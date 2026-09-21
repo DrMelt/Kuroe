@@ -2,47 +2,24 @@ using ErrorOr;
 
 namespace Kuroe.Cli;
 
-/// <summary>启动期工作目录的确定：命令行优先，未指定时用进程当前目录。</summary>
+/// <summary>启动参数由命令行框架解析，这里把工作目录取值规范化为绝对路径。</summary>
 internal static class WorkDirectory
 {
-    private const string LongOption = "--work-directory";
-    private const string ShortOption = "-d";
-
-    /// <summary>确定工作目录并返回绝对路径。</summary>
-    public static ErrorOr<string> Resolve(string[] args)
+    /// <summary>确定工作目录并返回绝对路径，未指定或为空白时用进程当前目录。</summary>
+    public static ErrorOr<string> Resolve(string? directory)
     {
-        ErrorOr<string?> option = Parse(args);
-        if (option.IsError)
+        if (string.IsNullOrWhiteSpace(directory))
         {
-            return option.ErrorsOrEmptyList;
+            return Directory.GetCurrentDirectory();
         }
 
-        return Path.GetFullPath(string.IsNullOrWhiteSpace(option.Value)
-            ? Directory.GetCurrentDirectory()
-            : option.Value);
-    }
-
-    /// <summary>从命令行取出工作目录，未指定时为 null。</summary>
-    private static ErrorOr<string?> Parse(string[] args)
-    {
-        string? directory = null;
-        for (int i = 0; i < args.Length; i++)
+        try
         {
-            string argument = args[i];
-            if (!argument.Equals(LongOption, StringComparison.OrdinalIgnoreCase) &&
-                !argument.Equals(ShortOption, StringComparison.OrdinalIgnoreCase))
-            {
-                return [Error.Validation("WorkDirectory.UnknownArgument", $"未知参数 {argument}，用法：{LongOption} <目录>")];
-            }
-
-            if (i + 1 == args.Length)
-            {
-                return [Error.Validation("WorkDirectory.MissingValue", $"{argument} 需要跟一个目录。")];
-            }
-
-            directory = args[++i];
+            return Path.GetFullPath(directory);
         }
-
-        return directory;
+        catch (ArgumentException)
+        {
+            return Error.Validation("WorkDirectory.Invalid", $"工作目录不是合法路径：{directory}");
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using ApiHub.Models;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
@@ -34,7 +35,7 @@ internal sealed class ReplCommands(
 
     public void Execute(string input)
     {
-        string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = Split(input);
 
         switch (parts[0].ToLowerInvariant())
         {
@@ -64,17 +65,56 @@ internal sealed class ReplCommands(
                 break;
 
             case "/set":
-                _settingsCommands.Set(input);
+                _settingsCommands.Set(parts);
                 break;
 
             case "/unset":
-                _settingsCommands.Unset(input);
+                _settingsCommands.Unset(parts);
                 break;
 
             default:
                 Console.WriteLine($"未知命令 {parts[0]}，输入 /help 查看命令。");
                 break;
         }
+    }
+
+    /// <summary>按空白拆分命令，双引号内的空白不作为分隔符，引号本身不出现在结果中。未闭合的引号按到输入末尾处理。</summary>
+    private static string[] Split(string input)
+    {
+        List<string> parts = [];
+        StringBuilder part = new();
+        bool quoted = false;
+        bool started = false;
+
+        foreach (char character in input)
+        {
+            if (character == '"')
+            {
+                quoted = !quoted;
+                started = true;
+            }
+            else if (!quoted && character is ' ' or '\t')
+            {
+                if (started)
+                {
+                    parts.Add(part.ToString());
+                    part.Clear();
+                    started = false;
+                }
+            }
+            else
+            {
+                part.Append(character);
+                started = true;
+            }
+        }
+
+        if (started)
+        {
+            parts.Add(part.ToString());
+        }
+
+        return [.. parts];
     }
 
     /// <summary>启动横幅：当前模型、目录规模，以及缺少提供商或工具时的处理指引。</summary>

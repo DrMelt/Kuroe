@@ -27,12 +27,11 @@ internal sealed class SettingsCommands(SettingsProvider settings)
     private readonly SettingsProvider _settings = settings;
 
     /// <summary>写入用户层中的设置项并立即生效。</summary>
-    public void Set(string input)
+    public void Set(string[] parts)
     {
-        string[] parts = input.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 3)
+        if (parts.Length != 3)
         {
-            Console.WriteLine("用法：/set <路径> <值>，例如 /set Agent:Temperature 0.7");
+            Console.WriteLine("用法：/set <路径> <值>，值含空格时用双引号包起来，例如 /set Agent:Temperature 0.7");
             return;
         }
 
@@ -54,9 +53,8 @@ internal sealed class SettingsCommands(SettingsProvider settings)
     }
 
     /// <summary>删除用户层中的该项。</summary>
-    public void Unset(string input)
+    public void Unset(string[] parts)
     {
-        string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2)
         {
             Console.WriteLine("用法：/unset <路径>，例如 /unset Agent:Temperature");
@@ -100,7 +98,7 @@ internal sealed class SettingsCommands(SettingsProvider settings)
     }
 
     /// <summary>解析路径为规范形式。路径未定义或由 /model 管理时返回错误，错误描述即给用户的提示。</summary>
-    private ErrorOr<string> Resolve(string path)
+    private static ErrorOr<string> Resolve(string path)
     {
         ErrorOr<string> resolved = KuroeSettings.ResolvePath(path);
         if (resolved.IsError)
