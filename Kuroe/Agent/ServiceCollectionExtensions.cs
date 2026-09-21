@@ -4,8 +4,6 @@ using Kuroe.Configuration;
 using Kuroe.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 namespace Kuroe.Agent;
 
@@ -26,17 +24,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(settings);
         services.AddSingleton(catalog);
-
-        // 日志全部导向 stderr，避免与 stdout 上的流式回复交错
-        services.Configure<ConsoleLoggerOptions>(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
-        services.AddLogging(builder => builder
-            // 日志级别只在启动时生效
-            .SetMinimumLevel(settings.Current.Agent.LogLevel)
-            .AddSimpleConsole(options =>
-            {
-                options.SingleLine = true;
-                options.TimestampFormat = "HH:mm:ss ";
-            }));
 
         services.AddSingleton(collection.Value);
         services.AddSingleton<AgentClientProvider>();

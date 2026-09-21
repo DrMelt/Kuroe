@@ -7,7 +7,7 @@ namespace Kuroe.Catalogs;
 /// <summary>运行期的提供商与模型目录。改动在锁内基于副本进行，落盘成功后才换快照。</summary>
 public sealed class CatalogService
 {
-    /// <summary>导出时替代凭据原文的占位文本，导入后需用 /provider key 补齐。</summary>
+    /// <summary>导出时替代凭据原文的占位文本，导入后需要替换为真实凭据。</summary>
     public const string PlaceholderApiKey = "***";
 
     private static readonly ApiKey MaskedApiKey = ApiKey.Create(PlaceholderApiKey).Value;
@@ -52,7 +52,7 @@ public sealed class CatalogService
 
             return [Error.NotFound(
                 "Catalog.ModelNotRegistered",
-                $"目录中没有模型 {modelName.Value}，先 /model add {modelName.Value} <提供商>。")];
+                $"目录中没有模型 {modelName.Value}。")];
         }
     }
 
@@ -91,14 +91,14 @@ public sealed class CatalogService
                 [.. _catalog.Providers.Select(provider => provider with { ApiKey = MaskedApiKey })],
                 [.. _catalog.Models]);
 
-            return masked.IsError ? masked.ErrorsOrEmptyList : _store.Write(target, masked.Value);
+            return masked.IsError ? masked.ErrorsOrEmptyList : CatalogStore.Write(target, masked.Value);
         }
     }
 
     /// <summary>合并导入：逐条添加，冲突跳过并汇总为说明，已有条目不受影响。</summary>
     public ErrorOr<IReadOnlyList<string>> Import(string source)
     {
-        ErrorOr<CatalogContents> parsed = _store.Read(source);
+        ErrorOr<CatalogContents> parsed = CatalogStore.Read(source);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -117,7 +117,7 @@ public sealed class CatalogService
                 }
                 else if (provider.ApiKey.Value == PlaceholderApiKey)
                 {
-                    notes.Add($"提供商 {name} 的凭据是占位符，用 /provider key {name} <凭据> 补齐。");
+                    notes.Add($"提供商 {name} 的凭据是占位符，使用前需要替换。");
                 }
             }
 

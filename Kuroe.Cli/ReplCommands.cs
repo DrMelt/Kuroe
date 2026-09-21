@@ -7,7 +7,7 @@ using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 
-namespace Kuroe;
+namespace Kuroe.Cli;
 
 /// <summary>斜杠命令的解析与执行。</summary>
 internal static class ReplCommands
@@ -175,7 +175,9 @@ internal static class ReplCommands
         Console.WriteLine("提供商：");
         foreach (ProviderDefinition provider in contents.Providers)
         {
-            Console.WriteLine($"  {provider.ProviderName.Value}  {provider.BaseAddress.Address}  凭据已设置");
+            string key = provider.ApiKey.Value == CatalogService.PlaceholderApiKey ? "凭据是占位符" : "凭据已设置";
+
+            Console.WriteLine($"  {provider.ProviderName.Value}  {provider.BaseAddress.Address}  {key}");
         }
 
         if (contents.Models.Length == 0)
@@ -273,6 +275,7 @@ internal static class ReplCommands
         if (connection.IsError)
         {
             Reject(connection.ErrorsOrEmptyList);
+            Errors.GuideModelRegistration(catalog, model.Value);
             return false;
         }
 
@@ -313,6 +316,14 @@ internal static class ReplCommands
         foreach (string note in imported.Value)
         {
             Console.WriteLine($"  {note}");
+        }
+
+        string[] masked = [.. catalog.Snapshot().Providers
+            .Where(provider => provider.ApiKey.Value == CatalogService.PlaceholderApiKey)
+            .Select(provider => provider.ProviderName.Value)];
+        if (masked.Length > 0)
+        {
+            Console.WriteLine($"用 /provider key <提供商> <凭据> 替换占位符凭据：{string.Join('、', masked)}");
         }
     }
 

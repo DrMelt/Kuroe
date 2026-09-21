@@ -8,29 +8,21 @@ using Microsoft.Extensions.AI;
 namespace Kuroe.Agent;
 
 /// <summary>一段连续对话：维护消息历史，向模型发起流式请求。</summary>
-public sealed class AgentSession
+public sealed class AgentSession(
+    AgentClientProvider clients,
+    SettingsProvider settings,
+    CatalogService catalog,
+    IReadOnlyList<AITool> tools)
 {
-    private readonly AgentClientProvider _clients;
-    private readonly SettingsProvider _settings;
-    private readonly CatalogService _catalog;
-    private readonly IReadOnlyList<AITool> _tools;
+    private readonly AgentClientProvider _clients = clients;
+    private readonly SettingsProvider _settings = settings;
+    private readonly CatalogService _catalog = catalog;
+    private readonly IReadOnlyList<AITool> _tools = tools;
     private readonly List<ChatMessage> _messages = [];
     private AgentSettings? _history;
 
     /// <summary>上一轮的输入与输出是否未计入上下文。</summary>
     public bool LastTurnDiscarded { get; private set; }
-
-    public AgentSession(
-        AgentClientProvider clients,
-        SettingsProvider settings,
-        CatalogService catalog,
-        IReadOnlyList<AITool> tools)
-    {
-        _clients = clients;
-        _settings = settings;
-        _catalog = catalog;
-        _tools = tools;
-    }
 
     /// <summary>丢弃上下文，系统提示词取自当前设置。</summary>
     public void Reset() => Restart(_settings.Current.Agent);

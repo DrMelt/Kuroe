@@ -4,7 +4,7 @@ using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 
-namespace Kuroe;
+namespace Kuroe.Cli;
 
 /// <summary>终端对话循环。</summary>
 public static class Repl
@@ -60,6 +60,7 @@ public static class Repl
                 if (reply.IsError)
                 {
                     Errors.Report(reply.ErrorsOrEmptyList);
+                    Errors.GuideModelRegistration(catalog, settings.Current.Agent.Model);
                 }
                 else if (!reply.Value.EndsWith('\n'))
                 {

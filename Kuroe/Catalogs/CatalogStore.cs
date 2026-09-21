@@ -5,14 +5,12 @@ using ErrorOr;
 namespace Kuroe.Catalogs;
 
 /// <summary>目录文件的读写。写盘先写临时文件再替换，中断不会留下半份文件。</summary>
-public sealed class CatalogStore
+public sealed class CatalogStore(string file)
 {
     private const string ReadError = "Catalog.Read";
     private const string WriteError = "Catalog.Write";
 
-    private readonly string _file;
-
-    public CatalogStore(string file) => _file = file;
+    private readonly string _file = file;
 
     /// <summary>读取目录文件，文件不存在时得到空目录。</summary>
     public ErrorOr<CatalogContents> Load() =>
@@ -22,7 +20,7 @@ public sealed class CatalogStore
     public ErrorOr<Success> Save(CatalogContents contents) => Write(_file, contents);
 
     /// <summary>从指定文件读取内容，供导入使用。</summary>
-    public ErrorOr<CatalogContents> Read(string path)
+    public static ErrorOr<CatalogContents> Read(string path)
     {
         try
         {
@@ -35,7 +33,7 @@ public sealed class CatalogStore
     }
 
     /// <summary>把内容写入指定文件，供导出使用。</summary>
-    public ErrorOr<Success> Write(string path, CatalogContents contents)
+    public static ErrorOr<Success> Write(string path, CatalogContents contents)
     {
         try
         {
