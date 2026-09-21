@@ -1,4 +1,5 @@
 bin/
 obj/
-appsettings.local.json
 packages/
+settings.json
+catalog.json

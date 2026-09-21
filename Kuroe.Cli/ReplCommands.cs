@@ -83,7 +83,8 @@ internal sealed class ReplCommands(
     public void PrintStartup()
     {
         CatalogContents contents = _catalog.Snapshot();
-        Console.WriteLine($"Kuroe 已启动，当前模型 {_settings.Current.Agent.Model.Value}，" +
+        string model = _settings.Current.Agent.Model?.Value ?? "未选择";
+        Console.WriteLine($"Kuroe 已启动，当前模型 {model}，" +
             $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型。");
         if (contents.Providers.Length == 0)
         {
@@ -232,7 +233,7 @@ internal sealed class ReplCommands(
         switch (parts.Length)
         {
             case 1:
-                Console.WriteLine($"当前模型 {_settings.Current.Agent.Model.Value}。{usage}");
+                Console.WriteLine($"当前模型 {_settings.Current.Agent.Model?.Value ?? "未选择"}。{usage}");
                 break;
 
             case 2 when subcommand is not ("add" or "rm"):

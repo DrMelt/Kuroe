@@ -14,8 +14,4 @@
     <ProjectReference Include="..\Kuroe\Kuroe.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="appsettings*.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>

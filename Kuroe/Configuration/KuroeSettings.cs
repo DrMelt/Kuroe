@@ -1,6 +1,6 @@
+using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Agent;
-using Microsoft.Extensions.Configuration;
 
 namespace Kuroe.Configuration;
 
@@ -9,10 +9,30 @@ public sealed record KuroeSettings
 {
     public required AgentSettings Agent { get; init; }
 
-    public static ErrorOr<KuroeSettings> From(IConfiguration configuration)
+    public static ErrorOr<KuroeSettings> From(JsonObject root)
     {
-        ErrorOr<AgentSettings> agent = AgentSettings.From(configuration.GetSection(AgentSettings.SectionName));
+        JsonNode? node = Section(root, AgentSettings.SectionName);
+        if (node is not null and not JsonObject)
+        {
+            return [Error.Validation($"{AgentSettings.SectionName}.Bind", $"{AgentSettings.SectionName} 节必须是对象。")];
+        }
+
+        ErrorOr<AgentSettings> agent = AgentSettings.From(node as JsonObject);
 
         return agent.IsError ? agent.ErrorsOrEmptyList : new KuroeSettings { Agent = agent.Value };
+    }
+
+    /// <summary>取该节的节点，不存在时返回 null，节名不区分大小写。</summary>
+    private static JsonNode? Section(JsonObject root, string name)
+    {
+        foreach ((string key, JsonNode? value) in root)
+        {
+            if (key.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 }

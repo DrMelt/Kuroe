@@ -15,9 +15,15 @@ internal static class Errors
         }
     }
 
-    /// <summary>模型不在目录中时补一行注册命令，模型已注册时没有输出。</summary>
-    public static void GuideModelRegistration(CatalogService catalog, ModelName model)
+    /// <summary>当前模型不可用时给出可用操作，模型可用时没有输出。</summary>
+    public static void GuideModelRegistration(CatalogService catalog, ModelName? model)
     {
+        if (model is null)
+        {
+            Console.WriteLine("用 /model <模型> 选择模型，没有已注册的模型时先 /model add <模型> <提供商> 注册。");
+            return;
+        }
+
         if (catalog.Connect(model).IsError)
         {
             Console.WriteLine($"用 /model add {model.Value} <提供商> 注册该模型。");

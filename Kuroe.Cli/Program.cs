@@ -6,7 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-KuroePaths paths = KuroePaths.Resolve();
+ErrorOr<string> workDirectory = WorkDirectory.Resolve(args);
+if (workDirectory.IsError)
+{
+    Errors.Report(workDirectory.ErrorsOrEmptyList);
+    return 1;
+}
+
+KuroePaths paths = KuroePaths.At(workDirectory.Value);
 
 var services = new ServiceCollection();
 ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);

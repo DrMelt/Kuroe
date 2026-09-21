@@ -1,16 +1,12 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using ErrorOr;
-using Microsoft.Extensions.Configuration;
 
 namespace Kuroe.Configuration;
 
-/// <summary>偏好配置的唯一生效点：装配各层、校验用户层改动、替换当前快照。凭据不在这里，见 <see cref="Catalogs.CatalogService"/>。</summary>
+/// <summary>偏好配置的唯一生效点：绑定用户层节点树、校验改动、替换当前快照。凭据不在这里，见 <see cref="Catalogs.CatalogService"/>。</summary>
 public sealed class SettingsProvider
 {
-    private const string DefaultSettingsFile = "appsettings.json";
-    private const string LocalSettingsFile = "appsettings.local.json";
-
     private readonly KuroePaths _paths;
     private readonly UserSettingsStore _store;
 
@@ -26,7 +22,7 @@ public sealed class SettingsProvider
 
     public string UserSettingsFile => _paths.UserSettingsFile;
 
-    /// <summary>装配各层并绑定，失败时一次给出全部错误。</summary>
+    /// <summary>绑定用户层并校验，失败时一次给出全部错误。</summary>
     public static ErrorOr<SettingsProvider> Create(KuroePaths paths)
     {
         UserSettingsStore store;
@@ -39,7 +35,7 @@ public sealed class SettingsProvider
             return [Error.Failure("Settings.UserFile", $"读取 {paths.UserSettingsFile} 失败：{ex.Message}")];
         }
 
-        ErrorOr<KuroeSettings> bound = Bind(store.Snapshot());
+        ErrorOr<KuroeSettings> bound = KuroeSettings.From(store.Snapshot());
 
         return bound.IsError ? bound.ErrorsOrEmptyList : new SettingsProvider(paths, store, bound.Value);
     }
@@ -57,7 +53,7 @@ public sealed class SettingsProvider
             return [Error.Validation("Settings.Path", ex.Message)];
         }
 
-        ErrorOr<KuroeSettings> next = Bind(candidate);
+        ErrorOr<KuroeSettings> next = KuroeSettings.From(candidate);
         if (next.IsError)
         {
             List<Error> errors = [Error.Validation("Settings.Invalid", "改动后的配置无效")];
@@ -102,27 +98,5 @@ public sealed class SettingsProvider
         }
 
         return true;
-    }
-
-    /// <summary>装配各层并绑定，配置文件缺失或损坏时返回错误。</summary>
-    private static ErrorOr<KuroeSettings> Bind(JsonObject userLayer)
-    {
-        IConfiguration configuration;
-        try
-        {
-            configuration = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile(DefaultSettingsFile)
-                .AddJsonStream(new MemoryStream(UserSettingsStore.Serialize(userLayer)))
-                .AddJsonFile(LocalSettingsFile, optional: true)
-                .AddEnvironmentVariables(KuroePaths.EnvironmentPrefix)
-                .Build();
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or FormatException)
-        {
-            return [Error.Failure("Settings.Read", $"读取配置失败：{ex.Message}")];
-        }
-
-        return KuroeSettings.From(configuration);
     }
 }

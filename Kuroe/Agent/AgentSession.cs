@@ -36,7 +36,12 @@ public sealed class AgentSession(
         LastTurnDiscarded = false;
 
         AgentSettings current = _settings.Current.Agent;
-        ErrorOr<ModelConnection> resolved = _catalog.Connect(current.Model);
+        if (current.Model is not { } model)
+        {
+            return [Error.Validation($"{AgentSettings.SectionName}.{nameof(AgentSettings.Model)}", "当前未选择模型，用 /model <模型> 选择。")];
+        }
+
+        ErrorOr<ModelConnection> resolved = _catalog.Connect(model);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;

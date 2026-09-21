@@ -67,7 +67,7 @@ public sealed class UserSettingsStore
     /// <summary>按路径删除节点，父节点清空后一并删除。</summary>
     public static void RemoveValue(JsonObject root, string path) => Remove(root, Segments(path), 0);
 
-    public static byte[] Serialize(JsonObject root) => JsonSerializer.SerializeToUtf8Bytes(root, WriteOptions);
+    private static byte[] Serialize(JsonObject root) => JsonSerializer.SerializeToUtf8Bytes(root, WriteOptions);
 
     /// <summary>读取路径上的标量文本，路径不存在或指向对象时返回 null。</summary>
     public string? TryGetValue(string path) => TryGetValue(_root, path);

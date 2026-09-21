@@ -1,19 +1,28 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using ApiHub.Models;
 using ErrorOr;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Kuroe.Agent;
 
-/// <summary>对话与请求参数，绑定自配置文件的 Agent 节。接入信息由目录提供，不在此处。</summary>
+/// <summary>对话与请求参数，绑定自用户层的 Agent 节。接入信息由目录提供，不在此处。</summary>
 public sealed record AgentSettings
 {
     public const string SectionName = "Agent";
 
     public const string DefaultSystemPrompt = "你是一个可以使用工具获取实时信息并解答问题的助手。";
 
-    /// <summary>当前选用的模型，必须在目录中注册。</summary>
-    public required ModelName Model { get; init; }
+    private static readonly JsonSerializerOptions ReadOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    /// <summary>当前选用的模型，必须在目录中注册。未选择时为空，由调用方给出选择指引。</summary>
+    public ModelName? Model { get; init; }
 
     public string SystemPrompt { get; init; } = DefaultSystemPrompt;
 
@@ -30,28 +39,34 @@ public sealed record AgentSettings
     /// <summary>日志级别在启动时写入日志管道，改动重启后生效。</summary>
     public bool RequiresRestart(AgentSettings other) => LogLevel != other.LogLevel;
 
-    /// <summary>绑定并校验该节。类型转换交给配置绑定器，值的合法性交给 ApiHub 的值对象。</summary>
-    public static ErrorOr<AgentSettings> From(IConfiguration configuration)
+    /// <summary>绑定并校验该节，节缺失时全部取默认值。类型转换交给 JSON 反序列化，值的合法性交给 ApiHub 的值对象。</summary>
+    public static ErrorOr<AgentSettings> From(JsonObject? section)
     {
         Raw? raw;
         try
         {
-            raw = configuration.Get<Raw>();
+            raw = section?.Deserialize<Raw>(ReadOptions);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        catch (JsonException ex)
         {
             return [Error.Validation($"{SectionName}.Bind", ex.Message)];
         }
 
-        ErrorOr<ModelName> model = ModelName.Create(raw?.Model ?? string.Empty);
-        if (model.IsError)
+        ModelName? model = null;
+        if (!string.IsNullOrWhiteSpace(raw?.Model))
         {
-            return model.ErrorsOrEmptyList;
+            ErrorOr<ModelName> created = ModelName.Create(raw.Model);
+            if (created.IsError)
+            {
+                return created.ErrorsOrEmptyList;
+            }
+
+            model = created.Value;
         }
 
         return new AgentSettings
         {
-            Model = model.Value,
+            Model = model,
             SystemPrompt = raw?.SystemPrompt ?? DefaultSystemPrompt,
             LogLevel = raw?.LogLevel ?? LogLevel.Warning,
             Temperature = raw?.Temperature,
@@ -59,7 +74,7 @@ public sealed record AgentSettings
         };
     }
 
-    /// <summary>配置文件里的原始形状，只承载类型转换。</summary>
+    /// <summary>用户层里的原始形状，只承载类型转换。</summary>
     private sealed class Raw
     {
         public string? Model { get; init; }

@@ -1,18 +1,13 @@
 namespace Kuroe.Configuration;
 
-/// <summary>程序识别的环境变量与用户级配置文件的路径解析。</summary>
+/// <summary>存储目录下的文件路径。目录由宿主给出，这里不做位置推断。</summary>
 public sealed class KuroePaths
 {
-    /// <summary>配置层与用户目录覆盖共用的环境变量前缀。</summary>
-    public const string EnvironmentPrefix = "KUROE_";
-
-    /// <summary>覆盖用户目录的环境变量。</summary>
-    public const string HomeVariable = EnvironmentPrefix + "HOME";
-
-    private KuroePaths(string userDirectory)
+    private KuroePaths(string directory)
     {
-        UserSettingsFile = Path.Combine(userDirectory, "settings.json");
-        CatalogFile = Path.Combine(userDirectory, "catalog.json");
+        string root = Path.GetFullPath(directory);
+        UserSettingsFile = Path.Combine(root, "settings.json");
+        CatalogFile = Path.Combine(root, "catalog.json");
     }
 
     /// <summary>用户层偏好文件。</summary>
@@ -21,13 +16,6 @@ public sealed class KuroePaths
     /// <summary>目录文件，提供商、模型及其凭据都在其中。</summary>
     public string CatalogFile { get; }
 
-    public static KuroePaths Resolve()
-    {
-        string? home = Environment.GetEnvironmentVariable(HomeVariable);
-        string directory = string.IsNullOrWhiteSpace(home)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Kuroe")
-            : home;
-
-        return new KuroePaths(directory);
-    }
+    /// <summary>按存储目录组装文件路径，相对目录按进程当前目录解析。</summary>
+    public static KuroePaths At(string directory) => new(directory);
 }
