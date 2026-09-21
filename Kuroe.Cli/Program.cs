@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe;
 using Kuroe.Cli;
+using Kuroe.Cli.Commands;
 using Kuroe.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Logging.Console;
 ErrorOr<string> workDirectory = WorkDirectory.Resolve(args);
 if (workDirectory.IsError)
 {
-    Errors.Report(workDirectory.ErrorsOrEmptyList);
+    ConsoleErrors.Report(workDirectory.ErrorsOrEmptyList);
     return 1;
 }
 
@@ -19,12 +20,16 @@ var services = new ServiceCollection();
 ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);
 if (startup.IsError)
 {
-    Errors.Report(startup.ErrorsOrEmptyList);
+    ConsoleErrors.Report(startup.ErrorsOrEmptyList);
     return 1;
 }
 
-services.AddSingleton<Repl>();
+services.AddSingleton<SettingsCommands>();
+services.AddSingleton<ProviderCommands>();
+services.AddSingleton<ModelCommands>();
+services.AddSingleton<CatalogCommands>();
 services.AddSingleton<ReplCommands>();
+services.AddSingleton<Repl>();
 
 // 日志全部导向 stderr，避免与 stdout 上的流式回复交错
 services.Configure<ConsoleLoggerOptions>(options => options.LogToStandardErrorThreshold = LogLevel.Trace);

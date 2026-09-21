@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Kuroe.Storage;
 
 namespace Kuroe.Configuration;
 
@@ -33,14 +34,10 @@ public sealed class UserSettingsStore
         _root = Load();
     }
 
-    /// <summary>读取路径上的标量文本，路径不存在或指向对象时返回 null。</summary>
-    public static string? TryGetValue(JsonObject root, string path) =>
-        Walk(root, path) is JsonValue value ? value.ToString() : null;
-
     /// <summary>按路径写入节点，中间节点不存在时创建。</summary>
-    public static void SetValue(JsonObject root, string path, JsonNode value)
+    internal static void SetValue(JsonObject root, string path, JsonNode value)
     {
-        string[] segments = Segments(path);
+        string[] segments = path.Split(':');
         JsonObject current = root;
         for (int i = 0; i < segments.Length - 1; i++)
         {
@@ -65,43 +62,26 @@ public sealed class UserSettingsStore
     }
 
     /// <summary>按路径删除节点，父节点清空后一并删除。</summary>
-    public static void RemoveValue(JsonObject root, string path) => Remove(root, Segments(path), 0);
+    internal static void RemoveValue(JsonObject root, string path) => Remove(root, path.Split(':'), 0);
 
-    private static byte[] Serialize(JsonObject root) => JsonSerializer.SerializeToUtf8Bytes(root, WriteOptions);
+    private static string Serialize(JsonObject root) => JsonSerializer.Serialize(root, WriteOptions);
 
     /// <summary>读取路径上的标量文本，路径不存在或指向对象时返回 null。</summary>
-    public string? TryGetValue(string path) => TryGetValue(_root, path);
+    public string? TryGetValue(string path) => Walk(_root, path) is JsonValue value ? value.ToString() : null;
 
     /// <summary>节点树副本，修改后交给 Commit。</summary>
     public JsonObject Snapshot() => (JsonObject)_root.DeepClone();
+
+    /// <summary>用规范化后的树替换当前树，不落盘。</summary>
+    internal void Adopt(JsonObject root) => _root = root;
 
     /// <summary>写盘并接受该节点树。</summary>
     public void Commit(JsonObject root)
     {
         root[VersionKey] = CurrentVersion;
-        Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
-
-        string temporary = _file + ".tmp";
-        File.WriteAllBytes(temporary, Serialize(root));
-        File.Move(temporary, _file, overwrite: true);
+        AtomicFile.WriteText(_file, Serialize(root));
 
         _root = root;
-    }
-
-    private static string[] Segments(string path)
-    {
-        string[] segments = path.Split(':');
-        if (segments.Any(string.IsNullOrWhiteSpace))
-        {
-            throw new InvalidOperationException($"配置路径“{path}”无效，应形如 Agent:Model。");
-        }
-
-        if (segments.Length == 1 && segments[0].Equals(VersionKey, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException($"{VersionKey} 是用户层文件的结构版本，不能作为设置项。");
-        }
-
-        return segments;
     }
 
     private static JsonNode? Walk(JsonObject root, string path)
@@ -151,13 +131,30 @@ public sealed class UserSettingsStore
         return true;
     }
 
+    /// <summary>取结构版本，同层的大小写变体只保留规范键。</summary>
     private static int ReadVersion(JsonObject root)
     {
-        if (root[VersionKey] is not JsonValue value)
+        int version = CurrentVersion;
+
+        foreach (string key in VersionKeys(root))
         {
-            return CurrentVersion;
+            if (root[key] is JsonValue value)
+            {
+                version = Math.Max(version, ReadInteger(value));
+            }
+
+            root.Remove(key);
         }
 
+        return version;
+    }
+
+    /// <summary>同层中与规范版本键忽略大小写同名的键。</summary>
+    private static string[] VersionKeys(JsonObject root) =>
+        [.. root.Select(pair => pair.Key).Where(key => key.Equals(VersionKey, StringComparison.OrdinalIgnoreCase))];
+
+    private static int ReadInteger(JsonValue value)
+    {
         try
         {
             return value.GetValue<int>();

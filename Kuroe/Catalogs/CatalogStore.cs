@@ -1,15 +1,13 @@
 using ApiHub.Json;
 using ApiHub.Models;
 using ErrorOr;
+using Kuroe.Storage;
 
 namespace Kuroe.Catalogs;
 
-/// <summary>目录文件的读写。写盘先写临时文件再替换，中断不会留下半份文件。</summary>
+/// <summary>目录文件的读写，内容与 JSON 文本的转换交给 ApiHub。</summary>
 public sealed class CatalogStore(string file)
 {
-    private const string ReadError = "Catalog.Read";
-    private const string WriteError = "Catalog.Write";
-
     private readonly string _file = file;
 
     /// <summary>读取目录文件，文件不存在时得到空目录。</summary>
@@ -28,7 +26,7 @@ public sealed class CatalogStore(string file)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [Error.Failure(ReadError, $"读取 {path} 失败：{ex.Message}")];
+            return [CatalogErrors.Read(path, ex.Message)];
         }
     }
 
@@ -37,17 +35,13 @@ public sealed class CatalogStore(string file)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-
-            string temporary = path + ".tmp";
-            File.WriteAllText(temporary, contents.ToJson());
-            File.Move(temporary, path, overwrite: true);
+            AtomicFile.WriteText(path, contents.ToJson());
 
             return Result.Success;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [Error.Failure(WriteError, $"写入 {path} 失败：{ex.Message}")];
+            return [CatalogErrors.Write(path, ex.Message)];
         }
     }
 }

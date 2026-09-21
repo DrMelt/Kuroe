@@ -12,6 +12,9 @@ public sealed class CatalogService
 
     private static readonly ApiKey MaskedApiKey = ApiKey.Create(PlaceholderApiKey).Value;
 
+    /// <summary>凭据是否为导出时的占位文本。</summary>
+    public static bool IsPlaceholder(ApiKey apiKey) => apiKey.Value == PlaceholderApiKey;
+
     private readonly CatalogStore _store;
     private readonly Lock _gate = new();
     private Catalog _catalog;
@@ -50,9 +53,7 @@ public sealed class CatalogService
                 return connection;
             }
 
-            return [Error.NotFound(
-                "Catalog.ModelNotRegistered",
-                $"目录中没有模型 {modelName.Value}。")];
+            return [CatalogErrors.ModelNotRegistered(modelName)];
         }
     }
 
@@ -66,7 +67,7 @@ public sealed class CatalogService
             ProviderDefinition? provider = catalog.FindProvider(providerName);
             if (provider is null)
             {
-                return [Error.NotFound("Catalog.ProviderNotFound", $"提供商 {providerName.Value} 不存在。")];
+                return [CatalogErrors.ProviderNotFound(providerName)];
             }
 
             return catalog.ReplaceProvider(provider with { ApiKey = apiKey });
@@ -115,7 +116,7 @@ public sealed class CatalogService
                 {
                     notes.Add($"提供商 {name} 未导入：{added.FirstError.Description}");
                 }
-                else if (provider.ApiKey.Value == PlaceholderApiKey)
+                else if (IsPlaceholder(provider.ApiKey))
                 {
                     notes.Add($"提供商 {name} 的凭据是占位符，使用前需要替换。");
                 }

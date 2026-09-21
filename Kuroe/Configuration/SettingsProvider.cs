@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json.Nodes;
 using ErrorOr;
 
@@ -22,7 +21,7 @@ public sealed class SettingsProvider
 
     public string UserSettingsFile => _paths.UserSettingsFile;
 
-    /// <summary>绑定用户层并校验，失败时一次给出全部错误。</summary>
+    /// <summary>规范化用户层并绑定校验，失败时一次给出全部错误。</summary>
     public static ErrorOr<SettingsProvider> Create(KuroePaths paths)
     {
         UserSettingsStore store;
@@ -32,16 +31,48 @@ public sealed class SettingsProvider
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            return [Error.Failure("Settings.UserFile", $"读取 {paths.UserSettingsFile} 失败：{ex.Message}")];
+            return [SettingsErrors.UserFile(paths.UserSettingsFile, ex.Message)];
         }
 
-        ErrorOr<KuroeSettings> bound = KuroeSettings.From(store.Snapshot());
+        ErrorOr<JsonObject> normalized = KuroeSettings.Normalize(store.Snapshot());
+        if (normalized.IsError)
+        {
+            return normalized.ErrorsOrEmptyList;
+        }
 
-        return bound.IsError ? bound.ErrorsOrEmptyList : new SettingsProvider(paths, store, bound.Value);
+        ErrorOr<KuroeSettings> bound = KuroeSettings.From(normalized.Value);
+        if (bound.IsError)
+        {
+            return bound.ErrorsOrEmptyList;
+        }
+
+        store.Adopt(normalized.Value);
+
+        return new SettingsProvider(paths, store, bound.Value);
+    }
+
+    /// <summary>写入该设置并立即生效，路径按规范路径落盘。路径无效或校验失败时返回错误，文件不变。</summary>
+    public ErrorOr<Success> Set(string path, JsonNode value) =>
+        WithResolved(path, (root, resolved) => UserSettingsStore.SetValue(root, resolved, value));
+
+    /// <summary>删除该设置在用户层中的项。路径无效或校验失败时返回错误，文件不变。</summary>
+    public ErrorOr<Success> Clear(string path) =>
+        WithResolved(path, (root, resolved) => UserSettingsStore.RemoveValue(root, resolved));
+
+    /// <summary>读取用户层中该路径的设置，未设置时返回 null。</summary>
+    public string? TryGetUserValue(string path) => _store.TryGetValue(path);
+
+    private ErrorOr<Success> WithResolved(string path, Action<JsonObject, string> mutate)
+    {
+        ErrorOr<string> resolved = KuroeSettings.ResolvePath(path);
+
+        return resolved.IsError
+            ? resolved.ErrorsOrEmptyList
+            : Apply(root => mutate(root, resolved.Value));
     }
 
     /// <summary>改动用户层并立即生效。校验失败时返回错误，文件不变。</summary>
-    public ErrorOr<Success> Apply(Action<JsonObject> mutate)
+    private ErrorOr<Success> Apply(Action<JsonObject> mutate)
     {
         JsonObject candidate = _store.Snapshot();
         try
@@ -50,13 +81,13 @@ public sealed class SettingsProvider
         }
         catch (InvalidOperationException ex)
         {
-            return [Error.Validation("Settings.Path", ex.Message)];
+            return [SettingsErrors.Path(ex.Message)];
         }
 
         ErrorOr<KuroeSettings> next = KuroeSettings.From(candidate);
         if (next.IsError)
         {
-            List<Error> errors = [Error.Validation("Settings.Invalid", "改动后的配置无效")];
+            List<Error> errors = [SettingsErrors.Invalid()];
             errors.AddRange(next.ErrorsOrEmptyList);
 
             return errors;
@@ -68,35 +99,11 @@ public sealed class SettingsProvider
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [Error.Failure("Settings.Write", $"写入 {_paths.UserSettingsFile} 失败：{ex.Message}")];
+            return [SettingsErrors.Write(_paths.UserSettingsFile, ex.Message)];
         }
 
         Current = next.Value;
 
         return Result.Success;
-    }
-
-    /// <summary>读取用户层中该路径的设置，未设置时返回 null。</summary>
-    public string? TryGetUserValue(string path) => _store.TryGetValue(path);
-
-    /// <summary>路径是否对应已定义的设置项，未定义的路径不会生效。</summary>
-    public bool IsConfigured(string path)
-    {
-        object? value = Current;
-        foreach (string segment in path.Split(':'))
-        {
-            PropertyInfo? property = value?.GetType().GetProperty(
-                segment,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-            if (property is null)
-            {
-                return false;
-            }
-
-            value = property.GetValue(value);
-        }
-
-        return true;
     }
 }

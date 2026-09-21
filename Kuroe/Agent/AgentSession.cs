@@ -25,7 +25,7 @@ public sealed class AgentSession(
     public bool LastTurnDiscarded { get; private set; }
 
     /// <summary>丢弃上下文，系统提示词取自当前设置。</summary>
-    public void Reset() => Restart(_settings.Current.Agent);
+    public void Reset() => RebuildHistory(_settings.Current.Agent);
 
     /// <summary>一轮问答。onText 接收增量文本，返回值是完整回复或错误。</summary>
     public async Task<ErrorOr<string>> AskAsync(
@@ -38,7 +38,7 @@ public sealed class AgentSession(
         AgentSettings current = _settings.Current.Agent;
         if (current.Model is not { } model)
         {
-            return [Error.Validation($"{AgentSettings.SectionName}.{nameof(AgentSettings.Model)}", "当前未选择模型，用 /model <模型> 选择。")];
+            return [AgentErrors.ModelNotSelected()];
         }
 
         ErrorOr<ModelConnection> resolved = _catalog.Connect(model);
@@ -47,9 +47,9 @@ public sealed class AgentSession(
             return resolved.ErrorsOrEmptyList;
         }
 
-        if (_history is null || current.InvalidatesSession(_history))
+        if (_history is null || current.InvalidatesHistory(_history))
         {
-            Restart(current);
+            RebuildHistory(current);
         }
 
         IChatClient client = _clients.GetClient(resolved.Value);
@@ -130,7 +130,7 @@ public sealed class AgentSession(
     }
 
     /// <summary>按给定的设置重建历史。</summary>
-    private void Restart(AgentSettings current)
+    private void RebuildHistory(AgentSettings current)
     {
         _history = current;
 

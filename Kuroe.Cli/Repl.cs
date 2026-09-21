@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Agent;
+using Kuroe.Cli.Commands;
 
 namespace Kuroe.Cli;
 
@@ -53,7 +54,7 @@ internal sealed class Repl(
                 ErrorOr<string> reply = await _session.AskAsync(input, Console.Write, cancellation.Begin());
                 if (reply.IsError)
                 {
-                    Errors.Report(reply.ErrorsOrEmptyList);
+                    ConsoleErrors.Report(reply.ErrorsOrEmptyList);
                     _commands.GuideCurrentModel();
                 }
                 else if (!reply.Value.EndsWith('\n'))

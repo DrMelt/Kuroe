@@ -15,7 +15,7 @@
 dotnet run --project Kuroe.Cli -- -d <工作目录>
 ```
 
-首次运行时工作目录里还没有提供商与模型，用 `/provider add <名> <端点> <凭据>` 与 `/model add <模型> <提供商>` 登记。未选择模型不影响启动，发起对话时才会提示。
+首次运行时工作目录里还没有提供商与模型，用 `/provider add <名> <端点> <凭据>` 与 `/model add <模型> <提供商>` 登记。未选择模型不影响启动，发起对话时才会提示，用 `/model <模型>` 选择、`/model none` 取消选择。
 
 ## 存储位置
 
@@ -24,7 +24,7 @@ dotnet run --project Kuroe.Cli -- -d <工作目录>
 1. 命令行 `--work-directory <目录>`，短名 `-d`
 2. 启动进程的当前目录
 
-偏好配置只有两个来源：代码默认值与工作目录下的 `settings.json`，后者由 `/set`、`/unset` 写入，也可以手工编辑。`catalog.json` 含明文凭据，不要提交。
+偏好配置只有两个来源：代码默认值与工作目录下的 `settings.json`，后者由 `/set`、`/unset` 写入，也可以手工编辑。路径按配置节的属性名逐级书写，如 `Agent:Temperature`：大小写不敏感，未定义的路径被拒绝，路径不会进入值对象内部。加载时设置项的键统一为属性名，同一个设置项写成多个大小写变体时程序拒绝启动。`Agent:Model` 由 `/model` 管理，`/set` 与 `/unset` 不接受。`catalog.json` 含明文凭据，不要提交。
 
 ## 依赖准备
 

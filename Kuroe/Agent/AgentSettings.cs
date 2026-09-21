@@ -12,6 +12,9 @@ public sealed record AgentSettings
 {
     public const string SectionName = "Agent";
 
+    /// <summary>模型设置在用户层中的路径。</summary>
+    public const string ModelPath = $"{SectionName}:{nameof(Model)}";
+
     public const string DefaultSystemPrompt = "你是一个可以使用工具获取实时信息并解答问题的助手。";
 
     private static readonly JsonSerializerOptions ReadOptions = new()
@@ -34,7 +37,7 @@ public sealed record AgentSettings
     public int? MaxOutputTokens { get; init; }
 
     /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，客户端由 <see cref="AgentClientProvider"/> 按连接重建。</summary>
-    public bool InvalidatesSession(AgentSettings other) => Model != other.Model || SystemPrompt != other.SystemPrompt;
+    public bool InvalidatesHistory(AgentSettings other) => Model != other.Model || SystemPrompt != other.SystemPrompt;
 
     /// <summary>日志级别在启动时写入日志管道，改动重启后生效。</summary>
     public bool RequiresRestart(AgentSettings other) => LogLevel != other.LogLevel;
@@ -49,7 +52,7 @@ public sealed record AgentSettings
         }
         catch (JsonException ex)
         {
-            return [Error.Validation($"{SectionName}.Bind", ex.Message)];
+            return [AgentErrors.Bind(ex.Message)];
         }
 
         ModelName? model = null;

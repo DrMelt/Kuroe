@@ -5,7 +5,7 @@ using Kuroe.Catalogs;
 namespace Kuroe.Cli;
 
 /// <summary>错误到终端的统一输出与可恢复错误的操作指引。</summary>
-internal static class Errors
+internal static class ConsoleErrors
 {
     public static void Report(IEnumerable<Error> errors)
     {
