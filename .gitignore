@@ -1,5 +1,4 @@
 bin/
 obj/
+.docs/
 packages/
-settings.json
-catalog.json
