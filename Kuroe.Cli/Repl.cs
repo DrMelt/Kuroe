@@ -1,15 +1,17 @@
-using ApiHub.Models;
 using ErrorOr;
 using Kuroe.Agent;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
 
 namespace Kuroe.Cli;
 
 /// <summary>终端对话循环。</summary>
-public static class Repl
+internal sealed class Repl(
+    AgentSession session,
+    ReplCommands commands)
 {
-    public static async Task RunAsync(AgentSession session, SettingsProvider settings, CatalogService catalog)
+    private readonly AgentSession _session = session;
+    private readonly ReplCommands _commands = commands;
+
+    public async Task RunAsync()
     {
         using var cancellation = new TurnCancellation();
         Console.CancelKeyPress += (_, e) =>
@@ -18,15 +20,7 @@ public static class Repl
             cancellation.Cancel();
         };
 
-        CatalogContents contents = catalog.Snapshot();
-        Console.WriteLine($"Kuroe 已启动，当前模型 {settings.Current.Agent.Model.Value}，" +
-            $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型。");
-        if (contents.Providers.Length == 0)
-        {
-            Console.WriteLine("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
-        }
-
-        Console.WriteLine("输入 exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
+        _commands.PrintStartup();
 
         while (true)
         {
@@ -49,18 +43,18 @@ public static class Repl
 
             if (input.StartsWith('/'))
             {
-                ReplCommands.Execute(input, session, settings, catalog);
+                _commands.Execute(input);
                 continue;
             }
 
             Console.Write("智能体 > ");
             try
             {
-                ErrorOr<string> reply = await session.AskAsync(input, Console.Write, cancellation.Begin());
+                ErrorOr<string> reply = await _session.AskAsync(input, Console.Write, cancellation.Begin());
                 if (reply.IsError)
                 {
                     Errors.Report(reply.ErrorsOrEmptyList);
-                    Errors.GuideModelRegistration(catalog, settings.Current.Agent.Model);
+                    _commands.GuideCurrentModel();
                 }
                 else if (!reply.Value.EndsWith('\n'))
                 {
@@ -76,7 +70,7 @@ public static class Repl
                 Console.Error.WriteLine($"\n请求失败：{ex.Message}");
             }
 
-            if (session.LastTurnDiscarded)
+            if (_session.LastTurnDiscarded)
             {
                 Console.WriteLine("本轮内容未计入上下文。");
             }

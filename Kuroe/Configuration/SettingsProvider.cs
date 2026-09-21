@@ -118,7 +118,7 @@ public sealed class SettingsProvider
                 .AddEnvironmentVariables(KuroePaths.EnvironmentPrefix)
                 .Build();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or FormatException)
         {
             return [Error.Failure("Settings.Read", $"读取配置失败：{ex.Message}")];
         }

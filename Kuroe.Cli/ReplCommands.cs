@@ -9,8 +9,12 @@ using Kuroe.Configuration;
 
 namespace Kuroe.Cli;
 
-/// <summary>斜杠命令的解析与执行。</summary>
-internal static class ReplCommands
+/// <summary>启动提示与斜杠命令的解析与执行。</summary>
+internal sealed class ReplCommands(
+    AgentSession session,
+    SettingsProvider settings,
+    CatalogService catalog,
+    ToolCollection tools)
 {
     private const string ModelPath = $"{AgentSettings.SectionName}:{nameof(AgentSettings.Model)}";
 
@@ -19,7 +23,12 @@ internal static class ReplCommands
         Converters = { new JsonStringEnumConverter(), new ModelNameJsonConverter() },
     };
 
-    public static void Execute(string input, AgentSession session, SettingsProvider settings, CatalogService catalog)
+    private readonly AgentSession _session = session;
+    private readonly SettingsProvider _settings = settings;
+    private readonly CatalogService _catalog = catalog;
+    private readonly ToolCollection _tools = tools;
+
+    public void Execute(string input)
     {
         string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
@@ -30,28 +39,28 @@ internal static class ReplCommands
                 break;
 
             case "/reset":
-                session.Reset();
+                _session.Reset();
                 Console.WriteLine("上下文已清空。");
                 break;
 
             case "/config":
-                PrintConfig(settings);
+                PrintConfig();
                 break;
 
             case "/provider":
-                RunProvider(parts, catalog);
+                RunProvider(parts);
                 break;
 
             case "/model":
-                RunModel(parts, settings, catalog);
+                RunModel(parts);
                 break;
 
             case "/catalog":
-                RunCatalog(parts, catalog);
+                RunCatalog(parts);
                 break;
 
             case "/set":
-                Set(input, settings, catalog);
+                Set(input);
                 break;
 
             case "/unset":
@@ -61,7 +70,7 @@ internal static class ReplCommands
                     break;
                 }
 
-                Unset(parts[1], settings);
+                Unset(parts[1]);
                 break;
 
             default:
@@ -69,6 +78,28 @@ internal static class ReplCommands
                 break;
         }
     }
+
+    /// <summary>启动横幅：当前模型、目录规模，以及缺少提供商或工具时的处理指引。</summary>
+    public void PrintStartup()
+    {
+        CatalogContents contents = _catalog.Snapshot();
+        Console.WriteLine($"Kuroe 已启动，当前模型 {_settings.Current.Agent.Model.Value}，" +
+            $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型。");
+        if (contents.Providers.Length == 0)
+        {
+            Console.WriteLine("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
+        }
+
+        if (_tools.Tools.Count == 0)
+        {
+            Console.WriteLine("当前没有可用工具，检查是否注册了工具载体、公开方法是否标注 DescriptionAttribute。");
+        }
+
+        Console.WriteLine("输入 exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
+    }
+
+    /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
+    public void GuideCurrentModel() => Errors.GuideModelRegistration(_catalog, _settings.Current.Agent.Model);
 
     private static void PrintHelp() => Console.WriteLine("""
         /config                            打印生效配置，标记各项是否已写入用户层
@@ -87,7 +118,7 @@ internal static class ReplCommands
         exit                               退出
         """);
 
-    private static void RunProvider(string[] parts, CatalogService catalog)
+    private void RunProvider(string[] parts)
     {
         const string usage = "用法：/provider list | add <名> <端点> <凭据> | key <名> <凭据> | rm <名>";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
@@ -95,19 +126,19 @@ internal static class ReplCommands
         switch (parts.Length)
         {
             case 2 when subcommand == "list":
-                PrintCatalog(catalog.Snapshot());
+                PrintCatalog(_catalog.Snapshot());
                 break;
 
             case 3 when subcommand == "rm":
-                RemoveProvider(parts[2], catalog);
+                RemoveProvider(parts[2]);
                 break;
 
             case 4 when subcommand == "key":
-                SetProviderKey(parts[2], parts[3], catalog);
+                SetProviderKey(parts[2], parts[3]);
                 break;
 
             case 5 when subcommand == "add":
-                AddProvider(parts[2], parts[3], parts[4], catalog);
+                AddProvider(parts[2], parts[3], parts[4]);
                 break;
 
             default:
@@ -116,7 +147,7 @@ internal static class ReplCommands
         }
     }
 
-    private static void AddProvider(string name, string baseAddress, string apiKey, CatalogService catalog)
+    private void AddProvider(string name, string baseAddress, string apiKey)
     {
         ErrorOr<ProviderName> providerName = ProviderName.Create(name);
         ErrorOr<ProviderEndpoint> endpoint = ProviderEndpoint.Create(baseAddress);
@@ -132,10 +163,10 @@ internal static class ReplCommands
             return;
         }
 
-        Report(catalog.AddProvider(providerName.Value, endpoint.Value, key.Value), "已保存。");
+        Report(_catalog.AddProvider(providerName.Value, endpoint.Value, key.Value), "已保存。");
     }
 
-    private static void SetProviderKey(string name, string apiKey, CatalogService catalog)
+    private void SetProviderKey(string name, string apiKey)
     {
         ErrorOr<ProviderName> providerName = ProviderName.Create(name);
         ErrorOr<ApiKey> key = ApiKey.Create(apiKey);
@@ -149,10 +180,10 @@ internal static class ReplCommands
             return;
         }
 
-        Report(catalog.SetProviderKey(providerName.Value, key.Value), "已保存。");
+        Report(_catalog.SetProviderKey(providerName.Value, key.Value), "已保存。");
     }
 
-    private static void RemoveProvider(string name, CatalogService catalog)
+    private void RemoveProvider(string name)
     {
         ErrorOr<ProviderName> providerName = ProviderName.Create(name);
         if (providerName.IsError)
@@ -161,7 +192,7 @@ internal static class ReplCommands
             return;
         }
 
-        Report(catalog.RemoveProvider(providerName.Value), "已删除。");
+        Report(_catalog.RemoveProvider(providerName.Value), "已删除。");
     }
 
     private static void PrintCatalog(CatalogContents contents)
@@ -193,7 +224,7 @@ internal static class ReplCommands
         }
     }
 
-    private static void RunModel(string[] parts, SettingsProvider settings, CatalogService catalog)
+    private void RunModel(string[] parts)
     {
         const string usage = "用法：/model <模型> 切换，/model add <模型> <提供商> 注册，/model rm <模型> 注销";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
@@ -201,19 +232,19 @@ internal static class ReplCommands
         switch (parts.Length)
         {
             case 1:
-                Console.WriteLine($"当前模型 {settings.Current.Agent.Model.Value}。{usage}");
+                Console.WriteLine($"当前模型 {_settings.Current.Agent.Model.Value}。{usage}");
                 break;
 
             case 2 when subcommand is not ("add" or "rm"):
-                SelectModel(parts[1], settings, catalog);
+                SelectModel(parts[1]);
                 break;
 
             case 3 when subcommand == "rm":
-                RemoveModel(parts[2], catalog);
+                RemoveModel(parts[2]);
                 break;
 
             case 4 when subcommand == "add":
-                AddModel(parts[2], parts[3], catalog);
+                AddModel(parts[2], parts[3]);
                 break;
 
             default:
@@ -222,7 +253,7 @@ internal static class ReplCommands
         }
     }
 
-    private static void AddModel(string modelName, string providerName, CatalogService catalog)
+    private void AddModel(string modelName, string providerName)
     {
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         ErrorOr<ProviderName> provider = ProviderName.Create(providerName);
@@ -236,10 +267,10 @@ internal static class ReplCommands
             return;
         }
 
-        Report(catalog.AddModel(model.Value, provider.Value), "已注册。");
+        Report(_catalog.AddModel(model.Value, provider.Value), "已注册。");
     }
 
-    private static void RemoveModel(string modelName, CatalogService catalog)
+    private void RemoveModel(string modelName)
     {
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         if (model.IsError)
@@ -248,21 +279,21 @@ internal static class ReplCommands
             return;
         }
 
-        Report(catalog.RemoveModel(model.Value), "已注销。");
+        Report(_catalog.RemoveModel(model.Value), "已注销。");
     }
 
-    private static void SelectModel(string modelName, SettingsProvider settings, CatalogService catalog)
+    private void SelectModel(string modelName)
     {
-        if (!IsRegistered(modelName, catalog))
+        if (!IsRegistered(modelName))
         {
             return;
         }
 
-        Apply(ModelPath, JsonValue.Create(modelName)!, settings);
+        Apply(ModelPath, JsonValue.Create(modelName)!);
     }
 
     /// <summary>模型必须已在目录中注册，否则写进偏好只让下一轮对话失败。</summary>
-    private static bool IsRegistered(string modelName, CatalogService catalog)
+    private bool IsRegistered(string modelName)
     {
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         if (model.IsError)
@@ -271,18 +302,18 @@ internal static class ReplCommands
             return false;
         }
 
-        ErrorOr<ModelConnection> connection = catalog.Connect(model.Value);
+        ErrorOr<ModelConnection> connection = _catalog.Connect(model.Value);
         if (connection.IsError)
         {
             Reject(connection.ErrorsOrEmptyList);
-            Errors.GuideModelRegistration(catalog, model.Value);
+            Errors.GuideModelRegistration(_catalog, model.Value);
             return false;
         }
 
         return true;
     }
 
-    private static void RunCatalog(string[] parts, CatalogService catalog)
+    private void RunCatalog(string[] parts)
     {
         const string usage = "用法：/catalog export <文件> | import <文件>";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
@@ -290,11 +321,11 @@ internal static class ReplCommands
         switch (parts.Length)
         {
             case 3 when subcommand == "export":
-                Report(catalog.Export(parts[2]), $"已导出，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
+                Report(_catalog.Export(parts[2]), $"已导出，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
                 break;
 
             case 3 when subcommand == "import":
-                Import(parts[2], catalog);
+                Import(parts[2]);
                 break;
 
             default:
@@ -303,9 +334,9 @@ internal static class ReplCommands
         }
     }
 
-    private static void Import(string file, CatalogService catalog)
+    private void Import(string file)
     {
-        ErrorOr<IReadOnlyList<string>> imported = catalog.Import(file);
+        ErrorOr<IReadOnlyList<string>> imported = _catalog.Import(file);
         if (imported.IsError)
         {
             Reject(imported.ErrorsOrEmptyList);
@@ -318,7 +349,7 @@ internal static class ReplCommands
             Console.WriteLine($"  {note}");
         }
 
-        string[] masked = [.. catalog.Snapshot().Providers
+        string[] masked = [.. _catalog.Snapshot().Providers
             .Where(provider => provider.ApiKey.Value == CatalogService.PlaceholderApiKey)
             .Select(provider => provider.ProviderName.Value)];
         if (masked.Length > 0)
@@ -327,7 +358,7 @@ internal static class ReplCommands
         }
     }
 
-    private static void Set(string input, SettingsProvider settings, CatalogService catalog)
+    private void Set(string input)
     {
         string[] parts = input.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 3)
@@ -343,31 +374,31 @@ internal static class ReplCommands
             return;
         }
 
-        if (parts[1].Equals(ModelPath, StringComparison.OrdinalIgnoreCase) && !IsRegistered(value.ToString(), catalog))
+        if (parts[1].Equals(ModelPath, StringComparison.OrdinalIgnoreCase) && !IsRegistered(value.ToString()))
         {
             return;
         }
 
-        Apply(parts[1], value, settings);
+        Apply(parts[1], value);
     }
 
-    private static void Unset(string path, SettingsProvider settings)
+    private void Unset(string path)
     {
-        if (settings.TryGetUserValue(path) is null)
+        if (_settings.TryGetUserValue(path) is null)
         {
             Console.WriteLine($"{path} 未在用户层设置。");
             return;
         }
 
-        AgentSettings before = settings.Current.Agent;
-        ErrorOr<Success> removed = settings.Apply(root => UserSettingsStore.RemoveValue(root, path));
+        AgentSettings before = _settings.Current.Agent;
+        ErrorOr<Success> removed = _settings.Apply(root => UserSettingsStore.RemoveValue(root, path));
         if (removed.IsError)
         {
             Reject(removed.ErrorsOrEmptyList);
             return;
         }
 
-        ReportApplied(before, settings);
+        ReportApplied(before);
     }
 
     /// <summary>值先按 JSON 字面量解析，解析失败按字符串写入。</summary>
@@ -383,29 +414,29 @@ internal static class ReplCommands
         }
     }
 
-    private static void Apply(string path, JsonNode value, SettingsProvider settings)
+    private void Apply(string path, JsonNode value)
     {
-        AgentSettings before = settings.Current.Agent;
-        ErrorOr<Success> saved = settings.Apply(root => UserSettingsStore.SetValue(root, path, value));
+        AgentSettings before = _settings.Current.Agent;
+        ErrorOr<Success> saved = _settings.Apply(root => UserSettingsStore.SetValue(root, path, value));
         if (saved.IsError)
         {
             Reject(saved.ErrorsOrEmptyList);
             return;
         }
 
-        if (!settings.IsConfigured(path))
+        if (!_settings.IsConfigured(path))
         {
             Console.WriteLine($"已写入用户层，但生效配置中没有 {path}，不会起作用。");
             return;
         }
 
-        ReportApplied(before, settings);
+        ReportApplied(before);
     }
 
     /// <summary>设置写入落盘后的提示。</summary>
-    private static void ReportApplied(AgentSettings before, SettingsProvider settings)
+    private void ReportApplied(AgentSettings before)
     {
-        AgentSettings current = settings.Current.Agent;
+        AgentSettings current = _settings.Current.Agent;
 
         Console.WriteLine(current.RequiresRestart(before) ? "已保存，重启后生效。" : "已保存并生效。");
         if (current.InvalidatesSession(before))
@@ -439,11 +470,11 @@ internal static class ReplCommands
         }
     }
 
-    private static void PrintConfig(SettingsProvider settings)
+    private void PrintConfig()
     {
-        Console.WriteLine($"用户层文件：{settings.UserSettingsFile}");
+        Console.WriteLine($"用户层文件：{_settings.UserSettingsFile}");
 
-        JsonObject view = JsonSerializer.SerializeToNode(settings.Current, ViewOptions)!.AsObject();
+        JsonObject view = JsonSerializer.SerializeToNode(_settings.Current, ViewOptions)!.AsObject();
         foreach ((string section, JsonNode? body) in view)
         {
             Console.WriteLine($"{section}:");
@@ -451,7 +482,7 @@ internal static class ReplCommands
             {
                 string text = value is JsonValue scalar ? scalar.ToString() : "未设置";
                 string path = $"{section}:{key}";
-                bool written = settings.TryGetUserValue(path) is not null;
+                bool written = _settings.TryGetUserValue(path) is not null;
 
                 Console.WriteLine($"  {key} = {text}（{(written ? "用户层已设置" : "用户层未设置")}）");
             }

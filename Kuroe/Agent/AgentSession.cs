@@ -12,12 +12,12 @@ public sealed class AgentSession(
     AgentClientProvider clients,
     SettingsProvider settings,
     CatalogService catalog,
-    IReadOnlyList<AITool> tools)
+    ToolCollection tools)
 {
     private readonly AgentClientProvider _clients = clients;
     private readonly SettingsProvider _settings = settings;
     private readonly CatalogService _catalog = catalog;
-    private readonly IReadOnlyList<AITool> _tools = tools;
+    private readonly ToolCollection _tools = tools;
     private readonly List<ChatMessage> _messages = [];
     private AgentSettings? _history;
 
@@ -140,7 +140,7 @@ public sealed class AgentSession(
 
         return new ChatOptions
         {
-            Tools = [.. _tools],
+            Tools = [.. _tools.Tools],
             Temperature = current.Temperature,
             MaxOutputTokens = current.MaxOutputTokens,
         };
