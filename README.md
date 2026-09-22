@@ -4,21 +4,6 @@
 
 提供商与模型的接入目录由 [ApiHub](https://github.com/DrMelt/ApiHub) 提供。
 
-## 项目结构
-
-- `Kuroe`：智能体会话、模型目录与配置的库，不涉及终端。偏好默认值在代码中，覆盖项写在工作目录下的 `settings.json`；作为库使用时由宿主给出工作目录并注册日志输出，其余装配由 `AddKuroe` 完成。
-- `Kuroe.Cli`：终端入口，承载 REPL、斜杠命令与日志输出。
-
-## 对外边界
-
-`Kuroe` 是宿主与外部世界之间唯一的边界：ApiHub 与 Microsoft.Extensions.AI 的包引用标为 `PrivateAssets="compile"`，对宿主隐藏编译可见性而照常随输出部署，宿主代码里出现这些类型时编译直接失败。宿主的编译面因此只有 `Kuroe` 的类型、`ErrorOr` 的错误形状，以及装配与日志所需的 `Microsoft.Extensions.DependencyInjection`、`Microsoft.Extensions.Logging`。
-
-进出边界的都是文本与 `Kuroe` 自己的记录：提供商名、端点、凭据、模型名以字符串写入，目录快照、生效配置、改动影响以 `ProviderInfo`、`SettingEntry`、`SettingsEffect` 等读出。端点经 `Uri` 规范化，快照给出的是规范化后的文本，与录入写法可以不同。凭据原文不经快照交出，只给出它是真实凭据还是导出占位符。
-
-目录内容的增删改查沿用 ApiHub 契约的错误码，如 `Catalog.ProviderAlreadyExists`、`Catalog.ProviderNotFound`、`Catalog.ModelNotFound`，宿主可按 `Error.Code` 判定；目录文件读写与路径错误是 `Kuroe` 自己的码，前缀为 `CatalogFile.`。
-
-宿主注册自己的工具：实现 `IAgentTool`，在标注 `DescriptionAttribute` 的公开方法上承载能力，在 `AddKuroe` 之前或之后注册为 `IAgentTool` 实现都生效。
-
 运行：
 
 ```powershell

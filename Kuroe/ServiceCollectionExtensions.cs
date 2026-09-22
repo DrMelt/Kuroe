@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(catalog.Value);
         services.AddSingleton<IAgentTool>(new TimeTool());
         services.AddSingleton<IAgentTool>(new WeatherTool());
+        services.AddSingleton<ToolCallLog>();
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<ModelService>();
 

@@ -8,11 +8,13 @@ namespace Kuroe.Cli;
 internal sealed class Repl(
     AgentSession session,
     ReplCommands commands,
+    ConsoleToolCalls toolCalls,
     Terminal terminal,
     ConsoleErrors errors)
 {
     private readonly AgentSession _session = session;
     private readonly ReplCommands _commands = commands;
+    private readonly ConsoleToolCalls _toolCalls = toolCalls;
     private readonly Terminal _terminal = terminal;
     private readonly ConsoleErrors _errors = errors;
 
@@ -25,6 +27,7 @@ internal sealed class Repl(
             cancellation.Cancel();
         };
 
+        _toolCalls.Attach();
         _commands.PrintStartup();
 
         while (true)

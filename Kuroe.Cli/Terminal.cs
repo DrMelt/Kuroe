@@ -25,6 +25,12 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
 
     public void Hint(string text) => outputWriter.WriteLine(text, Styles.Hint);
 
+    /// <summary>工具调用行。</summary>
+    public void ToolCall(string text) => outputWriter.WriteLine(text, Styles.Key);
+
+    /// <summary>工具结果行。</summary>
+    public void ToolResult(string text) => outputWriter.WriteLine(text, Styles.Hint);
+
     /// <summary>错误写 stderr，与 stdout 上的流式回复分流。</summary>
     public void Error(string text) => errorWriter.WriteLine(text, Styles.Error);
 
