@@ -83,23 +83,62 @@ public sealed class CatalogService
     public ErrorOr<Success> RemoveModel(ModelName modelName) =>
         Mutate(catalog => catalog.RemoveModel(modelName));
 
-    /// <summary>导出脱敏目录，凭据替换为占位文本。</summary>
-    public ErrorOr<Success> Export(string target)
+    /// <summary>把文件参数解析为绝对路径，相对参数按目录文件所在目录解析。</summary>
+    private ErrorOr<string> ResolveFile(string path)
     {
+        try
+        {
+            return Path.GetFullPath(path, _store.BaseDirectory);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException)
+        {
+            return [CatalogErrors.InvalidPath(path, ex.Message)];
+        }
+    }
+
+    /// <summary>导出脱敏目录，凭据替换为占位文本，返回写入的绝对路径。</summary>
+    public ErrorOr<string> Export(string target)
+    {
+        ErrorOr<string> resolved = ResolveFile(target);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        string path = resolved.Value;
+        if (_store.IsCatalogFile(path))
+        {
+            return [CatalogErrors.OverwritesCatalog(path)];
+        }
+
         lock (_gate)
         {
             ErrorOr<CatalogContents> masked = CatalogContents.Create(
                 [.. _catalog.Providers.Select(provider => provider with { ApiKey = MaskedApiKey })],
                 [.. _catalog.Models]);
 
-            return masked.IsError ? masked.ErrorsOrEmptyList : CatalogStore.Write(target, masked.Value);
+            if (masked.IsError)
+            {
+                return masked.ErrorsOrEmptyList;
+            }
+
+            ErrorOr<Success> written = CatalogStore.Write(path, masked.Value);
+
+            return written.IsError ? written.ErrorsOrEmptyList : path;
         }
     }
 
     /// <summary>合并导入：逐条添加，冲突跳过并汇总为说明，已有条目不受影响。</summary>
-    public ErrorOr<IReadOnlyList<string>> Import(string source)
+    public ErrorOr<CatalogMerge> Import(string source)
     {
-        ErrorOr<CatalogContents> parsed = CatalogStore.Read(source);
+        ErrorOr<string> resolved = ResolveFile(source);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        string path = resolved.Value;
+        ErrorOr<CatalogContents> parsed = CatalogStore.Read(path);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -134,7 +173,7 @@ public sealed class CatalogService
             return Result.Success;
         });
 
-        return merged.IsError ? merged.ErrorsOrEmptyList : notes;
+        return merged.IsError ? merged.ErrorsOrEmptyList : new CatalogMerge(path, notes);
     }
 
     private ErrorOr<Success> Mutate(Func<Catalog, ErrorOr<Success>> mutate)

@@ -19,4 +19,11 @@ public static class CatalogErrors
 
     public static Error Write(string path, string message) =>
         Error.Failure("Catalog.Write", $"写入 {path} 失败：{message}");
+
+    public static Error InvalidPath(string path, string message) =>
+        Error.Failure("Catalog.InvalidPath", $"文件参数不是合法路径：{path}（{message}）");
+
+    public static Error OverwritesCatalog(string path) =>
+        Error.Failure("Catalog.OverwritesCatalog",
+            $"{path} 是在用的目录文件，导出会抹掉其中全部凭据，换别的文件名。");
 }

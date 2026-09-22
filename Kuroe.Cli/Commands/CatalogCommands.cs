@@ -28,7 +28,7 @@ internal sealed class CatalogCommands(
         switch ((subcommand, parts.Length))
         {
             case ("export", 3):
-                _results.Report(_catalog.Export(parts[2]), $"已导出，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
+                Export(parts[2]);
                 break;
 
             case ("import", 3):
@@ -41,18 +41,31 @@ internal sealed class CatalogCommands(
         }
     }
 
+    /// <summary>导出成功后提示写入位置与凭据占位。</summary>
+    private void Export(string file)
+    {
+        ErrorOr<string> exported = _catalog.Export(file);
+        if (exported.IsError)
+        {
+            _results.Reject(exported.ErrorsOrEmptyList);
+            return;
+        }
+
+        _terminal.Ok($"已导出到 {exported.Value}，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
+    }
+
     /// <summary>合并导入后列出跳过的条目与仍是占位符的凭据。</summary>
     private void Import(string file)
     {
-        ErrorOr<IReadOnlyList<string>> imported = _catalog.Import(file);
+        ErrorOr<CatalogMerge> imported = _catalog.Import(file);
         if (imported.IsError)
         {
             _results.Reject(imported.ErrorsOrEmptyList);
             return;
         }
 
-        _terminal.Ok("已合并导入。");
-        foreach (string note in imported.Value)
+        _terminal.Ok($"已从 {imported.Value.Source} 合并导入。");
+        foreach (string note in imported.Value.Notes)
         {
             _terminal.Hint($"  {note}");
         }
