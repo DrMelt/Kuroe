@@ -8,7 +8,12 @@ using Kuroe.Configuration;
 namespace Kuroe.Cli.Commands;
 
 /// <summary>/model 子命令的解析与执行。模型选择只经此命令，/set 与 /unset 拒绝模型路径。</summary>
-internal sealed class ModelCommands(CatalogService catalog, SettingsProvider settings)
+internal sealed class ModelCommands(
+    CatalogService catalog,
+    SettingsProvider settings,
+    Terminal terminal,
+    ConsoleResults results,
+    ConsoleErrors errors)
 {
     /// <summary>取消选择的参数值。</summary>
     private const string NoneValue = "none";
@@ -25,6 +30,9 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
 
     private readonly CatalogService _catalog = catalog;
     private readonly SettingsProvider _settings = settings;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleResults _results = results;
+    private readonly ConsoleErrors _errors = errors;
 
     public void Run(string[] parts)
     {
@@ -34,7 +42,8 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
         switch ((subcommand, parts.Length))
         {
             case (_, 1):
-                Console.WriteLine($"当前模型 {CurrentModel}。{usage}");
+                _terminal.Line($"当前模型 {CurrentModel}。");
+                _terminal.Hint(usage);
                 break;
 
             case (NoneValue, 2):
@@ -54,7 +63,7 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
                 break;
 
             default:
-                Console.WriteLine(usage);
+                _terminal.Hint(usage);
                 break;
         }
     }
@@ -67,19 +76,19 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         if (model.IsError)
         {
-            ConsoleResults.Reject(model.ErrorsOrEmptyList);
+            _results.Reject(model.ErrorsOrEmptyList);
             return;
         }
 
         ErrorOr<ModelConnection> connection = _catalog.Connect(model.Value);
         if (connection.IsError)
         {
-            ConsoleResults.Reject(connection.ErrorsOrEmptyList);
-            ConsoleErrors.GuideModelRegistration(_catalog, model.Value);
+            _results.Reject(connection.ErrorsOrEmptyList);
+            _errors.GuideModelRegistration(_catalog, model.Value);
             return;
         }
 
-        ConsoleResults.Apply(
+        _results.Apply(
             _settings,
             () => _settings.Set(AgentSettings.ModelPath, JsonValue.Create(model.Value.Value)!));
     }
@@ -89,11 +98,11 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
     {
         if (_settings.TryGetUserValue(AgentSettings.ModelPath) is null)
         {
-            Console.WriteLine($"当前模型 {CurrentModel}。");
+            _terminal.Line($"当前模型 {CurrentModel}。");
             return;
         }
 
-        ConsoleResults.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
+        _results.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
     }
 
     private void Add(string modelName, string providerName)
@@ -101,16 +110,16 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         ErrorOr<ProviderName> provider = ProviderName.Create(providerName);
 
-        List<Error> errors = [];
-        ConsoleResults.Collect(model, errors);
-        ConsoleResults.Collect(provider, errors);
-        if (errors.Count > 0)
+        List<Error> collected = [];
+        ConsoleResults.Collect(model, collected);
+        ConsoleResults.Collect(provider, collected);
+        if (collected.Count > 0)
         {
-            ConsoleResults.Reject(errors);
+            _results.Reject(collected);
             return;
         }
 
-        ConsoleResults.Report(_catalog.AddModel(model.Value, provider.Value), "已注册。");
+        _results.Report(_catalog.AddModel(model.Value, provider.Value), "已注册。");
     }
 
     /// <summary>注销模型，注销的是当前选择时一并取消选择。</summary>
@@ -119,24 +128,24 @@ internal sealed class ModelCommands(CatalogService catalog, SettingsProvider set
         ErrorOr<ModelName> model = ModelName.Create(modelName);
         if (model.IsError)
         {
-            ConsoleResults.Reject(model.ErrorsOrEmptyList);
+            _results.Reject(model.ErrorsOrEmptyList);
             return;
         }
 
         ErrorOr<Success> removed = _catalog.RemoveModel(model.Value);
         if (removed.IsError)
         {
-            ConsoleResults.Reject(removed.ErrorsOrEmptyList);
+            _results.Reject(removed.ErrorsOrEmptyList);
             return;
         }
 
         if (model.Value != _settings.Current.Agent.Model)
         {
-            ConsoleResults.Report(removed, "已注销。");
+            _results.Report(removed, "已注销。");
             return;
         }
 
-        Console.WriteLine("已注销当前模型，选择一并取消。");
-        ConsoleResults.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
+        _terminal.Warn("已注销当前模型，选择一并取消。");
+        _results.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
     }
 }

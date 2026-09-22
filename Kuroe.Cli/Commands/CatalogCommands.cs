@@ -4,7 +4,10 @@ using Kuroe.Catalogs;
 namespace Kuroe.Cli.Commands;
 
 /// <summary>/catalog 子命令的解析与执行。</summary>
-internal sealed class CatalogCommands(CatalogService catalog)
+internal sealed class CatalogCommands(
+    CatalogService catalog,
+    Terminal terminal,
+    ConsoleResults results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -14,6 +17,8 @@ internal sealed class CatalogCommands(CatalogService catalog)
     ];
 
     private readonly CatalogService _catalog = catalog;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleResults _results = results;
 
     public void Run(string[] parts)
     {
@@ -23,7 +28,7 @@ internal sealed class CatalogCommands(CatalogService catalog)
         switch ((subcommand, parts.Length))
         {
             case ("export", 3):
-                ConsoleResults.Report(_catalog.Export(parts[2]), $"已导出，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
+                _results.Report(_catalog.Export(parts[2]), $"已导出，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
                 break;
 
             case ("import", 3):
@@ -31,7 +36,7 @@ internal sealed class CatalogCommands(CatalogService catalog)
                 break;
 
             default:
-                Console.WriteLine(usage);
+                _terminal.Hint(usage);
                 break;
         }
     }
@@ -42,14 +47,14 @@ internal sealed class CatalogCommands(CatalogService catalog)
         ErrorOr<IReadOnlyList<string>> imported = _catalog.Import(file);
         if (imported.IsError)
         {
-            ConsoleResults.Reject(imported.ErrorsOrEmptyList);
+            _results.Reject(imported.ErrorsOrEmptyList);
             return;
         }
 
-        Console.WriteLine("已合并导入。");
+        _terminal.Ok("已合并导入。");
         foreach (string note in imported.Value)
         {
-            Console.WriteLine($"  {note}");
+            _terminal.Hint($"  {note}");
         }
 
         string[] masked = [.. _catalog.Snapshot().Providers
@@ -57,7 +62,7 @@ internal sealed class CatalogCommands(CatalogService catalog)
             .Select(provider => provider.ProviderName.Value)];
         if (masked.Length > 0)
         {
-            Console.WriteLine($"用 /provider key <提供商> <凭据> 替换占位符凭据：{string.Join('、', masked)}");
+            _terminal.Hint($"用 /provider key <提供商> <凭据> 替换占位符凭据：{string.Join('、', masked)}");
         }
     }
 }

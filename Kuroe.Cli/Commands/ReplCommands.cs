@@ -3,6 +3,7 @@ using ApiHub.Models;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
@@ -15,7 +16,9 @@ internal sealed class ReplCommands(
     ProviderCommands providers,
     ModelCommands models,
     CatalogCommands catalogs,
-    SettingsCommands settingsCommands)
+    SettingsCommands settingsCommands,
+    Terminal terminal,
+    ConsoleErrors errors)
 {
     /// <summary>不属于任何命令族的帮助行。</summary>
     private static readonly (string Command, string Description)[] OwnHelp =
@@ -32,6 +35,8 @@ internal sealed class ReplCommands(
     private readonly ModelCommands _models = models;
     private readonly CatalogCommands _catalogs = catalogs;
     private readonly SettingsCommands _settingsCommands = settingsCommands;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleErrors _errors = errors;
 
     public void Execute(string input)
     {
@@ -45,7 +50,7 @@ internal sealed class ReplCommands(
 
             case "/reset":
                 _session.Reset();
-                Console.WriteLine("上下文已清空。");
+                _terminal.Ok("上下文已清空。");
                 break;
 
             case "/config":
@@ -73,7 +78,7 @@ internal sealed class ReplCommands(
                 break;
 
             default:
-                Console.WriteLine($"未知命令 {parts[0]}，输入 /help 查看命令。");
+                _terminal.Warn($"未知命令 {parts[0]}，输入 /help 查看命令。");
                 break;
         }
     }
@@ -122,26 +127,26 @@ internal sealed class ReplCommands(
     {
         CatalogContents contents = _catalog.Snapshot();
         string model = _settings.Current.Agent.Model?.Value ?? "未选择";
-        Console.WriteLine($"Kuroe 已启动，当前模型 {model}，" +
+        _terminal.Line($"Kuroe 已启动，当前模型 {model}，" +
             $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型。");
         if (contents.Providers.Length == 0)
         {
-            Console.WriteLine("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
+            _terminal.Hint("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
         }
 
         if (_tools.Tools.Count == 0)
         {
-            Console.WriteLine("当前没有可用工具，检查是否注册了工具载体、公开方法是否标注 DescriptionAttribute。");
+            _terminal.Hint("当前没有可用工具，检查是否注册了工具载体、公开方法是否标注 DescriptionAttribute。");
         }
 
-        Console.WriteLine("输入 exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
+        _terminal.Hint("输入 exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
     }
 
     /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
-    public void GuideCurrentModel() => ConsoleErrors.GuideModelRegistration(_catalog, _settings.Current.Agent.Model);
+    public void GuideCurrentModel() => _errors.GuideModelRegistration(_catalog, _settings.Current.Agent.Model);
 
-    /// <summary>各命令族的帮助行按固定顺序汇总，命令列宽统一。</summary>
-    private static void PrintHelp()
+    /// <summary>各命令族的帮助行按固定顺序汇总，命令列与说明列由栅格对齐。</summary>
+    private void PrintHelp()
     {
         (string Command, string Description)[] rows =
         [
@@ -152,10 +157,13 @@ internal sealed class ReplCommands(
             .. OwnHelp,
         ];
 
-        int width = rows.Max(row => ConsoleResults.Width(row.Command)) + 3;
+        Grid grid = Terminal.Columns(2, wrapColumns: 1);
         foreach ((string command, string description) in rows)
         {
-            Console.WriteLine($"{ConsoleResults.PadTo(command, width)}{description}");
+            grid.AddRow(new Text(command, Styles.Key), new Text(description));
         }
+
+        _terminal.NewLine();
+        _terminal.Write(grid);
     }
 }

@@ -17,23 +17,29 @@ return await root.Parse(args).InvokeAsync();
 
 static async Task<int> RunAsync(string? workDirectory)
 {
+    Terminal terminal = Terminal.Create();
+    ConsoleErrors errors = new(terminal);
+
     ErrorOr<string> directory = WorkDirectory.Resolve(workDirectory);
     if (directory.IsError)
     {
-        ConsoleErrors.Report(directory.ErrorsOrEmptyList);
+        errors.Report(directory.ErrorsOrEmptyList);
         return 1;
     }
 
     KuroePaths paths = KuroePaths.At(directory.Value);
 
     var services = new ServiceCollection();
+    services.AddSingleton(terminal);
+    services.AddSingleton(errors);
     ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);
     if (startup.IsError)
     {
-        ConsoleErrors.Report(startup.ErrorsOrEmptyList);
+        errors.Report(startup.ErrorsOrEmptyList);
         return 1;
     }
 
+    services.AddSingleton<ConsoleResults>();
     services.AddSingleton<SettingsCommands>();
     services.AddSingleton<ProviderCommands>();
     services.AddSingleton<ModelCommands>();

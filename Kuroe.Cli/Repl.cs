@@ -7,10 +7,14 @@ namespace Kuroe.Cli;
 /// <summary>终端对话循环。</summary>
 internal sealed class Repl(
     AgentSession session,
-    ReplCommands commands)
+    ReplCommands commands,
+    Terminal terminal,
+    ConsoleErrors errors)
 {
     private readonly AgentSession _session = session;
     private readonly ReplCommands _commands = commands;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleErrors _errors = errors;
 
     public async Task RunAsync()
     {
@@ -25,7 +29,7 @@ internal sealed class Repl(
 
         while (true)
         {
-            Console.Write("\n用户 > ");
+            _terminal.Append("\n用户 > ");
             string? input = Console.ReadLine()?.Trim();
             if (input is null)
             {
@@ -48,32 +52,32 @@ internal sealed class Repl(
                 continue;
             }
 
-            Console.Write("智能体 > ");
+            _terminal.Append("智能体 > ");
             try
             {
-                ErrorOr<string> reply = await _session.AskAsync(input, Console.Write, cancellation.Begin());
+                ErrorOr<string> reply = await _session.AskAsync(input, _terminal.Append, cancellation.Begin());
                 if (reply.IsError)
                 {
-                    ConsoleErrors.Report(reply.ErrorsOrEmptyList);
+                    _errors.Report(reply.ErrorsOrEmptyList);
                     _commands.GuideCurrentModel();
                 }
                 else if (!reply.Value.EndsWith('\n'))
                 {
-                    Console.WriteLine();
+                    _terminal.NewLine();
                 }
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("已取消。");
+                _terminal.Line("已取消。");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"\n请求失败：{ex.Message}");
+                _terminal.Error($"\n请求失败：{ex.Message}");
             }
 
             if (_session.LastTurnDiscarded)
             {
-                Console.WriteLine("本轮内容未计入上下文。");
+                _terminal.Hint("本轮内容未计入上下文。");
             }
         }
     }

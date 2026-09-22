@@ -5,11 +5,15 @@ using ApiHub.Models;
 using ErrorOr;
 using Kuroe.Agent;
 using Kuroe.Configuration;
+using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
 /// <summary>/config、/set、/unset 的解析与执行。模型路径由 /model 管理，这里拒绝。</summary>
-internal sealed class SettingsCommands(SettingsProvider settings)
+internal sealed class SettingsCommands(
+    SettingsProvider settings,
+    Terminal terminal,
+    ConsoleResults results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -25,31 +29,33 @@ internal sealed class SettingsCommands(SettingsProvider settings)
     };
 
     private readonly SettingsProvider _settings = settings;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleResults _results = results;
 
     /// <summary>写入用户层中的设置项并立即生效。</summary>
     public void Set(string[] parts)
     {
         if (parts.Length != 3)
         {
-            Console.WriteLine("用法：/set <路径> <值>，值含空格时用双引号包起来，例如 /set Agent:Temperature 0.7");
+            _terminal.Hint("用法：/set <路径> <值>，值含空格时用双引号包起来，例如 /set Agent:Temperature 0.7");
             return;
         }
 
         JsonNode? value = ParseValue(parts[2]);
         if (value is null)
         {
-            Console.WriteLine("值不能为 null，清除设置请用 /unset。");
+            _terminal.Warn("值不能为 null，清除设置请用 /unset。");
             return;
         }
 
         ErrorOr<string> path = Resolve(parts[1]);
         if (path.IsError)
         {
-            ConsoleResults.Reject(path.ErrorsOrEmptyList);
+            _results.Reject(path.ErrorsOrEmptyList);
             return;
         }
 
-        ConsoleResults.Apply(_settings, () => _settings.Set(path.Value, value));
+        _results.Apply(_settings, () => _settings.Set(path.Value, value));
     }
 
     /// <summary>删除用户层中的该项。</summary>
@@ -57,43 +63,51 @@ internal sealed class SettingsCommands(SettingsProvider settings)
     {
         if (parts.Length != 2)
         {
-            Console.WriteLine("用法：/unset <路径>，例如 /unset Agent:Temperature");
+            _terminal.Hint("用法：/unset <路径>，例如 /unset Agent:Temperature");
             return;
         }
 
         ErrorOr<string> resolved = Resolve(parts[1]);
         if (resolved.IsError)
         {
-            ConsoleResults.Reject(resolved.ErrorsOrEmptyList);
+            _results.Reject(resolved.ErrorsOrEmptyList);
             return;
         }
 
         if (_settings.TryGetUserValue(resolved.Value) is null)
         {
-            Console.WriteLine($"{resolved.Value} 未在用户层设置。");
+            _terminal.Line($"{resolved.Value} 未在用户层设置。");
             return;
         }
 
-        ConsoleResults.Apply(_settings, () => _settings.Clear(resolved.Value));
+        _results.Apply(_settings, () => _settings.Clear(resolved.Value));
     }
 
     /// <summary>打印生效的配置，逐项标记是否来自用户层。</summary>
     public void PrintConfig()
     {
-        Console.WriteLine($"用户层文件：{_settings.UserSettingsFile}");
+        _terminal.Hint($"用户层文件：{_settings.UserSettingsFile}");
 
         JsonObject view = JsonSerializer.SerializeToNode(_settings.Current, ViewOptions)!.AsObject();
         foreach ((string section, JsonNode? body) in view)
         {
-            Console.WriteLine($"{section}:");
+            _terminal.Line($"{section}:");
+
+            Grid grid = Terminal.Columns(3, wrapColumns: 1);
             foreach ((string key, JsonNode? value) in body!.AsObject())
             {
                 string text = value is JsonValue scalar ? scalar.ToString() : "未设置";
-                string path = $"{section}:{key}";
-                bool written = _settings.TryGetUserValue(path) is not null;
+                bool written = _settings.TryGetUserValue($"{section}:{key}") is not null;
 
-                Console.WriteLine($"  {key} = {text}（{(written ? "用户层已设置" : "用户层未设置")}）");
+                grid.AddRow(
+                    new Text(key, Styles.Key),
+                    new Text(text),
+                    new Text(
+                        written ? "用户层已设置" : "用户层未设置",
+                        written ? Styles.Success : Styles.Hint));
             }
+
+            _terminal.Write(grid);
         }
     }
 

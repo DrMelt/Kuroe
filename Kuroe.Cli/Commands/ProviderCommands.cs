@@ -1,11 +1,15 @@
 using ApiHub.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
+using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
 /// <summary>/provider 子命令的解析与执行。</summary>
-internal sealed class ProviderCommands(CatalogService catalog)
+internal sealed class ProviderCommands(
+    CatalogService catalog,
+    Terminal terminal,
+    ConsoleResults results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -17,6 +21,8 @@ internal sealed class ProviderCommands(CatalogService catalog)
     ];
 
     private readonly CatalogService _catalog = catalog;
+    private readonly Terminal _terminal = terminal;
+    private readonly ConsoleResults _results = results;
 
     public void Run(string[] parts)
     {
@@ -42,7 +48,7 @@ internal sealed class ProviderCommands(CatalogService catalog)
                 break;
 
             default:
-                Console.WriteLine(usage);
+                _terminal.Hint(usage);
                 break;
         }
     }
@@ -59,11 +65,11 @@ internal sealed class ProviderCommands(CatalogService catalog)
         ConsoleResults.Collect(key, errors);
         if (errors.Count > 0)
         {
-            ConsoleResults.Reject(errors);
+            _results.Reject(errors);
             return;
         }
 
-        ConsoleResults.Report(_catalog.AddProvider(providerName.Value, endpoint.Value, key.Value), "已保存。");
+        _results.Report(_catalog.AddProvider(providerName.Value, endpoint.Value, key.Value), "已保存。");
     }
 
     private void SetKey(string name, string apiKey)
@@ -76,11 +82,11 @@ internal sealed class ProviderCommands(CatalogService catalog)
         ConsoleResults.Collect(key, errors);
         if (errors.Count > 0)
         {
-            ConsoleResults.Reject(errors);
+            _results.Reject(errors);
             return;
         }
 
-        ConsoleResults.Report(_catalog.SetProviderKey(providerName.Value, key.Value), "已保存。");
+        _results.Report(_catalog.SetProviderKey(providerName.Value, key.Value), "已保存。");
     }
 
     private void Remove(string name)
@@ -88,40 +94,52 @@ internal sealed class ProviderCommands(CatalogService catalog)
         ErrorOr<ProviderName> providerName = ProviderName.Create(name);
         if (providerName.IsError)
         {
-            ConsoleResults.Reject(providerName.ErrorsOrEmptyList);
+            _results.Reject(providerName.ErrorsOrEmptyList);
             return;
         }
 
-        ConsoleResults.Report(_catalog.RemoveProvider(providerName.Value), "已删除。");
+        _results.Report(_catalog.RemoveProvider(providerName.Value), "已删除。");
     }
 
     /// <summary>列出提供商与模型，凭据只显示是否已设置。</summary>
-    private static void Print(CatalogContents contents)
+    private void Print(CatalogContents contents)
     {
         if (contents.Providers.Length == 0)
         {
-            Console.WriteLine("目录为空，用 /provider add <名> <端点> <凭据> 添加提供商。");
+            _terminal.Hint("目录为空，用 /provider add <名> <端点> <凭据> 添加提供商。");
             return;
         }
 
-        Console.WriteLine("提供商：");
+        _terminal.Line("提供商：");
+        Grid providers = Terminal.Columns(3, wrapColumns: 1);
         foreach (ProviderDefinition provider in contents.Providers)
         {
-            string key = CatalogService.IsPlaceholder(provider.ApiKey) ? "凭据是占位符" : "凭据已设置";
-
-            Console.WriteLine($"  {provider.ProviderName.Value}  {provider.BaseAddress.Address}  {key}");
+            bool placeholder = CatalogService.IsPlaceholder(provider.ApiKey);
+            providers.AddRow(
+                new Text(provider.ProviderName.Value, Styles.Key),
+                new Text(provider.BaseAddress.Address.ToString()),
+                new Text(
+                    placeholder ? "凭据是占位符" : "凭据已设置",
+                    placeholder ? Styles.Warning : Styles.Success));
         }
+
+        _terminal.Write(providers);
 
         if (contents.Models.Length == 0)
         {
-            Console.WriteLine("模型：无，用 /model add <模型> <提供商> 注册。");
+            _terminal.Hint("模型：无，用 /model add <模型> <提供商> 注册。");
             return;
         }
 
-        Console.WriteLine("模型：");
+        _terminal.Line("模型：");
+        Grid models = Terminal.Columns(2);
         foreach (ModelDefinition model in contents.Models)
         {
-            Console.WriteLine($"  {model.ModelName.Value} → {model.ProviderName.Value}");
+            models.AddRow(
+                new Text(model.ModelName.Value, Styles.Key),
+                new Text($"→ {model.ProviderName.Value}"));
         }
+
+        _terminal.Write(models);
     }
 }
