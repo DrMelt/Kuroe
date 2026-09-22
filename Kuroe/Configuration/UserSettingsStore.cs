@@ -6,7 +6,7 @@ using Kuroe.Storage;
 namespace Kuroe.Configuration;
 
 /// <summary>用户层配置文件，内容是用户设置过的项构成的节点树。</summary>
-public sealed class UserSettingsStore
+sealed class UserSettingsStore
 {
     /// <summary>用户层结构版本。</summary>
     private const int CurrentVersion = 1;

@@ -1,15 +1,10 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using ApiHub.Models;
 using ErrorOr;
-using Kuroe.Agent;
 using Kuroe.Configuration;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
-/// <summary>/config、/set、/unset 的解析与执行。模型路径由 /model 管理，这里拒绝。</summary>
+/// <summary>/config、/set、/unset 的解析与执行。模型路径由 /model 管理，库层一律拒绝按路径写入。</summary>
 internal sealed class SettingsCommands(
     SettingsProvider settings,
     Terminal terminal,
@@ -23,16 +18,11 @@ internal sealed class SettingsCommands(
         ("/unset <路径>", "删除用户层中的该项"),
     ];
 
-    private static readonly JsonSerializerOptions ViewOptions = new()
-    {
-        Converters = { new JsonStringEnumConverter(), new ModelNameJsonConverter() },
-    };
-
     private readonly SettingsProvider _settings = settings;
     private readonly Terminal _terminal = terminal;
     private readonly ConsoleResults _results = results;
 
-    /// <summary>写入用户层中的设置项并立即生效。</summary>
+    /// <summary>写入用户层中的设置项并立即生效。值按 JSON 字面量解析，不是合法 JSON 时按字符串写入。</summary>
     public void Set(string[] parts)
     {
         if (parts.Length != 3)
@@ -41,21 +31,7 @@ internal sealed class SettingsCommands(
             return;
         }
 
-        JsonNode? value = ParseValue(parts[2]);
-        if (value is null)
-        {
-            _terminal.Warn("值不能为 null，清除设置请用 /unset。");
-            return;
-        }
-
-        ErrorOr<string> path = Resolve(parts[1]);
-        if (path.IsError)
-        {
-            _results.Reject(path.ErrorsOrEmptyList);
-            return;
-        }
-
-        _results.Apply(_settings, () => _settings.Set(path.Value, value));
+        _results.Apply(_settings.Set(parts[1], parts[2]));
     }
 
     /// <summary>删除用户层中的该项。</summary>
@@ -67,7 +43,7 @@ internal sealed class SettingsCommands(
             return;
         }
 
-        ErrorOr<string> resolved = Resolve(parts[1]);
+        ErrorOr<string> resolved = SettingsProvider.ResolvePath(parts[1]);
         if (resolved.IsError)
         {
             _results.Reject(resolved.ErrorsOrEmptyList);
@@ -80,7 +56,7 @@ internal sealed class SettingsCommands(
             return;
         }
 
-        _results.Apply(_settings, () => _settings.Clear(resolved.Value));
+        _results.Apply(_settings.Clear(resolved.Value));
     }
 
     /// <summary>打印生效的配置，逐项标记是否来自用户层。</summary>
@@ -88,63 +64,22 @@ internal sealed class SettingsCommands(
     {
         _terminal.Hint($"用户层文件：{_settings.UserSettingsFile}");
 
-        JsonObject view = JsonSerializer.SerializeToNode(_settings.Current, ViewOptions)!.AsObject();
-        foreach ((string section, JsonNode? body) in view)
+        foreach (SettingSection section in _settings.Sections())
         {
-            _terminal.Line($"{section}:");
+            _terminal.Line($"{section.Name}:");
 
             Grid grid = Terminal.Columns(3, wrapColumns: 1);
-            foreach ((string key, JsonNode? value) in body!.AsObject())
+            foreach (SettingEntry entry in section.Entries)
             {
-                string text = value is JsonValue scalar ? scalar.ToString() : "未设置";
-                bool written = _settings.TryGetUserValue($"{section}:{key}") is not null;
-
                 grid.AddRow(
-                    new Text(key, Styles.Key),
-                    new Text(text),
+                    new Text(entry.Name, Styles.Key),
+                    new Text(entry.Value),
                     new Text(
-                        written ? "用户层已设置" : "用户层未设置",
-                        written ? Styles.Success : Styles.Hint));
+                        entry.FromUserLayer ? "用户层已设置" : "用户层未设置",
+                        entry.FromUserLayer ? Styles.Success : Styles.Hint));
             }
 
             _terminal.Write(grid);
         }
-    }
-
-    /// <summary>解析路径为规范形式。路径未定义或由 /model 管理时返回错误，错误描述即给用户的提示。</summary>
-    private static ErrorOr<string> Resolve(string path)
-    {
-        ErrorOr<string> resolved = KuroeSettings.ResolvePath(path);
-        if (resolved.IsError)
-        {
-            return resolved;
-        }
-
-        return resolved.Value == AgentSettings.ModelPath
-            ? Error.Validation("Command.ModelPath", "模型用 /model 管理：/model <模型> 切换，/model none 取消选择。")
-            : resolved.Value;
-    }
-
-    /// <summary>值先按 JSON 字面量解析，解析失败按字符串写入。</summary>
-    private static JsonNode? ParseValue(string text)
-    {
-        try
-        {
-            return JsonNode.Parse(text);
-        }
-        catch (JsonException)
-        {
-            return JsonValue.Create(text);
-        }
-    }
-
-    /// <summary>让模型名在 /config 中显示为原文。</summary>
-    private sealed class ModelNameJsonConverter : JsonConverter<ModelName>
-    {
-        public override ModelName Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            throw new NotSupportedException();
-
-        public override void Write(Utf8JsonWriter writer, ModelName value, JsonSerializerOptions options) =>
-            writer.WriteStringValue(value.Value);
     }
 }

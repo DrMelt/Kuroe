@@ -1,8 +1,6 @@
 using System.Text;
-using ApiHub.Models;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
-using Kuroe.Configuration;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
@@ -10,11 +8,11 @@ namespace Kuroe.Cli.Commands;
 /// <summary>启动提示与斜杠命令的分发，各命令族的解析与执行在对应的类型里。</summary>
 internal sealed class ReplCommands(
     AgentSession session,
-    SettingsProvider settings,
+    ModelService models,
     CatalogService catalog,
     ToolCollection tools,
     ProviderCommands providers,
-    ModelCommands models,
+    ModelCommands modelCommands,
     CatalogCommands catalogs,
     SettingsCommands settingsCommands,
     Terminal terminal,
@@ -28,11 +26,11 @@ internal sealed class ReplCommands(
     ];
 
     private readonly AgentSession _session = session;
-    private readonly SettingsProvider _settings = settings;
+    private readonly ModelService _models = models;
     private readonly CatalogService _catalog = catalog;
     private readonly ToolCollection _tools = tools;
     private readonly ProviderCommands _providers = providers;
-    private readonly ModelCommands _models = models;
+    private readonly ModelCommands _modelCommands = modelCommands;
     private readonly CatalogCommands _catalogs = catalogs;
     private readonly SettingsCommands _settingsCommands = settingsCommands;
     private readonly Terminal _terminal = terminal;
@@ -62,7 +60,7 @@ internal sealed class ReplCommands(
                 break;
 
             case "/model":
-                _models.Run(parts);
+                _modelCommands.Run(parts);
                 break;
 
             case "/catalog":
@@ -125,16 +123,16 @@ internal sealed class ReplCommands(
     /// <summary>启动横幅：当前模型、目录规模，以及缺少提供商或工具时的处理指引。</summary>
     public void PrintStartup()
     {
-        CatalogContents contents = _catalog.Snapshot();
-        string model = _settings.Current.Agent.Model?.Value ?? "未选择";
+        CatalogSnapshot contents = _catalog.Snapshot();
+        string model = _models.Current ?? "未选择";
         _terminal.Line($"Kuroe 已启动，当前模型 {model}，" +
-            $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型。");
-        if (contents.Providers.Length == 0)
+            $"目录中有 {contents.Providers.Count} 个提供商、{contents.Models.Count} 个模型。");
+        if (contents.Providers.Count == 0)
         {
             _terminal.Hint("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
         }
 
-        if (_tools.Tools.Count == 0)
+        if (_tools.Names.Count == 0)
         {
             _terminal.Hint("当前没有可用工具，检查是否注册了工具载体、公开方法是否标注 DescriptionAttribute。");
         }
@@ -143,7 +141,7 @@ internal sealed class ReplCommands(
     }
 
     /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
-    public void GuideCurrentModel() => _errors.GuideModelRegistration(_catalog, _settings.Current.Agent.Model);
+    public void GuideCurrentModel() => _errors.GuideModelRegistration(_models, _models.Current);
 
     /// <summary>各命令族的帮助行按固定顺序汇总，命令列与说明列由栅格对齐。</summary>
     private void PrintHelp()

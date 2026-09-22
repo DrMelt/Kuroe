@@ -1,16 +1,13 @@
-using System.Text.Json.Nodes;
-using ApiHub.Models;
 using ErrorOr;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
-using Kuroe.Configuration;
 
 namespace Kuroe.Cli.Commands;
 
-/// <summary>/model 子命令的解析与执行。模型选择只经此命令，/set 与 /unset 拒绝模型路径。</summary>
+/// <summary>/model 子命令的解析与执行。模型选择只经此命令，注册校验与注销联动由库保证。</summary>
 internal sealed class ModelCommands(
     CatalogService catalog,
-    SettingsProvider settings,
+    ModelService models,
     Terminal terminal,
     ConsoleResults results,
     ConsoleErrors errors)
@@ -29,7 +26,7 @@ internal sealed class ModelCommands(
     ];
 
     private readonly CatalogService _catalog = catalog;
-    private readonly SettingsProvider _settings = settings;
+    private readonly ModelService _models = models;
     private readonly Terminal _terminal = terminal;
     private readonly ConsoleResults _results = results;
     private readonly ConsoleErrors _errors = errors;
@@ -47,7 +44,7 @@ internal sealed class ModelCommands(
                 break;
 
             case (NoneValue, 2):
-                Clear();
+                Unselect();
                 break;
 
             case (not ("add" or "rm"), 2):
@@ -68,84 +65,60 @@ internal sealed class ModelCommands(
         }
     }
 
-    private string CurrentModel => _settings.Current.Agent.Model?.Value ?? "未选择";
+    private string CurrentModel => _models.Current ?? "未选择";
 
-    /// <summary>模型必须已在目录中注册，否则写进偏好只让下一轮对话失败。</summary>
     private void Select(string modelName)
     {
-        ErrorOr<ModelName> model = ModelName.Create(modelName);
-        if (model.IsError)
+        ErrorOr<ModelSelection> selected = _models.Select(modelName);
+        if (selected.IsError)
         {
-            _results.Reject(model.ErrorsOrEmptyList);
+            _results.Reject(selected.ErrorsOrEmptyList);
+            _errors.GuideModelRegistration(_models, modelName);
             return;
         }
 
-        ErrorOr<ModelConnection> connection = _catalog.Connect(model.Value);
-        if (connection.IsError)
-        {
-            _results.Reject(connection.ErrorsOrEmptyList);
-            _errors.GuideModelRegistration(_catalog, model.Value);
-            return;
-        }
-
-        _results.Apply(
-            _settings,
-            () => _settings.Set(AgentSettings.ModelPath, JsonValue.Create(model.Value.Value)!));
+        _results.Apply(selected.Value.Effect);
     }
 
     /// <summary>取消选择。用户层没有模型项时本来就未选择。</summary>
-    private void Clear()
+    private void Unselect()
     {
-        if (_settings.TryGetUserValue(AgentSettings.ModelPath) is null)
+        ErrorOr<ModelSelection> unselected = _models.Unselect();
+        if (unselected.IsError)
+        {
+            _results.Reject(unselected.ErrorsOrEmptyList);
+            return;
+        }
+
+        if (!unselected.Value.Changed)
         {
             _terminal.Line($"当前模型 {CurrentModel}。");
             return;
         }
 
-        _results.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
+        _results.Apply(unselected.Value.Effect);
     }
 
-    private void Add(string modelName, string providerName)
-    {
-        ErrorOr<ModelName> model = ModelName.Create(modelName);
-        ErrorOr<ProviderName> provider = ProviderName.Create(providerName);
+    private void Add(string modelName, string providerName) =>
+        _results.Report(_catalog.AddModel(modelName, providerName), "已注册。");
 
-        List<Error> collected = [];
-        ConsoleResults.Collect(model, collected);
-        ConsoleResults.Collect(provider, collected);
-        if (collected.Count > 0)
-        {
-            _results.Reject(collected);
-            return;
-        }
-
-        _results.Report(_catalog.AddModel(model.Value, provider.Value), "已注册。");
-    }
-
-    /// <summary>注销模型，注销的是当前选择时一并取消选择。</summary>
     private void Remove(string modelName)
     {
-        ErrorOr<ModelName> model = ModelName.Create(modelName);
-        if (model.IsError)
-        {
-            _results.Reject(model.ErrorsOrEmptyList);
-            return;
-        }
-
-        ErrorOr<Success> removed = _catalog.RemoveModel(model.Value);
+        ErrorOr<ModelRemoval> removed = _models.Remove(modelName);
         if (removed.IsError)
         {
-            _results.Reject(removed.ErrorsOrEmptyList);
+            _errors.Report(removed.ErrorsOrEmptyList);
+            _terminal.Note(_models.IsRegistered(modelName) ? "未生效。" : "模型已注销，取消选择未生效。");
             return;
         }
 
-        if (model.Value != _settings.Current.Agent.Model)
+        if (!removed.Value.WasSelected)
         {
-            _results.Report(removed, "已注销。");
+            _terminal.Ok("已注销。");
             return;
         }
 
         _terminal.Warn("已注销当前模型，选择一并取消。");
-        _results.Apply(_settings, () => _settings.Clear(AgentSettings.ModelPath));
+        _results.Apply(removed.Value.Effect);
     }
 }

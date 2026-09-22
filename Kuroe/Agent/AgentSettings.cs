@@ -1,14 +1,14 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using ApiHub.Models;
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 
 namespace Kuroe.Agent;
 
 /// <summary>对话与请求参数，绑定自用户层的 Agent 节。接入信息由目录提供，不在此处。</summary>
-public sealed record AgentSettings
+internal sealed record AgentSettings
 {
     public const string SectionName = "Agent";
 
@@ -24,8 +24,8 @@ public sealed record AgentSettings
         Converters = { new JsonStringEnumConverter() },
     };
 
-    /// <summary>当前选用的模型，必须在目录中注册。未选择时为空，由调用方给出选择指引。</summary>
-    public ModelName? Model { get; init; }
+    /// <summary>当前选用的模型名，必须在目录中注册。空或全空白的文本视为未选择，由调用方给出选择指引。</summary>
+    public string? Model { get; init; }
 
     public string SystemPrompt { get; init; } = DefaultSystemPrompt;
 
@@ -55,16 +55,16 @@ public sealed record AgentSettings
             return [AgentErrors.Bind(ex.Message)];
         }
 
-        ModelName? model = null;
+        string? model = null;
         if (!string.IsNullOrWhiteSpace(raw?.Model))
         {
-            ErrorOr<ModelName> created = ModelName.Create(raw.Model);
-            if (created.IsError)
+            ErrorOr<ModelName> parsed = ModelName.Create(raw.Model);
+            if (parsed.IsError)
             {
-                return created.ErrorsOrEmptyList;
+                return parsed.ErrorsOrEmptyList;
             }
 
-            model = created.Value;
+            model = parsed.Value.Value;
         }
 
         return new AgentSettings

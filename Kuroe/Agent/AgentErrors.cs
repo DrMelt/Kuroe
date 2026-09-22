@@ -3,7 +3,7 @@ using ErrorOr;
 namespace Kuroe.Agent;
 
 /// <summary>Agent 域的错误构造。</summary>
-public static class AgentErrors
+static class AgentErrors
 {
     /// <summary>设置节反序列化失败。</summary>
     public static Error Bind(string message) => Error.Validation($"{AgentSettings.SectionName}.Bind", message);

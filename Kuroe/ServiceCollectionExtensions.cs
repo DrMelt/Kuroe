@@ -4,6 +4,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Kuroe;
 
@@ -28,11 +29,18 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
-        services.AddSingleton<IAgentTool, TimeTool>();
-        services.AddSingleton<IAgentTool, WeatherTool>();
+        services.AddSingleton<IAgentTool>(new TimeTool());
+        services.AddSingleton<IAgentTool>(new WeatherTool());
         services.AddSingleton<ToolCollection>();
-        services.AddSingleton<AgentClientProvider>();
-        services.AddSingleton<AgentSession>();
+        services.AddSingleton<ModelService>();
+
+        // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
+        services.AddSingleton(sp => new AgentClientProvider(sp.GetRequiredService<ILoggerFactory>()));
+        services.AddSingleton(sp => new AgentSession(
+            sp.GetRequiredService<AgentClientProvider>(),
+            sp.GetRequiredService<SettingsProvider>(),
+            sp.GetRequiredService<CatalogService>(),
+            sp.GetRequiredService<ToolCollection>()));
 
         return new KuroeStartup(settings.Value.Current.Agent.LogLevel);
     }

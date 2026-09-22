@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Agent;
 using Kuroe.Configuration;
 
 namespace Kuroe.Cli;
@@ -19,40 +18,31 @@ internal sealed class ConsoleResults(Terminal terminal, ConsoleErrors errors)
         terminal.Ok(done);
     }
 
-    /// <summary>执行设置改动，成功后按改动的影响给出提示。</summary>
-    public void Apply(SettingsProvider settings, Func<ErrorOr<Success>> write)
+    /// <summary>呈现一次设置改动：成功按影响给出提示，失败说明未生效。影响由库判定。</summary>
+    public void Apply(ErrorOr<SettingsEffect> result)
     {
-        AgentSettings before = settings.Current.Agent;
-
-        ErrorOr<Success> result = write();
         if (result.IsError)
         {
             Reject(result.ErrorsOrEmptyList);
             return;
         }
 
-        AgentSettings current = settings.Current.Agent;
+        SettingsEffect effect = result.Value;
 
-        terminal.Ok(current.RequiresRestart(before) ? "已保存，重启后生效。" : "已保存并生效。");
-        if (current.InvalidatesHistory(before))
+        terminal.Ok(effect.RequiresRestart ? "已保存，重启后生效。" : "已保存并生效。");
+        if (effect.InvalidatesHistory)
         {
             terminal.Hint("下一轮对话将清空上下文。");
         }
     }
 
-    /// <summary>报告错误并说明改动未生效，与错误同走 stderr。</summary>
+    /// <summary>报告错误、给出可操作提示，并说明改动未生效，与错误同走 stderr。</summary>
     public void Reject(IEnumerable<Error> failures)
     {
-        errors.Report(failures);
-        terminal.Note("未生效。");
-    }
+        Error[] reported = [.. failures];
 
-    /// <summary>收集解析失败的错误。</summary>
-    public static void Collect<T>(ErrorOr<T> parsed, List<Error> errors)
-    {
-        if (parsed.IsError)
-        {
-            errors.AddRange(parsed.ErrorsOrEmptyList);
-        }
+        errors.Report(reported);
+        errors.Guide(reported);
+        terminal.Note("未生效。");
     }
 }

@@ -4,9 +4,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="ApiHub" Version="0.1.2" />
-    <PackageVersion Include="ApiHub.ChatClient" Version="0.1.2" />
-    <PackageVersion Include="ApiHub.Json" Version="0.1.2" />
+    <PackageVersion Include="ApiHub" Version="0.2.0" />
+    <PackageVersion Include="ApiHub.ChatClient" Version="0.2.0" />
+    <PackageVersion Include="ApiHub.Json" Version="0.2.0" />
+    <PackageVersion Include="ApiHub.Shared" Version="0.2.0" />
     <PackageVersion Include="ErrorOr" Version="2.1.1" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />

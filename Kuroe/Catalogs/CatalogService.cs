@@ -1,5 +1,6 @@
 using ApiHub.Catalogs;
-using ApiHub.Models;
+using ApiHub.Shared.Catalogs;
+using ApiHub.Shared.Models;
 using ErrorOr;
 
 namespace Kuroe.Catalogs;
@@ -8,12 +9,12 @@ namespace Kuroe.Catalogs;
 public sealed class CatalogService
 {
     /// <summary>导出时替代凭据原文的占位文本，导入后需要替换为真实凭据。</summary>
-    public const string PlaceholderApiKey = "***";
+    internal const string PlaceholderApiKey = "***";
 
     private static readonly ApiKey MaskedApiKey = ApiKey.Create(PlaceholderApiKey).Value;
 
     /// <summary>凭据是否为导出时的占位文本。</summary>
-    public static bool IsPlaceholder(ApiKey apiKey) => apiKey.Value == PlaceholderApiKey;
+    internal static bool IsPlaceholder(ApiKey apiKey) => apiKey.Value == PlaceholderApiKey;
 
     private readonly CatalogStore _store;
     private readonly Lock _gate = new();
@@ -26,7 +27,7 @@ public sealed class CatalogService
     }
 
     /// <summary>从目录文件装配目录。</summary>
-    public static ErrorOr<CatalogService> Create(CatalogStore store)
+    internal static ErrorOr<CatalogService> Create(CatalogStore store)
     {
         ErrorOr<CatalogContents> loaded = store.Load();
 
@@ -34,16 +35,44 @@ public sealed class CatalogService
     }
 
     /// <summary>目录当前快照，供列出与展示。</summary>
-    public CatalogContents Snapshot()
+    public CatalogSnapshot Snapshot()
     {
         lock (_gate)
         {
-            return _catalog.Contents;
+            CatalogContents contents = _catalog.Contents;
+
+            return new CatalogSnapshot(
+                [.. contents.Providers.Select(provider => new ProviderInfo(
+                    provider.ProviderName.Value,
+                    provider.BaseAddress.Address.ToString(),
+                    IsPlaceholder(provider.ApiKey)))],
+                [.. contents.Models.Select(model => new ModelInfo(
+                    model.ModelName.Value,
+                    model.ProviderName.Value))]);
+        }
+    }
+
+    /// <summary>模型是否已在目录中注册。</summary>
+    internal bool HasModel(string modelName) =>
+        CatalogValues.Model(modelName) is { IsError: false } model && HasModel(model.Value);
+
+    private bool HasModel(ModelName modelName)
+    {
+        lock (_gate)
+        {
+            return _catalog.FindModel(modelName) is not null;
         }
     }
 
     /// <summary>按模型名解析接入信息，模型未注册时返回错误。</summary>
-    public ErrorOr<ModelConnection> Connect(ModelName modelName)
+    internal ErrorOr<ModelConnection> Connect(string modelName)
+    {
+        ErrorOr<ModelName> model = CatalogValues.Model(modelName);
+
+        return model.IsError ? model.ErrorsOrEmptyList : Connect(model.Value);
+    }
+
+    private ErrorOr<ModelConnection> Connect(ModelName modelName)
     {
         lock (_gate)
         {
@@ -53,35 +82,80 @@ public sealed class CatalogService
                 return connection;
             }
 
-            return [CatalogErrors.ModelNotRegistered(modelName)];
+            return [CatalogErrors.ModelNotFound(modelName)];
         }
     }
 
-    public ErrorOr<Success> AddProvider(ProviderName providerName, ProviderEndpoint baseAddress, ApiKey apiKey) =>
-        Mutate(catalog => catalog.AddProvider(ProviderDefinition.Create(providerName, baseAddress, apiKey)));
+    public ErrorOr<Success> AddProvider(string name, string baseAddress, string apiKey)
+    {
+        ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> parsed =
+            CatalogValues.Provider(name, baseAddress, apiKey);
+        if (parsed.IsError)
+        {
+            return parsed.ErrorsOrEmptyList;
+        }
+
+        (ProviderName provider, ProviderEndpoint endpoint, ApiKey key) = parsed.Value;
+
+        return Mutate(catalog => catalog.AddProvider(ProviderDefinition.Create(provider, endpoint, key)));
+    }
 
     /// <summary>更换提供商凭据，提供商不存在时返回错误。</summary>
-    public ErrorOr<Success> SetProviderKey(ProviderName providerName, ApiKey apiKey) =>
-        Mutate(catalog =>
+    public ErrorOr<Success> SetProviderKey(string name, string apiKey)
+    {
+        ErrorOr<(ProviderName Provider, ApiKey Key)> parsed = CatalogValues.ProviderKey(name, apiKey);
+        if (parsed.IsError)
         {
-            ProviderDefinition? provider = catalog.FindProvider(providerName);
-            if (provider is null)
+            return parsed.ErrorsOrEmptyList;
+        }
+
+        (ProviderName provider, ApiKey key) = parsed.Value;
+
+        return Mutate(catalog =>
+        {
+            ProviderDefinition? existing = catalog.FindProvider(provider);
+            if (existing is null)
             {
-                return [CatalogErrors.ProviderNotFound(providerName)];
+                return [CatalogErrors.ProviderNotFound(provider)];
             }
 
-            return catalog.ReplaceProvider(provider with { ApiKey = apiKey });
+            return catalog.ReplaceProvider(existing with { ApiKey = key });
         });
+    }
 
     /// <summary>删除提供商，仍被模型引用时由目录拒绝。</summary>
-    public ErrorOr<Success> RemoveProvider(ProviderName providerName) =>
-        Mutate(catalog => catalog.RemoveProvider(providerName));
+    public ErrorOr<Success> RemoveProvider(string name)
+    {
+        ErrorOr<ProviderName> providerName = CatalogValues.Provider(name);
 
-    public ErrorOr<Success> AddModel(ModelName modelName, ProviderName providerName) =>
-        Mutate(catalog => catalog.AddModel(ModelDefinition.Create(modelName, providerName)));
+        return providerName.IsError
+            ? providerName.ErrorsOrEmptyList
+            : Mutate(catalog => catalog.RemoveProvider(providerName.Value));
+    }
 
-    public ErrorOr<Success> RemoveModel(ModelName modelName) =>
-        Mutate(catalog => catalog.RemoveModel(modelName));
+    public ErrorOr<Success> AddModel(string modelName, string providerName)
+    {
+        ErrorOr<(ModelName Model, ProviderName Provider)> parsed =
+            CatalogValues.ModelReference(modelName, providerName);
+        if (parsed.IsError)
+        {
+            return parsed.ErrorsOrEmptyList;
+        }
+
+        (ModelName model, ProviderName provider) = parsed.Value;
+
+        return Mutate(catalog => catalog.AddModel(ModelDefinition.Create(model, provider)));
+    }
+
+    /// <summary>从目录注销模型。注销当前选中模型时的取消选择由 <see cref="Agent.ModelService"/> 负责。</summary>
+    internal ErrorOr<Success> RemoveModel(string modelName)
+    {
+        ErrorOr<ModelName> model = CatalogValues.Model(modelName);
+
+        return model.IsError
+            ? model.ErrorsOrEmptyList
+            : Mutate(catalog => catalog.RemoveModel(model.Value));
+    }
 
     /// <summary>把文件参数解析为绝对路径，相对参数按目录文件所在目录解析。</summary>
     private ErrorOr<string> ResolveFile(string path)
@@ -92,7 +166,7 @@ public sealed class CatalogService
         }
         catch (Exception ex) when (ex is ArgumentException or IOException)
         {
-            return [CatalogErrors.InvalidPath(path, ex.Message)];
+            return [CatalogFileErrors.InvalidPath(path, ex.Message)];
         }
     }
 
@@ -108,7 +182,7 @@ public sealed class CatalogService
         string path = resolved.Value;
         if (_store.IsCatalogFile(path))
         {
-            return [CatalogErrors.OverwritesCatalog(path)];
+            return [CatalogFileErrors.OverwritesCatalog(path)];
         }
 
         lock (_gate)
@@ -145,19 +219,15 @@ public sealed class CatalogService
         }
 
         List<string> notes = [];
+        List<string> placeholders = [];
         ErrorOr<Success> merged = Mutate(catalog =>
         {
             foreach (ProviderDefinition provider in parsed.Value.Providers)
             {
-                string name = provider.ProviderName.Value;
                 ErrorOr<Success> added = catalog.AddProvider(provider);
                 if (added.IsError)
                 {
-                    notes.Add($"提供商 {name} 未导入：{added.FirstError.Description}");
-                }
-                else if (IsPlaceholder(provider.ApiKey))
-                {
-                    notes.Add($"提供商 {name} 的凭据是占位符，使用前需要替换。");
+                    notes.Add($"提供商 {provider.ProviderName.Value} 未导入：{added.FirstError.Description}");
                 }
             }
 
@@ -170,10 +240,16 @@ public sealed class CatalogService
                 }
             }
 
+            placeholders.AddRange(catalog.Providers
+                .Where(provider => IsPlaceholder(provider.ApiKey))
+                .Select(provider => provider.ProviderName.Value));
+
             return Result.Success;
         });
 
-        return merged.IsError ? merged.ErrorsOrEmptyList : new CatalogMerge(path, notes);
+        return merged.IsError
+            ? merged.ErrorsOrEmptyList
+            : new CatalogMerge(path, notes, placeholders);
     }
 
     private ErrorOr<Success> Mutate(Func<Catalog, ErrorOr<Success>> mutate)

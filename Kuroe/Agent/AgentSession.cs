@@ -1,5 +1,5 @@
 using System.Text;
-using ApiHub.Models;
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
@@ -8,18 +8,27 @@ using Microsoft.Extensions.AI;
 namespace Kuroe.Agent;
 
 /// <summary>一段连续对话：维护消息历史，向模型发起流式请求。</summary>
-public sealed class AgentSession(
-    AgentClientProvider clients,
-    SettingsProvider settings,
-    CatalogService catalog,
-    ToolCollection tools)
+public sealed class AgentSession
 {
-    private readonly AgentClientProvider _clients = clients;
-    private readonly SettingsProvider _settings = settings;
-    private readonly CatalogService _catalog = catalog;
-    private readonly ToolCollection _tools = tools;
+    private readonly AgentClientProvider _clients;
+    private readonly SettingsProvider _settings;
+    private readonly CatalogService _catalog;
+    private readonly ToolCollection _tools;
     private readonly List<ChatMessage> _messages = [];
     private AgentSettings? _history;
+
+    /// <summary>由装配创建。</summary>
+    internal AgentSession(
+        AgentClientProvider clients,
+        SettingsProvider settings,
+        CatalogService catalog,
+        ToolCollection tools)
+    {
+        _clients = clients;
+        _settings = settings;
+        _catalog = catalog;
+        _tools = tools;
+    }
 
     /// <summary>上一轮的输入与输出是否未计入上下文。</summary>
     public bool LastTurnDiscarded { get; private set; }
@@ -36,7 +45,7 @@ public sealed class AgentSession(
         LastTurnDiscarded = false;
 
         AgentSettings current = _settings.Current.Agent;
-        if (current.Model is not { } model)
+        if (current.Model is not { Length: > 0 } model)
         {
             return [AgentErrors.ModelNotSelected()];
         }

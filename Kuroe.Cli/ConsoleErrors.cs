@@ -1,6 +1,5 @@
-using ApiHub.Models;
 using ErrorOr;
-using Kuroe.Catalogs;
+using Kuroe.Agent;
 
 namespace Kuroe.Cli;
 
@@ -15,8 +14,9 @@ internal sealed class ConsoleErrors(Terminal terminal)
         }
     }
 
-    /// <summary>当前模型不可用时给出可用操作，模型可用时没有输出。</summary>
-    public void GuideModelRegistration(CatalogService catalog, ModelName? model)
+    /// <summary>模型不可用时给出可用操作：未选择时给出登记流程，名称合法但未注册时给出该模型的注册命令。
+    /// 空或全空白的名称不给指引，按这样的名字注册无从下手。</summary>
+    public void GuideModelRegistration(ModelService models, string? model)
     {
         if (model is null)
         {
@@ -24,9 +24,27 @@ internal sealed class ConsoleErrors(Terminal terminal)
             return;
         }
 
-        if (catalog.Connect(model).IsError)
+        if (!string.IsNullOrWhiteSpace(model) && !models.IsRegistered(model))
         {
-            terminal.Hint($"用 /model add {model.Value} <提供商> 注册该模型。");
+            terminal.Hint($"用 /model add {model} <提供商> 注册该模型。");
+        }
+    }
+
+    /// <summary>按错误码补充可操作提示，没有对应提示时没有输出。</summary>
+    public void Guide(IEnumerable<Error> errors)
+    {
+        foreach (Error error in errors)
+        {
+            switch (error.Code)
+            {
+                case "Settings.ModelPath":
+                    terminal.Hint("模型选择用 /model <模型> 切换，/model none 取消选择。");
+                    break;
+
+                case "Settings.NullValue":
+                    terminal.Hint("清除设置用 /unset <路径>。");
+                    break;
+            }
         }
     }
 }

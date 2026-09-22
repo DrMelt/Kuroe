@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using ErrorOr;
@@ -5,10 +6,44 @@ using Kuroe.Agent;
 
 namespace Kuroe.Configuration;
 
-/// <summary>全部配置节的绑定结果，也是用户层路径与键名的定义。</summary>
-public sealed record KuroeSettings
+/// <summary>全部配置节的绑定结果，也是用户层路径与键名的定义。
+/// 路径由公共实例属性的反射得出，因此类内部化后成员仍声明为 public。</summary>
+internal sealed record KuroeSettings
 {
+    /// <summary>生效值缺失时的呈现文本。</summary>
+    public const string NotSetText = "未设置";
+
     public required AgentSettings Agent { get; init; }
+
+    /// <summary>按当前生效值列出各节与各设置项，路径与 <see cref="ResolvePath"/> 同源。</summary>
+    public IReadOnlyList<SettingSection> Sections(UserSettingsStore store)
+    {
+        const BindingFlags Declared = BindingFlags.Public | BindingFlags.Instance;
+
+        List<SettingSection> sections = [];
+        foreach (PropertyInfo section in typeof(KuroeSettings).GetProperties(Declared))
+        {
+            if (!IsSection(section.PropertyType))
+            {
+                continue;
+            }
+
+            object? body = section.GetValue(this);
+            List<SettingEntry> entries = [];
+
+            foreach (PropertyInfo item in section.PropertyType.GetProperties(Declared))
+            {
+                string path = $"{section.Name}:{item.Name}";
+                object? value = item.GetValue(body);
+                string text = value is null ? NotSetText : Convert.ToString(value, CultureInfo.InvariantCulture)!;
+                entries.Add(new SettingEntry(path, item.Name, text, store.TryGetValue(path) is not null));
+            }
+
+            sections.Add(new SettingSection(section.Name, entries));
+        }
+
+        return sections;
+    }
 
     /// <summary>把用户输入的路径解析为由属性名构成的规范路径。路径不对应已定义设置项时返回错误。</summary>
     public static ErrorOr<string> ResolvePath(string path)

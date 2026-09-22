@@ -51,7 +51,7 @@ internal sealed class CatalogCommands(
             return;
         }
 
-        _terminal.Ok($"已导出到 {exported.Value}，凭据以 {CatalogService.PlaceholderApiKey} 占位。");
+        _terminal.Ok($"已导出到 {exported.Value}，凭据已替换为占位符。");
     }
 
     /// <summary>合并导入后列出跳过的条目与仍是占位符的凭据。</summary>
@@ -70,10 +70,8 @@ internal sealed class CatalogCommands(
             _terminal.Hint($"  {note}");
         }
 
-        string[] masked = [.. _catalog.Snapshot().Providers
-            .Where(provider => CatalogService.IsPlaceholder(provider.ApiKey))
-            .Select(provider => provider.ProviderName.Value)];
-        if (masked.Length > 0)
+        IReadOnlyList<string> masked = imported.Value.PlaceholderProviders;
+        if (masked.Count > 0)
         {
             _terminal.Hint($"用 /provider key <提供商> <凭据> 替换占位符凭据：{string.Join('、', masked)}");
         }

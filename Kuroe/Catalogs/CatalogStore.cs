@@ -1,12 +1,12 @@
 using ApiHub.Json;
-using ApiHub.Models;
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Storage;
 
 namespace Kuroe.Catalogs;
 
 /// <summary>目录文件的读写，内容与 JSON 文本的转换交给 ApiHub。</summary>
-public sealed class CatalogStore(string file)
+sealed class CatalogStore(string file)
 {
     private readonly string _file = Path.GetFullPath(file);
 
@@ -33,7 +33,7 @@ public sealed class CatalogStore(string file)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [CatalogErrors.Read(path, ex.Message)];
+            return [CatalogFileErrors.Read(path, ex.Message)];
         }
     }
 
@@ -48,7 +48,7 @@ public sealed class CatalogStore(string file)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [CatalogErrors.Write(path, ex.Message)];
+            return [CatalogFileErrors.Write(path, ex.Message)];
         }
     }
 }

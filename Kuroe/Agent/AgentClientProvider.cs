@@ -1,12 +1,12 @@
 using ApiHub.ChatClient;
-using ApiHub.Models;
+using ApiHub.Shared.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 namespace Kuroe.Agent;
 
 /// <summary>按接入信息缓存带中间件的模型客户端，信息变化时重建。错误由调用方解析连接时给出。</summary>
-public sealed class AgentClientProvider(ILoggerFactory loggerFactory) : IDisposable
+sealed class AgentClientProvider(ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly Lock _gate = new();
     private IChatClient? _client;

@@ -1,5 +1,3 @@
-using ApiHub.Models;
-using ErrorOr;
 using Kuroe.Catalogs;
 using Spectre.Console;
 
@@ -53,58 +51,19 @@ internal sealed class ProviderCommands(
         }
     }
 
-    private void Add(string name, string baseAddress, string apiKey)
-    {
-        ErrorOr<ProviderName> providerName = ProviderName.Create(name);
-        ErrorOr<ProviderEndpoint> endpoint = ProviderEndpoint.Create(baseAddress);
-        ErrorOr<ApiKey> key = ApiKey.Create(apiKey);
+    private void Add(string name, string baseAddress, string apiKey) =>
+        _results.Report(_catalog.AddProvider(name, baseAddress, apiKey), "已保存。");
 
-        List<Error> errors = [];
-        ConsoleResults.Collect(providerName, errors);
-        ConsoleResults.Collect(endpoint, errors);
-        ConsoleResults.Collect(key, errors);
-        if (errors.Count > 0)
-        {
-            _results.Reject(errors);
-            return;
-        }
+    private void SetKey(string name, string apiKey) =>
+        _results.Report(_catalog.SetProviderKey(name, apiKey), "已保存。");
 
-        _results.Report(_catalog.AddProvider(providerName.Value, endpoint.Value, key.Value), "已保存。");
-    }
-
-    private void SetKey(string name, string apiKey)
-    {
-        ErrorOr<ProviderName> providerName = ProviderName.Create(name);
-        ErrorOr<ApiKey> key = ApiKey.Create(apiKey);
-
-        List<Error> errors = [];
-        ConsoleResults.Collect(providerName, errors);
-        ConsoleResults.Collect(key, errors);
-        if (errors.Count > 0)
-        {
-            _results.Reject(errors);
-            return;
-        }
-
-        _results.Report(_catalog.SetProviderKey(providerName.Value, key.Value), "已保存。");
-    }
-
-    private void Remove(string name)
-    {
-        ErrorOr<ProviderName> providerName = ProviderName.Create(name);
-        if (providerName.IsError)
-        {
-            _results.Reject(providerName.ErrorsOrEmptyList);
-            return;
-        }
-
-        _results.Report(_catalog.RemoveProvider(providerName.Value), "已删除。");
-    }
+    private void Remove(string name) =>
+        _results.Report(_catalog.RemoveProvider(name), "已删除。");
 
     /// <summary>列出提供商与模型，凭据只显示是否已设置。</summary>
-    private void Print(CatalogContents contents)
+    private void Print(CatalogSnapshot snapshot)
     {
-        if (contents.Providers.Length == 0)
+        if (snapshot.Providers.Count == 0)
         {
             _terminal.Hint("目录为空，用 /provider add <名> <端点> <凭据> 添加提供商。");
             return;
@@ -112,20 +71,19 @@ internal sealed class ProviderCommands(
 
         _terminal.Line("提供商：");
         Grid providers = Terminal.Columns(3, wrapColumns: 1);
-        foreach (ProviderDefinition provider in contents.Providers)
+        foreach (ProviderInfo provider in snapshot.Providers)
         {
-            bool placeholder = CatalogService.IsPlaceholder(provider.ApiKey);
             providers.AddRow(
-                new Text(provider.ProviderName.Value, Styles.Key),
-                new Text(provider.BaseAddress.Address.ToString()),
+                new Text(provider.Name, Styles.Key),
+                new Text(provider.Endpoint),
                 new Text(
-                    placeholder ? "凭据是占位符" : "凭据已设置",
-                    placeholder ? Styles.Warning : Styles.Success));
+                    provider.HasPlaceholderKey ? "凭据是占位符" : "凭据已设置",
+                    provider.HasPlaceholderKey ? Styles.Warning : Styles.Success));
         }
 
         _terminal.Write(providers);
 
-        if (contents.Models.Length == 0)
+        if (snapshot.Models.Count == 0)
         {
             _terminal.Hint("模型：无，用 /model add <模型> <提供商> 注册。");
             return;
@@ -133,11 +91,11 @@ internal sealed class ProviderCommands(
 
         _terminal.Line("模型：");
         Grid models = Terminal.Columns(2);
-        foreach (ModelDefinition model in contents.Models)
+        foreach (ModelInfo model in snapshot.Models)
         {
             models.AddRow(
-                new Text(model.ModelName.Value, Styles.Key),
-                new Text($"→ {model.ProviderName.Value}"));
+                new Text(model.Name, Styles.Key),
+                new Text($"→ {model.ProviderName}"));
         }
 
         _terminal.Write(models);
