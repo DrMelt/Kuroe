@@ -2,13 +2,14 @@ using ErrorOr;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
 using Kuroe.Workflows;
+using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli;
 
 /// <summary>终端对话循环。</summary>
 internal sealed class Repl(
     TaskRegistry registry,
-    WorkflowDriver driver,
+    TaskService tasks,
     ReplCommands commands,
     DialogueSink sink,
     RunNotifier notifier,
@@ -52,7 +53,7 @@ internal sealed class Repl(
             await AskAsync(input, cancellation);
         }
 
-        await driver.ShutdownAsync();
+        await tasks.ShutdownAsync();
     }
 
     /// <summary>前台对话发生在当前任务上。</summary>

@@ -1,9 +1,12 @@
 using ErrorOr;
-using Kuroe.Agent;
+using Kuroe.Agent.Runs;
+using Kuroe.Agent.Sessions;
+using Kuroe.Agent.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Tools;
-using Kuroe.Workflows;
+using Kuroe.Workflows.Flows;
+using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -46,9 +49,22 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TaskRegistry>();
         services.AddSingleton<UnitSubmitter>();
         services.AddSingleton<RunDispatcher>();
-        services.AddSingleton<WorkflowDriver>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
+        services.AddSingleton(sp => new StepModelResolver(
+            sp.GetRequiredService<SettingsProvider>(),
+            sp.GetRequiredService<CatalogService>()));
+        services.AddSingleton(sp => new WorkflowDriver(
+            sp.GetRequiredService<TaskRegistry>(),
+            sp.GetRequiredService<RunDispatcher>(),
+            sp.GetRequiredService<StepModelResolver>(),
+            sp.GetRequiredService<SettingsProvider>()));
+        services.AddSingleton(sp => new TaskService(
+            sp.GetRequiredService<TaskRegistry>(),
+            sp.GetRequiredService<WorkflowDriver>(),
+            sp.GetRequiredService<WorkflowService>(),
+            sp.GetRequiredService<AgentSessionFactory>(),
+            sp.GetRequiredService<StepModelResolver>()));
         services.AddSingleton(sp => new AgentClientProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new AgentSessionFactory(
             sp.GetRequiredService<AgentClientProvider>(),

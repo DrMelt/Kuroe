@@ -1,6 +1,7 @@
 using System.ComponentModel;
-using Kuroe.Agent;
-using Kuroe.Workflows;
+using Kuroe.Agent.Tools;
+using Kuroe.Agent.Turns;
+using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools;
 

@@ -1,5 +1,5 @@
 using Kuroe.Agent;
-using Kuroe.Workflows;
+using Kuroe.Workflows.Tasks;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;

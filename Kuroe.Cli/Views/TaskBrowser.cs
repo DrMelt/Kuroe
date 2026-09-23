@@ -1,6 +1,8 @@
 using ErrorOr;
 using Kuroe.Agent;
+using Kuroe.Agent.Runs;
 using Kuroe.Workflows;
+using Kuroe.Workflows.Tasks;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
@@ -8,7 +10,7 @@ namespace Kuroe.Cli.Views;
 /// <summary>任务 → 步骤内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
-    WorkflowDriver driver,
+    TaskService tasks,
     TaskListView list,
     TaskDetailView detail,
     AgentDetailView agentView,
@@ -82,19 +84,19 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "approve":
-                    Act(driver.Approve(id));
+                    Act(tasks.Approve(id));
                     break;
 
                 case "rework":
-                    Act(driver.Rework(id, null));
+                    Act(tasks.Rework(id, null));
                     break;
 
                 case "stopTask":
-                    Act(driver.StopTask(id));
+                    Act(tasks.StopTask(id));
                     break;
 
                 case "stopRun" when picked.Run is { } target:
-                    Act(driver.StopRun(target));
+                    Act(tasks.StopRun(target));
                     break;
             }
         }
@@ -148,11 +150,11 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "adopt":
-                    Act(driver.Adopt(runId));
+                    Act(tasks.Adopt(runId));
                     break;
 
                 case "stopRun":
-                    Act(driver.StopRun(runId));
+                    Act(tasks.StopRun(runId));
                     break;
             }
         }

@@ -1,4 +1,4 @@
-namespace Kuroe.Agent;
+namespace Kuroe.Agent.Turns;
 
 /// <summary>过程记录中的一条，按发生顺序排列。</summary>
 public abstract record JournalEntry(DateTimeOffset At);

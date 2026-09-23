@@ -20,4 +20,6 @@ public static class ErrorCodes
     public const string WorkflowStep = "Workflow.Step";
 
     public const string WorkflowBody = "Workflow.Body";
+
+    public const string WorkflowInvalidPath = "Workflow.InvalidPath";
 }

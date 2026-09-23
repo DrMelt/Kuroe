@@ -1,6 +1,6 @@
 <Solution>
   <Project Path="Kuroe/Kuroe.csproj" />
   <Project Path="Kuroe.Cli/Kuroe.Cli.csproj" />
-  <Project Path="Kuroe.Tests/Kuroe.Tests.csproj" />
+  <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
 </Solution>
 

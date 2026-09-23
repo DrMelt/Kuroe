@@ -23,4 +23,8 @@ static class TaskErrors
     /// <summary>该任务没有被阻塞的条目。</summary>
     public static Error NotBlocked(TaskId task) =>
         Error.Validation("Task.Rework", $"{task} 没有被阻塞的步骤或条目。");
+
+    /// <summary>条目数组的形状不合法，原因要能直接回给模型改正。</summary>
+    public static Error Items(string reason) => Error.Validation(
+        "Task.Items", $"{reason}。要提交对象数组，每项含 Title、Instruction、Acceptance。");
 }

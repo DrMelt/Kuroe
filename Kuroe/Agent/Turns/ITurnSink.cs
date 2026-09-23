@@ -1,4 +1,4 @@
-namespace Kuroe.Agent;
+namespace Kuroe.Agent.Turns;
 
 /// <summary>一轮模型请求的观察者。库只在这里交出过程，不关心它被写到何处。</summary>
 public interface ITurnSink

@@ -1,14 +1,15 @@
 using ErrorOr;
 using Kuroe.Agent;
+using Kuroe.Agent.Runs;
 using Kuroe.Cli.Views;
-using Kuroe.Workflows;
+using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli.Commands;
 
 /// <summary>/task 子命令的解析与执行。无参数时进入浏览器逐级下钻。</summary>
 internal sealed class TaskCommands(
     TaskRegistry registry,
-    WorkflowDriver driver,
+    TaskService tasks,
     TaskListView list,
     TaskDetailView detail,
     AgentDetailView agent,
@@ -65,32 +66,32 @@ internal sealed class TaskCommands(
                 break;
 
             case ("use", 3) when Number(parts[2], "任务号") is { } task:
-                results.Report(driver.Use(new TaskId(task)), "已切换。");
+                results.Report(tasks.Use(new TaskId(task)), "已切换。");
                 break;
 
             case ("title", >= 4) when Number(parts[2], "任务号") is { } task:
-                results.Report(driver.Rename(new TaskId(task), string.Join(' ', parts[3..])), "已改标题。");
+                results.Report(tasks.Rename(new TaskId(task), string.Join(' ', parts[3..])), "已改标题。");
                 break;
 
             case ("approve", 3) when Number(parts[2], "任务号") is { } task:
-                Act(driver.Approve(new TaskId(task)));
+                Act(tasks.Approve(new TaskId(task)));
                 break;
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:
-                Act(driver.Rework(new TaskId(task), null));
+                Act(tasks.Rework(new TaskId(task), null));
                 break;
 
             case ("adopt", 3) when Number(parts[2], "agent号") is { } run:
-                Act(driver.Adopt(new RunId(run)));
+                Act(tasks.Adopt(new RunId(run)));
                 break;
 
             case ("stop", 3) when Number(parts[2], "任务号") is { } task:
-                Act(driver.StopTask(new TaskId(task)));
+                Act(tasks.StopTask(new TaskId(task)));
                 break;
 
             case ("stop", 4) when parts[2].Equals("agent", StringComparison.OrdinalIgnoreCase)
                 && Number(parts[3], "agent号") is { } run:
-                Act(driver.StopRun(new RunId(run)));
+                Act(tasks.StopRun(new RunId(run)));
                 break;
 
             case ("clear", 2):
@@ -120,7 +121,7 @@ internal sealed class TaskCommands(
         }
 
         string goal = string.Join(' ', parts[from..]);
-        ErrorOr<TaskSnapshot> submitted = driver.Submit(goal, flow, null);
+        ErrorOr<TaskSnapshot> submitted = tasks.Submit(goal, flow, null);
         if (submitted.IsError)
         {
             results.Reject(submitted.ErrorsOrEmptyList);

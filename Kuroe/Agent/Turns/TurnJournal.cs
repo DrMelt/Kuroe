@@ -1,4 +1,4 @@
-namespace Kuroe.Agent;
+namespace Kuroe.Agent.Turns;
 
 /// <summary>追加式过程记录。追加与读取共用一把锁，交出的快照不受后续追加影响。</summary>
 public sealed class TurnJournal

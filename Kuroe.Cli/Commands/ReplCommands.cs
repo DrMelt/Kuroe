@@ -2,7 +2,7 @@ using System.Text;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
-using Kuroe.Workflows;
+using Kuroe.Workflows.Tasks;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
