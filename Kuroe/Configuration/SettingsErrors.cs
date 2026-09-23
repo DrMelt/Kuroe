@@ -1,10 +1,14 @@
 using ErrorOr;
+using Kuroe;
 
 namespace Kuroe.Configuration;
 
 /// <summary>偏好配置域的错误构造。</summary>
 static class SettingsErrors
 {
+    /// <summary>设置节反序列化失败。</summary>
+    public static Error Bind(string message) => Error.Validation("Settings.Bind", message);
+
     public static Error UserFile(string path, string message) =>
         Error.Failure("Settings.UserFile", $"读取 {path} 失败：{message}");
 
@@ -12,10 +16,10 @@ static class SettingsErrors
     public static Error Path(string message) => Error.Validation("Settings.Path", message);
 
     /// <summary>模型选择不按路径写入。</summary>
-    public static Error ModelPath() => Error.Validation("Settings.ModelPath", "模型选择不按路径写入。");
+    public static Error ModelPath() => Error.Validation(ErrorCodes.SettingsModelPath, "模型选择不按路径写入。");
 
     /// <summary>值写成了 JSON null。</summary>
-    public static Error NullValue() => Error.Validation("Settings.NullValue", "值不能为 null。");
+    public static Error NullValue() => Error.Validation(ErrorCodes.SettingsNullValue, "值不能为 null。");
 
     /// <summary>改动后的配置无法绑定。</summary>
     public static Error Invalid() => Error.Validation("Settings.Invalid", "改动后的配置无效");

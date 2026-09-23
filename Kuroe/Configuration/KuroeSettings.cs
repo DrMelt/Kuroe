@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using ErrorOr;
-using Kuroe.Agent;
 
 namespace Kuroe.Configuration;
 
@@ -74,7 +73,7 @@ internal sealed record KuroeSettings
         JsonNode? node = Section(root, AgentSettings.SectionName);
         if (node is not null and not JsonObject)
         {
-            return [AgentErrors.Bind($"{AgentSettings.SectionName} 节必须是对象。")];
+            return [SettingsErrors.Bind($"{AgentSettings.SectionName} 节必须是对象。")];
         }
 
         ErrorOr<AgentSettings> agent = AgentSettings.From(node as JsonObject);

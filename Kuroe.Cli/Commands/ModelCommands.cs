@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Agent;
 using Kuroe.Catalogs;
+using Kuroe.Cli.Views;
 
 namespace Kuroe.Cli.Commands;
 
@@ -10,8 +10,8 @@ internal sealed class ModelCommands(
     ModelService models,
     CatalogPrinter printer,
     Terminal terminal,
-    ConsoleResults results,
-    ConsoleErrors errors)
+    ResultPrinter results,
+    ErrorPrinter errors)
 {
     /// <summary>取消选择的参数值。</summary>
     private const string NoneValue = "none";
@@ -31,8 +31,8 @@ internal sealed class ModelCommands(
     private readonly ModelService _models = models;
     private readonly CatalogPrinter _printer = printer;
     private readonly Terminal _terminal = terminal;
-    private readonly ConsoleResults _results = results;
-    private readonly ConsoleErrors _errors = errors;
+    private readonly ResultPrinter _results = results;
+    private readonly ErrorPrinter _errors = errors;
 
     public void Run(string[] parts)
     {
@@ -111,17 +111,25 @@ internal sealed class ModelCommands(
 
     private void Remove(string modelName)
     {
+        bool wasSelected = string.Equals(modelName, _models.Current, StringComparison.Ordinal);
         ErrorOr<ModelRemoval> removed = _models.Remove(modelName);
         if (removed.IsError)
         {
-            _errors.Report(removed.ErrorsOrEmptyList);
-            _terminal.Note(_models.IsRegistered(modelName) ? "未生效。" : "模型已注销，取消选择未生效。");
+            _results.Reject(removed.ErrorsOrEmptyList);
             return;
         }
 
-        if (!removed.Value.WasSelected)
+        if (!wasSelected)
         {
             _terminal.Ok("已注销。");
+            return;
+        }
+
+        if (removed.Value.Failures.Count > 0)
+        {
+            _terminal.Warn("已注销当前模型。");
+            _errors.Report(removed.Value.Failures);
+            _terminal.Note("取消选择未生效。");
             return;
         }
 

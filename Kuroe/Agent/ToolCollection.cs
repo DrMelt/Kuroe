@@ -6,31 +6,47 @@ using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent;
 
-/// <summary>工具载体上标注 DescriptionAttribute 的公开方法构成的模型可调用工具集合。实例方法需要载体实例，静态方法不需要。</summary>
+/// <summary>工具载体上标注 DescriptionAttribute 的公开方法构成的模型可调用工具集合。实例方法需要载体实例，静态方法不需要。
+/// 每轮请求按回合归属重新构造载体与包装，使调用记录落到该回合的记录上。</summary>
 public sealed class ToolCollection
 {
     private const BindingFlags Scan = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
-    private readonly AIFunction[] _functions;
+    private readonly Provider[] _providers;
 
-    public ToolCollection(IEnumerable<IAgentTool> providers, ToolCallLog log)
+    public ToolCollection(IEnumerable<IAgentTool> providers)
     {
-        _functions = [.. providers.SelectMany(provider => provider.GetType()
+        _providers = [.. providers.Select(provider => new Provider(provider, [.. provider.GetType()
             .GetMethods(Scan)
-            .Where(method => method.GetCustomAttribute<DescriptionAttribute>() is not null)
-            .Select(method => new RecordingAIFunction(AIFunctionFactory.Create(method, method.IsStatic ? null : provider), log)))];
+            .Where(method => method.GetCustomAttribute<DescriptionAttribute>() is not null)]))];
 
-        Names = [.. _functions.Select(function => function.Name)];
+        Names = [.. _providers.SelectMany(provider => provider.Methods.Select(method => method.Name))];
     }
-
-    /// <summary>模型可调用的工具，请求选项由会话取用。没有符合条件的载体方法时为空。</summary>
-    internal IReadOnlyList<AITool> Tools => _functions;
 
     /// <summary>工具名，供宿主展示可用性。</summary>
     public IReadOnlyList<string> Names { get; }
 
+    /// <summary>模型可调用的工具，请求选项由会话取用。没有符合条件的载体方法时为空。</summary>
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink)
+    {
+        List<AITool> tools = [];
+        foreach (Provider provider in _providers)
+        {
+            IAgentTool carrier = provider.Instance is IScopedAgentTool scoped ? scoped.ForTurn(scope) : provider.Instance;
+            foreach (MethodInfo method in provider.Methods)
+            {
+                tools.Add(new RecordingAIFunction(
+                    AIFunctionFactory.Create(method, method.IsStatic ? null : carrier), sink));
+            }
+        }
+
+        return tools;
+    }
+
+    private sealed record Provider(IAgentTool Instance, MethodInfo[] Methods);
+
     /// <summary>记录一次调用的包装，执行原样转发给被包装的函数。</summary>
-    private sealed class RecordingAIFunction(AIFunction inner, ToolCallLog log) : DelegatingAIFunction(inner)
+    private sealed class RecordingAIFunction(AIFunction inner, ITurnSink sink) : DelegatingAIFunction(inner)
     {
         /// <summary>参数与结果写成文本时保留非 ASCII 字符。</summary>
         private static readonly JsonSerializerOptions Display = new()
@@ -44,12 +60,12 @@ public sealed class ToolCollection
             try
             {
                 object? result = await base.InvokeCoreAsync(arguments, cancellationToken);
-                log.Add(new ToolCallRecord(Name, parameters, Describe(result), false));
+                sink.OnToolCall(new ToolCallRecord(Name, parameters, Describe(result), false));
                 return result;
             }
             catch (Exception ex)
             {
-                log.Add(new ToolCallRecord(Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                sink.OnToolCall(new ToolCallRecord(Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
         }

@@ -1,9 +1,8 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Catalogs;
 using Kuroe.Configuration;
 
-namespace Kuroe.Agent;
+namespace Kuroe.Catalogs;
 
 /// <summary>当前模型的选择与注销。校验模型已在目录注册，并守住目录与选择的一致：注销当前模型即取消选择。</summary>
 public sealed class ModelService(SettingsProvider settings, CatalogService catalog)
@@ -44,8 +43,7 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
         return cleared.IsError ? cleared.ErrorsOrEmptyList : new ModelSelection(true, cleared.Value);
     }
 
-    /// <summary>从目录注销模型。注销的是当前选中模型时一并取消选择，两处改动分别落盘：
-    /// 取消选择失败时模型已注销，选择仍指向它。</summary>
+    /// <summary>从目录注销模型。注销的是当前选中模型时一并取消选择，两处改动分别落盘。</summary>
     public ErrorOr<ModelRemoval> Remove(string modelName)
     {
         ErrorOr<Success> removed = _catalog.RemoveModel(modelName);
@@ -56,11 +54,19 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
 
         if (!string.Equals(modelName, Current, StringComparison.Ordinal))
         {
-            return new ModelRemoval(false, SettingsEffect.None);
+            return new ModelRemoval(SettingsEffect.None, []);
         }
 
         ErrorOr<SettingsEffect> cleared = _settings.SetModel(null);
 
-        return cleared.IsError ? cleared.ErrorsOrEmptyList : new ModelRemoval(true, cleared.Value);
+        return cleared.IsError
+            ? new ModelRemoval(SettingsEffect.None, cleared.ErrorsOrEmptyList)
+            : new ModelRemoval(cleared.Value, []);
     }
 }
+
+/// <summary>一次模型选择的结果：是否改动了用户层，以及该改动的影响。</summary>
+public sealed record ModelSelection(bool Changed, SettingsEffect Effect);
+
+/// <summary>一次模型注销的结果：模型已从目录注销；当前选择随之取消时给出改动影响，取消未生效时给出原因。</summary>
+public sealed record ModelRemoval(SettingsEffect Effect, IReadOnlyList<Error> Failures);

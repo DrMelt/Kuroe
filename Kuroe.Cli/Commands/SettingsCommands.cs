@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Cli.Views;
 using Kuroe.Configuration;
 using Spectre.Console;
 
@@ -8,7 +9,7 @@ namespace Kuroe.Cli.Commands;
 internal sealed class SettingsCommands(
     SettingsProvider settings,
     Terminal terminal,
-    ConsoleResults results)
+    ResultPrinter results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -20,7 +21,7 @@ internal sealed class SettingsCommands(
 
     private readonly SettingsProvider _settings = settings;
     private readonly Terminal _terminal = terminal;
-    private readonly ConsoleResults _results = results;
+    private readonly ResultPrinter _results = results;
 
     /// <summary>写入用户层中的设置项并立即生效。值按 JSON 字面量解析，不是合法 JSON 时按字符串写入。</summary>
     public void Set(string[] parts)

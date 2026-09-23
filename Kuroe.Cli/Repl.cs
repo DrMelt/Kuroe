@@ -1,39 +1,33 @@
 using ErrorOr;
-using Kuroe.Agent;
 using Kuroe.Cli.Commands;
+using Kuroe.Cli.Views;
+using Kuroe.Workflows;
 
 namespace Kuroe.Cli;
 
 /// <summary>终端对话循环。</summary>
 internal sealed class Repl(
-    AgentSession session,
+    TaskRegistry registry,
+    WorkflowDriver driver,
     ReplCommands commands,
-    ConsoleToolCalls toolCalls,
+    DialogueSink sink,
+    RunNotifier notifier,
+    StartupView startup,
     Terminal terminal,
-    ConsoleErrors errors)
+    ErrorPrinter errors)
 {
-    private readonly AgentSession _session = session;
-    private readonly ReplCommands _commands = commands;
-    private readonly ConsoleToolCalls _toolCalls = toolCalls;
-    private readonly Terminal _terminal = terminal;
-    private readonly ConsoleErrors _errors = errors;
-
     public async Task RunAsync()
     {
-        using var cancellation = new TurnCancellation();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cancellation.Cancel();
-        };
+        using var cancellation = new TurnCancellation(registry, terminal);
+        Terminal.OnInterrupt(cancellation.Cancel);
 
-        _toolCalls.Attach();
-        _commands.PrintStartup();
+        notifier.Attach();
+        startup.Print();
 
         while (true)
         {
-            _terminal.Append("\n用户 > ");
-            string? input = Console.ReadLine()?.Trim();
+            terminal.Append($"\n{Prompt}");
+            string? input = Terminal.ReadLine()?.Trim();
             if (input is null)
             {
                 break;
@@ -51,74 +45,66 @@ internal sealed class Repl(
 
             if (input.StartsWith('/'))
             {
-                _commands.Execute(input);
+                commands.Execute(input);
                 continue;
             }
 
-            _terminal.Append("智能体 > ");
+            await AskAsync(input, cancellation);
+        }
+
+        await driver.ShutdownAsync();
+    }
+
+    /// <summary>前台对话发生在当前任务上。</summary>
+    private string Prompt => registry.Active is { } id ? $"{id} 用户 > " : "用户 > ";
+
+    private async Task AskAsync(string input, TurnCancellation cancellation)
+    {
+        if (registry.Active is not { } id || registry.Find(id) is not { IsError: false } found)
+        {
+            terminal.Hint("还没有任务可对话，先 /task new <目标> 提交一个。");
+            return;
+        }
+
+        AgentTask task = found.Value;
+        ErrorOr<DialogueReply> reply;
+        using (terminal.Exclusive())
+        {
+            terminal.Append("智能体 > ");
             try
             {
-                ErrorOr<string> reply = await _session.AskAsync(input, _terminal.Append, cancellation.Begin());
-                if (reply.IsError)
-                {
-                    _errors.Report(reply.ErrorsOrEmptyList);
-                    _commands.GuideCurrentModel();
-                }
-                else if (!reply.Value.EndsWith('\n'))
-                {
-                    _terminal.NewLine();
-                }
+                reply = await task.AskDialogueAsync(input, sink, cancellation.Begin());
             }
             catch (OperationCanceledException)
             {
-                _terminal.Line("已取消。");
+                terminal.NewLine();
+                terminal.Line("已取消。");
+                return;
             }
             catch (Exception ex)
             {
-                _terminal.Error($"\n请求失败：{ex.Message}");
-            }
-
-            if (_session.LastTurnDiscarded)
-            {
-                _terminal.Hint("本轮内容未计入上下文。");
-            }
-        }
-    }
-
-    /// <summary>Ctrl+C 的取消范围，只作用于当前一轮请求。</summary>
-    private sealed class TurnCancellation : IDisposable
-    {
-        private readonly Lock _gate = new();
-        private CancellationTokenSource? _current;
-
-        /// <summary>开始一轮请求并返回该轮的取消令牌，上一轮的取消源随之释放。</summary>
-        public CancellationToken Begin()
-        {
-            lock (_gate)
-            {
-                _current?.Dispose();
-                _current = new CancellationTokenSource();
-
-                return _current.Token;
+                terminal.NewLine();
+                terminal.Error($"请求失败：{ex.Message}");
+                return;
             }
         }
 
-        /// <summary>取消当前一轮请求，没有进行中的请求时无事发生。</summary>
-        public void Cancel()
+        if (reply.IsError)
         {
-            lock (_gate)
-            {
-                _current?.Cancel();
-            }
+            errors.Report(reply.ErrorsOrEmptyList);
+            commands.GuideCurrentModel();
+            return;
         }
 
-        public void Dispose()
+        if (!reply.Value.Text.EndsWith('\n'))
         {
-            lock (_gate)
-            {
-                _current?.Dispose();
-                _current = null;
-            }
+            terminal.NewLine();
+        }
+
+        if (reply.Value.Discarded)
+        {
+            terminal.Hint("本轮内容未计入上下文。");
         }
     }
 }
+

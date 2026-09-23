@@ -1,10 +1,11 @@
 using ErrorOr;
-using Kuroe.Agent;
+using Kuroe;
+using Kuroe.Catalogs;
 
-namespace Kuroe.Cli;
+namespace Kuroe.Cli.Views;
 
 /// <summary>错误到终端的统一输出与可恢复错误的操作指引。</summary>
-internal sealed class ConsoleErrors(Terminal terminal)
+internal sealed class ErrorPrinter(Terminal terminal)
 {
     public void Report(IEnumerable<Error> errors)
     {
@@ -37,12 +38,29 @@ internal sealed class ConsoleErrors(Terminal terminal)
         {
             switch (error.Code)
             {
-                case "Settings.ModelPath":
+                case ErrorCodes.SettingsModelPath:
                     terminal.Hint("模型选择用 /model <模型> 切换，/model none 取消选择。");
                     break;
 
-                case "Settings.NullValue":
+                case ErrorCodes.SettingsNullValue:
                     terminal.Hint("清除设置用 /unset <路径>。");
+                    break;
+
+                case ErrorCodes.TaskNotFound:
+                    terminal.Hint("用 /task list 查看任务号。");
+                    break;
+
+                case ErrorCodes.RunNotFound:
+                    terminal.Hint("agent 号全局递增，用 /task list 或 /task show <任务号> 查看。");
+                    break;
+
+                case ErrorCodes.WorkflowNotFound:
+                    terminal.Hint("用 /flow list 查看流程名。");
+                    break;
+
+                case ErrorCodes.WorkflowStep or ErrorCodes.WorkflowBody or ErrorCodes.WorkflowName
+                    or ErrorCodes.WorkflowFormat:
+                    terminal.Hint("流程文件是工作目录下的 flows.json，改完用 /flow list 确认是否加载成功。");
                     break;
             }
         }

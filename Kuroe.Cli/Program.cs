@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe;
 using Kuroe.Cli;
 using Kuroe.Cli.Commands;
+using Kuroe.Cli.Views;
 using Kuroe.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,14 @@ return await root.Parse(args).InvokeAsync();
 static async Task<int> RunAsync(string? workDirectory)
 {
     Terminal terminal = Terminal.Create();
-    ConsoleErrors errors = new(terminal);
+    ErrorPrinter errors = new(terminal);
+
+    // 任务浏览与逐级下钻要读键盘，没有输入环境时不再降级呈现
+    if (!Terminal.Interactive)
+    {
+        errors.Report([Error.Failure("Terminal.NotInteractive", "需要可交互的终端，当前无法读键盘。")]);
+        return 1;
+    }
 
     ErrorOr<string> directory = WorkDirectory.Resolve(workDirectory);
     if (directory.IsError)
@@ -39,13 +47,24 @@ static async Task<int> RunAsync(string? workDirectory)
         return 1;
     }
 
-    services.AddSingleton<ConsoleResults>();
-    services.AddSingleton<ConsoleToolCalls>();
+    // 呈现与通知
+    services.AddSingleton<ResultPrinter>();
+    services.AddSingleton<DialogueSink>();
+    services.AddSingleton<RunNotifier>();
+    services.AddSingleton<TaskListView>();
+    services.AddSingleton<TaskDetailView>();
+    services.AddSingleton<AgentDetailView>();
     services.AddSingleton<CatalogPrinter>();
+    services.AddSingleton<StartupView>();
+    services.AddSingleton<TaskBrowser>();
+
+    // 命令族与对话循环
     services.AddSingleton<SettingsCommands>();
     services.AddSingleton<ProviderCommands>();
     services.AddSingleton<ModelCommands>();
     services.AddSingleton<CatalogCommands>();
+    services.AddSingleton<FlowCommands>();
+    services.AddSingleton<TaskCommands>();
     services.AddSingleton<ReplCommands>();
     services.AddSingleton<Repl>();
 

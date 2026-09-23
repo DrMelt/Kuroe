@@ -1,4 +1,5 @@
 using Kuroe.Catalogs;
+using Kuroe.Cli.Views;
 
 namespace Kuroe.Cli.Commands;
 
@@ -7,7 +8,7 @@ internal sealed class ProviderCommands(
     CatalogService catalog,
     CatalogPrinter printer,
     Terminal terminal,
-    ConsoleResults results)
+    ResultPrinter results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -21,7 +22,7 @@ internal sealed class ProviderCommands(
     private readonly CatalogService _catalog = catalog;
     private readonly CatalogPrinter _printer = printer;
     private readonly Terminal _terminal = terminal;
-    private readonly ConsoleResults _results = results;
+    private readonly ResultPrinter _results = results;
 
     public void Run(string[] parts)
     {

@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Configuration;
 
-namespace Kuroe.Cli;
+namespace Kuroe.Cli.Views;
 
 /// <summary>命令结果的终端呈现。</summary>
-internal sealed class ConsoleResults(Terminal terminal, ConsoleErrors errors)
+internal sealed class ResultPrinter(Terminal terminal, ErrorPrinter errors)
 {
     /// <summary>成功时打印完成提示，失败时打印错误与未生效提示。</summary>
     public void Report(ErrorOr<Success> result, string done)

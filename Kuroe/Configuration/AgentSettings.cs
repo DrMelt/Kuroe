@@ -5,9 +5,10 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 
-namespace Kuroe.Agent;
+namespace Kuroe.Configuration;
 
-/// <summary>对话与请求参数，绑定自用户层的 Agent 节。接入信息由目录提供，不在此处。</summary>
+/// <summary>对话与请求参数，绑定自用户层的 Agent 节。接入信息由目录提供，不在此处。
+/// 各项默认值只有属性初始化器一处。</summary>
 internal sealed record AgentSettings
 {
     public const string SectionName = "Agent";
@@ -36,59 +37,44 @@ internal sealed record AgentSettings
 
     public int? MaxOutputTokens { get; init; }
 
-    /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，客户端由 <see cref="AgentClientProvider"/> 按连接重建。</summary>
+    /// <summary>同时在跑的 agent 数上限，超出的排队等待。改动即时生效。</summary>
+    public int MaxConcurrentRuns { get; init; } = 4;
+
+    /// <summary>提交任务时未指定流程则用该流程，未设置时用内置流程。</summary>
+    public string? DefaultFlow { get; init; }
+
+    /// <summary>单个条目允许的实施轮数上限，检查步骤的 MaxAttempts 不得超过它。</summary>
+    public int MaxAttempts { get; init; } = 3;
+
+    /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，客户端由 <see cref="Agent.AgentClientProvider"/> 按模型重建。</summary>
     public bool InvalidatesHistory(AgentSettings other) => Model != other.Model || SystemPrompt != other.SystemPrompt;
 
     /// <summary>日志级别在启动时写入日志管道，改动重启后生效。</summary>
     public bool RequiresRestart(AgentSettings other) => LogLevel != other.LogLevel;
 
-    /// <summary>绑定并校验该节，节缺失时全部取默认值。类型转换交给 JSON 反序列化，值的合法性交给 ApiHub 的值对象。</summary>
+    /// <summary>绑定并校验该节，未写的设置项取属性默认值。值的合法性交给 ApiHub 的值对象。</summary>
     public static ErrorOr<AgentSettings> From(JsonObject? section)
     {
-        Raw? raw;
+        AgentSettings bound;
         try
         {
-            raw = section?.Deserialize<Raw>(ReadOptions);
+            bound = section?.Deserialize<AgentSettings>(ReadOptions) ?? new AgentSettings();
         }
         catch (JsonException ex)
         {
-            return [AgentErrors.Bind(ex.Message)];
+            return [SettingsErrors.Bind(ex.Message)];
         }
 
-        string? model = null;
-        if (!string.IsNullOrWhiteSpace(raw?.Model))
+        if (string.IsNullOrWhiteSpace(bound.Model))
         {
-            ErrorOr<ModelName> parsed = ModelName.Create(raw.Model);
-            if (parsed.IsError)
-            {
-                return parsed.ErrorsOrEmptyList;
-            }
-
-            model = parsed.Value.Value;
+            return bound with { Model = null };
         }
 
-        return new AgentSettings
-        {
-            Model = model,
-            SystemPrompt = raw?.SystemPrompt ?? DefaultSystemPrompt,
-            LogLevel = raw?.LogLevel ?? LogLevel.Warning,
-            Temperature = raw?.Temperature,
-            MaxOutputTokens = raw?.MaxOutputTokens,
-        };
-    }
+        ErrorOr<ModelName> parsed = ModelName.Create(bound.Model);
 
-    /// <summary>用户层里的原始形状，只承载类型转换。</summary>
-    private sealed class Raw
-    {
-        public string? Model { get; init; }
-
-        public string? SystemPrompt { get; init; }
-
-        public LogLevel? LogLevel { get; init; }
-
-        public float? Temperature { get; init; }
-
-        public int? MaxOutputTokens { get; init; }
+        return parsed.IsError
+            ? parsed.ErrorsOrEmptyList
+            : bound with { Model = parsed.Value.Value };
     }
 }
 

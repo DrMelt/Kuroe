@@ -86,6 +86,14 @@ public sealed class CatalogService
         }
     }
 
+    /// <summary>模型可接入时成功，否则给出接入信息解析的错误，供不持有客户端的调用方判可用性。</summary>
+    internal ErrorOr<Success> Check(string modelName)
+    {
+        ErrorOr<ModelConnection> connection = Connect(modelName);
+
+        return connection.IsError ? connection.ErrorsOrEmptyList : Result.Success;
+    }
+
     public ErrorOr<Success> AddProvider(string name, string baseAddress, string apiKey)
     {
         ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> parsed =
