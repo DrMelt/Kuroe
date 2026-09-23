@@ -41,6 +41,7 @@ static async Task<int> RunAsync(string? workDirectory)
 
     services.AddSingleton<ConsoleResults>();
     services.AddSingleton<ConsoleToolCalls>();
+    services.AddSingleton<CatalogPrinter>();
     services.AddSingleton<SettingsCommands>();
     services.AddSingleton<ProviderCommands>();
     services.AddSingleton<ModelCommands>();

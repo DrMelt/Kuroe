@@ -6,27 +6,36 @@ namespace Kuroe.Cli.Commands;
 /// <summary>/catalog 子命令的解析与执行。</summary>
 internal sealed class CatalogCommands(
     CatalogService catalog,
+    CatalogPrinter printer,
     Terminal terminal,
     ConsoleResults results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
+        ("/catalog list", "列出提供商与模型"),
         ("/catalog export <文件>", "导出目录，凭据替换为占位符"),
         ("/catalog import <文件>", "合并导入目录"),
     ];
 
     private readonly CatalogService _catalog = catalog;
+    private readonly CatalogPrinter _printer = printer;
     private readonly Terminal _terminal = terminal;
     private readonly ConsoleResults _results = results;
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/catalog export <文件> | import <文件>";
+        const string usage = "用法：/catalog list | export <文件> | import <文件>";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
         {
+            case ("list", 2):
+                CatalogSnapshot contents = _catalog.Snapshot();
+                _printer.PrintProviders(contents.Providers);
+                _printer.PrintModels(contents.Models);
+                break;
+
             case ("export", 3):
                 Export(parts[2]);
                 break;

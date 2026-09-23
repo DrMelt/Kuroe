@@ -8,6 +8,7 @@ namespace Kuroe.Cli.Commands;
 internal sealed class ModelCommands(
     CatalogService catalog,
     ModelService models,
+    CatalogPrinter printer,
     Terminal terminal,
     ConsoleResults results,
     ConsoleErrors errors)
@@ -19,6 +20,7 @@ internal sealed class ModelCommands(
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
         ("/model", "打印当前模型"),
+        ("/model list", "列出已注册模型"),
         ("/model <模型>", "切换模型，要求已注册"),
         ("/model none", "取消选择模型"),
         ("/model add <模型> <提供商>", "把模型注册到提供商"),
@@ -27,13 +29,14 @@ internal sealed class ModelCommands(
 
     private readonly CatalogService _catalog = catalog;
     private readonly ModelService _models = models;
+    private readonly CatalogPrinter _printer = printer;
     private readonly Terminal _terminal = terminal;
     private readonly ConsoleResults _results = results;
     private readonly ConsoleErrors _errors = errors;
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/model <模型> 切换，/model none 取消选择，/model add <模型> <提供商> 注册，/model rm <模型> 注销";
+        const string usage = "用法：/model <模型> 切换，/model none 取消选择，/model list 列出已注册模型，/model add <模型> <提供商> 注册，/model rm <模型> 注销";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -45,6 +48,10 @@ internal sealed class ModelCommands(
 
             case (NoneValue, 2):
                 Unselect();
+                break;
+
+            case ("list", 2):
+                _printer.PrintModels(_catalog.Snapshot().Models);
                 break;
 
             case (not ("add" or "rm"), 2):
