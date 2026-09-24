@@ -1,6 +1,6 @@
 # Kuroe
 
-基于 .NET 10 + Microsoft.Extensions.AI 的智能体骨架：终端 REPL、流式输出、自动工具调用，多个任务并发执行。
+基于 .NET 10 + Microsoft Agent Framework 与 Microsoft.Extensions.AI 的智能体骨架：终端 REPL、流式输出、自动工具调用，多个任务并发执行。模型接入与流程编排分别落在上层调用与图执行器上，agent 会话与工具调用由框架承担。
 
 提供商与模型的接入目录由 [ApiHub](https://github.com/DrMelt/ApiHub) 提供。
 
@@ -31,7 +31,7 @@ $ver = '0.2.0'
 }
 ```
 
-升级 ApiHub 时同步改动 `$ver` 与 `Directory.Packages.props` 中的包版本。
+`Microsoft.Agents.AI` 与 `Microsoft.Agents.AI.Workflows` 从 nuget.org 获取，版本与 `Directory.Packages.props` 保持一致。升级 ApiHub 时同步改动 `$ver` 与其中的包版本。
 
 ## 运行
 
