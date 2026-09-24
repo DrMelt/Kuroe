@@ -1,4 +1,7 @@
 
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Turns;
+
 namespace Kuroe.Agent.Turns;
 
 /// <summary>一次模型请求的归属：哪个任务、哪个 agent、哪个步骤、哪个条目、记录写到哪里、过程写给谁。</summary>

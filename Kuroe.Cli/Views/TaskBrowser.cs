@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Agent;
-using Kuroe.Agent.Runs;
-using Kuroe.Workflows;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Spectre.Console;
 

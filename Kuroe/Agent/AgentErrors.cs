@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe;
+using Kuroe.Shared;
+using Kuroe.Shared.Agent;
 
 namespace Kuroe.Agent;
 

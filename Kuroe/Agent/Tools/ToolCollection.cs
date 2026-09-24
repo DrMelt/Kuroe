@@ -2,6 +2,9 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Kuroe.Agent.Turns;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Tools;
+using Kuroe.Shared.Agent.Turns;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent.Tools;
@@ -41,6 +44,8 @@ public sealed class ToolCollection
     /// <summary>按声明执行的函数，调用参数与结果写进过程记录。</summary>
     private sealed class DeclaredFunction(ToolFunction declaration, ITurnSink sink) : AIFunction
     {
+        private readonly JsonElement _schema = SchemaOf(declaration.Parameters);
+
         /// <summary>调用参数的呈现方式：非 ASCII 字符不转义。</summary>
         private static readonly JsonWriterOptions Rendering = new()
         {
@@ -51,7 +56,7 @@ public sealed class ToolCollection
 
         public override string Description => declaration.Description;
 
-        public override JsonElement JsonSchema => declaration.Schema;
+        public override JsonElement JsonSchema => _schema;
 
         protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
         {
@@ -118,5 +123,40 @@ public sealed class ToolCollection
                     break;
             }
         }
+    }
+
+    /// <summary>参数的 JSON Schema，随请求交给模型。</summary>
+    private static JsonElement SchemaOf(IReadOnlyList<ToolParameter> parameters)
+    {
+        using MemoryStream buffer = new();
+        using (Utf8JsonWriter writer = new(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("type", "object");
+            writer.WriteStartObject("properties");
+            foreach (ToolParameter parameter in parameters)
+            {
+                writer.WriteStartObject(parameter.Name);
+                writer.WriteString("type", parameter.Flag ? "boolean" : "string");
+                writer.WriteString("description", parameter.Description);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndObject();
+            if (parameters.Any(parameter => parameter.Required))
+            {
+                writer.WriteStartArray("required");
+                foreach (ToolParameter parameter in parameters.Where(parameter => parameter.Required))
+                {
+                    writer.WriteStringValue(parameter.Name);
+                }
+
+                writer.WriteEndArray();
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return JsonDocument.Parse(buffer.ToArray()).RootElement.Clone();
     }
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using ErrorOr;
+using Kuroe.Shared.Configuration;
 
 namespace Kuroe.Configuration;
 

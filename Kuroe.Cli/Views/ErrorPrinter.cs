@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe;
 using Kuroe.Catalogs;
+using Kuroe.Shared;
 
 namespace Kuroe.Cli.Views;
 

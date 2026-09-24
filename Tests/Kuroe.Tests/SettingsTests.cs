@@ -1,5 +1,7 @@
 using System.Reflection;
 using Kuroe.Configuration;
+using Kuroe.Shared.Configuration;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Tests;

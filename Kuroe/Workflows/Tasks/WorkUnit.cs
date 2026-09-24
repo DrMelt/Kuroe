@@ -1,4 +1,6 @@
 using Kuroe.Agent.Runs;
+using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 

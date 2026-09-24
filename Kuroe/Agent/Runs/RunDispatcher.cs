@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration;
+using Kuroe.Shared.Agent;
 
 namespace Kuroe.Agent.Runs;
 

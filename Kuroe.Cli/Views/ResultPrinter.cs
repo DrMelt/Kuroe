@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Configuration;
+using Kuroe.Shared.Configuration;
 
 namespace Kuroe.Cli.Views;
 

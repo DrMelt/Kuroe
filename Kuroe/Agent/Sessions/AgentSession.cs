@@ -5,6 +5,7 @@ using Kuroe.Agent.Tools;
 using Kuroe.Agent.Turns;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Shared.Agent.Turns;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent.Sessions;

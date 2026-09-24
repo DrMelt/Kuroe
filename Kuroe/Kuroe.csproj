@@ -18,4 +18,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

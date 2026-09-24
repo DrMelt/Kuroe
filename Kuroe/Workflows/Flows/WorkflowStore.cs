@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Agent;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Storage;
 
 namespace Kuroe.Workflows.Flows;
@@ -31,7 +32,7 @@ sealed class WorkflowStore(string file)
     {
         if (!File.Exists(_file))
         {
-            return new List<Workflow> { Workflow.Builtin };
+            return new List<Workflow> { DefaultFlows.Builtin };
         }
 
         return Read(_file);

@@ -2,6 +2,7 @@ using ApiHub.Catalogs;
 using ApiHub.Shared.Catalogs;
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Catalogs;
 
@@ -14,7 +15,7 @@ public sealed class CatalogService
     private static readonly ApiKey MaskedApiKey = ApiKey.Create(PlaceholderApiKey).Value;
 
     /// <summary>凭据是否为导出时的占位文本。</summary>
-    internal static bool IsPlaceholder(ApiKey apiKey) => apiKey.Value == PlaceholderApiKey;
+    public static bool IsPlaceholder(ApiKey apiKey) => apiKey.Value == PlaceholderApiKey;
 
     private readonly CatalogStore _store;
     private readonly Lock _gate = new();
@@ -35,20 +36,11 @@ public sealed class CatalogService
     }
 
     /// <summary>目录当前快照，供列出与展示。</summary>
-    public CatalogSnapshot Snapshot()
+    public CatalogContents Snapshot()
     {
         lock (_gate)
         {
-            CatalogContents contents = _catalog.Contents;
-
-            return new CatalogSnapshot(
-                [.. contents.Providers.Select(provider => new ProviderInfo(
-                    provider.ProviderName.Value,
-                    provider.BaseAddress.Address.ToString(),
-                    IsPlaceholder(provider.ApiKey)))],
-                [.. contents.Models.Select(model => new ModelInfo(
-                    model.ModelName.Value,
-                    model.ProviderName.Value))]);
+            return _catalog.Contents;
         }
     }
 

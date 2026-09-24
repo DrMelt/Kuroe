@@ -1,4 +1,4 @@
-using Kuroe.Agent.Turns;
+using Kuroe.Shared.Agent.Turns;
 
 namespace Kuroe.Cli.Views;
 

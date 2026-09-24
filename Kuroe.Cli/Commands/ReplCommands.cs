@@ -1,5 +1,4 @@
 using System.Text;
-using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
 using Kuroe.Workflows.Tasks;
@@ -93,7 +92,7 @@ internal sealed class ReplCommands(
     }
 
     /// <summary>按空白拆分命令，双引号内的空白不作为分隔符，引号本身不出现在结果中。未闭合的引号按到输入末尾处理。</summary>
-    private static string[] Split(string input)
+    internal static string[] Split(string input)
     {
         List<string> parts = [];
         StringBuilder part = new();

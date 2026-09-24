@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Agent;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
-using Kuroe.Workflows.Flows;
+using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
 

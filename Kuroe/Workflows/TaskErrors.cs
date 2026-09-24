@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe;
-using Kuroe.Agent;
+using Kuroe.Shared;
+using Kuroe.Shared.Agent;
 
 namespace Kuroe.Workflows;
 

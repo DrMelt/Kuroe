@@ -1,14 +1,9 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Agent;
+using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
-
-/// <summary>规划步骤交回的一个条目，是按条目展开执行单元的依据。</summary>
-public sealed record PlanItem(int Index, string Title, string Instruction, string Acceptance);
-
-/// <summary>规划步骤的产出：由哪个 agent 交回的条目拆分。</summary>
-public sealed record StepPlan(RunId Origin, IReadOnlyList<PlanItem> Items);
 
 /// <summary>规划步骤交回的条目拆分：把模型给的 JSON 数组解析成条目，不合法时给出一条可回给模型的原因。</summary>
 static class PlanItems

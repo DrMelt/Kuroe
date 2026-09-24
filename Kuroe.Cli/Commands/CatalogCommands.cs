@@ -1,6 +1,8 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
+using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Cli.Commands;
 
@@ -32,7 +34,7 @@ internal sealed class CatalogCommands(
         switch ((subcommand, parts.Length))
         {
             case ("list", 2):
-                CatalogSnapshot contents = _catalog.Snapshot();
+                CatalogContents contents = _catalog.Snapshot();
                 _printer.PrintProviders(contents.Providers);
                 _printer.PrintModels(contents.Models);
                 break;

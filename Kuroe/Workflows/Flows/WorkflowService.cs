@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration;
+using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -37,7 +38,7 @@ public sealed class WorkflowService
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
-    public string DefaultName => _settings.Current.Agent.DefaultFlow ?? Workflow.BuiltinName;
+    public string DefaultName => _settings.Current.Agent.DefaultFlow ?? DefaultFlows.Name;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<Workflow> All()
@@ -136,6 +137,3 @@ public sealed class WorkflowService
         return errors;
     }
 }
-
-/// <summary>一次流程导入的结果：来源文件的绝对路径与逐条说明。</summary>
-public sealed record WorkflowImport(string Source, IReadOnlyList<string> Names, IReadOnlyList<string> Notes);

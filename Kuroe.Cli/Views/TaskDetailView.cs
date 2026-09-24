@@ -1,7 +1,7 @@
 using Kuroe.Agent;
-using Kuroe.Agent.Runs;
-using Kuroe.Workflows;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 

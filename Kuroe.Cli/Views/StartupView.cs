@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Agent.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Workflows.Flows;
@@ -14,12 +15,12 @@ internal sealed class StartupView(
 {
     public void Print()
     {
-        CatalogSnapshot contents = catalog.Snapshot();
+        CatalogContents contents = catalog.Snapshot();
         string model = models.Current ?? "未选择";
         terminal.Line($"Kuroe 已启动，当前模型 {model}，" +
-            $"目录中有 {contents.Providers.Count} 个提供商、{contents.Models.Count} 个模型，" +
+            $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型，" +
             $"流程模板 {flows.All().Count} 条（默认 {flows.DefaultName}）。");
-        if (contents.Providers.Count == 0)
+        if (contents.Providers.Length == 0)
         {
             terminal.Hint("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。");
         }

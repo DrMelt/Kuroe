@@ -1,5 +1,8 @@
 using ErrorOr;
 using Kuroe.Agent.Turns;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Agent.Turns;
 
 namespace Kuroe.Agent.Runs;
 
@@ -29,7 +32,7 @@ public sealed class AgentRun
             StepName = context.StepName,
             ItemIndex = context.ItemIndex,
             Journal = Journal,
-            Sink = ITurnSink.For(Journal, new ProgressSink(this)),
+            Sink = TurnSinks.For(Journal, new ProgressSink(this)),
         };
     }
 

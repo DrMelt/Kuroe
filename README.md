@@ -191,7 +191,7 @@ exit
 
 ```powershell
 dotnet build Kuroe.slnx
-dotnet test Tests/Kuroe.Tests/Kuroe.Tests.csproj
+dotnet test Kuroe.slnx
 ```
 
 ## 许可

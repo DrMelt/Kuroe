@@ -1,7 +1,9 @@
 using ErrorOr;
-using Kuroe.Agent;
 using Kuroe.Agent.Runs;
 using Kuroe.Cli.Views;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli.Commands;

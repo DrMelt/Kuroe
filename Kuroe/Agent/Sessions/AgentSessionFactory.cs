@@ -1,6 +1,7 @@
 using Kuroe.Agent.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Shared.Agent;
 
 namespace Kuroe.Agent.Sessions;
 

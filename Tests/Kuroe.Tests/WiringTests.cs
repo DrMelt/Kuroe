@@ -5,6 +5,8 @@ using Kuroe.Agent.Sessions;
 using Kuroe.Agent.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Shared;
+using Kuroe.Shared.Agent.Tools;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,6 @@
 using Kuroe.Agent.Tools;
 using Kuroe.Agent.Turns;
+using Kuroe.Shared.Agent.Tools;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools;

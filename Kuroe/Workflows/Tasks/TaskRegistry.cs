@@ -2,7 +2,11 @@ using ErrorOr;
 using Kuroe.Agent;
 using Kuroe.Agent.Runs;
 using Kuroe.Agent.Sessions;
-using Kuroe.Workflows.Flows;
+using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 

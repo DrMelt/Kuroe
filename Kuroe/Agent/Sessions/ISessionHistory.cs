@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using Kuroe.Configuration;
+using Kuroe.Shared.Agent;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent.Sessions;

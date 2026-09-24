@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
+using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Cli.Commands;
 

@@ -1,4 +1,5 @@
 using Kuroe.Agent.Tools;
+using Kuroe.Shared.Agent.Tools;
 
 namespace Kuroe.Tools;
 
