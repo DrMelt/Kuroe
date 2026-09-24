@@ -9,6 +9,7 @@
     <PackageReference Include="ApiHub.ChatClient" />
     <PackageReference Include="ApiHub.Json" />
     <PackageReference Include="ApiHub.Shared" />
+    <PackageReference Include="Microsoft.Agents.AI" />
     <PackageReference Include="Microsoft.Extensions.AI" />
   </ItemGroup>
 
