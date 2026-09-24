@@ -7,6 +7,7 @@ using Kuroe.Configuration;
 using Kuroe.Shared;
 using Kuroe.Shared.Agent.Tools;
 using Kuroe.Tools;
+using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,14 +57,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new StepModelResolver(
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>()));
-        services.AddSingleton(sp => new WorkflowDriver(
+        services.AddSingleton(sp => new WorkflowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
             sp.GetRequiredService<StepModelResolver>(),
             sp.GetRequiredService<SettingsProvider>()));
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<WorkflowDriver>(),
+            sp.GetRequiredService<WorkflowEngine>(),
             sp.GetRequiredService<WorkflowService>(),
             sp.GetRequiredService<AgentSessionFactory>(),
             sp.GetRequiredService<StepModelResolver>()));

@@ -7,6 +7,7 @@ using Kuroe.Shared.Agent.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
@@ -16,14 +17,14 @@ namespace Kuroe.Workflows.Tasks;
 public sealed class TaskService
 {
     private readonly TaskRegistry _registry;
-    private readonly WorkflowDriver _driver;
+    private readonly WorkflowEngine _driver;
     private readonly WorkflowService _flows;
     private readonly AgentSessionFactory _sessions;
     private readonly StepModelResolver _models;
 
     internal TaskService(
         TaskRegistry registry,
-        WorkflowDriver driver,
+        WorkflowEngine driver,
         WorkflowService flows,
         AgentSessionFactory sessions,
         StepModelResolver models)
@@ -177,7 +178,7 @@ public sealed class TaskService
         AgentTask task = found.Value;
         lock (task.Gate)
         {
-            WorkflowDriver.Cancel(task);
+            _driver.Cancel(task);
         }
 
         _registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 已取消。"));

@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Shared.Agent;
+using Kuroe.Shared.Agent.Runs;
 
 namespace Kuroe.Agent.Runs;
 
@@ -13,6 +14,27 @@ public sealed class RunDispatcher(IRunExecutor executor, SettingsProvider settin
     private readonly Dictionary<RunId, (AgentRun Run, Task Task)> _live = [];
     private readonly Dictionary<RunId, Action<AgentRun>> _settled = [];
     private bool _stopping;
+
+    /// <summary>入队一个 agent 并等待收口，返回完整回复或错误。编排层用，行为与 <see cref="Dispatch"/> 一致。</summary>
+    public Task<ErrorOr<string>> DispatchAsync(AgentRun run, CancellationToken cancellationToken = default)
+    {
+        var completion = new TaskCompletionSource<ErrorOr<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatch(run, settled =>
+        {
+            if (settled.State == RunState.Succeeded && settled.Result is { Length: > 0 })
+            {
+                completion.TrySetResult(settled.Result);
+                return;
+            }
+
+            string description = settled.State == RunState.Canceled ? "已取消。"
+                : settled.Snapshot().Failures is { Count: > 0 } failures ? string.Join("；", failures)
+                : "请求未正常结束。";
+            completion.TrySetResult(Error.Failure("Run.Dispatch", description));
+        });
+
+        return completion.Task.WaitAsync(cancellationToken);
+    }
 
     /// <summary>入队一个 agent，跑完或失败后回调 settled。</summary>
     public void Dispatch(AgentRun run, Action<AgentRun> settled)
