@@ -8,12 +8,12 @@ namespace Kuroe.Agent.Sessions;
 /// <summary>会话装配入口。公共的推进器与执行器经它取会话，内部实现类型不外露。</summary>
 public sealed class AgentSessionFactory
 {
-    private readonly AgentClientProvider _clients;
+    private readonly AgentProvider _clients;
     private readonly SettingsProvider _settings;
     private readonly CatalogService _catalog;
     private readonly ToolCollection _tools;
 
-    internal AgentSessionFactory(AgentClientProvider clients, SettingsProvider settings, CatalogService catalog, ToolCollection tools)
+    internal AgentSessionFactory(AgentProvider clients, SettingsProvider settings, CatalogService catalog, ToolCollection tools)
     {
         _clients = clients;
         _settings = settings;

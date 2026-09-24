@@ -38,7 +38,7 @@ internal sealed record AgentSettings
     /// <summary>单个条目允许的实施轮数上限，检查步骤的 MaxAttempts 不得超过它。</summary>
     public int MaxAttempts { get; init; } = 3;
 
-    /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，客户端由 <see cref="Agent.Sessions.AgentClientProvider"/> 按模型重建。</summary>
+    /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，agent 由 <see cref="Agent.Sessions.AgentProvider"/> 按模型重建。</summary>
     public bool InvalidatesHistory(AgentSettings other) => Model != other.Model || SystemPrompt != other.SystemPrompt;
 
     /// <summary>日志级别在启动时写入日志管道，改动重启后生效。</summary>

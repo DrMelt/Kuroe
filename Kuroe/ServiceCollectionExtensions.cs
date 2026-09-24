@@ -67,9 +67,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<WorkflowService>(),
             sp.GetRequiredService<AgentSessionFactory>(),
             sp.GetRequiredService<StepModelResolver>()));
-        services.AddSingleton(sp => new AgentClientProvider(sp.GetRequiredService<ILoggerFactory>()));
+        services.AddSingleton(sp => new AgentProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new AgentSessionFactory(
-            sp.GetRequiredService<AgentClientProvider>(),
+            sp.GetRequiredService<AgentProvider>(),
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>(),
             sp.GetRequiredService<ToolCollection>()));

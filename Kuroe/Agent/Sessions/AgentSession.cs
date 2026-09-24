@@ -6,6 +6,7 @@ using Kuroe.Agent.Turns;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Shared.Agent.Turns;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent.Sessions;
@@ -14,7 +15,7 @@ namespace Kuroe.Agent.Sessions;
 /// 会话本身只管持有历史、逐轮请求并把本轮消息接回历史。</summary>
 public sealed class AgentSession
 {
-    private readonly AgentClientProvider _clients;
+    private readonly AgentProvider _clients;
     private readonly SettingsProvider _settings;
     private readonly CatalogService _catalog;
     private readonly ToolCollection _tools;
@@ -22,7 +23,7 @@ public sealed class AgentSession
     private readonly List<ChatMessage> _messages = [];
 
     internal AgentSession(
-        AgentClientProvider clients,
+        AgentProvider clients,
         SettingsProvider settings,
         CatalogService catalog,
         ToolCollection tools,
@@ -70,14 +71,18 @@ public sealed class AgentSession
             _history.LayOut(_messages);
         }
 
-        IChatClient client = _clients.GetClient(model, resolved.Value);
+        ChatClientAgent agent = _clients.GetAgent(model, resolved.Value);
         _messages.Add(new ChatMessage(ChatRole.User, input));
 
-        var updates = new List<ChatResponseUpdate>();
+        var updates = new List<AgentResponseUpdate>();
         var reply = new StringBuilder();
         try
         {
-            await foreach (var update in client.GetStreamingResponseAsync(_messages, Options(scope), cancellationToken))
+            await foreach (var update in agent.RunStreamingAsync(
+                _messages,
+                session: null,
+                Options(scope),
+                cancellationToken))
             {
                 updates.Add(update);
                 if (update.Text is { Length: > 0 } text)
@@ -96,7 +101,7 @@ public sealed class AgentSession
     }
 
     /// <summary>本轮消息写回历史。工具调用缺少结果时整轮退回，本轮的用户输入随之撤销。</summary>
-    private void CompleteTurn(List<ChatResponseUpdate> updates, TurnJournal journal)
+    private void CompleteTurn(List<AgentResponseUpdate> updates, TurnJournal journal)
     {
         if (updates.Count == 0)
         {
@@ -104,7 +109,7 @@ public sealed class AgentSession
             return;
         }
 
-        IList<ChatMessage> produced = updates.ToChatResponse().Messages;
+        IList<ChatMessage> produced = updates.ToAgentResponse().Messages;
         if (HasPendingFunctionCall(produced))
         {
             DiscardTurn(journal);
@@ -149,16 +154,16 @@ public sealed class AgentSession
     }
 
     /// <summary>请求选项逐轮取自当前设置，工具按本轮归属构造。</summary>
-    private ChatOptions Options(TurnScope scope)
+    private ChatClientAgentRunOptions Options(TurnScope scope)
     {
         AgentSettings current = _settings.Current.Agent;
 
-        return new ChatOptions
+        return new ChatClientAgentRunOptions(new ChatOptions
         {
             Tools = [.. _tools.Build(scope, scope.Sink)],
             Temperature = current.Temperature,
             MaxOutputTokens = current.MaxOutputTokens,
-        };
+        });
     }
 }
 
