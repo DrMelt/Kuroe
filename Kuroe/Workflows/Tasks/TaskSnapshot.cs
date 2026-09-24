@@ -20,6 +20,7 @@ public sealed record TaskSnapshot(
     int DroppedDialogue,
     DateTimeOffset LastActivityAt)
 {
+    /// <summary>流程的步骤数。</summary>
     public int TotalSteps => Flow.Count;
 
     /// <summary>全部单元推进到的最远步骤位置，用于列表里的进度。</summary>

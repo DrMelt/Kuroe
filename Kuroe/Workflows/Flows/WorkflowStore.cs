@@ -1,6 +1,4 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using ErrorOr;
 using Kuroe.Agent;
 using Kuroe.Storage;
@@ -10,20 +8,6 @@ namespace Kuroe.Workflows.Flows;
 /// <summary>flows.json 的读写。文件形状由 DTO 承载，绑定成 <see cref="Workflow"/> 后交校验。</summary>
 sealed class WorkflowStore(string file)
 {
-    private static readonly JsonSerializerOptions ReadOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly string _file = Path.GetFullPath(file);
 
     /// <summary>流程文件所在目录，用户给出的文件参数以此为基准。</summary>
@@ -72,7 +56,7 @@ sealed class WorkflowStore(string file)
         FlowFileDto? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize<FlowFileDto>(text, ReadOptions);
+            parsed = JsonSerializer.Deserialize(text, FlowJson.Default.FlowFileDto);
         }
         catch (JsonException ex)
         {
@@ -91,7 +75,8 @@ sealed class WorkflowStore(string file)
 
         try
         {
-            AtomicFile.WriteText(path, JsonSerializer.Serialize(file, WriteOptions));
+            AtomicFile.WriteText(path,
+                JsonSerializer.Serialize(file, FlowJson.WriteOptions.GetTypeInfo(typeof(FlowFileDto))));
 
             return Result.Success;
         }
@@ -163,38 +148,43 @@ sealed class WorkflowStore(string file)
         })],
     };
 
-    private sealed class FlowFileDto
-    {
-        public List<WorkflowDto> Flows { get; init; } = [];
-    }
+}
 
-    private sealed class WorkflowDto
-    {
-        public string? Name { get; init; }
+/// <summary>流程文件的形状：文件里的字段名与类型在此固定，读入后装配成 <see cref="Workflow"/>。
+/// 属性必须可写，否则缺键的项拿不到声明的默认值。</summary>
+internal sealed class FlowFileDto
+{
+    public List<WorkflowDto> Flows { get; set; } = [];
+}
 
-        public string? Description { get; init; }
+/// <summary>文件里的一条流程与它的步骤。</summary>
+internal sealed class WorkflowDto
+{
+    public string? Name { get; set; }
 
-        public List<StepDto> Steps { get; init; } = [];
-    }
+    public string? Description { get; set; }
 
-    private sealed class StepDto
-    {
-        public string? Name { get; init; }
+    public List<StepDto> Steps { get; set; } = [];
+}
 
-        public RunRole? Role { get; init; }
+/// <summary>文件里的一个步骤，省略的字段在装配时取流程规则的缺省值。</summary>
+internal sealed class StepDto
+{
+    public string? Name { get; set; }
 
-        public string? Model { get; init; }
+    public RunRole? Role { get; set; }
 
-        public string? Prompt { get; init; }
+    public string? Model { get; set; }
 
-        public StepScope? Scope { get; init; }
+    public string? Prompt { get; set; }
 
-        public List<string>? From { get; init; }
+    public StepScope? Scope { get; set; }
 
-        public StepGate? Gate { get; init; }
+    public List<string>? From { get; set; }
 
-        public RejectAction? OnReject { get; init; }
+    public StepGate? Gate { get; set; }
 
-        public int? MaxAttempts { get; init; }
-    }
+    public RejectAction? OnReject { get; set; }
+
+    public int? MaxAttempts { get; set; }
 }

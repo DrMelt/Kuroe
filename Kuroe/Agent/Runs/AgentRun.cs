@@ -33,17 +33,22 @@ public sealed class AgentRun
         };
     }
 
+    /// <summary>agent 标识。</summary>
     public RunId Id { get; }
 
+    /// <summary>执行上下文。</summary>
     public RunContext Context { get; }
 
+    /// <summary>过程记录。</summary>
     public TurnJournal Journal { get; }
 
     /// <summary>该 agent 的回合归属，工具与提交通道用它认定身份。</summary>
     public TurnScope Scope { get; }
 
+    /// <summary>登记时刻。</summary>
     public DateTimeOffset CreatedAt { get; }
 
+    /// <summary>当前执行状态。</summary>
     public RunState State
     {
         get
@@ -67,6 +72,7 @@ public sealed class AgentRun
         }
     }
 
+    /// <summary>还在排队或正在执行。</summary>
     public bool IsLive => State.IsLive();
 
     internal CancellationToken CancellationToken => _cancellation.Token;
@@ -143,6 +149,7 @@ public sealed class AgentRun
     /// <summary>取消该 agent，进行中的一轮请求随之结束。</summary>
     public void Cancel() => _cancellation.Cancel();
 
+    /// <summary>当前状态的只读快照。</summary>
     public RunSnapshot Snapshot()
     {
         lock (_gate)

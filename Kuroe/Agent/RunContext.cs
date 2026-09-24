@@ -4,13 +4,16 @@ namespace Kuroe.Agent;
 /// <summary>agent 的执行上下文。派生出的 agent 只用这里声明的内容，不继承任何未声明的历史。</summary>
 public sealed record RunContext
 {
+    /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }
 
+    /// <summary>承担的角色。</summary>
     public required RunRole Role { get; init; }
 
-    /// <summary>所属流程步骤的序号与名称。</summary>
+    /// <summary>所属流程步骤的序号。</summary>
     public required int StepIndex { get; init; }
 
+    /// <summary>所属流程步骤的名称。</summary>
     public required string StepName { get; init; }
 
     /// <summary>本 agent 要做的事，作为一条用户消息发给模型。</summary>

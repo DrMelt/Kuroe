@@ -40,7 +40,7 @@ internal sealed class TaskCommands(
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task agent <agent号>，/task help 看全部";
+        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task agent <agent号>，/help 看全部";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))

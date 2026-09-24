@@ -44,7 +44,7 @@ internal static class Labels
     public static string Of(StepScope scope) => scope == StepScope.PerItem ? "按条目" : "整步";
 
     /// <summary>步骤产出后是否等人放行。</summary>
-    public static string Of(StepGate gate) => gate == StepGate.Review ? "需批准" : "自动";
+    public static string Of(StepGate gate) => gate == StepGate.Review ? "需批准" : "自动放行";
 
     /// <summary>agent 的状态，有工具调用在进行时带上它。</summary>
     public static string State(RunSnapshot run) =>

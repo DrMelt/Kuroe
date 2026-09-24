@@ -94,6 +94,7 @@ public sealed class CatalogService
         return connection.IsError ? connection.ErrorsOrEmptyList : Result.Success;
     }
 
+    /// <summary>新增提供商，失败时一次给出全部非法项。</summary>
     public ErrorOr<Success> AddProvider(string name, string baseAddress, string apiKey)
     {
         ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> parsed =
@@ -141,6 +142,7 @@ public sealed class CatalogService
             : Mutate(catalog => catalog.RemoveProvider(providerName.Value));
     }
 
+    /// <summary>把模型注册到提供商，提供商不存在时返回错误。</summary>
     public ErrorOr<Success> AddModel(string modelName, string providerName)
     {
         ErrorOr<(ModelName Model, ProviderName Provider)> parsed =
@@ -155,7 +157,7 @@ public sealed class CatalogService
         return Mutate(catalog => catalog.AddModel(ModelDefinition.Create(model, provider)));
     }
 
-    /// <summary>从目录注销模型。注销当前选中模型时的取消选择由 <see cref="Agent.ModelService"/> 负责。</summary>
+    /// <summary>从目录注销模型。注销当前选中模型时的取消选择由 <see cref="ModelService"/> 负责。</summary>
     internal ErrorOr<Success> RemoveModel(string modelName)
     {
         ErrorOr<ModelName> model = CatalogValues.Model(modelName);

@@ -63,6 +63,7 @@ public sealed class TaskRegistry
         }
     }
 
+    /// <summary>按任务号取任务，不存在时返回错误。</summary>
     public ErrorOr<AgentTask> Find(TaskId id)
     {
         lock (_gate)
@@ -73,6 +74,7 @@ public sealed class TaskRegistry
         }
     }
 
+    /// <summary>按 agent 号取 agent，不存在时返回错误。</summary>
     public ErrorOr<AgentRun> FindRun(RunId id)
     {
         lock (_gate)
@@ -81,6 +83,7 @@ public sealed class TaskRegistry
         }
     }
 
+    /// <summary>全部任务的快照，按提交顺序。</summary>
     public IReadOnlyList<TaskSnapshot> Snapshots()
     {
         AgentTask[] all;

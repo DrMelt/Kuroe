@@ -5,9 +5,16 @@ namespace Kuroe.Workflows;
 /// <summary>值得宿主单独提示一句的执行事件。</summary>
 public enum NoticeLevel
 {
+    /// <summary>普通进展。</summary>
     Info,
+
+    /// <summary>某个步骤或任务走完。</summary>
     Done,
+
+    /// <summary>取消一类的可恢复情况。</summary>
     Warning,
+
+    /// <summary>失败。</summary>
     Error,
 }
 

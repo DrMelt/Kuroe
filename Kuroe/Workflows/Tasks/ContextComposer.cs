@@ -14,6 +14,7 @@ public static class ContextComposer
     /// <summary>带进上下文的任务对话条数。</summary>
     private const int DialogueLimit = 6;
 
+    /// <summary>按步骤声明装配该单元这一轮的上下文。</summary>
     public static RunContext ForStep(AgentTask task, WorkUnit unit, int stepIndex, string model)
     {
         StepSpec spec = task.Flow.Steps[stepIndex];

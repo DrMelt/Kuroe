@@ -58,6 +58,10 @@ internal sealed class ErrorPrinter(Terminal terminal)
                     terminal.Hint("用 /flow list 查看流程名。");
                     break;
 
+                case ErrorCodes.WorkflowInvalidPath:
+                    terminal.Hint("/flow add 的文件参数相对工作目录解析，路径非法时换一个写法。");
+                    break;
+
                 case ErrorCodes.WorkflowStep or ErrorCodes.WorkflowBody or ErrorCodes.WorkflowName
                     or ErrorCodes.WorkflowFormat:
                     terminal.Hint("流程文件是工作目录下的 flows.json，改完用 /flow list 确认是否加载成功。");

@@ -20,6 +20,7 @@ public sealed class SettingsProvider
     /// <summary>当前生效的配置。呈现由 <see cref="Sections"/> 给出，改动只经 Set 与 Clear。</summary>
     internal KuroeSettings Current { get; private set; }
 
+    /// <summary>用户层偏好文件的绝对路径。</summary>
     public string UserSettingsFile => _paths.UserSettingsFile;
 
     /// <summary>规范化用户层并绑定校验，失败时一次给出全部错误。装配统一由 AddKuroe 完成。</summary>

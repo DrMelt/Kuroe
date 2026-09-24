@@ -48,5 +48,6 @@ public sealed record Workflow(string Name, string? Description, IReadOnlyList<St
         return null;
     }
 
+    /// <summary>步骤数。</summary>
     public int Count => Steps.Count;
 }

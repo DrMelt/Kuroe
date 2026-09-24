@@ -26,7 +26,7 @@ internal sealed class StartupView(
 
         if (tools.Names.Count == 0)
         {
-            terminal.Hint("当前没有可用工具，检查是否注册了工具载体、公开方法是否标注 DescriptionAttribute。");
+            terminal.Hint("当前没有可用工具，检查是否注册了工具载体、载体是否声明了函数。");
         }
 
         if (flows.Find(flows.DefaultName).IsError)

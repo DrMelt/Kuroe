@@ -1,6 +1,6 @@
 namespace Kuroe.Agent.Runs;
 
-/// <summary>agent 的执行状态，只表达跑没跑完。流程结论见 <see cref="UnitVerdict"/>。</summary>
+/// <summary>agent 的执行状态，只表达跑没跑完。流程结论见 <see cref="Workflows.UnitVerdict"/>。</summary>
 public enum RunState
 {
     /// <summary>已登记，等待并发额度。</summary>
@@ -22,6 +22,7 @@ public enum RunState
 /// <summary>状态的展示名与终态判定。</summary>
 public static class RunStates
 {
+    /// <summary>状态的展示名。</summary>
     public static string Label(this RunState state) => state switch
     {
         RunState.Queued => "排队中",

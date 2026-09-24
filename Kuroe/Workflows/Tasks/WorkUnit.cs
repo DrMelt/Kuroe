@@ -9,15 +9,19 @@ public sealed class WorkUnit(int? itemIndex, PlanItem? item, int stepCursor)
 {
     private readonly Dictionary<int, AgentRun> _byStep = [];
 
+    /// <summary>所属条目序号，整步单元为空。</summary>
     public int? ItemIndex { get; } = itemIndex;
 
+    /// <summary>规划交回的条目，整步单元为空。</summary>
     public PlanItem? Item { get; } = item;
 
     /// <summary>下一个待执行的步骤序号，等于步骤数时该单元走完。</summary>
     public int StepCursor { get; private set; } = stepCursor;
 
+    /// <summary>单元是否还在自动推进。</summary>
     public UnitState State { get; private set; } = UnitState.Working;
 
+    /// <summary>检查步骤交回的结论。</summary>
     public UnitVerdict Verdict { get; private set; } = UnitVerdict.NotChecked;
 
     /// <summary>检查不通过时的问题清单，返工时写进上下文。</summary>

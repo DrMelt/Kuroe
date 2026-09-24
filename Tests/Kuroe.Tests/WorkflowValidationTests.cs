@@ -17,6 +17,7 @@ public sealed class WorkflowValidationTests
     [InlineData(RejectOnImplement, "OnReject 与 MaxAttempts 只适用于检查步骤")]
     [InlineData(TwoPlans, "一条流程只能有一个规划步骤")]
     [InlineData(AttemptsOverCap, "MaxAttempts 超过 Agent:MaxAttempts")]
+    [InlineData(NoSteps, "至少要有个步骤")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -57,6 +58,20 @@ public sealed class WorkflowValidationTests
 
         Assert.Equal(2, imported.Names.Count);
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
+    }
+
+    /// <summary>写回的流程文件保留缩进与可读中文，枚举写成名字。</summary>
+    [Fact]
+    public void Saved_flow_file_keeps_readable_text_and_string_enums()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), TwoStepPlan);
+
+        harness.Flows.Import("extra.json").ThrowIfError();
+
+        string text = File.ReadAllText(Path.Combine(harness.Root, "flows.json"));
+        Assert.Contains("\"Role\": \"Plan\"", text);
+        Assert.Contains("只规划", text);
     }
 
     private const string MissingStepName = """
@@ -125,6 +140,11 @@ public sealed class WorkflowValidationTests
           { "Name": "实施", "Role": "Implement", "Scope": "PerItem", "From": ["规划"] },
           { "Name": "检查", "Role": "Check", "Scope": "PerItem", "From": ["实施"], "MaxAttempts": 9 }
         ] } ] }
+        """;
+
+    /// <summary>一条流程只写了名字，步骤缺键时按空步骤处理。</summary>
+    private const string NoSteps = """
+        { "Flows": [ { "Name": "默认", "Description": "只有名字" } ] }
         """;
 
     private const string SingleStepPlan = """

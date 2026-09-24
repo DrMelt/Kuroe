@@ -93,7 +93,7 @@ internal sealed class FlowCommands(
             new Text("步骤", Styles.Hint),
             new Text("角色", Styles.Hint),
             new Text("展开", Styles.Hint),
-            new Text("放行", Styles.Hint),
+            new Text("产出后", Styles.Hint),
             new Text("上游与要求", Styles.Hint));
 
         foreach ((StepSpec step, int index) in found.Value.Steps.Select((step, index) => (step, index)))

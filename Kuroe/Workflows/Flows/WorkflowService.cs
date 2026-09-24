@@ -48,6 +48,7 @@ public sealed class WorkflowService
         }
     }
 
+    /// <summary>按名取流程，不存在时返回错误。</summary>
     public ErrorOr<Workflow> Find(string name)
     {
         lock (_gate)
@@ -58,6 +59,7 @@ public sealed class WorkflowService
         }
     }
 
+    /// <summary>提交任务未指定流程时用的那条流程。</summary>
     public ErrorOr<Workflow> Default() => Find(DefaultName);
 
     /// <summary>从文件导入流程：逐条校验，任一条不合法就整体不生效；同名整条覆盖，新的追加，成功后落盘。</summary>

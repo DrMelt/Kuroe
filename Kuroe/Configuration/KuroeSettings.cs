@@ -1,12 +1,10 @@
 using System.Globalization;
-using System.Reflection;
 using System.Text.Json.Nodes;
 using ErrorOr;
 
 namespace Kuroe.Configuration;
 
-/// <summary>全部配置节的绑定结果，也是用户层路径与键名的定义。
-/// 路径由公共实例属性的反射得出，因此类内部化后成员仍声明为 public。</summary>
+/// <summary>全部配置节的绑定结果。路径与设置项由 <see cref="SettingDefinitions"/> 给出。</summary>
 internal sealed record KuroeSettings
 {
     /// <summary>生效值缺失时的呈现文本。</summary>
@@ -15,57 +13,70 @@ internal sealed record KuroeSettings
     public required AgentSettings Agent { get; init; }
 
     /// <summary>按当前生效值列出各节与各设置项，路径与 <see cref="ResolvePath"/> 同源。</summary>
-    public IReadOnlyList<SettingSection> Sections(UserSettingsStore store)
-    {
-        const BindingFlags Declared = BindingFlags.Public | BindingFlags.Instance;
+    public IReadOnlyList<SettingSection> Sections(UserSettingsStore store) =>
+    [
+        .. SettingDefinitions.All
+            .GroupBy(definition => definition.Section)
+            .Select(section => new SettingSection(section.Key,
+            [
+                .. section.Select(definition => new SettingEntry(definition.Path, definition.Name,
+                    Text(definition.Value(this)), store.TryGetValue(definition.Path) is not null)),
+            ])),
+    ];
 
-        List<SettingSection> sections = [];
-        foreach (PropertyInfo section in typeof(KuroeSettings).GetProperties(Declared))
-        {
-            if (!IsSection(section.PropertyType))
-            {
-                continue;
-            }
-
-            object? body = section.GetValue(this);
-            List<SettingEntry> entries = [];
-
-            foreach (PropertyInfo item in section.PropertyType.GetProperties(Declared))
-            {
-                string path = $"{section.Name}:{item.Name}";
-                object? value = item.GetValue(body);
-                string text = value is null ? NotSetText : Convert.ToString(value, CultureInfo.InvariantCulture)!;
-                entries.Add(new SettingEntry(path, item.Name, text, store.TryGetValue(path) is not null));
-            }
-
-            sections.Add(new SettingSection(section.Name, entries));
-        }
-
-        return sections;
-    }
-
-    /// <summary>把用户输入的路径解析为由属性名构成的规范路径。路径不对应已定义设置项时返回错误。</summary>
+    /// <summary>把用户输入的路径解析为声明里的规范路径。路径不对应已定义设置项时返回错误。</summary>
     public static ErrorOr<string> ResolvePath(string path)
     {
         string[] segments = path.Split(':');
-        Type? type = typeof(KuroeSettings);
 
-        for (int i = 0; i < segments.Length; i++)
+        if (segments.Length == 1 && SettingDefinitions.SectionName(segments[0]) is { } section)
         {
-            if (type is null || Property(type, segments[i]) is not { } property)
-            {
-                return [SettingsErrors.Undefined(path)];
-            }
-
-            segments[i] = property.Name;
-            type = IsSection(property.PropertyType) ? property.PropertyType : null;
+            return section;
         }
 
-        return string.Join(':', segments);
+        if (segments.Length == 2 && SettingDefinitions.Find(segments[0], segments[1]) is { } definition)
+        {
+            return definition.Path;
+        }
+
+        return [SettingsErrors.Undefined(path)];
     }
 
-    /// <summary>把用户层树中的设置项键改写为属性名，未知键原样保留。同一设置项写成多个大小写变体时返回错误。</summary>
-    public static ErrorOr<JsonObject> Normalize(JsonObject root) => Normalize(root, typeof(KuroeSettings), string.Empty);
+    /// <summary>把用户层树中的设置项键改写为声明的项名，未知键原样保留。同一设置项写成多个大小写变体时返回错误。</summary>
+    public static ErrorOr<JsonObject> Normalize(JsonObject root)
+    {
+        JsonObject normalized = [];
+
+        foreach ((string key, JsonNode? value) in root)
+        {
+            if (SettingDefinitions.SectionName(key) is not { } section)
+            {
+                normalized[key] = value?.DeepClone();
+                continue;
+            }
+
+            if (normalized.ContainsKey(section))
+            {
+                return [SettingsErrors.DuplicateKey(section)];
+            }
+
+            if (value is not JsonObject body)
+            {
+                normalized[section] = value?.DeepClone();
+                continue;
+            }
+
+            ErrorOr<JsonObject> items = NormalizeSection(body, section);
+            if (items.IsError)
+            {
+                return items.ErrorsOrEmptyList;
+            }
+
+            normalized[section] = items.Value;
+        }
+
+        return normalized;
+    }
 
     /// <summary>绑定全部节，输入须是 <see cref="Normalize"/> 处理过的树。</summary>
     public static ErrorOr<KuroeSettings> From(JsonObject root)
@@ -95,45 +106,31 @@ internal sealed record KuroeSettings
         return null;
     }
 
-    private static ErrorOr<JsonObject> Normalize(JsonObject node, Type type, string path)
+    /// <summary>把一节的键改写为声明的项名，未知键原样保留。</summary>
+    private static ErrorOr<JsonObject> NormalizeSection(JsonObject node, string section)
     {
         JsonObject normalized = [];
 
         foreach ((string key, JsonNode? value) in node)
         {
-            if (Property(type, key) is not { } property)
+            if (SettingDefinitions.Find(section, key)?.Name is not { } item)
             {
                 normalized[key] = value?.DeepClone();
                 continue;
             }
 
-            string itemPath = path.Length == 0 ? property.Name : $"{path}:{property.Name}";
-            if (normalized.ContainsKey(property.Name))
+            if (normalized.ContainsKey(item))
             {
-                return [SettingsErrors.DuplicateKey(itemPath)];
+                return [SettingsErrors.DuplicateKey($"{section}:{item}")];
             }
 
-            if (value is JsonObject section && IsSection(property.PropertyType))
-            {
-                ErrorOr<JsonObject> child = Normalize(section, property.PropertyType, itemPath);
-                if (child.IsError)
-                {
-                    return child.ErrorsOrEmptyList;
-                }
-
-                normalized[property.Name] = child.Value;
-                continue;
-            }
-
-            normalized[property.Name] = value?.DeepClone();
+            normalized[item] = value?.DeepClone();
         }
 
         return normalized;
     }
 
-    private static PropertyInfo? Property(Type type, string name) =>
-        type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-    /// <summary>属性类型是 Kuroe 定义的配置节时路径可以继续，其余类型是设置项。</summary>
-    private static bool IsSection(Type type) => type.IsClass && type.Assembly == typeof(KuroeSettings).Assembly;
+    /// <summary>生效值的呈现文本，未设置时用 <see cref="NotSetText"/>。</summary>
+    private static string Text(object? value) =>
+        value is null ? NotSetText : Convert.ToString(value, CultureInfo.InvariantCulture)!;
 }

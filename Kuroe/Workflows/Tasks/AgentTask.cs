@@ -35,10 +35,13 @@ public sealed class AgentTask
         _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : title;
     }
 
+    /// <summary>任务标识。</summary>
     public TaskId Id { get; }
 
+    /// <summary>提交时给出的目标。</summary>
     public string Goal { get; }
 
+    /// <summary>提交时锁定的流程模板。</summary>
     public Workflow Flow { get; }
 
     internal AgentSession Session { get; }
@@ -71,6 +74,7 @@ public sealed class AgentTask
         }
     }
 
+    /// <summary>规划步骤交回的条目拆分，尚未交回时为空。仅在持有 <see cref="Gate"/> 时写。</summary>
     public StepPlan? Plan { get; internal set; }
 
     /// <summary>提交顺序排列的 agent。仅在持有 <see cref="Gate"/> 时读写。</summary>
@@ -79,6 +83,7 @@ public sealed class AgentTask
     /// <summary>创建顺序排列的工作单元：整步单元在前，按条目展开出的单元随后。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<WorkUnit> Units => _units;
 
+    /// <summary>任务的整体状态，由取消标记、各单元与在跑的 agent 汇总得出。</summary>
     public TaskState State
     {
         get
@@ -208,6 +213,7 @@ public sealed class AgentTask
         }
     }
 
+    /// <summary>当前状态的只读快照，含步骤、单元、agent 与前台对话。</summary>
     public TaskSnapshot Snapshot()
     {
         lock (Gate)

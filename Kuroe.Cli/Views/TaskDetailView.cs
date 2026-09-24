@@ -1,7 +1,6 @@
 using Kuroe.Agent;
 using Kuroe.Agent.Runs;
 using Kuroe.Workflows;
-using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
@@ -36,8 +35,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (StepSnapshot step in task.Steps)
         {
             _terminal.ToolCall($"步骤 {step.Index + 1} · {step.Spec.Name}"
-                + $"（{step.Spec.Role.Label()} · {Labels.Of(step.Spec.Scope)}"
-                + $" · {(step.Spec.Gate == StepGate.Review ? "需批准" : "自动放行")}）");
+                + $"（{step.Spec.Role.Label()} · {Labels.Of(step.Spec.Scope)} · {Labels.Of(step.Spec.Gate)}）");
 
             if (step.Runs.Count == 0)
             {

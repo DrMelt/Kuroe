@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using System.Reflection;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Kuroe.Agent.Turns;
@@ -7,76 +6,117 @@ using Microsoft.Extensions.AI;
 
 namespace Kuroe.Agent.Tools;
 
-/// <summary>工具载体上标注 DescriptionAttribute 的公开方法构成的模型可调用工具集合。实例方法需要载体实例，静态方法不需要。
-/// 每轮请求按回合归属重新构造载体与包装，使调用记录落到该回合的记录上。</summary>
+/// <summary>工具载体声明的函数构成的模型可调用集合，外加记录调用的包装。
+/// 每轮请求按回合归属重新取载体，使调用记录落到该回合的记录上。</summary>
 public sealed class ToolCollection
 {
-    private const BindingFlags Scan = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+    private readonly IAgentTool[] _carriers;
 
-    private readonly Provider[] _providers;
-
-    public ToolCollection(IEnumerable<IAgentTool> providers)
+    /// <summary>收集各载体的函数声明。</summary>
+    public ToolCollection(IEnumerable<IAgentTool> carriers)
     {
-        _providers = [.. providers.Select(provider => new Provider(provider, [.. provider.GetType()
-            .GetMethods(Scan)
-            .Where(method => method.GetCustomAttribute<DescriptionAttribute>() is not null)]))];
-
-        Names = [.. _providers.SelectMany(provider => provider.Methods.Select(method => method.Name))];
+        _carriers = [.. carriers];
+        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Name)];
     }
 
     /// <summary>工具名，供宿主展示可用性。</summary>
     public IReadOnlyList<string> Names { get; }
 
-    /// <summary>模型可调用的工具，请求选项由会话取用。没有符合条件的载体方法时为空。</summary>
+    /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。</summary>
     internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink)
     {
         List<AITool> tools = [];
-        foreach (Provider provider in _providers)
+        foreach (IAgentTool carrier in _carriers)
         {
-            IAgentTool carrier = provider.Instance is IScopedAgentTool scoped ? scoped.ForTurn(scope) : provider.Instance;
-            foreach (MethodInfo method in provider.Methods)
+            IAgentTool bound = carrier is IScopedAgentTool scoped ? scoped.ForTurn(scope) : carrier;
+            foreach (ToolFunction function in bound.Functions)
             {
-                tools.Add(new RecordingAIFunction(
-                    AIFunctionFactory.Create(method, method.IsStatic ? null : carrier), sink));
+                tools.Add(new DeclaredFunction(function, sink));
             }
         }
 
         return tools;
     }
 
-    private sealed record Provider(IAgentTool Instance, MethodInfo[] Methods);
-
-    /// <summary>记录一次调用的包装，执行原样转发给被包装的函数。</summary>
-    private sealed class RecordingAIFunction(AIFunction inner, ITurnSink sink) : DelegatingAIFunction(inner)
+    /// <summary>按声明执行的函数，调用参数与结果写进过程记录。</summary>
+    private sealed class DeclaredFunction(ToolFunction declaration, ITurnSink sink) : AIFunction
     {
-        /// <summary>参数与结果写成文本时保留非 ASCII 字符。</summary>
-        private static readonly JsonSerializerOptions Display = new()
+        /// <summary>调用参数的呈现方式：非 ASCII 字符不转义。</summary>
+        private static readonly JsonWriterOptions Rendering = new()
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
-        protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+        public override string Name => declaration.Name;
+
+        public override string Description => declaration.Description;
+
+        public override JsonElement JsonSchema => declaration.Schema;
+
+        protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
         {
-            string parameters = JsonSerializer.Serialize(new Dictionary<string, object?>(arguments), Display);
+            string parameters = Describe(arguments);
+
+            string result;
             try
             {
-                object? result = await base.InvokeCoreAsync(arguments, cancellationToken);
-                sink.OnToolCall(new ToolCallRecord(Name, parameters, Describe(result), false));
-                return result;
+                result = declaration.Invoke(new ToolArguments(arguments));
             }
             catch (Exception ex)
             {
                 sink.OnToolCall(new ToolCallRecord(Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
+
+            sink.OnToolCall(new ToolCallRecord(Name, parameters, result, false));
+
+            return new ValueTask<object?>(result);
         }
 
-        /// <summary>返回值转成文本，字符串形式的返回值去掉 JSON 引号。</summary>
-        private static string Describe(object? result) => result switch
+        /// <summary>实参写成 JSON 文本。</summary>
+        private static string Describe(AIFunctionArguments arguments)
         {
-            JsonElement element when element.ValueKind is JsonValueKind.String => element.GetString() ?? string.Empty,
-            JsonElement element => JsonSerializer.Serialize(element, Display),
-            _ => JsonSerializer.Serialize(result, Display),
-        };
+            using MemoryStream buffer = new();
+            using (Utf8JsonWriter writer = new(buffer, Rendering))
+            {
+                writer.WriteStartObject();
+                foreach ((string name, object? value) in arguments)
+                {
+                    writer.WritePropertyName(name);
+                    WriteValue(writer, value);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return Encoding.UTF8.GetString(buffer.ToArray());
+        }
+
+        /// <summary>JSON 值原样写出，其余值按文本写出。</summary>
+        private static void WriteValue(Utf8JsonWriter writer, object? value)
+        {
+            switch (value)
+            {
+                case null:
+                    writer.WriteNullValue();
+                    break;
+
+                case JsonElement element:
+                    element.WriteTo(writer);
+                    break;
+
+                case string text:
+                    writer.WriteStringValue(text);
+                    break;
+
+                case bool flag:
+                    writer.WriteBooleanValue(flag);
+                    break;
+
+                default:
+                    writer.WriteStringValue(value.ToString());
+                    break;
+            }
+        }
     }
 }

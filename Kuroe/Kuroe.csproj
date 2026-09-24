@@ -1,12 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
   <ItemGroup>
-    <!-- 只对宿主隐藏编译可见性，运行时仍随输出部署：宿主的编译面只有 Kuroe 的类型、ErrorOr 与日志所需的 Microsoft.Extensions.Logging -->
-    <PackageReference Include="ApiHub" PrivateAssets="compile" />
-    <PackageReference Include="ApiHub.ChatClient" PrivateAssets="compile" />
-    <PackageReference Include="ApiHub.Json" PrivateAssets="compile" />
-    <PackageReference Include="ApiHub.Shared" PrivateAssets="compile" />
-    <PackageReference Include="Microsoft.Extensions.AI" PrivateAssets="compile" />
+    <PackageReference Include="ApiHub" />
+    <PackageReference Include="ApiHub.ChatClient" />
+    <PackageReference Include="ApiHub.Json" />
+    <PackageReference Include="ApiHub.Shared" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
   </ItemGroup>
 
   <ItemGroup>

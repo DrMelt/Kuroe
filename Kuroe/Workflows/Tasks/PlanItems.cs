@@ -16,18 +16,12 @@ static class PlanItems
     /// <summary>一个方案最多交回的条目数。</summary>
     private const int Limit = 20;
 
-    private static readonly JsonSerializerOptions ReadOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        AllowTrailingCommas = true,
-    };
-
     public static ErrorOr<IReadOnlyList<PlanItem>> Parse(string itemsJson)
     {
-        List<ItemDto>? parsed;
+        List<PlanItemDto>? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize<List<ItemDto>>(itemsJson, ReadOptions);
+            parsed = JsonSerializer.Deserialize(itemsJson, PlanJson.Default.ListPlanItemDto);
         }
         catch (JsonException ex)
         {
@@ -47,7 +41,7 @@ static class PlanItems
         List<PlanItem> items = [];
         for (int index = 0; index < parsed.Count; index++)
         {
-            ItemDto item = parsed[index];
+            PlanItemDto item = parsed[index];
             if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction))
             {
                 return [TaskErrors.Items($"第 {index + 1} 个条目缺 Title 或 Instruction")];
@@ -59,13 +53,14 @@ static class PlanItems
 
         return items;
     }
+}
 
-    private sealed class ItemDto
-    {
-        public string? Title { get; init; }
+/// <summary>模型交回的条目文本的形状，不含序号与去空白后的结果。</summary>
+internal sealed class PlanItemDto
+{
+    public string? Title { get; set; }
 
-        public string? Instruction { get; init; }
+    public string? Instruction { get; set; }
 
-        public string? Acceptance { get; init; }
-    }
+    public string? Acceptance { get; set; }
 }

@@ -14,7 +14,7 @@
 - 工具调用自动发起，调用参数与结果分行呈现
 - 提供商与模型在命令行登记，目录可脱敏导出、合并导入
 - 偏好改动立即生效，需要重启或会使旧上下文失效时当场提示
-- 内置时间、天气两个示例工具，实现 `IAgentTool` 即可扩展
+- 内置时间、天气两个示例工具，实现 `IAgentTool` 声明函数即可扩展
 
 ## 环境要求
 
@@ -186,20 +186,6 @@ exit
 | 带进上下文的任务对话 | 最近 6 条 | 更早的内容由上游产出概括 |
 | 任务标题 | 40 字 | 取目标首行截断 |
 | 一个方案的条目 | 20 条 | 提交被拒绝，模型在同一轮里改正 |
-
-## 作为库使用
-
-`Kuroe` 是库，`Kuroe.Cli` 是它的终端宿主。宿主给出工作目录与日志输出，其余装配由 `services.AddKuroe(KuroePaths.At(directory))` 完成，失败时一次返回全部启动期错误。
-
-命名空间按聚合划分，聚合内按机制再分子命名空间，依赖单向：`Storage` ← `Configuration` ← `Catalogs` ← `Agent` ← `Workflows` ← `Tools`。`Agent` 是一次 agent 执行的形状：根命名空间放标识、执行上下文与错误的形状，`Turns`（回合的归属与记录）、`Tools`（工具契约）、`Sessions`（模型会话）、`Runs`（执行体与调度）依次单向依赖；`Workflows` 是任务与流程：`Flows` 放流程模板及其读写与校验，`Tasks` 放任务、工作单元、快照与推进，根命名空间放状态、错误与通知。
-
-需要宿主据此区分处理的错误码在 `ErrorCodes` 里，库侧的错误构造与宿主的操作指引引用同一批常量。
-
-ApiHub 与 Microsoft.Extensions.AI 的引用标为 `PrivateAssets="compile"`，宿主只见 `Kuroe` 的类型、`ErrorOr` 的错误形状，以及装配与日志所需的 `Microsoft.Extensions.DependencyInjection` 与 `Microsoft.Extensions.Logging`。工具实现 `IAgentTool`，在标注 `DescriptionAttribute` 的公开方法上承载能力，在 `AddKuroe` 之前或之后注册都生效。
-
-任务侧的公开入口是 `TaskService`（提交、批准、返工、取消、采纳、改标题、切换当前任务）与 `TaskRegistry`（快照与通知）。渲染只读 `TaskSnapshot` 与 `RunSnapshot`，二者是不可变记录，读的时候不会碰到正在写的执行体。前台对话经 `AgentTask.AskDialogueAsync` 交出，实现 `ITurnSink` 就能同时拿到文本增量与工具调用记录。
-
-需要按回合身份行事的工具实现 `IScopedAgentTool`，`ForTurn` 每轮换一个带 `TurnScope` 的载体，避免共享实例上串台；无状态工具不必实现它。替换 `IRunExecutor` 即可在不接模型的情况下驱动整条流程，`Kuroe.Tests` 用这个口子验证推进与校验逻辑。
 
 ## 开发
 

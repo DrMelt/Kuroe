@@ -16,6 +16,7 @@ public sealed record RunSnapshot(
     IReadOnlyList<JournalEntry> Journal,
     int DroppedEntries)
 {
+    /// <summary>状态是否不再变化。</summary>
     public bool IsSettled => State.IsSettled();
 
     /// <summary>已耗时，未结束时按当前时刻算。</summary>
