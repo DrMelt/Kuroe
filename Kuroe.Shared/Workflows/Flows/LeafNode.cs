@@ -17,6 +17,6 @@ public sealed record LeafNode(
     /// <summary>检查未声明时按退回返工处理。</summary>
     public RejectAction RejectAction => OnReject ?? RejectAction.Retry;
 
-    /// <summary>检查未声明时按两轮处理。</summary>
-    public int AttemptLimit => Math.Max(1, MaxAttempts ?? 2);
+    /// <summary>检查未声明时按两轮处理，值域由 WorkflowRules 校验保证。</summary>
+    public int AttemptLimit => MaxAttempts ?? 2;
 }

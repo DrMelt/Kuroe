@@ -2,6 +2,7 @@ using Kuroe.Agent.Runs;
 using Kuroe.Agent.Turns;
 using Kuroe.Shared.Agent;
 using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Agent.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Shared.Workflows.Flows;
@@ -76,6 +77,11 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
                 implement = task.Graph.ReturnTarget(unit.NodeCursor, unit.Branch);
                 unit.Rework(implement);
                 task.Touch();
+            }
+
+            if (implement is null)
+            {
+                task.Journal.Append(new ErrorEntry("检查叶没有可退回的实施节点，原地重试。"));
             }
 
             int target = implement ?? unit.NodeCursor;

@@ -1,7 +1,10 @@
 using ApiHub.ChatClient;
 using ApiHub.Shared.Models;
+using Kuroe;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -39,6 +42,25 @@ public sealed class AgentFrameworkWiringTests
         Assert.Equal(0.7f, options.ChatOptions.Temperature);
         Assert.NotNull(options.ChatOptions.Tools);
         Assert.Single(options.ChatOptions.Tools);
+    }
+
+    /// <summary>未缓存的模型首次解析不触碰不存在的旧客户端，重复解析命中同一实例。</summary>
+    [Fact]
+    public void GetAgent_creates_for_missing_cache_and_reuses_cached()
+    {
+        Type providerType = typeof(ServiceCollectionExtensions).Assembly
+            .GetType("Kuroe.Agent.Sessions.AgentProvider", throwOnError: true)!;
+        object provider = Activator.CreateInstance(providerType, [NullLoggerFactory.Instance])!;
+        MethodInfo getAgent = providerType.GetMethod("GetAgent", BindingFlags.Instance | BindingFlags.Public)!;
+
+        ModelConnection connection = Connection();
+
+        ChatClientAgent first = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, ["fake", connection]));
+        ChatClientAgent second = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, ["fake", connection]));
+
+        Assert.Same(first, second);
+
+        ((IDisposable)provider).Dispose();
     }
 
     private static ModelConnection Connection() => ModelConnection.Create(

@@ -27,6 +27,7 @@ public sealed class WorkflowValidationTests
     [InlineData(UnknownAgent, "引用的 agent XXX 不存在")]
     [InlineData(FunnelGateBlocked, "收拢检查不支持待批准门控")]
     [InlineData(AttemptsOverCap, "MaxAttempts 超过 Agent:MaxAttempts")]
+    [InlineData(MaxAttemptsZero, "MaxAttempts 必须为正整数")]
     [InlineData(NoNodes, "至少要有一个节点")]
     [InlineData(ContainerFrom, "不支持 From")]
     [InlineData(ContainerPrompt, "不支持 Prompt")]
@@ -198,6 +199,14 @@ public sealed class WorkflowValidationTests
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
           { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
           { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 9 }
+        ] } ] }
+        """;
+
+    private const string MaxAttemptsZero = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 0 }
         ] } ] }
         """;
 

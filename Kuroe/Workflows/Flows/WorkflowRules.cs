@@ -254,6 +254,11 @@ static class WorkflowRules
                 errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "收拢检查不支持待批准门控。"));
             }
 
+            if (leaf.MaxAttempts is < 1)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "MaxAttempts 必须为正整数。"));
+            }
+
             if (leaf.MaxAttempts > attemptLimit)
             {
                 errors.Add(WorkflowErrors.Node(flowName, leaf.Name, $"MaxAttempts 超过 Agent:MaxAttempts={attemptLimit}。"));

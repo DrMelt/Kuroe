@@ -14,23 +14,26 @@ sealed class AgentProvider(ILoggerFactory loggerFactory) : IDisposable
     private readonly Lock _gate = new();
     private readonly Dictionary<string, (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client)> _agents = [];
 
-    /// <summary>该模型的 agent，接入信息与上次不同则重建。</summary>
+    /// <summary>该模型的 agent，接入信息与上次不同则重建。缓存未命中时没有旧客户端可释放。</summary>
     public ChatClientAgent GetAgent(string model, ModelConnection connection)
     {
         lock (_gate)
         {
-            if (!_agents.TryGetValue(model, out (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client) cached)
-                || cached.Connection != connection)
+            if (_agents.TryGetValue(model, out (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client) cached) && cached.Connection == connection)
             {
-                cached.Client.Dispose();
-                IChatClient client = connection.CreateChatClient();
-                ChatClientAgent agent = client.AsAIAgent(new ChatClientAgentOptions { Name = model }, loggerFactory);
-                _agents[model] = (connection, agent, client);
-
-                return agent;
+                return cached.Agent;
             }
 
-            return cached.Agent;
+            if (cached.Agent is not null)
+            {
+                cached.Client.Dispose();
+            }
+
+            IChatClient client = connection.CreateChatClient();
+            ChatClientAgent agent = client.AsAIAgent(new ChatClientAgentOptions { Name = model }, loggerFactory);
+            _agents[model] = (connection, agent, client);
+
+            return agent;
         }
     }
 
