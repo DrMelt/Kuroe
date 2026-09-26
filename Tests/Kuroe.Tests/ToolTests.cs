@@ -23,6 +23,17 @@ public sealed class ToolTests
         Assert.Contains("只有进行中的检查 agent", outcome);
     }
 
+    [Fact]
+    public void Verdict_missing_passed_is_rejected()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        ToolFunction submit = new VerdictTool(harness.Submitter).Functions.Single();
+
+        string outcome = submit.Invoke(Arguments("""{"findings": "缺验收标准"}"""));
+
+        Assert.Contains("被拒绝：passed 缺失或不是 true/false", outcome);
+    }
+
     /// <summary>实参按模型给出的 JSON 值构造，值各自持有，不随文档释放失效。</summary>
     private static ToolArguments Arguments(string json)
     {

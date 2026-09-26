@@ -39,7 +39,8 @@ public sealed class VerdictTool : IScopedAgentTool
                 new ToolParameter("passed", "检查是否通过", Flag: true, Required: true),
                 new ToolParameter("findings", "不通过时逐条列出问题"),
             ],
-            arguments => intake.SubmitVerdict(scope, arguments.Flag("passed") ?? false,
-                arguments.Text("findings") ?? string.Empty)),
+            arguments => arguments.Flag("passed") is { } passed
+                ? intake.SubmitVerdict(scope, passed, arguments.Text("findings") ?? string.Empty)
+                : "被拒绝：passed 缺失或不是 true/false。"),
     ];
 }

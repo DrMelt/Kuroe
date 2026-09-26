@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Storage;
 
@@ -100,13 +101,21 @@ sealed class WorkflowStore(string file)
                 continue;
             }
 
-            flows.Add(ToWorkflow(dto));
+            ErrorOr<Workflow> flow = ToWorkflow(dto);
+            if (flow.IsError)
+            {
+                errors.AddRange(flow.ErrorsOrEmptyList);
+
+                continue;
+            }
+
+            flows.Add(flow.Value);
         }
 
         return errors.Count > 0 ? errors : flows;
     }
 
-    private static Workflow ToWorkflow(WorkflowDto dto)
+    private static ErrorOr<Workflow> ToWorkflow(WorkflowDto dto)
     {
         List<AgentDefinition> agents = [.. dto.Agents.Select(agent => new AgentDefinition
         {
@@ -117,34 +126,83 @@ sealed class WorkflowStore(string file)
             Tools = agent.Tools ?? [],
         })];
 
-        return new Workflow(dto.Name!, dto.Description, agents, ToNodes(dto.Nodes));
+        ErrorOr<IReadOnlyList<NodeSpec>> nodes = ToNodes(dto.Nodes, dto.Name!);
+
+        return nodes.IsError
+            ? nodes.ErrorsOrEmptyList
+            : new Workflow(dto.Name!, dto.Description, agents, nodes.Value);
     }
 
-    /// <summary>有子节点的是容器，否则是叶子。缺省的字段取节点定义的安全值，合法性交校验。</summary>
-    private static IReadOnlyList<NodeSpec> ToNodes(List<NodeDto> nodes) =>
-        [.. nodes.Select(ToNode)];
+    /// <summary>有子节点的是容器，否则是叶子。缺省的字段取节点定义的安全值，Mode 非法时给出错误。</summary>
+    private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, string flowName)
+    {
+        List<NodeSpec> result = [];
+        List<Error> errors = [];
 
-    private static NodeSpec ToNode(NodeDto node) => node.Nodes is { Count: > 0 }
-        ? new FlowNode
+        foreach (NodeDto node in nodes)
         {
-            Name = node.Name ?? string.Empty,
-            Prompt = node.Prompt,
-            From = node.From ?? [],
-            Mode = ParseContainerMode(node.Mode),
-            Nodes = ToNodes(node.Nodes),
+            ErrorOr<NodeSpec> converted = ToNode(node, flowName);
+            if (converted.IsError)
+            {
+                errors.AddRange(converted.ErrorsOrEmptyList);
+            }
+            else
+            {
+                result.Add(converted.Value);
+            }
         }
-        : new AgentNode
+
+        return errors.Count > 0 ? errors : result;
+    }
+
+    private static ErrorOr<NodeSpec> ToNode(NodeDto node, string flowName)
+    {
+        if (node.Nodes is { Count: > 0 })
+        {
+            ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(node.Nodes, flowName);
+            ErrorOr<ContainerMode> mode = ParseContainerMode(node.Mode);
+
+            if (children.IsError || mode.IsError)
+            {
+                List<Error> errors = [];
+                errors.AddRange(children.IsError ? children.ErrorsOrEmptyList : []);
+                if (mode.IsError)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name ?? string.Empty, mode.FirstError.Description));
+                }
+
+                return errors;
+            }
+
+            return new FlowNode
+            {
+                Name = node.Name ?? string.Empty,
+                Prompt = node.Prompt,
+                From = node.From ?? [],
+                Mode = mode.Value,
+                Nodes = children.Value,
+            };
+        }
+
+        ErrorOr<NodeMode> leafMode = ParseNodeMode(node.Mode);
+        if (leafMode.IsError)
+        {
+            return [WorkflowErrors.Node(flowName, node.Name ?? string.Empty, leafMode.FirstError.Description)];
+        }
+
+        return new AgentNode
         {
             Name = node.Name ?? string.Empty,
             Agent = node.Agent ?? string.Empty,
             Prompt = node.Prompt,
             From = node.From ?? [],
             Output = node.Output ?? NodeOutput.Plain,
-            Mode = ParseNodeMode(node.Mode),
+            Mode = leafMode.Value,
             Gate = node.Gate ?? NodeGate.Auto,
             OnReject = node.OnReject,
             MaxAttempts = node.MaxAttempts,
         };
+    }
     private static WorkflowDto ToDto(Workflow flow) => new()
     {
         Name = flow.Name,
@@ -185,11 +243,29 @@ sealed class WorkflowStore(string file)
         _ => throw new InvalidOperationException($"未知节点类型：{node.GetType().Name}"),
     };
 
-    /// <summary>容器模式的名字按枚举解析，缺省按顺序处理。</summary>
-    private static ContainerMode ParseContainerMode(string? mode) =>
-        Enum.TryParse(mode, ignoreCase: true, out ContainerMode parsed) ? parsed : ContainerMode.Sequential;
+    /// <summary>容器模式的名字按枚举解析，未写时回退顺序模式。</summary>
+    private static ErrorOr<ContainerMode> ParseContainerMode(string? mode)
+    {
+        if (mode is null)
+        {
+            return ContainerMode.Sequential;
+        }
 
-    /// <summary>叶子模式的名字按枚举解析，缺省按整叶处理。</summary>
-    private static NodeMode ParseNodeMode(string? mode) =>
-        Enum.TryParse(mode, ignoreCase: true, out NodeMode parsed) ? parsed : NodeMode.Single;
+        return Enum.TryParse(mode, ignoreCase: true, out ContainerMode parsed)
+            ? parsed
+            : Error.Validation(ErrorCodes.WorkflowNode, $"Mode 应为 Sequential 或 Parallel，收到 {mode}。");
+    }
+
+    /// <summary>叶子模式的名字按枚举解析，未写时回退整叶模式。</summary>
+    private static ErrorOr<NodeMode> ParseNodeMode(string? mode)
+    {
+        if (mode is null)
+        {
+            return NodeMode.Single;
+        }
+
+        return Enum.TryParse(mode, ignoreCase: true, out NodeMode parsed)
+            ? parsed
+            : Error.Validation(ErrorCodes.WorkflowNode, $"Mode 应为 Single 或 PerItem，收到 {mode}。");
+    }
 }

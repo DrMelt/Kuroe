@@ -31,6 +31,8 @@ public sealed class WorkflowValidationTests
     [InlineData(ContainerFrom, "不支持 From")]
     [InlineData(ContainerPrompt, "不支持 Prompt")]
     [InlineData(LeafAfterExpansion, "只能有一个收拢检查叶子收尾")]
+    [InlineData(BadLeafMode, "Mode 应为 Single 或 PerItem")]
+    [InlineData(BadContainerMode, "Mode 应为 Sequential 或 Parallel")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -91,6 +93,20 @@ public sealed class WorkflowValidationTests
     private const string MissingNodeName = """
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
           { "Agent": "规划者", "Output": "Plan" }
+        ] } ] }
+        """;
+
+    private const string BadLeafMode = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Mode": "PerItemm" }
+        ] } ] }
+        """;
+
+    private const string BadContainerMode = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Mode": "Parallell",
+            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "From": ["制定计划"] } ] }
         ] } ] }
         """;
 
