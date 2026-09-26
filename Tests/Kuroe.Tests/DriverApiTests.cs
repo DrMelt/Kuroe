@@ -20,7 +20,7 @@ public sealed class DriverApiTests
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot done = harness.Settle(id);
-        RunSnapshot implement = Assert.Single(done.Steps[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
 
         harness.Tasks.Adopt(implement.Id).ThrowIfError();
 
@@ -36,7 +36,7 @@ public sealed class DriverApiTests
 
         TaskSnapshot blocked = harness.Settle(harness.Submit("补齐 README"));
 
-        Error result = Assert.Single(harness.Tasks.Adopt(blocked.Steps[0].Runs[0].Id).ErrorsOrEmptyList);
+        Error result = Assert.Single(harness.Tasks.Adopt(blocked.Nodes[0].Runs[0].Id).ErrorsOrEmptyList);
         Assert.Equal("Run.Adopt", result.Code);
     }
 
@@ -61,7 +61,7 @@ public sealed class DriverApiTests
         using KuroeHarness harness = KuroeHarness.Create();
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot implement = Assert.Single(done.Steps[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
         TurnScope scope = harness.Registry.FindRun(implement.Id).ThrowIfError().Scope;
 
         Assert.Contains("被拒绝", harness.Submitter.SubmitPlan(scope, """[{"Title":"甲"}]"""));
@@ -75,7 +75,7 @@ public sealed class DriverApiTests
         harness.Executor.ItemsJson = "[]";
 
         TaskSnapshot blocked = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(blocked.Steps[0].Runs);
+        RunSnapshot plan = Assert.Single(blocked.Nodes[0].Runs);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Contains(harness.Executor.Submissions, text => text.Contains("被拒绝") && text.Contains("Title"));

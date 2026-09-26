@@ -8,7 +8,7 @@ public enum NoticeLevel
     /// <summary>普通进展。</summary>
     Info,
 
-    /// <summary>某个步骤或任务走完。</summary>
+    /// <summary>某个节点或任务走完。</summary>
     Done,
 
     /// <summary>取消一类的可恢复情况。</summary>

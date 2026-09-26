@@ -143,12 +143,8 @@ internal sealed partial class ProbeHalt : Executor
 }
 
 [YieldsOutput(typeof(string))]
-internal sealed partial class ProbeSink : Executor
+internal sealed partial class ProbeSink(string id) : Executor(id)
 {
-    public ProbeSink(string id) : base(id)
-    {
-    }
-
     [MessageHandler]
     public async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {

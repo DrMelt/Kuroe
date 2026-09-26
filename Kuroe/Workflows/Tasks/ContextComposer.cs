@@ -6,7 +6,8 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>为步骤装配上下文。派生出的 agent 只用这里给出的内容，装配规则集中在一处。</summary>
+/// <summary>为叶子装配上下文。派出的 agent 只用这里给出的内容，装配规则集中在一处。
+/// 收拢检查走跨单元的聚合装配，其余叶子共用单单元装配。</summary>
 public static class ContextComposer
 {
     /// <summary>单条种子文本的上限。</summary>
@@ -15,15 +16,20 @@ public static class ContextComposer
     /// <summary>带进上下文的任务对话条数。</summary>
     private const int DialogueLimit = 6;
 
-    /// <summary>按步骤声明装配该单元这一轮的上下文。</summary>
-    public static RunContext ForStep(AgentTask task, WorkUnit unit, int stepIndex, string model)
+    /// <summary>契约工具名：按叶子产出契约自动附加到工具面。</summary>
+    internal const string PlanToolName = "SubmitPlanItems";
+
+    /// <summary>契约工具名：按叶子产出契约自动附加到工具面。</summary>
+    internal const string ReviewToolName = "SubmitVerdict";
+
+    /// <summary>按叶子声明为单元装配这一轮的上下文。规划、实施与逐条检查共用同一套装配。</summary>
+    public static RunContext ForLeaf(AgentTask task, WorkUnit unit, LeafNode leaf, string model)
     {
-        StepSpec spec = task.Flow.Steps[stepIndex];
         List<ContextMessage> seed = [];
         AppendDialogue(task, seed);
-        foreach (string from in spec.From)
+        foreach (int fromIndex in leaf.From)
         {
-            AppendUpstream(task, unit, from, seed);
+            AppendUpstream(task, unit, fromIndex, seed);
         }
 
         if (unit.Item is { } item && task.Plan is { } plan)
@@ -33,18 +39,67 @@ public static class ContextComposer
                 new ItemSource(plan.Origin, item.Index, item.Title)));
         }
 
-        AppendRework(task, unit, seed);
+        AppendRework(unit, seed);
+        int round = (unit.LastCheck?.Round ?? 0) + 1;
 
         return new RunContext
         {
             Task = task.Id,
-            Role = spec.Role,
-            StepIndex = stepIndex,
-            StepName = spec.Name,
-            Instruction = Instruction(task, unit, spec),
+            Output = leaf.Output,
+            NodeIndex = leaf.Index,
+            NodeName = leaf.Name,
+            Instruction = Instruction(task, unit, leaf, round),
             Model = model,
+            SystemPrompt = leaf.Agent.SystemPrompt,
             ItemIndex = unit.ItemIndex,
-            Attempt = unit.Attempts,
+            Attempt = round,
+            Tools = ToolsOf(leaf),
+            Seed = seed,
+        };
+    }
+
+    /// <summary>收拢检查的装配：跨全部条目单元汇总实施产出，整体交一个检查 agent，结论作用于全部。</summary>
+    public static RunContext ForFunnel(AgentTask task, IReadOnlyList<WorkUnit> members, LeafNode leaf, string model, int round)
+    {
+        List<ContextMessage> seed = [];
+        AppendDialogue(task, seed);
+        foreach (int fromIndex in leaf.From)
+        {
+            if (task.Graph[fromIndex].Mode == NodeMode.PerItem)
+            {
+                AppendImplementations(task, members, fromIndex, seed);
+            }
+            else
+            {
+                AppendUpstream(task, members[0], fromIndex, seed);
+            }
+        }
+
+        AppendFunnelRework(task, leaf, seed);
+        List<string> lines = [];
+        if (leaf.Prompt is { Length: > 0 } prompt)
+        {
+            lines.Add(prompt);
+        }
+
+        lines.Add($"目标：{task.Goal}");
+        if (round > 1)
+        {
+            lines.Add($"这是第 {round} 轮整体检查。");
+        }
+
+        return new RunContext
+        {
+            Task = task.Id,
+            Output = leaf.Output,
+            NodeIndex = leaf.Index,
+            NodeName = leaf.Name,
+            Instruction = string.Join('\n', lines),
+            Model = model,
+            SystemPrompt = leaf.Agent.SystemPrompt,
+            ItemIndex = null,
+            Attempt = round,
+            Tools = ToolsOf(leaf),
             Seed = seed,
         };
     }
@@ -71,42 +126,63 @@ public static class ContextComposer
         seed.AddRange(history.Skip(Math.Max(0, history.Count - DialogueLimit)));
     }
 
-    /// <summary>被引用步骤在本单元上的产出。</summary>
-    private static void AppendUpstream(AgentTask task, WorkUnit unit, string from, List<ContextMessage> seed)
+    /// <summary>被引用叶子在本单元上的产出。</summary>
+    private static void AppendUpstream(AgentTask task, WorkUnit unit, int fromIndex, List<ContextMessage> seed)
     {
-        if (task.Flow.IndexOf(from) is not { } index
-            || !unit.Steps.TryGetValue(index, out AgentRun? run)
-            || run.Result is not { Length: > 0 } result)
+        if (!unit.Nodes.TryGetValue(fromIndex, out AgentRun? run) || run.Result is not { Length: > 0 } result)
         {
             return;
         }
 
-        seed.Add(new ContextMessage(MessageRole.User, Limit($"步骤「{from}」的产出：\n{result}"), new AgentSource(run.Id, from)));
+        seed.Add(new ContextMessage(MessageRole.User, Limit($"节点「{task.Graph[fromIndex].Name}」的产出：\n{result}"),
+            new AgentSource(run.Id, task.Graph[fromIndex].Name)));
     }
 
-    /// <summary>返工时带上一轮的检查意见。</summary>
-    private static void AppendRework(AgentTask task, WorkUnit unit, List<ContextMessage> seed)
+    /// <summary>收拢检查引用的展开实施叶：逐条目列出实施产出。</summary>
+    private static void AppendImplementations(AgentTask task, IReadOnlyList<WorkUnit> members, int fromIndex, List<ContextMessage> seed)
     {
-        if (unit.Attempts <= 1 || unit.Findings is not { Length: > 0 } findings)
+        string name = task.Graph[fromIndex].Name;
+        foreach (WorkUnit member in members)
         {
-            return;
-        }
-
-        foreach ((int index, AgentRun run) in unit.Steps.OrderByDescending(entry => entry.Key))
-        {
-            if (task.Flow.Steps[index].Role == RunRole.Check)
+            if (!member.Nodes.TryGetValue(fromIndex, out AgentRun? run) || run.Result is not { Length: > 0 } result)
             {
-                seed.Add(new ContextMessage(MessageRole.User, Limit($"上一轮检查未通过：\n{findings}"),
-                    new AgentSource(run.Id, task.Flow.Steps[index].Name)));
-                return;
+                continue;
             }
+
+            string title = member.Item?.Title ?? $"条目 {member.ItemIndex + 1}";
+            seed.Add(new ContextMessage(MessageRole.User, Limit($"条目「{title}」的实施产出：\n{result}"),
+                new AgentSource(run.Id, name)));
         }
     }
 
-    private static string Instruction(AgentTask task, WorkUnit unit, StepSpec spec)
+    /// <summary>返工的实施上下文带上上一轮检查的意见与轮次。</summary>
+    private static void AppendRework(WorkUnit unit, List<ContextMessage> seed)
+    {
+        if (unit.LastCheck is not { Passed: false } check)
+        {
+            return;
+        }
+
+        seed.Add(new ContextMessage(MessageRole.User,
+            Limit($"上一轮检查未通过：\n{check.Findings}"), new AgentSource(check.Origin, check.NodeName)));
+    }
+
+    /// <summary>收拢检查的返工读任务级的整体结论。</summary>
+    private static void AppendFunnelRework(AgentTask task, LeafNode leaf, List<ContextMessage> seed)
+    {
+        if (task.FunnelCheck(leaf.Name) is not { Passed: false } check)
+        {
+            return;
+        }
+
+        seed.Add(new ContextMessage(MessageRole.User,
+            Limit($"上一轮整体检查未通过：\n{check.Findings}"), new AgentSource(check.Origin, check.NodeName)));
+    }
+
+    private static string Instruction(AgentTask task, WorkUnit unit, LeafNode leaf, int round)
     {
         List<string> lines = [];
-        if (spec.Prompt is { Length: > 0 } prompt)
+        if (leaf.Prompt is { Length: > 0 } prompt)
         {
             lines.Add(prompt);
         }
@@ -115,12 +191,29 @@ public static class ContextComposer
             ? $"目标：{task.Goal}\n本次只负责条目 {item.Index + 1}：{item.Title}"
             : $"目标：{task.Goal}");
 
-        if (unit.Attempts > 1)
+        if (round > 1)
         {
-            lines.Add($"这是第 {unit.Attempts} 轮实施，针对上一轮检查意见返工。");
+            lines.Add($"这是第 {round} 轮实施，针对上一轮检查意见返工。");
         }
 
         return string.Join('\n', lines);
+    }
+
+    /// <summary>本轮工具面：agent 声明的能力工具加按产出契约附上的契约工具。</summary>
+    private static List<string> ToolsOf(LeafNode leaf)
+    {
+        List<string> names = [.. leaf.Agent.Tools];
+        if (leaf.Output == NodeOutput.Plan)
+        {
+            names.Add(PlanToolName);
+        }
+
+        if (leaf.Output == NodeOutput.Review)
+        {
+            names.Add(ReviewToolName);
+        }
+
+        return names;
     }
 
     private static string Limit(string text) =>

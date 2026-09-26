@@ -15,24 +15,27 @@ namespace Kuroe.Workflows.Tasks;
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class AgentTask
 {
-    /// <summary>前台对话回合在过程记录里的步骤名。</summary>
-    public const string DialogueStep = "对话";
+    /// <summary>前台对话回合在过程记录里的叶子名。</summary>
+    public const string DialogueNode = "对话";
 
     private const int TitleLimit = 40;
 
     private readonly List<AgentRun> _runs = [];
     private readonly List<WorkUnit> _units = [];
     private readonly SemaphoreSlim _turn = new(1, 1);
+    private readonly Dictionary<string, CheckResult> _funnels = [];
+    private readonly HashSet<int> _funnelActive = [];
     private string _title;
     private int _dialogueTurns;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal AgentTask(TaskId id, string goal, Workflow flow, AgentSession session, string? title)
+    internal AgentTask(TaskId id, string goal, Workflow flow, NodeGraph graph, AgentSession session, string? title)
     {
         Id = id;
         Goal = goal;
         Flow = flow;
+        Graph = graph;
         Session = session;
         Journal = new TurnJournal();
         _lastActivityAt = DateTimeOffset.UtcNow;
@@ -47,6 +50,9 @@ public sealed class AgentTask
 
     /// <summary>提交时锁定的流程模板。</summary>
     public Workflow Flow { get; }
+
+    /// <summary>提交时锁定的流程编译视图。</summary>
+    internal NodeGraph Graph { get; }
 
     internal AgentSession Session { get; }
 
@@ -78,8 +84,8 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>规划步骤交回的条目拆分，尚未交回时为空。仅在持有 <see cref="Gate"/> 时写。</summary>
-    public StepPlan? Plan { get; internal set; }
+    /// <summary>规划叶子交回的条目拆分，尚未交回时为空。仅在持有 <see cref="Gate"/> 时写。</summary>
+    public PlanOutput? Plan { get; internal set; }
 
     /// <summary>提交顺序排列的 agent。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<AgentRun> Runs => _runs;
@@ -142,6 +148,39 @@ public sealed class AgentTask
 
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
+    /// <summary>收拢检查的最近一次结论，未检查时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal CheckResult? FunnelCheck(string nodeName) => _funnels.GetValueOrDefault(nodeName);
+
+    /// <summary>抢占收拢检查的活动，成功时给出本轮轮次。要求持有 <see cref="Gate"/>。</summary>
+    internal bool TryBeginFunnel(int nodeIndex, string nodeName, out int round)
+    {
+        if (!_funnelActive.Add(nodeIndex))
+        {
+            round = 0;
+
+            return false;
+        }
+
+        round = (FunnelCheck(nodeName)?.Round ?? 0) + 1;
+
+        return true;
+    }
+
+    /// <summary>收拢检查收口后释放活动。要求持有 <see cref="Gate"/>。</summary>
+    internal void EndFunnel(int nodeIndex) => _funnelActive.Remove(nodeIndex);
+
+    /// <summary>收拢检查结论落地。同一次检查只有首个交点，交回文本给模型。要求持有 <see cref="Gate"/>。</summary>
+    internal bool RecordFunnelCheck(AgentRun run, string nodeName, bool passed, string findings)
+    {
+        if (_funnels.TryGetValue(nodeName, out CheckResult? last) && last.Origin == run.Id)
+        {
+            return false;
+        }
+
+        _funnels[nodeName] = new CheckResult(run.Context.Attempt, passed, findings, run.Id, nodeName);
+
+        return true;
+    }
 
     internal WorkUnit AddUnit(int? itemIndex, PlanItem? item, int cursor)
     {
@@ -151,14 +190,21 @@ public sealed class AgentTask
         return unit;
     }
 
-    /// <summary>按条目定位单元；不展开的步骤只有一个单元。要求持有 <see cref="Gate"/>。</summary>
+    /// <summary>按条目定位单元；不展开的叶子只有一个单元。要求持有 <see cref="Gate"/>。</summary>
     internal WorkUnit? UnitFor(int? itemIndex) => _units.Find(unit => unit.ItemIndex == itemIndex);
 
-    /// <summary>把 agent 挂到任务的单元与该步骤上。</summary>
+    /// <summary>把 agent 挂到任务的单元与该叶子上。</summary>
     internal void Attach(WorkUnit unit, AgentRun run)
     {
         _runs.Add(run);
         unit.Attach(run);
+        _lastActivityAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>收拢检查的 agent 没有单元载体，只挂到任务的运行统计。</summary>
+    internal void AttachRun(AgentRun run)
+    {
+        _runs.Add(run);
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
 
@@ -183,8 +229,8 @@ public sealed class AgentTask
                 {
                     Task = Id,
                     Run = null,
-                    Role = null,
-                    StepName = DialogueStep,
+                    Output = null,
+                    NodeName = DialogueNode,
                     ItemIndex = null,
                     Journal = Journal,
                     Sink = TurnSinks.For(Journal, observer),
@@ -217,27 +263,27 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>当前状态的只读快照，含步骤、单元、agent 与前台对话。</summary>
+    /// <summary>当前状态的只读快照，含节点、单元、agent 与前台对话。</summary>
     public TaskSnapshot Snapshot()
     {
         lock (Gate)
         {
             Dictionary<RunId, RunSnapshot> runs = _runs.ToDictionary(run => run.Id, run => run.Snapshot());
 
-            List<StepSnapshot> steps =
+            List<NodeSnapshot> nodes =
             [
-                .. Flow.Steps.Select((spec, index) => new StepSnapshot(index, spec,
-                    [.. _runs.Where(run => run.Context.StepIndex == index).Select(run => runs[run.Id])])),
+                .. Graph.Leaves.Select((leaf, index) => new NodeSnapshot(index, leaf,
+                    [.. _runs.Where(run => run.Context.NodeIndex == index).Select(run => runs[run.Id])])),
             ];
 
             List<UnitSnapshot> units =
             [
-                .. _units.Select(unit => new UnitSnapshot(unit.ItemIndex, unit.StepCursor, unit.State,
-                    unit.Verdict, unit.Findings, unit.Attempts, [.. unit.Steps.Values.Select(run => runs[run.Id])])),
+                .. _units.Select(unit => new UnitSnapshot(unit.ItemIndex, unit.NodeCursor, unit.State,
+                    unit.Verdict, unit.Findings, unit.Attempts, [.. unit.Nodes.Values.Select(run => runs[run.Id])])),
             ];
 
-            return new TaskSnapshot(Id, _title, Goal, Flow, Summarize(), _dialogueTurns,
-                _runs.Count(run => run.IsLive), Plan, steps, units, Journal.Entries, Journal.DroppedEntries,
+            return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
+                _runs.Count(run => run.IsLive), Plan, nodes, units, Journal.Entries, Journal.DroppedEntries,
                 _lastActivityAt);
         }
     }

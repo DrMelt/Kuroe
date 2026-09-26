@@ -35,7 +35,7 @@ public sealed class TaskAndReplTests
 
         ui.Tasks.Run(["/task", "approve", "1"]);
 
-        Assert.Contains("没有等待批准的步骤", ui.ErrorsOut.Output);
+        Assert.Contains("没有等待批准的节点", ui.ErrorsOut.Output);
         Assert.Contains("未生效。", ui.ErrorsOut.Output);
     }
 

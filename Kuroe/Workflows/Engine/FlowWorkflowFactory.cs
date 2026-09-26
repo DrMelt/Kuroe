@@ -1,6 +1,7 @@
 using Kuroe.Agent.Runs;
 using Kuroe.Configuration;
 using Kuroe.Shared.Agent;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 using FrameworkWorkflow = Microsoft.Agents.AI.Workflows.Workflow;
@@ -11,50 +12,47 @@ namespace Kuroe.Workflows.Engine;
 /// 执行器持有任务标识与流程依赖，不跨任务共享状态。</summary>
 internal static class FlowWorkflowFactory
 {
-    /// <summary>启动该任务的流程运行。start 与所有步骤、相邻步骤、检查到前置实施各有边，
+    /// <summary>启动该任务的流程运行。start 与所有叶子、相邻叶子、检查到被查实施各有边，
     /// 激活消息按目标执行器定向投递，自动流转与时序由执行器内部决定。</summary>
     public static StreamingRun Start(
         AgentTask task,
         TaskRegistry registry,
         RunDispatcher dispatcher,
-        StepModelResolver models,
+        NodeModelResolver models,
         SettingsProvider settings)
     {
-        FlowStartExecutor start = new(registry, task.Id, task.Flow);
-        FlowStepExecutor[] steps = [.. task.Flow.Steps.Select((spec, index) =>
-            new FlowStepExecutor(registry, dispatcher, models, settings, task.Id, index, task.Flow))];
+        FlowStartExecutor start = new(registry, task.Id);
+        FlowLeafExecutor[] leaves = [.. task.Graph.Leaves.Select((_, index) =>
+            new FlowLeafExecutor(registry, dispatcher, models, settings, task.Id, index))];
 
         WorkflowBuilder builder = new(start);
-        foreach (FlowStepExecutor step in steps)
+        foreach (FlowLeafExecutor leaf in leaves)
         {
-            builder.AddEdge(start, step);
+            builder.AddEdge(start, leaf);
         }
 
-        for (int index = 1; index < steps.Length; index++)
+        for (int index = 1; index < leaves.Length; index++)
         {
-            builder.AddEdge(steps[index - 1], steps[index]);
+            builder.AddEdge(leaves[index - 1], leaves[index]);
         }
 
-        for (int check = 0; check < steps.Length; check++)
+        for (int check = 0; check < leaves.Length; check++)
         {
-            if (task.Flow.Steps[check].Role != RunRole.Check)
+            if (task.Graph[check].Output != NodeOutput.Review)
             {
                 continue;
             }
 
-            for (int implement = check - 1; implement >= 0; implement--)
+            int? implement = task.Graph.FunnelReturn(check) ?? task.Graph.ImplementBefore(check);
+            if (implement is { } at)
             {
-                if (task.Flow.Steps[implement].Role == RunRole.Implement)
-                {
-                    builder.AddEdge(steps[check], steps[implement]);
-                    break;
-                }
+                builder.AddEdge(leaves[check], leaves[at]);
             }
         }
 
         FrameworkWorkflow workflow = builder.WithName(task.Flow.Name).Build();
 
         return InProcessExecution.RunStreamingAsync(
-            workflow, new FlowMessage { Intent = FlowIntent.Start }).GetAwaiter().GetResult();
+            workflow, new FlowMessage { Intent = FlowIntent.Start }).AsTask().GetAwaiter().GetResult();
     }
 }

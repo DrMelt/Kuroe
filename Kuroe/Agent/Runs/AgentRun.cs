@@ -28,11 +28,12 @@ public sealed class AgentRun
         {
             Task = context.Task,
             Run = id,
-            Role = context.Role,
-            StepName = context.StepName,
+            Output = context.Output,
+            NodeName = context.NodeName,
             ItemIndex = context.ItemIndex,
             Journal = Journal,
             Sink = TurnSinks.For(Journal, new ProgressSink(this)),
+            Tools = context.Tools,
         };
     }
 
@@ -131,7 +132,7 @@ public sealed class AgentRun
         }
     }
 
-    /// <summary>该 agent 的请求正常结束但没交回本步骤要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>
+    /// <summary>该 agent 的请求正常结束但没交回本叶子要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>
     internal void MarkUncollected(string reason)
     {
         lock (_gate)

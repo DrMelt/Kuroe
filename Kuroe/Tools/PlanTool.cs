@@ -5,7 +5,7 @@ using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools;
 
-/// <summary>规划步骤交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 agent 在交。</summary>
+/// <summary>规划叶子交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 agent 在交。</summary>
 public sealed class PlanTool : IScopedAgentTool
 {
     private readonly UnitSubmitter _intake;
@@ -35,7 +35,7 @@ public sealed class PlanTool : IScopedAgentTool
     private static IReadOnlyList<ToolFunction> Declare(UnitSubmitter intake, TurnScope? scope) =>
     [
         new ToolFunction("SubmitPlanItems",
-            "提交本步骤的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
+            "提交本叶子的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
             [new ToolParameter("itemsJson", "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
             arguments => intake.SubmitPlan(scope, arguments.Text("itemsJson") ?? string.Empty)),
     ];

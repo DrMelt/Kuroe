@@ -5,7 +5,7 @@ using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools;
 
-/// <summary>检查步骤交回结论的通道。载体按回合换一份，结论只会落到该回合所属的条目上。</summary>
+/// <summary>检查叶子交回结论的通道。载体按回合换一份，结论只会落到该回合所属的条目上。</summary>
 public sealed class VerdictTool : IScopedAgentTool
 {
     private readonly UnitSubmitter _intake;

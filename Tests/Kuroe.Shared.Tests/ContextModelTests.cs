@@ -1,4 +1,5 @@
 using Kuroe.Shared.Agent;
+using Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;
@@ -57,9 +58,9 @@ public sealed class ContextModelTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Role = RunRole.Implement,
-        StepIndex = 1,
-        StepName = "实施",
+        Output = NodeOutput.Plain,
+        NodeIndex = 1,
+        NodeName = "实施",
         Instruction = "做事",
         Model = "fake",
     };

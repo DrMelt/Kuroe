@@ -35,7 +35,7 @@ internal sealed record AgentSettings
     /// <summary>提交任务时未指定流程则用该流程，未设置时用内置流程。</summary>
     public string? DefaultFlow { get; init; }
 
-    /// <summary>单个条目允许的实施轮数上限，检查步骤的 MaxAttempts 不得超过它。</summary>
+    /// <summary>单个条目允许的实施轮数上限，检查叶子的 MaxAttempts 不得超过它。</summary>
     public int MaxAttempts { get; init; } = 3;
 
     /// <summary>模型或系统提示词变化后旧上下文不再适用。凭据与端点变化不影响历史，agent 由 <see cref="Agent.Sessions.AgentProvider"/> 按模型重建。</summary>

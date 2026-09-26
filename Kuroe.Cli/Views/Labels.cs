@@ -41,11 +41,11 @@ internal static class Labels
     /// <summary>检查不通过的处置。</summary>
     public static string Of(RejectAction action) => action == RejectAction.Retry ? "退回返工" : "停止";
 
-    /// <summary>步骤的展开方式。</summary>
-    public static string Of(StepScope scope) => scope == StepScope.PerItem ? "按条目" : "整步";
+    /// <summary>叶子的展开方式。</summary>
+    public static string Of(NodeMode mode) => mode == NodeMode.PerItem ? "按条目" : "整叶";
 
-    /// <summary>步骤产出后是否等人放行。</summary>
-    public static string Of(StepGate gate) => gate == StepGate.Review ? "需批准" : "自动放行";
+    /// <summary>叶子产出后是否等人放行。</summary>
+    public static string Of(NodeGate gate) => gate == NodeGate.Review ? "需批准" : "自动放行";
 
     /// <summary>agent 的状态，有工具调用在进行时带上它。</summary>
     public static string State(RunSnapshot run) =>
@@ -61,7 +61,7 @@ internal static class Labels
         _ => Styles.Hint,
     };
 
-    public static string Item(int? itemIndex) => itemIndex is { } index ? $"条目 {index + 1}" : "整步";
+    public static string Item(int? itemIndex) => itemIndex is { } index ? $"条目 {index + 1}" : "整体";
 
     public static string Elapsed(TimeSpan span) => span.TotalMinutes < 1
         ? $"{span.TotalSeconds:0}秒"

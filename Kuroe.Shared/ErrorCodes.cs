@@ -24,10 +24,10 @@ public static class ErrorCodes
     /// <summary>流程名为空或重复。</summary>
     public const string WorkflowName = "Workflow.Name";
 
-    /// <summary>步骤名不合法。</summary>
-    public const string WorkflowStep = "Workflow.Step";
+    /// <summary>节点名不合法。</summary>
+    public const string WorkflowNode = "Workflow.Node";
 
-    /// <summary>流程的步骤组合不满足推进依赖的不变量。</summary>
+    /// <summary>流程的节点组合不满足推进依赖的不变量。</summary>
     public const string WorkflowBody = "Workflow.Body";
 
     /// <summary>命令里的文件参数无法解析为路径。</summary>

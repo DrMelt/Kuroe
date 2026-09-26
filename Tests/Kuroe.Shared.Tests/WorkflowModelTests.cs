@@ -5,58 +5,60 @@ using Xunit;
 
 namespace Kuroe.Shared.Tests;
 
-/// <summary>流程模型：步骤的缺省配置与按名查步骤。</summary>
+/// <summary>流程模型：叶子的缺省配置与编译视图的按名定位。</summary>
 public sealed class WorkflowModelTests
 {
     [Fact]
-    public void StepSpec_defaults_to_single_auto_without_rework()
+    public void Leaf_defaults_to_plain_single_auto_without_rework()
     {
-        StepSpec step = new() { Name = "规划", Role = RunRole.Plan };
+        AgentNode leaf = new() { Name = "实施", Agent = "执行者" };
 
-        Assert.Equal(StepScope.Single, step.Scope);
-        Assert.Equal(StepGate.Auto, step.Gate);
-        Assert.Empty(step.From);
-        Assert.Null(step.Model);
-        Assert.Null(step.OnReject);
+        Assert.Equal(NodeOutput.Plain, leaf.Output);
+        Assert.Equal(NodeMode.Single, leaf.Mode);
+        Assert.Equal(NodeGate.Auto, leaf.Gate);
+        Assert.Empty(leaf.From);
+        Assert.Null(leaf.OnReject);
+        Assert.Null(leaf.MaxAttempts);
     }
 
     [Fact]
-    public void Check_step_defaults_to_retry_once_more()
+    public void Check_leaf_defaults_to_retry_once_more()
     {
-        StepSpec step = new() { Name = "检查", Role = RunRole.Check };
+        AgentNode leaf = new() { Name = "检查", Agent = "检查者", Output = NodeOutput.Review };
 
-        Assert.Equal(RejectAction.Retry, step.RejectAction);
-        Assert.Equal(2, step.AttemptLimit);
+        Assert.Equal(RejectAction.Retry, leaf.RejectAction);
+        Assert.Equal(2, leaf.AttemptLimit);
     }
 
     [Fact]
     public void Declared_rework_overrides_defaults()
     {
-        StepSpec step = new()
+        AgentNode leaf = new()
         {
             Name = "检查",
-            Role = RunRole.Check,
+            Agent = "检查者",
+            Output = NodeOutput.Review,
             OnReject = RejectAction.Stop,
             MaxAttempts = 5,
         };
 
-        Assert.Equal(RejectAction.Stop, step.RejectAction);
-        Assert.Equal(5, step.AttemptLimit);
+        Assert.Equal(RejectAction.Stop, leaf.RejectAction);
+        Assert.Equal(5, leaf.AttemptLimit);
     }
 
     [Fact]
-    public void Workflow_indexes_steps_by_name()
+    public void NodeGraph_locates_leaves_by_name()
     {
-        Workflow flow = new("默认", null,
+        var graph = new NodeGraph(
         [
-            new StepSpec { Name = "规划", Role = RunRole.Plan },
-            new StepSpec { Name = "实施", Role = RunRole.Implement },
+            new LeafNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null),
+            new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null),
         ]);
 
-        Assert.Equal(2, flow.Count);
-        Assert.Equal(0, flow.IndexOf("规划"));
-        Assert.Equal(1, flow.IndexOf("实施"));
-        Assert.Null(flow.IndexOf("检查"));
+        Assert.Equal(2, graph.Count);
+        Assert.Equal(0, graph.IndexOf("规划"));
+        Assert.Equal(1, graph.IndexOf("实施"));
+        Assert.Null(graph.IndexOf("检查"));
     }
 
     [Fact]
@@ -69,4 +71,6 @@ public sealed class WorkflowModelTests
         Assert.Empty(function.Parameters);
         Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())));
     }
+
+    private static readonly AgentDefinition Agent = new() { Name = "执行者" };
 }

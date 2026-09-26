@@ -20,7 +20,7 @@ internal sealed class FlowCommands(
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
         ("/flow list", "列出流程模板"),
-        ("/flow show <流程>", "打印流程的步骤"),
+        ("/flow show <流程>", "打印流程的节点"),
         ("/flow add <文件>", "导入流程，同名覆盖"),
         ("/flow default <流程>", "设为提交任务的默认流程"),
     ];
@@ -62,7 +62,7 @@ internal sealed class FlowCommands(
         Grid grid = Terminal.Columns(3, wrapColumns: 2);
         grid.AddRow(
             new Text("流程", Styles.Hint),
-            new Text("步骤", Styles.Hint),
+            new Text("节点", Styles.Hint),
             new Text("说明", Styles.Hint));
 
         foreach (Workflow flow in flows.All())
@@ -70,7 +70,7 @@ internal sealed class FlowCommands(
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
                 new Text(standard ? $">{flow.Name}" : flow.Name, standard ? Styles.Success : Styles.Key),
-                new Text(string.Join(" → ", flow.Steps.Select(step => step.Name))),
+                new Text(string.Join(" → ", FlowCommands.Flatten(flow.Nodes).Select(node => node.Name))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
@@ -88,24 +88,42 @@ internal sealed class FlowCommands(
             return;
         }
 
-        Grid grid = Terminal.Columns(6, wrapColumns: 5);
+        Grid grid = Terminal.Columns(7, wrapColumns: 6);
         grid.AddRow(
-            new Text("序", Styles.Hint),
-            new Text("步骤", Styles.Hint),
-            new Text("角色", Styles.Hint),
+            new Text("序号", Styles.Hint),
+            new Text("叶子", Styles.Hint),
+            new Text("执行", Styles.Hint),
+            new Text("契约", Styles.Hint),
             new Text("展开", Styles.Hint),
             new Text("产出后", Styles.Hint),
             new Text("上游与要求", Styles.Hint));
 
-        foreach ((StepSpec step, int index) in found.Value.Steps.Select((step, index) => (step, index)))
+        int index = 0;
+        foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
         {
-            grid.AddRow(
-                new Text($"{index + 1}", Styles.Key),
-                new Text(step.Name),
-                new Text(step.Role.Label()),
-                new Text(Labels.Of(step.Scope)),
-                new Text(Labels.Of(step.Gate)),
-                new Text(Requirement(step), Styles.Hint));
+            if (node is AgentNode leaf)
+            {
+                grid.AddRow(
+                    new Text($"{index + 1}", Styles.Key),
+                    new Text(new string(' ', depth * 2) + leaf.Name),
+                    new Text(leaf.Agent),
+                    new Text(leaf.Output.Label()),
+                    new Text(Labels.Of(leaf.Mode)),
+                    new Text(Labels.Of(leaf.Gate)),
+                    new Text(Requirement(leaf), Styles.Hint));
+                index++;
+            }
+            else if (node is FlowNode flow)
+            {
+                grid.AddRow(
+                    new Text(string.Empty),
+                    new Text(new string(' ', depth * 2) + flow.Name),
+                    new Text("容器", Styles.Hint),
+                    new Text(string.Empty),
+                    new Text(string.Empty),
+                    new Text(string.Empty),
+                    new Text(string.Empty));
+            }
         }
 
         terminal.NewLine();
@@ -140,24 +158,56 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, name));
     }
 
-    private static string Requirement(StepSpec step)
+    private static string Requirement(AgentNode leaf)
     {
         List<string> parts = [];
-        if (step.From.Count > 0)
+        if (leaf.From.Count > 0)
         {
-            parts.Add($"取自 {string.Join("、", step.From)}");
+            parts.Add($"取自 {string.Join("、", leaf.From)}");
         }
 
-        if (step.Role == RunRole.Check)
+        if (leaf.Output == NodeOutput.Review)
         {
-            parts.Add($"不通过则 {Labels.Of(step.RejectAction)}，至多 {step.AttemptLimit} 轮");
-        }
-
-        if (step.Model is { Length: > 0 } model)
-        {
-            parts.Add($"模型 {model}");
+            RejectAction action = leaf.OnReject ?? RejectAction.Retry;
+            int limit = Math.Max(1, leaf.MaxAttempts ?? 2);
+            parts.Add($"不通过则 {Labels.Of(action)}，至多 {limit} 轮");
         }
 
         return parts.Count == 0 ? "—" : string.Join("；", parts);
+    }
+
+    /// <summary>递归收集流程里的全部叶子。</summary>
+    private static IEnumerable<NodeSpec> Flatten(IReadOnlyList<NodeSpec> nodes)
+    {
+        foreach (NodeSpec node in nodes)
+        {
+            if (node is FlowNode flow)
+            {
+                foreach (NodeSpec child in Flatten(flow.Nodes))
+                {
+                    yield return child;
+                }
+            }
+            else
+            {
+                yield return node;
+            }
+        }
+    }
+
+    /// <summary>先根序遍历节点树，附带层级深度供缩进。</summary>
+    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(IReadOnlyList<NodeSpec> nodes, int depth = 0)
+    {
+        foreach (NodeSpec node in nodes)
+        {
+            yield return (node, depth);
+            if (node is FlowNode flow)
+            {
+                foreach ((NodeSpec child, int childDepth) in Walk(flow.Nodes, depth + 1))
+                {
+                    yield return (child, childDepth);
+                }
+            }
+        }
     }
 }

@@ -20,14 +20,14 @@ public sealed class TaskService
     private readonly WorkflowEngine _driver;
     private readonly WorkflowService _flows;
     private readonly AgentSessionFactory _sessions;
-    private readonly StepModelResolver _models;
+    private readonly NodeModelResolver _models;
 
     internal TaskService(
         TaskRegistry registry,
         WorkflowEngine driver,
         WorkflowService flows,
         AgentSessionFactory sessions,
-        StepModelResolver models)
+        NodeModelResolver models)
     {
         _registry = registry;
         _driver = driver;
@@ -50,13 +50,14 @@ public sealed class TaskService
             return flow.ErrorsOrEmptyList;
         }
 
-        ErrorOr<string> model = _models.For(flow.Value.Steps[0]);
+        NodeGraph graph = FlowCompiler.Compile(flow.Value);
+        ErrorOr<string> model = _models.For(graph[0]);
         if (model.IsError)
         {
             return model.ErrorsOrEmptyList;
         }
 
-        AgentTask task = _registry.Create(goal.Trim(), flow.Value, _sessions.NewDialogue(), title);
+        AgentTask task = _registry.Create(goal.Trim(), flow.Value, graph, _sessions.NewDialogue(), title);
         lock (task.Gate)
         {
             _driver.Start(task);
@@ -95,7 +96,7 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>批准等待放行的步骤，开下一步。</summary>
+    /// <summary>批准等待放行的节点，开下一叶。</summary>
     public ErrorOr<Success> Approve(TaskId id)
     {
         ErrorOr<AgentTask> found = _registry.Find(id);

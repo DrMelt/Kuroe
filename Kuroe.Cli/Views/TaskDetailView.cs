@@ -5,7 +5,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按步骤列出已执行与在执行的 agent，再列出单元结论与前台对话。</summary>
+/// <summary>任务详情：按叶子列出已执行与在执行的 agent，再列出单元结论与前台对话。</summary>
 internal sealed class TaskDetailView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -14,8 +14,8 @@ internal sealed class TaskDetailView(Terminal terminal)
     {
         _terminal.Line($"{task.Id} · {task.Title}　状态：{Labels.Of(task.State)}");
         _terminal.Line($"目标：{task.Goal}");
-        _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Flow.Steps.Select(step => step.Name))}）"
-            + $"　步骤进度 {task.FrontierSteps}/{task.TotalSteps}　前台对话 {task.DialogueTurns} 回合");
+        _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.Leaves.Select(leaf => leaf.Path))}）"
+            + $"　节点进度 {task.FrontierNodes}/{task.TotalNodes}　前台对话 {task.DialogueTurns} 回合");
 
         if (task.Plan is { } plan)
         {
@@ -32,18 +32,18 @@ internal sealed class TaskDetailView(Terminal terminal)
         PrintUnits(task);
 
         _terminal.NewLine();
-        foreach (StepSnapshot step in task.Steps)
+        foreach (NodeSnapshot node in task.Nodes)
         {
-            _terminal.ToolCall($"步骤 {step.Index + 1} · {step.Spec.Name}"
-                + $"（{step.Spec.Role.Label()} · {Labels.Of(step.Spec.Scope)} · {Labels.Of(step.Spec.Gate)}）");
+            _terminal.ToolCall($"叶子 {node.Index + 1} · {node.Leaf.Path}"
+                + $"（{node.Leaf.Output.Label()} · {Labels.Of(node.Leaf.Mode)} · {Labels.Of(node.Leaf.Gate)}）");
 
-            if (step.Runs.Count == 0)
+            if (node.Runs.Count == 0)
             {
                 _terminal.Hint("  还没有 agent。");
                 continue;
             }
 
-            foreach (RunSnapshot run in step.Runs)
+            foreach (RunSnapshot run in node.Runs)
             {
                 _terminal.Line($"  {AgentLabel(run)}");
             }
@@ -59,7 +59,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         JournalPrinter.Print(_terminal, task.Dialogue, task.DroppedDialogue);
     }
 
-    /// <summary>执行单元推进到哪一步、结论如何。</summary>
+    /// <summary>执行单元推进到哪片叶子、结论如何。</summary>
     private void PrintUnits(TaskSnapshot task)
     {
         if (task.Units.Count == 0)
@@ -71,14 +71,16 @@ internal sealed class TaskDetailView(Terminal terminal)
         _terminal.Line("单元推进：");
         foreach (UnitSnapshot unit in task.Units)
         {
-            string verdict = unit.Verdict == UnitVerdict.NotChecked ? string.Empty : $" · {Labels.Of(unit.Verdict)}";
-            _terminal.Line($"  {Labels.Item(unit.ItemIndex)} · 下一步 {StepName(task, unit.StepCursor)}"
-                + $" · {Labels.Of(unit.State)}{verdict} · 第 {unit.Attempts} 轮");
+            string verdict = unit.Verdict == UnitVerdict.NotChecked
+                ? string.Empty
+                : $" · {Labels.Of(unit.Verdict)} · 检查 {unit.Attempts} 轮";
+            _terminal.Line($"  {Labels.Item(unit.ItemIndex)} · 下一步 {NodeName(task, unit.NodeCursor)}"
+                + $" · {Labels.Of(unit.State)}{verdict}");
         }
     }
 
-    private static string StepName(TaskSnapshot task, int cursor) =>
-        cursor >= task.TotalSteps ? "结束" : task.Flow.Steps[cursor].Name;
+    private static string NodeName(TaskSnapshot task, int cursor) =>
+        cursor >= task.TotalNodes ? "结束" : task.Graph[cursor].Name;
 
     /// <summary>列表里一行的 agent 概况。</summary>
     internal static string AgentLabel(RunSnapshot run)

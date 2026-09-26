@@ -8,7 +8,7 @@ using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务 → 步骤内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
+/// <summary>任务 → 叶子内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
@@ -67,7 +67,7 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
             detail.Print(task);
 
-            List<Item> items = [.. task.Steps.SelectMany(step => step.Runs)
+            List<Item> items = [.. task.Nodes.SelectMany(node => node.Runs)
                 .OrderBy(run => run.Id.Value)
                 .Select(run => new Item("  " + TaskDetailView.AgentLabel(run), "agent", Task: id, Run: run.Id))];
             AddTaskActions(items, task);
@@ -165,7 +165,7 @@ internal sealed class TaskBrowser(
     {
         if (task.State == TaskState.AwaitingApproval)
         {
-            items.Add(new Item("✓ 批准当前步骤，开下一步", "approve", Task: task.Id));
+            items.Add(new Item("✓ 批准当前节点，开下一步", "approve", Task: task.Id));
         }
 
         if (task.State == TaskState.Blocked)
@@ -201,7 +201,7 @@ internal sealed class TaskBrowser(
     }
 
     private static string TaskLabel(TaskSnapshot task) =>
-        $"#{task.Id.Value} {task.Title} · {Labels.Of(task.State)} · 步骤 {task.FrontierSteps}/{task.TotalSteps}"
+        $"#{task.Id.Value} {task.Title} · {Labels.Of(task.State)} · 节点 {task.FrontierNodes}/{task.TotalNodes}"
         + $" · {task.LiveRuns} 在跑";
 }
 

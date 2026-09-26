@@ -12,7 +12,7 @@ public enum RunState
     /// <summary>请求正常结束。</summary>
     Succeeded,
 
-    /// <summary>请求失败或步骤未收口。</summary>
+    /// <summary>请求失败或叶子未收口。</summary>
     Failed,
 
     /// <summary>被取消。</summary>

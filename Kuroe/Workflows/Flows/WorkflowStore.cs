@@ -1,6 +1,5 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Shared.Agent;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Storage;
 
@@ -101,91 +100,86 @@ sealed class WorkflowStore(string file)
                 continue;
             }
 
-            List<StepSpec> steps = [];
-            foreach (StepDto step in dto.Steps)
-            {
-                if (step.Role is not { } role)
-                {
-                    errors.Add(WorkflowErrors.Step(dto.Name, step.Name ?? "(未命名)", "缺少 Role。"));
-
-                    continue;
-                }
-
-                steps.Add(new StepSpec
-                {
-                    Name = step.Name ?? string.Empty,
-                    Role = role,
-                    Model = step.Model,
-                    Prompt = step.Prompt,
-                    Scope = step.Scope ?? StepScope.Single,
-                    From = step.From ?? [],
-                    Gate = step.Gate ?? StepGate.Auto,
-                    OnReject = step.OnReject,
-                    MaxAttempts = step.MaxAttempts,
-                });
-            }
-
-            flows.Add(new Workflow(dto.Name, dto.Description, steps));
+            flows.Add(ToWorkflow(dto));
         }
 
         return errors.Count > 0 ? errors : flows;
     }
 
+    private static Workflow ToWorkflow(WorkflowDto dto)
+    {
+        List<AgentDefinition> agents = [.. dto.Agents.Select(agent => new AgentDefinition
+        {
+            Name = agent.Name ?? string.Empty,
+            Description = agent.Description,
+            SystemPrompt = agent.SystemPrompt,
+            Model = agent.Model,
+            Tools = agent.Tools ?? [],
+        })];
+
+        return new Workflow(dto.Name!, dto.Description, agents, ToNodes(dto.Nodes));
+    }
+
+    /// <summary>有子节点的是容器，否则是叶子。缺省的字段取节点定义的安全值，合法性交校验。</summary>
+    private static IReadOnlyList<NodeSpec> ToNodes(List<NodeDto> nodes) =>
+        [.. nodes.Select(ToNode)];
+
+    private static NodeSpec ToNode(NodeDto node) => node.Nodes is { Count: > 0 }
+        ? new FlowNode
+        {
+            Name = node.Name ?? string.Empty,
+            Prompt = node.Prompt,
+            From = node.From ?? [],
+            Nodes = ToNodes(node.Nodes),
+        }
+        : new AgentNode
+        {
+            Name = node.Name ?? string.Empty,
+            Agent = node.Agent ?? string.Empty,
+            Prompt = node.Prompt,
+            From = node.From ?? [],
+            Output = node.Output ?? NodeOutput.Plain,
+            Mode = node.Mode ?? NodeMode.Single,
+            Gate = node.Gate ?? NodeGate.Auto,
+            OnReject = node.OnReject,
+            MaxAttempts = node.MaxAttempts,
+        };
     private static WorkflowDto ToDto(Workflow flow) => new()
     {
         Name = flow.Name,
         Description = flow.Description,
-        Steps = [.. flow.Steps.Select(step => new StepDto
+        Agents = [.. flow.Agents.Select(agent => new AgentDto
         {
-            Name = step.Name,
-            Role = step.Role,
-            Model = step.Model,
-            Prompt = step.Prompt,
-            Scope = step.Scope,
-            From = [.. step.From],
-            Gate = step.Gate,
-            OnReject = step.OnReject,
-            MaxAttempts = step.MaxAttempts,
+            Name = agent.Name,
+            Description = agent.Description,
+            SystemPrompt = agent.SystemPrompt,
+            Model = agent.Model,
+            Tools = agent.Tools.Count == 0 ? null : [.. agent.Tools],
         })],
+        Nodes = [.. flow.Nodes.Select(ToNodeDto)],
     };
 
-}
-
-/// <summary>流程文件的形状：文件里的字段名与类型在此固定，读入后装配成 <see cref="Workflow"/>。
-/// 属性必须可写，否则缺键的项拿不到声明的默认值。</summary>
-internal sealed class FlowFileDto
-{
-    public List<WorkflowDto> Flows { get; set; } = [];
-}
-
-/// <summary>文件里的一条流程与它的步骤。</summary>
-internal sealed class WorkflowDto
-{
-    public string? Name { get; set; }
-
-    public string? Description { get; set; }
-
-    public List<StepDto> Steps { get; set; } = [];
-}
-
-/// <summary>文件里的一个步骤，省略的字段在装配时取流程规则的缺省值。</summary>
-internal sealed class StepDto
-{
-    public string? Name { get; set; }
-
-    public RunRole? Role { get; set; }
-
-    public string? Model { get; set; }
-
-    public string? Prompt { get; set; }
-
-    public StepScope? Scope { get; set; }
-
-    public List<string>? From { get; set; }
-
-    public StepGate? Gate { get; set; }
-
-    public RejectAction? OnReject { get; set; }
-
-    public int? MaxAttempts { get; set; }
+    private static NodeDto ToNodeDto(NodeSpec node) => node switch
+    {
+        FlowNode flow => new NodeDto
+        {
+            Name = flow.Name,
+            Prompt = flow.Prompt,
+            From = flow.From.Count == 0 ? null : [.. flow.From],
+            Nodes = [.. flow.Nodes.Select(ToNodeDto)],
+        },
+        AgentNode leaf => new NodeDto
+        {
+            Name = leaf.Name,
+            Agent = leaf.Agent,
+            Prompt = leaf.Prompt,
+            From = leaf.From.Count == 0 ? null : [.. leaf.From],
+            Output = leaf.Output,
+            Mode = leaf.Mode,
+            Gate = leaf.Gate,
+            OnReject = leaf.OnReject,
+            MaxAttempts = leaf.MaxAttempts,
+        },
+        _ => throw new InvalidOperationException($"未知节点类型：{node.GetType().Name}"),
+    };
 }

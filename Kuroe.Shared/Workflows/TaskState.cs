@@ -6,7 +6,7 @@ public enum TaskState
     /// <summary>有 agent 在跑或排队。</summary>
     Running,
 
-    /// <summary>停在等人批准的步骤上。</summary>
+    /// <summary>停在等人批准的叶子上。</summary>
     AwaitingApproval,
 
     /// <summary>有单元被阻塞，任务不再自动推进。</summary>

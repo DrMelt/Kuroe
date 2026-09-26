@@ -43,16 +43,16 @@ public sealed class SnapshotTests
     [Fact]
     public void Task_frontier_comes_from_the_furthest_unit()
     {
-        // 两个条目各推到不同步骤，进度取最远的一个
-        Assert.Equal(3, Task().Snap([Unit(0, 1), Unit(1, 3)]).FrontierSteps);
-        Assert.Equal(2, Task().Snap([Unit(0, 1), Unit(1, 3)]).TotalSteps);
+        // 两个条目各推到不同叶子，进度取最远的一个
+        Assert.Equal(3, Task().Snap([Unit(0, 1), Unit(1, 3)]).FrontierNodes);
+        Assert.Equal(2, Task().Snap([Unit(0, 1), Unit(1, 3)]).TotalNodes);
     }
 
     [Fact]
     public void Task_without_units_has_zero_frontier()
     {
-        Assert.Equal(0, Task().Snap([]).FrontierSteps);
-        Assert.Equal(2, Task().Snap([]).TotalSteps);
+        Assert.Equal(0, Task().Snap([]).FrontierNodes);
+        Assert.Equal(2, Task().Snap([]).TotalNodes);
     }
 
     private static RunSnapshot Run(RunState state, DateTimeOffset? started = null, DateTimeOffset? finished = null) =>
@@ -67,9 +67,9 @@ public sealed class SnapshotTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Role = RunRole.Plan,
-        StepIndex = 0,
-        StepName = "规划",
+        Output = NodeOutput.Plan,
+        NodeIndex = 0,
+        NodeName = "制定计划",
         Instruction = "做",
         Model = "fake",
     };
@@ -77,16 +77,21 @@ public sealed class SnapshotTests
     private sealed class TaskBuilder
     {
         public TaskSnapshot Snap(IReadOnlyList<UnitSnapshot> units) => new(
-            new TaskId(1), "标题", "目标", Flow, TaskState.Running, 0, 0, null,
-            [new StepSnapshot(0, Spec, []), new StepSnapshot(1, Spec, [])],
+            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, null,
+            [.. Graph.Leaves.Select((leaf, index) => new NodeSnapshot(index, leaf, []))],
             units, [], 0, DateTimeOffset.UtcNow);
     }
 
-    private static readonly Workflow Flow = new("默认", null,
+    private static readonly AgentDefinition Agent = new() { Name = "规划者" };
+
+    private static readonly Workflow Flow = new("默认", null, [Agent],
     [
-        new StepSpec { Name = "规划", Role = RunRole.Plan },
-        new StepSpec { Name = "实施", Role = RunRole.Implement },
+        new AgentNode { Name = "制定计划", Agent = Agent.Name, Output = NodeOutput.Plan },
+        new AgentNode { Name = "实施", Agent = Agent.Name },
     ]);
 
-    private static readonly StepSpec Spec = new() { Name = "规划", Role = RunRole.Plan };
+    private static readonly NodeGraph Graph = new([
+        new LeafNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null),
+        new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null),
+    ]);
 }

@@ -23,11 +23,11 @@ public sealed class TaskRegistry
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal AgentTask Create(string goal, Workflow flow, AgentSession session, string? title)
+    internal AgentTask Create(string goal, Workflow flow, NodeGraph graph, AgentSession session, string? title)
     {
         lock (_gate)
         {
-            AgentTask task = new(new TaskId(_nextTask++), goal, flow, session, title);
+            AgentTask task = new(new TaskId(_nextTask++), goal, flow, graph, session, title);
             _tasks.Add(task);
             _active = task.Id;
 

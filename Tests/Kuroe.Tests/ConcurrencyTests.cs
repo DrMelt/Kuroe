@@ -46,7 +46,7 @@ public sealed class ConcurrencyTests
             TaskSnapshot done = harness.Settle(id);
 
             Assert.Equal(TaskState.Done, done.State);
-            Assert.Equal(5, done.Steps.Sum(step => step.Runs.Count));
+            Assert.Equal(4, done.Nodes.Sum(node => node.Runs.Count));
         }
 
         Assert.Equal(3, harness.Registry.ClearFinished());

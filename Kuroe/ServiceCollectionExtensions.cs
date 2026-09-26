@@ -54,20 +54,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RunDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
-        services.AddSingleton(sp => new StepModelResolver(
+        services.AddSingleton(sp => new NodeModelResolver(
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>()));
         services.AddSingleton(sp => new WorkflowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
-            sp.GetRequiredService<StepModelResolver>(),
+            sp.GetRequiredService<NodeModelResolver>(),
             sp.GetRequiredService<SettingsProvider>()));
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<WorkflowEngine>(),
             sp.GetRequiredService<WorkflowService>(),
             sp.GetRequiredService<AgentSessionFactory>(),
-            sp.GetRequiredService<StepModelResolver>()));
+            sp.GetRequiredService<NodeModelResolver>()));
         services.AddSingleton(sp => new AgentProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new AgentSessionFactory(
             sp.GetRequiredService<AgentProvider>(),

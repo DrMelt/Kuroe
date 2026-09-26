@@ -202,14 +202,14 @@ public sealed class AgentSession
         return !calls.IsSubsetOf(results);
     }
 
-    /// <summary>请求选项逐轮取自当前设置，工具按本轮归属构造。</summary>
+    /// <summary>请求选项逐轮取自当前设置，工具按本轮归属与工具面构造。</summary>
     private ChatClientAgentRunOptions Options(TurnScope scope)
     {
         AgentSettings current = _settings.Current.Agent;
 
         return new ChatClientAgentRunOptions(new ChatOptions
         {
-            Tools = [.. _tools.Build(scope, scope.Sink)],
+            Tools = [.. _tools.Build(scope, scope.Sink, scope.Tools)],
             Temperature = current.Temperature,
             MaxOutputTokens = current.MaxOutputTokens,
         });

@@ -1,4 +1,3 @@
-using Kuroe.Agent.Runs;
 using Kuroe.Cli.Views;
 using Kuroe.Shared.Agent;
 using Kuroe.Shared.Agent.Runs;
@@ -27,14 +26,14 @@ public sealed class LabelsTests
         Assert.Equal("推进中", Labels.Of(UnitState.Working));
         Assert.Equal("未检查", Labels.Of(UnitVerdict.NotChecked));
         Assert.Equal("退回返工", Labels.Of(RejectAction.Retry));
-        Assert.Equal("按条目", Labels.Of(StepScope.PerItem));
-        Assert.Equal("自动放行", Labels.Of(StepGate.Auto));
+        Assert.Equal("按条目", Labels.Of(NodeMode.PerItem));
+        Assert.Equal("自动放行", Labels.Of(NodeGate.Auto));
     }
 
     [Fact]
     public void Item_labels_number_from_one()
     {
-        Assert.Equal("整步", Labels.Item(null));
+        Assert.Equal("整体", Labels.Item(null));
         Assert.Equal("条目 1", Labels.Item(0));
         Assert.Equal("条目 3", Labels.Item(2));
     }
@@ -68,9 +67,9 @@ public sealed class LabelsTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Role = RunRole.Plan,
-        StepIndex = 0,
-        StepName = "规划",
+        Output = NodeOutput.Plan,
+        NodeIndex = 0,
+        NodeName = "制定计划",
         Instruction = "做",
         Model = "fake",
     };

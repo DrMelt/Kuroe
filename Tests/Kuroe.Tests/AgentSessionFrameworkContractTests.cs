@@ -22,7 +22,7 @@ public sealed class AgentSessionFrameworkContractTests
         await ConsumeAsync(agent.RunStreamingAsync("第二问", session));
 
         IReadOnlyList<ChatMessage> last = client.Requests[^1];
-        Assert.Equal(new[] { "你是一个助手。", "第一问", "回复", "第二问" }, last.Select(message => message.Text));
+        Assert.Equal(["你是一个助手。", "第一问", "回复", "第二问"], last.Select(message => message.Text));
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public sealed class AgentSessionFrameworkContractTests
         await ConsumeAsync(agent.RunStreamingAsync("新一问", session));
 
         IReadOnlyList<ChatMessage> last = client.Requests[^1];
-        Assert.Equal(new[] { "新提示词。", "新一问" }, last.Select(message => message.Text));
+        Assert.Equal(["新提示词。", "新一问"], last.Select(message => message.Text));
     }
 
     private sealed class RecordingChatClient : IChatClient

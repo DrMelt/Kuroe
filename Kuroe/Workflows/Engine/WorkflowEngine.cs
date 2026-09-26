@@ -16,7 +16,7 @@ namespace Kuroe.Workflows.Engine;
 sealed class WorkflowEngine(
     TaskRegistry registry,
     RunDispatcher dispatcher,
-    StepModelResolver models,
+    NodeModelResolver models,
     SettingsProvider settings)
 {
     private readonly Lock _gate = new();
@@ -70,28 +70,11 @@ sealed class WorkflowEngine(
         return waiting;
     }
 
-    /// <summary>要求持有任务 Gate：单元从当前步继续，需要展开时建子单元。</summary>
+    /// <summary>要求持有任务 Gate：单元从当前叶继续，需要展开时建子单元。</summary>
     private static void MoveForward(AgentTask task, WorkUnit unit)
     {
-        int next = unit.StepCursor + 1;
-        if (next >= task.Flow.Count)
-        {
-            unit.Finish(next);
-            return;
-        }
-
-        if (task.Flow.Steps[next].Scope == StepScope.PerItem && unit.Item is null && task.Plan is { } plan)
-        {
-            unit.Finish(next);
-            foreach (PlanItem item in plan.Items)
-            {
-                task.AddUnit(item.Index, item, next).Inherit(unit);
-            }
-
-            return;
-        }
-
-        unit.AdvanceTo(next);
+        int next = unit.NodeCursor + 1;
+        FlowLeafExecutor.AdvanceUnit(task, unit, next);
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的单元再开一轮实施，itemIndex 为空时处理全部，返回被处理的单元数。</summary>
@@ -184,6 +167,7 @@ sealed class WorkflowEngine(
         {
             if (!_runs.TryGetValue(id, out var found))
             {
+                registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 的信号丢失：流程运行已结束。"));
                 return;
             }
 
@@ -262,6 +246,34 @@ sealed class WorkflowEngine(
         }
 
         StreamingRun run = entry.Run;
+        try
+        {
+            await DriveLoopAsync(id, run).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 的流程运行异常：{ex.Message}"));
+        }
+
+        lock (_gate)
+        {
+            _runs.Remove(id);
+            _recovery.Remove(id);
+        }
+
+        try
+        {
+            await run.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    /// <summary>消费流程事件流。事件流在 RequestHalt 处结束：任务已完成则结束，否则等待宿主信号后继续。
+    /// 恢复后的消费用阻塞模式，让新投递的宿主意图进入执行器后再回到暂停点判定。</summary>
+    private async Task DriveLoopAsync(TaskId id, StreamingRun run)
+    {
         while (true)
         {
             await foreach (WorkflowEvent _ in run.WatchStreamAsync(blockOnPendingRequest: false))
@@ -287,20 +299,7 @@ sealed class WorkflowEngine(
             }
 
             await gate.Task.ConfigureAwait(false);
-        }
-
-        lock (_gate)
-        {
-            _runs.Remove(id);
             _recovery.Remove(id);
-        }
-
-        try
-        {
-            await run.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (ObjectDisposedException)
-        {
         }
     }
 

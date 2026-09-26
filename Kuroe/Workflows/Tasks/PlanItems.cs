@@ -5,7 +5,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>规划步骤交回的条目拆分：把模型给的 JSON 数组解析成条目，不合法时给出一条可回给模型的原因。</summary>
+/// <summary>规划叶子交回的条目拆分：把模型给的 JSON 数组解析成条目，不合法时给出一条可回给模型的原因。</summary>
 static class PlanItems
 {
     /// <summary>一个方案最多交回的条目数。</summary>

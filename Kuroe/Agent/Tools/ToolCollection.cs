@@ -10,7 +10,8 @@ using Microsoft.Extensions.AI;
 namespace Kuroe.Agent.Tools;
 
 /// <summary>工具载体声明的函数构成的模型可调用集合，外加记录调用的包装。
-/// 每轮请求按回合归属重新取载体，使调用记录落到该回合的记录上。</summary>
+/// 每轮请求按回合归属重新取载体，使调用记录落到该回合的记录上。
+/// 工具面从回合的归属取用：null 表示全部，名单表示只给这些函数。</summary>
 public sealed class ToolCollection
 {
     private readonly IAgentTool[] _carriers;
@@ -26,19 +27,22 @@ public sealed class ToolCollection
     public IReadOnlyList<string> Names { get; }
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。</summary>
-    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink)
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<string>? tools)
     {
-        List<AITool> tools = [];
+        List<AITool> result = [];
         foreach (IAgentTool carrier in _carriers)
         {
             IAgentTool bound = carrier is IScopedAgentTool scoped ? scoped.ForTurn(scope) : carrier;
             foreach (ToolFunction function in bound.Functions)
             {
-                tools.Add(new DeclaredFunction(function, sink));
+                if (tools is null || tools.Contains(function.Name))
+                {
+                    result.Add(new DeclaredFunction(function, sink));
+                }
             }
         }
 
-        return tools;
+        return result;
     }
 
     /// <summary>按声明执行的函数，调用参数与结果写进过程记录。</summary>

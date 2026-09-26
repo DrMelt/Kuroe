@@ -23,7 +23,7 @@ public sealed class LimitsTests
     public void Title_is_truncated_at_forty_characters()
     {
         using KuroeHarness harness = KuroeHarness.Create();
-        string goal = new string('目', 50);
+        string goal = new('目', 50);
 
         TaskSnapshot snapshot = harness.Snapshot(harness.Submit(goal));
 
@@ -39,12 +39,12 @@ public sealed class LimitsTests
         harness.Executor.Output = _ => new string('长', 3000);
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot implement = Assert.Single(done.Steps[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
         ContextMessage upstream = Assert.Single(implement.Context.Seed,
             message => message.Source is AgentSource);
 
         Assert.Equal(2001, upstream.Text.Length);
-        Assert.StartsWith("步骤「规划」的产出", upstream.Text);
+        Assert.StartsWith("节点「制定计划」的产出", upstream.Text);
         Assert.EndsWith("…", upstream.Text);
     }
 }

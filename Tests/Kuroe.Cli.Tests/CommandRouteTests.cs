@@ -86,11 +86,12 @@ public sealed class CommandRouteTests
         using Ui ui = new();
         ui.Flows.Run(["/flow", "list"]);
         Assert.Contains("默认流程", ui.Output.Output);
-        Assert.Contains("规划", ui.Output.Output);
+        Assert.Contains("制定计划", ui.Output.Output);
 
         ui.Flows.Run(["/flow", "show", "默认"]);
-        Assert.Contains("规划", ui.Output.Output);
-        Assert.Contains("实施", ui.Output.Output);
+        Assert.Contains("制定计划", ui.Output.Output);
+        Assert.Contains("分配执行", ui.Output.Output);
+        Assert.Contains("整体检查", ui.Output.Output);
     }
 
     [Fact]

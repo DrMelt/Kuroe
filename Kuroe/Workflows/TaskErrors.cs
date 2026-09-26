@@ -16,13 +16,13 @@ static class TaskErrors
     /// <summary>提交任务时目标为空。</summary>
     public static Error EmptyGoal() => Error.Validation("Task.Goal", "目标不能为空。");
 
-    /// <summary>该任务没有等待批准的步骤。</summary>
+    /// <summary>该任务没有等待批准的节点。</summary>
     public static Error NotAwaiting(TaskId task) =>
-        Error.Validation("Task.Approve", $"{task} 没有等待批准的步骤。");
+        Error.Validation("Task.Approve", $"{task} 没有等待批准的节点。");
 
     /// <summary>该任务没有被阻塞的条目。</summary>
     public static Error NotBlocked(TaskId task) =>
-        Error.Validation("Task.Rework", $"{task} 没有被阻塞的步骤或条目。");
+        Error.Validation("Task.Rework", $"{task} 没有被阻塞的节点或条目。");
 
     /// <summary>条目数组的形状不合法，原因要能直接回给模型改正。</summary>
     public static Error Items(string reason) => Error.Validation(

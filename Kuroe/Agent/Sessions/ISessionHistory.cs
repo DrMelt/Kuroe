@@ -51,7 +51,7 @@ internal sealed class RunHistory(SettingsProvider settings, RunContext context) 
         _laidOut = true;
 
         messages.Clear();
-        messages.Add(new ChatMessage(ChatRole.System, settings.Current.Agent.SystemPrompt));
+        messages.Add(new ChatMessage(ChatRole.System, context.SystemPrompt ?? settings.Current.Agent.SystemPrompt));
         foreach (ContextMessage message in context.Seed)
         {
             messages.Add(new ChatMessage(Role(message.Role), message.Text));

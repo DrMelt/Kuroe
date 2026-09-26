@@ -22,8 +22,11 @@ static class WorkflowErrors
     public static Error InvalidPath(string path, string message) =>
         Error.Validation(ErrorCodes.WorkflowInvalidPath, $"文件参数不是合法路径：{path}（{message}）");
 
-    public static Error Step(string flow, string step, string message) =>
-        Error.Validation(ErrorCodes.WorkflowStep, $"流程 {flow} 的步骤 {step}：{message}");
+    public static Error Node(string flow, string node, string message) =>
+        Error.Validation(ErrorCodes.WorkflowNode, $"流程 {flow} 的节点 {node}：{message}");
+
+    public static Error Agent(string flow, string agent, string message) =>
+        Error.Validation(ErrorCodes.WorkflowNode, $"流程 {flow} 的 agent {agent}：{message}");
 
     public static Error Body(string flow, string message) =>
         Error.Validation(ErrorCodes.WorkflowBody, $"流程 {flow}：{message}");
