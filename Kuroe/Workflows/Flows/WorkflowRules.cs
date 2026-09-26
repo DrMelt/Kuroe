@@ -144,12 +144,78 @@ static class WorkflowRules
                         errors.Add(WorkflowErrors.Node(flowName, node.Name, $"引用的 agent {leaf.Agent} 不存在。"));
                     }
 
+                    ValidateSplit(leaf, flowName, errors);
                     break;
             }
 
             visible.Add(node.Name);
         }
     }
+
+    /// <summary>拆分配置的静态规则：只能写在规划叶上，条目与补充上限的取值边界。</summary>
+    private static void ValidateSplit(AgentNode leaf, string flowName, List<Error> errors)
+    {
+        if (leaf.Split is not { } split)
+        {
+            return;
+        }
+
+        if (leaf.Output != NodeOutput.Plan)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split 只能写在规划节点上。"));
+        }
+
+        if (split.Items is null && split.ExtrasMax is null)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split 至少要声明 Items 或 ExtrasMax。"));
+        }
+
+        if (split.Items is null && split.ExtrasMax is 0)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split.ExtrasMax 为 0 时要求声明至少一条 Items。"));
+        }
+
+        if (split.Items is not null && split.Items.Count is 0 or > 20)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split.Items 要有 1 到 20 条。"));
+        }
+
+        if (split.Items is { } items)
+        {
+            foreach (SplitItem item in items)
+            {
+                if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
+                    break;
+                }
+            }
+        }
+
+        if (split.ExtrasMax is < 0 or > 20)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "Split.ExtrasMax 必须是 0 到 20 的整数。"));
+        }
+
+        if (leaf.IsStaticSplit)
+        {
+            if (leaf.Prompt is not null)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "纯静态拆分节点不支持 Prompt。"));
+            }
+
+            if (leaf.From.Count > 0)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "纯静态拆分节点不支持 From。"));
+            }
+
+            if (leaf.Gate == NodeGate.Review)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "纯静态拆分节点不支持待批准门控。"));
+            }
+        }
+    }
+
     /// <summary>展平后的形状规则：展开段、并行段与检查节点。</summary>
     private static void CheckShape(NodeGraph graph, string flowName, int attemptLimit, List<Error> errors)
     {
@@ -194,6 +260,20 @@ static class WorkflowRules
                     if (graph[branch].Mode != NodeMode.PerItem)
                     {
                         errors.Add(WorkflowErrors.Node(flowName, graph[branch].Name, "并行段的分支叶必须按条目展开。"));
+                    }
+                }
+
+                // 静态条目声明的分支必须落在并行段内
+                SplitConfig? split = segment.Source >= 0 ? graph[segment.Source].Split : null;
+                if (split?.Items is { } fixedItems)
+                {
+                    foreach (SplitItem item in fixedItems)
+                    {
+                        if (item.Branch is { } branch && graph.BranchLeaf(segment, branch) is null)
+                        {
+                            errors.Add(WorkflowErrors.Node(flowName, graph[segment.Source].Name,
+                                $"Split.Items 的分支“{branch}”不在并行段里。"));
+                        }
                     }
                 }
 

@@ -201,8 +201,19 @@ sealed class WorkflowStore(string file)
             Gate = node.Gate ?? NodeGate.Auto,
             OnReject = node.OnReject,
             MaxAttempts = node.MaxAttempts,
+            Split = ToSplit(node.Split),
         };
     }
+
+    /// <summary>把文件里的拆分配置装配成模型：缺失的必填字段留空交校验。</summary>
+    private static SplitConfig? ToSplit(SplitDto? split) => split is null ? null : new SplitConfig(
+        split.Items?.Select(item => new SplitItem(
+            item.Title ?? string.Empty,
+            item.Instruction ?? string.Empty,
+            item.Acceptance ?? string.Empty,
+            item.Branch)).ToList(),
+        split.ExtrasMax,
+        split.Acceptance);
     private static WorkflowDto ToDto(Workflow flow) => new()
     {
         Name = flow.Name,
@@ -239,6 +250,18 @@ sealed class WorkflowStore(string file)
             Gate = leaf.Gate,
             OnReject = leaf.OnReject,
             MaxAttempts = leaf.MaxAttempts,
+            Split = leaf.Split is { } split ? new SplitDto
+            {
+                Items = split.Items?.Select(item => new SplitItemDto
+                {
+                    Title = item.Title,
+                    Instruction = item.Instruction,
+                    Acceptance = item.Acceptance,
+                    Branch = item.Branch,
+                }).ToList(),
+                ExtrasMax = split.ExtrasMax,
+                Acceptance = split.Acceptance,
+            } : null,
         },
         _ => throw new InvalidOperationException($"未知节点类型：{node.GetType().Name}"),
     };

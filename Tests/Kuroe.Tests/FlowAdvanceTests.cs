@@ -316,11 +316,206 @@ public sealed class FlowAdvanceTests
         Assert.Single(done.Nodes[3].Runs);
     }
 
+    [Fact]
+    public void Plan_dispatch_instruction_lists_available_parallel_branches()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelFunnelFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 分配者的上下文里给出可用的分支名，模型据此交回带 Branch 的条目
+        RunSnapshot dispatcher = done.Nodes[1].Runs[0];
+        Assert.Contains("可选分支：撰写、排版", dispatcher.Context.Instruction);
+    }
+
+    [Fact]
+    public void Static_split_expands_without_plan_agent()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(StaticSplitFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 静态拆分不派规划 agent，两条目各一个实施者，整体检查一个
+        Assert.Empty(done.Nodes[0].Runs);
+        Assert.Equal(2, done.Nodes[1].Runs.Count);
+        Assert.Single(done.Nodes[2].Runs);
+        Assert.All(done.Units.Where(unit => unit.ItemIndex is not null),
+            unit => Assert.Equal(UnitVerdict.Verified, unit.Verdict));
+
+        RunSnapshot first = done.Nodes[1].Runs[0];
+        Assert.Contains(first.Context.Seed, message => message.Text.Contains("本条目：甲\n要做：做甲\n验收标准：甲可见"));
+    }
+
+    [Fact]
+    public void Static_split_with_model_extras_merges_fixed_and_proposed()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ExtrasSplitFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 规划 agent 跑一次交补充条目，固定条目加两条补充共三个实施者
+        Assert.Single(done.Nodes[0].Runs);
+        Assert.Equal(3, done.Nodes[1].Runs.Count);
+
+        // 规划指令给出固定条目参考与补充上限
+        RunSnapshot plan = done.Nodes[0].Runs[0];
+        Assert.Contains("已按标准固定 1 条", plan.Context.Instruction);
+        Assert.Contains("补充至多 2 条", plan.Context.Instruction);
+        Assert.Contains("验收统一为", plan.Context.Instruction);
+
+        // 固定条目保留配置内容，补充条目接受模型文本并注入统一验收
+        RunSnapshot fixedRun = Assert.Single(done.Nodes[1].Runs,
+            run => run.Context.Seed.Any(message => message.Text.Contains("本条目：固定任务")));
+        Assert.Contains(fixedRun.Context.Seed, message => message.Text.Contains("验收标准：固定验收"));
+
+        RunSnapshot extraRun = Assert.Single(done.Nodes[1].Runs,
+            run => run.Context.Seed.Any(message => message.Text.Contains("本条目：甲")));
+        Assert.Contains(extraRun.Context.Seed, message => message.Text.Contains("验收标准：统一验收"));
+    }
+
+    [Fact]
+    public void Extras_over_limit_rejects_submission_and_blocks()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ConstrainedSplitFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot blocked = harness.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        Assert.Contains(harness.Executor.Submissions, text => text.Contains("最多补充 1 条"));
+    }
+
+    [Fact]
+    public void Static_split_dispatches_items_to_their_branches()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(StaticParallelSplitFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 静态拆分不派规划 agent，条目按声明的分支落并行分支各一个实施者
+        Assert.Empty(done.Nodes[0].Runs);
+        Assert.Single(done.Nodes[1].Runs);
+        Assert.Single(done.Nodes[2].Runs);
+        Assert.Single(done.Nodes[3].Runs);
+        Assert.Equal(2, done.Units.Count(unit => unit.Branch is not null));
+        Assert.All(done.Units.Where(unit => unit.Branch is not null),
+            unit => Assert.Equal(UnitVerdict.Verified, unit.Verdict));
+    }
+
     private const string BranchedItemsJson = """
         [
           { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见", "Branch": "撰写" },
           { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见", "Branch": "排版" }
         ]
+        """;
+
+    private const string StaticSplitFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "执行者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "静态拆分", "Agent": "执行者", "Output": "Plan",
+                  "Split": {
+                    "Items": [
+                      { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
+                      { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" }
+                    ]
+                  } },
+                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["静态拆分"] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["静态拆分", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ExtrasSplitFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "执行者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan",
+                  "Split": {
+                    "Items": [ { "Title": "固定任务", "Instruction": "固定做法", "Acceptance": "固定验收" } ],
+                    "ExtrasMax": 2,
+                    "Acceptance": "统一验收"
+                  } },
+                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ConstrainedSplitFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "执行者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan",
+                  "Split": { "ExtrasMax": 1, "Acceptance": "统一验收" } },
+                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string StaticParallelSplitFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "执行者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "静态拆分", "Agent": "执行者", "Output": "Plan",
+                  "Split": {
+                    "Items": [
+                      { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见", "Branch": "撰写" },
+                      { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见", "Branch": "排版" }
+                    ]
+                  } },
+                { "Name": "实施", "Mode": "Parallel",
+                  "Nodes": [
+                    { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "From": ["静态拆分"] },
+                    { "Name": "排版", "Agent": "执行者", "Mode": "PerItem", "From": ["静态拆分"] }
+                  ] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["静态拆分", "撰写", "排版"], "OnReject": "Retry" }
+              ]
+            }
+          ]
+        }
         """;
 
     private const string SingleBranchItemsJson = """

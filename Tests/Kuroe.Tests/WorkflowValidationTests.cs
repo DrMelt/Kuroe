@@ -34,6 +34,14 @@ public sealed class WorkflowValidationTests
     [InlineData(LeafAfterExpansion, "只能有一个收拢检查叶子收尾")]
     [InlineData(BadLeafMode, "Mode 应为 Single 或 PerItem")]
     [InlineData(BadContainerMode, "Mode 应为 Sequential 或 Parallel")]
+    [InlineData(SplitOnImplement, "Split 只能写在规划节点上")]
+    [InlineData(SplitEmpty, "Split 至少要声明 Items 或 ExtrasMax")]
+    [InlineData(SplitExtrasOverCap, "Split.ExtrasMax 必须是 0 到 20 的整数")]
+    [InlineData(SplitZeroWithoutItems, "Split.ExtrasMax 为 0 时要求声明至少一条 Items")]
+    [InlineData(SplitStaticPrompt, "纯静态拆分节点不支持 Prompt")]
+    [InlineData(SplitStaticGate, "纯静态拆分节点不支持待批准门控")]
+    [InlineData(SplitStaticFrom, "纯静态拆分节点不支持 From")]
+    [InlineData(SplitParallelBranch, "Split.Items 的分支“不存在”不在并行段里")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -317,5 +325,62 @@ public sealed class WorkflowValidationTests
             }
           ]
         }
+        """;
+
+    private const string SplitOnImplement = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "实施", "Agent": "执行者",
+            "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
+        ] } ] }
+        """;
+
+    private const string SplitEmpty = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": {} }
+        ] } ] }
+        """;
+
+    private const string SplitExtrasOverCap = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 21 } }
+        ] } ] }
+        """;
+
+    private const string SplitZeroWithoutItems = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 0 } }
+        ] } ] }
+        """;
+
+    private const string SplitStaticPrompt = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Prompt": "不需要",
+            "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
+        ] } ] }
+        """;
+
+    private const string SplitStaticGate = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Gate": "Review",
+            "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
+        ] } ] }
+        """;
+
+    private const string SplitStaticFrom = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "上游", "Agent": "执行者" },
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "From": ["上游"],
+            "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
+        ] } ] }
+        """;
+
+    private const string SplitParallelBranch = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
+            "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Branch": "不存在" } ] } },
+          { "Name": "实施", "Mode": "Parallel",
+            "Nodes": [ { "Name": "分支甲", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] } ] },
+          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分支甲"], "OnReject": "Retry" }
+        ] } ] }
         """;
 }

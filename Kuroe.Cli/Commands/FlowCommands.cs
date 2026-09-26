@@ -173,6 +173,24 @@ internal sealed class FlowCommands(
             parts.Add($"不通过则 {Labels.Of(action)}，至多 {limit} 轮");
         }
 
+        if (leaf.Split is { } split)
+        {
+            if (split.Items is { Count: > 0 } items)
+            {
+                parts.Add($"固定 {items.Count} 条");
+            }
+
+            if (split.ExtrasMax is { } limit)
+            {
+                parts.Add($"补充至多 {limit} 条");
+            }
+
+            if (split.Acceptance is { Length: > 0 })
+            {
+                parts.Add("统一验收");
+            }
+        }
+
         return parts.Count == 0 ? "—" : string.Join("；", parts);
     }
 

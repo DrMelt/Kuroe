@@ -112,7 +112,8 @@ internal static class FlowCompiler
         [.. leaf.From.Select(name => order[name])],
         leaf.Gate,
         leaf.OnReject,
-        leaf.MaxAttempts);
+        leaf.MaxAttempts,
+        leaf.Split);
 
     /// <summary>段：并行容器各成一个并行段，组外的连续 PerItem 叶子构成单分支段。拆分源取段首叶 From 里的规划产出。
     /// 存在并行段时不再识别单分支段，段后的逐条检查仍沿展开出的单元推进。</summary>

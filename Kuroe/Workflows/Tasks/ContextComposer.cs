@@ -213,12 +213,59 @@ public static class ContextComposer
             ? $"目标：{task.Goal}\n本次只负责条目 {item.Index + 1}：{item.Title}{(unit.Branch is { } branch ? $"（分支 {branch}）" : string.Empty)}"
             : $"目标：{task.Goal}");
 
+        AppendSplitGuide(task, leaf, lines);
+
         if (round > 1)
         {
             lines.Add($"这是第 {round} 轮实施，针对上一轮检查意见返工。");
         }
 
         return string.Join('\n', lines);
+    }
+
+    /// <summary>规划叶的拆分说明：固定条目作参考、补充上限与统一验收、并行段的分支清单。</summary>
+    private static void AppendSplitGuide(AgentTask task, LeafNode leaf, List<string> lines)
+    {
+        if (leaf.Output != NodeOutput.Plan)
+        {
+            return;
+        }
+
+        if (leaf.Split is { } split)
+        {
+            if (split.Items is { Count: > 0 } items)
+            {
+                List<string> listed = [];
+                int number = 1;
+                foreach (SplitItem item in items)
+                {
+                    string acceptance = item.Acceptance.Length > 0 ? $"｜验收：{item.Acceptance}" : string.Empty;
+                    string branch = item.Branch is { Length: > 0 } name ? $"｜分支：{name}" : string.Empty;
+                    listed.Add($"{number}. {item.Title}｜{item.Instruction}{acceptance}{branch}");
+                    number++;
+                }
+
+                lines.Add($"已按标准固定 {items.Count} 条：\n{string.Join('\n', listed)}");
+            }
+
+            if (split.ExtrasMax is { } limit)
+            {
+                lines.Add(split.Acceptance is { Length: > 0 } acceptance
+                    ? $"请补充至多 {limit} 条新条目，每条给出标题与做法，不要重述已列条目；验收统一为：{acceptance}"
+                    : $"请补充至多 {limit} 条新条目，每条给出标题、做法与验收标准，不要重述已列条目。");
+            }
+        }
+
+        if (task.Graph.SegmentConsuming(leaf.Index) is { IsParallel: true } segment)
+        {
+            List<string> branches = [];
+            foreach (int branch in segment.BranchLeaves)
+            {
+                branches.Add(task.Graph[branch].Name);
+            }
+
+            lines.Add($"可选分支：{string.Join('、', branches)}，条目须标明其一。");
+        }
     }
 
     /// <summary>本轮工具面：agent 声明的能力工具加按产出契约附上的契约工具。</summary>

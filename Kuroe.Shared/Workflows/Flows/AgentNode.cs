@@ -26,4 +26,10 @@ public sealed record AgentNode : NodeSpec
 
     /// <summary>检查未声明时按两轮处理，值域由校验保证。</summary>
     public int AttemptLimit => MaxAttempts ?? 2;
+
+    /// <summary>拆分源的固定配置：静态条目与模型补充约束。</summary>
+    public SplitConfig? Split { get; init; }
+
+    /// <summary>拆分只有固定条目，模型不参与补充。</summary>
+    public bool IsStaticSplit => Split is { Items.Count: > 0, ExtrasMax: null or 0 };
 }

@@ -46,6 +46,13 @@ internal sealed partial class FlowLeafExecutor(
             return;
         }
 
+        LeafNode leaf = task.Graph[nodeIndex];
+        if (leaf.IsStaticSplit)
+        {
+            await StaticSplitActivateAsync(task, context, cancellationToken);
+            return;
+        }
+
         if (message.ItemIndex is not null)
         {
             if (UnitAt(task, message.ItemIndex) is { } unit)
@@ -63,6 +70,41 @@ internal sealed partial class FlowLeafExecutor(
         }
 
         await Task.WhenAll(targets.Select(unit => RunAndSettleAsync(task, unit, context, cancellationToken).AsTask()));
+    }
+
+    /// <summary>纯静态拆分叶：拆分只有固定条目，激活时不派模型。</summary>
+    private async ValueTask StaticSplitActivateAsync(AgentTask task, IWorkflowContext context, CancellationToken cancellationToken)
+    {
+        LeafNode leaf = task.Graph[nodeIndex];
+        if (!leaf.IsStaticSplit)
+        {
+            return;
+        }
+
+        FlowAction? action;
+        lock (task.Gate)
+        {
+            if (task.SplitFor(nodeIndex) is not null)
+            {
+                return;
+            }
+
+            // 静态拆分没有 run 归属，用哨兵 RunId(0) 对齐 PlanOutput.Origin 的记录
+            task.SetSplit(nodeIndex, new PlanOutput(new RunId(0), SplitMerge.Apply(leaf.Split!, []).Value));
+
+            // 在叶上等待推进的单元去向一致，只取首个非空动作
+            action = null;
+            List<WorkUnit> units = [.. task.Units.Where(unit => unit.State == UnitState.Working && unit.NodeCursor == nodeIndex)];
+            foreach (WorkUnit unit in units)
+            {
+                action ??= Advance(task, unit);
+            }
+        }
+
+        if (action is not null)
+        {
+            await RouteAsync(context, action, cancellationToken);
+        }
     }
 
     /// <summary>定位单元：批准恢复的单元推进到本叶，非本叶或已收口的单元忽略。</summary>

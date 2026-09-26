@@ -76,7 +76,7 @@ public sealed class SnapshotTests
 
     private sealed class TaskBuilder
     {
-        public static TaskSnapshot Snap(IReadOnlyList<UnitSnapshot> units) => new(
+        public TaskSnapshot Snap(IReadOnlyList<UnitSnapshot> units) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
             [.. Graph.Leaves.Select((leaf, index) => new NodeSnapshot(index, leaf, []))],
             units, [], 0, DateTimeOffset.UtcNow);
@@ -91,7 +91,7 @@ public sealed class SnapshotTests
     ]);
 
     private static readonly NodeGraph Graph = new([
-        new LeafNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null),
-        new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null),
+        new LeafNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null, null),
+        new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null, null),
     ], []);
 }

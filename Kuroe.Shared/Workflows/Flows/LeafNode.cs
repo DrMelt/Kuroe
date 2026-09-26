@@ -12,11 +12,15 @@ public sealed record LeafNode(
     IReadOnlyList<int> From,
     NodeGate Gate,
     RejectAction? OnReject,
-    int? MaxAttempts)
+    int? MaxAttempts,
+    SplitConfig? Split)
 {
     /// <summary>检查未声明时按退回返工处理。</summary>
     public RejectAction RejectAction => OnReject ?? RejectAction.Retry;
 
     /// <summary>检查未声明时按两轮处理，值域由 WorkflowRules 校验保证。</summary>
     public int AttemptLimit => MaxAttempts ?? 2;
+
+    /// <summary>拆分只有固定条目，模型不参与补充。</summary>
+    public bool IsStaticSplit => Split is { Items.Count: > 0, ExtrasMax: null or 0 };
 }

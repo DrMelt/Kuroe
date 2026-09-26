@@ -41,9 +41,18 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
+            SplitConfig? split = task.Graph[run.Context.NodeIndex].Split;
+            ErrorOr<IReadOnlyList<PlanItem>> merged = split is null
+                ? parsed
+                : SplitMerge.Apply(split, parsed.Value);
+            if (merged.IsError)
+            {
+                return $"被拒绝：{merged.FirstError.Description}";
+            }
+
             if (task.Graph.SegmentConsuming(run.Context.NodeIndex) is { IsParallel: true } segment)
             {
-                foreach (PlanItem item in parsed.Value)
+                foreach (PlanItem item in merged.Value)
                 {
                     if (string.IsNullOrWhiteSpace(item.Branch))
                     {
@@ -57,9 +66,9 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 }
             }
 
-            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, parsed.Value));
+            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, merged.Value));
 
-            return $"已记录 {parsed.Value.Count} 个条目。";
+            return $"已记录 {merged.Value.Count} 个条目。";
         }
     }
 

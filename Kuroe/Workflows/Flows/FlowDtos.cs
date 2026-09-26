@@ -58,5 +58,32 @@ internal sealed class NodeDto
 
     public int? MaxAttempts { get; set; }
 
+    /// <summary>拆分源的固定配置，只能写在规划叶子上。</summary>
+    public SplitDto? Split { get; set; }
+
     public List<NodeDto>? Nodes { get; set; }
+}
+
+/// <summary>拆分源的固定配置：静态条目、模型补充上限与统一验收文本。</summary>
+internal sealed class SplitDto
+{
+    public List<SplitItemDto>? Items { get; set; }
+
+    /// <summary>模型最多补充的条数，0 或未写表示不补充。</summary>
+    public int? ExtrasMax { get; set; }
+
+    /// <summary>统一验收文本，覆盖模型补充条目的验收标准。</summary>
+    public string? Acceptance { get; set; }
+}
+
+/// <summary>拆分里一条定死的条目。</summary>
+internal sealed class SplitItemDto
+{
+    public string? Title { get; set; }
+
+    public string? Instruction { get; set; }
+
+    public string? Acceptance { get; set; }
+
+    public string? Branch { get; set; }
 }

@@ -51,8 +51,8 @@ public sealed class WorkflowModelTests
     {
         var graph = new NodeGraph(
         [
-            new LeafNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null),
-            new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null),
+            new LeafNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null, null),
+            new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null, null),
         ], []);
 
         Assert.Equal(2, graph.Count);
