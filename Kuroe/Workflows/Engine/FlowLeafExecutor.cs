@@ -149,7 +149,7 @@ internal sealed partial class FlowLeafExecutor(
                 return FlowAction.Pause;
             }
 
-            if (leaf.Output == NodeOutput.Plan && task.Plan?.Origin != run.Id)
+            if (leaf.Output == NodeOutput.Plan && task.SplitFor(run.Context.NodeIndex)?.Origin != run.Id)
             {
                 run.MarkUncollected("规划叶子没有交回条目拆分，本步未收口。");
                 unit.Block();
@@ -182,11 +182,12 @@ internal sealed partial class FlowLeafExecutor(
 
         return leaf.Gate == NodeGate.Review ? AwaitApproval(unit) : Advance(task, unit);
     }
-    /// <summary>要求持有任务 Gate：逐条检查拒绝后按处置决定返工一轮还是停下。轮次由检查结论给出，退回不再计数。</summary>
+    /// <summary>要求持有任务 Gate：逐条检查拒绝后按处置决定返工一轮还是停下。轮次由检查结论给出，退回不再计数。
+    /// 分支单元退回它的分支叶，整叶单元退回前一个实施叶。</summary>
     private FlowAction? Retry(AgentTask task, WorkUnit unit, LeafNode leaf)
     {
         int limit = Math.Min(leaf.AttemptLimit, settings.Current.Agent.MaxAttempts);
-        int? implement = task.Graph.ImplementBefore(nodeIndex);
+        int? implement = task.Graph.ReturnTarget(nodeIndex, unit.Branch);
         if (leaf.RejectAction == RejectAction.Retry
             && unit.LastCheck is { } check
             && check.Round < limit
@@ -200,11 +201,36 @@ internal sealed partial class FlowLeafExecutor(
         return FlowAction.Pause;
     }
 
-    /// <summary>要求持有任务 Gate：本叶收口后推进单元，按条目展开时建子单元并把下一叶整叶激活。</summary>
+    /// <summary>要求持有任务 Gate：本叶收口后推进单元。进入并行段时展开并广播分支叶，
+    /// 分支单元跳过不属自己的分支叶直通段出口，其余按下一叶推进。</summary>
     private FlowAction? Advance(AgentTask task, WorkUnit unit)
     {
         int next = nodeIndex + 1;
-        AdvanceUnit(task, unit, next);
+        if (next < task.Graph.Count && unit.Item is not null
+            && task.Graph.SegmentFor(next) is { IsParallel: true } segment)
+        {
+            int own = task.Graph.BranchLeaf(segment, unit.Branch) ?? -1;
+            if (next != own)
+            {
+                if (segment.Exit >= task.Graph.Count)
+                {
+                    unit.Finish(segment.Exit);
+
+                    return null;
+                }
+
+                unit.AdvanceTo(segment.Exit);
+
+                return FlowAction.Move(segment.Exit);
+            }
+        }
+
+        UnitSegment? entered = AdvanceUnit(task, unit, next);
+        if (entered is not null)
+        {
+            return FlowAction.MoveTo([.. entered.BranchLeaves]);
+        }
+
         if (next >= task.Graph.Count)
         {
             return null;
@@ -213,16 +239,26 @@ internal sealed partial class FlowLeafExecutor(
         return FlowAction.Move(next, unit.ItemIndex);
     }
 
-    /// <summary>要求持有任务 Gate：推进一个单元到下一叶子。下一叶展开且本单元是整叶单元时按条目建子单元。</summary>
-    internal static void AdvanceUnit(AgentTask task, WorkUnit unit, int next)
+    /// <summary>要求持有任务 Gate：推进一个单元到下一叶子。整叶单元进入展开段或并行段时按拆分建子单元，
+    /// 并行展开时返回该段供调用方决定是否广播分支叶。</summary>
+    internal static UnitSegment? AdvanceUnit(AgentTask task, WorkUnit unit, int next)
     {
         if (next >= task.Graph.Count)
         {
             unit.Finish(next);
-            return;
+
+            return null;
         }
 
-        if (task.Graph[next].Mode == NodeMode.PerItem && unit.Item is null && task.Plan is { } plan)
+        if (unit.Item is null && task.Graph.SegmentFor(next) is { IsParallel: true } entered)
+        {
+            ExpandUnit(task, unit, next, entered);
+
+            return entered;
+        }
+
+        if (unit.Item is null && task.Graph.SegmentFor(next) is { IsParallel: false } single
+            && task.Splits.TryGetValue(single.Source, out PlanOutput? plan))
         {
             unit.Finish(next);
             foreach (PlanItem item in plan.Items)
@@ -230,10 +266,35 @@ internal sealed partial class FlowLeafExecutor(
                 task.AddUnit(item.Index, item, next).Inherit(unit);
             }
 
-            return;
+            return null;
         }
 
         unit.AdvanceTo(next);
+
+        return null;
+    }
+
+    /// <summary>要求持有任务 Gate：并行段入口的展开。整叶单元按拆分建子单元，条目落到各自分支叶。</summary>
+    private static void ExpandUnit(AgentTask task, WorkUnit unit, int next, UnitSegment segment)
+    {
+        if (!task.Splits.TryGetValue(segment.Source, out PlanOutput? plan))
+        {
+            unit.Block();
+
+            return;
+        }
+
+        unit.Finish(next);
+        foreach (PlanItem item in plan.Items)
+        {
+            int? owned = task.Graph.BranchLeaf(segment, item.Branch);
+            if (owned is null)
+            {
+                continue;
+            }
+
+            task.AddUnit(item.Index, item, owned.Value, item.Branch).Inherit(unit);
+        }
     }
 
     private static FlowAction? AwaitApproval(WorkUnit unit)
@@ -253,8 +314,9 @@ internal sealed partial class FlowLeafExecutor(
                 unit.ItemIndex is not null && unit.State == UnitState.Working
                 && unit.NodeCursor == nodeIndex && !unit.Pending)];
 
-            bool ready = task.Plan is { } plan
-                && plan.Items.All(item => members.Any(member => member.ItemIndex == item.Index));
+            bool ready = task.Graph.FunnelSource(nodeIndex) is { } source
+                && task.SplitFor(source) is { } split
+                && split.Items.All(item => members.Any(member => member.ItemIndex == item.Index));
             if (!ready || !task.TryBeginFunnel(nodeIndex, leaf.Name, out int round))
             {
                 return;
@@ -322,15 +384,35 @@ internal sealed partial class FlowLeafExecutor(
                 }
 
                 int limit = Math.Min(leaf.AttemptLimit, settings.Current.Agent.MaxAttempts);
-                int? implement = task.Graph.FunnelReturn(nodeIndex);
-                if (leaf.RejectAction == RejectAction.Retry && check.Round < limit && implement is not null)
+                if (leaf.RejectAction == RejectAction.Retry && check.Round < limit)
                 {
+                    List<(WorkUnit Target, int Implement)> reworks = [];
                     foreach (WorkUnit target in targets)
                     {
-                        target.Rework(implement);
+                        if (task.Graph.ReturnTarget(nodeIndex, target.Branch) is { } implement)
+                        {
+                            reworks.Add((target, implement));
+                        }
                     }
 
-                    action = FlowAction.Move(implement.Value);
+                    if (reworks.Count == targets.Count)
+                    {
+                        foreach ((WorkUnit target, int implement) in reworks)
+                        {
+                            target.Rework(implement);
+                        }
+
+                        action = FlowAction.MoveTo([.. reworks.Select(entry => entry.Implement).Distinct()]);
+                    }
+                    else
+                    {
+                        foreach (WorkUnit target in targets)
+                        {
+                            target.Block();
+                        }
+
+                        action = FlowAction.Pause;
+                    }
                 }
                 else
                 {
@@ -389,6 +471,17 @@ internal sealed partial class FlowLeafExecutor(
                     cancellationToken);
                 break;
 
+            case FlowAction.Routes routes:
+                foreach ((int node, int? item) in routes.Targets)
+                {
+                    await context.SendMessageAsync(
+                        new FlowMessage { NodeIndex = node, ItemIndex = item },
+                        $"node:{node}",
+                        cancellationToken);
+                }
+
+                break;
+
             case FlowAction.Halt:
                 await context.RequestHaltAsync();
                 break;
@@ -406,11 +499,17 @@ internal abstract record FlowAction
     /// <summary>向另一片叶子投递激活消息。</summary>
     public static FlowAction Move(int node, int? item = null) => new Route(node, item);
 
+    /// <summary>向几片叶子各投递一条整叶激活消息。</summary>
+    public static FlowAction MoveTo(IReadOnlyList<int> nodes) => new Routes([.. nodes.Select(node => (node, (int?)null))]);
+
     /// <summary>请求暂停，等宿主批准或返工后恢复。</summary>
     public static FlowAction Pause { get; } = new Halt();
 
     /// <summary>向另一片叶子投递激活消息。</summary>
     public sealed record Route(int Node, int? Item) : FlowAction;
+
+    /// <summary>向几片叶子各投递一条整叶激活消息。</summary>
+    public sealed record Routes(IReadOnlyList<(int Node, int? Item)> Targets) : FlowAction;
 
     /// <summary>请求暂停。</summary>
     public sealed record Halt() : FlowAction;

@@ -73,7 +73,7 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
             int? implement;
             lock (task.Gate)
             {
-                implement = task.Graph.FunnelReturn(unit.NodeCursor) ?? task.Graph.ImplementBefore(unit.NodeCursor);
+                implement = task.Graph.ReturnTarget(unit.NodeCursor, unit.Branch);
                 unit.Rework(implement);
                 task.Touch();
             }

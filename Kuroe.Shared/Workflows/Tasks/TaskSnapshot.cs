@@ -14,7 +14,7 @@ public sealed record TaskSnapshot(
     TaskState State,
     int DialogueTurns,
     int LiveRuns,
-    PlanOutput? Plan,
+    IReadOnlyDictionary<int, PlanOutput> Splits,
     IReadOnlyList<NodeSnapshot> Nodes,
     IReadOnlyList<UnitSnapshot> Units,
     IReadOnlyList<JournalEntry> Dialogue,

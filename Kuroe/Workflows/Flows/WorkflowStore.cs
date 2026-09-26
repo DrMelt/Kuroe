@@ -130,6 +130,7 @@ sealed class WorkflowStore(string file)
             Name = node.Name ?? string.Empty,
             Prompt = node.Prompt,
             From = node.From ?? [],
+            Mode = ParseContainerMode(node.Mode),
             Nodes = ToNodes(node.Nodes),
         }
         : new AgentNode
@@ -139,7 +140,7 @@ sealed class WorkflowStore(string file)
             Prompt = node.Prompt,
             From = node.From ?? [],
             Output = node.Output ?? NodeOutput.Plain,
-            Mode = node.Mode ?? NodeMode.Single,
+            Mode = ParseNodeMode(node.Mode),
             Gate = node.Gate ?? NodeGate.Auto,
             OnReject = node.OnReject,
             MaxAttempts = node.MaxAttempts,
@@ -166,6 +167,7 @@ sealed class WorkflowStore(string file)
             Name = flow.Name,
             Prompt = flow.Prompt,
             From = flow.From.Count == 0 ? null : [.. flow.From],
+            Mode = flow.Mode.ToString(),
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
         AgentNode leaf => new NodeDto
@@ -175,11 +177,19 @@ sealed class WorkflowStore(string file)
             Prompt = leaf.Prompt,
             From = leaf.From.Count == 0 ? null : [.. leaf.From],
             Output = leaf.Output,
-            Mode = leaf.Mode,
+            Mode = leaf.Mode.ToString(),
             Gate = leaf.Gate,
             OnReject = leaf.OnReject,
             MaxAttempts = leaf.MaxAttempts,
         },
         _ => throw new InvalidOperationException($"未知节点类型：{node.GetType().Name}"),
     };
+
+    /// <summary>容器模式的名字按枚举解析，缺省按顺序处理。</summary>
+    private static ContainerMode ParseContainerMode(string? mode) =>
+        Enum.TryParse(mode, ignoreCase: true, out ContainerMode parsed) ? parsed : ContainerMode.Sequential;
+
+    /// <summary>叶子模式的名字按枚举解析，缺省按整叶处理。</summary>
+    private static NodeMode ParseNodeMode(string? mode) =>
+        Enum.TryParse(mode, ignoreCase: true, out NodeMode parsed) ? parsed : NodeMode.Single;
 }

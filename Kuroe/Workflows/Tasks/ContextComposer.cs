@@ -3,6 +3,7 @@ using Kuroe.Shared.Agent;
 using Kuroe.Shared.Agent.Runs;
 using Kuroe.Shared.Agent.Turns;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -32,11 +33,12 @@ public static class ContextComposer
             AppendUpstream(task, unit, fromIndex, seed);
         }
 
-        if (unit.Item is { } item && task.Plan is { } plan)
+        if (unit.Item is { } item)
         {
+            string branch = unit.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
-                Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}"),
-                new ItemSource(plan.Origin, item.Index, item.Title)));
+                Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
+                new ItemSource(PlanOrigin(task, unit, leaf), item.Index, item.Title)));
         }
 
         AppendRework(unit, seed);
@@ -126,6 +128,25 @@ public static class ContextComposer
         seed.AddRange(history.Skip(Math.Max(0, history.Count - DialogueLimit)));
     }
 
+    /// <summary>当前叶子引用的拆分产出的出处 agent。从 From 里的规划产出找，找不到时按单元条目所属的拆分回退，仍找不到给空标识。</summary>
+    private static RunId PlanOrigin(AgentTask task, WorkUnit unit, LeafNode leaf)
+    {
+        if (task.Graph.PlanSource(leaf.Index) is { } source && task.SplitFor(source) is { } plan)
+        {
+            return plan.Origin;
+        }
+
+        foreach (PlanOutput split in task.Splits.Values)
+        {
+            if (split.Items.Any(item => item.Index == unit.ItemIndex))
+            {
+                return split.Origin;
+            }
+        }
+
+        return new RunId(0);
+    }
+
     /// <summary>被引用叶子在本单元上的产出。</summary>
     private static void AppendUpstream(AgentTask task, WorkUnit unit, int fromIndex, List<ContextMessage> seed)
     {
@@ -138,7 +159,7 @@ public static class ContextComposer
             new AgentSource(run.Id, task.Graph[fromIndex].Name)));
     }
 
-    /// <summary>收拢检查引用的展开实施叶：逐条目列出实施产出。</summary>
+    /// <summary>收拢检查引用的展开实施叶：逐条目列出实施产出，分支单元标注所属分支。</summary>
     private static void AppendImplementations(AgentTask task, IReadOnlyList<WorkUnit> members, int fromIndex, List<ContextMessage> seed)
     {
         string name = task.Graph[fromIndex].Name;
@@ -150,7 +171,8 @@ public static class ContextComposer
             }
 
             string title = member.Item?.Title ?? $"条目 {member.ItemIndex + 1}";
-            seed.Add(new ContextMessage(MessageRole.User, Limit($"条目「{title}」的实施产出：\n{result}"),
+            string branch = member.Branch is { } branchName ? $"{title}（{branchName}）" : title;
+            seed.Add(new ContextMessage(MessageRole.User, Limit($"条目「{branch}」的实施产出：\n{result}"),
                 new AgentSource(run.Id, name)));
         }
     }
@@ -188,7 +210,7 @@ public static class ContextComposer
         }
 
         lines.Add(unit.Item is { } item
-            ? $"目标：{task.Goal}\n本次只负责条目 {item.Index + 1}：{item.Title}"
+            ? $"目标：{task.Goal}\n本次只负责条目 {item.Index + 1}：{item.Title}{(unit.Branch is { } branch ? $"（分支 {branch}）" : string.Empty)}"
             : $"目标：{task.Goal}");
 
         if (round > 1)

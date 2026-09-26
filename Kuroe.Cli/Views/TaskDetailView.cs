@@ -17,15 +17,20 @@ internal sealed class TaskDetailView(Terminal terminal)
         _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.Leaves.Select(leaf => leaf.Path))}）"
             + $"　节点进度 {task.FrontierNodes}/{task.TotalNodes}　前台对话 {task.DialogueTurns} 回合");
 
-        if (task.Plan is { } plan)
+        if (task.Splits.Count > 0)
         {
             _terminal.NewLine();
-            _terminal.Line($"条目由 {plan.Origin} 交回：");
-            foreach (PlanItem item in plan.Items)
+            foreach ((int leafIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
             {
-                UnitSnapshot? unit = task.Units.FirstOrDefault(candidate => candidate.ItemIndex == item.Index);
-                string verdict = unit is null ? string.Empty : $"　{Labels.Of(unit.Verdict)}";
-                _terminal.Line($"  {item.Index + 1}. {item.Title}{verdict}");
+                string nodeName = leafIndex < task.Graph.Count ? task.Graph[leafIndex].Name : $"叶子 {leafIndex + 1}";
+                _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
+                foreach (PlanItem item in plan.Items)
+                {
+                    UnitSnapshot? unit = task.Units.FirstOrDefault(candidate => candidate.ItemIndex == item.Index);
+                    string verdict = unit is null ? string.Empty : $"　{Labels.Of(unit.Verdict)}";
+                    string branch = item.Branch is { Length: > 0 } name ? $"（{name}）" : string.Empty;
+                    _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}{verdict}");
+                }
             }
         }
 

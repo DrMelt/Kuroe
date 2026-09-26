@@ -49,7 +49,8 @@ internal sealed class NodeDto
 
     public NodeOutput? Output { get; set; }
 
-    public NodeMode? Mode { get; set; }
+    /// <summary>叶子模式或容器模式的名字：Single、PerItem、Sequential、Parallel。</summary>
+    public string? Mode { get; set; }
 
     public NodeGate? Gate { get; set; }
 

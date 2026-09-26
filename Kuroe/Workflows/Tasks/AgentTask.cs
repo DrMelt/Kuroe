@@ -22,6 +22,7 @@ public sealed class AgentTask
 
     private readonly List<AgentRun> _runs = [];
     private readonly List<WorkUnit> _units = [];
+    private readonly Dictionary<int, PlanOutput> _splits = [];
     private readonly SemaphoreSlim _turn = new(1, 1);
     private readonly Dictionary<string, CheckResult> _funnels = [];
     private readonly HashSet<int> _funnelActive = [];
@@ -84,8 +85,14 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>规划叶子交回的条目拆分，尚未交回时为空。仅在持有 <see cref="Gate"/> 时写。</summary>
-    public PlanOutput? Plan { get; internal set; }
+    /// <summary>各叶子交回的条目拆分，键是产出叶子序号，尚未交回时为空。仅在持有 <see cref="Gate"/> 时读写。</summary>
+    public IReadOnlyDictionary<int, PlanOutput> Splits => _splits;
+
+    /// <summary>某叶子的条目拆分，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal PlanOutput? SplitFor(int leafIndex) => _splits.GetValueOrDefault(leafIndex);
+
+    /// <summary>记录某叶子的条目拆分。要求持有 <see cref="Gate"/>。</summary>
+    internal void SetSplit(int leafIndex, PlanOutput output) => _splits[leafIndex] = output;
 
     /// <summary>提交顺序排列的 agent。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<AgentRun> Runs => _runs;
@@ -182,9 +189,9 @@ public sealed class AgentTask
         return true;
     }
 
-    internal WorkUnit AddUnit(int? itemIndex, PlanItem? item, int cursor)
+    internal WorkUnit AddUnit(int? itemIndex, PlanItem? item, int cursor, string? branch = null)
     {
-        WorkUnit unit = new(itemIndex, item, cursor);
+        WorkUnit unit = new(itemIndex, item, cursor, branch);
         _units.Add(unit);
 
         return unit;
@@ -278,13 +285,13 @@ public sealed class AgentTask
 
             List<UnitSnapshot> units =
             [
-                .. _units.Select(unit => new UnitSnapshot(unit.ItemIndex, unit.NodeCursor, unit.State,
+                .. _units.Select(unit => new UnitSnapshot(unit.ItemIndex, unit.Branch, unit.NodeCursor, unit.State,
                     unit.Verdict, unit.Findings, unit.Attempts, [.. unit.Nodes.Values.Select(run => runs[run.Id])])),
             ];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
-                _runs.Count(run => run.IsLive), Plan, nodes, units, Journal.Entries, Journal.DroppedEntries,
-                _lastActivityAt);
+                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), nodes, units,
+                Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
 

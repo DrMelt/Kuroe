@@ -13,7 +13,7 @@ namespace Kuroe.Workflows.Tasks;
 public sealed class UnitSubmitter(TaskRegistry registry)
 {
 
-    /// <summary>规划叶子交回条目拆分。</summary>
+    /// <summary>规划叶子交回条目拆分。并行段的分支拆分在这里校验，它交回的任务都要落在存在的分支上。</summary>
     public string SubmitPlan(TurnScope? scope, string itemsJson)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
@@ -36,12 +36,28 @@ public sealed class UnitSubmitter(TaskRegistry registry)
 
         lock (task.Gate)
         {
-            if (task.Plan?.Origin == run.Id)
+            if (task.SplitFor(run.Context.NodeIndex) is { } existing && existing.Origin == run.Id)
             {
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
-            task.Plan = new PlanOutput(run.Id, parsed.Value);
+            if (task.Graph.SegmentConsuming(run.Context.NodeIndex) is { IsParallel: true } segment)
+            {
+                foreach (PlanItem item in parsed.Value)
+                {
+                    if (string.IsNullOrWhiteSpace(item.Branch))
+                    {
+                        return "被拒绝：并行段的任务必须写明分支 Branch。";
+                    }
+
+                    if (task.Graph.BranchLeaf(segment, item.Branch) is null)
+                    {
+                        return $"被拒绝：分支 {item.Branch} 不在并行段里。";
+                    }
+                }
+            }
+
+            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, parsed.Value));
 
             return $"已记录 {parsed.Value.Count} 个条目。";
         }

@@ -42,8 +42,9 @@ static class PlanItems
                 return [TaskErrors.Items($"第 {index + 1} 个条目缺 Title 或 Instruction")];
             }
 
+            string? branch = string.IsNullOrWhiteSpace(item.Branch) ? null : item.Branch.Trim();
             items.Add(new PlanItem(index, item.Title.Trim(), item.Instruction.Trim(),
-                item.Acceptance?.Trim() ?? string.Empty));
+                item.Acceptance?.Trim() ?? string.Empty, branch));
         }
 
         return items;
@@ -58,4 +59,6 @@ internal sealed class PlanItemDto
     public string? Instruction { get; set; }
 
     public string? Acceptance { get; set; }
+
+    public string? Branch { get; set; }
 }

@@ -202,6 +202,238 @@ public sealed class FlowAdvanceTests
         }
         """;
 
+    [Fact]
+    public void Parallel_dispatch_assigns_items_to_branches_and_funnels()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelFunnelFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 规划、分配各一个 agent，两个分支各一个实施者，整体检查一个
+        Assert.Single(done.Nodes[0].Runs);
+        Assert.Single(done.Nodes[1].Runs);
+        Assert.Single(done.Nodes[2].Runs);
+        Assert.Single(done.Nodes[3].Runs);
+        Assert.Single(done.Nodes[4].Runs);
+        Assert.All(done.Units.Where(unit => unit.Branch is not null), unit =>
+        {
+            Assert.Equal(UnitVerdict.Verified, unit.Verdict);
+            Assert.True(unit.Branch == "撰写" || unit.Branch == "排版", $"分支 {unit.Branch} 不在实施分支里。");
+        });
+    }
+
+    [Fact]
+    public void Parallel_funnel_reject_returns_each_item_to_its_branch()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelFunnelFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
+        harness.Executor.CheckPasses = run => run.Context.Attempt > 1;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 两个分支的实施各两轮，整体检查两轮
+        Assert.Equal(2, done.Nodes[2].Runs.Count);
+        Assert.Equal(2, done.Nodes[3].Runs.Count);
+        Assert.Equal(2, done.Nodes[4].Runs.Count);
+        Assert.All(done.Units.Where(unit => unit.Branch is not null), unit => Assert.Equal(2, unit.Attempts));
+
+        // 退回后的实施上下文带上整体检查意见
+        RunSnapshot retry = Assert.Single(done.Nodes[2].Runs, run => run.Context.Attempt == 2);
+        Assert.Contains(retry.Context.Seed, message => message.Text.Contains("上一轮检查未通过"));
+    }
+
+    [Fact]
+    public void Parallel_dispatch_requires_branch_on_every_item()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelFunnelFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot blocked = harness.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        Assert.Contains(harness.Executor.Submissions, text => text.Contains("必须写明分支 Branch"));
+    }
+
+    [Fact]
+    public void Parallel_per_item_check_reviews_each_item_separately()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelPerItemCheckFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 段后逐条检查：每个条目各一个检查 agent
+        Assert.Equal(2, done.Nodes[4].Runs.Count);
+        Assert.All(done.Units.Where(unit => unit.Branch is not null),
+            unit => Assert.Equal(UnitVerdict.Verified, unit.Verdict));
+    }
+
+    [Fact]
+    public void Parallel_dispatch_after_approval_expands_branches()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelReviewGateFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot parked = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+
+        harness.Tasks.Approve(id).ThrowIfError();
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 批准推进必须展开并行段而不是整叶顶替分支：每个分支各一个实施者、整体检查一个
+        Assert.Single(done.Nodes[2].Runs);
+        Assert.Single(done.Nodes[3].Runs);
+        Assert.Single(done.Nodes[4].Runs);
+        Assert.All(done.Units.Where(unit => unit.Branch is not null),
+            unit => Assert.Equal(UnitVerdict.Verified, unit.Verdict));
+    }
+
+    [Fact]
+    public void Parallel_single_branch_expands_after_approval()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ParallelSingleBranchReviewGateFlow);
+        harness.Executor.ItemsJson = SingleBranchItemsJson;
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot parked = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+
+        harness.Tasks.Approve(id).ThrowIfError();
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        // 单分支并行段也要按拆分展开：两条目各一个实施者
+        Assert.Equal(2, done.Nodes[2].Runs.Count);
+        Assert.Single(done.Nodes[3].Runs);
+    }
+
+    private const string BranchedItemsJson = """
+        [
+          { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见", "Branch": "撰写" },
+          { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见", "Branch": "排版" }
+        ]
+        """;
+
+    private const string SingleBranchItemsJson = """
+        [
+          { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见", "Branch": "撰写" },
+          { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见", "Branch": "撰写" }
+        ]
+        """;
+
+    private const string ParallelFunnelFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "分配者" },
+                { "Name": "实施者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+                { "Name": "分配任务", "Agent": "分配者", "Output": "Plan", "From": ["制定计划"] },
+                { "Name": "实施", "Mode": "Parallel",
+                  "Nodes": [
+                    { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] },
+                    { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] }
+                  ] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["分配任务", "撰写", "排版"], "OnReject": "Retry" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ParallelReviewGateFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "分配者" },
+                { "Name": "实施者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+                { "Name": "分配任务", "Agent": "分配者", "Output": "Plan", "From": ["制定计划"], "Gate": "Review" },
+                { "Name": "实施", "Mode": "Parallel",
+                  "Nodes": [
+                    { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] },
+                    { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] }
+                  ] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["分配任务", "撰写", "排版"], "OnReject": "Retry" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ParallelSingleBranchReviewGateFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "分配者" },
+                { "Name": "实施者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+                { "Name": "分配任务", "Agent": "分配者", "Output": "Plan", "From": ["制定计划"], "Gate": "Review" },
+                { "Name": "实施", "Mode": "Parallel",
+                  "Nodes": [
+                    { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] }
+                  ] },
+                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["分配任务", "撰写"], "OnReject": "Retry" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ParallelPerItemCheckFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Agents": [
+                { "Name": "规划者" },
+                { "Name": "分配者" },
+                { "Name": "实施者" },
+                { "Name": "检查者" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+                { "Name": "分配任务", "Agent": "分配者", "Output": "Plan", "From": ["制定计划"] },
+                { "Name": "实施", "Mode": "Parallel",
+                  "Nodes": [
+                    { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] },
+                    { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "From": ["分配任务"] }
+                  ] },
+                { "Name": "逐任务检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem",
+                  "From": ["撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
+              ]
+            }
+          ]
+        }
+        """;
+
     private const string PerItemCheckFlow = """
         {
           "Flows": [

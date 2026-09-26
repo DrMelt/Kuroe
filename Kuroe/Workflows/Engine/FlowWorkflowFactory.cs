@@ -36,6 +36,31 @@ internal static class FlowWorkflowFactory
             builder.AddEdge(leaves[index - 1], leaves[index]);
         }
 
+        // 并行段的投递边：入口前叶广播到各分支叶，各分支叶汇合回段出口
+        foreach (UnitSegment segment in task.Graph.Segments)
+        {
+            if (!segment.IsParallel)
+            {
+                continue;
+            }
+
+            if (segment.Start - 1 >= 0)
+            {
+                foreach (int branch in segment.BranchLeaves)
+                {
+                    builder.AddEdge(leaves[segment.Start - 1], leaves[branch]);
+                }
+            }
+
+            if (segment.Exit < leaves.Length)
+            {
+                foreach (int branch in segment.BranchLeaves)
+                {
+                    builder.AddEdge(leaves[branch], leaves[segment.Exit]);
+                }
+            }
+        }
+
         for (int check = 0; check < leaves.Length; check++)
         {
             if (task.Graph[check].Output != NodeOutput.Review)
@@ -43,8 +68,7 @@ internal static class FlowWorkflowFactory
                 continue;
             }
 
-            int? implement = task.Graph.FunnelReturn(check) ?? task.Graph.ImplementBefore(check);
-            if (implement is { } at)
+            foreach (int at in task.Graph.ReturnTargets(check))
             {
                 builder.AddEdge(leaves[check], leaves[at]);
             }

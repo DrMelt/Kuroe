@@ -8,7 +8,7 @@ namespace Kuroe.Workflows.Tasks;
 /// <summary>任务内的一个执行单元：不展开的叶子只有一个，按条目展开时每个条目一个。
 /// 单元沿流程叶子推进，每个叶子上由一个 agent 承担。状态只经本类的方法改动，
 /// 调用方须持有所属任务的 Gate。</summary>
-public sealed class WorkUnit(int? itemIndex, PlanItem? item, int nodeCursor)
+public sealed class WorkUnit(int? itemIndex, PlanItem? item, int nodeCursor, string? branch = null)
 {
     private readonly Dictionary<int, AgentRun> _byNode = [];
 
@@ -17,6 +17,9 @@ public sealed class WorkUnit(int? itemIndex, PlanItem? item, int nodeCursor)
 
     /// <summary>规划交回的条目，整叶单元为空。</summary>
     public PlanItem? Item { get; } = item;
+
+    /// <summary>并行段里单元归属的分支名，非分支单元为空。</summary>
+    public string? Branch { get; } = branch;
 
     /// <summary>下一个待执行的叶子序号，等于叶子数时该单元走完。</summary>
     public int NodeCursor { get; private set; } = nodeCursor;

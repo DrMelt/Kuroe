@@ -105,9 +105,25 @@ static class WorkflowRules
                     {
                         errors.Add(WorkflowErrors.Node(flowName, node.Name, "容器至少要有一个子节点。"));
                     }
+                    else if (flow.Mode == ContainerMode.Parallel && flow.Nodes.Any(child => child is FlowNode))
+                    {
+                        errors.Add(WorkflowErrors.Node(flowName, node.Name, "并行容器只能包含叶子节点。"));
+                    }
                     else
                     {
                         CheckTree(flow.Nodes, [.. visible, flow.Name], names, agentNames, containerNames, flowName, errors);
+                    }
+
+                    if (flow.Mode == ContainerMode.Parallel)
+                    {
+                        // 并行容器的分支叶对本层后续兄弟可见，段后的检查才能引用它们
+                        foreach (NodeSpec child in flow.Nodes)
+                        {
+                            if (child is AgentNode branch)
+                            {
+                                visible.Add(branch.Name);
+                            }
+                        }
                     }
 
                     if (flow.From.Count > 0)
@@ -134,78 +150,87 @@ static class WorkflowRules
             visible.Add(node.Name);
         }
     }
-    /// <summary>展平后的形状规则：展开段、检查节点与返工配置。</summary>
+    /// <summary>展平后的形状规则：展开段、并行段与检查节点。</summary>
     private static void CheckShape(NodeGraph graph, string flowName, int attemptLimit, List<Error> errors)
     {
-        int? plan = null;
-        List<int> expanded = [];
         for (int index = 0; index < graph.Count; index++)
         {
             LeafNode leaf = graph[index];
-            if (leaf.Mode == NodeMode.PerItem)
-            {
-                expanded.Add(index);
-            }
-
-            if (leaf.Output == NodeOutput.Plan)
-            {
-                plan = index;
-            }
-
             if (leaf.Output != NodeOutput.Review && (leaf.OnReject is not null || leaf.MaxAttempts is not null))
             {
                 errors.Add(WorkflowErrors.Node(flowName, leaf.Name, "OnReject 与 MaxAttempts 只适用于检查节点。"));
             }
         }
 
-        if (expanded.Count > 0)
+        for (int index = 0; index < graph.Count; index++)
         {
-            int first = expanded[0];
-            if (plan is null)
+            // 按条目展开的实施依赖段拆分，段后检查叶的 PerItem 是逐条检查，不需要落段
+            if (graph[index].Mode == NodeMode.PerItem && graph[index].Output != NodeOutput.Review
+                && graph.SegmentFor(index) is null)
             {
-                errors.Add(WorkflowErrors.Node(flowName, graph[first].Name, "按条目展开的叶子需要先有规划节点。"));
+                errors.Add(WorkflowErrors.Node(flowName, graph[index].Name, "按条目展开的实施必须落入展开段或并行段。"));
             }
-            else if (plan > first)
+        }
+
+        if (graph.Segments.Count > 1)
+        {
+            errors.Add(WorkflowErrors.Body(flowName, "流程只允许一个展开或并行段。"));
+        }
+
+        UnitSegment? segment = graph.Segments.Count > 0 ? graph.Segments[0] : null;
+        if (segment is not null)
+        {
+            if (segment.Source < 0 || graph[segment.Source].Output != NodeOutput.Plan)
             {
-                errors.Add(WorkflowErrors.Node(flowName, graph[first].Name, "按条目展开的叶子必须排在规划叶子之后。"));
+                errors.Add(WorkflowErrors.Node(flowName, graph[segment.Start].Name,
+                    segment.IsParallel ? "并行段的分支需要在之前有一个分配节点。" : "按条目展开的叶子需要先有规划节点。"));
             }
 
-            // 展开要连成一段：段内不允许夹着整叶
-            bool contiguous = true;
-            for (int index = first; index < expanded[^1]; index++)
+            if (segment.IsParallel)
             {
-                if (graph[index].Mode != NodeMode.PerItem)
+                // 分支叶按分配条目各派实施者，PerItem 是并行分支的展开依据
+                for (int branch = segment.Start; branch < segment.Exit; branch++)
                 {
-                    contiguous = false;
+                    if (graph[branch].Mode != NodeMode.PerItem)
+                    {
+                        errors.Add(WorkflowErrors.Node(flowName, graph[branch].Name, "并行段的分支叶必须按条目展开。"));
+                    }
+                }
+
+                // 并行段之后只能有一个检查叶子收尾：收拢检查整体过，逐条检查分别过
+                int exit = segment.Exit;
+                if (exit >= graph.Count || exit != graph.Count - 1 || graph[exit].Output != NodeOutput.Review)
+                {
+                    errors.Add(WorkflowErrors.Body(flowName, "并行段之后只能有一个检查叶子收尾。"));
+                }
+            }
+            else
+            {
+                // 段后只能跟一个收拢检查收尾，否则整叶在展开段后会被每条目各跑一次
+                for (int index = segment.Exit; index < graph.Count; index++)
+                {
+                    if (index == segment.Exit && graph.IsFunnel(index) && index == graph.Count - 1)
+                    {
+                        continue;
+                    }
+
+                    errors.Add(WorkflowErrors.Body(flowName, "展开段之后只能有一个收拢检查叶子收尾。"));
                     break;
                 }
             }
 
-            if (!contiguous)
+            // 段内每条实施都必须被某个检查节点引用
+            for (int index = segment.Start; index < segment.Exit; index++)
             {
-                errors.Add(WorkflowErrors.Body(flowName, "按条目展开的叶子必须构成连续的展开段。"));
-            }
-
-            // 段后只能跟一个收拢检查收尾，否则整叶在展开段后会被每条目各跑一次
-            int last = expanded[^1];
-            for (int index = last + 1; index < graph.Count; index++)
-            {
-                if (index == last + 1 && graph.IsFunnel(index) && index == graph.Count - 1)
+                if (graph[index].Output != NodeOutput.Plain)
                 {
                     continue;
                 }
 
-                errors.Add(WorkflowErrors.Body(flowName, "展开段之后只能有一个收拢检查叶子收尾。"));
-                break;
-            }
-        }
-
-        // 每条按条目展开的实施都必须被某个检查节点引用
-        foreach (int index in expanded.Where(index => graph[index].Output == NodeOutput.Plain))
-        {
-            if (!graph.Leaves.Any(leaf => leaf.Output == NodeOutput.Review && leaf.From.Contains(index)))
-            {
-                errors.Add(WorkflowErrors.Node(flowName, graph[index].Name, "按条目展开的实施必须被某个检查节点引用。"));
+                if (!graph.Leaves.Any(leaf => leaf.Output == NodeOutput.Review && leaf.From.Contains(index)))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, graph[index].Name, "按条目展开的实施必须被某个检查节点引用。"));
+                }
             }
         }
 
