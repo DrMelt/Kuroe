@@ -12,12 +12,11 @@ using Microsoft.Agents.AI.Workflows;
 namespace Kuroe.Workflows.Engine;
 
 /// <summary>任务推进的宿主：提交时组装框架 Workflow 并驱动其流式运行，
-/// 批准、返工与取消经信号恢复或终止。单元与 agent 的状态仍由任务对象承载，这里只管流程生命周期。</summary>
+/// 批准、返工与取消经信号恢复或终止。执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 sealed class WorkflowEngine(
     TaskRegistry registry,
     RunDispatcher dispatcher,
-    NodeModelResolver models,
-    SettingsProvider settings)
+    NodeModelResolver models) : IWorkflowDriver
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<TaskId, (StreamingRun Run, Task Driver)> _runs = [];
@@ -25,39 +24,25 @@ sealed class WorkflowEngine(
     private readonly HashSet<TaskId> _cancelling = [];
     private bool _stopping;
 
-    /// <summary>要求持有任务 Gate：建首个单元并启动该任务的流程运行。</summary>
+    /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     public void Start(AgentTask task)
     {
-        lock (task.Gate)
-        {
-            if (task.Units.Count == 0)
-            {
-                task.AddUnit(null, null, 0);
-            }
-        }
-
-        StreamingRun run = FlowWorkflowFactory.Start(task, registry, dispatcher, models, settings);
+        StreamingRun run = FlowWorkflowFactory.Start(task, registry, dispatcher, models);
         lock (_gate)
         {
             _runs[task.Id] = (run, Task.Run(() => DriveAsync(task.Id)));
         }
     }
 
-    /// <summary>要求持有任务 Gate：批准等待放行的单元：同步把它们推进到下一步，再向流程运行发出继续信号，返回被批准的单元数。</summary>
+    /// <summary>要求持有任务 Gate：批准等待放行的节点，再向流程运行发出继续信号，返回被批准的节点数。</summary>
     public int Approve(AgentTask task)
     {
         int waiting;
         lock (task.Gate)
         {
-            List<WorkUnit> waitingUnits = [.. task.Units.Where(unit => unit.State == UnitState.AwaitingApproval)];
-            waiting = waitingUnits.Count;
+            waiting = task.Runtime.AwaitingNodes.Count;
             if (waiting > 0)
             {
-                foreach (WorkUnit unit in waitingUnits)
-                {
-                    MoveForward(task, unit);
-                }
-
                 task.Touch();
             }
         }
@@ -70,33 +55,35 @@ sealed class WorkflowEngine(
         return waiting;
     }
 
-    /// <summary>要求持有任务 Gate：单元从当前叶继续，需要展开时建子单元。</summary>
-    private static void MoveForward(AgentTask task, WorkUnit unit)
-    {
-        int next = unit.NodeCursor + 1;
-        FlowLeafExecutor.AdvanceUnit(task, unit, next);
-    }
-
-    /// <summary>要求持有任务 Gate：对被阻塞的单元再开一轮实施，itemIndex 为空时处理全部，返回被处理的单元数。</summary>
+    /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     public int Rework(AgentTask task, int? itemIndex)
     {
-        int blocked;
+        IReadOnlyList<(int Blocked, int Node, int? Item)> targets;
         lock (task.Gate)
         {
-            blocked = task.Units.Count(unit =>
-                unit.State == UnitState.Blocked && (itemIndex is null || unit.ItemIndex == itemIndex));
-            if (blocked > 0)
+            targets = task.Runtime.PlanRework(itemIndex);
+            foreach (IGrouping<int, (int Blocked, int Node, int? Item)> group in targets.GroupBy(pair => pair.Blocked))
+            {
+                task.Runtime.Unblock(group.Key, [.. group.Select(pair => (pair.Node, pair.Item))]);
+            }
+
+            foreach ((int _, int node, int? item) in targets)
+            {
+                task.Runtime.Invalidate(node, item);
+            }
+
+            if (targets.Count > 0)
             {
                 task.Touch();
             }
         }
 
-        if (blocked > 0)
+        if (targets.Count > 0)
         {
-            Signal(task.Id, new FlowMessage { Intent = FlowIntent.Reworked, ItemIndex = itemIndex });
+            Signal(task.Id, new FlowMessage { Intent = FlowIntent.Reworked, Rerun = targets });
         }
 
-        return blocked;
+        return targets.Count;
     }
 
     /// <summary>取消任务：任务对象停止全部 agent，流程运行终止。</summary>

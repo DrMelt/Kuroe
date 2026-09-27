@@ -2,6 +2,7 @@ using Kuroe.Agent.Runs;
 using Kuroe.Configuration;
 using Kuroe.Shared.Agent;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 using FrameworkWorkflow = Microsoft.Agents.AI.Workflows.Workflow;
@@ -12,65 +13,40 @@ namespace Kuroe.Workflows.Engine;
 /// 执行器持有任务标识与流程依赖，不跨任务共享状态。</summary>
 internal static class FlowWorkflowFactory
 {
-    /// <summary>启动该任务的流程运行。start 与所有叶子、相邻叶子、检查到被查实施各有边，
-    /// 激活消息按目标执行器定向投递，自动流转与时序由执行器内部决定。</summary>
+    /// <summary>启动该任务的流程运行。start 与全部根执行节点、每条依赖边、检查返工边各有边，
+    /// 激活消息按目标执行器定向投递，就绪判定与发布由执行器内部按边决定。</summary>
     public static StreamingRun Start(
         AgentTask task,
         TaskRegistry registry,
         RunDispatcher dispatcher,
-        NodeModelResolver models,
-        SettingsProvider settings)
+        NodeModelResolver models)
     {
         FlowStartExecutor start = new(registry, task.Id);
-        FlowLeafExecutor[] leaves = [.. task.Graph.Leaves.Select((_, index) =>
-            new FlowLeafExecutor(registry, dispatcher, models, settings, task.Id, index))];
+        NodeExecutor[] executors = [.. task.Graph.ExecutableNodes.Select((_, index) =>
+            new NodeExecutor(registry, dispatcher, models, task.Id, index))];
 
         WorkflowBuilder builder = new(start);
-        foreach (FlowLeafExecutor leaf in leaves)
+        foreach (NodeExecutor executor in executors)
         {
-            builder.AddEdge(start, leaf);
+            builder.AddEdge(start, executor);
         }
 
-        for (int index = 1; index < leaves.Length; index++)
+        foreach (FlowEdge edge in task.Graph.Edges)
         {
-            builder.AddEdge(leaves[index - 1], leaves[index]);
+            builder.AddEdge(executors[edge.From], executors[edge.To]);
         }
 
-        // 并行段的投递边：入口前叶广播到各分支叶，各分支叶汇合回段出口
-        foreach (UnitSegment segment in task.Graph.Segments)
-        {
-            if (!segment.IsParallel)
-            {
-                continue;
-            }
-
-            if (segment.Start - 1 >= 0)
-            {
-                foreach (int branch in segment.BranchLeaves)
-                {
-                    builder.AddEdge(leaves[segment.Start - 1], leaves[branch]);
-                }
-            }
-
-            if (segment.Exit < leaves.Length)
-            {
-                foreach (int branch in segment.BranchLeaves)
-                {
-                    builder.AddEdge(leaves[branch], leaves[segment.Exit]);
-                }
-            }
-        }
-
-        for (int check = 0; check < leaves.Length; check++)
+        // 检查返工的退回边：检查执行节点不通过时把实施来源重跑
+        for (int check = 0; check < executors.Length; check++)
         {
             if (task.Graph[check].Output != NodeOutput.Review)
             {
                 continue;
             }
 
-            foreach (int at in task.Graph.ReturnTargets(check))
+            foreach (int source in task.Graph.CheckedSources(check))
             {
-                builder.AddEdge(leaves[check], leaves[at]);
+                builder.AddEdge(executors[check], executors[source]);
             }
         }
 

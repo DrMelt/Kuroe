@@ -4,15 +4,15 @@ using Kuroe.Shared.Agent;
 using Kuroe.Shared.Agent.Runs;
 using Kuroe.Shared.Agent.Turns;
 using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 
 namespace Kuroe.Workflows.Engine;
 
-/// <summary>流程入口：承接宿主的启动、批准与返工意图，把它转成对具体叶子的激活消息。
-/// 单元状态改动在任务 Gate 内，消息投递在 Gate 外。</summary>
+/// <summary>流程入口：承接宿主的启动、批准与返工意图，把它转成对具体执行节点的评估消息。
+/// 状态改动在任务 Gate 内，消息投递在 Gate 外。</summary>
 [SendsMessage(typeof(FlowMessage))]
 internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId taskId) : Executor("start")
 {
@@ -28,68 +28,53 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
         switch (message.Intent)
         {
             case FlowIntent.Start:
-                await context.SendMessageAsync(Activate(0), "node:0", cancellationToken);
+                await RouteAsync(task, context, cancellationToken);
                 break;
 
             case FlowIntent.Approved:
-                await RouteReadyAsync(task, context, cancellationToken);
+                await RouteAsync(task, context, cancellationToken);
                 break;
 
             case FlowIntent.Reworked:
-                await ReworkAsync(task, message.ItemIndex, context, cancellationToken);
+                await ReworkAsync(task, message.Rerun ?? [], context, cancellationToken);
                 break;
         }
     }
 
-    /// <summary>批准后激活所有待跑的单元：引擎已把它们推进到下一叶子，这里按叶子去重投递激活消息。</summary>
-    private static async ValueTask RouteReadyAsync(AgentTask task, IWorkflowContext context, CancellationToken cancellationToken)
+    /// <summary>启动：评估第一批根执行节点。放行：评估等待批准的执行节点。</summary>
+    private static async ValueTask RouteAsync(AgentTask task, IWorkflowContext context, CancellationToken cancellationToken)
     {
-        List<(int Node, int? Item)> ready;
+        List<int> targets;
         lock (task.Gate)
         {
-            ready = [.. task.Units
-                .Where(unit => unit.State == UnitState.Working && !unit.Pending)
-                .Select(unit => (unit.NodeCursor, unit.ItemIndex))
-                .Distinct()];
+            IReadOnlyList<int> waiting = task.Runtime.AwaitingNodes;
+            targets = [.. waiting.Count > 0 ? waiting : task.Runtime.Roots()];
         }
 
-        foreach ((int node, int? item) in ready)
+        foreach (int node in targets)
         {
-            await context.SendMessageAsync(Activate(node, item), $"node:{node}", cancellationToken);
+            await context.SendMessageAsync(Activate(node), $"node:{node}", cancellationToken);
         }
     }
 
-    /// <summary>对被阻塞的单元再开一轮实施，itemIndex 为空时处理全部。收拢叶的单元退回它引用的展开实施叶。</summary>
-    private static async ValueTask ReworkAsync(AgentTask task, int? itemIndex, IWorkflowContext context, CancellationToken cancellationToken)
+    /// <summary>返工：作废与放行已由宿主信号前的 Gate 内完成，这里只把重派消息投给目标执行节点。</summary>
+    private static async ValueTask ReworkAsync(AgentTask task, IReadOnlyList<(int Blocked, int Node, int? Item)> targets, IWorkflowContext context, CancellationToken cancellationToken)
     {
-        List<WorkUnit> blocked;
-        lock (task.Gate)
+        if (targets.Count == 0)
         {
-            blocked = [.. task.Units.Where(unit =>
-                unit.State == UnitState.Blocked && (itemIndex is null || unit.ItemIndex == itemIndex))];
+            task.Journal.Append(new ErrorEntry("被阻塞的执行节点没有可作废重跑的目标，原地重试。"));
+            return;
         }
 
-        foreach (WorkUnit unit in blocked)
+        foreach ((int _, int node, int? item) in targets)
         {
-            int? implement;
-            lock (task.Gate)
-            {
-                implement = task.Graph.ReturnTarget(unit.NodeCursor, unit.Branch);
-                unit.Rework(implement);
-                task.Touch();
-            }
-
-            if (implement is null)
-            {
-                task.Journal.Append(new ErrorEntry("检查叶没有可退回的实施节点，原地重试。"));
-            }
-
-            int target = implement ?? unit.NodeCursor;
-            await context.SendMessageAsync(Activate(target, unit.ItemIndex), $"node:{target}", cancellationToken);
+            await context.SendMessageAsync(
+                new FlowMessage { NodeIndex = node, ItemIndex = item },
+                $"node:{node}",
+                cancellationToken);
         }
     }
 
-    /// <summary>激活某叶子的单元，整叶激活不携带条目。</summary>
-    private static FlowMessage Activate(int node, int? item = null) =>
-        new() { NodeIndex = node, ItemIndex = item };
+    /// <summary>激活某执行节点的评估消息，整节点不携带条目。</summary>
+    private static FlowMessage Activate(int node) => new() { NodeIndex = node };
 }

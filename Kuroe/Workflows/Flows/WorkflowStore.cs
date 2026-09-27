@@ -133,7 +133,7 @@ sealed class WorkflowStore(string file)
             : new Workflow(dto.Name!, dto.Description, agents, nodes.Value);
     }
 
-    /// <summary>有子节点的是容器，否则是叶子。缺省的字段取节点定义的安全值，Mode 非法时给出错误。</summary>
+    /// <summary>有子节点的是容器，否则是执行节点。缺省的字段取节点定义的安全值，Mode 非法时给出错误。</summary>
     private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, string flowName)
     {
         List<NodeSpec> result = [];
@@ -159,19 +159,17 @@ sealed class WorkflowStore(string file)
     {
         if (node.Nodes is { Count: > 0 })
         {
-            ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(node.Nodes, flowName);
-            ErrorOr<ContainerMode> mode = ParseContainerMode(node.Mode);
-
-            if (children.IsError || mode.IsError)
+            if (node.Mode is not null
+                && !string.Equals(node.Mode, "Sequential", StringComparison.OrdinalIgnoreCase))
             {
-                List<Error> errors = [];
-                errors.AddRange(children.IsError ? children.ErrorsOrEmptyList : []);
-                if (mode.IsError)
-                {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name ?? string.Empty, mode.FirstError.Description));
-                }
+                return [WorkflowErrors.Node(flowName, node.Name ?? string.Empty,
+                    $"容器不再有 Mode，并行请改用 Branch 声明，收到 {node.Mode}。")];
+            }
 
-                return errors;
+            ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(node.Nodes, flowName);
+            if (children.IsError)
+            {
+                return children.ErrorsOrEmptyList;
             }
 
             return new FlowNode
@@ -179,7 +177,6 @@ sealed class WorkflowStore(string file)
                 Name = node.Name ?? string.Empty,
                 Prompt = node.Prompt,
                 From = node.From ?? [],
-                Mode = mode.Value,
                 Nodes = children.Value,
             };
         }
@@ -198,6 +195,7 @@ sealed class WorkflowStore(string file)
             From = node.From ?? [],
             Output = node.Output ?? NodeOutput.Plain,
             Mode = leafMode.Value,
+            Branch = node.Branch,
             Gate = node.Gate ?? NodeGate.Auto,
             OnReject = node.OnReject,
             MaxAttempts = node.MaxAttempts,
@@ -236,21 +234,21 @@ sealed class WorkflowStore(string file)
             Name = flow.Name,
             Prompt = flow.Prompt,
             From = flow.From.Count == 0 ? null : [.. flow.From],
-            Mode = flow.Mode.ToString(),
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
-        AgentNode leaf => new NodeDto
+        AgentNode executable => new NodeDto
         {
-            Name = leaf.Name,
-            Agent = leaf.Agent,
-            Prompt = leaf.Prompt,
-            From = leaf.From.Count == 0 ? null : [.. leaf.From],
-            Output = leaf.Output,
-            Mode = leaf.Mode.ToString(),
-            Gate = leaf.Gate,
-            OnReject = leaf.OnReject,
-            MaxAttempts = leaf.MaxAttempts,
-            Split = leaf.Split is { } split ? new SplitDto
+            Name = executable.Name,
+            Agent = executable.Agent,
+            Prompt = executable.Prompt,
+            From = executable.From.Count == 0 ? null : [.. executable.From],
+            Output = executable.Output,
+            Mode = executable.Mode.ToString(),
+            Branch = executable.Branch,
+            Gate = executable.Gate,
+            OnReject = executable.OnReject,
+            MaxAttempts = executable.MaxAttempts,
+            Split = executable.Split is { } split ? new SplitDto
             {
                 Items = split.Items?.Select(item => new SplitItemDto
                 {
@@ -266,20 +264,7 @@ sealed class WorkflowStore(string file)
         _ => throw new InvalidOperationException($"未知节点类型：{node.GetType().Name}"),
     };
 
-    /// <summary>容器模式的名字按枚举解析，未写时回退顺序模式。</summary>
-    private static ErrorOr<ContainerMode> ParseContainerMode(string? mode)
-    {
-        if (mode is null)
-        {
-            return ContainerMode.Sequential;
-        }
-
-        return Enum.TryParse(mode, ignoreCase: true, out ContainerMode parsed)
-            ? parsed
-            : Error.Validation(ErrorCodes.WorkflowNode, $"Mode 应为 Sequential 或 Parallel，收到 {mode}。");
-    }
-
-    /// <summary>叶子模式的名字按枚举解析，未写时回退整叶模式。</summary>
+    /// <summary>执行节点模式的名字按枚举解析，未写时回退 `Single` 模式。</summary>
     private static ErrorOr<NodeMode> ParseNodeMode(string? mode)
     {
         if (mode is null)

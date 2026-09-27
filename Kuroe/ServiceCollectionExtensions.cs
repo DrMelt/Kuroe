@@ -60,8 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new WorkflowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
-            sp.GetRequiredService<NodeModelResolver>(),
-            sp.GetRequiredService<SettingsProvider>()));
+            sp.GetRequiredService<NodeModelResolver>()));
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<WorkflowEngine>(),

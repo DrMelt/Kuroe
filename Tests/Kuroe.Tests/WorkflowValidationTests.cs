@@ -11,29 +11,23 @@ public sealed class WorkflowValidationTests
     [Theory]
     [InlineData(MissingNodeName, "节点名不能为空")]
     [InlineData(MissingCheck, "流程需要有检查节点")]
-    [InlineData(ScopeViolation, "不在可见作用域")]
-    [InlineData(FanOutBeforePlan, "按条目展开的叶子需要先有规划节点")]
-    [InlineData(NonContiguousExpansion, "流程只允许一个展开或并行段")]
-    [InlineData(ParallelBranchWithoutSource, "并行段的分支需要在之前有一个分配节点")]
-    [InlineData(ParallelContainerWithContainer, "并行容器只能包含叶子节点")]
-    [InlineData(ParallelCheckNotAtEnd, "并行段之后只能有一个检查叶子收尾")]
-    [InlineData(ParallelBranchNotPerItem, "并行段的分支叶必须按条目展开")]
-    [InlineData(PerItemOutsideSegment, "实施必须落入展开段或并行段")]
+    [InlineData(ScopeViolation, "From 引用的节点 不存在 不在流程里")]
+    [InlineData(FanOutBeforePlan, "按条目展开的执行节点必须从规划执行节点或其它展开执行节点取输入")]
+    [InlineData(ExpansionWithoutPlan, "按条目展开的执行节点只能从规划执行节点取拆分")]
+    [InlineData(CyclicReference, "流程引用关系存在环")]
+    [InlineData(ParallelBranchNotPerItem, "声明分支 撰写 的执行节点必须按条目展开并从规划执行节点取拆分")]
     [InlineData(CheckWithoutImplementReference, "检查节点必须用 From 引用被检查的实施产出")]
     [InlineData(UnreferencedImplement, "按条目展开的实施必须被某个检查节点引用")]
     [InlineData(RejectOnImplement, "OnReject 与 MaxAttempts 只适用于检查节点")]
     [InlineData(DuplicateNodeName, "节点名重复")]
     [InlineData(DuplicateAgentName, "agent 名重复")]
     [InlineData(UnknownAgent, "引用的 agent XXX 不存在")]
-    [InlineData(FunnelGateBlocked, "收拢检查不支持待批准门控")]
     [InlineData(AttemptsOverCap, "MaxAttempts 超过 Agent:MaxAttempts")]
     [InlineData(MaxAttemptsZero, "MaxAttempts 必须为正整数")]
     [InlineData(NoNodes, "至少要有一个节点")]
     [InlineData(ContainerFrom, "不支持 From")]
     [InlineData(ContainerPrompt, "不支持 Prompt")]
-    [InlineData(LeafAfterExpansion, "只能有一个收拢检查叶子收尾")]
-    [InlineData(BadLeafMode, "Mode 应为 Single 或 PerItem")]
-    [InlineData(BadContainerMode, "Mode 应为 Sequential 或 Parallel")]
+    [InlineData(BadNodeMode, "Mode 应为 Single 或 PerItem")]
     [InlineData(SplitOnImplement, "Split 只能写在规划节点上")]
     [InlineData(SplitEmpty, "Split 至少要声明 Items 或 ExtrasMax")]
     [InlineData(SplitExtrasOverCap, "Split.ExtrasMax 必须是 0 到 20 的整数")]
@@ -41,7 +35,9 @@ public sealed class WorkflowValidationTests
     [InlineData(SplitStaticPrompt, "纯静态拆分节点不支持 Prompt")]
     [InlineData(SplitStaticGate, "纯静态拆分节点不支持待批准门控")]
     [InlineData(SplitStaticFrom, "纯静态拆分节点不支持 From")]
-    [InlineData(SplitParallelBranch, "Split.Items 的分支“不存在”不在并行段里")]
+    [InlineData(SplitParallelBranch, "没有对应的分支执行节点")]
+    [InlineData(ContainerModeRejected, "容器不再有 Mode")]
+    [InlineData(AlignedAcrossSpaces, "逐条对齐的两端必须来自同一个拆分")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -105,17 +101,9 @@ public sealed class WorkflowValidationTests
         ] } ] }
         """;
 
-    private const string BadLeafMode = """
+    private const string BadNodeMode = """
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Mode": "PerItemm" }
-        ] } ] }
-        """;
-
-    private const string BadContainerMode = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Mode": "Parallell",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "From": ["制定计划"] } ] }
         ] } ] }
         """;
 
@@ -130,9 +118,8 @@ public sealed class WorkflowValidationTests
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
           { "Name": "容器", "Nodes": [
-            { "Name": "内部", "Agent": "执行者", "From": ["外层收尾"] }
-          ] },
-          { "Name": "外层收尾", "Agent": "执行者" }
+            { "Name": "内部", "Agent": "执行者", "From": ["不存在"] }
+          ] }
         ] } ] }
         """;
 
@@ -141,16 +128,6 @@ public sealed class WorkflowValidationTests
           { "Name": "实施", "Agent": "执行者", "Mode": "PerItem" },
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
           { "Name": "检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
-        ] } ] }
-        """;
-
-    private const string NonContiguousExpansion = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施甲", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "中间", "Agent": "执行者", "From": ["制定计划"] },
-          { "Name": "实施乙", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["实施甲", "实施乙"] }
         ] } ] }
         """;
 
@@ -194,14 +171,6 @@ public sealed class WorkflowValidationTests
         ] } ] }
         """;
 
-    private const string FunnelGateBlocked = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "Gate": "Review" }
-        ] } ] }
-        """;
-
     private const string AttemptsOverCap = """
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
@@ -233,57 +202,27 @@ public sealed class WorkflowValidationTests
         ] } ] }
         """;
 
-    private const string LeafAfterExpansion = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "收尾", "Agent": "执行者", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "OnReject": "Retry" }
-        ] } ] }
-        """;
-
-    private const string ParallelBranchWithoutSource = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem" } ] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["撰写"], "OnReject": "Retry" }
-        ] } ] }
-        """;
-
-    private const string ParallelContainerWithContainer = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "子容器", "Nodes": [ { "Name": "撰写", "Agent": "执行者", "From": ["制定计划"] } ] } ] }
-        ] } ] }
-        """;
-
-    private const string ParallelCheckNotAtEnd = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] } ] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["撰写"] },
-          { "Name": "收尾", "Agent": "执行者", "From": ["整体检查"] }
-        ] } ] }
-        """;
-
     private const string ParallelBranchNotPerItem = """
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
           { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "From": ["制定计划"] } ] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["撰写"], "OnReject": "Retry" }
+          { "Name": "撰写", "Agent": "执行者", "Branch": "撰写", "From": ["制定计划"] },
+          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
         ] } ] }
         """;
 
-    private const string PerItemOutsideSegment = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "预实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] } ] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["撰写"], "OnReject": "Retry" }
+    private const string ExpansionWithoutPlan = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "准备", "Agent": "执行者" },
+          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["准备"] },
+          { "Name": "检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
+        ] } ] }
+        """;
+
+    private const string CyclicReference = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "甲", "Agent": "执行者", "From": ["乙"] },
+          { "Name": "乙", "Agent": "执行者", "From": ["甲"] },
+          { "Name": "检查", "Agent": "检查者", "Output": "Review", "From": ["甲"] }
         ] } ] }
         """;
 
@@ -378,9 +317,25 @@ public sealed class WorkflowValidationTests
         { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
           { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Branch": "不存在" } ] } },
+          { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
+        ] } ] }
+        """;
+
+    private const string ContainerModeRejected = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "分支甲", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] } ] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分支甲"], "OnReject": "Retry" }
+            "Nodes": [ { "Name": "撰写", "Agent": "执行者" } ] }
+        ] } ] }
+        """;
+
+    private const string AlignedAcrossSpaces = """
+        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定A计划", "Agent": "规划者", "Output": "Plan" },
+          { "Name": "制定B计划", "Agent": "规划者", "Output": "Plan" },
+          { "Name": "实施A", "Agent": "执行者", "Mode": "PerItem", "From": ["制定A计划"] },
+          { "Name": "实施B", "Agent": "执行者", "Mode": "PerItem", "From": ["制定B计划"] },
+          { "Name": "逐条检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A", "实施B"] }
         ] } ] }
         """;
 }

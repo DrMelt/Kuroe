@@ -16,7 +16,7 @@ internal sealed class AgentDetailView(Terminal terminal)
     public void Print(TaskSnapshot task, RunSnapshot run)
     {
         RunContext context = run.Context;
-        _terminal.Line($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {Labels.Item(context.ItemIndex)} · 第 {context.Attempt} 轮");
+        _terminal.Line($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {Labels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
         _terminal.Line($"{task.Id} {task.Title}　节点 {context.NodeIndex + 1}/{task.TotalNodes}　模型 {context.Model}");
         _terminal.Line($"状态 {Labels.State(run)}　{Labels.Clock(run.StartedAt)} → {Labels.Clock(run.FinishedAt)}　耗时 {Labels.Elapsed(run.Elapsed)}");
 

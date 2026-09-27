@@ -11,21 +11,18 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>任务 = 一条长期会话线程：自己的对话历史、按流程推进的执行单元、派出的全部 agent。
+/// <summary>任务 = 一条长期会话线程：自己的对话历史、按流程推进的执行节点状态、派出的全部 agent。
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class AgentTask
 {
-    /// <summary>前台对话回合在过程记录里的叶子名。</summary>
+    /// <summary>前台对话回合在过程记录里的执行节点名。</summary>
     public const string DialogueNode = "对话";
 
     private const int TitleLimit = 40;
 
     private readonly List<AgentRun> _runs = [];
-    private readonly List<WorkUnit> _units = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
     private readonly SemaphoreSlim _turn = new(1, 1);
-    private readonly Dictionary<string, CheckResult> _funnels = [];
-    private readonly HashSet<int> _funnelActive = [];
     private string _title;
     private int _dialogueTurns;
     private DateTimeOffset _lastActivityAt;
@@ -39,6 +36,7 @@ public sealed class AgentTask
         Graph = graph;
         Session = session;
         Journal = new TurnJournal();
+        Runtime = new TaskFlow(this);
         _lastActivityAt = DateTimeOffset.UtcNow;
         _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : title;
     }
@@ -63,6 +61,9 @@ public sealed class AgentTask
     /// <summary>任务内状态改动的串行点。锁序固定为任务 Gate、注册表、派发器。</summary>
     internal Lock Gate { get; } = new();
 
+    /// <summary>图驱动的执行状态，执行节点就地决定激活与发布。</summary>
+    internal TaskFlow Runtime { get; }
+
     /// <summary>任务标题，未给出时取目标首行。</summary>
     public string Title
     {
@@ -85,22 +86,19 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>各叶子交回的条目拆分，键是产出叶子序号，尚未交回时为空。仅在持有 <see cref="Gate"/> 时读写。</summary>
+    /// <summary>各执行节点交回的条目拆分，键是产出执行节点序号，尚未交回时为空。仅在持有 <see cref="Gate"/> 时读写。</summary>
     public IReadOnlyDictionary<int, PlanOutput> Splits => _splits;
 
-    /// <summary>某叶子的条目拆分，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal PlanOutput? SplitFor(int leafIndex) => _splits.GetValueOrDefault(leafIndex);
+    /// <summary>某执行节点的条目拆分，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal PlanOutput? SplitFor(int executableIndex) => _splits.GetValueOrDefault(executableIndex);
 
-    /// <summary>记录某叶子的条目拆分。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetSplit(int leafIndex, PlanOutput output) => _splits[leafIndex] = output;
+    /// <summary>记录某执行节点的条目拆分。要求持有 <see cref="Gate"/>。</summary>
+    internal void SetSplit(int executableIndex, PlanOutput output) => _splits[executableIndex] = output;
 
     /// <summary>提交顺序排列的 agent。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<AgentRun> Runs => _runs;
 
-    /// <summary>创建顺序排列的工作单元：整步单元在前，按条目展开出的单元随后。仅在持有 <see cref="Gate"/> 时读写。</summary>
-    internal IReadOnlyList<WorkUnit> Units => _units;
-
-    /// <summary>任务的整体状态，由取消标记、各单元与在跑的 agent 汇总得出。</summary>
+    /// <summary>任务的整体状态，由取消标记、执行节点状态与在跑的 agent 汇总得出。</summary>
     public TaskState State
     {
         get
@@ -112,7 +110,7 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>要求持有 <see cref="Gate"/>。任务状态由取消标记、单元状态与在跑的 agent 汇总得出，不单独维护。</summary>
+    /// <summary>要求持有 <see cref="Gate"/>。任务状态由取消标记、执行节点状态与在跑的 agent 汇总得出，不单独维护。</summary>
     private TaskState Summarize()
     {
         if (_canceled)
@@ -125,21 +123,20 @@ public sealed class AgentTask
             return TaskState.Running;
         }
 
-        if (_units.Any(unit => unit.State == UnitState.AwaitingApproval))
+        if (Runtime.HasAwaiting)
         {
             return TaskState.AwaitingApproval;
         }
 
-        if (_units.Any(unit => unit.State == UnitState.Blocked))
+        if (Runtime.HasBlocked)
         {
             return TaskState.Blocked;
         }
 
-        // 还有单元没走完最后一步，或一步都没派出去
-        return _units.All(unit => unit.State == UnitState.Done) ? TaskState.Done : TaskState.Running;
+        return Runtime.HasWork ? TaskState.Running : TaskState.Done;
     }
 
-    /// <summary>任务被取消：在跑的 agent 与未走完的单元一并终止。要求持有 <see cref="Gate"/>。</summary>
+    /// <summary>任务被取消：在跑的 agent 与执行节点状态一并终止。要求持有 <see cref="Gate"/>。</summary>
     internal void Cancel()
     {
         _canceled = true;
@@ -148,68 +145,12 @@ public sealed class AgentTask
             run.Cancel();
         }
 
-        foreach (WorkUnit unit in _units.Where(unit => unit.State != UnitState.Done))
-        {
-            unit.Cancel();
-        }
-
-        _lastActivityAt = DateTimeOffset.UtcNow;
-    }
-    /// <summary>收拢检查的最近一次结论，未检查时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal CheckResult? FunnelCheck(string nodeName) => _funnels.GetValueOrDefault(nodeName);
-
-    /// <summary>抢占收拢检查的活动，成功时给出本轮轮次。要求持有 <see cref="Gate"/>。</summary>
-    internal bool TryBeginFunnel(int nodeIndex, string nodeName, out int round)
-    {
-        if (!_funnelActive.Add(nodeIndex))
-        {
-            round = 0;
-
-            return false;
-        }
-
-        round = (FunnelCheck(nodeName)?.Round ?? 0) + 1;
-
-        return true;
-    }
-
-    /// <summary>收拢检查收口后释放活动。要求持有 <see cref="Gate"/>。</summary>
-    internal void EndFunnel(int nodeIndex) => _funnelActive.Remove(nodeIndex);
-
-    /// <summary>收拢检查结论落地。同一次检查只有首个交点，交回文本给模型。要求持有 <see cref="Gate"/>。</summary>
-    internal bool RecordFunnelCheck(AgentRun run, string nodeName, bool passed, string findings)
-    {
-        if (_funnels.TryGetValue(nodeName, out CheckResult? last) && last.Origin == run.Id)
-        {
-            return false;
-        }
-
-        _funnels[nodeName] = new CheckResult(run.Context.Attempt, passed, findings, run.Id, nodeName);
-
-        return true;
-    }
-
-    internal WorkUnit AddUnit(int? itemIndex, PlanItem? item, int cursor, string? branch = null)
-    {
-        WorkUnit unit = new(itemIndex, item, cursor, branch);
-        _units.Add(unit);
-
-        return unit;
-    }
-
-    /// <summary>按条目定位单元；不展开的叶子只有一个单元。要求持有 <see cref="Gate"/>。</summary>
-    internal WorkUnit? UnitFor(int? itemIndex) => _units.Find(unit => unit.ItemIndex == itemIndex);
-
-    /// <summary>把 agent 挂到任务的单元与该叶子上。</summary>
-    internal void Attach(WorkUnit unit, AgentRun run)
-    {
-        _runs.Add(run);
-        unit.Attach(run);
+        Runtime.Cancel();
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>收拢检查的 agent 没有单元载体，只挂到任务的运行统计。</summary>
-    internal void AttachRun(AgentRun run)
+    /// <summary>记下一个派出的 agent 与它的执行回合。要求持有 <see cref="Gate"/>。</summary>
+    internal void Attach(AgentRun run)
     {
         _runs.Add(run);
         _lastActivityAt = DateTimeOffset.UtcNow;
@@ -270,7 +211,7 @@ public sealed class AgentTask
         }
     }
 
-    /// <summary>当前状态的只读快照，含节点、单元、agent 与前台对话。</summary>
+    /// <summary>当前状态的只读快照，含执行节点、执行节点状态、条目结论、agent 与前台对话。</summary>
     public TaskSnapshot Snapshot()
     {
         lock (Gate)
@@ -279,21 +220,100 @@ public sealed class AgentTask
 
             List<NodeSnapshot> nodes =
             [
-                .. Graph.Leaves.Select((leaf, index) => new NodeSnapshot(index, leaf,
+                .. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable,
                     [.. _runs.Where(run => run.Context.NodeIndex == index).Select(run => runs[run.Id])])),
             ];
 
-            List<UnitSnapshot> units =
-            [
-                .. _units.Select(unit => new UnitSnapshot(unit.ItemIndex, unit.Branch, unit.NodeCursor, unit.State,
-                    unit.Verdict, unit.Findings, unit.Attempts, [.. unit.Nodes.Values.Select(run => runs[run.Id])])),
-            ];
+            List<NodeStateSnapshot> nodeStates = [];
+            for (int index = 0; index < Graph.Count; index++)
+            {
+                nodeStates.Add(Runtime.NodeStateSnapshot(index));
+            }
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
-                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), nodes, units,
-                Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), nodes, nodeStates,
+                ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
+
+    /// <summary>检查执行节点交回的结论：逐条检查按实例收集，整体检查按它覆盖的单一拆分空间回填条目。</summary>
+    private List<ItemStateSnapshot> ItemStates()
+    {
+        List<ItemStateSnapshot> states = [];
+        foreach (ExecutableNode review in Graph.ExecutableNodes.Where(node => node.Output == NodeOutput.Review))
+        {
+            if (review.Mode == NodeMode.PerItem)
+            {
+                CollectPerItemChecks(review, states);
+            }
+            else
+            {
+                CollectFunnelCheck(review, states);
+            }
+        }
+
+        return states;
+    }
+
+    /// <summary>逐条检查按实例收集结论。</summary>
+    private void CollectPerItemChecks(ExecutableNode review, List<ItemStateSnapshot> states)
+    {
+        if (Runtime.ExpandedItems(review.Index) is not { } items)
+        {
+            return;
+        }
+
+        Dictionary<int, string?> branchByItem = BranchByItem(Graph.ItemSpace(review.Index)) ?? [];
+        foreach (int item in items)
+        {
+            if (Runtime.LastCheck(review.Index, item) is not { } check)
+            {
+                continue;
+            }
+
+            states.Add(new ItemStateSnapshot(review.Index, item, branchByItem.GetValueOrDefault(item),
+                check.Passed ? UnitVerdict.Verified : UnitVerdict.Rejected, check.Findings, check.Round));
+        }
+    }
+
+    /// <summary>整体检查按它覆盖的单一拆分空间回填条目结论。覆盖多个空间时不回填，避免结论错配到别家条目。</summary>
+    private void CollectFunnelCheck(ExecutableNode review, List<ItemStateSnapshot> states)
+    {
+        if (Runtime.LastCheck(review.Index, null) is not { } check)
+        {
+            return;
+        }
+
+        List<int> itemSources = [.. Graph.CheckedSources(review.Index)
+            .Where(source => Graph[source].Mode == NodeMode.PerItem)];
+        if (itemSources.Count == 0)
+        {
+            return;
+        }
+
+        int? space = Graph.ItemSpace(itemSources[0]);
+        if (space is not { } splitNode || !itemSources.All(source => Graph.ItemSpace(source) == splitNode))
+        {
+            return;
+        }
+
+        if (_splits.GetValueOrDefault(splitNode) is not { } split)
+        {
+            return;
+        }
+
+        foreach (PlanItem item in split.Items)
+        {
+            states.Add(new ItemStateSnapshot(review.Index, item.Index, item.Branch,
+                check.Passed ? UnitVerdict.Verified : UnitVerdict.Rejected, check.Findings, check.Round));
+        }
+    }
+
+    /// <summary>条目到分支的归属，拆分不存在时为空。</summary>
+    private Dictionary<int, string?>? BranchByItem(int? space) =>
+        space is { } splitNode && _splits.GetValueOrDefault(splitNode) is { } split
+            ? split.Items.ToDictionary(item => item.Index, item => item.Branch)
+            : null;
 
     /// <summary>取目标的首行作标题，过长时截断。</summary>
     private static string Shorten(string text)

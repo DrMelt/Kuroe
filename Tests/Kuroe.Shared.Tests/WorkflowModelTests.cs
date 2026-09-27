@@ -5,35 +5,35 @@ using Xunit;
 
 namespace Kuroe.Shared.Tests;
 
-/// <summary>流程模型：叶子的缺省配置与编译视图的按名定位。</summary>
+/// <summary>流程模型：执行节点的缺省配置与编译视图的按名定位。</summary>
 public sealed class WorkflowModelTests
 {
     [Fact]
-    public void Leaf_defaults_to_plain_single_auto_without_rework()
+    public void Executable_defaults_to_plain_single_auto_without_rework()
     {
-        AgentNode leaf = new() { Name = "实施", Agent = "执行者" };
+        AgentNode executable = new() { Name = "实施", Agent = "执行者" };
 
-        Assert.Equal(NodeOutput.Plain, leaf.Output);
-        Assert.Equal(NodeMode.Single, leaf.Mode);
-        Assert.Equal(NodeGate.Auto, leaf.Gate);
-        Assert.Empty(leaf.From);
-        Assert.Null(leaf.OnReject);
-        Assert.Null(leaf.MaxAttempts);
+        Assert.Equal(NodeOutput.Plain, executable.Output);
+        Assert.Equal(NodeMode.Single, executable.Mode);
+        Assert.Equal(NodeGate.Auto, executable.Gate);
+        Assert.Empty(executable.From);
+        Assert.Null(executable.OnReject);
+        Assert.Null(executable.MaxAttempts);
     }
 
     [Fact]
-    public void Check_leaf_defaults_to_retry_once_more()
+    public void Check_executable_defaults_to_retry_once_more()
     {
-        AgentNode leaf = new() { Name = "检查", Agent = "检查者", Output = NodeOutput.Review };
+        AgentNode executable = new() { Name = "检查", Agent = "检查者", Output = NodeOutput.Review };
 
-        Assert.Equal(RejectAction.Retry, leaf.RejectAction);
-        Assert.Equal(2, leaf.AttemptLimit);
+        Assert.Equal(RejectAction.Retry, executable.RejectAction);
+        Assert.Equal(2, executable.AttemptLimit);
     }
 
     [Fact]
     public void Declared_rework_overrides_defaults()
     {
-        AgentNode leaf = new()
+        AgentNode executable = new()
         {
             Name = "检查",
             Agent = "检查者",
@@ -42,17 +42,17 @@ public sealed class WorkflowModelTests
             MaxAttempts = 5,
         };
 
-        Assert.Equal(RejectAction.Stop, leaf.RejectAction);
-        Assert.Equal(5, leaf.AttemptLimit);
+        Assert.Equal(RejectAction.Stop, executable.RejectAction);
+        Assert.Equal(5, executable.AttemptLimit);
     }
 
     [Fact]
-    public void NodeGraph_locates_leaves_by_name()
+    public void NodeGraph_locates_executables_by_name()
     {
         var graph = new NodeGraph(
         [
-            new LeafNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null, null),
-            new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null, null),
+            new ExecutableNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
+            new ExecutableNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
         ], []);
 
         Assert.Equal(2, graph.Count);

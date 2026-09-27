@@ -1,6 +1,6 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>叶子下方的一段会话能力：系统提示词、模型与可用工具。叶子按名引用。</summary>
+/// <summary>执行节点下方的一段会话能力：系统提示词、模型与可用工具。执行节点按名引用。</summary>
 public sealed record AgentDefinition
 {
     /// <summary>agent 名，流程内唯一。</summary>

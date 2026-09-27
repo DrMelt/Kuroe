@@ -36,7 +36,7 @@ internal sealed class AgentDto
 }
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
-/// 有子节点即容器，否则为叶子。</summary>
+/// 有子节点即容器，否则为执行节点。</summary>
 internal sealed class NodeDto
 {
     public string? Name { get; set; }
@@ -49,8 +49,11 @@ internal sealed class NodeDto
 
     public NodeOutput? Output { get; set; }
 
-    /// <summary>叶子模式或容器模式的名字：Single、PerItem、Sequential、Parallel。</summary>
+    /// <summary>执行节点模式的名字：Single、PerItem。容器不再接受 Mode。</summary>
     public string? Mode { get; set; }
+
+    /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
+    public string? Branch { get; set; }
 
     public NodeGate? Gate { get; set; }
 
@@ -58,7 +61,7 @@ internal sealed class NodeDto
 
     public int? MaxAttempts { get; set; }
 
-    /// <summary>拆分源的固定配置，只能写在规划叶子上。</summary>
+    /// <summary>拆分源的固定配置，只能写在规划执行节点上。</summary>
     public SplitDto? Split { get; set; }
 
     public List<NodeDto>? Nodes { get; set; }

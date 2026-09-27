@@ -1,6 +1,6 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>流程里的一个节点：叶子或容器。节点是流程的组织单元，
+/// <summary>流程里的一个节点：执行节点或容器。节点是流程的组织单元，
 /// 统一面向作用域引用与上下文装配，对外只暴露名字与输入来源。</summary>
 public abstract record NodeSpec
 {

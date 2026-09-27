@@ -1,6 +1,6 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>叶子节点：指派一个 agent 承担本节点的执行，是唯一真实执行的节点。</summary>
+/// <summary>执行节点：指派一个 agent 承担本节点的执行，是唯一真实执行的节点。</summary>
 public sealed record AgentNode : NodeSpec
 {
     /// <summary>引用的 agent 定义名。</summary>
@@ -9,7 +9,7 @@ public sealed record AgentNode : NodeSpec
     /// <summary>交回什么。</summary>
     public NodeOutput Output { get; init; } = NodeOutput.Plain;
 
-    /// <summary>整叶一个 agent 还是按规划条目各派一个。</summary>
+    /// <summary>整节点一个 agent 还是按规划条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;
 
     /// <summary>产出即开下一步还是停在待批准。</summary>
@@ -26,6 +26,9 @@ public sealed record AgentNode : NodeSpec
 
     /// <summary>检查未声明时按两轮处理，值域由校验保证。</summary>
     public int AttemptLimit => MaxAttempts ?? 2;
+
+    /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
+    public string? Branch { get; init; }
 
     /// <summary>拆分源的固定配置：静态条目与模型补充约束。</summary>
     public SplitConfig? Split { get; init; }

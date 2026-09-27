@@ -6,12 +6,12 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>叶子到可用模型的解析：叶子引用的 agent 未指定时用当前选中的模型，目录里没有时报错。</summary>
+/// <summary>执行节点到可用模型的解析：执行节点引用的 agent 未指定时用当前选中的模型，目录里没有时报错。</summary>
 sealed class NodeModelResolver(SettingsProvider settings, CatalogService catalog)
 {
-    public ErrorOr<string> For(LeafNode leaf)
+    public ErrorOr<string> For(ExecutableNode executable)
     {
-        string? model = leaf.Agent.Model ?? settings.Current.Agent.Model;
+        string? model = executable.Agent.Model ?? settings.Current.Agent.Model;
         if (string.IsNullOrWhiteSpace(model))
         {
             return [AgentErrors.ModelNotSelected()];

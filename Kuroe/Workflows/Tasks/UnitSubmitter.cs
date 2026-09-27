@@ -12,8 +12,7 @@ namespace Kuroe.Workflows.Tasks;
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
 public sealed class UnitSubmitter(TaskRegistry registry)
 {
-
-    /// <summary>规划叶子交回条目拆分。并行段的分支拆分在这里校验，它交回的任务都要落在存在的分支上。</summary>
+    /// <summary>规划执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。</summary>
     public string SubmitPlan(TurnScope? scope, string itemsJson)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
@@ -50,19 +49,30 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 return $"被拒绝：{merged.FirstError.Description}";
             }
 
-            if (task.Graph.SegmentConsuming(run.Context.NodeIndex) is { IsParallel: true } segment)
+            List<string> branches = [];
+            foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                foreach (PlanItem item in merged.Value)
+                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To].Branch is { } branch)
                 {
-                    if (string.IsNullOrWhiteSpace(item.Branch))
-                    {
-                        return "被拒绝：并行段的任务必须写明分支 Branch。";
-                    }
+                    branches.Add(branch);
+                }
+            }
 
-                    if (task.Graph.BranchLeaf(segment, item.Branch) is null)
-                    {
-                        return $"被拒绝：分支 {item.Branch} 不在并行段里。";
-                    }
+            foreach (PlanItem item in merged.Value)
+            {
+                if (branches.Count == 0)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.Branch))
+                {
+                    return "被拒绝：分流任务的条目必须写明分支 Branch。";
+                }
+
+                if (!branches.Contains(item.Branch))
+                {
+                    return $"被拒绝：分支 {item.Branch} 没有对应的分支执行节点。";
                 }
             }
 
@@ -72,7 +82,7 @@ public sealed class UnitSubmitter(TaskRegistry registry)
         }
     }
 
-    /// <summary>检查叶子交回结论。收拢检查记到任务上，逐条检查记到单元的最后一个检查活动。</summary>
+    /// <summary>检查执行节点交回结论。按执行节点的实例记到执行状态的检查结论里。</summary>
     public string SubmitVerdict(TurnScope? scope, bool passed, string findings)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Review)
@@ -89,31 +99,15 @@ public sealed class UnitSubmitter(TaskRegistry registry)
         AgentTask task = found.Value;
         lock (task.Gate)
         {
-            if (run.Context.ItemIndex is null)
-            {
-                if (!passed && string.IsNullOrWhiteSpace(findings))
-                {
-                    return "被拒绝：不通过时要列出问题。";
-                }
-
-                bool recorded = task.RecordFunnelCheck(run, run.Context.NodeName, passed, findings);
-
-                return recorded ? (passed ? "已记录：通过。" : "已记录：不通过。") : "本轮已提交过结论，无需重复提交。";
-            }
-
-            if (task.UnitFor(run.Context.ItemIndex) is not { } unit)
-            {
-                return "内部错误：该 agent 没有对应的工作单元。";
-            }
-
             if (!passed && string.IsNullOrWhiteSpace(findings))
             {
                 return "被拒绝：不通过时要列出问题。";
             }
 
-            bool unitRecorded = unit.RecordCheck(run, passed, findings);
+            bool recorded = task.Runtime.RecordCheck(run.Context.NodeIndex, run.Context.ItemIndex,
+                new CheckResult(run.Context.ExecutionCount, passed, findings, run.Id, run.Context.NodeName));
 
-            return unitRecorded ? (passed ? "已记录：通过。" : "已记录：不通过。") : "本轮已提交过结论，无需重复提交。";
+            return recorded ? (passed ? "已记录：通过。" : "已记录：不通过。") : "本轮已提交过结论，无需重复提交。";
         }
     }
 

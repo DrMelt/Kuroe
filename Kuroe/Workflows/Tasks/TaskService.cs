@@ -7,7 +7,6 @@ using Kuroe.Shared.Agent.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
@@ -17,14 +16,14 @@ namespace Kuroe.Workflows.Tasks;
 public sealed class TaskService
 {
     private readonly TaskRegistry _registry;
-    private readonly WorkflowEngine _driver;
+    private readonly IWorkflowDriver _driver;
     private readonly WorkflowService _flows;
     private readonly AgentSessionFactory _sessions;
     private readonly NodeModelResolver _models;
 
     internal TaskService(
         TaskRegistry registry,
-        WorkflowEngine driver,
+        IWorkflowDriver driver,
         WorkflowService flows,
         AgentSessionFactory sessions,
         NodeModelResolver models)
@@ -51,7 +50,8 @@ public sealed class TaskService
         }
 
         NodeGraph graph = FlowCompiler.Compile(flow.Value);
-        ErrorOr<string> model = _models.For(graph[0]);
+        int root = Enumerable.Range(0, graph.Count).First(index => !graph.Edges.Any(edge => edge.To == index));
+        ErrorOr<string> model = _models.For(graph[root]);
         if (model.IsError)
         {
             return model.ErrorsOrEmptyList;
@@ -96,7 +96,7 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>批准等待放行的节点，开下一叶。</summary>
+    /// <summary>批准等待放行的节点，开下一步。</summary>
     public ErrorOr<Success> Approve(TaskId id)
     {
         ErrorOr<AgentTask> found = _registry.Find(id);

@@ -18,11 +18,11 @@ public sealed class ContextModelTests
     }
 
     [Fact]
-    public void RunContext_defaults_attempt_and_seed()
+    public void RunContext_defaults_execution_count_and_seed()
     {
         RunContext context = Context();
 
-        Assert.Equal(1, context.Attempt);
+        Assert.Equal(1, context.ExecutionCount);
         Assert.Empty(context.Seed);
     }
 

@@ -12,10 +12,10 @@ public sealed record RunContext
     /// <summary>产出的契约，决定能交回什么。</summary>
     public required NodeOutput Output { get; init; }
 
-    /// <summary>所属叶子在流程图里的序号。</summary>
+    /// <summary>所属执行节点在流程图里的序号。</summary>
     public required int NodeIndex { get; init; }
 
-    /// <summary>所属叶子的名称。</summary>
+    /// <summary>所属执行节点的名称。</summary>
     public required string NodeName { get; init; }
 
     /// <summary>本 agent 要做的事，作为一条用户消息发给模型。</summary>
@@ -27,16 +27,16 @@ public sealed record RunContext
     /// <summary>agent 定义级的系统提示词，未声明时为 null 而用全局设置。</summary>
     public string? SystemPrompt { get; init; }
 
-    /// <summary>所属条目序号，非按条目展开的叶为空。</summary>
+    /// <summary>所属条目序号，非按条目展开时为空。</summary>
     public int? ItemIndex { get; init; }
 
-    /// <summary>该 agent 被叫到的名字：叶子名，展开条目时带上条目号。</summary>
+    /// <summary>该 agent 被叫到的名字：执行节点名，展开条目时带上条目号。</summary>
     public string Label => ItemIndex is { } index ? $"{NodeName}·条目 {index + 1}" : NodeName;
 
-    /// <summary>本轮的检查或实施轮次，从 1 起。</summary>
-    public int Attempt { get; init; } = 1;
+    /// <summary>当前节点下本实例的执行次数，按节点与条目各自累计，从 1 起。</summary>
+    public int ExecutionCount { get; init; } = 1;
 
-    /// <summary>本轮可用的工具名单：能力工具加契约工具，执行期由叶子确定。</summary>
+    /// <summary>本轮可用的工具名单：能力工具加契约工具，执行期由执行节点确定。</summary>
     public IReadOnlyList<string> Tools { get; init; } = [];
 
     /// <summary>上游装配进来的已有内容，按序置于指令之前。</summary>

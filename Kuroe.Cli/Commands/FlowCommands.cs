@@ -91,7 +91,7 @@ internal sealed class FlowCommands(
         Grid grid = Terminal.Columns(7, wrapColumns: 6);
         grid.AddRow(
             new Text("序号", Styles.Hint),
-            new Text("叶子", Styles.Hint),
+            new Text("执行节点", Styles.Hint),
             new Text("执行", Styles.Hint),
             new Text("契约", Styles.Hint),
             new Text("展开", Styles.Hint),
@@ -101,16 +101,16 @@ internal sealed class FlowCommands(
         int index = 0;
         foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
         {
-            if (node is AgentNode leaf)
+            if (node is AgentNode executable)
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
-                    new Text(new string(' ', depth * 2) + leaf.Name),
-                    new Text(leaf.Agent),
-                    new Text(leaf.Output.Label()),
-                    new Text(Labels.Of(leaf.Mode)),
-                    new Text(Labels.Of(leaf.Gate)),
-                    new Text(Requirement(leaf), Styles.Hint));
+                    new Text(new string(' ', depth * 2) + executable.Name),
+                    new Text(executable.Agent),
+                    new Text(executable.Output.Label()),
+                    new Text(Labels.Of(executable.Mode)),
+                    new Text(Labels.Of(executable.Gate)),
+                    new Text(Requirement(executable), Styles.Hint));
                 index++;
             }
             else if (node is FlowNode flow)
@@ -158,22 +158,27 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, name));
     }
 
-    private static string Requirement(AgentNode leaf)
+    private static string Requirement(AgentNode executable)
     {
         List<string> parts = [];
-        if (leaf.From.Count > 0)
+        if (executable.Branch is { Length: > 0 } branch)
         {
-            parts.Add($"取自 {string.Join("、", leaf.From)}");
+            parts.Add($"分支 {branch}");
         }
 
-        if (leaf.Output == NodeOutput.Review)
+        if (executable.From.Count > 0)
         {
-            RejectAction action = leaf.OnReject ?? RejectAction.Retry;
-            int limit = Math.Max(1, leaf.MaxAttempts ?? 2);
+            parts.Add($"取自 {string.Join("、", executable.From)}");
+        }
+
+        if (executable.Output == NodeOutput.Review)
+        {
+            RejectAction action = executable.OnReject ?? RejectAction.Retry;
+            int limit = Math.Max(1, executable.MaxAttempts ?? 2);
             parts.Add($"不通过则 {Labels.Of(action)}，至多 {limit} 轮");
         }
 
-        if (leaf.Split is { } split)
+        if (executable.Split is { } split)
         {
             if (split.Items is { Count: > 0 } items)
             {
@@ -194,7 +199,7 @@ internal sealed class FlowCommands(
         return parts.Count == 0 ? "—" : string.Join("；", parts);
     }
 
-    /// <summary>递归收集流程里的全部叶子。</summary>
+    /// <summary>递归收集流程里的全部执行节点。</summary>
     private static IEnumerable<NodeSpec> Flatten(IReadOnlyList<NodeSpec> nodes)
     {
         foreach (NodeSpec node in nodes)

@@ -7,8 +7,8 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>为叶子装配上下文。派出的 agent 只用这里给出的内容，装配规则集中在一处。
-/// 收拢检查走跨单元的聚合装配，其余叶子共用单单元装配。</summary>
+/// <summary>为执行节点装配上下文。派出的 agent 只用这里给出的内容，装配规则集中在一处。
+/// 每条依赖边按它的消费方式取值：单份产出、拆分条目、全部实例或按条目对齐。</summary>
 public static class ContextComposer
 {
     /// <summary>单条种子文本的上限。</summary>
@@ -17,93 +17,109 @@ public static class ContextComposer
     /// <summary>带进上下文的任务对话条数。</summary>
     private const int DialogueLimit = 6;
 
-    /// <summary>契约工具名：按叶子产出契约自动附加到工具面。</summary>
+    /// <summary>契约工具名：按执行节点产出契约自动附加到工具面。</summary>
     internal const string PlanToolName = "SubmitPlanItems";
 
-    /// <summary>契约工具名：按叶子产出契约自动附加到工具面。</summary>
+    /// <summary>契约工具名：按执行节点产出契约自动附加到工具面。</summary>
     internal const string ReviewToolName = "SubmitVerdict";
 
-    /// <summary>按叶子声明为单元装配这一轮的上下文。规划、实施与逐条检查共用同一套装配。</summary>
-    public static RunContext ForLeaf(AgentTask task, WorkUnit unit, LeafNode leaf, string model)
+    /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
+    public static RunContext ForExecutable(AgentTask task, ExecutableNode executable, int? itemIndex, string model)
     {
         List<ContextMessage> seed = [];
         AppendDialogue(task, seed);
-        foreach (int fromIndex in leaf.From)
+        foreach (FlowEdge edge in task.Graph.Incoming(executable.Index))
         {
-            AppendUpstream(task, unit, fromIndex, seed);
+            AppendSource(task, edge, itemIndex, seed);
         }
 
-        if (unit.Item is { } item)
+        PlanItem? item = ItemOf(task, executable, itemIndex);
+        if (item is not null)
         {
-            string branch = unit.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
+            string branch = item.Branch is { Length: > 0 } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
                 Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
-                new ItemSource(PlanOrigin(task, unit, leaf), item.Index, item.Title)));
+                new ItemSource(OriginOf(task, executable, item), item.Index, item.Title)));
         }
 
-        AppendRework(unit, seed);
-        int round = (unit.LastCheck?.Round ?? 0) + 1;
+        CheckResult? rework = ReworkOf(task, executable, itemIndex);
+        if (rework is not null)
+        {
+            seed.Add(new ContextMessage(MessageRole.User,
+                Limit($"上一轮检查未通过：\n{rework.Findings}"), new AgentSource(rework.Origin, rework.NodeName)));
+        }
+
+        int count = task.Runtime.ExecutionCount(executable.Index, itemIndex);
 
         return new RunContext
         {
             Task = task.Id,
-            Output = leaf.Output,
-            NodeIndex = leaf.Index,
-            NodeName = leaf.Name,
-            Instruction = Instruction(task, unit, leaf, round),
+            Output = executable.Output,
+            NodeIndex = executable.Index,
+            NodeName = executable.Name,
+            Instruction = Instruction(task, executable, item, count, rework is not null),
             Model = model,
-            SystemPrompt = leaf.Agent.SystemPrompt,
-            ItemIndex = unit.ItemIndex,
-            Attempt = round,
-            Tools = ToolsOf(leaf),
+            SystemPrompt = executable.Agent.SystemPrompt,
+            ItemIndex = itemIndex,
+            ExecutionCount = count,
+            Tools = ToolsOf(executable),
             Seed = seed,
         };
     }
 
-    /// <summary>收拢检查的装配：跨全部条目单元汇总实施产出，整体交一个检查 agent，结论作用于全部。</summary>
-    public static RunContext ForFunnel(AgentTask task, IReadOnlyList<WorkUnit> members, LeafNode leaf, string model, int round)
+    /// <summary>按一条依赖边的消费方式追加上游产出。</summary>
+    private static void AppendSource(AgentTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
-        List<ContextMessage> seed = [];
-        AppendDialogue(task, seed);
-        foreach (int fromIndex in leaf.From)
+        switch (edge.Feed)
         {
-            if (task.Graph[fromIndex].Mode == NodeMode.PerItem)
-            {
-                AppendImplementations(task, members, fromIndex, seed);
-            }
-            else
-            {
-                AppendUpstream(task, members[0], fromIndex, seed);
-            }
+            case EdgeFeed.Items:
+            case EdgeFeed.Single:
+                AppendLatestRun(task, edge.From, null, seed);
+                break;
+
+            case EdgeFeed.AllInstances:
+                if (task.Runtime.ExpandedItems(edge.From) is { } items)
+                {
+                    foreach (int item in items)
+                    {
+                        AppendLatestRun(task, edge.From, item, seed);
+                    }
+                }
+
+                break;
+
+            case EdgeFeed.Aligned:
+                if (itemIndex is { } index)
+                {
+                    AppendLatestRun(task, edge.From, index, seed);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>来源节点上某实例最近一次成功收口且产出非空的 agent。</summary>
+    private static AgentRun? LatestSucceeded(AgentTask task, int node, int? item) =>
+        task.Runs.LastOrDefault(run =>
+            run.Context.NodeIndex == node
+            && run.Context.ItemIndex == item
+            && run.State == RunState.Succeeded
+            && run.Result is { Length: > 0 });
+
+    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 agent。</summary>
+    private static void AppendLatestRun(AgentTask task, int fromIndex, int? item, List<ContextMessage> seed)
+    {
+        if (LatestSucceeded(task, fromIndex, item) is not { } run)
+        {
+            return;
         }
 
-        AppendFunnelRework(task, leaf, seed);
-        List<string> lines = [];
-        if (leaf.Prompt is { Length: > 0 } prompt)
-        {
-            lines.Add(prompt);
-        }
-
-        lines.Add($"目标：{task.Goal}");
-        if (round > 1)
-        {
-            lines.Add($"这是第 {round} 轮整体检查。");
-        }
-
-        return new RunContext
-        {
-            Task = task.Id,
-            Output = leaf.Output,
-            NodeIndex = leaf.Index,
-            NodeName = leaf.Name,
-            Instruction = string.Join('\n', lines),
-            Model = model,
-            SystemPrompt = leaf.Agent.SystemPrompt,
-            ItemIndex = null,
-            Attempt = round,
-            Tools = ToolsOf(leaf),
-            Seed = seed,
-        };
+        string name = task.Graph[fromIndex].Name;
+        string prefix = item is { } index
+            ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
+            : $"节点「{name}」的产出：\n";
+        seed.Add(new ContextMessage(MessageRole.User, Limit($"{prefix}{run.Result}"),
+            new AgentSource(run.Id, name)));
     }
 
     /// <summary>任务已有的对话只带最近几条，更早的内容由上游产出概括。</summary>
@@ -128,110 +144,81 @@ public static class ContextComposer
         seed.AddRange(history.Skip(Math.Max(0, history.Count - DialogueLimit)));
     }
 
-    /// <summary>当前叶子引用的拆分产出的出处 agent。从 From 里的规划产出找，找不到时按单元条目所属的拆分回退，仍找不到给空标识。</summary>
-    private static RunId PlanOrigin(AgentTask task, WorkUnit unit, LeafNode leaf)
+    /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
+    private static PlanItem? ItemOf(AgentTask task, ExecutableNode executable, int? itemIndex)
     {
-        if (task.Graph.PlanSource(leaf.Index) is { } source && task.SplitFor(source) is { } plan)
+        if (itemIndex is not { } index || executable.Mode != NodeMode.PerItem)
         {
-            return plan.Origin;
+            return null;
         }
 
-        foreach (PlanOutput split in task.Splits.Values)
+        return task.Graph.ItemSpace(executable.Index) is { } space && task.SplitFor(space) is { } split
+            ? split.Items.FirstOrDefault(item => item.Index == index)
+            : null;
+    }
+
+    /// <summary>条目内容的出处 agent：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
+    private static RunId OriginOf(AgentTask task, ExecutableNode executable, PlanItem item)
+    {
+        if (task.Graph.ItemSource(executable.Index) is { } plan
+            && LatestSucceeded(task, plan, null) is { } planRun)
         {
-            if (split.Items.Any(item => item.Index == unit.ItemIndex))
-            {
-                return split.Origin;
-            }
+            return planRun.Id;
+        }
+
+        if (task.Graph.ItemSpace(executable.Index) is { } space && task.SplitFor(space) is { } split)
+        {
+            return split.Origin;
         }
 
         return new RunId(0);
     }
 
-    /// <summary>被引用叶子在本单元上的产出。</summary>
-    private static void AppendUpstream(AgentTask task, WorkUnit unit, int fromIndex, List<ContextMessage> seed)
-    {
-        if (!unit.Nodes.TryGetValue(fromIndex, out AgentRun? run) || run.Result is not { Length: > 0 } result)
-        {
-            return;
-        }
+    /// <summary>条目的标题，取不到时退回序号。条目身份只在归属空间内有效。</summary>
+    private static string ItemTitle(AgentTask task, int fromIndex, int itemIndex) =>
+        task.Graph.ItemSpace(fromIndex) is { } space && task.SplitFor(space) is { } split
+            ? split.Items.FirstOrDefault(item => item.Index == itemIndex)?.Title ?? $"条目 {itemIndex + 1}"
+            : $"条目 {itemIndex + 1}";
 
-        seed.Add(new ContextMessage(MessageRole.User, Limit($"节点「{task.Graph[fromIndex].Name}」的产出：\n{result}"),
-            new AgentSource(run.Id, task.Graph[fromIndex].Name)));
-    }
+    /// <summary>上一轮被拒的检查结论：检查执行节点读自己，实施执行节点读引用它的检查执行节点。</summary>
+    private static CheckResult? ReworkOf(AgentTask task, ExecutableNode executable, int? itemIndex) =>
+        task.Runtime.ReworkFor(executable.Index, itemIndex);
 
-    /// <summary>收拢检查引用的展开实施叶：逐条目列出实施产出，分支单元标注所属分支。</summary>
-    private static void AppendImplementations(AgentTask task, IReadOnlyList<WorkUnit> members, int fromIndex, List<ContextMessage> seed)
-    {
-        string name = task.Graph[fromIndex].Name;
-        foreach (WorkUnit member in members)
-        {
-            if (!member.Nodes.TryGetValue(fromIndex, out AgentRun? run) || run.Result is not { Length: > 0 } result)
-            {
-                continue;
-            }
-
-            string title = member.Item?.Title ?? $"条目 {member.ItemIndex + 1}";
-            string branch = member.Branch is { } branchName ? $"{title}（{branchName}）" : title;
-            seed.Add(new ContextMessage(MessageRole.User, Limit($"条目「{branch}」的实施产出：\n{result}"),
-                new AgentSource(run.Id, name)));
-        }
-    }
-
-    /// <summary>返工的实施上下文带上上一轮检查的意见与轮次。</summary>
-    private static void AppendRework(WorkUnit unit, List<ContextMessage> seed)
-    {
-        if (unit.LastCheck is not { Passed: false } check)
-        {
-            return;
-        }
-
-        seed.Add(new ContextMessage(MessageRole.User,
-            Limit($"上一轮检查未通过：\n{check.Findings}"), new AgentSource(check.Origin, check.NodeName)));
-    }
-
-    /// <summary>收拢检查的返工读任务级的整体结论。</summary>
-    private static void AppendFunnelRework(AgentTask task, LeafNode leaf, List<ContextMessage> seed)
-    {
-        if (task.FunnelCheck(leaf.Name) is not { Passed: false } check)
-        {
-            return;
-        }
-
-        seed.Add(new ContextMessage(MessageRole.User,
-            Limit($"上一轮整体检查未通过：\n{check.Findings}"), new AgentSource(check.Origin, check.NodeName)));
-    }
-
-    private static string Instruction(AgentTask task, WorkUnit unit, LeafNode leaf, int round)
+    /// <summary>指令正文：节点要求、目标与第几轮。</summary>
+    private static string Instruction(AgentTask task, ExecutableNode executable, PlanItem? item, int count, bool reworked)
     {
         List<string> lines = [];
-        if (leaf.Prompt is { Length: > 0 } prompt)
+        if (executable.Prompt is { Length: > 0 } prompt)
         {
             lines.Add(prompt);
         }
 
-        lines.Add(unit.Item is { } item
-            ? $"目标：{task.Goal}\n本次只负责条目 {item.Index + 1}：{item.Title}{(unit.Branch is { } branch ? $"（分支 {branch}）" : string.Empty)}"
+        lines.Add(item is { } entry
+            ? $"目标：{task.Goal}\n本次只负责条目 {entry.Index + 1}：{entry.Title}{(entry.Branch is { Length: > 0 } branch ? $"（分支 {branch}）" : string.Empty)}"
             : $"目标：{task.Goal}");
 
-        AppendSplitGuide(task, leaf, lines);
+        AppendSplitGuide(task, executable, lines);
 
-        if (round > 1)
+        if (count > 1)
         {
-            lines.Add($"这是第 {round} 轮实施，针对上一轮检查意见返工。");
+            string scope = executable.Output == NodeOutput.Review ? "检查" : "实施";
+            lines.Add(reworked
+                ? $"这是第 {count} 轮{scope}，针对上一轮检查意见返工。"
+                : $"这是第 {count} 轮{scope}。");
         }
 
         return string.Join('\n', lines);
     }
 
-    /// <summary>规划叶的拆分说明：固定条目作参考、补充上限与统一验收、并行段的分支清单。</summary>
-    private static void AppendSplitGuide(AgentTask task, LeafNode leaf, List<string> lines)
+    /// <summary>规划执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
+    private static void AppendSplitGuide(AgentTask task, ExecutableNode executable, List<string> lines)
     {
-        if (leaf.Output != NodeOutput.Plan)
+        if (executable.Output != NodeOutput.Plan)
         {
             return;
         }
 
-        if (leaf.Split is { } split)
+        if (executable.Split is { } split)
         {
             if (split.Items is { Count: > 0 } items)
             {
@@ -256,28 +243,31 @@ public static class ContextComposer
             }
         }
 
-        if (task.Graph.SegmentConsuming(leaf.Index) is { IsParallel: true } segment)
+        List<string> branches = [];
+        foreach (FlowEdge edge in task.Graph.Outgoing(executable.Index))
         {
-            List<string> branches = [];
-            foreach (int branch in segment.BranchLeaves)
+            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To].Branch is { } name)
             {
-                branches.Add(task.Graph[branch].Name);
+                branches.Add(name);
             }
+        }
 
+        if (branches.Count > 0)
+        {
             lines.Add($"可选分支：{string.Join('、', branches)}，条目须标明其一。");
         }
     }
 
     /// <summary>本轮工具面：agent 声明的能力工具加按产出契约附上的契约工具。</summary>
-    private static List<string> ToolsOf(LeafNode leaf)
+    private static List<string> ToolsOf(ExecutableNode executable)
     {
-        List<string> names = [.. leaf.Agent.Tools];
-        if (leaf.Output == NodeOutput.Plan)
+        List<string> names = [.. executable.Agent.Tools];
+        if (executable.Output == NodeOutput.Plan)
         {
             names.Add(PlanToolName);
         }
 
-        if (leaf.Output == NodeOutput.Review)
+        if (executable.Output == NodeOutput.Review)
         {
             names.Add(ReviewToolName);
         }

@@ -20,13 +20,14 @@ internal static class Labels
         _ => state.ToString(),
     };
 
-    public static string Of(UnitState state) => state switch
+    public static string Of(NodeState state) => state switch
     {
-        UnitState.Working => "推进中",
-        UnitState.AwaitingApproval => "待批准",
-        UnitState.Blocked => "已阻塞",
-        UnitState.Done => "已完成",
-        UnitState.Canceled => "已取消",
+        NodeState.Pending => "待执行",
+        NodeState.Running => "推进中",
+        NodeState.AwaitingApproval => "待批准",
+        NodeState.Blocked => "已阻塞",
+        NodeState.Done => "已完成",
+        NodeState.Canceled => "已取消",
         _ => state.ToString(),
     };
 
@@ -41,10 +42,10 @@ internal static class Labels
     /// <summary>检查不通过的处置。</summary>
     public static string Of(RejectAction action) => action == RejectAction.Retry ? "退回返工" : "停止";
 
-    /// <summary>叶子的展开方式。</summary>
-    public static string Of(NodeMode mode) => mode == NodeMode.PerItem ? "按条目" : "整叶";
+    /// <summary>执行节点的展开方式。</summary>
+    public static string Of(NodeMode mode) => mode == NodeMode.PerItem ? "按条目" : "整节点";
 
-    /// <summary>叶子产出后是否等人放行。</summary>
+    /// <summary>执行节点产出后是否等人放行。</summary>
     public static string Of(NodeGate gate) => gate == NodeGate.Review ? "需批准" : "自动放行";
 
     /// <summary>agent 的状态，有工具调用在进行时带上它。</summary>

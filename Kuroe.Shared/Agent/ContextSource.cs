@@ -17,7 +17,7 @@ public sealed record DialogueSource(TaskId Task, int Turn) : ContextSource
     public override string Label => $"{Task} 第 {Turn} 回合";
 }
 
-/// <summary>某个 agent 在某叶子上的产出。</summary>
+/// <summary>某个 agent 在某执行节点上的产出。</summary>
 public sealed record AgentSource(RunId Run, string NodeName) : ContextSource
 {
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed record AgentSource(RunId Run, string NodeName) : ContextSource
     public override RunId? FromRun => Run;
 }
 
-/// <summary>规划叶子交回的某个条目。</summary>
+/// <summary>规划执行节点交回的某个条目。</summary>
 public sealed record ItemSource(RunId Plan, int Index, string Title) : ContextSource
 {
     /// <inheritdoc/>

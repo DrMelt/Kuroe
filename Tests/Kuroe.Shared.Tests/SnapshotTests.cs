@@ -41,17 +41,18 @@ public sealed class SnapshotTests
     }
 
     [Fact]
-    public void Task_frontier_comes_from_the_furthest_unit()
+    public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
-        // 两个条目各推到不同叶子，进度取最远的一个
-        Assert.Equal(3, Task().Snap([Unit(0, 1), Unit(1, 3)]).FrontierNodes);
-        Assert.Equal(2, Task().Snap([Unit(0, 1), Unit(1, 3)]).TotalNodes);
+        Assert.Equal(2, Task().Snap([
+            State(0, NodeState.Done),
+            State(1, NodeState.Done)]).FrontierNodes);
+        Assert.Equal(2, Task().Snap([]).TotalNodes);
     }
 
     [Fact]
-    public void Task_without_units_has_zero_frontier()
+    public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, Task().Snap([]).FrontierNodes);
+        Assert.Equal(0, Task().Snap([State(0, NodeState.Running)]).FrontierNodes);
         Assert.Equal(2, Task().Snap([]).TotalNodes);
     }
 
@@ -59,10 +60,10 @@ public sealed class SnapshotTests
         new(new RunId(1), Context(), state, string.Empty, new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             started, finished, null, [], [], 0);
 
-    private static TaskBuilder Task() => new();
+    private static NodeStateSnapshot State(int index, NodeState state) =>
+        new(index, state, [], 0);
 
-    private static UnitSnapshot Unit(int itemIndex, int cursor) =>
-        new(itemIndex, null, cursor, UnitState.Working, UnitVerdict.NotChecked, null, 1, []);
+    private static TaskBuilder Task() => new();
 
     private static RunContext Context() => new()
     {
@@ -76,10 +77,10 @@ public sealed class SnapshotTests
 
     private sealed class TaskBuilder
     {
-        public TaskSnapshot Snap(IReadOnlyList<UnitSnapshot> units) => new(
+        public TaskSnapshot Snap(IReadOnlyList<NodeStateSnapshot> states) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
-            [.. Graph.Leaves.Select((leaf, index) => new NodeSnapshot(index, leaf, []))],
-            units, [], 0, DateTimeOffset.UtcNow);
+            [.. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable, []))],
+            states, [], [], 0, DateTimeOffset.UtcNow);
     }
 
     private static readonly AgentDefinition Agent = new() { Name = "规划者" };
@@ -91,7 +92,7 @@ public sealed class SnapshotTests
     ]);
 
     private static readonly NodeGraph Graph = new([
-        new LeafNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, [], NodeGate.Auto, null, null, null),
-        new LeafNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, [0], NodeGate.Auto, null, null, null),
+        new ExecutableNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
+        new ExecutableNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
     ], []);
 }

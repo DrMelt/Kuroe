@@ -1,7 +1,7 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>一棵流程树展平后的一片叶子及其解析结果。叶子是唯一会派发 agent 的节点。</summary>
-public sealed record LeafNode(
+/// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发 agent 的节点。</summary>
+public sealed record ExecutableNode(
     int Index,
     string Name,
     string Path,
@@ -9,6 +9,7 @@ public sealed record LeafNode(
     string? Prompt,
     NodeOutput Output,
     NodeMode Mode,
+    string? Branch,
     IReadOnlyList<int> From,
     NodeGate Gate,
     RejectAction? OnReject,

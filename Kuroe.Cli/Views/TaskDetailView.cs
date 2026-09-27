@@ -5,7 +5,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按叶子列出已执行与在执行的 agent，再列出单元结论与前台对话。</summary>
+/// <summary>任务详情：按执行节点列出已执行与在执行的 agent，再列出条目结论与前台对话。</summary>
 internal sealed class TaskDetailView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -14,20 +14,21 @@ internal sealed class TaskDetailView(Terminal terminal)
     {
         _terminal.Line($"{task.Id} · {task.Title}　状态：{Labels.Of(task.State)}");
         _terminal.Line($"目标：{task.Goal}");
-        _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.Leaves.Select(leaf => leaf.Path))}）"
+        _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
             + $"　节点进度 {task.FrontierNodes}/{task.TotalNodes}　前台对话 {task.DialogueTurns} 回合");
 
         if (task.Splits.Count > 0)
         {
             _terminal.NewLine();
-            foreach ((int leafIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
+            foreach ((int executableIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
             {
-                string nodeName = leafIndex < task.Graph.Count ? task.Graph[leafIndex].Name : $"叶子 {leafIndex + 1}";
+                string nodeName = executableIndex < task.Graph.Count ? task.Graph[executableIndex].Name : $"执行节点 {executableIndex + 1}";
                 _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
                 foreach (PlanItem item in plan.Items)
                 {
-                    UnitSnapshot? unit = task.Units.FirstOrDefault(candidate => candidate.ItemIndex == item.Index);
-                    string verdict = unit is null ? string.Empty : $"　{Labels.Of(unit.Verdict)}";
+                    ItemStateSnapshot? state = task.ItemStates.FirstOrDefault(candidate =>
+                        candidate.ExecutableIndex == executableIndex && candidate.ItemIndex == item.Index);
+                    string verdict = state is null ? string.Empty : $"　{Labels.Of(state.Verdict)}";
                     string branch = item.Branch is { Length: > 0 } name ? $"（{name}）" : string.Empty;
                     _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}{verdict}");
                 }
@@ -39,8 +40,8 @@ internal sealed class TaskDetailView(Terminal terminal)
         _terminal.NewLine();
         foreach (NodeSnapshot node in task.Nodes)
         {
-            _terminal.ToolCall($"叶子 {node.Index + 1} · {node.Leaf.Path}"
-                + $"（{node.Leaf.Output.Label()} · {Labels.Of(node.Leaf.Mode)} · {Labels.Of(node.Leaf.Gate)}）");
+            _terminal.ToolCall($"执行节点 {node.Index + 1} · {node.Executable.Path}"
+                + $"（{node.Executable.Output.Label()} · {Labels.Of(node.Executable.Mode)} · {Labels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)
             {
@@ -54,9 +55,9 @@ internal sealed class TaskDetailView(Terminal terminal)
             }
         }
 
-        foreach (UnitSnapshot unit in task.Units.Where(unit => unit.Findings is { Length: > 0 }))
+        foreach (ItemStateSnapshot item in task.ItemStates.Where(state => state.Findings is { Length: > 0 }))
         {
-            _terminal.Warn($"  {Labels.Item(unit.ItemIndex)} 的检查意见：{unit.Findings}");
+            _terminal.Warn($"  {Labels.Item(item.ItemIndex)} 的检查意见：{item.Findings}");
         }
 
         _terminal.NewLine();
@@ -64,28 +65,22 @@ internal sealed class TaskDetailView(Terminal terminal)
         JournalPrinter.Print(_terminal, task.Dialogue, task.DroppedDialogue);
     }
 
-    /// <summary>执行单元推进到哪片叶子、结论如何。</summary>
+    /// <summary>各执行节点的执行状态与条目结论。</summary>
     private void PrintUnits(TaskSnapshot task)
     {
-        if (task.Units.Count == 0)
+        if (task.NodeStates.Count == 0)
         {
             return;
         }
 
         _terminal.NewLine();
-        _terminal.Line("单元推进：");
-        foreach (UnitSnapshot unit in task.Units)
+        _terminal.Line("执行节点状态：");
+        foreach (NodeStateSnapshot node in task.NodeStates)
         {
-            string verdict = unit.Verdict == UnitVerdict.NotChecked
-                ? string.Empty
-                : $" · {Labels.Of(unit.Verdict)} · 检查 {unit.Attempts} 轮";
-            _terminal.Line($"  {Labels.Item(unit.ItemIndex)} · 下一步 {NodeName(task, unit.NodeCursor)}"
-                + $" · {Labels.Of(unit.State)}{verdict}");
+            string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
+            _terminal.Line($"  {task.Graph[node.Index].Name} · {Labels.Of(node.State)}{items}");
         }
     }
-
-    private static string NodeName(TaskSnapshot task, int cursor) =>
-        cursor >= task.TotalNodes ? "结束" : task.Graph[cursor].Name;
 
     /// <summary>列表里一行的 agent 概况。</summary>
     internal static string AgentLabel(RunSnapshot run)
@@ -94,7 +89,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         [
             run.Id.ToString(),
             Labels.Item(run.Context.ItemIndex),
-            $"第 {run.Context.Attempt} 轮",
+            $"第 {run.Context.ExecutionCount} 轮",
             Labels.State(run),
             Labels.Elapsed(run.Elapsed),
         ];

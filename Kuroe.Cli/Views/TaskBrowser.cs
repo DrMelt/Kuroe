@@ -8,7 +8,7 @@ using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务 → 叶子内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
+/// <summary>任务 → 执行节点内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,

@@ -132,7 +132,7 @@ public sealed class AgentRun
         }
     }
 
-    /// <summary>该 agent 的请求正常结束但没交回本叶子要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>
+    /// <summary>该 agent 的请求正常结束但没交回本执行节点要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>
     internal void MarkUncollected(string reason)
     {
         lock (_gate)

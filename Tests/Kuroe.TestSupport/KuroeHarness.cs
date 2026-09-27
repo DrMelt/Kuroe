@@ -110,10 +110,37 @@ public sealed class KuroeHarness : IDisposable
         }
     }
 
-    /// <summary>等执行侧不再有任何在跑或待推进的 agent。</summary>
-    public TaskSnapshot Settle(TaskId id) => Wait(id, snapshot =>
-        snapshot.LiveRuns == 0 && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled
-            or TaskState.AwaitingApproval);
+    /// <summary>等执行侧不再有任何在跑或待推进的 agent。待批准状态要求连续两次采样一致，避免批准信号落地前的瞬态。</summary>
+    public TaskSnapshot Settle(TaskId id)
+    {
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);
+        TaskState? previous = null;
+        while (true)
+        {
+            TaskSnapshot snapshot = Snapshot(id);
+            if (snapshot.LiveRuns == 0
+                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled)
+            {
+                return snapshot;
+            }
+
+            if (snapshot.LiveRuns == 0 && snapshot.State == TaskState.AwaitingApproval)
+            {
+                if (previous == TaskState.AwaitingApproval)
+                {
+                    return snapshot;
+                }
+            }
+
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException($"任务 {id} 未在超时内稳定，当前状态 {snapshot.State}。");
+            }
+
+            previous = snapshot.State;
+            Thread.Sleep(20);
+        }
+    }
 
     public void Dispose()
     {

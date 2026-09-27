@@ -17,7 +17,7 @@ public sealed class FakeExecutor : IRunExecutor
 
     public UnitSubmitter? Submitter { get; set; }
 
-    /// <summary>规划叶子交回的条目拆分。</summary>
+    /// <summary>规划执行节点交回的条目拆分。</summary>
     public string ItemsJson { get; set; } = """
         [
           { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
@@ -25,19 +25,25 @@ public sealed class FakeExecutor : IRunExecutor
         ]
         """;
 
-    /// <summary>检查叶子是否交回通过，默认全部通过。</summary>
+    /// <summary>检查执行节点是否交回通过，默认全部通过。</summary>
     public Func<AgentRun, bool> CheckPasses { get; set; } = _ => true;
 
     /// <summary>检查不通过时交回的意见，空串用于验证拒绝路径。</summary>
     public string FindingsForCheck { get; set; } = "验收项未满足";
 
-    /// <summary>规划叶子是否交回条目，关掉用于验证未收口。</summary>
+    /// <summary>规划执行节点是否交回条目，关掉用于验证未收口。</summary>
     public bool SubmitsPlan { get; set; } = true;
+
+    /// <summary>检查执行节点是否交回结论，关掉用于验证未收口。</summary>
+    public bool SubmitsVerdict { get; set; } = true;
 
     /// <summary>单个 agent 的人为耗时，用于并发与取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
-    /// <summary>非规划与检查叶子的返回文本，缺省为契约名加产出。</summary>
+    /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
+    public Func<AgentRun, bool>? FailsWhen { get; set; }
+
+    /// <summary>非规划与检查执行节点的返回文本，缺省为契约名加产出。</summary>
     public Func<AgentRun, string>? Output { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
@@ -81,10 +87,15 @@ public sealed class FakeExecutor : IRunExecutor
                 _submissions.Enqueue(Submitter!.SubmitPlan(run.Scope, ItemsJson));
             }
 
-            if (run.Context.Output == NodeOutput.Review)
+            if (run.Context.Output == NodeOutput.Review && SubmitsVerdict)
             {
                 bool passed = CheckPasses(run);
                 _submissions.Enqueue(Submitter!.SubmitVerdict(run.Scope, passed, passed ? string.Empty : FindingsForCheck));
+            }
+
+            if (FailsWhen?.Invoke(run) == true)
+            {
+                return Error.Failure("模拟执行器失败");
             }
 
             return Output?.Invoke(run) ?? $"{run.Context.Output.Label()}产出";
