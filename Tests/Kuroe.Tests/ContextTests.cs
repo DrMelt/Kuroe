@@ -1,5 +1,5 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>上下文只由上游装配：每个 agent 看到的内容与出处都可追溯。</summary>
+/// <summary>上下文只由上游装配：每个 run 看到的内容与出处都可追溯。</summary>
 public sealed class ContextTests
 {
     [Fact]
@@ -33,7 +33,7 @@ public sealed class ContextTests
         RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
 
         Assert.Contains(implement.Context.Seed, message =>
-            message.Source is AgentSource { NodeName: "制定计划", FromRun: not null } source && source.FromRun == plan.Id);
+            message.Source is RunSource { NodeName: "制定计划", FromRun: not null } source && source.FromRun == plan.Id);
         Assert.Contains(implement.Context.Seed, message =>
             message.Source is ItemSource { Index: 0 } source && source.FromRun == plan.Id);
         Assert.Contains("条目 1", implement.Context.Instruction);
@@ -55,10 +55,10 @@ public sealed class ContextTests
         Assert.Null(check.Context.ItemIndex);
         // 规划产出一份，各条目实施产出各一份
         Assert.Contains(check.Context.Seed, message =>
-            message.Source is AgentSource { NodeName: "制定计划" });
+            message.Source is RunSource { NodeName: "制定计划" });
         Assert.Equal(2, check.Context.Seed.Count(message =>
-            message.Source is AgentSource { NodeName: "分配执行" }));
-        Assert.Equal(3, check.Context.Seed.Count(message => message.Source is AgentSource));
+            message.Source is RunSource { NodeName: "分配执行" }));
+        Assert.Equal(3, check.Context.Seed.Count(message => message.Source is RunSource));
 
         string visible = check.Context.Instruction
             + string.Concat(check.Context.Seed.Select(message => message.Text));

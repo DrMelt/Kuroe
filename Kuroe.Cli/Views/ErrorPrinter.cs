@@ -51,7 +51,7 @@ internal sealed class ErrorPrinter(Terminal terminal)
                     break;
 
                 case ErrorCodes.RunNotFound:
-                    terminal.Hint("agent 号全局递增，用 /task list 或 /task show <任务号> 查看。");
+                    terminal.Hint("run 号全局递增，用 /task list 或 /task show <任务号> 查看。");
                     break;
 
                 case ErrorCodes.WorkflowNotFound:

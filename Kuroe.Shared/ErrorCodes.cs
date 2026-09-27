@@ -12,7 +12,7 @@ public static class ErrorCodes
     /// <summary>任务号不存在。</summary>
     public const string TaskNotFound = "Task.NotFound";
 
-    /// <summary>agent 号不存在。</summary>
+    /// <summary>run 号不存在。</summary>
     public const string RunNotFound = "Run.NotFound";
 
     /// <summary>流程名不存在。</summary>

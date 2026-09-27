@@ -1,4 +1,4 @@
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Tasks;
 using Spectre.Console;
 
@@ -18,7 +18,7 @@ internal sealed class TaskListView(Terminal terminal)
         }
 
         Grid grid = Terminal.Columns(7);
-        grid.AddRow(Header("#"), Header("标题"), Header("流程"), Header("节点"), Header("状态"), Header("agent"), Header("最近"));
+        grid.AddRow(Header("#"), Header("标题"), Header("流程"), Header("节点"), Header("状态"), Header("run"), Header("最近"));
         foreach (TaskSnapshot task in tasks)
         {
             int total = task.Nodes.Sum(node => node.Runs.Count);

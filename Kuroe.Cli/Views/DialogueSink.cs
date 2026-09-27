@@ -1,5 +1,5 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Turns;
 
 namespace Kuroe.Cli.Views;
 

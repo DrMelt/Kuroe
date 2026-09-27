@@ -1,6 +1,6 @@
 using System.Threading;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -23,7 +23,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Nodes[0].Runs);
         Assert.Equal(2, done.Nodes[1].Runs.Count);
-        // 整体检查由单个 agent 汇拢全部条目实施
+        // 整体检查由单个 run 汇拢全部条目实施
         Assert.Single(done.Nodes[2].Runs);
         Assert.Equal(3, done.FrontierNodes);
         // 整体检查结论按覆盖的拆分回填到条目
@@ -93,7 +93,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 逐条检查：每个条目各一个检查 agent
+        // 逐条检查：每个条目各一个检查 run
         Assert.Equal(2, done.Nodes[2].Runs.Count);
         Assert.All(done.ItemStates, state => Assert.Equal(UnitVerdict.Verified, state.Verdict));
     }
@@ -304,7 +304,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 规划各一个 agent，两个分支各一个实施者，整体检查一个
+        // 规划各一个 run，两个分支各一个实施者，整体检查一个
         Assert.Single(done.Nodes[0].Runs);
         Assert.Single(done.Nodes[1].Runs);
         Assert.Single(done.Nodes[2].Runs);
@@ -356,7 +356,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 逐条检查：每个条目各一个检查 agent
+        // 逐条检查：每个条目各一个检查 run
         Assert.Equal(2, done.Nodes[3].Runs.Count);
         Assert.All(done.ItemStates, state => Assert.Equal(UnitVerdict.Verified, state.Verdict));
     }
@@ -416,7 +416,7 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Static_split_expands_without_plan_agent()
+    public void Static_split_expands_without_plan_run()
     {
         using KuroeHarness harness = KuroeHarness.Create(StaticSplitFlow);
 
@@ -424,7 +424,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 静态拆分不派规划 agent，两条目各一个实施者，整体检查一个
+        // 静态拆分不派规划 run，两条目各一个实施者，整体检查一个
         Assert.Empty(done.Nodes[0].Runs);
         Assert.Equal(2, done.Nodes[1].Runs.Count);
         Assert.Single(done.Nodes[2].Runs);
@@ -443,7 +443,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 规划 agent 跑一次交补充条目，固定条目加两条补充共三个实施者
+        // 规划 run 跑一次交补充条目，固定条目加两条补充共三个实施者
         Assert.Single(done.Nodes[0].Runs);
         Assert.Equal(3, done.Nodes[1].Runs.Count);
 
@@ -484,7 +484,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 静态拆分不派规划 agent，条目按声明的分支落分支各一个实施者
+        // 静态拆分不派规划 run，条目按声明的分支落分支各一个实施者
         Assert.Empty(done.Nodes[0].Runs);
         Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
         Assert.Single(done.Nodes[2].Runs, run => run.Context.ItemIndex == 1);
@@ -501,7 +501,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 每个规划各一个 agent，两个实施各按自己的拆分展开两条目
+        // 每个规划各一个 run，两个实施各按自己的拆分展开两条目
         Assert.Single(done.Nodes[0].Runs);
         Assert.Single(done.Nodes[1].Runs);
         Assert.Equal(2, done.Nodes[2].Runs.Count);
@@ -522,7 +522,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // Single 整节点实施一个 agent，被检查节点整体引用
+        // Single 整节点实施一个 run，被检查节点整体引用
         Assert.Single(done.Nodes[0].Runs);
         Assert.Single(done.Nodes[1].Runs);
         Assert.Equal(NodeOutput.Review, done.Nodes[1].Runs[0].Context.Output);
@@ -547,15 +547,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
-                { "Name": "执行者", "Tools": ["GetLocalTime", "GetWeather"] },
+                { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -567,15 +567,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
-                { "Name": "执行者", "Tools": ["GetLocalTime", "GetWeather"] },
+                { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Stop" }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Stop" }
               ]
             }
           ]
@@ -587,15 +587,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
-                { "Name": "执行者", "Tools": ["GetLocalTime", "GetWeather"] },
+                { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "逐条检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "逐条检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -603,13 +603,13 @@ public sealed class FlowAdvanceTests
         """;
 
     private const string TwoPlanPerItemCheckFlow = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "实施者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定A计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施A", "Agent": "实施者", "Mode": "PerItem", "From": ["制定A计划"] },
-          { "Name": "检查A", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A"], "OnReject": "Stop" },
-          { "Name": "制定B计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施B", "Agent": "实施者", "Mode": "PerItem", "From": ["制定B计划"] },
-          { "Name": "检查B", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施B"], "OnReject": "Stop" }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "实施者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施A", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划"] },
+          { "Name": "检查A", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A"], "OnReject": "Stop" },
+          { "Name": "制定B计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施B", "Model": "实施者", "Mode": "PerItem", "From": ["制定B计划"] },
+          { "Name": "检查B", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施B"], "OnReject": "Stop" }
         ] } ] }
         """;
 
@@ -618,16 +618,16 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
+                { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -639,16 +639,16 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
+                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
+                { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -660,15 +660,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
+                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -680,16 +680,16 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "撰写", "Agent": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                { "Name": "排版", "Agent": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
-                { "Name": "逐条检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
+                { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
+                { "Name": "逐条检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["撰写", "排版"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -701,15 +701,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
                   "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" }, { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" } ], "ExtrasMax": 0 } },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -721,15 +721,15 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
                   "Split": { "Items": [ { "Title": "固定任务", "Instruction": "做固定", "Acceptance": "固定验收" } ], "ExtrasMax": 2, "Acceptance": "统一验收" } },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -741,14 +741,14 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 1 } },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
+                { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 1 } },
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -760,18 +760,18 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
                   "Split": { "ExtrasMax": 0, "Items": [
                     { "Title": "甲", "Instruction": "做甲", "Branch": "撰写" },
                     { "Title": "乙", "Instruction": "做乙", "Branch": "排版" } ] } },
-                { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                { "Name": "排版", "Agent": "执行者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry" }
+                { "Name": "撰写", "Model": "执行者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
+                { "Name": "排版", "Model": "执行者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写", "排版"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -783,17 +783,17 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定A计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "制定B计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "实施A", "Agent": "实施者", "Mode": "PerItem", "From": ["制定A计划"] },
-                { "Name": "实施B", "Agent": "实施者", "Mode": "PerItem", "From": ["制定B计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定A计划", "实施A", "制定B计划", "实施B"], "OnReject": "Retry" }
+                { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "制定B计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "实施A", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划"] },
+                { "Name": "实施B", "Model": "实施者", "Mode": "PerItem", "From": ["制定B计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定A计划", "实施A", "制定B计划", "实施B"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -812,13 +812,13 @@ public sealed class FlowAdvanceTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "实施者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "撰写", "Agent": "实施者" },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["撰写"], "OnReject": "Retry" }
+                { "Name": "撰写", "Model": "实施者" },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["撰写"], "OnReject": "Retry" }
               ]
             }
           ]

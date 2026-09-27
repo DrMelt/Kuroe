@@ -28,7 +28,7 @@ public sealed class WorkflowService
             return loaded.ErrorsOrEmptyList;
         }
 
-        List<Error> errors = Validate(loaded.Value, settings.Current.Agent.MaxAttempts, out List<Workflow> valid);
+        List<Error> errors = Validate(loaded.Value, settings.Current.Runtime.MaxAttempts, out List<Workflow> valid);
         if (WorkflowRules.Duplicated(loaded.Value) is { } duplicated)
         {
             errors.Add(WorkflowErrors.Body(duplicated, "流程名重复。"));
@@ -38,7 +38,7 @@ public sealed class WorkflowService
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
-    public string DefaultName => _settings.Current.Agent.DefaultFlow ?? DefaultFlows.Name;
+    public string DefaultName => _settings.Current.Runtime.DefaultFlow ?? DefaultFlows.Name;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<Workflow> All()
@@ -78,7 +78,7 @@ public sealed class WorkflowService
             return parsed.ErrorsOrEmptyList;
         }
 
-        List<Error> errors = Validate(parsed.Value, _settings.Current.Agent.MaxAttempts, out List<Workflow> candidates);
+        List<Error> errors = Validate(parsed.Value, _settings.Current.Runtime.MaxAttempts, out List<Workflow> candidates);
         if (errors.Count > 0)
         {
             return errors;

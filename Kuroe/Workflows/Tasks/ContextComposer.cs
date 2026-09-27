@@ -1,13 +1,13 @@
-using Kuroe.Agent.Runs;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>为执行节点装配上下文。派出的 agent 只用这里给出的内容，装配规则集中在一处。
+/// <summary>为执行节点装配上下文。派出的执行只用这里给出的内容，装配规则集中在一处。
 /// 每条依赖边按它的消费方式取值：单份产出、拆分条目、全部实例或按条目对齐。</summary>
 public static class ContextComposer
 {
@@ -24,7 +24,7 @@ public static class ContextComposer
     internal const string ReviewToolName = "SubmitVerdict";
 
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
-    public static RunContext ForExecutable(AgentTask task, ExecutableNode executable, int? itemIndex, string model)
+    public static RunContext ForExecutable(WorkTask task, ExecutableNode executable, int? itemIndex, string model)
     {
         List<ContextMessage> seed = [];
         AppendDialogue(task, seed);
@@ -46,7 +46,7 @@ public static class ContextComposer
         if (rework is not null)
         {
             seed.Add(new ContextMessage(MessageRole.User,
-                Limit($"上一轮检查未通过：\n{rework.Findings}"), new AgentSource(rework.Origin, rework.NodeName)));
+                Limit($"上一轮检查未通过：\n{rework.Findings}"), new RunSource(rework.Origin, rework.NodeName)));
         }
 
         int count = task.Runtime.ExecutionCount(executable.Index, itemIndex);
@@ -59,7 +59,6 @@ public static class ContextComposer
             NodeName = executable.Name,
             Instruction = Instruction(task, executable, item, count, rework is not null),
             Model = model,
-            SystemPrompt = executable.Agent.SystemPrompt,
             ItemIndex = itemIndex,
             ExecutionCount = count,
             Tools = ToolsOf(executable),
@@ -68,7 +67,7 @@ public static class ContextComposer
     }
 
     /// <summary>按一条依赖边的消费方式追加上游产出。</summary>
-    private static void AppendSource(AgentTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
+    private static void AppendSource(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
         switch (edge.Feed)
         {
@@ -98,16 +97,16 @@ public static class ContextComposer
         }
     }
 
-    /// <summary>来源节点上某实例最近一次成功收口且产出非空的 agent。</summary>
-    private static AgentRun? LatestSucceeded(AgentTask task, int node, int? item) =>
+    /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
+    private static Run? LatestSucceeded(WorkTask task, int node, int? item) =>
         task.Runs.LastOrDefault(run =>
             run.Context.NodeIndex == node
             && run.Context.ItemIndex == item
             && run.State == RunState.Succeeded
             && run.Result is { Length: > 0 });
 
-    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 agent。</summary>
-    private static void AppendLatestRun(AgentTask task, int fromIndex, int? item, List<ContextMessage> seed)
+    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。</summary>
+    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, List<ContextMessage> seed)
     {
         if (LatestSucceeded(task, fromIndex, item) is not { } run)
         {
@@ -119,11 +118,11 @@ public static class ContextComposer
             ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
             : $"节点「{name}」的产出：\n";
         seed.Add(new ContextMessage(MessageRole.User, Limit($"{prefix}{run.Result}"),
-            new AgentSource(run.Id, name)));
+            new RunSource(run.Id, name)));
     }
 
     /// <summary>任务已有的对话只带最近几条，更早的内容由上游产出概括。</summary>
-    private static void AppendDialogue(AgentTask task, List<ContextMessage> seed)
+    private static void AppendDialogue(WorkTask task, List<ContextMessage> seed)
     {
         List<ContextMessage> history = [];
         int turn = 0;
@@ -145,7 +144,7 @@ public static class ContextComposer
     }
 
     /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
-    private static PlanItem? ItemOf(AgentTask task, ExecutableNode executable, int? itemIndex)
+    private static PlanItem? ItemOf(WorkTask task, ExecutableNode executable, int? itemIndex)
     {
         if (itemIndex is not { } index || executable.Mode != NodeMode.PerItem)
         {
@@ -157,8 +156,8 @@ public static class ContextComposer
             : null;
     }
 
-    /// <summary>条目内容的出处 agent：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
-    private static RunId OriginOf(AgentTask task, ExecutableNode executable)
+    /// <summary>条目内容的出处 run：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
+    private static RunId OriginOf(WorkTask task, ExecutableNode executable)
     {
         if (task.Graph.ItemSource(executable.Index) is { } plan
             && LatestSucceeded(task, plan, null) is { } planRun)
@@ -175,17 +174,17 @@ public static class ContextComposer
     }
 
     /// <summary>条目的标题，取不到时退回序号。条目身份只在归属空间内有效。</summary>
-    private static string ItemTitle(AgentTask task, int fromIndex, int itemIndex) =>
+    private static string ItemTitle(WorkTask task, int fromIndex, int itemIndex) =>
         task.Graph.ItemSpace(fromIndex) is { } space && task.SplitFor(space) is { } split
             ? split.Items.FirstOrDefault(item => item.Index == itemIndex)?.Title ?? $"条目 {itemIndex + 1}"
             : $"条目 {itemIndex + 1}";
 
     /// <summary>上一轮被拒的检查结论：检查执行节点读自己，实施执行节点读引用它的检查执行节点。</summary>
-    private static CheckResult? ReworkOf(AgentTask task, ExecutableNode executable, int? itemIndex) =>
+    private static CheckResult? ReworkOf(WorkTask task, ExecutableNode executable, int? itemIndex) =>
         task.Runtime.ReworkFor(executable.Index, itemIndex);
 
     /// <summary>指令正文：节点要求、目标与第几轮。</summary>
-    private static string Instruction(AgentTask task, ExecutableNode executable, PlanItem? item, int count, bool reworked)
+    private static string Instruction(WorkTask task, ExecutableNode executable, PlanItem? item, int count, bool reworked)
     {
         List<string> lines = [];
         if (executable.Prompt is { Length: > 0 } prompt)
@@ -217,7 +216,7 @@ public static class ContextComposer
     }
 
     /// <summary>规划执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
-    private static void AppendSplitGuide(AgentTask task, ExecutableNode executable, List<string> lines)
+    private static void AppendSplitGuide(WorkTask task, ExecutableNode executable, List<string> lines)
     {
         if (executable.Output != NodeOutput.Plan)
         {
@@ -264,10 +263,10 @@ public static class ContextComposer
         }
     }
 
-    /// <summary>本轮工具面：agent 声明的能力工具加按产出契约附上的契约工具。</summary>
+    /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
     private static List<string> ToolsOf(ExecutableNode executable)
     {
-        List<string> names = [.. executable.Agent.Tools];
+        List<string> names = [.. executable.Tools];
         if (executable.Output == NodeOutput.Plan)
         {
             names.Add(PlanToolName);

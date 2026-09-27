@@ -1,6 +1,6 @@
 namespace Kuroe.Shared.Workflows;
 
-/// <summary>工作单元的流程结论，由检查执行节点交回，与 agent 的执行状态分轴。</summary>
+/// <summary>工作单元的流程结论，由检查执行节点交回，与 run 的执行状态分轴。</summary>
 public enum UnitVerdict
 {
     /// <summary>还没有检查执行节点交回结论。</summary>

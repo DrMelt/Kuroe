@@ -3,20 +3,20 @@ using Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：执行节点按先根序展平，From 引用编译为带消费方式的边。
-/// 要求已通过 WorkflowRules 校验，agent 引用与执行节点名字都可解析。</summary>
+/// 要求已通过 WorkflowRules 校验，模型配置引用与执行节点名字都可解析。</summary>
 internal static class FlowCompiler
 {
     /// <summary>编译流程树。</summary>
     public static NodeGraph Compile(Workflow flow)
     {
-        Dictionary<string, AgentDefinition> agents = flow.Agents.ToDictionary(agent => agent.Name);
+        Dictionary<string, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
         // 先根序登记执行节点名与展平序号
         Dictionary<string, int> order = [];
         FirstPass(flow.Nodes, order, 0);
 
         var result = new List<ExecutableNode>();
-        SecondPass(flow.Nodes, agents, order, result, []);
+        SecondPass(flow.Nodes, models, order, result, []);
 
         List<FlowEdge> edges = [];
         for (int index = 0; index < result.Count; index++)
@@ -36,7 +36,7 @@ internal static class FlowCompiler
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node is AgentNode)
+            if (node is ExecuteNode)
             {
                 order[node.Name] = next;
                 next++;
@@ -52,7 +52,7 @@ internal static class FlowCompiler
 
     private static void SecondPass(
         IReadOnlyList<NodeSpec> nodes,
-        Dictionary<string, AgentDefinition> agents,
+        Dictionary<string, ModelDefinition> models,
         Dictionary<string, int> order,
         List<ExecutableNode> result,
         List<string> path)
@@ -61,13 +61,13 @@ internal static class FlowCompiler
         {
             switch (node)
             {
-                case AgentNode executable:
-                    result.Add(NewExecutable(executable, result.Count, path, agents, order));
+                case ExecuteNode executable:
+                    result.Add(NewExecutable(executable, result.Count, path, models, order));
                     break;
 
                 case FlowNode flow:
                     path.Add(node.Name);
-                    SecondPass(flow.Nodes, agents, order, result, path);
+                    SecondPass(flow.Nodes, models, order, result, path);
                     path.RemoveAt(path.Count - 1);
                     break;
             }
@@ -75,15 +75,16 @@ internal static class FlowCompiler
     }
 
     private static ExecutableNode NewExecutable(
-        AgentNode executable,
+        ExecuteNode executable,
         int index,
         List<string> path,
-        Dictionary<string, AgentDefinition> agents,
+        Dictionary<string, ModelDefinition> models,
         Dictionary<string, int> order) => new(
         index,
         executable.Name,
         string.Join('/', [.. path, executable.Name]),
-        agents[executable.Agent],
+        models[executable.Model],
+        executable.Tools,
         executable.Prompt,
         executable.Output,
         executable.Mode,

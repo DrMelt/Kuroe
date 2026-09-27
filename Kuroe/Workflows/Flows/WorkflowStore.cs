@@ -117,20 +117,17 @@ sealed class WorkflowStore(string file)
 
     private static ErrorOr<Workflow> ToWorkflow(WorkflowDto dto)
     {
-        List<AgentDefinition> agents = [.. dto.Agents.Select(agent => new AgentDefinition
+        List<ModelDefinition> models = [.. dto.Models.Select(model => new ModelDefinition
         {
-            Name = agent.Name ?? string.Empty,
-            Description = agent.Description,
-            SystemPrompt = agent.SystemPrompt,
-            Model = agent.Model,
-            Tools = agent.Tools ?? [],
+            Name = model.Name ?? string.Empty,
+            Model = model.Model,
         })];
 
         ErrorOr<IReadOnlyList<NodeSpec>> nodes = ToNodes(dto.Nodes, dto.Name!);
 
         return nodes.IsError
             ? nodes.ErrorsOrEmptyList
-            : new Workflow(dto.Name!, dto.Description, agents, nodes.Value);
+            : new Workflow(dto.Name!, dto.Description, models, nodes.Value);
     }
 
     /// <summary>有子节点的是容器，否则是执行节点。缺省的字段取节点定义的安全值，Mode 非法时给出错误。</summary>
@@ -187,10 +184,11 @@ sealed class WorkflowStore(string file)
             return [WorkflowErrors.Node(flowName, node.Name ?? string.Empty, leafMode.FirstError.Description)];
         }
 
-        return new AgentNode
+        return new ExecuteNode
         {
             Name = node.Name ?? string.Empty,
-            Agent = node.Agent ?? string.Empty,
+            Model = node.Model ?? string.Empty,
+            Tools = node.Tools ?? [],
             Prompt = node.Prompt,
             From = node.From ?? [],
             Output = node.Output ?? NodeOutput.Plain,
@@ -216,13 +214,10 @@ sealed class WorkflowStore(string file)
     {
         Name = flow.Name,
         Description = flow.Description,
-        Agents = [.. flow.Agents.Select(agent => new AgentDto
+        Models = [.. flow.Models.Select(model => new ModelDto
         {
-            Name = agent.Name,
-            Description = agent.Description,
-            SystemPrompt = agent.SystemPrompt,
-            Model = agent.Model,
-            Tools = agent.Tools.Count == 0 ? null : [.. agent.Tools],
+            Name = model.Name,
+            Model = model.Model,
         })],
         Nodes = [.. flow.Nodes.Select(ToNodeDto)],
     };
@@ -236,10 +231,11 @@ sealed class WorkflowStore(string file)
             From = flow.From.Count == 0 ? null : [.. flow.From],
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
-        AgentNode executable => new NodeDto
+        ExecuteNode executable => new NodeDto
         {
             Name = executable.Name,
-            Agent = executable.Agent,
+            Model = executable.Model,
+            Tools = executable.Tools.Count == 0 ? null : [.. executable.Tools],
             Prompt = executable.Prompt,
             From = executable.From.Count == 0 ? null : [.. executable.From],
             Output = executable.Output,

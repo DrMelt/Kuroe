@@ -1,6 +1,6 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -81,16 +81,16 @@ public sealed class SnapshotTests
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
 
-    private static readonly AgentDefinition Agent = new() { Name = "规划者" };
+    private static readonly ModelDefinition Planner = new() { Name = "规划者" };
 
-    private static readonly Workflow Flow = new("默认", null, [Agent],
+    private static readonly Workflow Flow = new("默认", null, [Planner],
     [
-        new AgentNode { Name = "制定计划", Agent = Agent.Name, Output = NodeOutput.Plan },
-        new AgentNode { Name = "实施", Agent = Agent.Name },
+        new ExecuteNode { Name = "制定计划", Model = Planner.Name, Output = NodeOutput.Plan },
+        new ExecuteNode { Name = "实施", Model = Planner.Name },
     ]);
 
     private static readonly NodeGraph Graph = new([
-        new ExecutableNode(0, "制定计划", "制定计划", Agent, null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
-        new ExecutableNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
+        new ExecutableNode(0, "制定计划", "制定计划", Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
+        new ExecutableNode(1, "实施", "实施", Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
     ], []);
 }

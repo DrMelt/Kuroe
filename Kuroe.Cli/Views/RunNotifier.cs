@@ -3,7 +3,7 @@ using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>执行侧通知的一行呈现。后台 agent 的过程不进终端，只在这里报状态变化。</summary>
+/// <summary>执行侧通知的一行呈现。后台 run 的过程不进终端，只在这里报状态变化。</summary>
 internal sealed class RunNotifier(TaskRegistry registry, Terminal terminal)
 {
     private readonly TaskRegistry _registry = registry;

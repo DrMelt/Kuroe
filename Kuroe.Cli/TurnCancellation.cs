@@ -1,10 +1,10 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli;
 
-/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 agent，多个时只给出提示。</summary>
+/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 run，多个时只给出提示。</summary>
 internal sealed class TurnCancellation(TaskRegistry registry, Terminal terminal) : IDisposable
 {
     private readonly Lock _gate = new();
@@ -42,7 +42,7 @@ internal sealed class TurnCancellation(TaskRegistry registry, Terminal terminal)
                 break;
 
             case > 1:
-                terminal.Notice($"有 {live.Count} 个 agent 在跑：{string.Join("、", live.Select(run => run.Id.Value))}，用 /task stop agent <号> 指定。", Styles.Warning);
+                terminal.Notice($"有 {live.Count} 个 run 在跑：{string.Join("、", live.Select(run => run.Id.Value))}，用 /task stop run <号> 指定。", Styles.Warning);
                 break;
 
             default:

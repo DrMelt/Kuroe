@@ -1,12 +1,12 @@
 using ErrorOr;
 using Kuroe;
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Sessions;
-using Kuroe.Agent.Tools;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Sessions;
+using Kuroe.Executions.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Shared;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +26,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         Assert.NotNull(provider.GetRequiredService<IRunExecutor>());
-        Assert.NotNull(provider.GetRequiredService<AgentSessionFactory>());
+        Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<UnitSubmitter>());
         Assert.NotNull(provider.GetRequiredService<RunDispatcher>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
-        Assert.NotEmpty(provider.GetServices<IAgentTool>());
+        Assert.NotEmpty(provider.GetServices<ITool>());
     }
 
     private ServiceProvider Services()

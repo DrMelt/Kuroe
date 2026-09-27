@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Agent.Runs;
+using Kuroe.Executions.Runs;
 using Kuroe.Cli.Views;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
@@ -14,7 +14,7 @@ internal sealed class TaskCommands(
     TaskService tasks,
     TaskListView list,
     TaskDetailView detail,
-    AgentDetailView agent,
+    RunDetailView runView,
     TaskBrowser browser,
     Terminal terminal,
     ResultPrinter results)
@@ -22,19 +22,19 @@ internal sealed class TaskCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/task", "打开任务浏览器，逐级进入 agent 详情"),
+        ("/task", "打开任务浏览器，逐级进入 run 详情"),
         ("/task list", "列出任务"),
         ("/task new <目标>", "提交任务，按默认流程开第一步"),
         ("/task new --flow <流程> <目标>", "用指定流程提交任务"),
-        ("/task show <任务号>", "打印该任务的节点与 agent"),
-        ("/task agent <agent号>", "打印该 agent 的上下文来源与过程"),
+        ("/task show <任务号>", "打印该任务的节点与 run"),
+        ("/task run <run号>", "打印该 run 的上下文来源与过程"),
         ("/task use <任务号>", "把前台对话切到该任务"),
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准等待放行的节点"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
-        ("/task adopt <agent号>", "把 agent 结论写进任务历史"),
+        ("/task adopt <run号>", "把 run 结论写进任务历史"),
         ("/task stop <任务号>", "取消任务"),
-        ("/task stop agent <agent号>", "取消单个 agent"),
+        ("/task stop run <run号>", "取消单个 run"),
         ("/task clear", "丢掉已完成或已取消的任务"),
     ];
 
@@ -42,7 +42,7 @@ internal sealed class TaskCommands(
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task agent <agent号>，/help 看全部";
+        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task run <run号>，/help 看全部";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -63,8 +63,8 @@ internal sealed class TaskCommands(
                 Show(task);
                 break;
 
-            case ("agent", 3) when Number(parts[2], "agent号") is { } run:
-                ShowAgent(run);
+            case ("run", 3) when Number(parts[2], "run号") is { } run:
+                ShowRun(run);
                 break;
 
             case ("use", 3) when Number(parts[2], "任务号") is { } task:
@@ -83,17 +83,17 @@ internal sealed class TaskCommands(
                 Act(tasks.Rework(new TaskId(task), null));
                 break;
 
-            case ("adopt", 3) when Number(parts[2], "agent号") is { } run:
-                Act(tasks.Adopt(new RunId(run)));
+            case ("adopt", 3) when Number(parts[2], "run号") is { } runId:
+                Act(tasks.Adopt(new RunId(runId)));
                 break;
 
             case ("stop", 3) when Number(parts[2], "任务号") is { } task:
                 Act(tasks.StopTask(new TaskId(task)));
                 break;
 
-            case ("stop", 4) when parts[2].Equals("agent", StringComparison.OrdinalIgnoreCase)
-                && Number(parts[3], "agent号") is { } run:
-                Act(tasks.StopRun(new RunId(run)));
+            case ("stop", 4) when parts[2].Equals("run", StringComparison.OrdinalIgnoreCase)
+                && Number(parts[3], "run号") is { } runId:
+                Act(tasks.StopRun(new RunId(runId)));
                 break;
 
             case ("clear", 2):
@@ -131,13 +131,13 @@ internal sealed class TaskCommands(
         }
 
         TaskSnapshot task = submitted.Value;
-        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 agent 已派出。");
+        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已派出。");
         list.Print([task], task.Id);
     }
 
     private void Show(int number)
     {
-        ErrorOr<AgentTask> found = registry.Find(new TaskId(number));
+        ErrorOr<WorkTask> found = registry.Find(new TaskId(number));
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -147,9 +147,9 @@ internal sealed class TaskCommands(
         detail.Print(found.Value.Snapshot());
     }
 
-    private void ShowAgent(int number)
+    private void ShowRun(int number)
     {
-        ErrorOr<AgentRun> run = registry.FindRun(new RunId(number));
+        ErrorOr<Run> run = registry.FindRun(new RunId(number));
         if (run.IsError)
         {
             results.Reject(run.ErrorsOrEmptyList);
@@ -157,14 +157,14 @@ internal sealed class TaskCommands(
         }
 
         RunSnapshot snapshot = run.Value.Snapshot();
-        ErrorOr<AgentTask> owner = registry.Find(snapshot.Context.Task);
+        ErrorOr<WorkTask> owner = registry.Find(snapshot.Context.Task);
         if (owner.IsError)
         {
             results.Reject(owner.ErrorsOrEmptyList);
             return;
         }
 
-        agent.Print(owner.Value.Snapshot(), snapshot);
+        runView.Print(owner.Value.Snapshot(), snapshot);
     }
 
     private void Act(ErrorOr<Success> result)
@@ -175,7 +175,7 @@ internal sealed class TaskCommands(
         }
     }
 
-    /// <summary>标识只写数字，任务号与 agent 号各自唯一。</summary>
+    /// <summary>标识只写数字，任务号与 run 号各自唯一。</summary>
     private int? Number(string text, string label)
     {
         if (int.TryParse(text, out int value) && value > 0)

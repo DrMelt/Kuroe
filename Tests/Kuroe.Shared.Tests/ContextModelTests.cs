@@ -1,10 +1,10 @@
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;
 
-/// <summary>上下文模型：agent 的叫法、条目序号与出处的可读文本。</summary>
+/// <summary>上下文模型：run 的叫法、条目序号与出处的可读文本。</summary>
 public sealed class ContextModelTests
 {
     [Fact]
@@ -27,12 +27,12 @@ public sealed class ContextModelTests
     }
 
     [Fact]
-    public void AgentSource_points_back_to_its_run()
+    public void RunSource_points_back_to_its_run()
     {
         RunId run = new(7);
-        AgentSource source = new(run, "实施");
+        RunSource source = new(run, "实施");
 
-        Assert.Equal("agent #7 · 实施 产出", source.Label);
+        Assert.Equal("run #7 · 实施 产出", source.Label);
         Assert.Equal(run, source.FromRun);
     }
 
@@ -51,7 +51,7 @@ public sealed class ContextModelTests
         RunId plan = new(1);
         ItemSource source = new(plan, 0, "甲");
 
-        Assert.Equal("agent #1 · 规划条目 1：甲", source.Label);
+        Assert.Equal("run #1 · 规划条目 1：甲", source.Label);
         Assert.Equal(plan, source.FromRun);
     }
 

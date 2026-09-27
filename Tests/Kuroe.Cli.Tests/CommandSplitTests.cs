@@ -9,7 +9,7 @@ public sealed class CommandSplitTests
     [Fact]
     public void Plain_space_separates_arguments()
     {
-        Assert.Equal(["/set", "Agent:Temperature", "0.7"], ReplCommands.Split("/set Agent:Temperature 0.7"));
+        Assert.Equal(["/set", "Runtime:Temperature", "0.7"], ReplCommands.Split("/set Runtime:Temperature 0.7"));
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed class CommandSplitTests
     [Fact]
     public void Quoted_spaces_stay_within_one_argument()
     {
-        Assert.Equal(["/set", "Agent:SystemPrompt", "多 词"], ReplCommands.Split("/set Agent:SystemPrompt \"多 词\""));
+        Assert.Equal(["/set", "Runtime:Temperature", "多 词"], ReplCommands.Split("/set Runtime:Temperature \"多 词\""));
     }
 
     [Fact]
@@ -39,6 +39,6 @@ public sealed class CommandSplitTests
     [Fact]
     public void Empty_arguments_are_kept_when_quoted()
     {
-        Assert.Equal(["/set", "Agent:SystemPrompt", ""], ReplCommands.Split("/set Agent:SystemPrompt \"\""));
+        Assert.Equal(["/set", "Runtime:Temperature", ""], ReplCommands.Split("/set Runtime:Temperature \"\""));
     }
 }

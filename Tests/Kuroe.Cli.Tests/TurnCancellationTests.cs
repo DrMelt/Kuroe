@@ -1,12 +1,12 @@
 using Kuroe.Cli;
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.TestSupport;
 using Spectre.Console.Testing;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
 
-/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 agent，多个时只给出提示。</summary>
+/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 run，多个时只给出提示。</summary>
 public sealed class TurnCancellationTests
 {
     private const int LongDelay = 20000;
@@ -35,7 +35,7 @@ public sealed class TurnCancellationTests
         using TurnCancellation cancellation = NewCancellation(harness, out TestConsole output);
         cancellation.Cancel();
 
-        Assert.Contains("已取消 agent #1。", output.Output);
+        Assert.Contains("已取消 run #1。", output.Output);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class TurnCancellationTests
         using TurnCancellation cancellation = NewCancellation(harness, out TestConsole output);
         cancellation.Cancel();
 
-        Assert.Contains("有 2 个 agent 在跑", output.Output);
+        Assert.Contains("有 2 个 run 在跑", output.Output);
     }
 
     [Fact]

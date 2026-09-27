@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Agent;
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Sessions;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Executions;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Sessions;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -18,14 +18,14 @@ public sealed class TaskService
     private readonly TaskRegistry _registry;
     private readonly IWorkflowDriver _driver;
     private readonly WorkflowService _flows;
-    private readonly AgentSessionFactory _sessions;
+    private readonly SessionFactory _sessions;
     private readonly NodeModelResolver _models;
 
     internal TaskService(
         TaskRegistry registry,
         IWorkflowDriver driver,
         WorkflowService flows,
-        AgentSessionFactory sessions,
+        SessionFactory sessions,
         NodeModelResolver models)
     {
         _registry = registry;
@@ -57,7 +57,7 @@ public sealed class TaskService
             return model.ErrorsOrEmptyList;
         }
 
-        AgentTask task = _registry.Create(goal.Trim(), flow.Value, graph, _sessions.NewDialogue(), title);
+        WorkTask task = _registry.Create(goal.Trim(), flow.Value, graph, _sessions.NewDialogue(), title);
         lock (task.Gate)
         {
             _driver.Start(task);
@@ -71,7 +71,7 @@ public sealed class TaskService
     /// <summary>改任务标题。</summary>
     public ErrorOr<Success> Rename(TaskId id, string title)
     {
-        ErrorOr<AgentTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -85,7 +85,7 @@ public sealed class TaskService
     /// <summary>把前台对话切到该任务。</summary>
     public ErrorOr<Success> Use(TaskId id)
     {
-        ErrorOr<AgentTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -99,13 +99,13 @@ public sealed class TaskService
     /// <summary>批准等待放行的节点，开下一步。</summary>
     public ErrorOr<Success> Approve(TaskId id)
     {
-        ErrorOr<AgentTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         int approved;
         lock (task.Gate)
         {
@@ -125,13 +125,13 @@ public sealed class TaskService
     /// <summary>对被阻塞的单元再开一轮实施。itemIndex 为空时处理该任务全部被阻塞的单元。</summary>
     public ErrorOr<Success> Rework(TaskId id, int? itemIndex)
     {
-        ErrorOr<AgentTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         int reworked;
         lock (task.Gate)
         {
@@ -148,10 +148,10 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>取消一个 agent。它所在的单元随后被阻塞，任务不再自动推进。</summary>
+    /// <summary>取消一个 run。它所在的单元随后被阻塞，任务不再自动推进。</summary>
     public ErrorOr<Success> StopRun(RunId id)
     {
-        ErrorOr<AgentRun> found = _registry.FindRun(id);
+        ErrorOr<Run> found = _registry.FindRun(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -159,7 +159,7 @@ public sealed class TaskService
 
         if (!found.Value.IsLive)
         {
-            return [AgentErrors.RunSettled(id, "取消")];
+            return [RunErrors.RunSettled(id, "取消")];
         }
 
         found.Value.Cancel();
@@ -167,16 +167,16 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>取消任务：在跑的 agent 全部取消，未走完的单元不再推进。</summary>
+    /// <summary>取消任务：在跑的 run 全部取消，未走完的单元不再推进。</summary>
     public ErrorOr<Success> StopTask(TaskId id)
     {
-        ErrorOr<AgentTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         lock (task.Gate)
         {
             _driver.Cancel(task);
@@ -187,10 +187,10 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>把 agent 的结论作为一条消息写进任务历史，后续对话才用得上它。</summary>
+    /// <summary>把 run 的结论作为一条消息写进任务历史，后续对话才用得上它。</summary>
     public ErrorOr<Success> Adopt(RunId id)
     {
-        ErrorOr<AgentRun> found = _registry.FindRun(id);
+        ErrorOr<Run> found = _registry.FindRun(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -199,10 +199,10 @@ public sealed class TaskService
         RunSnapshot snapshot = found.Value.Snapshot();
         if (snapshot.State != RunState.Succeeded || snapshot.Result is not { Length: > 0 } result)
         {
-            return [AgentErrors.NothingToAdopt(id)];
+            return [RunErrors.NothingToAdopt(id)];
         }
 
-        ErrorOr<AgentTask> task = _registry.Find(snapshot.Context.Task);
+        ErrorOr<WorkTask> task = _registry.Find(snapshot.Context.Task);
         if (task.IsError)
         {
             return task.ErrorsOrEmptyList;
@@ -213,6 +213,6 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>退出时取消全部任务与 agent 并等待收口。</summary>
+    /// <summary>退出时取消全部任务与 run 并等待收口。</summary>
     public Task ShutdownAsync() => _driver.ShutdownAsync();
 }

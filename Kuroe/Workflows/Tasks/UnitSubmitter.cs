@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Turns;
-using Kuroe.Shared.Agent;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Turns;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -17,16 +17,16 @@ public sealed class UnitSubmitter(TaskRegistry registry)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
         {
-            return "被拒绝：只有进行中的规划 agent 能提交条目拆分。";
+            return "被拒绝：只有进行中的规划 run 能提交条目拆分。";
         }
 
-        ErrorOr<AgentTask> found = registry.Find(run.Context.Task);
+        ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
         if (found.IsError)
         {
-            return "内部错误：该 agent 没有归属任务。";
+            return "内部错误：该 run 没有归属任务。";
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         ErrorOr<IReadOnlyList<PlanItem>> parsed = PlanItems.Parse(itemsJson);
         if (parsed.IsError)
         {
@@ -85,16 +85,16 @@ public sealed class UnitSubmitter(TaskRegistry registry)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Review)
         {
-            return "被拒绝：只有进行中的检查 agent 能提交结论。";
+            return "被拒绝：只有进行中的检查 run 能提交结论。";
         }
 
-        ErrorOr<AgentTask> found = registry.Find(run.Context.Task);
+        ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
         if (found.IsError)
         {
-            return "内部错误：该 agent 没有归属任务。";
+            return "内部错误：该 run 没有归属任务。";
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         lock (task.Gate)
         {
             if (!passed && string.IsNullOrWhiteSpace(findings))
@@ -114,8 +114,8 @@ public sealed class UnitSubmitter(TaskRegistry registry)
         }
     }
 
-    /// <summary>提交者必须绑定了执行回合，且是该契约仍在跑的 agent。</summary>
-    private AgentRun? Owner(TurnScope? scope) =>
+    /// <summary>提交者必须绑定了执行回合，且是该契约仍在跑的 run。</summary>
+    private Run? Owner(TurnScope? scope) =>
         scope?.Run is { } id
         && registry.FindRun(id) is { IsError: false } found
         && found.Value.IsLive

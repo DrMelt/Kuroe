@@ -1,12 +1,12 @@
-using Kuroe.Agent.Runs;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>宿主侧的状态与耗时呈现。库内同样要用的展示名（角色、agent 状态）由库侧的 Label 扩展给出，
+/// <summary>宿主侧的状态与耗时呈现。库内同样要用的展示名（角色、run 状态）由库侧的 Label 扩展给出，
 /// 只在宿主出现的（任务与单元状态、检查处置、展开方式）在这里。</summary>
 internal static class Labels
 {
@@ -48,7 +48,7 @@ internal static class Labels
     /// <summary>执行节点产出后是否等人放行。</summary>
     public static string Of(NodeGate gate) => gate == NodeGate.Review ? "需批准" : "自动放行";
 
-    /// <summary>agent 的状态，有工具调用在进行时带上它。</summary>
+    /// <summary>run 的状态，有工具调用在进行时带上它。</summary>
     public static string State(RunSnapshot run) =>
         run.IsSettled || run.Progress.Length == 0
             ? run.State.Label()

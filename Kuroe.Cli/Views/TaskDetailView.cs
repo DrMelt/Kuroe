@@ -1,11 +1,11 @@
-using Kuroe.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按执行节点列出已执行与在执行的 agent，再列出条目结论与前台对话。</summary>
+/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目结论与前台对话。</summary>
 internal sealed class TaskDetailView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -45,13 +45,13 @@ internal sealed class TaskDetailView(Terminal terminal)
 
             if (node.Runs.Count == 0)
             {
-                _terminal.Hint("  还没有 agent。");
+                _terminal.Hint("  还没有 run。");
                 continue;
             }
 
             foreach (RunSnapshot run in node.Runs)
             {
-                _terminal.Line($"  {AgentLabel(run)}");
+                _terminal.Line($"  {RunLabel(run)}");
             }
         }
 
@@ -82,8 +82,8 @@ internal sealed class TaskDetailView(Terminal terminal)
         }
     }
 
-    /// <summary>列表里一行的 agent 概况。</summary>
-    internal static string AgentLabel(RunSnapshot run)
+    /// <summary>列表里一行的 run 概况。</summary>
+    internal static string RunLabel(RunSnapshot run)
     {
         List<string> parts =
         [

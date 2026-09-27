@@ -29,7 +29,7 @@ internal sealed class SettingsCommands(
     {
         if (parts.Length != 3)
         {
-            _terminal.Hint("用法：/set <路径> <值>，值含空格时用双引号包起来，例如 /set Agent:Temperature 0.7");
+            _terminal.Hint("用法：/set <路径> <值>，值含空格时用双引号包起来，例如 /set Runtime:Temperature 0.7");
             return;
         }
 
@@ -41,7 +41,7 @@ internal sealed class SettingsCommands(
     {
         if (parts.Length != 2)
         {
-            _terminal.Hint("用法：/unset <路径>，例如 /unset Agent:Temperature");
+            _terminal.Hint("用法：/unset <路径>，例如 /unset Runtime:Temperature");
             return;
         }
 

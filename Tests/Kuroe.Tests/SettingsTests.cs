@@ -14,7 +14,7 @@ public sealed class SettingsTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        Assert.True(harness.Settings.Set("Agent:DefaultFlow", "3").IsError);
+        Assert.True(harness.Settings.Set("Runtime:DefaultFlow", "3").IsError);
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public sealed class SettingsTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        harness.Settings.SetText("Agent:DefaultFlow", "3").ThrowIfError();
+        harness.Settings.SetText("Runtime:DefaultFlow", "3").ThrowIfError();
 
         Assert.Equal("3", harness.Flows.DefaultName);
     }
@@ -35,9 +35,9 @@ public sealed class SettingsTests
 
         SettingSection section = Assert.Single(harness.Settings.Sections());
 
-        Assert.Equal("Agent", section.Name);
-        Assert.Contains(section.Entries, entry => entry.Path == "Agent:Temperature");
-        Assert.All(section.Entries, entry => Assert.Equal("Agent", entry.Path.Split(':')[0]));
+        Assert.Equal("Runtime", section.Name);
+        Assert.Contains(section.Entries, entry => entry.Path == "Runtime:Temperature");
+        Assert.All(section.Entries, entry => Assert.Equal("Runtime", entry.Path.Split(':')[0]));
     }
 
     /// <summary>声明表、设置节的属性与用户层的形状三者一一对应，任一处漏写时失败。</summary>
@@ -47,8 +47,8 @@ public sealed class SettingsTests
         using KuroeHarness harness = KuroeHarness.Create();
         Assembly library = typeof(SettingsProvider).Assembly;
 
-        IEnumerable<string> section = Properties(library, "Kuroe.Configuration.AgentSettings");
-        IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.AgentSectionDto");
+        IEnumerable<string> section = Properties(library, "Kuroe.Configuration.RuntimeSettings");
+        IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.RuntimeSectionDto");
         IEnumerable<string> declared = harness.Settings.Sections().Single().Entries
             .Select(entry => entry.Name)
             .Order();
@@ -66,7 +66,6 @@ public sealed class SettingsTests
         IReadOnlyList<SettingEntry> entries = harness.Settings.Sections().Single().Entries;
 
         Assert.Equal("未设置", Value(entries, "DefaultFlow"));
-        Assert.NotEqual("未设置", Value(entries, "SystemPrompt"));
         Assert.Equal("Warning", Value(entries, "LogLevel"));
         Assert.Equal("4", Value(entries, "MaxConcurrentRuns"));
         Assert.Equal("3", Value(entries, "MaxAttempts"));
@@ -86,7 +85,7 @@ public sealed class SettingsTests
     [Fact]
     public void Path_resolution_keeps_defined_items_and_rejects_the_rest()
     {
-        Assert.Equal("Agent:Temperature", SettingsProvider.ResolvePath("agent:temperature").ThrowIfError());
-        Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Agent:Nope").FirstError.Description);
+        Assert.Equal("Runtime:Temperature", SettingsProvider.ResolvePath("runtime:temperature").ThrowIfError());
+        Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Runtime:Nope").FirstError.Description);
     }
 }

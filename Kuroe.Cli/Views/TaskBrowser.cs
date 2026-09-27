@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
@@ -8,13 +8,13 @@ using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务 → 执行节点内 agent → agent 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
+/// <summary>任务 → 执行节点内 run → run 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
     TaskListView list,
     TaskDetailView detail,
-    AgentDetailView agentView,
+    RunDetailView runView,
     Terminal terminal,
     ResultPrinter results)
 {
@@ -49,12 +49,12 @@ internal sealed class TaskBrowser(
 
             if (picked.Task is { } id)
             {
-                PickAgent(id);
+                PickRun(id);
             }
         }
     }
 
-    private void PickAgent(TaskId id)
+    private void PickRun(TaskId id)
     {
         while (true)
         {
@@ -69,7 +69,7 @@ internal sealed class TaskBrowser(
 
             List<Item> items = [.. task.Nodes.SelectMany(node => node.Runs)
                 .OrderBy(run => run.Id.Value)
-                .Select(run => new Item("  " + TaskDetailView.AgentLabel(run), "agent", Task: id, Run: run.Id))];
+                .Select(run => new Item("  " + TaskDetailView.RunLabel(run), "run", Task: id, Run: run.Id))];
             AddTaskActions(items, task);
             items.Add(Refresh);
             items.Add(Back);
@@ -80,8 +80,8 @@ internal sealed class TaskBrowser(
                 case "back":
                     return;
 
-                case "agent" when picked.Run is { } runId:
-                    ShowAgent(runId);
+                case "run" when picked.Run is { } runId:
+                    ShowRun(runId);
                     break;
 
                 case "approve":
@@ -103,7 +103,7 @@ internal sealed class TaskBrowser(
         }
     }
 
-    private void ShowAgent(RunId runId)
+    private void ShowRun(RunId runId)
     {
         while (true)
         {
@@ -120,11 +120,11 @@ internal sealed class TaskBrowser(
 
             TaskSnapshot task = foundTask.Value.Snapshot();
             terminal.NewLine();
-            agentView.Print(task, snapshot);
+            runView.Print(task, snapshot);
 
             List<Item> items = [.. snapshot.Context.Seed
                 .Where(message => message.Source.FromRun is not null)
-                .Select(message => new Item($"↑ {message.Source.Label}", "agent", Run: message.Source.FromRun))
+                .Select(message => new Item($"↑ {message.Source.Label}", "run", Run: message.Source.FromRun))
                 .DistinctBy(item => item.Run)];
 
             if (snapshot is { State: RunState.Succeeded, Result.Length: > 0 })
@@ -134,19 +134,19 @@ internal sealed class TaskBrowser(
 
             if (!snapshot.IsSettled)
             {
-                items.Add(new Item("✕ 取消该 agent", "stopRun", Run: runId));
+                items.Add(new Item("✕ 取消该 run", "stopRun", Run: runId));
             }
 
             items.Add(Refresh);
             items.Add(Back);
 
-            Item picked = Choose("agent 详情", items);
+            Item picked = Choose("run 详情", items);
             switch (picked.Action)
             {
                 case "back":
                     return;
 
-                case "agent" when picked.Run is { } upstream:
+                case "run" when picked.Run is { } upstream:
                     runId = upstream;
                     break;
 

@@ -1,9 +1,9 @@
 namespace Kuroe.Shared.Workflows;
 
-/// <summary>任务的整体状态，由取消标记、各工作单元与在跑的 agent 汇总得出，不单独维护。</summary>
+/// <summary>任务的整体状态，由取消标记、各工作单元与在跑的 run 汇总得出，不单独维护。</summary>
 public enum TaskState
 {
-    /// <summary>有 agent 在跑或排队。</summary>
+    /// <summary>有 run 在跑或排队。</summary>
     Running,
 
     /// <summary>停在等人批准的执行节点上。</summary>

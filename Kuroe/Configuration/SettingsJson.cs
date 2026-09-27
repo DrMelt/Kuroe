@@ -9,5 +9,5 @@ namespace Kuroe.Configuration;
     PropertyNameCaseInsensitive = true,
     NumberHandling = JsonNumberHandling.AllowReadingFromString,
     UseStringEnumConverter = true)]
-[JsonSerializable(typeof(AgentSectionDto))]
+[JsonSerializable(typeof(RuntimeSectionDto))]
 internal sealed partial class SettingsJson : JsonSerializerContext;

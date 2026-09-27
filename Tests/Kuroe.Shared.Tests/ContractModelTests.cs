@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Configuration;
 using Kuroe.Shared.Workflows;
 using Xunit;
@@ -13,7 +13,7 @@ public sealed class ContractModelTests
     public void Ids_render_for_the_human_reader()
     {
         Assert.Equal("任务 #3", new TaskId(3).ToString());
-        Assert.Equal("agent #7", new RunId(7).ToString());
+        Assert.Equal("run #7", new RunId(7).ToString());
     }
 
     [Fact]

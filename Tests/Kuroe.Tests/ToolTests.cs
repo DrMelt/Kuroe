@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.TestSupport;
 using Kuroe.Tools;
 using Xunit;
@@ -20,7 +20,7 @@ public sealed class ToolTests
 
         string outcome = submit.Invoke(Arguments("""{"passed": false, "findings": "缺验收标准"}"""));
 
-        Assert.Contains("只有进行中的检查 agent", outcome);
+        Assert.Contains("只有进行中的检查 run", outcome);
     }
 
     [Fact]

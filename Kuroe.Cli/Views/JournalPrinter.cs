@@ -1,8 +1,8 @@
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Shared.Executions.Turns;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>过程记录的逐行呈现，前台对话与 agent 详情共用。</summary>
+/// <summary>过程记录的逐行呈现，前台对话与 run 详情共用。</summary>
 internal static class JournalPrinter
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>

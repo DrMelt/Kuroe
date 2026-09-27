@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Agent.Runs;
+using Kuroe.Executions.Runs;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Shared;
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Flows;
@@ -110,7 +110,7 @@ public sealed class KuroeHarness : IDisposable
         }
     }
 
-    /// <summary>等执行侧不再有任何在跑或待推进的 agent。待批准状态要求连续两次采样一致，避免批准信号落地前的瞬态。</summary>
+    /// <summary>等执行侧不再有任何在跑或待推进的 run。待批准状态要求连续两次采样一致，避免批准信号落地前的瞬态。</summary>
     public TaskSnapshot Settle(TaskId id)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);

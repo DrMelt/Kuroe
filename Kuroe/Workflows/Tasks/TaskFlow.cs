@@ -1,6 +1,6 @@
-using Kuroe.Agent.Runs;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -39,13 +39,13 @@ sealed class NodeRunState
 /// 所有方法都要求调用者持有所属任务的 Gate。</summary>
 internal sealed class TaskFlow
 {
-    private readonly AgentTask _task;
+    private readonly WorkTask _task;
     private readonly Dictionary<int, NodeRunState> _states = [];
     private readonly Dictionary<(int Node, int? Item), CheckResult> _checks = [];
     private readonly Dictionary<(int Node, int? Item), int> _executions = [];
     private readonly Dictionary<int, IReadOnlyList<(int Node, int? Item)>> _reworkTargets = [];
 
-    internal TaskFlow(AgentTask task)
+    internal TaskFlow(WorkTask task)
     {
         _task = task;
     }
@@ -298,7 +298,7 @@ internal sealed class TaskFlow
     /// <summary>是否有执行节点停在等人返工。</summary>
     public bool HasBlocked => _states.Values.Any(state => state.Blocked);
 
-    /// <summary>还有在跑的 agent 或可启动的执行节点，任务就没走完。</summary>
+    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
     public bool HasWork
     {
         get
@@ -370,8 +370,8 @@ internal sealed class TaskFlow
     /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>
     public sealed record SettlePlan(IReadOnlyList<int> Notify, IReadOnlyList<(int Node, int? Item)> Rerun);
 
-    /// <summary>agent 收口：记产出、处理门控与检查结论，产出出向下游的通知或重派计划。</summary>
-    public SettlePlan Settle(AgentRun run)
+    /// <summary>run 收口：记产出、处理门控与检查结论，产出出向下游的通知或重派计划。</summary>
+    public SettlePlan Settle(Run run)
     {
         int node = run.Context.NodeIndex;
         int? item = run.Context.ItemIndex;
@@ -496,7 +496,7 @@ internal sealed class TaskFlow
         ExecutableNode executable = Graph[node];
         if (executable.IsStaticSplit && _task.SplitFor(node) is null)
         {
-            // 纯静态拆分不派 agent，激活即产出
+            // 纯静态拆分不派 run，激活即产出
             _task.SetSplit(node, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Split!, []).Value));
             Publish(node, null);
 

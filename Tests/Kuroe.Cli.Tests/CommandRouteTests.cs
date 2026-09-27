@@ -108,17 +108,17 @@ public sealed class CommandRouteTests
     public void Settings_set_writes_and_echoes_the_effect()
     {
         using Ui ui = new();
-        ui.Settings.Set(["/set", "Agent:Temperature", "0.5"]);
+        ui.Settings.Set(["/set", "Runtime:Temperature", "0.5"]);
 
         Assert.Contains("已保存并生效。", ui.Output.Output);
-        Assert.Equal("0.5", ui.Harness.Settings.TryGetUserValue("Agent:Temperature"));
+        Assert.Equal("0.5", ui.Harness.Settings.TryGetUserValue("Runtime:Temperature"));
     }
 
     [Fact]
     public void Settings_set_with_wrong_argument_count_shows_usage()
     {
         using Ui ui = new();
-        ui.Settings.Set(["/set", "Agent:Temperature"]);
+        ui.Settings.Set(["/set", "Runtime:Temperature"]);
 
         Assert.Contains("用法：/set", ui.Output.Output);
     }

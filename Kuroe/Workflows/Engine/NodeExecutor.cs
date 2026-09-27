@@ -1,19 +1,20 @@
 using ErrorOr;
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Turns;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Turns;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
+using Run = Kuroe.Executions.Runs.Run;
 
 namespace Kuroe.Workflows.Engine;
 
-/// <summary>流程里一个执行节点的执行器：收到评估消息后按图就绪判定启动实例，agent 收口后发布产出并沿出边通知下游。
-/// 批准放行与返工重派也走同一个评估入口。状态改动在任务 Gate 内，agent 运行与消息投递在 Gate 外。</summary>
+/// <summary>流程里一个执行节点的执行器：收到评估消息后按图就绪判定启动实例，run 收口后发布产出并沿出边通知下游。
+/// 批准放行与返工重派也走同一个评估入口。状态改动在任务 Gate 内，run 运行与消息投递在 Gate 外。</summary>
 [SendsMessage(typeof(FlowMessage))]
 internal sealed partial class NodeExecutor(
     TaskRegistry registry,
@@ -36,7 +37,7 @@ internal sealed partial class NodeExecutor(
             return;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         List<int> notify = [];
         List<TaskFlow.RunStarter> starters = [];
         lock (task.Gate)
@@ -61,7 +62,7 @@ internal sealed partial class NodeExecutor(
     }
 
     /// <summary>任务停在待批准或阻塞时请求暂停，让宿主循环停在信号上；其余情况运行自行收口。</summary>
-    private static async ValueTask MaybeHaltAsync(AgentTask task, IWorkflowContext context)
+    private static async ValueTask MaybeHaltAsync(WorkTask task, IWorkflowContext context)
     {
         bool park;
         lock (task.Gate)
@@ -76,10 +77,10 @@ internal sealed partial class NodeExecutor(
     }
 
     /// <summary>为一个实例装配、派发并等待收口，再按收口计划通知下游或重派返工实例。</summary>
-    private async ValueTask DispatchAndSettleAsync(AgentTask task, TaskFlow.RunStarter starter, IWorkflowContext context, CancellationToken cancellationToken)
+    private async ValueTask DispatchAndSettleAsync(WorkTask task, TaskFlow.RunStarter starter, IWorkflowContext context, CancellationToken cancellationToken)
     {
         ExecutableNode executable = task.Graph[nodeIndex];
-        AgentRun? run;
+        Run? run;
         lock (task.Gate)
         {
             if (task.State == TaskState.Canceled)

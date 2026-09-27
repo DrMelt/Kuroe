@@ -1,4 +1,4 @@
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;

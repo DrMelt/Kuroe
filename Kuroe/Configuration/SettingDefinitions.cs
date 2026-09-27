@@ -6,14 +6,13 @@ internal static class SettingDefinitions
     /// <summary>全部设置项，顺序即列出顺序。</summary>
     internal static readonly IReadOnlyList<SettingDefinition> All =
     [
-        Agent(nameof(AgentSettings.Model), settings => settings.Agent.Model),
-        Agent(nameof(AgentSettings.SystemPrompt), settings => settings.Agent.SystemPrompt),
-        Agent(nameof(AgentSettings.LogLevel), settings => settings.Agent.LogLevel),
-        Agent(nameof(AgentSettings.Temperature), settings => settings.Agent.Temperature),
-        Agent(nameof(AgentSettings.MaxOutputTokens), settings => settings.Agent.MaxOutputTokens),
-        Agent(nameof(AgentSettings.MaxConcurrentRuns), settings => settings.Agent.MaxConcurrentRuns),
-        Agent(nameof(AgentSettings.DefaultFlow), settings => settings.Agent.DefaultFlow),
-        Agent(nameof(AgentSettings.MaxAttempts), settings => settings.Agent.MaxAttempts),
+        Runtime(nameof(RuntimeSettings.Model), settings => settings.Runtime.Model),
+        Runtime(nameof(RuntimeSettings.LogLevel), settings => settings.Runtime.LogLevel),
+        Runtime(nameof(RuntimeSettings.Temperature), settings => settings.Runtime.Temperature),
+        Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
+        Runtime(nameof(RuntimeSettings.MaxConcurrentRuns), settings => settings.Runtime.MaxConcurrentRuns),
+        Runtime(nameof(RuntimeSettings.DefaultFlow), settings => settings.Runtime.DefaultFlow),
+        Runtime(nameof(RuntimeSettings.MaxAttempts), settings => settings.Runtime.MaxAttempts),
     ];
 
     /// <summary>按输入取规范节名，大小写不敏感，未定义的节返回 null。</summary>
@@ -26,6 +25,6 @@ internal static class SettingDefinitions
         string.Equals(definition.Section, section, StringComparison.OrdinalIgnoreCase)
         && string.Equals(definition.Name, name, StringComparison.OrdinalIgnoreCase));
 
-    private static SettingDefinition Agent(string name, Func<KuroeSettings, object?> value) =>
-        new(AgentSettings.SectionName, name, value);
+    private static SettingDefinition Runtime(string name, Func<KuroeSettings, object?> value) =>
+        new(RuntimeSettings.SectionName, name, value);
 }

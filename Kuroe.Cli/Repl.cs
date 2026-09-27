@@ -67,7 +67,7 @@ internal sealed class Repl(
             return;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         ErrorOr<DialogueReply> reply;
         using (terminal.Exclusive())
         {

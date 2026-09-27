@@ -89,15 +89,15 @@ public sealed class SettingsProvider
             return resolved;
         }
 
-        return resolved.Value == AgentSettings.ModelPath
+        return resolved.Value == RuntimeSettings.ModelPath
             ? [SettingsErrors.ModelPath()]
             : resolved.Value;
     }
 
     /// <summary>写入或清除模型选择，注册状态的校验由 <see cref="Catalogs.ModelService"/> 负责，因此不经 <see cref="ResolvePath"/>。</summary>
     internal ErrorOr<SettingsEffect> SetModel(string? model) => model is null
-        ? Apply(root => UserSettingsStore.RemoveValue(root, AgentSettings.ModelPath))
-        : Apply(root => UserSettingsStore.SetValue(root, AgentSettings.ModelPath, JsonValue.Create(model)));
+        ? Apply(root => UserSettingsStore.RemoveValue(root, RuntimeSettings.ModelPath))
+        : Apply(root => UserSettingsStore.SetValue(root, RuntimeSettings.ModelPath, JsonValue.Create(model)));
 
     private ErrorOr<SettingsEffect> WithResolved(string path, Action<JsonObject, string> mutate)
     {
@@ -124,7 +124,7 @@ public sealed class SettingsProvider
     /// <summary>改动用户层并立即生效，成功时给出该改动的影响。校验失败时返回错误，文件不变。</summary>
     private ErrorOr<SettingsEffect> Apply(Action<JsonObject> mutate)
     {
-        AgentSettings before = Current.Agent;
+        RuntimeSettings before = Current.Runtime;
 
         JsonObject candidate = _store.Snapshot();
         try
@@ -155,7 +155,7 @@ public sealed class SettingsProvider
         }
 
         Current = next.Value;
-        AgentSettings after = Current.Agent;
+        RuntimeSettings after = Current.Runtime;
 
         return new SettingsEffect(after.RequiresRestart(before), after.InvalidatesHistory(before));
     }

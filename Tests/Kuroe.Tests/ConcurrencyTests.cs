@@ -1,4 +1,4 @@
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
@@ -6,14 +6,14 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>并发额度：Agent:MaxConcurrentRuns 限制同时在跑的 agent 数。</summary>
+/// <summary>并发额度：Runtime:MaxConcurrentRuns 限制同时在跑的 run 数。</summary>
 public sealed class ConcurrencyTests
 {
     [Fact]
-    public void MaxConcurrentRuns_limits_parallel_agents()
+    public void MaxConcurrentRuns_limits_parallel_runs()
     {
         using KuroeHarness harness = KuroeHarness.Create();
-        harness.Settings.Set("Agent:MaxConcurrentRuns", "1").ThrowIfError();
+        harness.Settings.Set("Runtime:MaxConcurrentRuns", "1").ThrowIfError();
         harness.Executor.DelayMs = 60;
 
         harness.Settle(harness.Submit("补齐 README"));

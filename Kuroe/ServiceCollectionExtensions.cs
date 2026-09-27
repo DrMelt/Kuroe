@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Sessions;
-using Kuroe.Agent.Tools;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Sessions;
+using Kuroe.Executions.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Shared;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
 using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
@@ -43,10 +43,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
         services.AddSingleton(flows.Value);
-        services.AddSingleton<IAgentTool>(new TimeTool());
-        services.AddSingleton<IAgentTool>(new WeatherTool());
-        services.AddSingleton<IAgentTool, PlanTool>();
-        services.AddSingleton<IAgentTool, VerdictTool>();
+        services.AddSingleton<ITool>(new TimeTool());
+        services.AddSingleton<ITool>(new WeatherTool());
+        services.AddSingleton<ITool, PlanTool>();
+        services.AddSingleton<ITool, VerdictTool>();
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<ModelService>();
         services.AddSingleton<TaskRegistry>();
@@ -65,17 +65,17 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<WorkflowEngine>(),
             sp.GetRequiredService<WorkflowService>(),
-            sp.GetRequiredService<AgentSessionFactory>(),
+            sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<NodeModelResolver>()));
-        services.AddSingleton(sp => new AgentProvider(sp.GetRequiredService<ILoggerFactory>()));
-        services.AddSingleton(sp => new AgentSessionFactory(
-            sp.GetRequiredService<AgentProvider>(),
+        services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));
+        services.AddSingleton(sp => new SessionFactory(
+            sp.GetRequiredService<ClientProvider>(),
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>(),
             sp.GetRequiredService<ToolCollection>()));
-        services.AddSingleton<IRunExecutor>(sp => new RunExecutor(sp.GetRequiredService<AgentSessionFactory>()));
+        services.AddSingleton<IRunExecutor>(sp => new RunExecutor(sp.GetRequiredService<SessionFactory>()));
 
-        return new KuroeStartup(settings.Value.Current.Agent.LogLevel);
+        return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 }
 

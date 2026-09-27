@@ -1,12 +1,12 @@
-using Kuroe.Agent.Tools;
-using Kuroe.Agent.Turns;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Executions.Tools;
+using Kuroe.Executions.Turns;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools;
 
 /// <summary>检查执行节点交回结论的通道。载体按回合换一份，结论只会落到该回合所属的条目上。</summary>
-public sealed class VerdictTool : IScopedAgentTool
+public sealed class VerdictTool : IScopedTool
 {
     private readonly UnitSubmitter _intake;
 
@@ -27,7 +27,7 @@ public sealed class VerdictTool : IScopedAgentTool
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>换一份绑定到该回合的载体。</summary>
-    public IAgentTool ForTurn(TurnScope scope) => new VerdictTool(_intake, scope);
+    public ITool ForTurn(TurnScope scope) => new VerdictTool(_intake, scope);
 
     /// <summary>声明绑定到该回合上的提交函数。</summary>
     private static IReadOnlyList<ToolFunction> Declare(UnitSubmitter intake, TurnScope? scope) =>

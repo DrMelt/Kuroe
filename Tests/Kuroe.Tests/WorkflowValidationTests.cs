@@ -20,9 +20,9 @@ public sealed class WorkflowValidationTests
     [InlineData(UnreferencedImplement, "按条目展开的实施必须被某个检查节点引用")]
     [InlineData(RejectOnImplement, "OnReject 与 MaxAttempts 只适用于检查节点")]
     [InlineData(DuplicateNodeName, "节点名重复")]
-    [InlineData(DuplicateAgentName, "agent 名重复")]
-    [InlineData(UnknownAgent, "引用的 agent XXX 不存在")]
-    [InlineData(AttemptsOverCap, "MaxAttempts 超过 Agent:MaxAttempts")]
+    [InlineData(DuplicateModelName, "模型配置名重复")]
+    [InlineData(UnknownModel, "引用的模型配置 XXX 不存在")]
+    [InlineData(AttemptsOverCap, "MaxAttempts 超过 Runtime:MaxAttempts")]
     [InlineData(MaxAttemptsZero, "MaxAttempts 必须为正整数")]
     [InlineData(NoNodes, "至少要有一个节点")]
     [InlineData(ContainerFrom, "不支持 From")]
@@ -96,133 +96,133 @@ public sealed class WorkflowValidationTests
     }
 
     private const string MissingNodeName = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Agent": "规划者", "Output": "Plan" }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Model": "规划者", "Output": "Plan" }
         ] } ] }
         """;
 
     private const string BadNodeMode = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Mode": "PerItemm" }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Mode": "PerItemm" }
         ] } ] }
         """;
 
     private const string MissingCheck = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "From": ["制定计划"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Model": "执行者", "From": ["制定计划"] }
         ] } ] }
         """;
 
     private const string ScopeViolation = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
           { "Name": "容器", "Nodes": [
-            { "Name": "内部", "Agent": "执行者", "From": ["不存在"] }
+            { "Name": "内部", "Model": "执行者", "From": ["不存在"] }
           ] }
         ] } ] }
         """;
 
     private const string FanOutBeforePlan = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem" },
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem" },
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
         ] } ] }
         """;
 
     private const string CheckWithoutImplementReference = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "检查", "Model": "检查者", "Output": "Review", "From": ["制定计划"] }
         ] } ] }
         """;
 
     private const string UnreferencedImplement = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] }
         ] } ] }
         """;
     private const string RejectOnImplement = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "From": ["制定计划"], "OnReject": "Stop" },
-          { "Name": "检查", "Agent": "检查者", "Output": "Review", "From": ["实施"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Model": "执行者", "From": ["制定计划"], "OnReject": "Stop" },
+          { "Name": "检查", "Model": "检查者", "Output": "Review", "From": ["实施"] }
         ] } ] }
         """;
 
     private const string DuplicateNodeName = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "制定计划", "Agent": "规划者" }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "制定计划", "Model": "规划者" }
         ] } ] }
         """;
 
-    private const string DuplicateAgentName = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "规划者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" }
+    private const string DuplicateModelName = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "规划者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" }
         ] } ] }
         """;
 
-    private const string UnknownAgent = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "XXX", "Output": "Plan" }
+    private const string UnknownModel = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "XXX", "Output": "Plan" }
         ] } ] }
         """;
 
     private const string AttemptsOverCap = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 9 }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 9 }
         ] } ] }
         """;
 
     private const string MaxAttemptsZero = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 0 }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "实施"], "MaxAttempts": 0 }
         ] } ] }
         """;
 
     private const string NoNodes = """
-        { "Flows": [ { "Name": "默认", "Agents": [] } ] }
+        { "Flows": [ { "Name": "默认", "Models": [] } ] }
         """;
     private const string ContainerFrom = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Name": "容器", "From": ["规划"], "Nodes": [ { "Name": "规划", "Agent": "规划者", "Output": "Plan" } ] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "容器", "From": ["规划"], "Nodes": [ { "Name": "规划", "Model": "规划者", "Output": "Plan" } ] }
         ] } ] }
         """;
 
     private const string ContainerPrompt = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }], "Nodes": [
-          { "Name": "容器", "Prompt": "不落地的提示", "Nodes": [ { "Name": "规划", "Agent": "规划者", "Output": "Plan" } ] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "容器", "Prompt": "不落地的提示", "Nodes": [ { "Name": "规划", "Model": "规划者", "Output": "Plan" } ] }
         ] } ] }
         """;
 
     private const string ParallelBranchNotPerItem = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "撰写", "Agent": "执行者", "Branch": "撰写", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "撰写", "Model": "执行者", "Branch": "撰写", "From": ["制定计划"] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
         ] } ] }
         """;
 
     private const string ExpansionWithoutPlan = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "准备", "Agent": "执行者" },
-          { "Name": "实施", "Agent": "执行者", "Mode": "PerItem", "From": ["准备"] },
-          { "Name": "检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "准备", "Model": "执行者" },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": ["准备"] },
+          { "Name": "检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施"] }
         ] } ] }
         """;
 
     private const string CyclicReference = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "甲", "Agent": "执行者", "From": ["乙"] },
-          { "Name": "乙", "Agent": "执行者", "From": ["甲"] },
-          { "Name": "检查", "Agent": "检查者", "Output": "Review", "From": ["甲"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "甲", "Model": "执行者", "From": ["乙"] },
+          { "Name": "乙", "Model": "执行者", "From": ["甲"] },
+          { "Name": "检查", "Model": "检查者", "Output": "Review", "From": ["甲"] }
         ] } ] }
         """;
 
@@ -231,15 +231,15 @@ public sealed class WorkflowValidationTests
           "Flows": [
             {
               "Name": "默认",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "执行者", "Tools": ["GetLocalTime", "GetWeather"] },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan", "Prompt": "拆分条目。" },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "拆分条目。" },
+                { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
               ]
             }
           ]
@@ -251,15 +251,15 @@ public sealed class WorkflowValidationTests
           "Flows": [
             {
               "Name": "两级",
-              "Agents": [
+              "Models": [
                 { "Name": "规划者" },
                 { "Name": "执行者" },
                 { "Name": "检查者" }
               ],
               "Nodes": [
-                { "Name": "制定计划", "Agent": "规划者", "Output": "Plan" },
-                { "Name": "分配执行", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-                { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry" }
               ]
             }
           ]
@@ -267,75 +267,75 @@ public sealed class WorkflowValidationTests
         """;
 
     private const string SplitOnImplement = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "实施", "Agent": "执行者",
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "实施", "Model": "执行者",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
         ] } ] }
         """;
 
     private const string SplitEmpty = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": {} }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": {} }
         ] } ] }
         """;
 
     private const string SplitExtrasOverCap = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 21 } }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 21 } }
         ] } ] }
         """;
 
     private const string SplitZeroWithoutItems = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 0 } }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 0 } }
         ] } ] }
         """;
 
     private const string SplitStaticPrompt = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Prompt": "不需要",
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Prompt": "不需要",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
         ] } ] }
         """;
 
     private const string SplitStaticGate = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "Gate": "Review",
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Gate": "Review",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
         ] } ] }
         """;
 
     private const string SplitStaticFrom = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "上游", "Agent": "执行者" },
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan", "From": ["上游"],
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "上游", "Model": "执行者" },
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "From": ["上游"],
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
         ] } ] }
         """;
 
     private const string SplitParallelBranch = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定计划", "Agent": "执行者", "Output": "Plan",
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Branch": "不存在" } ] } },
-          { "Name": "撰写", "Agent": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
-          { "Name": "整体检查", "Agent": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
+          { "Name": "撰写", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "撰写"], "OnReject": "Retry" }
         ] } ] }
         """;
 
     private const string ContainerModeRejected = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "执行者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "实施", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Agent": "执行者" } ] }
+            "Nodes": [ { "Name": "撰写", "Model": "执行者" } ] }
         ] } ] }
         """;
 
     private const string AlignedAcrossSpaces = """
-        { "Flows": [ { "Name": "默认", "Agents": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
-          { "Name": "制定A计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "制定B计划", "Agent": "规划者", "Output": "Plan" },
-          { "Name": "实施A", "Agent": "执行者", "Mode": "PerItem", "From": ["制定A计划"] },
-          { "Name": "实施B", "Agent": "执行者", "Mode": "PerItem", "From": ["制定B计划"] },
-          { "Name": "逐条检查", "Agent": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A", "实施B"] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "制定B计划", "Model": "规划者", "Output": "Plan" },
+          { "Name": "实施A", "Model": "执行者", "Mode": "PerItem", "From": ["制定A计划"] },
+          { "Name": "实施B", "Model": "执行者", "Mode": "PerItem", "From": ["制定B计划"] },
+          { "Name": "逐条检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A", "实施B"] }
         ] } ] }
         """;
 }

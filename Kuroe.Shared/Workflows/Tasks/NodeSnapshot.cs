@@ -1,7 +1,7 @@
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Tasks;
 
-/// <summary>一个执行节点在某一刻的只读形状，含该执行节点上全部 agent。</summary>
+/// <summary>一个执行节点在某一刻的只读形状，含该执行节点上全部 run。</summary>
 public sealed record NodeSnapshot(int Index, ExecutableNode Executable, IReadOnlyList<RunSnapshot> Runs);

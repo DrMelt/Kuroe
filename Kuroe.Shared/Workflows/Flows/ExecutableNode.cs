@@ -1,11 +1,12 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发 agent 的节点。</summary>
+/// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发执行的节点。</summary>
 public sealed record ExecutableNode(
     int Index,
     string Name,
     string Path,
-    AgentDefinition Agent,
+    ModelDefinition Model,
+    IReadOnlyList<string> Tools,
     string? Prompt,
     NodeOutput Output,
     NodeMode Mode,

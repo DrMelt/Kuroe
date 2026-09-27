@@ -9,30 +9,24 @@ internal sealed class FlowFileDto
     public List<WorkflowDto> Flows { get; set; } = [];
 }
 
-/// <summary>文件里的一条流程：可指派的 agent 与节点树。</summary>
+/// <summary>文件里的一条流程：命名的模型选择与节点树。</summary>
 internal sealed class WorkflowDto
 {
     public string? Name { get; set; }
 
     public string? Description { get; set; }
 
-    public List<AgentDto> Agents { get; set; } = [];
+    public List<ModelDto> Models { get; set; } = [];
 
     public List<NodeDto> Nodes { get; set; } = [];
 }
 
-/// <summary>文件里的一个 agent 定义。</summary>
-internal sealed class AgentDto
+/// <summary>文件里的一个模型选择定义。</summary>
+internal sealed class ModelDto
 {
     public string? Name { get; set; }
 
-    public string? Description { get; set; }
-
-    public string? SystemPrompt { get; set; }
-
     public string? Model { get; set; }
-
-    public List<string>? Tools { get; set; }
 }
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
@@ -45,7 +39,11 @@ internal sealed class NodeDto
 
     public List<string>? From { get; set; }
 
-    public string? Agent { get; set; }
+    /// <summary>引用的模型选择配置名。</summary>
+    public string? Model { get; set; }
+
+    /// <summary>能力工具白名单，按函数名匹配。未写或空时不给出任何能力工具。</summary>
+    public List<string>? Tools { get; set; }
 
     public NodeOutput? Output { get; set; }
 

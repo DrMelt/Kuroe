@@ -68,10 +68,10 @@ internal sealed class Ui : IDisposable
         {
             TaskListView list = new(Terminal);
             TaskDetailView detail = new(Terminal);
-            AgentDetailView agent = new(Terminal);
-            TaskBrowser browser = new(Harness.Registry, Harness.Tasks, list, detail, agent, Terminal, Results);
+            RunDetailView runView = new(Terminal);
+            TaskBrowser browser = new(Harness.Registry, Harness.Tasks, list, detail, runView, Terminal, Results);
 
-            return new TaskCommands(Harness.Registry, Harness.Tasks, list, detail, agent, browser, Terminal, Results);
+            return new TaskCommands(Harness.Registry, Harness.Tasks, list, detail, runView, browser, Terminal, Results);
         }
     }
 

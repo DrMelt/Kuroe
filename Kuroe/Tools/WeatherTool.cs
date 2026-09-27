@@ -1,10 +1,10 @@
-using Kuroe.Agent.Tools;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Executions.Tools;
+using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Tools;
 
 /// <summary>天气工具，当前为占位实现，接入真实天气服务时替换调用体。</summary>
-sealed class WeatherTool : IAgentTool
+sealed class WeatherTool : ITool
 {
     public IReadOnlyList<ToolFunction> Functions { get; } =
     [

@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Agent.Turns;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Executions.Turns;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;

@@ -1,10 +1,10 @@
-using Kuroe.Agent.Tools;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Executions.Tools;
+using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Tools;
 
 /// <summary>系统时间工具。</summary>
-sealed class TimeTool : IAgentTool
+sealed class TimeTool : ITool
 {
     public IReadOnlyList<ToolFunction> Functions { get; } =
     [

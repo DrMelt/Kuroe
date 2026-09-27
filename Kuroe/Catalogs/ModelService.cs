@@ -13,7 +13,7 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
     private readonly CatalogService _catalog = catalog;
 
     /// <summary>当前选中的模型名，未选择时为空。</summary>
-    public string? Current => _settings.Current.Agent.Model;
+    public string? Current => _settings.Current.Runtime.Model;
 
     /// <summary>模型是否已在目录中注册。</summary>
     public bool IsRegistered(string modelName) => _catalog.HasModel(modelName);
@@ -35,7 +35,7 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
     /// <summary>取消选择。本来就未选择时 Changed 为假，用户层不变。</summary>
     public ErrorOr<ModelSelection> Unselect()
     {
-        if (_settings.TryGetUserValue(AgentSettings.ModelPath) is null)
+        if (_settings.TryGetUserValue(RuntimeSettings.ModelPath) is null)
         {
             return new ModelSelection(false, SettingsEffect.None);
         }

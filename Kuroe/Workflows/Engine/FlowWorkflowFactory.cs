@@ -1,6 +1,5 @@
-using Kuroe.Agent.Runs;
+using Kuroe.Executions.Runs;
 using Kuroe.Configuration;
-using Kuroe.Shared.Agent;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
@@ -16,7 +15,7 @@ internal static class FlowWorkflowFactory
     /// <summary>启动该任务的流程运行。start 与全部根执行节点、每条依赖边、检查返工边各有边，
     /// 激活消息按目标执行器定向投递，就绪判定与发布由执行器内部按边决定。</summary>
     public static StreamingRun Start(
-        AgentTask task,
+        WorkTask task,
         TaskRegistry registry,
         RunDispatcher dispatcher,
         NodeModelResolver models)

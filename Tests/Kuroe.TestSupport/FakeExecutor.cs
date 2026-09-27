@@ -1,17 +1,17 @@
 using ErrorOr;
-using Kuroe.Agent;
-using Kuroe.Agent.Runs;
-using Kuroe.Shared.Agent;
+using Kuroe.Executions;
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.TestSupport;
 
-/// <summary>不接模型的执行器：按角色交回条目或结论，并记录并发峰值。</summary>
+/// <summary>不接模型的执行器：按节点产出要求交回条目或结论，并记录并发峰值。</summary>
 public sealed class FakeExecutor : IRunExecutor
 {
     private readonly Lock _gate = new();
-    private readonly List<AgentRun> _started = [];
+    private readonly List<Run> _started = [];
     private int _live;
     private int _peak;
 
@@ -26,7 +26,7 @@ public sealed class FakeExecutor : IRunExecutor
         """;
 
     /// <summary>检查执行节点是否交回通过，默认全部通过。</summary>
-    public Func<AgentRun, bool> CheckPasses { get; set; } = _ => true;
+    public Func<Run, bool> CheckPasses { get; set; } = _ => true;
 
     /// <summary>检查不通过时交回的意见，空串用于验证拒绝路径。</summary>
     public string FindingsForCheck { get; set; } = "验收项未满足";
@@ -37,22 +37,22 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>检查执行节点是否交回结论，关掉用于验证未收口。</summary>
     public bool SubmitsVerdict { get; set; } = true;
 
-    /// <summary>单个 agent 的人为耗时，用于并发与取消断言。</summary>
+    /// <summary>单个 run 的人为耗时，用于并发与取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
     /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
-    public Func<AgentRun, bool>? FailsWhen { get; set; }
+    public Func<Run, bool>? FailsWhen { get; set; }
 
     /// <summary>非规划与检查执行节点的返回文本，缺省为契约名加产出。</summary>
-    public Func<AgentRun, string>? Output { get; set; }
+    public Func<Run, string>? Output { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
     public List<string> Submissions => [.. _submissions];
 
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _submissions = new();
 
-    /// <summary>每个 agent 的观察点，用于断言上下文与执行顺序。</summary>
-    public IReadOnlyList<AgentRun> Started
+    /// <summary>每个 run 的观察点，用于断言上下文与执行顺序。</summary>
+    public IReadOnlyList<Run> Started
     {
         get
         {
@@ -65,7 +65,7 @@ public sealed class FakeExecutor : IRunExecutor
 
     public int Peak { get { lock (_gate) { return _peak; } } }
 
-    public async Task<ErrorOr<string>> ExecuteAsync(AgentRun run, CancellationToken cancellationToken)
+    public async Task<ErrorOr<string>> ExecuteAsync(Run run, CancellationToken cancellationToken)
     {
         lock (_gate)
         {

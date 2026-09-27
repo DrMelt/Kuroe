@@ -1,8 +1,8 @@
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Turns;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
-using Kuroe.Shared.Agent.Turns;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Turns;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -24,7 +24,7 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
             return;
         }
 
-        AgentTask task = found.Value;
+        WorkTask task = found.Value;
         switch (message.Intent)
         {
             case FlowIntent.Start:
@@ -39,7 +39,7 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
     }
 
     /// <summary>启动：评估第一批根执行节点。放行：评估等待批准的执行节点。</summary>
-    private static async ValueTask RouteAsync(AgentTask task, IWorkflowContext context, CancellationToken cancellationToken)
+    private static async ValueTask RouteAsync(WorkTask task, IWorkflowContext context, CancellationToken cancellationToken)
     {
         List<int> targets;
         lock (task.Gate)
@@ -55,7 +55,7 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
     }
 
     /// <summary>返工：作废与放行已由宿主信号前的 Gate 内完成，这里只把重派消息投给目标执行节点。</summary>
-    private static async ValueTask ReworkAsync(AgentTask task, IReadOnlyList<(int Blocked, int Node, int? Item)> targets, IWorkflowContext context, CancellationToken cancellationToken)
+    private static async ValueTask ReworkAsync(WorkTask task, IReadOnlyList<(int Blocked, int Node, int? Item)> targets, IWorkflowContext context, CancellationToken cancellationToken)
     {
         if (targets.Count == 0)
         {

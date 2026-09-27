@@ -6,7 +6,7 @@ public enum NodeState
     /// <summary>尚未激活或输入未齐备。</summary>
     Pending,
 
-    /// <summary>有 agent 在跑。</summary>
+    /// <summary>有 run 在跑。</summary>
     Running,
 
     /// <summary>本节点产出已就绪，等人批准才向下游发布。</summary>

@@ -11,7 +11,7 @@ internal sealed record KuroeSettings
     /// <summary>生效值缺失时的呈现文本。</summary>
     public const string NotSetText = "未设置";
 
-    public required AgentSettings Agent { get; init; }
+    public required RuntimeSettings Runtime { get; init; }
 
     /// <summary>按当前生效值列出各节与各设置项，路径与 <see cref="ResolvePath"/> 同源。</summary>
     public IReadOnlyList<SettingSection> Sections(UserSettingsStore store) =>
@@ -82,15 +82,15 @@ internal sealed record KuroeSettings
     /// <summary>绑定全部节，输入须是 <see cref="Normalize"/> 处理过的树。</summary>
     public static ErrorOr<KuroeSettings> From(JsonObject root)
     {
-        JsonNode? node = Section(root, AgentSettings.SectionName);
+        JsonNode? node = Section(root, RuntimeSettings.SectionName);
         if (node is not null and not JsonObject)
         {
-            return [SettingsErrors.Bind($"{AgentSettings.SectionName} 节必须是对象。")];
+            return [SettingsErrors.Bind($"{RuntimeSettings.SectionName} 节必须是对象。")];
         }
 
-        ErrorOr<AgentSettings> agent = AgentSettings.From(node as JsonObject);
+        ErrorOr<RuntimeSettings> runtime = RuntimeSettings.From(node as JsonObject);
 
-        return agent.IsError ? agent.ErrorsOrEmptyList : new KuroeSettings { Agent = agent.Value };
+        return runtime.IsError ? runtime.ErrorsOrEmptyList : new KuroeSettings { Runtime = runtime.Value };
     }
 
     /// <summary>取该节的节点，不存在时返回 null，节名不区分大小写。</summary>

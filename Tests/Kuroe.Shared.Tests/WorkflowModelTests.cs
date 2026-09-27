@@ -1,5 +1,5 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Tools;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
@@ -11,7 +11,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Executable_defaults_to_plain_single_auto_without_rework()
     {
-        AgentNode executable = new() { Name = "实施", Agent = "执行者" };
+        ExecuteNode executable = new() { Name = "实施", Model = "执行者" };
 
         Assert.Equal(NodeOutput.Plain, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
@@ -19,12 +19,13 @@ public sealed class WorkflowModelTests
         Assert.Empty(executable.From);
         Assert.Null(executable.OnReject);
         Assert.Null(executable.MaxAttempts);
+        Assert.Empty(executable.Tools);
     }
 
     [Fact]
     public void Check_executable_defaults_to_retry_once_more()
     {
-        AgentNode executable = new() { Name = "检查", Agent = "检查者", Output = NodeOutput.Review };
+        ExecuteNode executable = new() { Name = "检查", Model = "检查者", Output = NodeOutput.Review };
 
         Assert.Equal(RejectAction.Retry, executable.RejectAction);
         Assert.Equal(2, executable.AttemptLimit);
@@ -33,10 +34,10 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Declared_rework_overrides_defaults()
     {
-        AgentNode executable = new()
+        ExecuteNode executable = new()
         {
             Name = "检查",
-            Agent = "检查者",
+            Model = "检查者",
             Output = NodeOutput.Review,
             OnReject = RejectAction.Stop,
             MaxAttempts = 5,
@@ -51,8 +52,8 @@ public sealed class WorkflowModelTests
     {
         var graph = new NodeGraph(
         [
-            new ExecutableNode(0, "规划", "规划", Agent, null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
-            new ExecutableNode(1, "实施", "实施", Agent, null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
+            new ExecutableNode(0, "规划", "规划", Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
+            new ExecutableNode(1, "实施", "实施", Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
         ], []);
 
         Assert.Equal(2, graph.Count);
@@ -72,5 +73,5 @@ public sealed class WorkflowModelTests
         Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())));
     }
 
-    private static readonly AgentDefinition Agent = new() { Name = "执行者" };
+    private static readonly ModelDefinition Planner = new() { Name = "执行者" };
 }

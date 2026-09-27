@@ -1,5 +1,5 @@
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
 using Xunit;
@@ -41,7 +41,7 @@ public sealed class LimitsTests
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
         RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
         ContextMessage upstream = Assert.Single(implement.Context.Seed,
-            message => message.Source is AgentSource);
+            message => message.Source is RunSource);
 
         Assert.Equal(2001, upstream.Text.Length);
         Assert.StartsWith("节点「制定计划」的产出", upstream.Text);

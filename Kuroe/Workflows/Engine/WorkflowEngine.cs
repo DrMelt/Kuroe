@@ -1,8 +1,8 @@
-using Kuroe.Agent.Runs;
-using Kuroe.Agent.Turns;
+using Kuroe.Executions.Runs;
+using Kuroe.Executions.Turns;
 using Kuroe.Configuration;
-using Kuroe.Shared.Agent;
-using Kuroe.Shared.Agent.Runs;
+using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Shared.Workflows.Flows;
@@ -25,7 +25,7 @@ sealed class WorkflowEngine(
     private bool _stopping;
 
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
-    public void Start(AgentTask task)
+    public void Start(WorkTask task)
     {
         StreamingRun run = FlowWorkflowFactory.Start(task, registry, dispatcher, models);
         lock (_gate)
@@ -35,7 +35,7 @@ sealed class WorkflowEngine(
     }
 
     /// <summary>要求持有任务 Gate：批准等待放行的节点，再向流程运行发出继续信号，返回被批准的节点数。</summary>
-    public int Approve(AgentTask task)
+    public int Approve(WorkTask task)
     {
         int waiting;
         lock (task.Gate)
@@ -56,7 +56,7 @@ sealed class WorkflowEngine(
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
-    public int Rework(AgentTask task, int? itemIndex)
+    public int Rework(WorkTask task, int? itemIndex)
     {
         IReadOnlyList<(int Blocked, int Node, int? Item)> targets;
         lock (task.Gate)
@@ -86,8 +86,8 @@ sealed class WorkflowEngine(
         return targets.Count;
     }
 
-    /// <summary>取消任务：任务对象停止全部 agent，流程运行终止。</summary>
-    public void Cancel(AgentTask task)
+    /// <summary>取消任务：任务对象停止全部 run，流程运行终止。</summary>
+    public void Cancel(WorkTask task)
     {
         lock (task.Gate)
         {

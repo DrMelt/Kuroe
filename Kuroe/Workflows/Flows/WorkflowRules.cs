@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Shared.Agent;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
@@ -17,16 +16,16 @@ static class WorkflowRules
             errors.Add(WorkflowErrors.Body(flow.Name, "至少要有一个节点。"));
         }
 
-        var agentNames = new HashSet<string>();
-        foreach (string name in flow.Agents.Select(agent => agent.Name))
+        var modelNames = new HashSet<string>();
+        foreach (string name in flow.Models.Select(model => model.Name))
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                errors.Add(WorkflowErrors.Agent(flow.Name, "(未命名)", "agent 名不能为空。"));
+                errors.Add(WorkflowErrors.Model(flow.Name, "(未命名)", "模型配置名不能为空。"));
             }
-            else if (!agentNames.Add(name))
+            else if (!modelNames.Add(name))
             {
-                errors.Add(WorkflowErrors.Agent(flow.Name, name, "agent 名重复。"));
+                errors.Add(WorkflowErrors.Model(flow.Name, name, "模型配置名重复。"));
             }
         }
 
@@ -37,9 +36,9 @@ static class WorkflowRules
         CollectExecutables(flow.Nodes, executableNames);
 
         var names = new HashSet<string>();
-        CheckTree(flow.Nodes, names, executableNames, agentNames, containerNames, flow.Name, errors);
+        CheckTree(flow.Nodes, names, executableNames, modelNames, containerNames, flow.Name, errors);
 
-        // 引用类错误不存在时才展平，避免编译时的 agent 查表落空
+        // 引用类错误不存在时才展平，避免编译时的模型配置查表落空
         if (errors.Count == 0)
         {
             CheckShape(FlowCompiler.Compile(flow), flow.Name, attemptLimit, errors);
@@ -66,7 +65,7 @@ static class WorkflowRules
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node is AgentNode executable)
+            if (node is ExecuteNode executable)
             {
                 names.Add(executable.Name);
             }
@@ -77,12 +76,12 @@ static class WorkflowRules
         }
     }
 
-    /// <summary>递归校验名字、From 引用、容器与 agent 引用。执行先后由拓扑排序保证，这里只检查引用是否落在执行节点或容器上。</summary>
+    /// <summary>递归校验名字、From 引用、容器与模型配置引用。执行先后由拓扑排序保证，这里只检查引用是否落在执行节点或容器上。</summary>
     private static void CheckTree(
         IReadOnlyList<NodeSpec> siblings,
         HashSet<string> names,
         HashSet<string> executableNames,
-        HashSet<string> agentNames,
+        HashSet<string> modelNames,
         HashSet<string> containerNames,
         string flowName,
         List<Error> errors)
@@ -124,7 +123,7 @@ static class WorkflowRules
                     }
                     else
                     {
-                        CheckTree(flow.Nodes, names, executableNames, agentNames, containerNames, flowName, errors);
+                        CheckTree(flow.Nodes, names, executableNames, modelNames, containerNames, flowName, errors);
                     }
 
                     if (flow.From.Count > 0)
@@ -139,10 +138,10 @@ static class WorkflowRules
 
                     break;
 
-                case AgentNode executable:
-                    if (string.IsNullOrWhiteSpace(executable.Agent) || !agentNames.Contains(executable.Agent))
+                case ExecuteNode executable:
+                    if (string.IsNullOrWhiteSpace(executable.Model) || !modelNames.Contains(executable.Model))
                     {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name, $"引用的 agent {executable.Agent} 不存在。"));
+                        errors.Add(WorkflowErrors.Node(flowName, node.Name, $"引用的模型配置 {executable.Model} 不存在。"));
                     }
 
                     ValidateSplit(executable, flowName, errors);
@@ -152,7 +151,7 @@ static class WorkflowRules
     }
 
     /// <summary>拆分配置的静态规则：只能写在规划执行节点上，条目与补充上限的取值边界。</summary>
-    private static void ValidateSplit(AgentNode executable, string flowName, List<Error> errors)
+    private static void ValidateSplit(ExecuteNode executable, string flowName, List<Error> errors)
     {
         if (executable.Split is not { } split)
         {
@@ -314,7 +313,7 @@ static class WorkflowRules
 
             if (executable.MaxAttempts > attemptLimit)
             {
-                errors.Add(WorkflowErrors.Node(flowName, executable.Name, $"MaxAttempts 超过 Agent:MaxAttempts={attemptLimit}。"));
+                errors.Add(WorkflowErrors.Node(flowName, executable.Name, $"MaxAttempts 超过 Runtime:MaxAttempts={attemptLimit}。"));
             }
         }
 

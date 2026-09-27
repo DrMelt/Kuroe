@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Agent;
+using Kuroe.Executions;
 using Kuroe.Cli.Views;
 using Kuroe.Configuration;
-using Kuroe.Shared.Agent;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
@@ -26,7 +26,7 @@ internal sealed class FlowCommands(
     ];
 
     /// <summary>默认流程名在用户层中的路径。</summary>
-    private const string DefaultFlowPath = "Agent:DefaultFlow";
+    private const string DefaultFlowPath = "Runtime:DefaultFlow";
 
     public void Run(string[] parts)
     {
@@ -92,7 +92,7 @@ internal sealed class FlowCommands(
         grid.AddRow(
             new Text("序号", Styles.Hint),
             new Text("执行节点", Styles.Hint),
-            new Text("执行", Styles.Hint),
+            new Text("模型", Styles.Hint),
             new Text("契约", Styles.Hint),
             new Text("展开", Styles.Hint),
             new Text("产出后", Styles.Hint),
@@ -101,12 +101,12 @@ internal sealed class FlowCommands(
         int index = 0;
         foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
         {
-            if (node is AgentNode executable)
+            if (node is ExecuteNode executable)
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + executable.Name),
-                    new Text(executable.Agent),
+                    new Text(executable.Model),
                     new Text(executable.Output.Label()),
                     new Text(Labels.Of(executable.Mode)),
                     new Text(Labels.Of(executable.Gate)),
@@ -158,12 +158,17 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, name));
     }
 
-    private static string Requirement(AgentNode executable)
+    private static string Requirement(ExecuteNode executable)
     {
         List<string> parts = [];
         if (executable.Branch is { Length: > 0 } branch)
         {
             parts.Add($"分支 {branch}");
+        }
+
+        if (executable.Tools.Count > 0)
+        {
+            parts.Add($"工具 {string.Join("、", executable.Tools)}");
         }
 
         if (executable.From.Count > 0)
