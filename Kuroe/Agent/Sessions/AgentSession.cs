@@ -160,7 +160,6 @@ public sealed class AgentSession
         if (HasPendingFunctionCall(produced))
         {
             DiscardTurn(journal, historyStart);
-            return;
         }
     }
 

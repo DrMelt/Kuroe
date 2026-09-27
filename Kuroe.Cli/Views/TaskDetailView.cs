@@ -12,10 +12,10 @@ internal sealed class TaskDetailView(Terminal terminal)
 
     public void Print(TaskSnapshot task)
     {
-        _terminal.Line($"{task.Id} · {task.Title}　状态：{Labels.Of(task.State)}");
+        _terminal.Line($"{task.Id} · {task.Title}\u3000状态：{Labels.Of(task.State)}");
         _terminal.Line($"目标：{task.Goal}");
         _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
-            + $"　节点进度 {task.FrontierNodes}/{task.TotalNodes}　前台对话 {task.DialogueTurns} 回合");
+            + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalNodes}\u3000前台对话 {task.DialogueTurns} 回合");
 
         if (task.Splits.Count > 0)
         {
@@ -28,7 +28,7 @@ internal sealed class TaskDetailView(Terminal terminal)
                 {
                     ItemStateSnapshot? state = task.ItemStates.FirstOrDefault(candidate =>
                         candidate.ExecutableIndex == executableIndex && candidate.ItemIndex == item.Index);
-                    string verdict = state is null ? string.Empty : $"　{Labels.Of(state.Verdict)}";
+                    string verdict = state is null ? string.Empty : $"\u3000{Labels.Of(state.Verdict)}";
                     string branch = item.Branch is { Length: > 0 } name ? $"（{name}）" : string.Empty;
                     _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}{verdict}");
                 }

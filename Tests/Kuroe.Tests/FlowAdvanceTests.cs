@@ -143,9 +143,9 @@ public sealed class FlowAdvanceTests
 
         // 只返工条目 0：条目 1 的返工目标保留，只重跑条目 0 的实施
         harness.Tasks.Rework(id, 0).ThrowIfError();
-        TaskSnapshot partial = harness.Wait(id,
+        harness.Wait(id,
             s => s.Nodes[1].Runs.Any(run => run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 3));
-        partial = harness.Settle(id);
+        TaskSnapshot partial = harness.Settle(id);
         // 条目 1 的返工目标保留，检查节点保持阻塞不重开
         Assert.Equal(TaskState.Blocked, partial.State);
         Assert.Equal(4, partial.Nodes[2].Runs.Count);
@@ -250,7 +250,7 @@ public sealed class FlowAdvanceTests
             run.Context.NodeIndex == 1 && Interlocked.Increment(ref failures) <= 2;
 
         TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         harness.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = harness.Wait(id, snapshot => snapshot.State == TaskState.Done);

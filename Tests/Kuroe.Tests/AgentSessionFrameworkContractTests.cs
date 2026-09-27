@@ -13,7 +13,7 @@ public sealed class AgentSessionFrameworkContractTests
     public async Task History_accumulates_across_runs_when_input_carries_only_the_latest_message()
     {
         var client = new RecordingChatClient();
-        ChatClientAgent agent = (ChatClientAgent)client.AsAIAgent();
+        ChatClientAgent agent = client.AsAIAgent();
         AgentSession session = await agent.CreateSessionAsync();
 
         session.SetInMemoryChatHistory([new ChatMessage(ChatRole.System, "你是一个助手。")]);
@@ -29,7 +29,7 @@ public sealed class AgentSessionFrameworkContractTests
     public async Task Relayout_replaces_session_history()
     {
         var client = new RecordingChatClient();
-        ChatClientAgent agent = (ChatClientAgent)client.AsAIAgent();
+        ChatClientAgent agent = client.AsAIAgent();
         AgentSession session = await agent.CreateSessionAsync();
 
         await ConsumeAsync(agent.RunStreamingAsync("第一问", session));
@@ -45,20 +45,20 @@ public sealed class AgentSessionFrameworkContractTests
         public List<IReadOnlyList<ChatMessage>> Requests { get; } = [];
 
         public Task<ChatResponse> GetResponseAsync(
-            IEnumerable<ChatMessage> chatMessages,
+            IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add([.. chatMessages]);
+            Requests.Add([.. messages]);
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "回复")));
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
-            IEnumerable<ChatMessage> chatMessages,
+            IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            Requests.Add([.. chatMessages]);
+            Requests.Add([.. messages]);
             yield return new ChatResponseUpdate(ChatRole.Assistant, "回复");
         }
 
@@ -73,6 +73,7 @@ public sealed class AgentSessionFrameworkContractTests
     {
         await foreach (var _ in stream)
         {
+            // 只消费事件流以完成回合
         }
     }
 }

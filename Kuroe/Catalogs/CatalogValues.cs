@@ -10,6 +10,18 @@ internal static class CatalogValues
 
     internal static ErrorOr<ProviderName> Provider(string name) => ProviderName.Create(name);
 
+    internal static ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> Provider(
+        string name, string endpoint, string apiKey)
+    {
+        ErrorOr<ProviderName> provider = ProviderName.Create(name);
+        ErrorOr<ProviderEndpoint> address = ProviderEndpoint.Create(endpoint);
+        ErrorOr<ApiKey> key = ApiKey.Create(apiKey);
+
+        return AllErrors(provider, address, key) is { Count: > 0 } errors
+            ? errors
+            : (provider.Value, address.Value, key.Value);
+    }
+
     internal static ErrorOr<ApiKey> Key(string apiKey) => ApiKey.Create(apiKey);
 
     internal static ErrorOr<(ProviderName Provider, ApiKey Key)> ProviderKey(string name, string apiKey)
@@ -31,18 +43,6 @@ internal static class CatalogValues
         return AllErrors(model, provider) is { Count: > 0 } errors
             ? errors
             : (model.Value, provider.Value);
-    }
-
-    internal static ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> Provider(
-        string name, string endpoint, string apiKey)
-    {
-        ErrorOr<ProviderName> provider = ProviderName.Create(name);
-        ErrorOr<ProviderEndpoint> address = ProviderEndpoint.Create(endpoint);
-        ErrorOr<ApiKey> key = ApiKey.Create(apiKey);
-
-        return AllErrors(provider, address, key) is { Count: > 0 } errors
-            ? errors
-            : (provider.Value, address.Value, key.Value);
     }
 
     /// <summary>全部解析结果的错误并集，无错误时为空列表。</summary>

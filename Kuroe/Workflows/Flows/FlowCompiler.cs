@@ -36,7 +36,7 @@ internal static class FlowCompiler
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node is AgentNode executable)
+            if (node is AgentNode)
             {
                 order[node.Name] = next;
                 next++;

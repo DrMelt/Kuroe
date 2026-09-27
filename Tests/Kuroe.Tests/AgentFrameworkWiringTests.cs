@@ -28,9 +28,6 @@ public sealed class AgentFrameworkWiringTests
     [Fact]
     public void Run_options_carry_tools_and_sampling()
     {
-        ChatClientAgent agent = Connection().CreateChatClient()
-            .AsAIAgent(new ChatClientAgentOptions());
-
         var options = new ChatClientAgentRunOptions(new ChatOptions
         {
             Temperature = 0.7f,

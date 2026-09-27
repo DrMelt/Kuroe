@@ -37,11 +37,11 @@ internal sealed class TaskBrowser(
     {
         while (true)
         {
-            IReadOnlyList<TaskSnapshot> tasks = registry.Snapshots();
-            list.Print(tasks, registry.Active);
+            IReadOnlyList<TaskSnapshot> snapshots = registry.Snapshots();
+            list.Print(snapshots, registry.Active);
 
             Item picked = Choose("选择任务",
-                [.. tasks.Select(task => new Item(TaskLabel(task), "task", task.Id)), Refresh, Exit]);
+                [.. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), Refresh, Exit]);
             if (picked.Action == "exit")
             {
                 return;

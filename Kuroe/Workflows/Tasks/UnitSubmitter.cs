@@ -58,21 +58,19 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 }
             }
 
-            foreach (PlanItem item in merged.Value)
+            if (branches.Count > 0)
             {
-                if (branches.Count == 0)
+                foreach (string? branch in merged.Value.Select(item => item.Branch))
                 {
-                    continue;
-                }
+                    if (string.IsNullOrWhiteSpace(branch))
+                    {
+                        return "被拒绝：分流任务的条目必须写明分支 Branch。";
+                    }
 
-                if (string.IsNullOrWhiteSpace(item.Branch))
-                {
-                    return "被拒绝：分流任务的条目必须写明分支 Branch。";
-                }
-
-                if (!branches.Contains(item.Branch))
-                {
-                    return $"被拒绝：分支 {item.Branch} 没有对应的分支执行节点。";
+                    if (!branches.Contains(branch))
+                    {
+                        return $"被拒绝：分支 {branch} 没有对应的分支执行节点。";
+                    }
                 }
             }
 
@@ -107,7 +105,12 @@ public sealed class UnitSubmitter(TaskRegistry registry)
             bool recorded = task.Runtime.RecordCheck(run.Context.NodeIndex, run.Context.ItemIndex,
                 new CheckResult(run.Context.ExecutionCount, passed, findings, run.Id, run.Context.NodeName));
 
-            return recorded ? (passed ? "已记录：通过。" : "已记录：不通过。") : "本轮已提交过结论，无需重复提交。";
+            if (!recorded)
+            {
+                return "本轮已提交过结论，无需重复提交。";
+            }
+
+            return passed ? "已记录：通过。" : "已记录：不通过。";
         }
     }
 

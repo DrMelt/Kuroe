@@ -113,6 +113,7 @@ internal sealed partial class NodeExecutor(
         }
         catch (OperationCanceledException)
         {
+            // 取消已由调度侧收口为取消状态，这里退出后按状态处理
         }
 
         TaskFlow.SettlePlan plan;

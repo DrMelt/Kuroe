@@ -126,6 +126,8 @@ public sealed class AgentRun
             _finishedAt = DateTimeOffset.UtcNow;
         }
 
+        _cancellation.Dispose();
+
         foreach (string text in failures)
         {
             Journal.Append(new ErrorEntry(text));
@@ -151,7 +153,18 @@ public sealed class AgentRun
     }
 
     /// <summary>取消该 agent，进行中的一轮请求随之结束。</summary>
-    public void Cancel() => _cancellation.Cancel();
+    public void Cancel()
+    {
+        lock (_gate)
+        {
+            if (_state.IsSettled())
+            {
+                return;
+            }
+
+            _cancellation.Cancel();
+        }
+    }
 
     /// <summary>当前状态的只读快照。</summary>
     public RunSnapshot Snapshot()

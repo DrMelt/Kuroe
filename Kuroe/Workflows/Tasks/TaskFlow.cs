@@ -141,18 +141,8 @@ internal sealed class TaskFlow
         }
     }
 
-    private bool ItemSatisfied(int node, int? item)
-    {
-        foreach (FlowEdge edge in Graph.Incoming(node))
-        {
-            if (!FeedSatisfied(edge, item))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    private bool ItemSatisfied(int node, int? item) =>
+        Graph.Incoming(node).All(edge => FeedSatisfied(edge, item));
 
     /// <summary>实例是否已有产出。</summary>
     public bool Complete(int node, int? item)
@@ -187,13 +177,10 @@ internal sealed class TaskFlow
         ExecutableNode executable = Graph[node];
         if (executable.Mode == NodeMode.PerItem)
         {
-            foreach (int item in ResolveItems(node))
+            foreach (int item in ResolveItems(node).Where(item => !Complete(node, item) && ItemSatisfied(node, item)))
             {
-                if (!Complete(node, item) && ItemSatisfied(node, item))
-                {
-                    _executions[(node, item)] = _executions.GetValueOrDefault((node, item)) + 1;
-                    starters.Add(new RunStarter(item));
-                }
+                _executions[(node, item)] = _executions.GetValueOrDefault((node, item)) + 1;
+                starters.Add(new RunStarter(item));
             }
         }
         else if (!Complete(node, null) && ItemSatisfied(node, null))
@@ -454,17 +441,41 @@ internal sealed class TaskFlow
         }
 
         List<int> items = s.Expanded ? [.. s.Items] : [];
-        int completed = s.Expanded
-            ? items.Count(item => s.ItemRev.ContainsKey(item))
-            : s.Rev > 0 ? 1 : 0;
+        int completed;
+        if (s.Expanded)
+        {
+            completed = items.Count(item => s.ItemRev.ContainsKey(item));
+        }
+        else
+        {
+            completed = s.Rev > 0 ? 1 : 0;
+        }
 
-        NodeState state = s.Canceled ? NodeState.Canceled
-            : s.Awaiting ? NodeState.AwaitingApproval
-            : s.Blocked ? NodeState.Blocked
-            : s.Active > 0 ? NodeState.Running
-            : s.Expanded ? completed >= items.Count ? NodeState.Done : NodeState.Running
-            : s.Rev > 0 ? NodeState.Done
-            : NodeState.Pending;
+        NodeState state;
+        if (s.Canceled)
+        {
+            state = NodeState.Canceled;
+        }
+        else if (s.Awaiting)
+        {
+            state = NodeState.AwaitingApproval;
+        }
+        else if (s.Blocked)
+        {
+            state = NodeState.Blocked;
+        }
+        else if (s.Active > 0)
+        {
+            state = NodeState.Running;
+        }
+        else if (s.Expanded)
+        {
+            state = completed >= items.Count ? NodeState.Done : NodeState.Running;
+        }
+        else
+        {
+            state = s.Rev > 0 ? NodeState.Done : NodeState.Pending;
+        }
 
         return new NodeStateSnapshot(index, state, items, completed);
     }

@@ -39,7 +39,7 @@ public static class ContextComposer
             string branch = item.Branch is { Length: > 0 } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
                 Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
-                new ItemSource(OriginOf(task, executable, item), item.Index, item.Title)));
+                new ItemSource(OriginOf(task, executable), item.Index, item.Title)));
         }
 
         CheckResult? rework = ReworkOf(task, executable, itemIndex);
@@ -158,7 +158,7 @@ public static class ContextComposer
     }
 
     /// <summary>条目内容的出处 agent：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
-    private static RunId OriginOf(AgentTask task, ExecutableNode executable, PlanItem item)
+    private static RunId OriginOf(AgentTask task, ExecutableNode executable)
     {
         if (task.Graph.ItemSource(executable.Index) is { } plan
             && LatestSucceeded(task, plan, null) is { } planRun)
@@ -193,9 +193,15 @@ public static class ContextComposer
             lines.Add(prompt);
         }
 
-        lines.Add(item is { } entry
-            ? $"目标：{task.Goal}\n本次只负责条目 {entry.Index + 1}：{entry.Title}{(entry.Branch is { Length: > 0 } branch ? $"（分支 {branch}）" : string.Empty)}"
-            : $"目标：{task.Goal}");
+        if (item is { } entry)
+        {
+            string branch = entry.Branch is { Length: > 0 } name ? $"（分支 {name}）" : string.Empty;
+            lines.Add($"目标：{task.Goal}\n本次只负责条目 {entry.Index + 1}：{entry.Title}{branch}");
+        }
+        else
+        {
+            lines.Add($"目标：{task.Goal}");
+        }
 
         AppendSplitGuide(task, executable, lines);
 

@@ -33,13 +33,10 @@ public sealed class ToolCollection
         foreach (IAgentTool carrier in _carriers)
         {
             IAgentTool bound = carrier is IScopedAgentTool scoped ? scoped.ForTurn(scope) : carrier;
-            foreach (ToolFunction function in bound.Functions)
-            {
-                if (tools is null || tools.Contains(function.Name))
-                {
-                    result.Add(new DeclaredFunction(function, sink));
-                }
-            }
+            IEnumerable<ToolFunction> allowed = tools is null
+                ? bound.Functions
+                : bound.Functions.Where(function => tools.Contains(function.Name));
+            result.AddRange(allowed.Select(function => new DeclaredFunction(function, sink)));
         }
 
         return result;
@@ -127,40 +124,40 @@ public sealed class ToolCollection
                     break;
             }
         }
-    }
 
-    /// <summary>参数的 JSON Schema，随请求交给模型。</summary>
-    private static JsonElement SchemaOf(IReadOnlyList<ToolParameter> parameters)
-    {
-        using MemoryStream buffer = new();
-        using (Utf8JsonWriter writer = new(buffer))
+        /// <summary>参数的 JSON Schema，随请求交给模型。</summary>
+        private static JsonElement SchemaOf(IReadOnlyList<ToolParameter> parameters)
         {
-            writer.WriteStartObject();
-            writer.WriteString("type", "object");
-            writer.WriteStartObject("properties");
-            foreach (ToolParameter parameter in parameters)
+            using MemoryStream buffer = new();
+            using (Utf8JsonWriter writer = new(buffer))
             {
-                writer.WriteStartObject(parameter.Name);
-                writer.WriteString("type", parameter.Flag ? "boolean" : "string");
-                writer.WriteString("description", parameter.Description);
+                writer.WriteStartObject();
+                writer.WriteString("type", "object");
+                writer.WriteStartObject("properties");
+                foreach (ToolParameter parameter in parameters)
+                {
+                    writer.WriteStartObject(parameter.Name);
+                    writer.WriteString("type", parameter.Flag ? "boolean" : "string");
+                    writer.WriteString("description", parameter.Description);
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndObject();
+                if (parameters.Any(parameter => parameter.Required))
+                {
+                    writer.WriteStartArray("required");
+                    foreach (ToolParameter parameter in parameters.Where(parameter => parameter.Required))
+                    {
+                        writer.WriteStringValue(parameter.Name);
+                    }
+
+                    writer.WriteEndArray();
+                }
+
                 writer.WriteEndObject();
             }
 
-            writer.WriteEndObject();
-            if (parameters.Any(parameter => parameter.Required))
-            {
-                writer.WriteStartArray("required");
-                foreach (ToolParameter parameter in parameters.Where(parameter => parameter.Required))
-                {
-                    writer.WriteStringValue(parameter.Name);
-                }
-
-                writer.WriteEndArray();
-            }
-
-            writer.WriteEndObject();
+            return JsonDocument.Parse(buffer.ToArray()).RootElement.Clone();
         }
-
-        return JsonDocument.Parse(buffer.ToArray()).RootElement.Clone();
     }
 }

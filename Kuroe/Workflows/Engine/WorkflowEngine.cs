@@ -217,6 +217,7 @@ sealed class WorkflowEngine(
         }
         catch (ObjectDisposedException)
         {
+            // 运行可能已随任务收尾释放，取消竞争视为已处理
         }
     }
 
@@ -254,6 +255,7 @@ sealed class WorkflowEngine(
         }
         catch (ObjectDisposedException)
         {
+            // run 已随任务收尾释放，竞争视为已处理
         }
     }
 
@@ -265,6 +267,7 @@ sealed class WorkflowEngine(
         {
             await foreach (WorkflowEvent _ in run.WatchStreamAsync(blockOnPendingRequest: false))
             {
+                // 事件流只为推进执行器，事件由后续等待与暂停点消费
             }
 
             RunStatus status = await run.GetStatusAsync().ConfigureAwait(false);

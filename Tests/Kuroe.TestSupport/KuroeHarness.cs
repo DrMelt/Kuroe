@@ -124,12 +124,11 @@ public sealed class KuroeHarness : IDisposable
                 return snapshot;
             }
 
-            if (snapshot.LiveRuns == 0 && snapshot.State == TaskState.AwaitingApproval)
+            if (snapshot.LiveRuns == 0
+                && snapshot.State == TaskState.AwaitingApproval
+                && previous == TaskState.AwaitingApproval)
             {
-                if (previous == TaskState.AwaitingApproval)
-                {
-                    return snapshot;
-                }
+                return snapshot;
             }
 
             if (DateTime.UtcNow > deadline)
@@ -153,6 +152,7 @@ public sealed class KuroeHarness : IDisposable
         }
         catch (IOException)
         {
+            // 临时目录可能已被清理或占用，收尾不再上报
         }
     }
 }

@@ -27,9 +27,20 @@ public sealed class RunDispatcher(IRunExecutor executor, SettingsProvider settin
                 return;
             }
 
-            string description = settled.State == RunState.Canceled ? "已取消。"
-                : settled.Snapshot().Failures is { Count: > 0 } failures ? string.Join("；", failures)
-                : "请求未正常结束。";
+            string description;
+            if (settled.State == RunState.Canceled)
+            {
+                description = "已取消。";
+            }
+            else if (settled.Snapshot().Failures is { Count: > 0 } failures)
+            {
+                description = string.Join("；", failures);
+            }
+            else
+            {
+                description = "请求未正常结束。";
+            }
+
             completion.TrySetResult(Error.Failure("Run.Dispatch", description));
         });
 
@@ -61,8 +72,8 @@ public sealed class RunDispatcher(IRunExecutor executor, SettingsProvider settin
     /// <summary>取消排队与在跑的 agent 并等待收口，之后不再开新的。</summary>
     public async Task ShutdownAsync()
     {
-        List<AgentRun> dropped = [];
         List<(AgentRun Run, Task Task)> live;
+        List<AgentRun> dropped;
         lock (_gate)
         {
             _stopping = true;

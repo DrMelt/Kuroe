@@ -9,7 +9,6 @@ namespace Kuroe.Tools;
 public sealed class VerdictTool : IScopedAgentTool
 {
     private readonly UnitSubmitter _intake;
-    private readonly TurnScope? _scope;
 
     /// <summary>容器装配用的载体，尚未绑定回合。</summary>
     public VerdictTool(UnitSubmitter intake)
@@ -21,7 +20,6 @@ public sealed class VerdictTool : IScopedAgentTool
     private VerdictTool(UnitSubmitter intake, TurnScope scope)
     {
         _intake = intake;
-        _scope = scope;
         Functions = Declare(intake, scope);
     }
 

@@ -66,6 +66,7 @@ public sealed class WiringTests : IDisposable
         }
         catch (IOException)
         {
+            // 临时目录可能已被清理或占用，收尾不再上报
         }
     }
 }

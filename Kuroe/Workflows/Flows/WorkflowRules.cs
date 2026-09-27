@@ -18,15 +18,15 @@ static class WorkflowRules
         }
 
         var agentNames = new HashSet<string>();
-        foreach (AgentDefinition agent in flow.Agents)
+        foreach (string name in flow.Agents.Select(agent => agent.Name))
         {
-            if (string.IsNullOrWhiteSpace(agent.Name))
+            if (string.IsNullOrWhiteSpace(name))
             {
                 errors.Add(WorkflowErrors.Agent(flow.Name, "(未命名)", "agent 名不能为空。"));
             }
-            else if (!agentNames.Add(agent.Name))
+            else if (!agentNames.Add(name))
             {
-                errors.Add(WorkflowErrors.Agent(flow.Name, agent.Name, "agent 名重复。"));
+                errors.Add(WorkflowErrors.Agent(flow.Name, name, "agent 名重复。"));
             }
         }
 
@@ -179,16 +179,10 @@ static class WorkflowRules
             errors.Add(WorkflowErrors.Node(flowName, executable.Name, "Split.Items 要有 1 到 20 条。"));
         }
 
-        if (split.Items is { } items)
+        if (split.Items is { } items
+            && items.Any(item => string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction)))
         {
-            foreach (SplitItem item in items)
-            {
-                if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction))
-                {
-                    errors.Add(WorkflowErrors.Node(flowName, executable.Name, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
-                    break;
-                }
-            }
+            errors.Add(WorkflowErrors.Node(flowName, executable.Name, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
         }
 
         if (split.ExtrasMax is < 0 or > 20)
@@ -356,11 +350,11 @@ static class WorkflowRules
         while (ready.TryDequeue(out int current))
         {
             visited++;
-            foreach (FlowEdge edge in graph.Outgoing(current))
+            foreach (int to in graph.Outgoing(current).Select(edge => edge.To))
             {
-                if (--indegree[edge.To] == 0)
+                if (--indegree[to] == 0)
                 {
-                    ready.Enqueue(edge.To);
+                    ready.Enqueue(to);
                 }
             }
         }

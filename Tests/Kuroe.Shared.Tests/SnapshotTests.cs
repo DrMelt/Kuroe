@@ -43,17 +43,17 @@ public sealed class SnapshotTests
     [Fact]
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
-        Assert.Equal(2, Task().Snap([
+        Assert.Equal(2, TaskBuilder.Snap([
             State(0, NodeState.Done),
             State(1, NodeState.Done)]).FrontierNodes);
-        Assert.Equal(2, Task().Snap([]).TotalNodes);
+        Assert.Equal(2, TaskBuilder.Snap([]).TotalNodes);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, Task().Snap([State(0, NodeState.Running)]).FrontierNodes);
-        Assert.Equal(2, Task().Snap([]).TotalNodes);
+        Assert.Equal(0, TaskBuilder.Snap([State(0, NodeState.Running)]).FrontierNodes);
+        Assert.Equal(2, TaskBuilder.Snap([]).TotalNodes);
     }
 
     private static RunSnapshot Run(RunState state, DateTimeOffset? started = null, DateTimeOffset? finished = null) =>
@@ -62,8 +62,6 @@ public sealed class SnapshotTests
 
     private static NodeStateSnapshot State(int index, NodeState state) =>
         new(index, state, [], 0);
-
-    private static TaskBuilder Task() => new();
 
     private static RunContext Context() => new()
     {
@@ -75,9 +73,9 @@ public sealed class SnapshotTests
         Model = "fake",
     };
 
-    private sealed class TaskBuilder
+    private static class TaskBuilder
     {
-        public TaskSnapshot Snap(IReadOnlyList<NodeStateSnapshot> states) => new(
+        public static TaskSnapshot Snap(IReadOnlyList<NodeStateSnapshot> states) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
             [.. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow);

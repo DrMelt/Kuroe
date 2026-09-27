@@ -17,8 +17,8 @@ internal sealed class AgentDetailView(Terminal terminal)
     {
         RunContext context = run.Context;
         _terminal.Line($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {Labels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
-        _terminal.Line($"{task.Id} {task.Title}　节点 {context.NodeIndex + 1}/{task.TotalNodes}　模型 {context.Model}");
-        _terminal.Line($"状态 {Labels.State(run)}　{Labels.Clock(run.StartedAt)} → {Labels.Clock(run.FinishedAt)}　耗时 {Labels.Elapsed(run.Elapsed)}");
+        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {context.NodeIndex + 1}/{task.TotalNodes}\u3000模型 {context.Model}");
+        _terminal.Line($"状态 {Labels.State(run)}\u3000{Labels.Clock(run.StartedAt)} → {Labels.Clock(run.FinishedAt)}\u3000耗时 {Labels.Elapsed(run.Elapsed)}");
 
         foreach (string failure in run.Failures)
         {
@@ -38,7 +38,7 @@ internal sealed class AgentDetailView(Terminal terminal)
 
         foreach (ContextMessage message in context.Seed)
         {
-            _terminal.Line($"  {message.Source.Label}　{OneLine(message.Text)}");
+            _terminal.Line($"  {message.Source.Label}\u3000{OneLine(message.Text)}");
         }
 
         _terminal.NewLine();

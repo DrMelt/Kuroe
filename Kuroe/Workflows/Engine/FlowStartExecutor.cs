@@ -28,9 +28,6 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
         switch (message.Intent)
         {
             case FlowIntent.Start:
-                await RouteAsync(task, context, cancellationToken);
-                break;
-
             case FlowIntent.Approved:
                 await RouteAsync(task, context, cancellationToken);
                 break;
