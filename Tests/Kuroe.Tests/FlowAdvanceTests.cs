@@ -1,4 +1,5 @@
 using System.Threading;
+using ErrorOr;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
@@ -12,6 +13,18 @@ namespace Kuroe.Tests;
 /// <summary>图驱动推进：展开、汇拢、放行、返工、未收口与取消。默认流程即计划后按条目展开并整体检查。</summary>
 public sealed class FlowAdvanceTests
 {
+    [Fact]
+    public void Builtin_flow_without_model_assignments_loads_but_submit_fails()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(writeDefaultFlow: false);
+
+        ErrorOr<TaskSnapshot> submitted = harness.Tasks.Submit("补齐 README", null, null);
+
+        Assert.True(submitted.IsError);
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("未写 Model"));
+    }
+
     [Fact]
     public void Plan_implement_funnel_check_completes_task()
     {
@@ -548,9 +561,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
@@ -568,9 +581,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -588,9 +601,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -603,7 +616,7 @@ public sealed class FlowAdvanceTests
         """;
 
     private const string TwoPlanPerItemCheckFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "实施者" }, { "Name": "检查者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者", "Model": "fake" }, { "Name": "实施者", "Model": "fake" }, { "Name": "检查者", "Model": "fake" }], "Nodes": [
           { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
           { "Name": "实施A", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划"] },
           { "Name": "检查A", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A"], "OnReject": "Stop" },
@@ -619,9 +632,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -640,9 +653,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
@@ -661,9 +674,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
@@ -681,9 +694,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -702,8 +715,8 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
@@ -722,8 +735,8 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
@@ -742,8 +755,8 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 1 } },
@@ -761,8 +774,8 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "执行者" },
-                { "Name": "检查者" }
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
@@ -784,9 +797,9 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
@@ -813,8 +826,8 @@ public sealed class FlowAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "撰写", "Model": "实施者" },

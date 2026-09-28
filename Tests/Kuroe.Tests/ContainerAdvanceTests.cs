@@ -155,9 +155,9 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -178,9 +178,9 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "规划者" },
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
@@ -201,8 +201,8 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "交付", "Nodes": [
@@ -224,8 +224,8 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "交付", "Nodes": [
@@ -245,8 +245,8 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者" },
-                { "Name": "检查者" }
+                { "Name": "实施者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
               ],
               "Nodes": [
                 { "Name": "交付", "Nodes": [

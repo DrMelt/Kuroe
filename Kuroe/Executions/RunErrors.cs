@@ -10,6 +10,10 @@ static class RunErrors
     /// <summary>未选择模型，选择指引由调用方给出。</summary>
     public static Error ModelNotSelected() => Error.Validation("Runtime.Model", "当前未选择模型。");
 
+    /// <summary>引用的模型配置未声明使用的模型名。</summary>
+    public static Error ModelNotConfigured(string model) =>
+        Error.Validation("Node.Model", $"模型配置 {model} 未写 Model，无法确定使用的模型。");
+
     public static Error RunNotFound(int value) => Error.NotFound(ErrorCodes.RunNotFound, $"没有 run #{value}。");
 
     /// <summary>该 run 还无可采纳的产出。</summary>

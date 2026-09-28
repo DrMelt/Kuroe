@@ -3,13 +3,14 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>内置模型选择与内置流程：用户层未指定默认流程时使用，工作目录里还没有 flows.json 时也只有这一条。</summary>
+/// <summary>内置模型选择与内置流程：用户层未指定默认流程时使用，工作目录里还没有 flows.json 时也只有这一条。
+/// 三个模型选择都不写模型名，流程可加载但执行时无法确定模型，派发 run 报错。</summary>
 internal static class DefaultFlows
 {
     /// <summary>内置流程的名字。</summary>
     internal const string Name = "默认";
 
-    /// <summary>规划者：交回条目拆分，不指定模型，用提交任务时选中的模型。</summary>
+    /// <summary>规划者：交回条目拆分。</summary>
     internal static readonly ModelDefinition Planner = new()
     {
         Name = new ModelRef("规划者"),

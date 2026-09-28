@@ -46,14 +46,42 @@ public sealed class KuroeHarness : IDisposable
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
-    /// <summary>装配失败时返回错误，用于校验类断言。</summary>
-    public static ErrorOr<KuroeHarness> TryCreate(string? flowsJson = null, bool seedCatalog = true)
+    /// <summary>测试默认流程：结构同内置「默认」流程，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
+    private const string TestDefaultFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" },
+                { "Name": "检查者", "Model": "fake" }
+              ],
+              "Nodes": [
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。" },
+                { "Name": "交付", "Nodes": [
+                  { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] },
+                  { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "分配执行"], "OnReject": "Retry", "MaxAttempts": 2 }
+                ] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入与内置流程同形的测试默认流程，
+    /// writeDefaultFlow 为 false 时不写文件，走真实内置流程。</summary>
+    public static ErrorOr<KuroeHarness> TryCreate(string? flowsJson = null, bool seedCatalog = true, bool writeDefaultFlow = true)
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
         if (flowsJson is not null)
         {
             File.WriteAllText(Path.Combine(root, "flows.json"), flowsJson);
+        }
+        else if (writeDefaultFlow)
+        {
+            File.WriteAllText(Path.Combine(root, "flows.json"), TestDefaultFlow);
         }
 
         var services = new ServiceCollection();
@@ -81,8 +109,8 @@ public sealed class KuroeHarness : IDisposable
         return new KuroeHarness(root, provider, executor);
     }
 
-    public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true) =>
-        TryCreate(flowsJson, seedCatalog).ThrowIfError();
+    public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, bool writeDefaultFlow = true) =>
+        TryCreate(flowsJson, seedCatalog, writeDefaultFlow).ThrowIfError();
 
     public TaskId Submit(string goal, string? flow = null) =>
         Tasks.Submit(goal, flow, null).ThrowIfError().Id;

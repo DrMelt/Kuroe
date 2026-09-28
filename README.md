@@ -39,8 +39,8 @@ dotnet run --project Kuroe.Cli -- -d <工作目录>
 
 ```text
 /provider add openai https://api.openai.com/v1 sk-xxxx
-/model add gpt-4o-mini openai
-/model gpt-4o-mini
+/model add <模型> openai
+/model <模型>
 /task new 查明北京今天的天气，给出穿衣建议
 ```
 

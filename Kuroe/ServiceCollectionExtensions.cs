@@ -55,7 +55,6 @@ public static class ServiceCollectionExtensions
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton(sp => new NodeModelResolver(
-            sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>()));
         services.AddSingleton(sp => new WorkflowEngine(
             sp.GetRequiredService<TaskRegistry>(),
