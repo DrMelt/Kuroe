@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Storage;
 
@@ -119,7 +120,7 @@ sealed class WorkflowStore(string file)
     {
         List<ModelDefinition> models = [.. dto.Models.Select(model => new ModelDefinition
         {
-            Name = model.Name ?? string.Empty,
+            Name = new ModelRef(model.Name ?? string.Empty),
             Model = model.Model,
         })];
 
@@ -171,9 +172,9 @@ sealed class WorkflowStore(string file)
 
             return new FlowNode
             {
-                Name = node.Name ?? string.Empty,
+                Name = new NodeName(node.Name ?? string.Empty),
                 Prompt = node.Prompt,
-                From = node.From ?? [],
+                From = [.. (node.From ?? []).Select(name => new NodeName(name))],
                 Gate = node.Gate ?? NodeGate.Auto,
                 Nodes = children.Value,
             };
@@ -187,14 +188,14 @@ sealed class WorkflowStore(string file)
 
         return new ExecuteNode
         {
-            Name = node.Name ?? string.Empty,
-            Model = node.Model ?? string.Empty,
-            Tools = node.Tools ?? [],
+            Name = new NodeName(node.Name ?? string.Empty),
+            Model = new ModelRef(node.Model ?? string.Empty),
+            Tools = [.. (node.Tools ?? []).Select(name => new ToolName(name))],
             Prompt = node.Prompt,
-            From = node.From ?? [],
+            From = [.. (node.From ?? []).Select(name => new NodeName(name))],
             Output = node.Output ?? NodeOutput.Plain,
             Mode = leafMode.Value,
-            Branch = node.Branch,
+            Branch = node.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
             Gate = node.Gate ?? NodeGate.Auto,
             OnReject = node.OnReject,
             MaxAttempts = node.MaxAttempts,
@@ -208,7 +209,7 @@ sealed class WorkflowStore(string file)
             item.Title ?? string.Empty,
             item.Instruction ?? string.Empty,
             item.Acceptance ?? string.Empty,
-            item.Branch)).ToList(),
+            item.Branch is { Length: > 0 } branch ? new BranchName(branch) : null)).ToList(),
         split.ExtrasMax,
         split.Acceptance);
     private static WorkflowDto ToDto(Workflow flow) => new()
@@ -217,7 +218,7 @@ sealed class WorkflowStore(string file)
         Description = flow.Description,
         Models = [.. flow.Models.Select(model => new ModelDto
         {
-            Name = model.Name,
+            Name = model.Name.Value,
             Model = model.Model,
         })],
         Nodes = [.. flow.Nodes.Select(ToNodeDto)],
@@ -227,22 +228,22 @@ sealed class WorkflowStore(string file)
     {
         FlowNode flow => new NodeDto
         {
-            Name = flow.Name,
+            Name = flow.Name.Value,
             Prompt = flow.Prompt,
-            From = flow.From.Count == 0 ? null : [.. flow.From],
+            From = flow.From.Count == 0 ? null : [.. flow.From.Select(name => name.Value)],
             Gate = flow.Gate,
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
         ExecuteNode executable => new NodeDto
         {
-            Name = executable.Name,
-            Model = executable.Model,
-            Tools = executable.Tools.Count == 0 ? null : [.. executable.Tools],
+            Name = executable.Name.Value,
+            Model = executable.Model.Value,
+            Tools = executable.Tools.Count == 0 ? null : [.. executable.Tools.Select(name => name.Value)],
             Prompt = executable.Prompt,
-            From = executable.From.Count == 0 ? null : [.. executable.From],
+            From = executable.From.Count == 0 ? null : [.. executable.From.Select(name => name.Value)],
             Output = executable.Output,
             Mode = executable.Mode.ToString(),
-            Branch = executable.Branch,
+            Branch = executable.Branch?.Value,
             Gate = executable.Gate,
             OnReject = executable.OnReject,
             MaxAttempts = executable.MaxAttempts,
@@ -253,7 +254,7 @@ sealed class WorkflowStore(string file)
                     Title = item.Title,
                     Instruction = item.Instruction,
                     Acceptance = item.Acceptance,
-                    Branch = item.Branch,
+                    Branch = item.Branch?.Value,
                 }).ToList(),
                 ExtrasMax = split.ExtrasMax,
                 Acceptance = split.Acceptance,

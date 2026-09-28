@@ -1,17 +1,18 @@
+using Kuroe.Shared.Executions.Tools;
 namespace Kuroe.Shared.Workflows.Flows;
 
 /// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发执行的节点。</summary>
 public sealed record ExecutableNode(
     int Index,
-    string Name,
+    NodeName Name,
     string Path,
     NodeGate Gate,
     ModelDefinition Model,
-    IReadOnlyList<string> Tools,
+    IReadOnlyList<ToolName> Tools,
     string? Prompt,
     NodeOutput Output,
     NodeMode Mode,
-    string? Branch,
+    BranchName? Branch,
     IReadOnlyList<int> From,
     RejectAction? OnReject,
     int? MaxAttempts,

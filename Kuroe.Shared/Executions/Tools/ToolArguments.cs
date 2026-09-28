@@ -7,7 +7,7 @@ namespace Kuroe.Shared.Executions.Tools;
 public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
 {
     /// <summary>按参数名取文本。标量按文本给出，缺参、JSON null 或类型不符时为空。</summary>
-    public string? Text(string name) => Value(name) switch
+    public string? Text(ToolName name) => Value(name) switch
     {
         JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
         JsonElement { ValueKind: JsonValueKind.Null or JsonValueKind.Undefined } => null,
@@ -21,7 +21,7 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
     };
 
     /// <summary>按参数名取真假值。文本形式只认 true 与 false，取不到时为空。</summary>
-    public bool? Flag(string name) => Value(name) switch
+    public bool? Flag(ToolName name) => Value(name) switch
     {
         JsonElement { ValueKind: JsonValueKind.True } => true,
         JsonElement { ValueKind: JsonValueKind.False } => false,
@@ -31,5 +31,5 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         _ => null,
     };
 
-    private object? Value(string name) => values.TryGetValue(name, out object? value) ? value : null;
+    private object? Value(ToolName name) => values.TryGetValue(name.Value, out object? value) ? value : null;
 }

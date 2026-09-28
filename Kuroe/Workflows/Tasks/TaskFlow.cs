@@ -458,7 +458,7 @@ internal sealed class TaskFlow
                 }) ? NodeState.Running : NodeState.Pending;
             }
 
-            snapshots.Add(new GroupSnapshot(group.Index, group.Name, group.Group.Path, state, group.Group.Members));
+            snapshots.Add(new GroupSnapshot(group.Index, group.Name.Value, group.Group.Path, state, group.Group.Members));
         }
 
         return snapshots;

@@ -4,7 +4,7 @@ namespace Kuroe.Shared.Workflows.Flows;
 /// 组是汇合点：成员产出齐备时组可被上下游消费，门控决定届时是否停人等批准。</summary>
 public sealed record FlowGroup(
     int Index,
-    string Name,
+    NodeName Name,
     string Path,
     NodeGate Gate,
     IReadOnlyList<int> Members,

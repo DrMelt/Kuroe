@@ -1,3 +1,4 @@
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
@@ -11,19 +12,19 @@ internal static class DefaultFlows
     /// <summary>规划者：交回条目拆分，不指定模型，用提交任务时选中的模型。</summary>
     internal static readonly ModelDefinition Planner = new()
     {
-        Name = "规划者",
+        Name = new ModelRef("规划者"),
     };
 
     /// <summary>执行者：实施条目。</summary>
     internal static readonly ModelDefinition Executor = new()
     {
-        Name = "执行者",
+        Name = new ModelRef("执行者"),
     };
 
     /// <summary>检查者：交回整体检查结论。</summary>
     internal static readonly ModelDefinition Reviewer = new()
     {
-        Name = "检查者",
+        Name = new ModelRef("检查者"),
     };
 
     /// <summary>内置流程：制定计划、按条目分配执行、整体检查，不通过退回返工。</summary>
@@ -32,30 +33,30 @@ internal static class DefaultFlows
         [
             new ExecuteNode
             {
-                Name = "制定计划",
+                Name = new NodeName("制定计划"),
                 Model = Planner.Name,
                 Output = NodeOutput.Plan,
                 Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
             },
             new FlowNode
             {
-                Name = "交付",
+                Name = new NodeName("交付"),
                 Nodes =
                 [
                     new ExecuteNode
                     {
-                        Name = "分配执行",
+                        Name = new NodeName("分配执行"),
                         Model = Executor.Name,
-                        Tools = ["GetLocalTime", "GetWeather"],
+                        Tools = [new ToolName("GetLocalTime"), new ToolName("GetWeather")],
                         Mode = NodeMode.PerItem,
-                        From = ["制定计划"],
+                        From = [new NodeName("制定计划")],
                     },
                     new ExecuteNode
                     {
-                        Name = "整体检查",
+                        Name = new NodeName("整体检查"),
                         Model = Reviewer.Name,
                         Output = NodeOutput.Review,
-                        From = ["制定计划", "分配执行"],
+                        From = [new NodeName("制定计划"), new NodeName("分配执行")],
                         OnReject = RejectAction.Retry,
                         MaxAttempts = 2,
                     },

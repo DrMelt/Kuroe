@@ -24,10 +24,10 @@ public sealed class ToolCollection
     }
 
     /// <summary>工具名，供宿主展示可用性。</summary>
-    public IReadOnlyList<string> Names { get; }
+    public IReadOnlyList<ToolName> Names { get; }
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。</summary>
-    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<string>? tools)
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<ToolName>? tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
@@ -53,7 +53,7 @@ public sealed class ToolCollection
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
-        public override string Name => declaration.Name;
+        public override string Name => declaration.Name.Value;
 
         public override string Description => declaration.Description;
 
@@ -70,11 +70,11 @@ public sealed class ToolCollection
             }
             catch (Exception ex)
             {
-                sink.OnToolCall(new ToolCallRecord(Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
 
-            sink.OnToolCall(new ToolCallRecord(Name, parameters, result, false));
+            sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, result, false));
 
             return new ValueTask<object?>(result);
         }
@@ -136,7 +136,7 @@ public sealed class ToolCollection
                 writer.WriteStartObject("properties");
                 foreach (ToolParameter parameter in parameters)
                 {
-                    writer.WriteStartObject(parameter.Name);
+                    writer.WriteStartObject(parameter.Name.Value);
                     writer.WriteString("type", parameter.Flag ? "boolean" : "string");
                     writer.WriteString("description", parameter.Description);
                     writer.WriteEndObject();
@@ -148,7 +148,7 @@ public sealed class ToolCollection
                     writer.WriteStartArray("required");
                     foreach (ToolParameter parameter in parameters.Where(parameter => parameter.Required))
                     {
-                        writer.WriteStringValue(parameter.Name);
+                        writer.WriteStringValue(parameter.Name.Value);
                     }
 
                     writer.WriteEndArray();

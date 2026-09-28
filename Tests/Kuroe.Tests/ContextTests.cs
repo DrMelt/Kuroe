@@ -33,7 +33,7 @@ public sealed class ContextTests
         RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
 
         Assert.Contains(implement.Context.Seed, message =>
-            message.Source is RunSource { NodeName: "制定计划", FromRun: not null } source && source.FromRun == plan.Id);
+            message.Source is RunSource { NodeName: { Value: "制定计划" }, FromRun: not null } source && source.FromRun == plan.Id);
         Assert.Contains(implement.Context.Seed, message =>
             message.Source is ItemSource { Index: 0 } source && source.FromRun == plan.Id);
         Assert.Contains("条目 1", implement.Context.Instruction);
@@ -55,9 +55,9 @@ public sealed class ContextTests
         Assert.Null(check.Context.ItemIndex);
         // 规划产出一份，各条目实施产出各一份
         Assert.Contains(check.Context.Seed, message =>
-            message.Source is RunSource { NodeName: "制定计划" });
+            message.Source is RunSource { NodeName: { Value: "制定计划" } });
         Assert.Equal(2, check.Context.Seed.Count(message =>
-            message.Source is RunSource { NodeName: "分配执行" }));
+            message.Source is RunSource { NodeName: { Value: "分配执行" } }));
         Assert.Equal(3, check.Context.Seed.Count(message => message.Source is RunSource));
 
         string visible = check.Context.Instruction

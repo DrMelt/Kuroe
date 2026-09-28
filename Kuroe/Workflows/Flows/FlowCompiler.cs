@@ -9,10 +9,10 @@ internal static class FlowCompiler
     /// <summary>编译流程树。</summary>
     public static NodeGraph Compile(Workflow flow)
     {
-        Dictionary<string, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
+        Dictionary<ModelRef, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
         var nodes = new List<GraphNode>();
-        var byName = new Dictionary<string, int>();
+        var byName = new Dictionary<NodeName, int>();
         var groups = new Dictionary<int, GroupBuilder>();
 
         // 先登记全部名字与序号，From 对后面的节点引用才可解析
@@ -41,14 +41,14 @@ internal static class FlowCompiler
     /// <summary>容器定义的编译期登记，最终固化为 <see cref="FlowGroup"/>。</summary>
     private sealed record GroupBuilder(
         int Index,
-        string Name,
+        NodeName Name,
         string Path,
         NodeGate Gate,
         List<int> Members,
         List<int> SubGroups);
 
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
-    private static int RegisterNames(IReadOnlyList<NodeSpec> specs, Dictionary<string, int> order, int next)
+    private static int RegisterNames(IReadOnlyList<NodeSpec> specs, Dictionary<NodeName, int> order, int next)
     {
         foreach (NodeSpec node in specs)
         {
@@ -65,9 +65,9 @@ internal static class FlowCompiler
 
     private static void SecondPass(
         IReadOnlyList<NodeSpec> specs,
-        Dictionary<string, ModelDefinition> models,
+        Dictionary<ModelRef, ModelDefinition> models,
         List<GraphNode> nodes,
-        Dictionary<string, int> byName,
+        Dictionary<NodeName, int> byName,
         Dictionary<int, GroupBuilder> groups,
         List<string> path,
         int? parent)
@@ -88,7 +88,7 @@ internal static class FlowCompiler
 
                 case FlowNode flow:
                     int group = nodes.Count;
-                    string groupPath = string.Join('/', [.. path, flow.Name]);
+                    string groupPath = string.Join('/', [.. path, flow.Name.Value]);
                     groups[group] = new GroupBuilder(group, flow.Name, groupPath, flow.Gate, [], []);
                     nodes.Add(new FlowGroup(group, flow.Name, groupPath, flow.Gate, [], []));
                     if (parent is { } childGroup)
@@ -96,7 +96,7 @@ internal static class FlowCompiler
                         groups[childGroup].SubGroups.Add(group);
                     }
 
-                    path.Add(flow.Name);
+                    path.Add(flow.Name.Value);
                     SecondPass(flow.Nodes, models, nodes, byName, groups, path, group);
                     path.RemoveAt(path.Count - 1);
                     break;
@@ -108,11 +108,11 @@ internal static class FlowCompiler
         ExecuteNode executable,
         int index,
         List<string> path,
-        Dictionary<string, ModelDefinition> models,
-        Dictionary<string, int> order) => new(
+        Dictionary<ModelRef, ModelDefinition> models,
+        Dictionary<NodeName, int> order) => new(
         index,
         executable.Name,
-        string.Join('/', [.. path, executable.Name]),
+        string.Join('/', [.. path, executable.Name.Value]),
         executable.Gate,
         models[executable.Model],
         executable.Tools,

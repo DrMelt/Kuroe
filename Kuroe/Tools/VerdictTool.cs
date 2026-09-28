@@ -32,13 +32,13 @@ public sealed class VerdictTool : IScopedTool
     /// <summary>声明绑定到该回合上的提交函数。</summary>
     private static IReadOnlyList<ToolFunction> Declare(UnitSubmitter intake, TurnScope? scope) =>
     [
-        new ToolFunction("SubmitVerdict", "交回检查结论。passed 为真表示通过；不通过时 findings 要逐条列出问题。",
+        new ToolFunction(ToolName.ContractReview, "交回检查结论。passed 为真表示通过；不通过时 findings 要逐条列出问题。",
             [
-                new ToolParameter("passed", "检查是否通过", Flag: true, Required: true),
-                new ToolParameter("findings", "不通过时逐条列出问题"),
+                new ToolParameter(new ToolName("passed"), "检查是否通过", Flag: true, Required: true),
+                new ToolParameter(new ToolName("findings"), "不通过时逐条列出问题"),
             ],
-            arguments => arguments.Flag("passed") is { } passed
-                ? intake.SubmitVerdict(scope, passed, arguments.Text("findings") ?? string.Empty)
+            arguments => arguments.Flag(new ToolName("passed")) is { } passed
+                ? intake.SubmitVerdict(scope, passed, arguments.Text(new ToolName("findings")) ?? string.Empty)
                 : "被拒绝：passed 缺失或不是 true/false。"),
     ];
 }

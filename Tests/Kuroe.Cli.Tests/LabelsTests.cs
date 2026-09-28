@@ -70,7 +70,7 @@ public sealed class LabelsTests
         Task = new TaskId(1),
         Output = NodeOutput.Plan,
         NodeIndex = 0,
-        NodeName = "制定计划",
+        NodeName = new NodeName("制定计划"),
         Instruction = "做",
         Model = "fake",
     };

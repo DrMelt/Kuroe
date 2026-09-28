@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Executions;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
@@ -42,7 +43,7 @@ static class PlanItems
                 return [TaskErrors.Items($"第 {index + 1} 个条目缺 Title 或 Instruction")];
             }
 
-            string? branch = string.IsNullOrWhiteSpace(item.Branch) ? null : item.Branch.Trim();
+            BranchName? branch = string.IsNullOrWhiteSpace(item.Branch) ? null : new BranchName(item.Branch.Trim());
             items.Add(new PlanItem(index, item.Title.Trim(), item.Instruction.Trim(),
                 item.Acceptance?.Trim() ?? string.Empty, branch));
         }

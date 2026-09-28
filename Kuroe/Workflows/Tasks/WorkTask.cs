@@ -15,9 +15,6 @@ namespace Kuroe.Workflows.Tasks;
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask
 {
-    /// <summary>前台对话回合在过程记录里的执行节点名。</summary>
-    public const string DialogueNode = "对话";
-
     private const int TitleLimit = 40;
 
     private readonly List<Run> _runs = [];
@@ -177,7 +174,7 @@ public sealed class WorkTask
                     Task = Id,
                     Run = null,
                     Output = null,
-                    NodeName = DialogueNode,
+                    NodeName = NodeName.Dialogue,
                     ItemIndex = null,
                     Journal = Journal,
                     Sink = TurnSinks.For(Journal, observer),
@@ -257,7 +254,7 @@ public sealed class WorkTask
             return;
         }
 
-        Dictionary<int, string?> branchByItem = BranchByItem(Graph.ItemSpace(review.Index)) ?? [];
+        Dictionary<int, BranchName?> branchByItem = BranchByItem(Graph.ItemSpace(review.Index)) ?? [];
         foreach (int item in items)
         {
             if (review.LastCheck(item) is not { } check)
@@ -304,7 +301,7 @@ public sealed class WorkTask
     }
 
     /// <summary>条目到分支的归属，拆分不存在时为空。</summary>
-    private Dictionary<int, string?>? BranchByItem(int? space) =>
+    private Dictionary<int, BranchName?>? BranchByItem(int? space) =>
         space is { } splitNode && _splits.GetValueOrDefault(splitNode) is { } split
             ? split.Items.ToDictionary(item => item.Index, item => item.Branch)
             : null;

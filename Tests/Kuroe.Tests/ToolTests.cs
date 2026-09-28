@@ -15,7 +15,7 @@ public sealed class ToolTests
         using KuroeHarness harness = KuroeHarness.Create();
         ToolFunction submit = new VerdictTool(harness.Submitter).Functions.Single();
 
-        Assert.Equal("SubmitVerdict", submit.Name);
+        Assert.Equal(new ToolName("SubmitVerdict"), submit.Name);
         Assert.NotEmpty(submit.Description);
 
         string outcome = submit.Invoke(Arguments("""{"passed": false, "findings": "缺验收标准"}"""));

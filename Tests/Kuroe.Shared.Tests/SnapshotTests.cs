@@ -68,7 +68,7 @@ public sealed class SnapshotTests
         Task = new TaskId(1),
         Output = NodeOutput.Plan,
         NodeIndex = 0,
-        NodeName = "制定计划",
+        NodeName = new NodeName("制定计划"),
         Instruction = "做",
         Model = "fake",
     };
@@ -81,16 +81,16 @@ public sealed class SnapshotTests
             states, [], [], [], 0, DateTimeOffset.UtcNow);
     }
 
-    private static readonly ModelDefinition Planner = new() { Name = "规划者" };
+    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly Workflow Flow = new("默认", null, [Planner],
     [
-        new ExecuteNode { Name = "制定计划", Model = Planner.Name, Output = NodeOutput.Plan },
-        new ExecuteNode { Name = "实施", Model = Planner.Name },
+        new ExecuteNode { Name = new NodeName("制定计划"), Model = Planner.Name, Output = NodeOutput.Plan },
+        new ExecuteNode { Name = new NodeName("实施"), Model = Planner.Name },
     ]);
 
     private static readonly NodeGraph Graph = new([
-        new ExecutableNode(0, "制定计划", "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
-        new ExecutableNode(1, "实施", "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
+        new ExecutableNode(0, new NodeName("制定计划"), "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
+        new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
     ], []);
 }

@@ -12,10 +12,10 @@ public sealed class ToolArgumentsTests
     {
         ToolArguments arguments = Arguments("""{"city": "北京", "passed": true, "count": 3}""");
 
-        Assert.Equal("北京", arguments.Text("city"));
-        Assert.Equal("True", arguments.Text("passed"));
-        Assert.Equal("3", arguments.Text("count"));
-        Assert.Null(arguments.Text("missing"));
+        Assert.Equal("北京", arguments.Text(new ToolName("city")));
+        Assert.Equal("True", arguments.Text(new ToolName("passed")));
+        Assert.Equal("3", arguments.Text(new ToolName("count")));
+        Assert.Null(arguments.Text(new ToolName("missing")));
     }
 
     [Fact]
@@ -23,11 +23,11 @@ public sealed class ToolArgumentsTests
     {
         ToolArguments arguments = Arguments("""{"yes": true, "no": "false", "city": "北京", "none": null}""");
 
-        Assert.True(arguments.Flag("yes"));
-        Assert.False(arguments.Flag("no"));
-        Assert.Null(arguments.Flag("city"));
-        Assert.Null(arguments.Flag("none"));
-        Assert.Null(arguments.Flag("missing"));
+        Assert.True(arguments.Flag(new ToolName("yes")));
+        Assert.False(arguments.Flag(new ToolName("no")));
+        Assert.Null(arguments.Flag(new ToolName("city")));
+        Assert.Null(arguments.Flag(new ToolName("none")));
+        Assert.Null(arguments.Flag(new ToolName("missing")));
     }
 
     [Fact]
@@ -40,15 +40,15 @@ public sealed class ToolArgumentsTests
             ["count"] = 3,
         });
 
-        Assert.Equal("北京", arguments.Text("city"));
-        Assert.True(arguments.Flag("passed"));
-        Assert.Equal("3", arguments.Text("count"));
+        Assert.Equal("北京", arguments.Text(new ToolName("city")));
+        Assert.True(arguments.Flag(new ToolName("passed")));
+        Assert.Equal("3", arguments.Text(new ToolName("count")));
     }
 
     [Fact]
     public void Parameters_default_to_string_and_not_required()
     {
-        ToolParameter parameter = new("city", "城市的中文名称");
+        ToolParameter parameter = new(new ToolName("city"), "城市的中文名称");
 
         Assert.False(parameter.Flag);
         Assert.False(parameter.Required);

@@ -1,4 +1,4 @@
-
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
@@ -18,7 +18,7 @@ public sealed record TurnScope
     public required NodeOutput? Output { get; init; }
 
     /// <summary>所属执行节点名，前台对话回合为「对话」。</summary>
-    public required string NodeName { get; init; }
+    public required NodeName NodeName { get; init; }
 
     /// <summary>所属条目序号，非按条目展开时为空。</summary>
     public required int? ItemIndex { get; init; }
@@ -30,5 +30,5 @@ public sealed record TurnScope
     public required ITurnSink Sink { get; init; }
 
     /// <summary>本轮可用的工具名单，空表示全部工具。</summary>
-    public IReadOnlyList<string>? Tools { get; init; }
+    public IReadOnlyList<ToolName>? Tools { get; init; }
 }

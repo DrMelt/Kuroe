@@ -5,4 +5,4 @@ namespace Kuroe.Shared.Executions.Tools;
 /// <param name="Description">给模型的说明。</param>
 /// <param name="Flag">该参数是布尔值，缺省为字符串。</param>
 /// <param name="Required">模型是否必须给出，缺省为否。</param>
-public sealed record ToolParameter(string Name, string Description, bool Flag = false, bool Required = false);
+public sealed record ToolParameter(ToolName Name, string Description, bool Flag = false, bool Required = false);

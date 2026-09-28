@@ -1,6 +1,7 @@
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -17,12 +18,6 @@ public static class ContextComposer
     /// <summary>带进上下文的任务对话条数。</summary>
     private const int DialogueLimit = 6;
 
-    /// <summary>契约工具名：按执行节点产出契约自动附加到工具面。</summary>
-    internal const string PlanToolName = "SubmitPlanItems";
-
-    /// <summary>契约工具名：按执行节点产出契约自动附加到工具面。</summary>
-    internal const string ReviewToolName = "SubmitVerdict";
-
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
     internal static RunContext ForExecutable(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
     {
@@ -36,7 +31,7 @@ public static class ContextComposer
         PlanItem? item = ItemOf(task, node, itemIndex);
         if (item is not null)
         {
-            string branch = item.Branch is { Length: > 0 } name ? $"\n实施分支：{name}" : string.Empty;
+            string branch = item.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
                 Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
                 new ItemSource(OriginOf(task, node), item.Index, item.Title)));
@@ -100,7 +95,7 @@ public static class ContextComposer
             return;
         }
 
-        string name = task.Graph[fromIndex].Name;
+        NodeName name = task.Graph[fromIndex].Name;
         string prefix = item is { } index
             ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
             : $"节点「{name}」的产出：\n";
@@ -180,7 +175,7 @@ public static class ContextComposer
 
         if (item is { } entry)
         {
-            string branch = entry.Branch is { Length: > 0 } name ? $"（分支 {name}）" : string.Empty;
+            string branch = entry.Branch is { } name ? $"（分支 {name}）" : string.Empty;
             lines.Add($"目标：{task.Goal}\n本次只负责条目 {entry.Index + 1}：{entry.Title}{branch}");
         }
         else
@@ -218,7 +213,7 @@ public static class ContextComposer
                 foreach (SplitItem item in items)
                 {
                     string acceptance = item.Acceptance.Length > 0 ? $"｜验收：{item.Acceptance}" : string.Empty;
-                    string branch = item.Branch is { Length: > 0 } name ? $"｜分支：{name}" : string.Empty;
+                    string branch = item.Branch is { } name ? $"｜分支：{name}" : string.Empty;
                     listed.Add($"{number}. {item.Title}｜{item.Instruction}{acceptance}{branch}");
                     number++;
                 }
@@ -239,7 +234,7 @@ public static class ContextComposer
         {
             if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } name })
             {
-                branches.Add(name);
+                branches.Add(name.Value);
             }
         }
 
@@ -250,17 +245,17 @@ public static class ContextComposer
     }
 
     /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
-    private static List<string> ToolsOf(ExecutableNode node)
+    private static List<ToolName> ToolsOf(ExecutableNode node)
     {
-        List<string> names = [.. node.Tools];
+        List<ToolName> names = [.. node.Tools];
         if (node.Output == NodeOutput.Plan)
         {
-            names.Add(PlanToolName);
+            names.Add(ToolName.ContractPlan);
         }
 
         if (node.Output == NodeOutput.Review)
         {
-            names.Add(ReviewToolName);
+            names.Add(ToolName.ContractReview);
         }
 
         return names;

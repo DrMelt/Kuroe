@@ -5,7 +5,7 @@ namespace Kuroe.Shared.Workflows.Flows;
 /// 构造时按入出边建索引并登记容器归属。</summary>
 public sealed class NodeGraph
 {
-    private readonly Dictionary<string, int> _byName;
+    private readonly Dictionary<NodeName, int> _byName;
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _incoming = [];
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
     private readonly Dictionary<int, int> _parentGroup;
@@ -66,7 +66,7 @@ public sealed class NodeGraph
     public GraphNode this[int index] => Nodes[index];
 
     /// <summary>按名定位节点，不存在时为空。</summary>
-    public int? IndexOf(string name) =>
+    public int? IndexOf(NodeName name) =>
         _byName.TryGetValue(name, out int index) ? index : null;
 
     /// <summary>节点直接所属的容器，根级节点为空。</summary>

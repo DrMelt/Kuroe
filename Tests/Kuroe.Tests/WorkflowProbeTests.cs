@@ -98,7 +98,7 @@ internal sealed partial class ProbeStart : Executor
     }
 
     [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         if (message == "start")
         {
@@ -130,7 +130,7 @@ internal sealed partial class ProbeHalt : Executor
     }
 
     [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         if (message == "go")
         {
@@ -146,7 +146,7 @@ internal sealed partial class ProbeHalt : Executor
 internal sealed partial class ProbeSink(string id) : Executor(id)
 {
     [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         await context.YieldOutputAsync(message, cancellationToken);
     }

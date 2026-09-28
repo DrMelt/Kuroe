@@ -30,7 +30,7 @@ public sealed class ContextModelTests
     public void RunSource_points_back_to_its_run()
     {
         RunId run = new(7);
-        RunSource source = new(run, "实施");
+        RunSource source = new(run, new NodeName("实施"));
 
         Assert.Equal("run #7 · 实施 产出", source.Label);
         Assert.Equal(run, source.FromRun);
@@ -60,7 +60,7 @@ public sealed class ContextModelTests
         Task = new TaskId(1),
         Output = NodeOutput.Plain,
         NodeIndex = 1,
-        NodeName = "实施",
+        NodeName = new NodeName("实施"),
         Instruction = "做事",
         Model = "fake",
     };

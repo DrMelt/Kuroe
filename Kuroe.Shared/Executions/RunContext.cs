@@ -1,4 +1,4 @@
-
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Executions;
@@ -16,7 +16,7 @@ public sealed record RunContext
     public required int NodeIndex { get; init; }
 
     /// <summary>所属执行节点的名称。</summary>
-    public required string NodeName { get; init; }
+    public required NodeName NodeName { get; init; }
 
     /// <summary>本次执行要做的事，作为一条用户消息发给模型。</summary>
     public required string Instruction { get; init; }
@@ -28,13 +28,13 @@ public sealed record RunContext
     public int? ItemIndex { get; init; }
 
     /// <summary>本次执行被叫到的名字：执行节点名，展开条目时带上条目号。</summary>
-    public string Label => ItemIndex is { } index ? $"{NodeName}·条目 {index + 1}" : NodeName;
+    public string Label => ItemIndex is { } index ? $"{NodeName}·条目 {index + 1}" : NodeName.ToString();
 
     /// <summary>当前节点下本实例的执行次数，按节点与条目各自累计，从 1 起。</summary>
     public int ExecutionCount { get; init; } = 1;
 
     /// <summary>本轮可用的工具名单：节点声明的能力工具加契约工具。</summary>
-    public IReadOnlyList<string> Tools { get; init; } = [];
+    public IReadOnlyList<ToolName> Tools { get; init; } = [];
 
     /// <summary>上游装配进来的已有内容，按序置于指令之前。</summary>
     public IReadOnlyList<ContextMessage> Seed { get; init; } = [];

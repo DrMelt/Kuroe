@@ -106,7 +106,7 @@ internal sealed class FlowCommands(
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + executable.Name),
-                    new Text(executable.Model),
+                    new Text(executable.Model.Value),
                     new Text(executable.Output.Label()),
                     new Text(Labels.Of(executable.Mode)),
                     new Text(Labels.Of(executable.Gate)),
@@ -161,7 +161,7 @@ internal sealed class FlowCommands(
     private static string Requirement(ExecuteNode executable)
     {
         List<string> parts = [];
-        if (executable.Branch is { Length: > 0 } branch)
+        if (executable.Branch is { } branch)
         {
             parts.Add($"分支 {branch}");
         }

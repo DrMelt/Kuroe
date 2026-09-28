@@ -49,7 +49,7 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 return $"被拒绝：{merged.FirstError.Description}";
             }
 
-            List<string> branches = [];
+            List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
                 if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } branch })
@@ -60,16 +60,16 @@ public sealed class UnitSubmitter(TaskRegistry registry)
 
             if (branches.Count > 0)
             {
-                foreach (string? branch in merged.Value.Select(item => item.Branch))
+                foreach (BranchName? branch in merged.Value.Select(item => item.Branch))
                 {
-                    if (string.IsNullOrWhiteSpace(branch))
+                    if (branch is not { } name)
                     {
                         return "被拒绝：分流任务的条目必须写明分支 Branch。";
                     }
 
-                    if (!branches.Contains(branch))
+                    if (!branches.Contains(name))
                     {
-                        return $"被拒绝：分支 {branch} 没有对应的分支执行节点。";
+                        return $"被拒绝：分支 {name} 没有对应的分支执行节点。";
                     }
                 }
             }

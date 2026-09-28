@@ -16,7 +16,7 @@ internal abstract class RuntimeNode(GraphNode node)
     public int Index => Node.Index;
 
     /// <summary>节点名。</summary>
-    public string Name => Node.Name;
+    public NodeName Name => Node.Name;
 
     /// <summary>节点进展到待批点时是否停人批准。</summary>
     public NodeGate Gate => Node.Gate;

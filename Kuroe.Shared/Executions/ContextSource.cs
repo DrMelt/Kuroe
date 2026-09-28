@@ -1,3 +1,5 @@
+using Kuroe.Shared.Workflows.Flows;
+
 namespace Kuroe.Shared.Executions;
 
 /// <summary>上下文中一条内容的出处，详情视图据此回跳上游。</summary>
@@ -18,7 +20,7 @@ public sealed record DialogueSource(TaskId Task, int Turn) : ContextSource
 }
 
 /// <summary>某个 run 在某执行节点上的产出。</summary>
-public sealed record RunSource(RunId Run, string NodeName) : ContextSource
+public sealed record RunSource(RunId Run, NodeName NodeName) : ContextSource
 {
     /// <inheritdoc/>
     public override string Label => $"{Run} · {NodeName} 产出";

@@ -1,4 +1,5 @@
 using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Tasks;
 
@@ -6,7 +7,7 @@ namespace Kuroe.Shared.Workflows.Tasks;
 public sealed record ItemStateSnapshot(
     int ExecutableIndex,
     int ItemIndex,
-    string? Branch,
+    BranchName? Branch,
     UnitVerdict Verdict,
     string? Findings,
     int Attempts);

@@ -11,4 +11,4 @@ public sealed record SplitItem(
     string Title,
     string Instruction,
     string Acceptance,
-    string? Branch);
+    BranchName? Branch);

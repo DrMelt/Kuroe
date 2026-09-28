@@ -32,9 +32,9 @@ public sealed class PlanTool : IScopedTool
     /// <summary>声明绑定到该回合上的提交函数。</summary>
     private static IReadOnlyList<ToolFunction> Declare(UnitSubmitter intake, TurnScope? scope) =>
     [
-        new ToolFunction("SubmitPlanItems",
+        new ToolFunction(ToolName.ContractPlan,
             "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
-            [new ToolParameter("itemsJson", "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
-            arguments => intake.SubmitPlan(scope, arguments.Text("itemsJson") ?? string.Empty)),
+            [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
+            arguments => intake.SubmitPlan(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
     ];
 }

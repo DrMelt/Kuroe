@@ -11,7 +11,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Executable_defaults_to_plain_single_auto_without_rework()
     {
-        ExecuteNode executable = new() { Name = "实施", Model = "执行者" };
+        ExecuteNode executable = new() { Name = new NodeName("实施"), Model = new ModelRef("执行者") };
 
         Assert.Equal(NodeOutput.Plain, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
@@ -25,7 +25,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Check_executable_defaults_to_retry_once_more()
     {
-        ExecuteNode executable = new() { Name = "检查", Model = "检查者", Output = NodeOutput.Review };
+        ExecuteNode executable = new() { Name = new NodeName("检查"), Model = new ModelRef("检查者"), Output = NodeOutput.Review };
 
         Assert.Equal(RejectAction.Retry, executable.RejectAction);
         Assert.Equal(2, executable.AttemptLimit);
@@ -36,8 +36,8 @@ public sealed class WorkflowModelTests
     {
         ExecuteNode executable = new()
         {
-            Name = "检查",
-            Model = "检查者",
+            Name = new NodeName("检查"),
+            Model = new ModelRef("检查者"),
             Output = NodeOutput.Review,
             OnReject = RejectAction.Stop,
             MaxAttempts = 5,
@@ -52,26 +52,26 @@ public sealed class WorkflowModelTests
     {
         var graph = new NodeGraph(
         [
-            new ExecutableNode(0, "规划", "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
-            new ExecutableNode(1, "实施", "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
+            new ExecutableNode(0, new NodeName("规划"), "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
+            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
         ], []);
 
         Assert.Equal(2, graph.Count);
-        Assert.Equal(0, graph.IndexOf("规划"));
-        Assert.Equal(1, graph.IndexOf("实施"));
-        Assert.Null(graph.IndexOf("检查"));
+        Assert.Equal(0, graph.IndexOf(new NodeName("规划")));
+        Assert.Equal(1, graph.IndexOf(new NodeName("实施")));
+        Assert.Null(graph.IndexOf(new NodeName("检查")));
     }
 
     [Fact]
     public void ToolFunction_exposes_its_declaration()
     {
-        ToolFunction function = new("GetTime", "取时间", [], _ => "现在");
+        ToolFunction function = new(new ToolName("GetTime"), "取时间", [], _ => "现在");
 
-        Assert.Equal("GetTime", function.Name);
+        Assert.Equal(new ToolName("GetTime"), function.Name);
         Assert.Equal("取时间", function.Description);
         Assert.Empty(function.Parameters);
         Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())));
     }
 
-    private static readonly ModelDefinition Planner = new() { Name = "执行者" };
+    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("执行者") };
 }
