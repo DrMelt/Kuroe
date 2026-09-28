@@ -1,4 +1,5 @@
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
+using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -7,23 +8,23 @@ namespace Kuroe.Workflows.Flows;
 internal static class FlowCompiler
 {
     /// <summary>编译流程树。</summary>
-    public static NodeGraph Compile(Workflow flow)
+    public static NodeGraph Compile(Flow.Workflow flow)
     {
-        Dictionary<ModelRef, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
+        Dictionary<Flow.ModelRef, Flow.ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
         var nodes = new List<GraphNode>();
-        var byName = new Dictionary<NodeName, int>();
-        var groups = new Dictionary<int, GroupBuilder>();
+        var byName = new Dictionary<Flow.NodeName, int>();
+        var containers = new Dictionary<int, ContainerBuilder>();
 
         // 先登记全部名字与序号，From 对后面的节点引用才可解析
         RegisterNames(flow.Nodes, byName, 0);
-        SecondPass(flow.Nodes, models, nodes, byName, groups, [], parent: null);
+        SecondPass(flow.Nodes, models, nodes, byName, containers, [], parent: null);
 
-        // 用登记好的成员与子容器固化组定义
-        foreach (GroupBuilder builder in groups.Values)
+        // 用登记好的成员与子容器固化容器定义
+        foreach (ContainerBuilder builder in containers.Values)
         {
-            nodes[builder.Index] = new FlowGroup(builder.Index, builder.Name, builder.Path, builder.Gate,
-                builder.Members, builder.SubGroups);
+            nodes[builder.Index] = new ContainerNode(builder.Index, builder.Name, builder.Path, builder.Gate,
+                builder.Members, builder.SubContainers);
         }
 
         List<FlowEdge> edges = [];
@@ -38,23 +39,23 @@ internal static class FlowCompiler
         return new NodeGraph(nodes, edges);
     }
 
-    /// <summary>容器定义的编译期登记，最终固化为 <see cref="FlowGroup"/>。</summary>
-    private sealed record GroupBuilder(
+    /// <summary>容器定义的编译期登记，最终固化为 <see cref="ContainerNode"/>。</summary>
+    private sealed record ContainerBuilder(
         int Index,
-        NodeName Name,
+        Flow.NodeName Name,
         string Path,
-        NodeGate Gate,
+        Flow.NodeGate Gate,
         List<int> Members,
-        List<int> SubGroups);
+        List<int> SubContainers);
 
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
-    private static int RegisterNames(IReadOnlyList<NodeSpec> specs, Dictionary<NodeName, int> order, int next)
+    private static int RegisterNames(IReadOnlyList<Flow.NodeSpec> specs, Dictionary<Flow.NodeName, int> order, int next)
     {
-        foreach (NodeSpec node in specs)
+        foreach (Flow.NodeSpec node in specs)
         {
             order[node.Name] = next;
             next++;
-            if (node is FlowNode flow)
+            if (node is Flow.ContainerNode flow)
             {
                 next = RegisterNames(flow.Nodes, order, next);
             }
@@ -64,40 +65,40 @@ internal static class FlowCompiler
     }
 
     private static void SecondPass(
-        IReadOnlyList<NodeSpec> specs,
-        Dictionary<ModelRef, ModelDefinition> models,
+        IReadOnlyList<Flow.NodeSpec> specs,
+        Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
         List<GraphNode> nodes,
-        Dictionary<NodeName, int> byName,
-        Dictionary<int, GroupBuilder> groups,
+        Dictionary<Flow.NodeName, int> byName,
+        Dictionary<int, ContainerBuilder> containers,
         List<string> path,
         int? parent)
     {
-        foreach (NodeSpec node in specs)
+        foreach (Flow.NodeSpec node in specs)
         {
             switch (node)
             {
-                case ExecuteNode executable:
+                case Flow.ExecutableNode executable:
                     int index = nodes.Count;
                     nodes.Add(NewExecutable(executable, index, path, models, byName));
-                    if (parent is { } memberGroup)
+                    if (parent is { } memberContainer)
                     {
-                        groups[memberGroup].Members.Add(index);
+                        containers[memberContainer].Members.Add(index);
                     }
 
                     break;
 
-                case FlowNode flow:
-                    int group = nodes.Count;
-                    string groupPath = string.Join('/', [.. path, flow.Name.Value]);
-                    groups[group] = new GroupBuilder(group, flow.Name, groupPath, flow.Gate, [], []);
-                    nodes.Add(new FlowGroup(group, flow.Name, groupPath, flow.Gate, [], []));
-                    if (parent is { } childGroup)
+                case Flow.ContainerNode flow:
+                    int container = nodes.Count;
+                    string containerPath = string.Join('/', [.. path, flow.Name.Value]);
+                    containers[container] = new ContainerBuilder(container, flow.Name, containerPath, flow.Gate, [], []);
+                    nodes.Add(new ContainerNode(container, flow.Name, containerPath, flow.Gate, [], []));
+                    if (parent is { } childContainer)
                     {
-                        groups[childGroup].SubGroups.Add(group);
+                        containers[childContainer].SubContainers.Add(container);
                     }
 
                     path.Add(flow.Name.Value);
-                    SecondPass(flow.Nodes, models, nodes, byName, groups, path, group);
+                    SecondPass(flow.Nodes, models, nodes, byName, containers, path, container);
                     path.RemoveAt(path.Count - 1);
                     break;
             }
@@ -105,11 +106,11 @@ internal static class FlowCompiler
     }
 
     private static ExecutableNode NewExecutable(
-        ExecuteNode executable,
+        Flow.ExecutableNode executable,
         int index,
         List<string> path,
-        Dictionary<ModelRef, ModelDefinition> models,
-        Dictionary<NodeName, int> order) => new(
+        Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
+        Dictionary<Flow.NodeName, int> order) => new(
         index,
         executable.Name,
         string.Join('/', [.. path, executable.Name.Value]),

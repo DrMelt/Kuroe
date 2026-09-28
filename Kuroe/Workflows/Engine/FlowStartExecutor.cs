@@ -45,11 +45,11 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
         lock (task.Gate)
         {
             // 容器放行后其出边目标要重估；执行节点等待由评估时的放行接住
-            IReadOnlyList<int> groupOutlets = task.Runtime.ReleaseGroups();
+            IReadOnlyList<int> containerOutlets = task.Runtime.ReleaseContainers();
             IReadOnlyList<int> waiting = task.Runtime.AwaitingNodes;
-            targets = waiting.Count == 0 && groupOutlets.Count == 0
+            targets = waiting.Count == 0 && containerOutlets.Count == 0
                 ? [.. task.Runtime.Roots()]
-                : [.. waiting, .. groupOutlets];
+                : [.. waiting, .. containerOutlets];
         }
 
         foreach (int node in targets.Distinct())

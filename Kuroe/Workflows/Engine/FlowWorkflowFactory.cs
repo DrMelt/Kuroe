@@ -1,10 +1,12 @@
 using Kuroe.Executions.Runs;
 using Kuroe.Configuration;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 using FrameworkWorkflow = Microsoft.Agents.AI.Workflows.Workflow;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Engine;
 
@@ -30,8 +32,8 @@ internal static class FlowWorkflowFactory
             builder.AddEdge(start, executor);
         }
 
-        // 执行依赖与容器来源边统一路由：执行节点来源展开为自身，容器来源展开到组内全部成员接到目标，
-        // 让目标在框架图中可达并承接组齐备的广播，就绪与否由推进器的放行判定保证
+        // 执行依赖与容器来源边统一路由：执行节点来源展开为自身，容器来源展开到容器内全部成员接到目标，
+        // 让目标在框架图中可达并承接容器齐备的广播，就绪与否由推进器的放行判定保证
         foreach (FlowEdge edge in task.Graph.Edges)
         {
             foreach (int member in task.Graph.ExecutablesIn(edge.From))

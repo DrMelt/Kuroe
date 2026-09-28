@@ -7,7 +7,9 @@ using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -213,17 +215,17 @@ public sealed class WorkTask
         {
             Dictionary<RunId, RunSnapshot> runs = _runs.ToDictionary(run => run.Id, run => run.Snapshot());
 
-            List<NodeSnapshot> nodes =
+            List<ExecutableSnapshot> executables =
             [
-                .. Runtime.Executables.Select(node => new NodeSnapshot(node.Index, node.Executable,
+                .. Runtime.Executables.Select(node => new ExecutableSnapshot(node.Index, node.Executable,
                     [.. _runs.Where(run => run.Context.NodeIndex == node.Index).Select(run => runs[run.Id])])),
             ];
 
-            List<NodeStateSnapshot> nodeStates = [.. Runtime.Executables.Select(node => node.StateSnapshot())];
+            List<ExecutableStateSnapshot> executableStates = [.. Runtime.Executables.Select(node => node.StateSnapshot())];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
-                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), nodes, nodeStates,
-                Runtime.GroupSnapshots(), ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), executables, executableStates,
+                Runtime.ContainerSnapshots(), ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
 

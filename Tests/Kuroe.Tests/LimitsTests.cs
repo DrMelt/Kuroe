@@ -39,7 +39,7 @@ public sealed class LimitsTests
         harness.Executor.Output = _ => new string('长', 3000);
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
         ContextMessage upstream = Assert.Single(implement.Context.Seed,
             message => message.Source is RunSource);
 

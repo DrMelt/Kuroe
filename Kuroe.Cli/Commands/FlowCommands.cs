@@ -101,7 +101,7 @@ internal sealed class FlowCommands(
         int index = 0;
         foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
         {
-            if (node is ExecuteNode executable)
+            if (node is ExecutableNode executable)
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
@@ -113,7 +113,7 @@ internal sealed class FlowCommands(
                     new Text(Requirement(executable), Styles.Hint));
                 index++;
             }
-            else if (node is FlowNode flow)
+            else if (node is ContainerNode flow)
             {
                 grid.AddRow(
                     new Text(string.Empty),
@@ -158,7 +158,7 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, name));
     }
 
-    private static string Requirement(ExecuteNode executable)
+    private static string Requirement(ExecutableNode executable)
     {
         List<string> parts = [];
         if (executable.Branch is { } branch)
@@ -209,7 +209,7 @@ internal sealed class FlowCommands(
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node is FlowNode flow)
+            if (node is ContainerNode flow)
             {
                 foreach (NodeSpec child in Flatten(flow.Nodes))
                 {
@@ -229,7 +229,7 @@ internal sealed class FlowCommands(
         foreach (NodeSpec node in nodes)
         {
             yield return (node, depth);
-            if (node is FlowNode flow)
+            if (node is ContainerNode flow)
             {
                 foreach ((NodeSpec child, int childDepth) in Walk(flow.Nodes, depth + 1))
                 {

@@ -170,7 +170,7 @@ sealed class WorkflowStore(string file)
                 return children.ErrorsOrEmptyList;
             }
 
-            return new FlowNode
+            return new ContainerNode
             {
                 Name = new NodeName(node.Name ?? string.Empty),
                 Prompt = node.Prompt,
@@ -186,7 +186,7 @@ sealed class WorkflowStore(string file)
             return [WorkflowErrors.Node(flowName, node.Name ?? string.Empty, leafMode.FirstError.Description)];
         }
 
-        return new ExecuteNode
+        return new ExecutableNode
         {
             Name = new NodeName(node.Name ?? string.Empty),
             Model = new ModelRef(node.Model ?? string.Empty),
@@ -226,7 +226,7 @@ sealed class WorkflowStore(string file)
 
     private static NodeDto ToNodeDto(NodeSpec node) => node switch
     {
-        FlowNode flow => new NodeDto
+        ContainerNode flow => new NodeDto
         {
             Name = flow.Name.Value,
             Prompt = flow.Prompt,
@@ -234,7 +234,7 @@ sealed class WorkflowStore(string file)
             Gate = flow.Gate,
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
-        ExecuteNode executable => new NodeDto
+        ExecutableNode executable => new NodeDto
         {
             Name = executable.Name.Value,
             Model = executable.Model.Value,

@@ -3,6 +3,8 @@ using Kuroe.Executions;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 

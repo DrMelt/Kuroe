@@ -31,19 +31,19 @@ internal static class DefaultFlows
     internal static readonly Workflow Builtin = new(Name, "内置流程：制定计划、分配执行、整体检查",
         [Planner, Executor, Reviewer],
         [
-            new ExecuteNode
+            new ExecutableNode
             {
                 Name = new NodeName("制定计划"),
                 Model = Planner.Name,
                 Output = NodeOutput.Plan,
                 Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
             },
-            new FlowNode
+            new ContainerNode
             {
                 Name = new NodeName("交付"),
                 Nodes =
                 [
-                    new ExecuteNode
+                    new ExecutableNode
                     {
                         Name = new NodeName("分配执行"),
                         Model = Executor.Name,
@@ -51,7 +51,7 @@ internal static class DefaultFlows
                         Mode = NodeMode.PerItem,
                         From = [new NodeName("制定计划")],
                     },
-                    new ExecuteNode
+                    new ExecutableNode
                     {
                         Name = new NodeName("整体检查"),
                         Model = Reviewer.Name,

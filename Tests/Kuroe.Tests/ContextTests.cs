@@ -16,7 +16,7 @@ public sealed class ContextTests
         using KuroeHarness harness = KuroeHarness.Create();
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(done.Nodes[0].Runs);
+        RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
 
         Assert.Contains("补齐 README", plan.Context.Instruction);
         Assert.Equal("fake", plan.Context.Model);
@@ -29,8 +29,8 @@ public sealed class ContextTests
         using KuroeHarness harness = KuroeHarness.Create();
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(done.Nodes[0].Runs);
-        RunSnapshot implement = Assert.Single(done.Nodes[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
+        RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
 
         Assert.Contains(implement.Context.Seed, message =>
             message.Source is RunSource { NodeName: { Value: "制定计划" }, FromRun: not null } source && source.FromRun == plan.Id);
@@ -49,7 +49,7 @@ public sealed class ContextTests
         using KuroeHarness harness = KuroeHarness.Create();
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot check = Assert.Single(done.Nodes[2].Runs);
+        RunSnapshot check = Assert.Single(done.Executables[2].Runs);
 
         Assert.Equal(NodeOutput.Review, check.Context.Output);
         Assert.Null(check.Context.ItemIndex);

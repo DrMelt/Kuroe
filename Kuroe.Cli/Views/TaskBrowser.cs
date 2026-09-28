@@ -67,7 +67,7 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
             detail.Print(task);
 
-            List<Item> items = [.. task.Nodes.SelectMany(node => node.Runs)
+            List<Item> items = [.. task.Executables.SelectMany(node => node.Runs)
                 .OrderBy(run => run.Id.Value)
                 .Select(run => new Item("  " + TaskDetailView.RunLabel(run), "run", Task: id, Run: run.Id))];
             AddTaskActions(items, task);

@@ -1,7 +1,9 @@
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -277,7 +279,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
-    public NodeStateSnapshot StateSnapshot()
+    public ExecutableStateSnapshot StateSnapshot()
     {
         List<int> items = Expanded ? [.. Items] : [];
         int completed;
@@ -316,6 +318,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             state = Rev > 0 ? NodeState.Done : NodeState.Pending;
         }
 
-        return new NodeStateSnapshot(Index, state, items, completed);
+        return new ExecutableStateSnapshot(Index, state, items, completed);
     }
 }

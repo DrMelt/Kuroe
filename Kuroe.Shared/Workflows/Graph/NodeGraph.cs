@@ -1,4 +1,6 @@
-namespace Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Flows;
+
+namespace Kuroe.Shared.Workflows.Graph;
 
 /// <summary>流程编译出的执行视图：节点按先根序统一编号，执行节点与容器在一张表里，
 /// 依赖以显式边表达，消费方式固化在边上。执行按“边齐备则激活”推进，节点序号只作定位与展示。
@@ -8,7 +10,7 @@ public sealed class NodeGraph
     private readonly Dictionary<NodeName, int> _byName;
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _incoming = [];
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
-    private readonly Dictionary<int, int> _parentGroup;
+    private readonly Dictionary<int, int> _parentContainer;
 
     /// <summary>构造执行视图，边两端必须落在节点范围内。按入出边建索引。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
@@ -16,20 +18,20 @@ public sealed class NodeGraph
         Nodes = nodes;
         Edges = edges;
         ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
-        Groups = [.. nodes.OfType<FlowGroup>()];
+        Containers = [.. nodes.OfType<ContainerNode>()];
         _byName = nodes.ToDictionary(node => node.Name, node => node.Index);
 
-        _parentGroup = [];
-        foreach (FlowGroup group in Groups)
+        _parentContainer = [];
+        foreach (ContainerNode container in Containers)
         {
-            foreach (int member in group.Members)
+            foreach (int member in container.Members)
             {
-                _parentGroup[member] = group.Index;
+                _parentContainer[member] = container.Index;
             }
 
-            foreach (int child in group.SubGroups)
+            foreach (int child in container.SubContainers)
             {
-                _parentGroup[child] = group.Index;
+                _parentContainer[child] = container.Index;
             }
         }
 
@@ -51,7 +53,7 @@ public sealed class NodeGraph
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
 
     /// <summary>容器节点，按先根序。</summary>
-    public IReadOnlyList<FlowGroup> Groups { get; }
+    public IReadOnlyList<ContainerNode> Containers { get; }
 
     /// <summary>依赖边。</summary>
     public IReadOnlyList<FlowEdge> Edges { get; }
@@ -70,8 +72,8 @@ public sealed class NodeGraph
         _byName.TryGetValue(name, out int index) ? index : null;
 
     /// <summary>节点直接所属的容器，根级节点为空。</summary>
-    public FlowGroup? GroupOf(int nodeIndex) =>
-        _parentGroup.TryGetValue(nodeIndex, out int group) ? (FlowGroup)Nodes[group] : null;
+    public ContainerNode? ContainerOf(int nodeIndex) =>
+        _parentContainer.TryGetValue(nodeIndex, out int container) ? (ContainerNode)Nodes[container] : null;
 
     /// <summary>目标的入边，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Incoming(int target) => _incoming.GetValueOrDefault(target) ?? [];
@@ -95,7 +97,7 @@ public sealed class NodeGraph
             .FirstOrDefault(space => space is not null);
 
     /// <summary>检查节点引用的实施来源：入边来源展开出的全部非 Plan 执行节点，整集、逐条与整份一视同仁。
-    /// 执行节点给自身，容器递归给全部成员，据此从容器汇合引用到组内实施。</summary>
+    /// 执行节点给自身，容器递归给全部成员，据此从容器汇合引用到容器内实施。</summary>
     public IReadOnlyList<int> CheckedSources(int checkIndex) =>
         [.. Incoming(checkIndex)
             .SelectMany(edge => SourcesIn(edge.From))
@@ -104,16 +106,16 @@ public sealed class NodeGraph
             .Order()];
 
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
-    public IReadOnlyList<int> ExecutablesIn(int groupIndex) =>
-        [.. SourcesIn(groupIndex).Distinct()];
+    public IReadOnlyList<int> ExecutablesIn(int containerIndex) =>
+        [.. SourcesIn(containerIndex).Distinct()];
 
     /// <summary>来源节点展开出的执行节点集合：执行节点给自身，容器递归给全部成员。</summary>
     private IEnumerable<int> SourcesIn(int nodeIndex) =>
         Nodes[nodeIndex] switch
         {
             ExecutableNode _ => [nodeIndex],
-            FlowGroup group => group.Members
-                .Concat(group.SubGroups)
+            ContainerNode container => container.Members
+                .Concat(container.SubContainers)
                 .SelectMany(member => SourcesIn(member)),
             _ => [],
         };

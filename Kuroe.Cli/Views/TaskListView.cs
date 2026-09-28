@@ -21,7 +21,7 @@ internal sealed class TaskListView(Terminal terminal)
         grid.AddRow(Header("#"), Header("标题"), Header("流程"), Header("节点"), Header("状态"), Header("run"), Header("最近"));
         foreach (TaskSnapshot task in tasks)
         {
-            int total = task.Nodes.Sum(node => node.Runs.Count);
+            int total = task.Executables.Sum(node => node.Runs.Count);
             grid.AddRow(
                 new Text(active == task.Id ? $">#{task.Id.Value}" : $"#{task.Id.Value}", Styles.Key),
                 new Text(task.Title),

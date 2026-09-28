@@ -1,6 +1,9 @@
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
+using Flow = Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;
@@ -11,7 +14,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Executable_defaults_to_plain_single_auto_without_rework()
     {
-        ExecuteNode executable = new() { Name = new NodeName("实施"), Model = new ModelRef("执行者") };
+        Flow.ExecutableNode executable = new() { Name = new NodeName("实施"), Model = new ModelRef("执行者") };
 
         Assert.Equal(NodeOutput.Plain, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
@@ -25,7 +28,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Check_executable_defaults_to_retry_once_more()
     {
-        ExecuteNode executable = new() { Name = new NodeName("检查"), Model = new ModelRef("检查者"), Output = NodeOutput.Review };
+        Flow.ExecutableNode executable = new() { Name = new NodeName("检查"), Model = new ModelRef("检查者"), Output = NodeOutput.Review };
 
         Assert.Equal(RejectAction.Retry, executable.RejectAction);
         Assert.Equal(2, executable.AttemptLimit);
@@ -34,7 +37,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Declared_rework_overrides_defaults()
     {
-        ExecuteNode executable = new()
+        Flow.ExecutableNode executable = new()
         {
             Name = new NodeName("检查"),
             Model = new ModelRef("检查者"),

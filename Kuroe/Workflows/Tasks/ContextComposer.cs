@@ -4,7 +4,9 @@ using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 

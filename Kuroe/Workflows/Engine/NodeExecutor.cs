@@ -6,10 +6,12 @@ using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 using Run = Kuroe.Executions.Runs.Run;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Engine;
 

@@ -1,28 +1,39 @@
 using Kuroe.Shared.Executions.Tools;
+
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发执行的节点。</summary>
-public sealed record ExecutableNode(
-    int Index,
-    NodeName Name,
-    string Path,
-    NodeGate Gate,
-    ModelDefinition Model,
-    IReadOnlyList<ToolName> Tools,
-    string? Prompt,
-    NodeOutput Output,
-    NodeMode Mode,
-    BranchName? Branch,
-    IReadOnlyList<int> From,
-    RejectAction? OnReject,
-    int? MaxAttempts,
-    SplitConfig? Split) : GraphNode(Index, Name, Path, Gate)
+/// <summary>执行节点：自带会话能力配置，是唯一真实执行的节点。</summary>
+public sealed record ExecutableNode : NodeSpec
 {
+    /// <summary>引用的模型配置名。</summary>
+    public required ModelRef Model { get; init; }
+
+    /// <summary>能力工具白名单，按函数名匹配。未写或空时不给出任何能力工具。</summary>
+    public IReadOnlyList<ToolName> Tools { get; init; } = [];
+
+    /// <summary>交回什么。</summary>
+    public NodeOutput Output { get; init; } = NodeOutput.Plain;
+
+    /// <summary>整节点一个执行还是按规划条目各派一个。</summary>
+    public NodeMode Mode { get; init; } = NodeMode.Single;
+
+    /// <summary>检查不通过的处置，非 Review 节点不得声明。</summary>
+    public RejectAction? OnReject { get; init; }
+
+    /// <summary>允许的检查轮数，非 Review 节点不得声明。</summary>
+    public int? MaxAttempts { get; init; }
+
     /// <summary>检查未声明时按退回返工处理。</summary>
     public RejectAction RejectAction => OnReject ?? RejectAction.Retry;
 
-    /// <summary>检查未声明时按两轮处理，值域由 WorkflowRules 校验保证。</summary>
+    /// <summary>检查未声明时按两轮处理，值域由校验保证。</summary>
     public int AttemptLimit => MaxAttempts ?? 2;
+
+    /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
+    public BranchName? Branch { get; init; }
+
+    /// <summary>拆分源的固定配置：静态条目与模型补充约束。</summary>
+    public SplitConfig? Split { get; init; }
 
     /// <summary>拆分只有固定条目，模型不参与补充。</summary>
     public bool IsStaticSplit => Split is { Items.Count: > 0, ExtrasMax: null or 0 };

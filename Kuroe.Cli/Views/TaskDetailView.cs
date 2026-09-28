@@ -37,18 +37,18 @@ internal sealed class TaskDetailView(Terminal terminal)
 
         PrintUnits(task);
 
-        if (task.Groups.Count > 0)
+        if (task.Containers.Count > 0)
         {
             _terminal.NewLine();
             _terminal.Line("容器状态：");
-            foreach (GroupSnapshot group in task.Groups)
+            foreach (ContainerSnapshot container in task.Containers)
             {
-                _terminal.Line($"  {group.Path} · {Labels.Of(group.State)}");
+                _terminal.Line($"  {container.Path} · {Labels.Of(container.State)}");
             }
         }
 
         _terminal.NewLine();
-        foreach (NodeSnapshot node in task.Nodes)
+        foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
                 + $"（{node.Executable.Output.Label()} · {Labels.Of(node.Executable.Mode)} · {Labels.Of(node.Executable.Gate)}）");
@@ -78,14 +78,14 @@ internal sealed class TaskDetailView(Terminal terminal)
     /// <summary>各执行节点的执行状态与条目结论。</summary>
     private void PrintUnits(TaskSnapshot task)
     {
-        if (task.NodeStates.Count == 0)
+        if (task.ExecutableStates.Count == 0)
         {
             return;
         }
 
         _terminal.NewLine();
         _terminal.Line("执行节点状态：");
-        foreach (NodeStateSnapshot node in task.NodeStates)
+        foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
             _terminal.Line($"  {task.Graph[node.Index].Name} · {Labels.Of(node.State)}{items}");

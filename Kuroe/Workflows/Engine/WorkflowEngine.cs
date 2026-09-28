@@ -40,7 +40,7 @@ sealed class WorkflowEngine(
         int waiting;
         lock (task.Gate)
         {
-            waiting = task.Runtime.AwaitingNodes.Count + task.Runtime.AwaitingGroups.Count;
+            waiting = task.Runtime.AwaitingNodes.Count + task.Runtime.AwaitingContainers.Count;
             if (waiting > 0)
             {
                 task.Touch();

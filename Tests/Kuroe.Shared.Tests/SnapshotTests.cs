@@ -3,7 +3,10 @@ using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
+using Flow = Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;
@@ -60,7 +63,7 @@ public sealed class SnapshotTests
         new(new RunId(1), Context(), state, string.Empty, new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             started, finished, null, [], [], 0);
 
-    private static NodeStateSnapshot State(int index, NodeState state) =>
+    private static ExecutableStateSnapshot State(int index, NodeState state) =>
         new(index, state, [], 0);
 
     private static RunContext Context() => new()
@@ -75,9 +78,9 @@ public sealed class SnapshotTests
 
     private static class TaskBuilder
     {
-        public static TaskSnapshot Snap(IReadOnlyList<NodeStateSnapshot> states) => new(
+        public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
-            [.. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable, []))],
+            [.. Graph.ExecutableNodes.Select((executable, index) => new ExecutableSnapshot(index, executable, []))],
             states, [], [], [], 0, DateTimeOffset.UtcNow);
     }
 
@@ -85,8 +88,8 @@ public sealed class SnapshotTests
 
     private static readonly Workflow Flow = new("默认", null, [Planner],
     [
-        new ExecuteNode { Name = new NodeName("制定计划"), Model = Planner.Name, Output = NodeOutput.Plan },
-        new ExecuteNode { Name = new NodeName("实施"), Model = Planner.Name },
+        new Flow.ExecutableNode { Name = new NodeName("制定计划"), Model = Planner.Name, Output = NodeOutput.Plan },
+        new Flow.ExecutableNode { Name = new NodeName("实施"), Model = Planner.Name },
     ]);
 
     private static readonly NodeGraph Graph = new([

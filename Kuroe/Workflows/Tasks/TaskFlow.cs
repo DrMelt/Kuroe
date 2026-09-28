@@ -3,7 +3,10 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
+using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
+using ContainerNode = Kuroe.Shared.Workflows.Graph.ContainerNode;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -24,7 +27,7 @@ internal sealed class TaskFlow
             nodes[i++] = node switch
             {
                 ExecutableNode executable => new RuntimeExecutable(executable),
-                FlowGroup group => new RuntimeGroup(group, index => nodes[index]),
+                ContainerNode container => new RuntimeContainer(container, index => nodes[index]),
                 _ => throw new InvalidOperationException($"不支持的节点类型：{node.GetType().Name}"),
             };
         }
@@ -174,11 +177,11 @@ internal sealed class TaskFlow
     /// <summary>实例或整节点产出的发表：发表号递增，下游据此重新评估。</summary>
     public static void Publish(RuntimeExecutable node, int? item) => node.Publish(item);
 
-    /// <summary>作废实例或整节点的已发表产出并刷新祖先组，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
+    /// <summary>作废实例或整节点的已发表产出并刷新祖先容器，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
     private void InvalidateNode(RuntimeExecutable node, int? item)
     {
         node.Invalidate(item);
-        RefreshGroups(node.Index);
+        RefreshContainers(node.Index);
     }
 
     /// <summary>作废实例或整节点的已发表产出，宿主返工入口按序号定位节点。</summary>
@@ -197,44 +200,44 @@ internal sealed class TaskFlow
     public IReadOnlyList<int> Downstream(RuntimeNode node) =>
         [.. Graph.Outgoing(node.Index).Select(edge => edge.To).Distinct()];
 
-    // ---- 组推进 ----
+    // ---- 容器推进 ----
 
     /// <summary>沿着执行节点所在的祖先链刷新容器：成员产出已放行时置齐备位并按门控停留或广播出边，
-    /// 成员停驻或作废时复位齐备份并撤组等待，不齐备的祖先一并复位。返回本次新齐备容器的出边目标。</summary>
-    public IReadOnlyList<int> RefreshGroups(int executableIndex)
+    /// 成员停驻或作废时复位齐备份并撤容器等待，不齐备的祖先一并复位。返回本次新齐备容器的出边目标。</summary>
+    public IReadOnlyList<int> RefreshContainers(int executableIndex)
     {
         List<int> notify = [];
         int nodeIndex = executableIndex;
-        while (Graph.GroupOf(nodeIndex) is { } parent && this[parent.Index] is RuntimeGroup group)
+        while (Graph.ContainerOf(nodeIndex) is { } parent && this[parent.Index] is RuntimeContainer container)
         {
-            if (!group.Released)
+            if (!container.Released)
             {
-                group.ResetProduced();
-                group.ClearAwaiting();
-                nodeIndex = group.Index;
+                container.ResetProduced();
+                container.ClearAwaiting();
+                nodeIndex = container.Index;
                 continue;
             }
 
-            if (group.Gate == NodeGate.Review)
+            if (container.Gate == NodeGate.Review)
             {
-                if (!group.Produced)
+                if (!container.Produced)
                 {
-                    group.MarkProduced();
-                    group.Park();
+                    container.MarkProduced();
+                    container.Park();
                 }
 
-                nodeIndex = group.Index;
+                nodeIndex = container.Index;
                 continue;
             }
 
-            bool first = !group.Produced;
-            group.MarkProduced();
+            bool first = !container.Produced;
+            container.MarkProduced();
             if (first)
             {
-                notify.AddRange(Downstream(group));
+                notify.AddRange(Downstream(container));
             }
 
-            nodeIndex = group.Index;
+            nodeIndex = container.Index;
         }
 
         return notify;
@@ -256,30 +259,30 @@ internal sealed class TaskFlow
         [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Awaiting).Select(node => node.Index)];
 
     /// <summary>正在等人批准的容器。</summary>
-    public IReadOnlyList<int> AwaitingGroups =>
-        [.. _nodes.OfType<RuntimeGroup>().Where(group => group.Awaiting).Select(group => group.Index)];
+    public IReadOnlyList<int> AwaitingContainers =>
+        [.. _nodes.OfType<RuntimeContainer>().Where(container => container.Awaiting).Select(container => container.Index)];
 
     /// <summary>放行等待批准的容器：撤等待、收集容器出边目标，并沿祖先链刷新出随放行新齐备的广播。批准信号落地时调用。</summary>
-    public IReadOnlyList<int> ReleaseGroups()
+    public IReadOnlyList<int> ReleaseContainers()
     {
         List<int> outlets = [];
-        foreach (RuntimeGroup group in _nodes.OfType<RuntimeGroup>())
+        foreach (RuntimeContainer container in _nodes.OfType<RuntimeContainer>())
         {
-            if (!group.Awaiting)
+            if (!container.Awaiting)
             {
                 continue;
             }
 
-            group.ClearAwaiting();
-            outlets.AddRange(Downstream(group));
-            outlets.AddRange(RefreshGroups(FirstExecutableIn(group)));
+            container.ClearAwaiting();
+            outlets.AddRange(Downstream(container));
+            outlets.AddRange(RefreshContainers(FirstExecutableIn(container)));
         }
 
         return [.. outlets.Distinct()];
     }
 
-    /// <summary>组内一个执行节点，作为祖先链刷新的起点。组内执行节点非空由提交时的 WorkflowRules 校验保证。</summary>
-    private int FirstExecutableIn(RuntimeGroup group) => Graph.ExecutablesIn(group.Index)[0];
+    /// <summary>容器内一个执行节点，作为祖先链刷新的起点。容器内执行节点非空由提交时的 WorkflowRules 校验保证。</summary>
+    private int FirstExecutableIn(RuntimeContainer container) => Graph.ExecutablesIn(container.Index)[0];
 
     /// <summary>取消任务：全部节点进入取消态。</summary>
     public void Cancel()
@@ -366,9 +369,9 @@ internal sealed class TaskFlow
     /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
     private SettlePlan Settled(RuntimeExecutable node, bool parked, IReadOnlyList<int> downstream)
     {
-        IReadOnlyList<int> groups = RefreshGroups(node.Index);
+        IReadOnlyList<int> containers = RefreshContainers(node.Index);
 
-        return parked ? new SettlePlan(groups, []) : new SettlePlan([.. downstream, .. groups], []);
+        return parked ? new SettlePlan(containers, []) : new SettlePlan([.. downstream, .. containers], []);
     }
 
     /// <summary>检查不通过且未达到轮次上限时自动退回返工。</summary>
@@ -403,7 +406,7 @@ internal sealed class TaskFlow
         if (node.ClearAwaiting())
         {
             return new EvaluateResult(
-                [.. Downstream(node).Concat(RefreshGroups(node.Index)).Distinct()], []);
+                [.. Downstream(node).Concat(RefreshContainers(node.Index)).Distinct()], []);
         }
 
         if (CanStart(node))
@@ -427,21 +430,21 @@ internal sealed class TaskFlow
     public IReadOnlyList<int> BlockedNodes =>
         [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Blocked).Select(node => node.Index)];
 
-    // ---- 组快照 ----
+    // ---- 容器快照 ----
 
     /// <summary>各容器在快照里的一刻状态：成员产出放行情况与门控停留。</summary>
-    public IReadOnlyList<GroupSnapshot> GroupSnapshots()
+    public IReadOnlyList<ContainerSnapshot> ContainerSnapshots()
     {
-        List<GroupSnapshot> snapshots = [];
-        foreach (RuntimeGroup group in _nodes.OfType<RuntimeGroup>())
+        List<ContainerSnapshot> snapshots = [];
+        foreach (RuntimeContainer container in _nodes.OfType<RuntimeContainer>())
         {
-            bool released = group.Released;
+            bool released = container.Released;
             NodeState state;
-            if (group.Canceled)
+            if (container.Canceled)
             {
                 state = NodeState.Canceled;
             }
-            else if (group.Awaiting)
+            else if (container.Awaiting)
             {
                 state = NodeState.AwaitingApproval;
             }
@@ -451,14 +454,14 @@ internal sealed class TaskFlow
             }
             else
             {
-                state = Graph.ExecutablesIn(group.Index).Any(executable =>
+                state = Graph.ExecutablesIn(container.Index).Any(executable =>
                 {
                     RuntimeExecutable item = Executable(executable);
                     return item.Active > 0 || item.Complete(null) || item.Expanded;
                 }) ? NodeState.Running : NodeState.Pending;
             }
 
-            snapshots.Add(new GroupSnapshot(group.Index, group.Name.Value, group.Group.Path, state, group.Group.Members));
+            snapshots.Add(new ContainerSnapshot(container.Index, container.Name.Value, container.Container.Path, state, container.Container.Members));
         }
 
         return snapshots;

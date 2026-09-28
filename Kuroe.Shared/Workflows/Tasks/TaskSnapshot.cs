@@ -1,10 +1,11 @@
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Shared.Workflows.Tasks;
 
-/// <summary>任务在某一刻的只读形状：节点、执行节点状态、组状态、条目结论与前台对话都在里面，渲染时不再回读可变成。</summary>
+/// <summary>任务在某一刻的只读形状：节点、执行节点状态、容器状态、条目结论与前台对话都在里面，渲染时不再回读可变成。</summary>
 public sealed record TaskSnapshot(
     TaskId Id,
     string Title,
@@ -15,9 +16,9 @@ public sealed record TaskSnapshot(
     int DialogueTurns,
     int LiveRuns,
     IReadOnlyDictionary<int, PlanOutput> Splits,
-    IReadOnlyList<NodeSnapshot> Nodes,
-    IReadOnlyList<NodeStateSnapshot> NodeStates,
-    IReadOnlyList<GroupSnapshot> Groups,
+    IReadOnlyList<ExecutableSnapshot> Executables,
+    IReadOnlyList<ExecutableStateSnapshot> ExecutableStates,
+    IReadOnlyList<ContainerSnapshot> Containers,
     IReadOnlyList<ItemStateSnapshot> ItemStates,
     IReadOnlyList<JournalEntry> Dialogue,
     int DroppedDialogue,
@@ -31,7 +32,7 @@ public sealed record TaskSnapshot(
     {
         get
         {
-            if (NodeStates.Count == 0)
+            if (ExecutableStates.Count == 0)
             {
                 return 0;
             }
@@ -40,7 +41,7 @@ public sealed record TaskSnapshot(
                 .Select((executable, rank) => (executable.Index, rank))
                 .ToDictionary(pair => pair.Index, pair => pair.rank);
 
-            return NodeStates
+            return ExecutableStates
                 .Where(state => state.State == NodeState.Done)
                 .Select(state => rankByIndex.GetValueOrDefault(state.Index) + 1)
                 .DefaultIfEmpty(0)
