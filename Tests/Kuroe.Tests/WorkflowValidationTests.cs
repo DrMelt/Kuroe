@@ -36,8 +36,11 @@ public sealed class WorkflowValidationTests
     [InlineData(SplitStaticGate, "纯静态拆分节点不支持待批准门控")]
     [InlineData(SplitStaticFrom, "纯静态拆分节点不支持 From")]
     [InlineData(SplitParallelBranch, "没有对应的分支执行节点")]
-    [InlineData(ContainerModeRejected, "容器不再有 Mode")]
+    [InlineData(ContainerModeRejected, "容器不支持 Mode")]
     [InlineData(AlignedAcrossSpaces, "逐条对齐的两端必须来自同一个拆分")]
+    [InlineData(SelfReferenceContainer, "流程引用关系存在环")]
+    [InlineData(PartialSelfReferenceContainer, "流程引用关系存在环")]
+    [InlineData(CrossContainerReference, "流程引用关系存在环")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -336,6 +339,37 @@ public sealed class WorkflowValidationTests
           { "Name": "实施A", "Model": "执行者", "Mode": "PerItem", "From": ["制定A计划"] },
           { "Name": "实施B", "Model": "执行者", "Mode": "PerItem", "From": ["制定B计划"] },
           { "Name": "逐条检查", "Model": "检查者", "Output": "Review", "Mode": "PerItem", "From": ["实施A", "实施B"] }
+        ] } ] }
+        """;
+
+    private const string SelfReferenceContainer = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "交付", "Nodes": [
+            { "Name": "撰写", "Model": "执行者", "From": ["交付"] }
+          ] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+        ] } ] }
+        """;
+
+    private const string PartialSelfReferenceContainer = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "交付", "Nodes": [
+            { "Name": "撰写", "Model": "执行者", "From": ["交付"] },
+            { "Name": "排版", "Model": "执行者" }
+          ] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+        ] } ] }
+        """;
+
+    private const string CrossContainerReference = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }, { "Name": "检查者" }], "Nodes": [
+          { "Name": "容器甲", "Nodes": [
+            { "Name": "甲", "Model": "执行者", "From": ["容器乙"] }
+          ] },
+          { "Name": "容器乙", "Nodes": [
+            { "Name": "乙", "Model": "执行者", "From": ["容器甲"] }
+          ] },
+          { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["容器甲"], "OnReject": "Retry" }
         ] } ] }
         """;
 }

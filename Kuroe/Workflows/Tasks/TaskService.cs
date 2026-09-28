@@ -50,8 +50,13 @@ public sealed class TaskService
         }
 
         NodeGraph graph = FlowCompiler.Compile(flow.Value);
-        int root = Enumerable.Range(0, graph.Count).First(index => !graph.Edges.Any(edge => edge.To == index));
-        ErrorOr<string> model = _models.For(graph[root]);
+        ExecutableNode? root = graph.ExecutableNodes.FirstOrDefault(executable => !graph.Incoming(executable.Index).Any());
+        if (root is null)
+        {
+            return [TaskErrors.NoRoot()];
+        }
+
+        ErrorOr<string> model = _models.For(root);
         if (model.IsError)
         {
             return model.ErrorsOrEmptyList;

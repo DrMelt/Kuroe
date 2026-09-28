@@ -24,79 +24,66 @@ public static class ContextComposer
     internal const string ReviewToolName = "SubmitVerdict";
 
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
-    public static RunContext ForExecutable(WorkTask task, ExecutableNode executable, int? itemIndex, string model)
+    internal static RunContext ForExecutable(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
     {
         List<ContextMessage> seed = [];
         AppendDialogue(task, seed);
-        foreach (FlowEdge edge in task.Graph.Incoming(executable.Index))
+        foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
             AppendSource(task, edge, itemIndex, seed);
         }
 
-        PlanItem? item = ItemOf(task, executable, itemIndex);
+        PlanItem? item = ItemOf(task, node, itemIndex);
         if (item is not null)
         {
             string branch = item.Branch is { Length: > 0 } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
                 Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
-                new ItemSource(OriginOf(task, executable), item.Index, item.Title)));
+                new ItemSource(OriginOf(task, node), item.Index, item.Title)));
         }
 
-        CheckResult? rework = ReworkOf(task, executable, itemIndex);
+        CheckResult? rework = ReworkOf(task, node, itemIndex);
         if (rework is not null)
         {
             seed.Add(new ContextMessage(MessageRole.User,
                 Limit($"上一轮检查未通过：\n{rework.Findings}"), new RunSource(rework.Origin, rework.NodeName)));
         }
 
-        int count = task.Runtime.ExecutionCount(executable.Index, itemIndex);
+        int count = node.ExecutionCount(itemIndex);
 
         return new RunContext
         {
             Task = task.Id,
-            Output = executable.Output,
-            NodeIndex = executable.Index,
-            NodeName = executable.Name,
-            Instruction = Instruction(task, executable, item, count, rework is not null),
+            Output = node.Output,
+            NodeIndex = node.Index,
+            NodeName = node.Name,
+            Instruction = Instruction(task, node, item, count, rework is not null),
             Model = model,
             ItemIndex = itemIndex,
             ExecutionCount = count,
-            Tools = ToolsOf(executable),
+            Tools = ToolsOf(node.Executable),
             Seed = seed,
         };
     }
 
-    /// <summary>按一条依赖边的消费方式追加上游产出。</summary>
+    /// <summary>按一条依赖边的消费方式追加上游产出。整份、整集与容器来源走同一个放行产出取数。</summary>
     private static void AppendSource(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
-        switch (edge.Feed)
+        if (edge.Feed == EdgeFeed.Aligned)
         {
-            case EdgeFeed.Items:
-            case EdgeFeed.Single:
-                AppendLatestRun(task, edge.From, null, seed);
-                break;
+            if (itemIndex is { } index)
+            {
+                AppendLatestRun(task, edge.From, index, seed);
+            }
 
-            case EdgeFeed.AllInstances:
-                if (task.Runtime.ExpandedItems(edge.From) is { } items)
-                {
-                    foreach (int item in items)
-                    {
-                        AppendLatestRun(task, edge.From, item, seed);
-                    }
-                }
+            return;
+        }
 
-                break;
-
-            case EdgeFeed.Aligned:
-                if (itemIndex is { } index)
-                {
-                    AppendLatestRun(task, edge.From, index, seed);
-                }
-
-                break;
+        foreach ((int source, int? item) in task.Runtime[edge.From].ReleasedOutputs())
+        {
+            AppendLatestRun(task, source, item, seed);
         }
     }
-
     /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
     private static Run? LatestSucceeded(WorkTask task, int node, int? item) =>
         task.Runs.LastOrDefault(run =>
@@ -144,28 +131,28 @@ public static class ContextComposer
     }
 
     /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
-    private static PlanItem? ItemOf(WorkTask task, ExecutableNode executable, int? itemIndex)
+    private static PlanItem? ItemOf(WorkTask task, RuntimeExecutable node, int? itemIndex)
     {
-        if (itemIndex is not { } index || executable.Mode != NodeMode.PerItem)
+        if (itemIndex is not { } index || node.Mode != NodeMode.PerItem)
         {
             return null;
         }
 
-        return task.Graph.ItemSpace(executable.Index) is { } space && task.SplitFor(space) is { } split
+        return task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split
             ? split.Items.FirstOrDefault(item => item.Index == index)
             : null;
     }
 
     /// <summary>条目内容的出处 run：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
-    private static RunId OriginOf(WorkTask task, ExecutableNode executable)
+    private static RunId OriginOf(WorkTask task, RuntimeExecutable node)
     {
-        if (task.Graph.ItemSource(executable.Index) is { } plan
+        if (task.Graph.ItemSource(node.Index) is { } plan
             && LatestSucceeded(task, plan, null) is { } planRun)
         {
             return planRun.Id;
         }
 
-        if (task.Graph.ItemSpace(executable.Index) is { } space && task.SplitFor(space) is { } split)
+        if (task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split)
         {
             return split.Origin;
         }
@@ -180,14 +167,13 @@ public static class ContextComposer
             : $"条目 {itemIndex + 1}";
 
     /// <summary>上一轮被拒的检查结论：检查执行节点读自己，实施执行节点读引用它的检查执行节点。</summary>
-    private static CheckResult? ReworkOf(WorkTask task, ExecutableNode executable, int? itemIndex) =>
-        task.Runtime.ReworkFor(executable.Index, itemIndex);
-
+    private static CheckResult? ReworkOf(WorkTask task, RuntimeExecutable node, int? itemIndex) =>
+        task.Runtime.ReworkFor(node, itemIndex);
     /// <summary>指令正文：节点要求、目标与第几轮。</summary>
-    private static string Instruction(WorkTask task, ExecutableNode executable, PlanItem? item, int count, bool reworked)
+    private static string Instruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count, bool reworked)
     {
         List<string> lines = [];
-        if (executable.Prompt is { Length: > 0 } prompt)
+        if (node.Executable.Prompt is { Length: > 0 } prompt)
         {
             lines.Add(prompt);
         }
@@ -202,11 +188,11 @@ public static class ContextComposer
             lines.Add($"目标：{task.Goal}");
         }
 
-        AppendSplitGuide(task, executable, lines);
+        AppendSplitGuide(task, node, lines);
 
         if (count > 1)
         {
-            string scope = executable.Output == NodeOutput.Review ? "检查" : "实施";
+            string scope = node.Output == NodeOutput.Review ? "检查" : "实施";
             lines.Add(reworked
                 ? $"这是第 {count} 轮{scope}，针对上一轮检查意见返工。"
                 : $"这是第 {count} 轮{scope}。");
@@ -216,14 +202,14 @@ public static class ContextComposer
     }
 
     /// <summary>规划执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
-    private static void AppendSplitGuide(WorkTask task, ExecutableNode executable, List<string> lines)
+    private static void AppendSplitGuide(WorkTask task, RuntimeExecutable node, List<string> lines)
     {
-        if (executable.Output != NodeOutput.Plan)
+        if (node.Output != NodeOutput.Plan)
         {
             return;
         }
 
-        if (executable.Split is { } split)
+        if (node.Executable.Split is { } split)
         {
             if (split.Items is { Count: > 0 } items)
             {
@@ -249,9 +235,9 @@ public static class ContextComposer
         }
 
         List<string> branches = [];
-        foreach (FlowEdge edge in task.Graph.Outgoing(executable.Index))
+        foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
-            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To].Branch is { } name)
+            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } name })
             {
                 branches.Add(name);
             }
@@ -264,15 +250,15 @@ public static class ContextComposer
     }
 
     /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
-    private static List<string> ToolsOf(ExecutableNode executable)
+    private static List<string> ToolsOf(ExecutableNode node)
     {
-        List<string> names = [.. executable.Tools];
-        if (executable.Output == NodeOutput.Plan)
+        List<string> names = [.. node.Tools];
+        if (node.Output == NodeOutput.Plan)
         {
             names.Add(PlanToolName);
         }
 
-        if (executable.Output == NodeOutput.Review)
+        if (node.Output == NodeOutput.Review)
         {
             names.Add(ReviewToolName);
         }

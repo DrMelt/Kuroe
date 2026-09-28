@@ -121,7 +121,7 @@ internal sealed class FlowCommands(
                     new Text("容器", Styles.Hint),
                     new Text(string.Empty),
                     new Text(string.Empty),
-                    new Text(string.Empty),
+                    new Text(Labels.Of(flow.Gate), Styles.Hint),
                     new Text(string.Empty));
             }
         }

@@ -47,7 +47,7 @@ static class WorkflowRules
         return errors.Count > 0 ? errors : Result.Success;
     }
 
-    /// <summary>收集全部容器名，From 不允许引用容器。</summary>
+    /// <summary>收集全部容器名，From 引用允许指向容器。</summary>
     private static void CollectContainers(IReadOnlyList<NodeSpec> nodes, HashSet<string> names)
     {
         foreach (NodeSpec node in nodes)
@@ -76,7 +76,7 @@ static class WorkflowRules
         }
     }
 
-    /// <summary>递归校验名字、From 引用、容器与模型配置引用。执行先后由拓扑排序保证，这里只检查引用是否落在执行节点或容器上。</summary>
+    /// <summary>递归校验名字、From 引用、容器与模型配置引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
     private static void CheckTree(
         IReadOnlyList<NodeSpec> siblings,
         HashSet<string> names,
@@ -95,11 +95,7 @@ static class WorkflowRules
                     break;
                 }
 
-                if (containerNames.Contains(from))
-                {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name, $"From 引用的 {from} 是容器节点，请直接引用其中的执行节点。"));
-                }
-                else if (!executableNames.Contains(from))
+                if (!executableNames.Contains(from) && !containerNames.Contains(from))
                 {
                     errors.Add(WorkflowErrors.Node(flowName, node.Name, $"From 引用的节点 {from} 不在流程里。"));
                 }
@@ -120,6 +116,10 @@ static class WorkflowRules
                     if (flow.Nodes.Count == 0)
                     {
                         errors.Add(WorkflowErrors.Node(flowName, node.Name, "容器至少要有一个子节点。"));
+                    }
+                    else if (!HasExecutable(flow.Nodes))
+                    {
+                        errors.Add(WorkflowErrors.Node(flowName, node.Name, "容器里至少要有一个执行节点。"));
                     }
                     else
                     {
@@ -148,6 +148,25 @@ static class WorkflowRules
                     break;
             }
         }
+    }
+
+    /// <summary>子树里是否至少有一个执行节点。</summary>
+    private static bool HasExecutable(IReadOnlyList<NodeSpec> nodes)
+    {
+        foreach (NodeSpec node in nodes)
+        {
+            if (node is ExecuteNode)
+            {
+                return true;
+            }
+
+            if (node is FlowNode flow && HasExecutable(flow.Nodes))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>拆分配置的静态规则：只能写在规划执行节点上，条目与补充上限的取值边界。</summary>
@@ -219,15 +238,20 @@ static class WorkflowRules
 
         foreach (FlowEdge edge in graph.Edges)
         {
-            ExecutableNode source = graph[edge.From];
-            ExecutableNode target = graph[edge.To];
+            GraphNode source = graph[edge.From];
+            if (graph[edge.To] is not ExecutableNode target)
+            {
+                continue;
+            }
 
-            if (target.Mode == NodeMode.Single && source.Mode == NodeMode.PerItem && target.Output == NodeOutput.Plan)
+            if (target.Mode == NodeMode.Single
+                && source is ExecutableNode { Mode: NodeMode.PerItem }
+                && target.Output == NodeOutput.Plan)
             {
                 errors.Add(WorkflowErrors.Node(flowName, target.Name, "规划执行节点不能从按条目展开的执行节点取输入。"));
             }
 
-            if (edge.Feed == EdgeFeed.Items && source.Output != NodeOutput.Plan)
+            if (edge.Feed == EdgeFeed.Items && source is not ExecutableNode { Output: NodeOutput.Plan })
             {
                 errors.Add(WorkflowErrors.Node(flowName, target.Name, "按条目展开的执行节点只能从规划执行节点取拆分。"));
             }
@@ -240,33 +264,36 @@ static class WorkflowRules
                 errors.Add(WorkflowErrors.Node(flowName, target.Name, "逐条对齐的两端必须来自同一个拆分。"));
             }
 
-            if (target.Branch is { } branch && (target.Mode != NodeMode.PerItem || graph.ItemSource(target.Index) is null))
+            if (target.Branch is { } branch
+                && (target.Mode != NodeMode.PerItem || graph.ItemSource(target.Index) is null))
             {
                 errors.Add(WorkflowErrors.Node(flowName, target.Name, $"声明分支 {branch} 的执行节点必须按条目展开并从规划执行节点取拆分。"));
             }
         }
 
         // 按条目展开必须能确定实例集：从规划执行节点取拆分，或从其它展开执行节点取对齐
-        for (int index = 0; index < graph.Count; index++)
+        foreach (ExecutableNode executable in graph.ExecutableNodes)
         {
-            ExecutableNode executable = graph[index];
             if (executable.Mode != NodeMode.PerItem)
             {
                 continue;
             }
 
-            bool expandable = graph.Incoming(index).Any(edge =>
+            bool expandable = graph.Incoming(executable.Index).Any(edge =>
                 edge.Feed is EdgeFeed.Items or EdgeFeed.Aligned);
             if (!expandable)
             {
-                errors.Add(WorkflowErrors.Node(flowName, executable.Name, "按条目展开的执行节点必须从规划执行节点或其它展开执行节点取输入。"));
+                // 容器来源只供整份上下文，不提供实例集，单独出现时节点永远无法展开
+                string reason = graph.Incoming(executable.Index).Any(edge => graph[edge.From] is FlowGroup)
+                    ? "按条目展开的执行节点不能从容器取实例集，请引用规划执行节点或其它展开执行节点。"
+                    : "按条目展开的执行节点必须从规划执行节点或其它展开执行节点取输入。";
+                errors.Add(WorkflowErrors.Node(flowName, executable.Name, reason));
             }
         }
 
         // 分支声明必须落在引用它的静态拆分条目里
-        for (int index = 0; index < graph.Count; index++)
+        foreach (ExecutableNode executable in graph.ExecutableNodes)
         {
-            ExecutableNode executable = graph[index];
             if (!executable.IsStaticSplit || executable.Split?.Items is not { } fixedItems)
             {
                 continue;
@@ -279,8 +306,10 @@ static class WorkflowRules
                     continue;
                 }
 
-                bool owned = graph.Outgoing(index).Any(edge =>
-                    edge.Feed == EdgeFeed.Items && graph[edge.To].Branch == branch);
+                bool owned = graph.Outgoing(executable.Index).Any(edge =>
+                    edge.Feed == EdgeFeed.Items
+                    && graph[edge.To] is ExecutableNode target
+                    && target.Branch == branch);
                 if (!owned)
                 {
                     errors.Add(WorkflowErrors.Node(flowName, executable.Name,
@@ -335,21 +364,33 @@ static class WorkflowRules
         }
     }
 
-    /// <summary>拓扑排序判定无环。执行按边推进，环会让激活永远等不到齐备。</summary>
+    /// <summary>拓扑排序判定无环。容器来源边按成员展开成执行依赖，执行按边推进，环会让激活永远等不到齐备。
+    /// 成员直接或间接依赖自身所在容器链，展开后就成为自环或容器间交叉环，一并在此拒绝。</summary>
     private static bool IsAcyclic(NodeGraph graph)
     {
-        var indegree = new int[graph.Count];
-        foreach (FlowEdge edge in graph.Edges)
+        var indegree = new Dictionary<int, int>();
+        var outgoing = new Dictionary<int, List<int>>();
+        foreach (int index in graph.ExecutableNodes.Select(node => node.Index))
         {
-            indegree[edge.To]++;
+            indegree[index] = 0;
+            outgoing[index] = [];
         }
 
-        var ready = new Queue<int>(Enumerable.Range(0, graph.Count).Where(index => indegree[index] == 0));
+        foreach (FlowEdge edge in graph.Edges)
+        {
+            foreach (int source in graph.ExecutablesIn(edge.From))
+            {
+                indegree[edge.To]++;
+                outgoing[source].Add(edge.To);
+            }
+        }
+
+        var ready = new Queue<int>(indegree.Where(entry => entry.Value == 0).Select(entry => entry.Key));
         int visited = 0;
         while (ready.TryDequeue(out int current))
         {
             visited++;
-            foreach (int to in graph.Outgoing(current).Select(edge => edge.To))
+            foreach (int to in outgoing[current])
             {
                 if (--indegree[to] == 0)
                 {
@@ -358,7 +399,7 @@ static class WorkflowRules
             }
         }
 
-        return visited == graph.Count;
+        return visited == graph.ExecutableNodes.Count;
     }
 
     /// <summary>一组流程里重复的流程名，没有时为空。</summary>

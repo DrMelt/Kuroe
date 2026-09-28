@@ -40,7 +40,7 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
-            SplitConfig? split = task.Graph[run.Context.NodeIndex].Split;
+            SplitConfig? split = task.Runtime.Executable(run.Context.NodeIndex).Executable.Split;
             ErrorOr<IReadOnlyList<PlanItem>> merged = split is null
                 ? parsed
                 : SplitMerge.Apply(split, parsed.Value);
@@ -52,7 +52,7 @@ public sealed class UnitSubmitter(TaskRegistry registry)
             List<string> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To].Branch is { } branch)
+                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } branch })
                 {
                     branches.Add(branch);
                 }
@@ -102,7 +102,7 @@ public sealed class UnitSubmitter(TaskRegistry registry)
                 return "被拒绝：不通过时要列出问题。";
             }
 
-            bool recorded = task.Runtime.RecordCheck(run.Context.NodeIndex, run.Context.ItemIndex,
+            bool recorded = task.Runtime.Executable(run.Context.NodeIndex).RecordCheck(run.Context.ItemIndex,
                 new CheckResult(run.Context.ExecutionCount, passed, findings, run.Id, run.Context.NodeName));
 
             if (!recorded)
@@ -122,3 +122,4 @@ public sealed class UnitSubmitter(TaskRegistry registry)
             ? found.Value
             : null;
 }
+

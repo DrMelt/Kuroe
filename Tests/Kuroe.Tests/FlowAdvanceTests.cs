@@ -28,7 +28,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(3, done.FrontierNodes);
         // 整体检查结论按覆盖的拆分回填到条目
         Assert.Equal(2, done.ItemStates.Count);
-        Assert.All(done.ItemStates, state => Assert.Equal(2, state.ExecutableIndex));
+        Assert.All(done.ItemStates, state => Assert.Equal(3, state.ExecutableIndex));
         Assert.All(done.ItemStates, state => Assert.Equal(UnitVerdict.Verified, state.Verdict));
     }
 
@@ -247,7 +247,7 @@ public sealed class FlowAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create();
         int failures = 0;
         harness.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 1 && Interlocked.Increment(ref failures) <= 2;
+            run.Context.NodeIndex == 2 && Interlocked.Increment(ref failures) <= 2;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);

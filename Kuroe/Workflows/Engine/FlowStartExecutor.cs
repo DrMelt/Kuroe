@@ -38,17 +38,21 @@ internal sealed partial class FlowStartExecutor(TaskRegistry registry, TaskId ta
         }
     }
 
-    /// <summary>启动：评估第一批根执行节点。放行：评估等待批准的执行节点。</summary>
+    /// <summary>启动：评估第一批根执行节点。放行：评估等待批准的执行节点与放行的容器出边目标。</summary>
     private static async ValueTask RouteAsync(WorkTask task, IWorkflowContext context, CancellationToken cancellationToken)
     {
         List<int> targets;
         lock (task.Gate)
         {
+            // 容器放行后其出边目标要重估；执行节点等待由评估时的放行接住
+            IReadOnlyList<int> groupOutlets = task.Runtime.ReleaseGroups();
             IReadOnlyList<int> waiting = task.Runtime.AwaitingNodes;
-            targets = [.. waiting.Count > 0 ? waiting : task.Runtime.Roots()];
+            targets = waiting.Count == 0 && groupOutlets.Count == 0
+                ? [.. task.Runtime.Roots()]
+                : [.. waiting, .. groupOutlets];
         }
 
-        foreach (int node in targets)
+        foreach (int node in targets.Distinct())
         {
             await context.SendMessageAsync(Activate(node), $"node:{node}", cancellationToken);
         }

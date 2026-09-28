@@ -5,6 +5,7 @@ public sealed record ExecutableNode(
     int Index,
     string Name,
     string Path,
+    NodeGate Gate,
     ModelDefinition Model,
     IReadOnlyList<string> Tools,
     string? Prompt,
@@ -12,10 +13,9 @@ public sealed record ExecutableNode(
     NodeMode Mode,
     string? Branch,
     IReadOnlyList<int> From,
-    NodeGate Gate,
     RejectAction? OnReject,
     int? MaxAttempts,
-    SplitConfig? Split)
+    SplitConfig? Split) : GraphNode(Index, Name, Path, Gate)
 {
     /// <summary>检查未声明时按退回返工处理。</summary>
     public RejectAction RejectAction => OnReject ?? RejectAction.Retry;

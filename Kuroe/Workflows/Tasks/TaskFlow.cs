@@ -7,77 +7,59 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>一个执行节点的执行进度：实例展开集、在跑数与产出发表号。只在任务的 Gate 内读写。</summary>
-sealed class NodeRunState
-{
-    /// <summary>PerItem 执行节点的实例条目集，Single 执行节点为空。实例集确定后不再变化。</summary>
-    public IReadOnlyList<int> Items { get; set; } = [];
-
-    /// <summary>实例集已确定。</summary>
-    public bool Expanded { get; set; }
-
-    /// <summary>在跑的实例数。</summary>
-    public int Active;
-
-    /// <summary>节点产出的发表号，拆分源也记在这里。</summary>
-    public int Rev;
-
-    /// <summary>逐实例的产出发表号。</summary>
-    public Dictionary<int, int> ItemRev { get; } = [];
-
-    /// <summary>产出停在等人批准。</summary>
-    public bool Awaiting;
-
-    /// <summary>停在等人返工或放行。</summary>
-    public bool Blocked;
-
-    /// <summary>随任务取消。</summary>
-    public bool Canceled;
-}
-
-/// <summary>按图驱动的执行状态：激活、发布、返工与会合都集中在这里，是 DAG 执行模型的唯一可变成面。
-/// 所有方法都要求调用者持有所属任务的 Gate。</summary>
+/// <summary>按图驱动的执行推进：激活、发布、返工与会合。节点状态在运行时节点对象上，这里是图算法面。
+/// 容器随成员推进刷新齐备与门控。所有方法都要求调用者持有所属任务的 Gate。</summary>
 internal sealed class TaskFlow
 {
     private readonly WorkTask _task;
-    private readonly Dictionary<int, NodeRunState> _states = [];
-    private readonly Dictionary<(int Node, int? Item), CheckResult> _checks = [];
-    private readonly Dictionary<(int Node, int? Item), int> _executions = [];
-    private readonly Dictionary<int, IReadOnlyList<(int Node, int? Item)>> _reworkTargets = [];
+    private readonly RuntimeNode[] _nodes;
 
     internal TaskFlow(WorkTask task)
     {
         _task = task;
+        var nodes = new RuntimeNode[task.Graph.Nodes.Count];
+        int i = 0;
+        foreach (GraphNode node in task.Graph.Nodes)
+        {
+            nodes[i++] = node switch
+            {
+                ExecutableNode executable => new RuntimeExecutable(executable),
+                FlowGroup group => new RuntimeGroup(group, index => nodes[index]),
+                _ => throw new InvalidOperationException($"不支持的节点类型：{node.GetType().Name}"),
+            };
+        }
+
+        _nodes = nodes;
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
     public NodeGraph Graph => _task.Graph;
 
-    private NodeRunState State(int index)
-    {
-        if (!_states.TryGetValue(index, out NodeRunState? state))
-        {
-            state = new NodeRunState();
-            _states[index] = state;
-        }
+    /// <summary>图上的运行时节点对象，按先根序与全节点一一对应。读写要求持有 Gate。</summary>
+    public IReadOnlyList<RuntimeNode> Nodes => _nodes;
 
-        return state;
-    }
+    /// <summary>图上的运行时执行节点对象，只含会派发 run 的节点。</summary>
+    public IReadOnlyList<RuntimeExecutable> Executables => [.. _nodes.OfType<RuntimeExecutable>()];
+
+    /// <summary>按序号取运行时节点对象。</summary>
+    public RuntimeNode this[int index] => _nodes[index];
+
+    /// <summary>按序号取运行时执行节点对象，序号必须是执行节点。</summary>
+    public RuntimeExecutable Executable(int index) => (RuntimeExecutable)_nodes[index];
 
     // ---- 实例展开 ----
 
     /// <summary>PerItem 执行节点的实例条目集。拆分来源给分支过滤后的条目，否则取对齐来源的并集。尚未可用时为空。</summary>
-    private List<int> ResolveItems(int node)
+    private List<int> ResolveItems(RuntimeExecutable node)
     {
-        NodeRunState state = State(node);
-        if (state.Expanded)
+        if (node.Expanded)
         {
-            return [.. state.Items];
+            return [.. node.Items];
         }
 
-        ExecutableNode executable = Graph[node];
+        ExecutableNode executable = node.Executable;
         List<int> items = [];
-        if (Graph.ItemSource(node) is { } plan && _task.SplitFor(plan) is { } output)
+        if (Graph.ItemSource(node.Index) is { } plan && _task.SplitFor(plan) is { } output)
         {
             items = [.. output.Items
                 .Where(item => executable.Branch is null || item.Branch == executable.Branch)
@@ -85,11 +67,11 @@ internal sealed class TaskFlow
         }
         else
         {
-            foreach (FlowEdge edge in Graph.Incoming(node))
+            foreach (FlowEdge edge in Graph.Incoming(node.Index))
             {
-                if (edge.Feed == EdgeFeed.Aligned && State(edge.From).Expanded)
+                if (edge.Feed == EdgeFeed.Aligned && Executable(edge.From).Expanded)
                 {
-                    items.AddRange(State(edge.From).Items);
+                    items.AddRange(Executable(edge.From).Items);
                 }
             }
 
@@ -98,8 +80,7 @@ internal sealed class TaskFlow
 
         if (items.Count > 0)
         {
-            state.Items = items;
-            state.Expanded = true;
+            node.AdoptItems(items);
         }
 
         return items;
@@ -107,20 +88,18 @@ internal sealed class TaskFlow
 
     // ---- 就绪判定 ----
 
-    /// <summary>一条入边当前是否可消费：来源已经有目标要等的那份产出。</summary>
+    /// <summary>一条入边当前是否可消费：来源产出的已放行部分里有目标要的那份。整份、整集与容器来源一视同仁。</summary>
     private bool FeedSatisfied(FlowEdge edge, int? item)
     {
-        NodeRunState? source = _states.GetValueOrDefault(edge.From);
+        RuntimeNode source = this[edge.From];
         switch (edge.Feed)
         {
             case EdgeFeed.Single:
-                return source is { Rev: > 0, Canceled: false };
+            case EdgeFeed.AllInstances:
+                return source.Released;
 
             case EdgeFeed.Items:
                 return _task.SplitFor(edge.From) is not null;
-
-            case EdgeFeed.AllInstances:
-                return source is { Expanded: true } && source.ItemRev.Count >= source.Items.Count;
 
             case EdgeFeed.Aligned:
                 if (item is not { } index)
@@ -128,271 +107,237 @@ internal sealed class TaskFlow
                     return true;
                 }
 
-                if (source is null || !source.Expanded)
+                RuntimeExecutable aligned = (RuntimeExecutable)source;
+                if (!aligned.Expanded)
                 {
                     return false;
                 }
 
                 // 已展开且承担该条目才需要它的产出
-                return !source.Items.Contains(index) || source.ItemRev.ContainsKey(index);
+                return !aligned.HasItem(index) || aligned.Complete(index);
 
             default:
                 return false;
         }
     }
 
-    private bool ItemSatisfied(int node, int? item) =>
-        Graph.Incoming(node).All(edge => FeedSatisfied(edge, item));
-
-    /// <summary>实例是否已有产出。</summary>
-    public bool Complete(int node, int? item)
-    {
-        NodeRunState? state = _states.GetValueOrDefault(node);
-        return state is not null && (item is { } i ? state.ItemRev.ContainsKey(i) : state.Rev > 0);
-    }
+    private bool ItemSatisfied(RuntimeExecutable node, int? item) =>
+        Graph.Incoming(node.Index).All(edge => FeedSatisfied(edge, item));
 
     /// <summary>执行节点是否还有待启动的实例。Single 执行节点一次执行，PerItem 执行节点按实例逐步启动。</summary>
-    public bool CanStart(int node)
+    public bool CanStart(RuntimeExecutable node)
     {
-        NodeRunState? state = _states.GetValueOrDefault(node);
-        if (state is { Active: > 0 } or { Awaiting: true } or { Blocked: true } or { Canceled: true })
+        if (node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
         {
             return false;
         }
 
-        ExecutableNode executable = Graph[node];
-        if (executable.Mode != NodeMode.PerItem)
+        if (node.Mode != NodeMode.PerItem)
         {
-            return !Complete(node, null) && ItemSatisfied(node, null);
+            return !node.Complete(null) && ItemSatisfied(node, null);
         }
 
-        return ResolveItems(node).Any(item => !Complete(node, item) && ItemSatisfied(node, item));
+        return ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item));
     }
-
     /// <summary>把执行节点可启动的实例取出来启动。调用者应先用 <see cref="CanStart"/> 判定。</summary>
-    public IReadOnlyList<RunStarter> Start(int node)
+    public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
-        NodeRunState state = State(node);
         List<RunStarter> starters = [];
-        ExecutableNode executable = Graph[node];
-        if (executable.Mode == NodeMode.PerItem)
+        if (node.Mode == NodeMode.PerItem)
         {
-            foreach (int item in ResolveItems(node).Where(item => !Complete(node, item) && ItemSatisfied(node, item)))
+            foreach (int item in ResolveItems(node).Where(item => !node.Complete(item) && ItemSatisfied(node, item)))
             {
-                _executions[(node, item)] = _executions.GetValueOrDefault((node, item)) + 1;
+                node.RecordExecution(item);
                 starters.Add(new RunStarter(item));
             }
         }
-        else if (!Complete(node, null) && ItemSatisfied(node, null))
+        else if (!node.Complete(null) && ItemSatisfied(node, null))
         {
-            _executions[(node, null)] = _executions.GetValueOrDefault((node, null)) + 1;
+            node.RecordExecution(null);
             starters.Add(new RunStarter(null));
         }
 
         if (starters.Count > 0)
         {
-            state.Active += starters.Count;
-            state.Awaiting = false;
+            node.AddActive(starters.Count);
+            node.ClearAwaiting();
         }
 
         return starters;
     }
 
-    /// <summary>某实例在当前节点的执行次数，首次启动为 1。要求持有 Gate。</summary>
-    public int ExecutionCount(int node, int? item) => _executions.GetValueOrDefault((node, item));
-
     /// <summary>一个待派发的实例：条目序可为空（整节点）。</summary>
     public readonly record struct RunStarter(int? Item);
-
-    /// <summary>把节点从等待批准中放行，返回是否确实在等待。</summary>
-    public bool Release(int node)
-    {
-        NodeRunState state = State(node);
-        if (!state.Awaiting)
-        {
-            return false;
-        }
-
-        state.Awaiting = false;
-
-        return true;
-    }
 
     // ---- 发布与作废 ----
 
     /// <summary>实例或整节点产出的发表：发表号递增，下游据此重新评估。</summary>
-    public void Publish(int node, int? item)
+    public static void Publish(RuntimeExecutable node, int? item) => node.Publish(item);
+
+    /// <summary>作废实例或整节点的已发表产出并刷新祖先组，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
+    private void InvalidateNode(RuntimeExecutable node, int? item)
     {
-        NodeRunState state = State(node);
-        if (item is { } index)
-        {
-            state.ItemRev[index] = state.ItemRev.GetValueOrDefault(index) + 1;
-        }
-        else
-        {
-            state.Rev++;
-        }
+        node.Invalidate(item);
+        RefreshGroups(node.Index);
     }
 
-    /// <summary>作废实例或整节点的已发表产出，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
-    public void Invalidate(int node, int? item)
-    {
-        NodeRunState state = State(node);
-        if (item is { } index)
-        {
-            state.ItemRev.Remove(index);
-        }
-        else if (Graph[node].Mode == NodeMode.PerItem)
-        {
-            state.ItemRev.Clear();
-        }
-        else
-        {
-            state.Rev = 0;
-        }
-    }
-
-    // ---- 检查结论 ----
-
-    /// <summary>最近一次检查结论，未检查时为空。</summary>
-    public CheckResult? LastCheck(int node, int? item) => _checks.GetValueOrDefault((node, item));
-
-    /// <summary>记录一轮检查结论，同一次检查只认首个交点。返回是否记录成功。</summary>
-    public bool RecordCheck(int node, int? item, CheckResult check)
-    {
-        if (_checks.TryGetValue((node, item), out CheckResult? last) && last.Origin == check.Origin)
-        {
-            return false;
-        }
-
-        _checks[(node, item)] = check;
-
-        return true;
-    }
-
-    // ---- 汇总 ----
-
-    /// <summary>一个已派发的实例终结，在跑数减一。要求持有 Gate。</summary>
-    public void ReleaseActive(int node)
-    {
-        NodeRunState state = State(node);
-        if (state.Active > 0)
-        {
-            state.Active--;
-        }
-    }
-
-    /// <summary>把执行节点置为阻塞并记下返工目标，恢复时按目标作废并重跑，重复阻塞合并去重。要求持有 Gate。</summary>
-    public void Block(int node, IReadOnlyList<(int Node, int? Item)> targets)
-    {
-        State(node).Blocked = true;
-        IEnumerable<(int Node, int? Item)> merged = _reworkTargets.TryGetValue(node, out var previous)
-            ? previous!.Concat(targets).Distinct()
-            : targets;
-        _reworkTargets[node] = [.. merged];
-    }
-
-    /// <summary>是否有执行节点停在等人批准。</summary>
-    public bool HasAwaiting => _states.Values.Any(state => state.Awaiting);
-
-    /// <summary>是否有执行节点停在等人返工。</summary>
-    public bool HasBlocked => _states.Values.Any(state => state.Blocked);
-
-    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
-    public bool HasWork
-    {
-        get
-        {
-            if (_states.Values.Any(state => state.Active > 0))
-            {
-                return true;
-            }
-
-            for (int index = 0; index < Graph.Count; index++)
-            {
-                if (CanStart(index))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
-
-    /// <summary>取消任务：全部执行节点进入取消态。</summary>
-    public void Cancel()
-    {
-        foreach (NodeRunState state in _states.Values)
-        {
-            state.Canceled = true;
-        }
-    }
+    /// <summary>作废实例或整节点的已发表产出，宿主返工入口按序号定位节点。</summary>
+    public void Invalidate(int node, int? item) => InvalidateNode(Executable(node), item);
 
     // ---- 返工 ----
 
     /// <summary>检查节点返工要退回的实施来源。</summary>
-    public IReadOnlyList<int> ReworkTargets(int checkNode) => Graph.CheckedSources(checkNode);
+    public IReadOnlyList<int> ReworkTargets(RuntimeExecutable checkNode) => Graph.CheckedSources(checkNode.Index);
 
     /// <summary>逐条返工要退回的实施来源：只退回实际承担该条目的执行节点。</summary>
-    public IReadOnlyList<int> ReworkTargets(int checkNode, int item)
-    {
-        List<int> targets = [];
-        foreach (int source in Graph.CheckedSources(checkNode))
-        {
-            NodeRunState? state = _states.GetValueOrDefault(source);
-            if (state is { Expanded: true } && state.Items.Contains(item))
-            {
-                targets.Add(source);
-            }
-        }
-
-        return targets;
-    }
+    public IReadOnlyList<int> ReworkTargets(RuntimeExecutable checkNode, int item) =>
+        [.. Graph.CheckedSources(checkNode.Index).Where(source => Executable(source).HasItem(item))];
 
     /// <summary>顺着出边要通知的下游执行节点，去重保持顺序。</summary>
-    public IReadOnlyList<int> Downstream(int node) =>
-        [.. Graph.Outgoing(node).Select(edge => edge.To).Distinct()];
+    public IReadOnlyList<int> Downstream(RuntimeNode node) =>
+        [.. Graph.Outgoing(node.Index).Select(edge => edge.To).Distinct()];
 
-    /// <summary>门控检查：产出后停在待批准，返回是否停留。</summary>
-    private bool Park(int node)
+    // ---- 组推进 ----
+
+    /// <summary>沿着执行节点所在的祖先链刷新容器：成员产出已放行时置齐备位并按门控停留或广播出边，
+    /// 成员停驻或作废时复位齐备份并撤组等待，不齐备的祖先一并复位。返回本次新齐备容器的出边目标。</summary>
+    public IReadOnlyList<int> RefreshGroups(int executableIndex)
     {
-        if (Graph[node].Gate != NodeGate.Review)
+        List<int> notify = [];
+        int nodeIndex = executableIndex;
+        while (Graph.GroupOf(nodeIndex) is { } parent && this[parent.Index] is RuntimeGroup group)
         {
-            return false;
+            if (!group.Released)
+            {
+                group.ResetProduced();
+                group.ClearAwaiting();
+                nodeIndex = group.Index;
+                continue;
+            }
+
+            if (group.Gate == NodeGate.Review)
+            {
+                if (!group.Produced)
+                {
+                    group.MarkProduced();
+                    group.Park();
+                }
+
+                nodeIndex = group.Index;
+                continue;
+            }
+
+            bool first = !group.Produced;
+            group.MarkProduced();
+            if (first)
+            {
+                notify.AddRange(Downstream(group));
+            }
+
+            nodeIndex = group.Index;
         }
 
-        State(node).Awaiting = true;
-
-        return true;
+        return notify;
     }
+
+    // ---- 汇总 ----
+
+    /// <summary>是否有执行节点或容器停在等人批准。</summary>
+    public bool HasAwaiting => _nodes.Any(node => node.Awaiting);
+
+    /// <summary>是否有执行节点停在等人返工。</summary>
+    public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.Blocked);
+
+    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
+    public bool HasWork => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node));
+
+    /// <summary>正在等人批准的执行节点。</summary>
+    public IReadOnlyList<int> AwaitingNodes =>
+        [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Awaiting).Select(node => node.Index)];
+
+    /// <summary>正在等人批准的容器。</summary>
+    public IReadOnlyList<int> AwaitingGroups =>
+        [.. _nodes.OfType<RuntimeGroup>().Where(group => group.Awaiting).Select(group => group.Index)];
+
+    /// <summary>放行等待批准的容器：撤等待、收集容器出边目标，并沿祖先链刷新出随放行新齐备的广播。批准信号落地时调用。</summary>
+    public IReadOnlyList<int> ReleaseGroups()
+    {
+        List<int> outlets = [];
+        foreach (RuntimeGroup group in _nodes.OfType<RuntimeGroup>())
+        {
+            if (!group.Awaiting)
+            {
+                continue;
+            }
+
+            group.ClearAwaiting();
+            outlets.AddRange(Downstream(group));
+            outlets.AddRange(RefreshGroups(FirstExecutableIn(group)));
+        }
+
+        return [.. outlets.Distinct()];
+    }
+
+    /// <summary>组内一个执行节点，作为祖先链刷新的起点。组内执行节点非空由提交时的 WorkflowRules 校验保证。</summary>
+    private int FirstExecutableIn(RuntimeGroup group) => Graph.ExecutablesIn(group.Index)[0];
+
+    /// <summary>取消任务：全部节点进入取消态。</summary>
+    public void Cancel()
+    {
+        foreach (RuntimeNode node in _nodes)
+        {
+            node.Cancel();
+        }
+    }
+    // ---- run 收口 ----
 
     /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>
     public sealed record SettlePlan(IReadOnlyList<int> Notify, IReadOnlyList<(int Node, int? Item)> Rerun);
 
-    /// <summary>run 收口：记产出、处理门控与检查结论，产出出向下游的通知或重派计划。</summary>
+    /// <summary>run 收口：失败与未收口先停驻阻塞，通过后记产出、处理门控与检查结论，
+    /// 产出出向下游的通知或重派计划。接收器先经 ReleaseActive 再进入。</summary>
     public SettlePlan Settle(Run run)
     {
-        int node = run.Context.NodeIndex;
+        RuntimeExecutable node = Executable(run.Context.NodeIndex);
         int? item = run.Context.ItemIndex;
-        ExecutableNode executable = Graph[node];
+
+        if (run.State != RunState.Succeeded)
+        {
+            node.EnterBlocked([(node.Index, item)]);
+            return new SettlePlan([], []);
+        }
+
+        ExecutableNode executable = node.Executable;
+        if (executable.Output == NodeOutput.Plan && _task.SplitFor(node.Index)?.Origin != run.Id)
+        {
+            run.MarkUncollected("规划执行节点没有交回条目拆分，本步未收口。");
+            node.EnterBlocked([(node.Index, null)]);
+            return new SettlePlan([], []);
+        }
+
+        if (executable.Output == NodeOutput.Review && node.LastCheck(item)?.Origin != run.Id)
+        {
+            run.MarkUncollected("检查执行节点没有交回结论，本步未收口。");
+            node.EnterBlocked([(node.Index, item)]);
+            return new SettlePlan([], []);
+        }
 
         if (executable.Output == NodeOutput.Plan)
         {
             // 拆分已由回执写入 _splits
             Publish(node, null);
 
-            return Park(node) ? new SettlePlan([], []) : new SettlePlan(Downstream(node), []);
+            return Settled(node, node.Park(), Downstream(node));
         }
 
         if (executable.Output == NodeOutput.Review)
         {
-            CheckResult? check = LastCheck(node, item);
+            CheckResult? check = node.LastCheck(item);
             if (check is { Passed: true })
             {
                 Publish(node, item);
 
-                return Park(node) ? new SettlePlan([], []) : new SettlePlan(Downstream(node), []);
+                return Settled(node, node.Park(), Downstream(node));
             }
 
             if (Retryable(executable, check))
@@ -400,7 +345,7 @@ internal sealed class TaskFlow
                 List<(int Node, int? Item)> rerun = [];
                 foreach (int source in item is { } index ? ReworkTargets(node, index) : ReworkTargets(node))
                 {
-                    Invalidate(source, item);
+                    InvalidateNode(Executable(source), item);
                     rerun.Add((source, item));
                 }
 
@@ -408,14 +353,22 @@ internal sealed class TaskFlow
             }
 
             IReadOnlyList<int> sources = item is { } failed ? ReworkTargets(node, failed) : ReworkTargets(node);
-            Block(node, [.. sources.Select(source => (source, item))]);
+            node.EnterBlocked([.. sources.Select(source => (source, item))]);
 
             return new SettlePlan([], []);
         }
 
         Publish(node, item);
 
-        return Park(node) ? new SettlePlan([], []) : new SettlePlan(Downstream(node), []);
+        return Settled(node, node.Park(), Downstream(node));
+    }
+
+    /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
+    private SettlePlan Settled(RuntimeExecutable node, bool parked, IReadOnlyList<int> downstream)
+    {
+        IReadOnlyList<int> groups = RefreshGroups(node.Index);
+
+        return parked ? new SettlePlan(groups, []) : new SettlePlan([.. downstream, .. groups], []);
     }
 
     /// <summary>检查不通过且未达到轮次上限时自动退回返工。</summary>
@@ -431,81 +384,26 @@ internal sealed class TaskFlow
         return round < executable.AttemptLimit;
     }
 
-    /// <summary>执行节点在快照里的一刻状态。</summary>
-    public NodeStateSnapshot NodeStateSnapshot(int index)
-    {
-        NodeRunState? s = _states.GetValueOrDefault(index);
-        if (s is null)
-        {
-            return new NodeStateSnapshot(index, NodeState.Pending, [], 0);
-        }
-
-        List<int> items = s.Expanded ? [.. s.Items] : [];
-        int completed;
-        if (s.Expanded)
-        {
-            completed = items.Count(item => s.ItemRev.ContainsKey(item));
-        }
-        else
-        {
-            completed = s.Rev > 0 ? 1 : 0;
-        }
-
-        NodeState state;
-        if (s.Canceled)
-        {
-            state = NodeState.Canceled;
-        }
-        else if (s.Awaiting)
-        {
-            state = NodeState.AwaitingApproval;
-        }
-        else if (s.Blocked)
-        {
-            state = NodeState.Blocked;
-        }
-        else if (s.Active > 0)
-        {
-            state = NodeState.Running;
-        }
-        else if (s.Expanded)
-        {
-            state = completed >= items.Count ? NodeState.Done : NodeState.Running;
-        }
-        else
-        {
-            state = s.Rev > 0 ? NodeState.Done : NodeState.Pending;
-        }
-
-        return new NodeStateSnapshot(index, state, items, completed);
-    }
-
-    /// <summary>执行节点已确定的实例集，尚未展开时为空。</summary>
-    public IReadOnlyList<int>? ExpandedItems(int node)
-    {
-        NodeRunState? s = _states.GetValueOrDefault(node);
-        return s is { Expanded: true } ? [.. s.Items] : null;
-    }
-
     // ---- 宿主入口 ----
 
     /// <summary>一个执行节点被激活后的评估：静态拆分就地产出、等待批准的放行、输入齐备启动实例。
     /// 返回要通知的下游与要派发的实例。要求持有 Gate。</summary>
-    public EvaluateResult Evaluate(int node)
+    public EvaluateResult Evaluate(RuntimeExecutable node)
     {
-        ExecutableNode executable = Graph[node];
-        if (executable.IsStaticSplit && _task.SplitFor(node) is null)
+        ExecutableNode executable = node.Executable;
+        if (executable.IsStaticSplit && _task.SplitFor(node.Index) is null)
         {
             // 纯静态拆分不派 run，激活即产出
-            _task.SetSplit(node, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Split!, []).Value));
+            _task.SetSplit(node.Index, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Split!, []).Value));
             Publish(node, null);
 
-            return new EvaluateResult(Downstream(node), []);
+            return new EvaluateResult(Settled(node, false, Downstream(node)).Notify, []);
         }
 
-        if (Release(node))
+        if (node.ClearAwaiting())
         {
-            return new EvaluateResult(Downstream(node), []);
+            return new EvaluateResult(
+                [.. Downstream(node).Concat(RefreshGroups(node.Index)).Distinct()], []);
         }
 
         if (CanStart(node))
@@ -521,13 +419,50 @@ internal sealed class TaskFlow
 
     /// <summary>无入边的执行节点，任务启动的第一批。</summary>
     public IReadOnlyList<int> Roots() =>
-        [.. Enumerable.Range(0, Graph.Count).Where(index => Graph.Incoming(index).Count == 0)];
-
-    /// <summary>正在等人批准的执行节点。</summary>
-    public IReadOnlyList<int> AwaitingNodes => [.. _states.Where(pair => pair.Value.Awaiting).Select(pair => pair.Key)];
+        [.. _nodes.OfType<RuntimeExecutable>()
+            .Where(node => Graph.Incoming(node.Index).Count == 0)
+            .Select(node => node.Index)];
 
     /// <summary>被阻塞的执行节点，等人返工或放行。</summary>
-    public IReadOnlyList<int> BlockedNodes => [.. _states.Where(pair => pair.Value.Blocked).Select(pair => pair.Key)];
+    public IReadOnlyList<int> BlockedNodes =>
+        [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Blocked).Select(node => node.Index)];
+
+    // ---- 组快照 ----
+
+    /// <summary>各容器在快照里的一刻状态：成员产出放行情况与门控停留。</summary>
+    public IReadOnlyList<GroupSnapshot> GroupSnapshots()
+    {
+        List<GroupSnapshot> snapshots = [];
+        foreach (RuntimeGroup group in _nodes.OfType<RuntimeGroup>())
+        {
+            bool released = group.Released;
+            NodeState state;
+            if (group.Canceled)
+            {
+                state = NodeState.Canceled;
+            }
+            else if (group.Awaiting)
+            {
+                state = NodeState.AwaitingApproval;
+            }
+            else if (released)
+            {
+                state = NodeState.Done;
+            }
+            else
+            {
+                state = Graph.ExecutablesIn(group.Index).Any(executable =>
+                {
+                    RuntimeExecutable item = Executable(executable);
+                    return item.Active > 0 || item.Complete(null) || item.Expanded;
+                }) ? NodeState.Running : NodeState.Pending;
+            }
+
+            snapshots.Add(new GroupSnapshot(group.Index, group.Name, group.Group.Path, state, group.Group.Members));
+        }
+
+        return snapshots;
+    }
 
     /// <summary>计算返工会作废并重跑的目标：各阻塞节点记录的目标按条目过滤，配对其阻塞节点。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<(int Blocked, int Node, int? Item)> PlanRework(int? itemIndex)
@@ -535,7 +470,7 @@ internal sealed class TaskFlow
         List<(int Blocked, int Node, int? Item)> targets = [];
         foreach (int blocked in BlockedNodes)
         {
-            foreach ((int node, int? item) in _reworkTargets.GetValueOrDefault(blocked) ?? [])
+            foreach ((int node, int? item) in Executable(blocked).ReworkTargets)
             {
                 if (itemIndex is { } requested && item != requested)
                 {
@@ -550,34 +485,15 @@ internal sealed class TaskFlow
     }
 
     /// <summary>解除执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
-    public void Unblock(int node, IReadOnlyList<(int Node, int? Item)> handled)
-    {
-        List<(int Node, int? Item)> remaining = [];
-        foreach ((int n, int? item) in _reworkTargets.GetValueOrDefault(node) ?? [])
-        {
-            if (!handled.Contains((n, item)))
-            {
-                remaining.Add((n, item));
-            }
-        }
-
-        if (remaining.Count == 0)
-        {
-            State(node).Blocked = false;
-            _reworkTargets.Remove(node);
-        }
-        else
-        {
-            _reworkTargets[node] = remaining;
-        }
-    }
+    public void Unblock(int node, IReadOnlyList<(int Node, int? Item)> handled) =>
+        Executable(node).FinishRework(handled);
 
     /// <summary>实施执行节点要读的返工意见：引用它的检查执行节点最近一次拒绝结论。检查执行节点读自己的结论。要求持有 Gate。</summary>
-    public CheckResult? ReworkFor(int executableIndex, int? itemIndex)
+    public CheckResult? ReworkFor(RuntimeExecutable executable, int? itemIndex)
     {
-        if (Graph[executableIndex].Output == NodeOutput.Review)
+        if (executable.Output == NodeOutput.Review)
         {
-            CheckResult? check = LastCheck(executableIndex, itemIndex);
+            CheckResult? check = executable.LastCheck(itemIndex);
 
             return check is { Passed: false } ? check : null;
         }
@@ -586,14 +502,15 @@ internal sealed class TaskFlow
                      .Where(candidate => candidate.Output == NodeOutput.Review)
                      .Select(candidate => candidate.Index))
         {
-            if (!Graph.CheckedSources(check).Contains(executableIndex))
+            if (!Graph.CheckedSources(check).Contains(executable.Index))
             {
                 continue;
             }
 
+            RuntimeExecutable checkNode = Executable(check);
             CheckResult? error = itemIndex is { } index
-                ? LastCheck(check, index) ?? LastCheck(check, null)
-                : LastCheck(check, null);
+                ? checkNode.LastCheck(index) ?? checkNode.LastCheck(null)
+                : checkNode.LastCheck(null);
             if (error is { Passed: false })
             {
                 return error;
@@ -603,3 +520,4 @@ internal sealed class TaskFlow
         return null;
     }
 }
+

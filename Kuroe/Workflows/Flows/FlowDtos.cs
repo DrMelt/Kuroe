@@ -47,7 +47,7 @@ internal sealed class NodeDto
 
     public NodeOutput? Output { get; set; }
 
-    /// <summary>执行节点模式的名字：Single、PerItem。容器不再接受 Mode。</summary>
+    /// <summary>执行节点模式的名字：Single、PerItem。</summary>
     public string? Mode { get; set; }
 
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>

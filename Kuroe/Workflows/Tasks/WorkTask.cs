@@ -109,7 +109,6 @@ public sealed class WorkTask
             }
         }
     }
-
     /// <summary>要求持有 <see cref="Gate"/>。任务状态由取消标记、执行节点状态与在跑的 run 汇总得出，不单独维护。</summary>
     private TaskState Summarize()
     {
@@ -210,7 +209,6 @@ public sealed class WorkTask
             _lastActivityAt = DateTimeOffset.UtcNow;
         }
     }
-
     /// <summary>当前状态的只读快照，含执行节点、执行节点状态、条目结论、run 与前台对话。</summary>
     public TaskSnapshot Snapshot()
     {
@@ -220,19 +218,15 @@ public sealed class WorkTask
 
             List<NodeSnapshot> nodes =
             [
-                .. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable,
-                    [.. _runs.Where(run => run.Context.NodeIndex == index).Select(run => runs[run.Id])])),
+                .. Runtime.Executables.Select(node => new NodeSnapshot(node.Index, node.Executable,
+                    [.. _runs.Where(run => run.Context.NodeIndex == node.Index).Select(run => runs[run.Id])])),
             ];
 
-            List<NodeStateSnapshot> nodeStates = [];
-            for (int index = 0; index < Graph.Count; index++)
-            {
-                nodeStates.Add(Runtime.NodeStateSnapshot(index));
-            }
+            List<NodeStateSnapshot> nodeStates = [.. Runtime.Executables.Select(node => node.StateSnapshot())];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
                 _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), nodes, nodeStates,
-                ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                Runtime.GroupSnapshots(), ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
 
@@ -240,7 +234,7 @@ public sealed class WorkTask
     private List<ItemStateSnapshot> ItemStates()
     {
         List<ItemStateSnapshot> states = [];
-        foreach (ExecutableNode review in Graph.ExecutableNodes.Where(node => node.Output == NodeOutput.Review))
+        foreach (RuntimeExecutable review in Runtime.Executables.Where(node => node.Output == NodeOutput.Review))
         {
             if (review.Mode == NodeMode.PerItem)
             {
@@ -256,9 +250,9 @@ public sealed class WorkTask
     }
 
     /// <summary>逐条检查按实例收集结论。</summary>
-    private void CollectPerItemChecks(ExecutableNode review, List<ItemStateSnapshot> states)
+    private void CollectPerItemChecks(RuntimeExecutable review, List<ItemStateSnapshot> states)
     {
-        if (Runtime.ExpandedItems(review.Index) is not { } items)
+        if (review.ExpandedItems is not { } items)
         {
             return;
         }
@@ -266,7 +260,7 @@ public sealed class WorkTask
         Dictionary<int, string?> branchByItem = BranchByItem(Graph.ItemSpace(review.Index)) ?? [];
         foreach (int item in items)
         {
-            if (Runtime.LastCheck(review.Index, item) is not { } check)
+            if (review.LastCheck(item) is not { } check)
             {
                 continue;
             }
@@ -277,15 +271,15 @@ public sealed class WorkTask
     }
 
     /// <summary>整体检查按它覆盖的单一拆分空间回填条目结论。覆盖多个空间时不回填，避免结论错配到别家条目。</summary>
-    private void CollectFunnelCheck(ExecutableNode review, List<ItemStateSnapshot> states)
+    private void CollectFunnelCheck(RuntimeExecutable review, List<ItemStateSnapshot> states)
     {
-        if (Runtime.LastCheck(review.Index, null) is not { } check)
+        if (review.LastCheck(null) is not { } check)
         {
             return;
         }
 
         List<int> itemSources = [.. Graph.CheckedSources(review.Index)
-            .Where(source => Graph[source].Mode == NodeMode.PerItem)];
+            .Where(source => Graph[source] is ExecutableNode { Mode: NodeMode.PerItem })];
         if (itemSources.Count == 0)
         {
             return;

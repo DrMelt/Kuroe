@@ -160,7 +160,7 @@ sealed class WorkflowStore(string file)
                 && !string.Equals(node.Mode, "Sequential", StringComparison.OrdinalIgnoreCase))
             {
                 return [WorkflowErrors.Node(flowName, node.Name ?? string.Empty,
-                    $"容器不再有 Mode，并行请改用 Branch 声明，收到 {node.Mode}。")];
+                    $"容器不支持 Mode，并行由 Branch 声明，收到 {node.Mode}。")];
             }
 
             ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(node.Nodes, flowName);
@@ -174,6 +174,7 @@ sealed class WorkflowStore(string file)
                 Name = node.Name ?? string.Empty,
                 Prompt = node.Prompt,
                 From = node.From ?? [],
+                Gate = node.Gate ?? NodeGate.Auto,
                 Nodes = children.Value,
             };
         }
@@ -229,6 +230,7 @@ sealed class WorkflowStore(string file)
             Name = flow.Name,
             Prompt = flow.Prompt,
             From = flow.From.Count == 0 ? null : [.. flow.From],
+            Gate = flow.Gate,
             Nodes = [.. flow.Nodes.Select(ToNodeDto)],
         },
         ExecuteNode executable => new NodeDto

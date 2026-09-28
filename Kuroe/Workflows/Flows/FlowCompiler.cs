@@ -2,8 +2,8 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>把流程树编译成执行视图：执行节点按先根序展平，From 引用编译为带消费方式的边。
-/// 要求已通过 WorkflowRules 校验，模型配置引用与执行节点名字都可解析。</summary>
+/// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，From 引用编译为带消费方式的边。
+/// 要求已通过 WorkflowRules 校验，模型配置引用与节点名字都可解析。</summary>
 internal static class FlowCompiler
 {
     /// <summary>编译流程树。</summary>
@@ -11,39 +11,52 @@ internal static class FlowCompiler
     {
         Dictionary<string, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
-        // 先根序登记执行节点名与展平序号
-        Dictionary<string, int> order = [];
-        FirstPass(flow.Nodes, order, 0);
+        var nodes = new List<GraphNode>();
+        var byName = new Dictionary<string, int>();
+        var groups = new Dictionary<int, GroupBuilder>();
 
-        var result = new List<ExecutableNode>();
-        SecondPass(flow.Nodes, models, order, result, []);
+        // 先登记全部名字与序号，From 对后面的节点引用才可解析
+        RegisterNames(flow.Nodes, byName, 0);
+        SecondPass(flow.Nodes, models, nodes, byName, groups, [], parent: null);
+
+        // 用登记好的成员与子容器固化组定义
+        foreach (GroupBuilder builder in groups.Values)
+        {
+            nodes[builder.Index] = new FlowGroup(builder.Index, builder.Name, builder.Path, builder.Gate,
+                builder.Members, builder.SubGroups);
+        }
 
         List<FlowEdge> edges = [];
-        for (int index = 0; index < result.Count; index++)
+        foreach (ExecutableNode executable in nodes.OfType<ExecutableNode>())
         {
-            ExecutableNode executable = result[index];
             foreach (int from in executable.From)
             {
-                edges.Add(new FlowEdge(from, index, EdgeFeedRules.Of(result[from].Mode, executable.Mode)));
+                edges.Add(new FlowEdge(from, executable.Index, EdgeFeedRules.Of(nodes[from], executable.Mode)));
             }
         }
 
-        return new NodeGraph(result, edges);
+        return new NodeGraph(nodes, edges);
     }
 
-    /// <summary>登记执行节点名与展平序号，返回该段执行节点数。</summary>
-    private static int FirstPass(IReadOnlyList<NodeSpec> nodes, Dictionary<string, int> order, int next)
+    /// <summary>容器定义的编译期登记，最终固化为 <see cref="FlowGroup"/>。</summary>
+    private sealed record GroupBuilder(
+        int Index,
+        string Name,
+        string Path,
+        NodeGate Gate,
+        List<int> Members,
+        List<int> SubGroups);
+
+    /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
+    private static int RegisterNames(IReadOnlyList<NodeSpec> specs, Dictionary<string, int> order, int next)
     {
-        foreach (NodeSpec node in nodes)
+        foreach (NodeSpec node in specs)
         {
-            if (node is ExecuteNode)
+            order[node.Name] = next;
+            next++;
+            if (node is FlowNode flow)
             {
-                order[node.Name] = next;
-                next++;
-            }
-            else if (node is FlowNode flow)
-            {
-                next = FirstPass(flow.Nodes, order, next);
+                next = RegisterNames(flow.Nodes, order, next);
             }
         }
 
@@ -51,23 +64,40 @@ internal static class FlowCompiler
     }
 
     private static void SecondPass(
-        IReadOnlyList<NodeSpec> nodes,
+        IReadOnlyList<NodeSpec> specs,
         Dictionary<string, ModelDefinition> models,
-        Dictionary<string, int> order,
-        List<ExecutableNode> result,
-        List<string> path)
+        List<GraphNode> nodes,
+        Dictionary<string, int> byName,
+        Dictionary<int, GroupBuilder> groups,
+        List<string> path,
+        int? parent)
     {
-        foreach (NodeSpec node in nodes)
+        foreach (NodeSpec node in specs)
         {
             switch (node)
             {
                 case ExecuteNode executable:
-                    result.Add(NewExecutable(executable, result.Count, path, models, order));
+                    int index = nodes.Count;
+                    nodes.Add(NewExecutable(executable, index, path, models, byName));
+                    if (parent is { } memberGroup)
+                    {
+                        groups[memberGroup].Members.Add(index);
+                    }
+
                     break;
 
                 case FlowNode flow:
-                    path.Add(node.Name);
-                    SecondPass(flow.Nodes, models, order, result, path);
+                    int group = nodes.Count;
+                    string groupPath = string.Join('/', [.. path, flow.Name]);
+                    groups[group] = new GroupBuilder(group, flow.Name, groupPath, flow.Gate, [], []);
+                    nodes.Add(new FlowGroup(group, flow.Name, groupPath, flow.Gate, [], []));
+                    if (parent is { } childGroup)
+                    {
+                        groups[childGroup].SubGroups.Add(group);
+                    }
+
+                    path.Add(flow.Name);
+                    SecondPass(flow.Nodes, models, nodes, byName, groups, path, group);
                     path.RemoveAt(path.Count - 1);
                     break;
             }
@@ -83,6 +113,7 @@ internal static class FlowCompiler
         index,
         executable.Name,
         string.Join('/', [.. path, executable.Name]),
+        executable.Gate,
         models[executable.Model],
         executable.Tools,
         executable.Prompt,
@@ -90,7 +121,6 @@ internal static class FlowCompiler
         executable.Mode,
         executable.Branch,
         [.. executable.From.Select(name => order[name])],
-        executable.Gate,
         executable.OnReject,
         executable.MaxAttempts,
         executable.Split);

@@ -78,7 +78,7 @@ public sealed class SnapshotTests
         public static TaskSnapshot Snap(IReadOnlyList<NodeStateSnapshot> states) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
             [.. Graph.ExecutableNodes.Select((executable, index) => new NodeSnapshot(index, executable, []))],
-            states, [], [], 0, DateTimeOffset.UtcNow);
+            states, [], [], [], 0, DateTimeOffset.UtcNow);
     }
 
     private static readonly ModelDefinition Planner = new() { Name = "规划者" };
@@ -90,7 +90,7 @@ public sealed class SnapshotTests
     ]);
 
     private static readonly NodeGraph Graph = new([
-        new ExecutableNode(0, "制定计划", "制定计划", Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], NodeGate.Auto, null, null, null),
-        new ExecutableNode(1, "实施", "实施", Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], NodeGate.Auto, null, null, null),
+        new ExecutableNode(0, "制定计划", "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
+        new ExecutableNode(1, "实施", "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
     ], []);
 }

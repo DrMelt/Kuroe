@@ -22,7 +22,7 @@ internal sealed class TaskDetailView(Terminal terminal)
             _terminal.NewLine();
             foreach ((int executableIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
             {
-                string nodeName = executableIndex < task.Graph.Count ? task.Graph[executableIndex].Name : $"执行节点 {executableIndex + 1}";
+                string nodeName = task.Graph[executableIndex].Name;
                 _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
                 foreach (PlanItem item in plan.Items)
                 {
@@ -37,10 +37,20 @@ internal sealed class TaskDetailView(Terminal terminal)
 
         PrintUnits(task);
 
+        if (task.Groups.Count > 0)
+        {
+            _terminal.NewLine();
+            _terminal.Line("容器状态：");
+            foreach (GroupSnapshot group in task.Groups)
+            {
+                _terminal.Line($"  {group.Path} · {Labels.Of(group.State)}");
+            }
+        }
+
         _terminal.NewLine();
         foreach (NodeSnapshot node in task.Nodes)
         {
-            _terminal.ToolCall($"执行节点 {node.Index + 1} · {node.Executable.Path}"
+            _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
                 + $"（{node.Executable.Output.Label()} · {Labels.Of(node.Executable.Mode)} · {Labels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)

@@ -34,13 +34,13 @@ sealed class WorkflowEngine(
         }
     }
 
-    /// <summary>要求持有任务 Gate：批准等待放行的节点，再向流程运行发出继续信号，返回被批准的节点数。</summary>
+    /// <summary>要求持有任务 Gate：批准等待放行的节点与容器，再向流程运行发出继续信号，返回被批准的节点数。</summary>
     public int Approve(WorkTask task)
     {
         int waiting;
         lock (task.Gate)
         {
-            waiting = task.Runtime.AwaitingNodes.Count;
+            waiting = task.Runtime.AwaitingNodes.Count + task.Runtime.AwaitingGroups.Count;
             if (waiting > 0)
             {
                 task.Touch();

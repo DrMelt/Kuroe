@@ -15,9 +15,6 @@ public sealed record ExecuteNode : NodeSpec
     /// <summary>整节点一个执行还是按规划条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;
 
-    /// <summary>产出即开下一步还是停在待批准。</summary>
-    public NodeGate Gate { get; init; } = NodeGate.Auto;
-
     /// <summary>检查不通过的处置，非 Review 节点不得声明。</summary>
     public RejectAction? OnReject { get; init; }
 

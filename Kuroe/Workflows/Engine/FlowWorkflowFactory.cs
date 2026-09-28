@@ -21,31 +21,36 @@ internal static class FlowWorkflowFactory
         NodeModelResolver models)
     {
         FlowStartExecutor start = new(registry, task.Id);
-        NodeExecutor[] executors = [.. task.Graph.ExecutableNodes.Select((_, index) =>
-            new NodeExecutor(registry, dispatcher, models, task.Id, index))];
+        Dictionary<int, NodeExecutor> byIndex = task.Runtime.Executables
+            .ToDictionary(node => node.Index, node => new NodeExecutor(registry, dispatcher, models, task.Id, node));
 
         WorkflowBuilder builder = new(start);
-        foreach (NodeExecutor executor in executors)
+        foreach (NodeExecutor executor in byIndex.Values)
         {
             builder.AddEdge(start, executor);
         }
 
+        // 执行依赖与容器来源边统一路由：执行节点来源展开为自身，容器来源展开到组内全部成员接到目标，
+        // 让目标在框架图中可达并承接组齐备的广播，就绪与否由推进器的放行判定保证
         foreach (FlowEdge edge in task.Graph.Edges)
         {
-            builder.AddEdge(executors[edge.From], executors[edge.To]);
+            foreach (int member in task.Graph.ExecutablesIn(edge.From))
+            {
+                builder.AddEdge(byIndex[member], byIndex[edge.To]);
+            }
         }
 
         // 检查返工的退回边：检查执行节点不通过时把实施来源重跑
-        for (int check = 0; check < executors.Length; check++)
+        foreach ((int check, NodeExecutor checkExecutor) in byIndex)
         {
-            if (task.Graph[check].Output != NodeOutput.Review)
+            if (task.Graph[check] is not ExecutableNode { Output: NodeOutput.Review })
             {
                 continue;
             }
 
             foreach (int source in task.Graph.CheckedSources(check))
             {
-                builder.AddEdge(executors[check], executors[source]);
+                builder.AddEdge(checkExecutor, byIndex[source]);
             }
         }
 

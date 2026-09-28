@@ -21,13 +21,13 @@ internal sealed partial class NodeExecutor(
     RunDispatcher dispatcher,
     NodeModelResolver models,
     TaskId taskId,
-    int nodeIndex) : Executor($"node:{nodeIndex}")
+    RuntimeExecutable node) : Executor($"node:{node.Index}")
 {
     /// <summary>评估消息只认本执行节点：纯静态拆分就地产出，等待批准的放行，其余按输入就绪启动实例。</summary>
     [MessageHandler]
     public async ValueTask HandleAsync(FlowMessage message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
-        if (message.NodeIndex != nodeIndex || message.Intent is not null)
+        if (message.NodeIndex != node.Index || message.Intent is not null)
         {
             return;
         }
@@ -42,7 +42,7 @@ internal sealed partial class NodeExecutor(
         List<TaskFlow.RunStarter> starters = [];
         lock (task.Gate)
         {
-            TaskFlow.EvaluateResult result = task.Runtime.Evaluate(nodeIndex);
+            TaskFlow.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             starters.AddRange(result.Starters);
         }
@@ -79,30 +79,29 @@ internal sealed partial class NodeExecutor(
     /// <summary>为一个实例装配、派发并等待收口，再按收口计划通知下游或重派返工实例。</summary>
     private async ValueTask DispatchAndSettleAsync(WorkTask task, TaskFlow.RunStarter starter, IWorkflowContext context, CancellationToken cancellationToken)
     {
-        ExecutableNode executable = task.Graph[nodeIndex];
+        ExecutableNode executable = node.Executable;
         Run? run;
         lock (task.Gate)
         {
             if (task.State == TaskState.Canceled)
             {
-                task.Runtime.ReleaseActive(nodeIndex);
+                node.ReleaseActive();
                 return;
             }
 
             ErrorOr<string> model = models.For(executable);
             if (model.IsError)
             {
-                task.Runtime.ReleaseActive(nodeIndex);
-                task.Runtime.Block(nodeIndex, [(nodeIndex, null)]);
+                node.ReleaseActive();
+                node.EnterBlocked([(node.Index, null)]);
                 task.Journal.Append(new ErrorEntry(model.FirstError.Description));
                 registry.Report(ExecutionNotice.From(model.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Name}"));
                 return;
             }
 
-            run = registry.NewRun(ContextComposer.ForExecutable(task, executable, starter.Item, model.Value));
+            run = registry.NewRun(ContextComposer.ForExecutable(task, node, starter.Item, model.Value));
             task.Attach(run);
         }
-
         if (run is null)
         {
             return;
@@ -120,28 +119,7 @@ internal sealed partial class NodeExecutor(
         TaskFlow.SettlePlan plan;
         lock (task.Gate)
         {
-            task.Runtime.ReleaseActive(nodeIndex);
-
-            if (run.State != RunState.Succeeded)
-            {
-                task.Runtime.Block(nodeIndex, [(nodeIndex, run.Context.ItemIndex)]);
-                return;
-            }
-
-            if (executable.Output == NodeOutput.Plan && task.SplitFor(nodeIndex)?.Origin != run.Id)
-            {
-                run.MarkUncollected("规划执行节点没有交回条目拆分，本步未收口。");
-                task.Runtime.Block(nodeIndex, [(nodeIndex, null)]);
-                return;
-            }
-
-            if (executable.Output == NodeOutput.Review && task.Runtime.LastCheck(nodeIndex, starter.Item)?.Origin != run.Id)
-            {
-                run.MarkUncollected("检查执行节点没有交回结论，本步未收口。");
-                task.Runtime.Block(nodeIndex, [(nodeIndex, starter.Item)]);
-                return;
-            }
-
+            node.ReleaseActive();
             plan = task.Runtime.Settle(run);
         }
 
@@ -150,14 +128,14 @@ internal sealed partial class NodeExecutor(
             await context.SendMessageAsync(Activate(next), $"node:{next}", cancellationToken);
         }
 
-        foreach ((int node, int? item) in plan.Rerun)
+        foreach ((int nodeIndex, int? item) in plan.Rerun)
         {
             await context.SendMessageAsync(
-                new FlowMessage { NodeIndex = node, ItemIndex = item },
-                $"node:{node}",
+                new FlowMessage { NodeIndex = nodeIndex, ItemIndex = item },
+                $"node:{nodeIndex}",
                 cancellationToken);
         }
     }
 
-    private static FlowMessage Activate(int node) => new() { NodeIndex = node };
+    private static FlowMessage Activate(int nodeIndex) => new() { NodeIndex = nodeIndex };
 }

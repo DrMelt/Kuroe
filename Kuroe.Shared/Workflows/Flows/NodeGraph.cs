@@ -1,21 +1,37 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>流程编译出的执行视图：执行节点按先根序存放，依赖以显式边表达，消费方式固化在边上。
-/// 执行按“边齐备则激活”推进，执行节点序号只作定位与展示。构造时按入出边建索引。</summary>
+/// <summary>流程编译出的执行视图：节点按先根序统一编号，执行节点与容器在一张表里，
+/// 依赖以显式边表达，消费方式固化在边上。执行按“边齐备则激活”推进，节点序号只作定位与展示。
+/// 构造时按入出边建索引并登记容器归属。</summary>
 public sealed class NodeGraph
 {
     private readonly Dictionary<string, int> _byName;
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _incoming = [];
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
+    private readonly Dictionary<int, int> _parentGroup;
 
     /// <summary>构造执行视图，边两端必须落在节点范围内。按入出边建索引。</summary>
-    public NodeGraph(IReadOnlyList<ExecutableNode> executableNodes, IReadOnlyList<FlowEdge> edges)
+    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
-        ExecutableNodes = executableNodes;
+        Nodes = nodes;
         Edges = edges;
-        _byName = executableNodes
-            .Select((node, index) => (node.Name, index))
-            .ToDictionary(entry => entry.Name, entry => entry.index);
+        ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
+        Groups = [.. nodes.OfType<FlowGroup>()];
+        _byName = nodes.ToDictionary(node => node.Name, node => node.Index);
+
+        _parentGroup = [];
+        foreach (FlowGroup group in Groups)
+        {
+            foreach (int member in group.Members)
+            {
+                _parentGroup[member] = group.Index;
+            }
+
+            foreach (int child in group.SubGroups)
+            {
+                _parentGroup[child] = group.Index;
+            }
+        }
 
         foreach (FlowEdge edge in edges)
         {
@@ -28,21 +44,34 @@ public sealed class NodeGraph
         }
     }
 
-    /// <summary>执行节点。</summary>
+    /// <summary>全部节点：执行节点与容器，按先根序统一编号。</summary>
+    public IReadOnlyList<GraphNode> Nodes { get; }
+
+    /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
+
+    /// <summary>容器节点，按先根序。</summary>
+    public IReadOnlyList<FlowGroup> Groups { get; }
 
     /// <summary>依赖边。</summary>
     public IReadOnlyList<FlowEdge> Edges { get; }
 
+    /// <summary>节点数，执行节点与容器一起算。</summary>
+    public int Count => Nodes.Count;
+
     /// <summary>执行节点数。</summary>
-    public int Count => ExecutableNodes.Count;
+    public int TotalExecutables => ExecutableNodes.Count;
 
-    /// <summary>取一个执行节点。</summary>
-    public ExecutableNode this[int index] => ExecutableNodes[index];
+    /// <summary>取一个节点。</summary>
+    public GraphNode this[int index] => Nodes[index];
 
-    /// <summary>按名定位执行节点，不存在时为空。</summary>
+    /// <summary>按名定位节点，不存在时为空。</summary>
     public int? IndexOf(string name) =>
         _byName.TryGetValue(name, out int index) ? index : null;
+
+    /// <summary>节点直接所属的容器，根级节点为空。</summary>
+    public FlowGroup? GroupOf(int nodeIndex) =>
+        _parentGroup.TryGetValue(nodeIndex, out int group) ? (FlowGroup)Nodes[group] : null;
 
     /// <summary>目标的入边，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Incoming(int target) => _incoming.GetValueOrDefault(target) ?? [];
@@ -65,11 +94,27 @@ public sealed class NodeGraph
             .Select(edge => ItemSpace(edge.From))
             .FirstOrDefault(space => space is not null);
 
-    /// <summary>检查节点引用的实施来源：入边里非 Plan 输出的来源，整集、逐条与整份一视同仁。</summary>
+    /// <summary>检查节点引用的实施来源：入边来源展开出的全部非 Plan 执行节点，整集、逐条与整份一视同仁。
+    /// 执行节点给自身，容器递归给全部成员，据此从容器汇合引用到组内实施。</summary>
     public IReadOnlyList<int> CheckedSources(int checkIndex) =>
         [.. Incoming(checkIndex)
-            .Select(edge => edge.From)
-            .Where(from => this[from].Output != NodeOutput.Plan)
+            .SelectMany(edge => SourcesIn(edge.From))
+            .Where(from => Nodes[from] is ExecutableNode { Output: not NodeOutput.Plan })
             .Distinct()
             .Order()];
+
+    /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
+    public IReadOnlyList<int> ExecutablesIn(int groupIndex) =>
+        [.. SourcesIn(groupIndex).Distinct()];
+
+    /// <summary>来源节点展开出的执行节点集合：执行节点给自身，容器递归给全部成员。</summary>
+    private IEnumerable<int> SourcesIn(int nodeIndex) =>
+        Nodes[nodeIndex] switch
+        {
+            ExecutableNode _ => [nodeIndex],
+            FlowGroup group => group.Members
+                .Concat(group.SubGroups)
+                .SelectMany(member => SourcesIn(member)),
+            _ => [],
+        };
 }
