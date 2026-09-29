@@ -91,14 +91,13 @@ public sealed class WorkflowProbeTests
 }
 
 [SendsMessage(typeof(string))]
-internal sealed partial class ProbeStart : Executor
+internal sealed partial class ProbeStart : Executor<string>
 {
     public ProbeStart() : base("start")
     {
     }
 
-    [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public override async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         if (message == "start")
         {
@@ -123,14 +122,13 @@ internal sealed partial class ProbeStart : Executor
 }
 
 [SendsMessage(typeof(string))]
-internal sealed partial class ProbeHalt : Executor
+internal sealed partial class ProbeHalt : Executor<string>
 {
     public ProbeHalt() : base("halt")
     {
     }
 
-    [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public override async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         if (message == "go")
         {
@@ -143,10 +141,9 @@ internal sealed partial class ProbeHalt : Executor
 }
 
 [YieldsOutput(typeof(string))]
-internal sealed partial class ProbeSink(string id) : Executor(id)
+internal sealed partial class ProbeSink(string id) : Executor<string>(id)
 {
-    [MessageHandler]
-    public static async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public override async ValueTask HandleAsync(string message, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
         await context.YieldOutputAsync(message, cancellationToken);
     }
