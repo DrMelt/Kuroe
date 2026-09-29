@@ -8,17 +8,18 @@ using Kuroe.Storage;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>flows.json 的读写。文件形状由 DTO 承载，绑定成 <see cref="FlowFile"/> 后交校验与展开。</summary>
-sealed class WorkflowStore(string file)
+sealed class WorkflowStore(string file, string baseDirectory)
 {
     /// <summary>节点库定义装配用作用域名。输入端口声明只属于库容器定义，装配层不允许。</summary>
     private const string LibraryScope = "节点库";
 
     private readonly string _file = Path.GetFullPath(file);
+    private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
 
-    /// <summary>流程文件所在目录，用户给出的文件参数以此为基准。</summary>
-    public string BaseDirectory => Path.GetDirectoryName(_file)!;
+    /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
+    public string BaseDirectory => _baseDirectory;
 
-    /// <summary>把文件参数解析为绝对路径，相对参数按流程文件所在目录解析。</summary>
+    /// <summary>把文件参数解析为绝对路径，相对参数按工作目录解析。</summary>
     public ErrorOr<string> Resolve(string path)
     {
         try

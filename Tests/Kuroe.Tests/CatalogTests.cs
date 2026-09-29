@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Configuration;
 using Kuroe.Shared.Catalogs;
 using Kuroe.TestSupport;
 using Xunit;
@@ -91,7 +92,7 @@ public sealed class CatalogTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        ErrorOr<string> exported = harness.Catalog.Export(Path.Combine(harness.Root, "catalog.json"));
+        ErrorOr<string> exported = harness.Catalog.Export(KuroePaths.At(harness.Root).CatalogFile);
 
         Assert.True(exported.IsError);
         Assert.Equal("CatalogFile.OverwritesCatalog", exported.FirstError.Code);

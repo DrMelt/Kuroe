@@ -28,13 +28,13 @@ public static class ServiceCollectionExtensions
             return settings.ErrorsOrEmptyList;
         }
 
-        ErrorOr<CatalogService> catalog = CatalogService.Create(new CatalogStore(paths.CatalogFile));
+        ErrorOr<CatalogService> catalog = CatalogService.Create(new CatalogStore(paths.CatalogFile, paths.WorkingDirectory));
         if (catalog.IsError)
         {
             return catalog.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkflowService> flows = WorkflowService.Create(new WorkflowStore(paths.WorkflowFile), settings.Value);
+        ErrorOr<WorkflowService> flows = WorkflowService.Create(new WorkflowStore(paths.WorkflowFile, paths.WorkingDirectory), settings.Value);
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;

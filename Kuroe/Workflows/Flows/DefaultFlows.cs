@@ -3,7 +3,7 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>内置节点库与内置流程：用户层未指定默认流程时使用，工作目录里还没有 flows.json 时也只有这一条。
+/// <summary>内置节点库与内置流程：用户层未指定默认流程时使用，工作目录 `.kuroe/` 里还没有 flows.json 时也只有这一条。
 /// 模型选择都不写模型名，流程可加载但执行时无法确定模型，派发 run 报错。</summary>
 internal static class DefaultFlows
 {

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Configuration;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
@@ -59,7 +60,7 @@ public sealed class NodeLibraryTests
         WorkflowImport imported = harness.Flows.Import("library.json").ThrowIfError();
         Assert.Contains(imported.Notes, note => note.Contains("节点库"));
 
-        string text = File.ReadAllText(Path.Combine(harness.Root, "flows.json"));
+        string text = File.ReadAllText(KuroePaths.At(harness.Root).WorkflowFile);
         Assert.Contains("\"Nodes\"", text);
         Assert.Contains("\"Use\"", text);
         Assert.Contains("\"In\"", text);

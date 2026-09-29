@@ -6,12 +6,13 @@ using Kuroe.Storage;
 namespace Kuroe.Catalogs;
 
 /// <summary>目录文件的读写，内容与 JSON 文本的转换交给 ApiHub。</summary>
-sealed class CatalogStore(string file)
+sealed class CatalogStore(string file, string baseDirectory)
 {
     private readonly string _file = Path.GetFullPath(file);
+    private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
 
-    /// <summary>目录文件所在目录，用户给出的文件参数以此为基准。</summary>
-    public string BaseDirectory => Path.GetDirectoryName(_file)!;
+    /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
+    public string BaseDirectory => _baseDirectory;
 
     /// <summary>路径是否指向目录文件本身，比较规则随平台。</summary>
     public bool IsCatalogFile(string path) => string.Equals(Path.GetFullPath(path), _file,

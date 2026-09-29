@@ -75,20 +75,20 @@ public sealed class KuroeHarness : IDisposable
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
-        if (flowsJson is not null)
+
+        KuroePaths paths = KuroePaths.At(root);
+        string? flowsText = flowsJson ?? (writeDefaultFlow ? TestDefaultFlow : null);
+        if (flowsText is not null)
         {
-            File.WriteAllText(Path.Combine(root, "flows.json"), flowsJson);
-        }
-        else if (writeDefaultFlow)
-        {
-            File.WriteAllText(Path.Combine(root, "flows.json"), TestDefaultFlow);
+            System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.WorkflowFile)!);
+            File.WriteAllText(paths.WorkflowFile, flowsText);
         }
 
         var services = new ServiceCollection();
         services.AddLogging();
         var executor = new FakeExecutor();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);
         if (startup.IsError)
         {
             return startup.ErrorsOrEmptyList;

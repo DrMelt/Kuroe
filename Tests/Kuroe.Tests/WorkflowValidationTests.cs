@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Configuration;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.TestSupport;
 using Xunit;
@@ -92,7 +93,7 @@ public sealed class WorkflowValidationTests
 
         harness.Flows.Import("extra.json").ThrowIfError();
 
-        string text = File.ReadAllText(Path.Combine(harness.Root, "flows.json"));
+        string text = File.ReadAllText(KuroePaths.At(harness.Root).WorkflowFile);
         Assert.Contains("\"Output\": \"Plan\"", text);
         Assert.Contains("制定计划", text);
         Assert.Contains("整体检查", text);

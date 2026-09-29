@@ -64,7 +64,7 @@ internal sealed class ErrorPrinter(Terminal terminal)
 
                 case ErrorCodes.WorkflowNode or ErrorCodes.WorkflowBody or ErrorCodes.WorkflowName
                     or ErrorCodes.WorkflowFormat:
-                    terminal.Hint("流程文件是工作目录下的 flows.json，改完用 /flow list 确认是否加载成功。");
+                    terminal.Hint("流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。");
                     break;
             }
         }

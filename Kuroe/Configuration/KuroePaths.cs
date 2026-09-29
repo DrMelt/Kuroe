@@ -6,10 +6,15 @@ public sealed class KuroePaths
     private KuroePaths(string directory)
     {
         string root = Path.GetFullPath(directory);
-        UserSettingsFile = Path.Combine(root, "settings.json");
-        CatalogFile = Path.Combine(root, "catalog.json");
-        WorkflowFile = Path.Combine(root, "flows.json");
+        WorkingDirectory = root;
+        string configDirectory = Path.Combine(root, ".kuroe");
+        UserSettingsFile = Path.Combine(configDirectory, "settings.json");
+        CatalogFile = Path.Combine(configDirectory, "catalog.json");
+        WorkflowFile = Path.Combine(configDirectory, "flows.json");
     }
+
+    /// <summary>工作目录根，命令里的文件参数以此为基准。</summary>
+    public string WorkingDirectory { get; }
 
     /// <summary>用户层偏好文件。</summary>
     public string UserSettingsFile { get; }

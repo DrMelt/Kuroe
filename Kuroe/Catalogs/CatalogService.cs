@@ -159,7 +159,7 @@ public sealed class CatalogService
             : Mutate(catalog => catalog.RemoveModel(model.Value));
     }
 
-    /// <summary>把文件参数解析为绝对路径，相对参数按目录文件所在目录解析。</summary>
+    /// <summary>把文件参数解析为绝对路径，相对参数按工作目录解析。</summary>
     private ErrorOr<string> ResolveFile(string path)
     {
         try

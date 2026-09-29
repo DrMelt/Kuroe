@@ -44,7 +44,7 @@ dotnet run --project Kuroe.Cli -- -d <工作目录>
 /task new 查明北京今天的天气，给出穿衣建议
 ```
 
-工作目录下有 `settings.json`、`catalog.json` 与 `flows.json` 三个文件，分别是偏好、模型目录与流程模板；`catalog.json` 含明文凭据。
+工作目录的 `.kuroe/` 下存放 `settings.json`、`catalog.json` 与 `flows.json` 三个配置文件，分别是偏好、模型目录与流程模板；`catalog.json` 含明文凭据。
 
 ## 文档
 
