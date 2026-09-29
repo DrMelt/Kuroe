@@ -25,6 +25,6 @@ public sealed record FlowMessage
     /// <summary>要激活的条目序号，整节点激活为空。</summary>
     public int? ItemIndex { get; init; }
 
-    /// <summary>返工目标：配对阻塞它们的检查节点，宿主预定时携带。</summary>
+    /// <summary>返工目标：配对阻塞它们的执行节点，宿主预定时携带。</summary>
     public IReadOnlyList<(int Blocked, int Node, int? Item)>? Rerun { get; init; }
 }

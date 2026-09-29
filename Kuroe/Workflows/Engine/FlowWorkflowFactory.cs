@@ -6,7 +6,6 @@ using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Agents.AI.Workflows;
 using FrameworkWorkflow = Microsoft.Agents.AI.Workflows.Workflow;
-using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Engine;
 
@@ -14,7 +13,7 @@ namespace Kuroe.Workflows.Engine;
 /// 执行器持有任务标识与流程依赖，不跨任务共享状态。</summary>
 internal static class FlowWorkflowFactory
 {
-    /// <summary>启动该任务的流程运行。start 与全部根执行节点、每条依赖边、检查返工边各有边，
+    /// <summary>启动该任务的流程运行。start 与全部根执行节点、每条依赖边各有边，
     /// 激活消息按目标执行器定向投递，就绪判定与发布由执行器内部按边决定。</summary>
     public static StreamingRun Start(
         WorkTask task,
@@ -39,20 +38,6 @@ internal static class FlowWorkflowFactory
             foreach (int member in task.Graph.ExecutablesIn(edge.From))
             {
                 builder.AddEdge(byIndex[member], byIndex[edge.To]);
-            }
-        }
-
-        // 检查返工的退回边：检查执行节点不通过时把实施来源重跑
-        foreach ((int check, NodeExecutor checkExecutor) in byIndex)
-        {
-            if (task.Graph[check] is not ExecutableNode { Output: NodeOutput.Review })
-            {
-                continue;
-            }
-
-            foreach (int source in task.Graph.CheckedSources(check))
-            {
-                builder.AddEdge(checkExecutor, byIndex[source]);
             }
         }
 

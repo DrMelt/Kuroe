@@ -31,9 +31,6 @@ internal sealed record RuntimeSettings
     /// <summary>提交任务时未指定流程则用该流程，未设置时用内置流程。</summary>
     public string? DefaultFlow { get; init; }
 
-    /// <summary>单个条目允许的实施轮数上限，检查执行节点的 MaxAttempts 不得超过它。</summary>
-    public int MaxAttempts { get; init; } = 3;
-
     /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端由 <see cref="Executions.Sessions.ClientProvider"/> 按模型重建。</summary>
     public bool InvalidatesHistory(RuntimeSettings other) => Model != other.Model;
 
@@ -67,7 +64,6 @@ internal sealed record RuntimeSettings
             MaxOutputTokens = file.MaxOutputTokens,
             MaxConcurrentRuns = file.MaxConcurrentRuns ?? defaults.MaxConcurrentRuns,
             DefaultFlow = file.DefaultFlow,
-            MaxAttempts = file.MaxAttempts ?? defaults.MaxAttempts,
         };
 
         if (string.IsNullOrWhiteSpace(bound.Model))
@@ -97,7 +93,5 @@ internal sealed class RuntimeSectionDto
     public int? MaxConcurrentRuns { get; set; }
 
     public string? DefaultFlow { get; set; }
-
-    public int? MaxAttempts { get; set; }
 }
 

@@ -21,11 +21,9 @@ public sealed class LabelsTests
     }
 
     [Fact]
-    public void Unit_names_cover_verdict_and_scope()
+    public void Mode_and_gate_labels_cover_the_scope()
     {
         Assert.Equal("推进中", Labels.Of(NodeState.Running));
-        Assert.Equal("未检查", Labels.Of(UnitVerdict.NotChecked));
-        Assert.Equal("退回返工", Labels.Of(RejectAction.Retry));
         Assert.Equal("按条目", Labels.Of(NodeMode.PerItem));
         Assert.Equal("整节点", Labels.Of(NodeMode.Single));
         Assert.Equal("自动放行", Labels.Of(NodeGate.Auto));

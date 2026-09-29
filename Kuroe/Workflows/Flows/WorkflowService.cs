@@ -31,7 +31,7 @@ public sealed class WorkflowService
             return loaded.ErrorsOrEmptyList;
         }
 
-        List<Error> errors = Validate(loaded.Value, settings.Current.Runtime.MaxAttempts, out List<Workflow> expanded);
+        List<Error> errors = Validate(loaded.Value, out List<Workflow> expanded);
         if (WorkflowRules.Duplicated(expanded) is { } duplicated)
         {
             errors.Add(WorkflowErrors.Body(duplicated, "流程名重复。"));
@@ -91,7 +91,7 @@ public sealed class WorkflowService
             MergeLibrary(_source.Nodes, incoming.Nodes),
             MergeFlows(_source.Flows, incoming.Flows));
 
-        List<Error> errors = Validate(merged, _settings.Current.Runtime.MaxAttempts, out List<Workflow> expanded);
+        List<Error> errors = Validate(merged, out List<Workflow> expanded);
         if (errors.Count > 0)
         {
             return errors;
@@ -121,7 +121,7 @@ public sealed class WorkflowService
     }
 
     /// <summary>校验节点库并逐流程展开校验，合法流程经 valid 交回，返回值是全部错误。</summary>
-    private static List<Error> Validate(FlowFile file, int attemptLimit, out List<Workflow> valid)
+    private static List<Error> Validate(FlowFile file, out List<Workflow> valid)
     {
         List<Error> errors = [];
         ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(file.Nodes);
@@ -141,7 +141,7 @@ public sealed class WorkflowService
         List<Workflow> accepted = [];
         foreach (Workflow flow in file.Flows)
         {
-            ErrorOr<IReadOnlyList<NodeSpec>> expanded = NodeExpander.Expand(library, flow.Nodes, flow.Name);
+            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, flow.Name);
             if (expanded.IsError)
             {
                 errors.AddRange(expanded.ErrorsOrEmptyList);
@@ -149,7 +149,7 @@ public sealed class WorkflowService
             }
 
             Workflow concrete = new(flow.Name, flow.Description, flow.Models, expanded.Value);
-            ErrorOr<Success> checkedFlow = WorkflowRules.Validate(concrete, attemptLimit);
+            ErrorOr<Success> checkedFlow = WorkflowRules.Validate(concrete);
             if (checkedFlow.IsError)
             {
                 errors.AddRange(checkedFlow.ErrorsOrEmptyList);

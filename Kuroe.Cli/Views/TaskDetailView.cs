@@ -5,7 +5,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目结论与前台对话。</summary>
+/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与前台对话。</summary>
 internal sealed class TaskDetailView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -26,11 +26,8 @@ internal sealed class TaskDetailView(Terminal terminal)
                 _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
                 foreach (PlanItem item in plan.Items)
                 {
-                    ItemStateSnapshot? state = task.ItemStates.FirstOrDefault(candidate =>
-                        candidate.ExecutableIndex == executableIndex && candidate.ItemIndex == item.Index);
-                    string verdict = state is null ? string.Empty : $"\u3000{Labels.Of(state.Verdict)}";
                     string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
-                    _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}{verdict}");
+                    _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}");
                 }
             }
         }
@@ -63,11 +60,6 @@ internal sealed class TaskDetailView(Terminal terminal)
             {
                 _terminal.Line($"  {RunLabel(run)}");
             }
-        }
-
-        foreach (ItemStateSnapshot item in task.ItemStates.Where(state => state.Findings is { Length: > 0 }))
-        {
-            _terminal.Warn($"  {Labels.Item(item.ItemIndex)} 的检查意见：{item.Findings}");
         }
 
         _terminal.NewLine();

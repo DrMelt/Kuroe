@@ -46,7 +46,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITool>(new TimeTool());
         services.AddSingleton<ITool>(new WeatherTool());
         services.AddSingleton<ITool, PlanTool>();
-        services.AddSingleton<ITool, VerdictTool>();
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<ModelService>();
         services.AddSingleton<TaskRegistry>();

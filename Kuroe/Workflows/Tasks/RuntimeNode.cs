@@ -85,12 +85,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             : Rev > 0)
         && !Awaiting && !Blocked && !Canceled;
 
-    /// <summary>整节点的最近检查结论，Single 检查执行节点使用。</summary>
-    public CheckResult? WholeCheck { get; private set; }
-
-    /// <summary>逐实例的最近检查结论，PerItem 检查执行节点使用。只经 RecordCheck 改动。</summary>
-    private readonly Dictionary<int, CheckResult> _itemChecks = [];
-
     /// <summary>整节点的执行次数，首次启动为 1。</summary>
     public int WholeExecutions { get; private set; }
 
@@ -235,35 +229,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
-
-    /// <summary>记录一轮检查结论，同一交回者只认首个交点。返回是否记录成功。</summary>
-    public bool RecordCheck(int? item, CheckResult check)
-    {
-        if (item is { } index)
-        {
-            if (_itemChecks.TryGetValue(index, out CheckResult? last) && last.Origin == check.Origin)
-            {
-                return false;
-            }
-
-            _itemChecks[index] = check;
-
-            return true;
-        }
-
-        if (WholeCheck is { Origin: var origin } && origin == check.Origin)
-        {
-            return false;
-        }
-
-        WholeCheck = check;
-
-        return true;
-    }
-
-    /// <summary>最近一次检查结论，未检查时为空。</summary>
-    public CheckResult? LastCheck(int? item) =>
-        item is { } index ? _itemChecks.GetValueOrDefault(index) : WholeCheck;
 
     /// <summary>已放行产出的位置集合：Single 给整节点，PerItem 给全部已发布实例。</summary>
     public override IReadOnlyList<(int Node, int? Item)> ReleasedOutputs()

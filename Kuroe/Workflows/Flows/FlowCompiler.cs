@@ -17,8 +17,8 @@ internal static class FlowCompiler
         var containers = new Dictionary<int, ContainerBuilder>();
 
         // 先登记全部名字与序号，From 对后面的节点引用才可解析
-        RegisterNames(flow.Nodes, byName, 0);
-        SecondPass(flow.Nodes, models, nodes, byName, containers, [], parent: null);
+        RegisterNames(flow.RootNode, byName, 0);
+        SecondPass(flow.RootNode, models, nodes, byName, containers, [], parent: null);
 
         // 用登记好的成员与子容器固化容器定义
         foreach (ContainerBuilder builder in containers.Values)
@@ -49,15 +49,15 @@ internal static class FlowCompiler
         List<int> SubContainers);
 
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
-    private static int RegisterNames(IReadOnlyList<Flow.NodeSpec> specs, Dictionary<Flow.NodeName, int> order, int next)
+    private static int RegisterNames(Flow.NodeSpec node, Dictionary<Flow.NodeName, int> order, int next)
     {
-        foreach (Flow.NodeSpec node in specs)
+        order[node.Name] = next;
+        next++;
+        if (node.Nodes is { Count: > 0 } children)
         {
-            order[node.Name] = next;
-            next++;
-            if (node.Nodes is { Count: > 0 } children)
+            foreach (Flow.NodeSpec child in children)
             {
-                next = RegisterNames(children, order, next);
+                next = RegisterNames(child, order, next);
             }
         }
 
@@ -65,7 +65,7 @@ internal static class FlowCompiler
     }
 
     private static void SecondPass(
-        IReadOnlyList<Flow.NodeSpec> specs,
+        Flow.NodeSpec node,
         Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
         List<GraphNode> nodes,
         Dictionary<Flow.NodeName, int> byName,
@@ -73,33 +73,33 @@ internal static class FlowCompiler
         List<string> path,
         int? parent)
     {
-        foreach (Flow.NodeSpec node in specs)
+        if (node.Execution is { } execution)
         {
-            if (node.Execution is { } execution)
+            int index = nodes.Count;
+            nodes.Add(NewExecutable(node, execution, index, path, models, byName));
+            if (parent is { } memberContainer)
             {
-                int index = nodes.Count;
-                nodes.Add(NewExecutable(node, execution, index, path, models, byName));
-                if (parent is { } memberContainer)
-                {
-                    containers[memberContainer].Members.Add(index);
-                }
-
-                continue;
+                containers[memberContainer].Members.Add(index);
             }
 
-            int container = nodes.Count;
-            string containerPath = string.Join('/', [.. path, node.Name.Value]);
-            containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
-            nodes.Add(new ContainerNode(container, node.Name, containerPath, node.Gate, [], []));
-            if (parent is { } childContainer)
-            {
-                containers[childContainer].SubContainers.Add(container);
-            }
-
-            path.Add(node.Name.Value);
-            SecondPass(node.Nodes!, models, nodes, byName, containers, path, container);
-            path.RemoveAt(path.Count - 1);
+            return;
         }
+
+        int container = nodes.Count;
+        string containerPath = string.Join('/', [.. path, node.Name.Value]);
+        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
+        nodes.Add(new ContainerNode(container, node.Name, containerPath, node.Gate, [], []));
+        if (parent is { } childContainer)
+        {
+            containers[childContainer].SubContainers.Add(container);
+        }
+
+        path.Add(node.Name.Value);
+        foreach (Flow.NodeSpec child in node.Nodes!)
+        {
+            SecondPass(child, models, nodes, byName, containers, path, container);
+        }
+        path.RemoveAt(path.Count - 1);
     }
 
     private static ExecutableNode NewExecutable(
@@ -120,7 +120,5 @@ internal static class FlowCompiler
         execution.Mode,
         execution.Branch,
         [.. node.From.Select(name => order[name])],
-        execution.OnReject,
-        execution.MaxAttempts,
         execution.Split);
 }

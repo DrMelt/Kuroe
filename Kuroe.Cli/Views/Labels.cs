@@ -7,7 +7,7 @@ using Spectre.Console;
 namespace Kuroe.Cli.Views;
 
 /// <summary>宿主侧的状态与耗时呈现。库内同样要用的展示名（角色、run 状态）由库侧的 Label 扩展给出，
-/// 只在宿主出现的（任务与单元状态、检查处置、展开方式）在这里。</summary>
+/// 只在宿主出现的（任务与单元状态、展开方式）在这里。</summary>
 internal static class Labels
 {
     public static string Of(TaskState state) => state switch
@@ -30,17 +30,6 @@ internal static class Labels
         NodeState.Canceled => "已取消",
         _ => state.ToString(),
     };
-
-    public static string Of(UnitVerdict verdict) => verdict switch
-    {
-        UnitVerdict.NotChecked => "未检查",
-        UnitVerdict.Verified => "通过",
-        UnitVerdict.Rejected => "不通过",
-        _ => verdict.ToString(),
-    };
-
-    /// <summary>检查不通过的处置。</summary>
-    public static string Of(RejectAction action) => action == RejectAction.Retry ? "退回返工" : "停止";
 
     /// <summary>执行节点的展开方式。</summary>
     public static string Of(NodeMode mode) => mode == NodeMode.PerItem ? "按条目" : "整节点";

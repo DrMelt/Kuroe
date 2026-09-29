@@ -70,10 +70,6 @@ internal sealed class NodeDto
 
     public NodeGate? Gate { get; set; }
 
-    public RejectAction? OnReject { get; set; }
-
-    public int? MaxAttempts { get; set; }
-
     /// <summary>拆分源的固定配置，只能写在规划执行节点上。</summary>
     public SplitDto? Split { get; set; }
 

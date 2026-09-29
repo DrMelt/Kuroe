@@ -19,11 +19,11 @@ public sealed class ContainerAdvanceTests
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        // 成员全部完成，收拢检查等容器放行，还没有 run
+        // 成员全部完成，收拢节点等容器放行，还没有 run
         Assert.Single(parked.Executables[1].Runs);
         Assert.Single(parked.Executables[2].Runs);
         Assert.Empty(parked.Executables[3].Runs);
-        ContainerSnapshot container = Assert.Single(parked.Containers);
+        ContainerSnapshot container = Assert.Single(parked.Containers, pending => pending.State == NodeState.AwaitingApproval);
         Assert.Equal(NodeState.AwaitingApproval, container.State);
 
         harness.Tasks.Approve(id).ThrowIfError();
@@ -31,7 +31,6 @@ public sealed class ContainerAdvanceTests
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[3].Runs);
-        Assert.All(done.ItemStates, state => Assert.Equal(UnitVerdict.Verified, state.Verdict));
     }
 
     [Fact]
@@ -44,13 +43,13 @@ public sealed class ContainerAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 两条分支各一个 run，收拢检查等容器齐备后一条 run 汇拢
+        // 两条分支各一个 run，收拢节点等容器齐备后一条 run 汇拢
         Assert.Single(done.Executables[1].Runs);
         Assert.Single(done.Executables[2].Runs);
         Assert.Single(done.Executables[3].Runs);
-        // 容器的快照状态汇拢后完成
-        ContainerSnapshot container = Assert.Single(done.Containers);
-        Assert.Equal(NodeState.Done, container.State);
+        // 根容器与交付容器的快照状态汇拢后完成
+        Assert.Equal(2, done.Containers.Count);
+        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
 
     [Fact]
@@ -78,13 +77,13 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
         Assert.Empty(parked.Executables[2].Runs);
         // 子容器停在待批，父容器不广播下游
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path == "交付/撰写组").State);
+        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path == "整体/交付/撰写组").State);
 
         harness.Tasks.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 子容器获批后一容器广播接续到检查，只跑一轮
+        // 子容器获批后一容器广播接续到收拢节点，只跑一轮
         Assert.Single(done.Executables[2].Runs);
         Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
@@ -98,30 +97,33 @@ public sealed class ContainerAdvanceTests
         TaskSnapshot parked = harness.Settle(id);
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
         Assert.Empty(parked.Executables[2].Runs);
-        Assert.Equal(NodeState.Running, Assert.Single(parked.Containers).State);
+        Assert.Equal(2, parked.Containers.Count);
+        Assert.All(parked.Containers, container => Assert.Equal(NodeState.Running, container.State));
 
         harness.Tasks.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[2].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(done.Containers).State);
+        Assert.Equal(2, done.Containers.Count);
+        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
 
     [Fact]
-    public void Nested_container_rebroadcasts_after_failed_check_rework()
+    public void Nested_container_rebroadcasts_after_failed_rework()
     {
         using KuroeHarness harness = KuroeHarness.Create(NestedContainerReworkFlow);
-        harness.Executor.CheckPasses = run => run.Context.ExecutionCount > 1;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
+        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        harness.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 容器广播在成员作废复位后重新发出，检查第二轮重新激活
+        // 容器广播在成员作废复位后重新发出，重跑的撰写重新激活下游
         Assert.Equal(2, done.Executables[0].Runs.Count);
-        Assert.Equal(2, done.Executables[1].Runs.Count);
-        Assert.Equal(2, done.Executables[2].Runs.Count);
+        Assert.Single(done.Executables[1].Runs);
     }
 
     [Fact]
@@ -139,7 +141,7 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(2, done.OrdinalOf(done.Executables[1].Index));
         Assert.Equal(3, done.OrdinalOf(done.Executables[2].Index));
         Assert.Equal(4, done.OrdinalOf(done.Executables[3].Index));
-        Assert.Equal(5, done.OrdinalOf(1));
+        Assert.Equal(5, done.OrdinalOf(0));
     }
 
     private const string BranchedItemsJson = """
@@ -156,16 +158,20 @@ public sealed class ContainerAdvanceTests
               "Name": "默认",
               "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "实施者", "Model": "fake" },
-                { "Name": "检查者", "Model": "fake" }
+                { "Name": "实施者", "Model": "fake" }
               ],
               "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
                 { "Name": "交付", "Gate": "Review", "Nodes": [
                   { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
                   { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] }
                 ] },
-                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["制定计划", "交付"], "OnReject": "Retry" }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                  ]
+                }
               ]
             }
           ]
@@ -179,16 +185,20 @@ public sealed class ContainerAdvanceTests
               "Name": "默认",
               "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "实施者", "Model": "fake" },
-                { "Name": "检查者", "Model": "fake" }
+                { "Name": "实施者", "Model": "fake" }
               ],
               "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
                 { "Name": "交付", "Nodes": [
                   { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
                   { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] }
                 ] },
-                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                  ]
+                }
               ]
             }
           ]
@@ -201,17 +211,21 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者", "Model": "fake" },
-                { "Name": "检查者", "Model": "fake" }
+                { "Name": "实施者", "Model": "fake" }
               ],
               "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
                 { "Name": "交付", "Nodes": [
                   { "Name": "撰写组", "Gate": "Review", "Nodes": [
                     { "Name": "撰写", "Model": "实施者" }
                   ] },
                   { "Name": "排版", "Model": "实施者" }
                 ] },
-                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                  ]
+                }
               ]
             }
           ]
@@ -224,15 +238,19 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者", "Model": "fake" },
-                { "Name": "检查者", "Model": "fake" }
+                { "Name": "实施者", "Model": "fake" }
               ],
               "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
                 { "Name": "交付", "Nodes": [
                   { "Name": "撰写", "Model": "实施者", "Gate": "Review" },
                   { "Name": "排版", "Model": "实施者" }
                 ] },
-                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                  ]
+                }
               ]
             }
           ]
@@ -245,17 +263,21 @@ public sealed class ContainerAdvanceTests
             {
               "Name": "默认",
               "Models": [
-                { "Name": "实施者", "Model": "fake" },
-                { "Name": "检查者", "Model": "fake" }
+                { "Name": "实施者", "Model": "fake" }
               ],
               "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
                 { "Name": "交付", "Nodes": [
                   { "Name": "撰写组", "Nodes": [
                     { "Name": "撰写", "Model": "实施者" }
                   ] },
                   { "Name": "排版", "Model": "实施者" }
                 ] },
-                { "Name": "整体检查", "Model": "检查者", "Output": "Review", "From": ["交付"], "OnReject": "Retry" }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                  ]
+                }
               ]
             }
           ]

@@ -24,24 +24,21 @@ internal static class NodeExpander
     private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
     private static string PortName(Flow.NodeName name) => name.Value[1..];
 
-    /// <summary>展开流程装配树。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
-    public static ErrorOr<IReadOnlyList<Flow.NodeSpec>> Expand(
+    /// <summary>展开流程根节点。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
+    public static ErrorOr<Flow.NodeSpec> Expand(
         IReadOnlyDictionary<Flow.NodeName, Flow.NodeSpec> library,
-        IReadOnlyList<Flow.NodeSpec> assembled,
+        Flow.NodeSpec root,
         string flowName)
     {
         List<Error> errors = [];
-        List<Flow.NodeSpec> expanded = [];
-        foreach (Flow.NodeSpec node in assembled)
+        Flow.NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, flowName, errors);
+
+        if (errors.Count > 0)
         {
-            Flow.NodeSpec? item = ExpandNode(library, node, null, string.Empty, inInstance: false, flowName, errors);
-            if (item is not null)
-            {
-                expanded.Add(item);
-            }
+            return errors;
         }
 
-        return errors.Count > 0 ? errors : expanded;
+        return expanded!;
     }
 
     /// <summary>展开一个节点。prefix 是库实例链前缀；装配层内联容器成员保持原名（原与校验的扁平唯一联动）。

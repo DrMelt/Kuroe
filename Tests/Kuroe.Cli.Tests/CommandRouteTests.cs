@@ -91,7 +91,6 @@ public sealed class CommandRouteTests
         ui.Flows.Run(["/flow", "show", "默认"]);
         Assert.Contains("制定计划", ui.Output.Output);
         Assert.Contains("分配执行", ui.Output.Output);
-        Assert.Contains("整体检查", ui.Output.Output);
     }
 
     [Fact]

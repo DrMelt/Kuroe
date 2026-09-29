@@ -6,9 +6,6 @@ public readonly record struct ToolName(string Value)
     /// <summary>规划执行节点交回条目拆分的契约工具。</summary>
     public static ToolName ContractPlan { get; } = new("SubmitPlanItems");
 
-    /// <summary>检查执行节点交回结论的契约工具。</summary>
-    public static ToolName ContractReview { get; } = new("SubmitVerdict");
-
     /// <summary>函数名的文本形式。</summary>
     public override string ToString() => Value;
 }

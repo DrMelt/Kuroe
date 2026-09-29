@@ -68,7 +68,6 @@ public sealed class SettingsTests
         Assert.Equal("未设置", Value(entries, "DefaultFlow"));
         Assert.Equal("Warning", Value(entries, "LogLevel"));
         Assert.Equal("4", Value(entries, "MaxConcurrentRuns"));
-        Assert.Equal("3", Value(entries, "MaxAttempts"));
     }
 
     private static string Value(IReadOnlyList<SettingEntry> entries, string name) =>

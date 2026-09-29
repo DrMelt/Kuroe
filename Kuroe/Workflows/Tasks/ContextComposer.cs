@@ -39,13 +39,6 @@ public static class ContextComposer
                 new ItemSource(OriginOf(task, node), item.Index, item.Title)));
         }
 
-        CheckResult? rework = ReworkOf(task, node, itemIndex);
-        if (rework is not null)
-        {
-            seed.Add(new ContextMessage(MessageRole.User,
-                Limit($"上一轮检查未通过：\n{rework.Findings}"), new RunSource(rework.Origin, rework.NodeName)));
-        }
-
         int count = node.ExecutionCount(itemIndex);
 
         return new RunContext
@@ -54,7 +47,7 @@ public static class ContextComposer
             Output = node.Output,
             NodeIndex = node.Index,
             NodeName = node.Name,
-            Instruction = Instruction(task, node, item, count, rework is not null),
+            Instruction = Instruction(task, node, item, count),
             Model = model,
             ItemIndex = itemIndex,
             ExecutionCount = count,
@@ -163,11 +156,8 @@ public static class ContextComposer
             ? split.Items.FirstOrDefault(item => item.Index == itemIndex)?.Title ?? $"条目 {itemIndex + 1}"
             : $"条目 {itemIndex + 1}";
 
-    /// <summary>上一轮被拒的检查结论：检查执行节点读自己，实施执行节点读引用它的检查执行节点。</summary>
-    private static CheckResult? ReworkOf(WorkTask task, RuntimeExecutable node, int? itemIndex) =>
-        task.Runtime.ReworkFor(node, itemIndex);
     /// <summary>指令正文：节点要求、目标与第几轮。</summary>
-    private static string Instruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count, bool reworked)
+    private static string Instruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
     {
         List<string> lines = [];
         if (node.Executable.Prompt is { Length: > 0 } prompt)
@@ -189,10 +179,7 @@ public static class ContextComposer
 
         if (count > 1)
         {
-            string scope = node.Output == NodeOutput.Review ? "检查" : "实施";
-            lines.Add(reworked
-                ? $"这是第 {count} 轮{scope}，针对上一轮检查意见返工。"
-                : $"这是第 {count} 轮{scope}。");
+            lines.Add($"这是第 {count} 轮实施。");
         }
 
         return string.Join('\n', lines);
@@ -253,11 +240,6 @@ public static class ContextComposer
         if (node.Output == NodeOutput.Plan)
         {
             names.Add(ToolName.ContractPlan);
-        }
-
-        if (node.Output == NodeOutput.Review)
-        {
-            names.Add(ToolName.ContractReview);
         }
 
         return names;

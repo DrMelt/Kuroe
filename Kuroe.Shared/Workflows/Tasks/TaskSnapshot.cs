@@ -5,7 +5,7 @@ using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Shared.Workflows.Tasks;
 
-/// <summary>任务在某一刻的只读形状：节点、执行节点状态、容器状态、条目结论与前台对话都在里面，渲染时不再回读可变成。</summary>
+/// <summary>任务在某一刻的只读形状：节点、执行节点状态、容器状态与前台对话都在里面，渲染时不再回读可变成。</summary>
 public sealed record TaskSnapshot(
     TaskId Id,
     string Title,
@@ -19,7 +19,6 @@ public sealed record TaskSnapshot(
     IReadOnlyList<ExecutableSnapshot> Executables,
     IReadOnlyList<ExecutableStateSnapshot> ExecutableStates,
     IReadOnlyList<ContainerSnapshot> Containers,
-    IReadOnlyList<ItemStateSnapshot> ItemStates,
     IReadOnlyList<JournalEntry> Dialogue,
     int DroppedDialogue,
     DateTimeOffset LastActivityAt)

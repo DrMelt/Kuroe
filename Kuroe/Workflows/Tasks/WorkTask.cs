@@ -225,88 +225,9 @@ public sealed class WorkTask
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
                 _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), executables, executableStates,
-                Runtime.ContainerSnapshots(), ItemStates(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                Runtime.ContainerSnapshots(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
-
-    /// <summary>检查执行节点交回的结论：逐条检查按实例收集，整体检查按它覆盖的单一拆分空间回填条目。</summary>
-    private List<ItemStateSnapshot> ItemStates()
-    {
-        List<ItemStateSnapshot> states = [];
-        foreach (RuntimeExecutable review in Runtime.Executables.Where(node => node.Output == NodeOutput.Review))
-        {
-            if (review.Mode == NodeMode.PerItem)
-            {
-                CollectPerItemChecks(review, states);
-            }
-            else
-            {
-                CollectFunnelCheck(review, states);
-            }
-        }
-
-        return states;
-    }
-
-    /// <summary>逐条检查按实例收集结论。</summary>
-    private void CollectPerItemChecks(RuntimeExecutable review, List<ItemStateSnapshot> states)
-    {
-        if (review.ExpandedItems is not { } items)
-        {
-            return;
-        }
-
-        Dictionary<int, BranchName?> branchByItem = BranchByItem(Graph.ItemSpace(review.Index)) ?? [];
-        foreach (int item in items)
-        {
-            if (review.LastCheck(item) is not { } check)
-            {
-                continue;
-            }
-
-            states.Add(new ItemStateSnapshot(review.Index, item, branchByItem.GetValueOrDefault(item),
-                check.Passed ? UnitVerdict.Verified : UnitVerdict.Rejected, check.Findings, check.Round));
-        }
-    }
-
-    /// <summary>整体检查按它覆盖的单一拆分空间回填条目结论。覆盖多个空间时不回填，避免结论错配到别家条目。</summary>
-    private void CollectFunnelCheck(RuntimeExecutable review, List<ItemStateSnapshot> states)
-    {
-        if (review.LastCheck(null) is not { } check)
-        {
-            return;
-        }
-
-        List<int> itemSources = [.. Graph.CheckedSources(review.Index)
-            .Where(source => Graph[source] is ExecutableNode { Mode: NodeMode.PerItem })];
-        if (itemSources.Count == 0)
-        {
-            return;
-        }
-
-        int? space = Graph.ItemSpace(itemSources[0]);
-        if (space is not { } splitNode || !itemSources.All(source => Graph.ItemSpace(source) == splitNode))
-        {
-            return;
-        }
-
-        if (_splits.GetValueOrDefault(splitNode) is not { } split)
-        {
-            return;
-        }
-
-        foreach (PlanItem item in split.Items)
-        {
-            states.Add(new ItemStateSnapshot(review.Index, item.Index, item.Branch,
-                check.Passed ? UnitVerdict.Verified : UnitVerdict.Rejected, check.Findings, check.Round));
-        }
-    }
-
-    /// <summary>条目到分支的归属，拆分不存在时为空。</summary>
-    private Dictionary<int, BranchName?>? BranchByItem(int? space) =>
-        space is { } splitNode && _splits.GetValueOrDefault(splitNode) is { } split
-            ? split.Items.ToDictionary(item => item.Index, item => item.Branch)
-            : null;
 
     /// <summary>取目标的首行作标题，过长时截断。</summary>
     private static string Shorten(string text)

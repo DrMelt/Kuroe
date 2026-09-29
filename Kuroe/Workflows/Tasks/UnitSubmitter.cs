@@ -10,7 +10,7 @@ using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>模型侧交回结构化产出的唯一入口：规划交条目拆分，检查交结论。
+/// <summary>模型侧交回结构化产出的入口：规划交条目拆分。
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
 public sealed class UnitSubmitter(TaskRegistry registry)
 {
@@ -79,40 +79,6 @@ public sealed class UnitSubmitter(TaskRegistry registry)
             task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, merged.Value));
 
             return $"已记录 {merged.Value.Count} 个条目。";
-        }
-    }
-
-    /// <summary>检查执行节点交回结论。按执行节点的实例记到执行状态的检查结论里。</summary>
-    public string SubmitVerdict(TurnScope? scope, bool passed, string findings)
-    {
-        if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Review)
-        {
-            return "被拒绝：只有进行中的检查 run 能提交结论。";
-        }
-
-        ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
-        if (found.IsError)
-        {
-            return "内部错误：该 run 没有归属任务。";
-        }
-
-        WorkTask task = found.Value;
-        lock (task.Gate)
-        {
-            if (!passed && string.IsNullOrWhiteSpace(findings))
-            {
-                return "被拒绝：不通过时要列出问题。";
-            }
-
-            bool recorded = task.Runtime.Executable(run.Context.NodeIndex).RecordCheck(run.Context.ItemIndex,
-                new CheckResult(run.Context.ExecutionCount, passed, findings, run.Id, run.Context.NodeName));
-
-            if (!recorded)
-            {
-                return "本轮已提交过结论，无需重复提交。";
-            }
-
-            return passed ? "已记录：通过。" : "已记录：不通过。";
         }
     }
 

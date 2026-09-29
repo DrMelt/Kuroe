@@ -70,7 +70,7 @@ internal sealed class FlowCommands(
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
                 new Text(standard ? $">{flow.Name}" : flow.Name, standard ? Styles.Success : Styles.Key),
-                new Text(string.Join(" → ", FlowCommands.Flatten(flow.Nodes).Select(node => node.Name.Value))),
+                new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Name.Value))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
@@ -99,7 +99,7 @@ internal sealed class FlowCommands(
             new Text("上游与要求", Styles.Hint));
 
         int index = 0;
-        foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
+        foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.RootNode))
         {
             if (node.Execution is { } executable)
             {
@@ -176,13 +176,6 @@ internal sealed class FlowCommands(
             parts.Add($"取自 {string.Join("、", node.From)}");
         }
 
-        if (executable.Output == NodeOutput.Review)
-        {
-            RejectAction action = executable.OnReject ?? RejectAction.Retry;
-            int limit = Math.Max(1, executable.MaxAttempts ?? 2);
-            parts.Add($"不通过则 {Labels.Of(action)}，至多 {limit} 轮");
-        }
-
         if (executable.Split is { } split)
         {
             if (split.Items is { Count: > 0 } items)
@@ -205,35 +198,35 @@ internal sealed class FlowCommands(
     }
 
     /// <summary>递归收集流程里的全部执行节点。</summary>
-    private static IEnumerable<NodeSpec> Flatten(IReadOnlyList<NodeSpec> nodes)
+    private static IEnumerable<NodeSpec> Flatten(NodeSpec node)
     {
-        foreach (NodeSpec node in nodes)
+        if (node.Nodes is { Count: > 0 } children)
         {
-            if (node.Nodes is { Count: > 0 } children)
+            foreach (NodeSpec child in children)
             {
-                foreach (NodeSpec child in Flatten(children))
+                foreach (NodeSpec descendant in Flatten(child))
                 {
-                    yield return child;
+                    yield return descendant;
                 }
             }
-            else
-            {
-                yield return node;
-            }
+        }
+        else
+        {
+            yield return node;
         }
     }
 
     /// <summary>先根序遍历节点树，附带层级深度供缩进。</summary>
-    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(IReadOnlyList<NodeSpec> nodes, int depth = 0)
+    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(NodeSpec node, int depth = 0)
     {
-        foreach (NodeSpec node in nodes)
+        yield return (node, depth);
+        if (node.Nodes is { Count: > 0 } children)
         {
-            yield return (node, depth);
-            if (node.Nodes is { Count: > 0 } children)
+            foreach (NodeSpec child in children)
             {
-                foreach ((NodeSpec child, int childDepth) in Walk(children, depth + 1))
+                foreach ((NodeSpec descendant, int childDepth) in Walk(child, depth + 1))
                 {
-                    yield return (child, childDepth);
+                    yield return (descendant, childDepth);
                 }
             }
         }

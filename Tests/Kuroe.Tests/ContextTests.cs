@@ -42,27 +42,4 @@ public sealed class ContextTests
             + string.Concat(implement.Context.Seed.Select(message => message.Text));
         Assert.DoesNotContain("做乙", visible);
     }
-
-    [Fact]
-    public void Funnel_check_context_carries_every_item_output_it_reviews()
-    {
-        using KuroeHarness harness = KuroeHarness.Create();
-
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot check = Assert.Single(done.Executables[2].Runs);
-
-        Assert.Equal(NodeOutput.Review, check.Context.Output);
-        Assert.Null(check.Context.ItemIndex);
-        // 规划产出一份，各条目实施产出各一份
-        Assert.Contains(check.Context.Seed, message =>
-            message.Source is RunSource { NodeName.Value: "制定计划" });
-        Assert.Equal(2, check.Context.Seed.Count(message =>
-            message.Source is RunSource { NodeName.Value: "分配执行" }));
-        Assert.Equal(3, check.Context.Seed.Count(message => message.Source is RunSource));
-
-        string visible = check.Context.Instruction
-            + string.Concat(check.Context.Seed.Select(message => message.Text));
-        Assert.Contains("条目「甲」", visible);
-        Assert.Contains("条目「乙」", visible);
-    }
 }

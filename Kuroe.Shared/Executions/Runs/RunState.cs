@@ -1,6 +1,6 @@
 namespace Kuroe.Shared.Executions.Runs;
 
-/// <summary>run 的执行状态，只表达跑没跑完。流程结论见 <see cref="Workflows.UnitVerdict"/>。</summary>
+/// <summary>run 的执行状态，只表达跑没跑完。</summary>
 public enum RunState
 {
     /// <summary>已登记，等待并发额度。</summary>

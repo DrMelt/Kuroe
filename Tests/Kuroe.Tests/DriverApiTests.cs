@@ -65,7 +65,6 @@ public sealed class DriverApiTests
         TurnScope scope = harness.Registry.FindRun(implement.Id).ThrowIfError().Scope;
 
         Assert.Contains("被拒绝", harness.Submitter.SubmitPlan(scope, """[{"Title":"甲"}]"""));
-        Assert.Contains("被拒绝", harness.Submitter.SubmitVerdict(scope, true, string.Empty));
     }
 
     [Fact]

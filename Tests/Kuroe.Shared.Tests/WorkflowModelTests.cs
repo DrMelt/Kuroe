@@ -11,7 +11,7 @@ namespace Kuroe.Shared.Tests;
 public sealed class WorkflowModelTests
 {
     [Fact]
-    public void Executable_defaults_to_plain_single_auto_without_rework()
+    public void Executable_defaults_to_plain_single_auto()
     {
         var node = new NodeSpec { Name = new NodeName("实施"), Execution = new ExecutableSpec { Model = new ModelRef("执行者") } };
 
@@ -20,43 +20,7 @@ public sealed class WorkflowModelTests
         Assert.Equal(NodeMode.Single, executable.Mode);
         Assert.Equal(NodeGate.Auto, node.Gate);
         Assert.Empty(node.From);
-        Assert.Null(executable.OnReject);
-        Assert.Null(executable.MaxAttempts);
         Assert.Empty(executable.Tools);
-    }
-
-    [Fact]
-    public void Check_executable_defaults_to_retry_once_more()
-    {
-        var node = new NodeSpec
-        {
-            Name = new NodeName("检查"),
-            Execution = new ExecutableSpec { Model = new ModelRef("检查者"), Output = NodeOutput.Review },
-        };
-
-        ExecutableSpec executable = node.Execution;
-        Assert.Equal(RejectAction.Retry, executable.RejectAction);
-        Assert.Equal(2, executable.AttemptLimit);
-    }
-
-    [Fact]
-    public void Declared_rework_overrides_defaults()
-    {
-        var node = new NodeSpec
-        {
-            Name = new NodeName("检查"),
-            Execution = new ExecutableSpec
-            {
-                Model = new ModelRef("检查者"),
-                Output = NodeOutput.Review,
-                OnReject = RejectAction.Stop,
-                MaxAttempts = 5,
-            },
-        };
-
-        ExecutableSpec executable = node.Execution;
-        Assert.Equal(RejectAction.Stop, executable.RejectAction);
-        Assert.Equal(5, executable.AttemptLimit);
     }
 
     [Fact]
@@ -64,8 +28,8 @@ public sealed class WorkflowModelTests
     {
         var graph = new NodeGraph(
         [
-            new ExecutableNode(0, new NodeName("规划"), "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null, null, null),
-            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null, null, null),
+            new ExecutableNode(0, new NodeName("规划"), "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null),
+            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null),
         ], []);
 
         Assert.Equal(2, graph.Count);

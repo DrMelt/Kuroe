@@ -25,17 +25,8 @@ public sealed class FakeExecutor : IRunExecutor
         ]
         """;
 
-    /// <summary>检查执行节点是否交回通过，默认全部通过。</summary>
-    public Func<Run, bool> CheckPasses { get; set; } = _ => true;
-
-    /// <summary>检查不通过时交回的意见，空串用于验证拒绝路径。</summary>
-    public string FindingsForCheck { get; set; } = "验收项未满足";
-
     /// <summary>规划执行节点是否交回条目，关掉用于验证未收口。</summary>
     public bool SubmitsPlan { get; set; } = true;
-
-    /// <summary>检查执行节点是否交回结论，关掉用于验证未收口。</summary>
-    public bool SubmitsVerdict { get; set; } = true;
 
     /// <summary>单个 run 的人为耗时，用于并发与取消断言。</summary>
     public int DelayMs { get; set; } = 10;
@@ -43,7 +34,7 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
     public Func<Run, bool>? FailsWhen { get; set; }
 
-    /// <summary>非规划与检查执行节点的返回文本，缺省为契约名加产出。</summary>
+    /// <summary>非规划执行节点的返回文本，缺省为契约名加产出。</summary>
     public Func<Run, string>? Output { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
@@ -85,12 +76,6 @@ public sealed class FakeExecutor : IRunExecutor
             if (run.Context.Output == NodeOutput.Plan && SubmitsPlan)
             {
                 _submissions.Enqueue(Submitter!.SubmitPlan(run.Scope, ItemsJson));
-            }
-
-            if (run.Context.Output == NodeOutput.Review && SubmitsVerdict)
-            {
-                bool passed = CheckPasses(run);
-                _submissions.Enqueue(Submitter!.SubmitVerdict(run.Scope, passed, passed ? string.Empty : FindingsForCheck));
             }
 
             if (FailsWhen?.Invoke(run) == true)

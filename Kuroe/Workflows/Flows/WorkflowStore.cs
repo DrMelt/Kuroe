@@ -135,11 +135,21 @@ sealed class WorkflowStore(string file, string baseDirectory)
             Model = model.Model,
         })];
 
-        ErrorOr<IReadOnlyList<NodeSpec>> nodes = ToNodes(dto.Nodes, dto.Name!);
+        if (dto.Nodes.Count == 0)
+        {
+            return WorkflowErrors.Body(dto.Name ?? string.Empty, "流程缺少根节点。");
+        }
 
-        return nodes.IsError
-            ? nodes.ErrorsOrEmptyList
-            : new Workflow(dto.Name!, dto.Description, models, nodes.Value);
+        if (dto.Nodes.Count > 1)
+        {
+            return WorkflowErrors.Body(dto.Name ?? string.Empty, "流程只能有一个根节点。");
+        }
+
+        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], dto.Name!);
+
+        return root.IsError
+            ? root.ErrorsOrEmptyList
+            : new Workflow(dto.Name!, dto.Description, models, root.Value);
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
@@ -173,7 +183,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             List<Error> useErrors = [];
             if (dto.Model is not null || dto.Prompt is not null || dto.Tools is { Count: > 0 }
                 || dto.Output is not null || dto.Mode is not null || dto.Branch is not null
-                || dto.OnReject is not null || dto.MaxAttempts is not null || dto.Split is not null
+                || dto.Split is not null
                 || dto.Nodes is { Count: > 0 })
             {
                 useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
@@ -223,7 +233,6 @@ sealed class WorkflowStore(string file, string baseDirectory)
             }
 
             if (dto.Model is not null || dto.Output is not null || dto.Branch is not null
-                || dto.OnReject is not null || dto.MaxAttempts is not null
                 || dto.Tools is { Count: > 0 } || dto.Split is not null)
             {
                 containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
@@ -294,8 +303,6 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 Output = dto.Output ?? NodeOutput.Plain,
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
-                OnReject = dto.OnReject,
-                MaxAttempts = dto.MaxAttempts,
                 Split = ToSplit(dto.Split),
             },
         };
@@ -329,7 +336,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             Name = model.Name.Value,
             Model = model.Model,
         })],
-        Nodes = [.. flow.Nodes.Select(ToNodeDto)],
+        Nodes = [ToNodeDto(flow.RootNode)],
     };
 
     private static NodeDto ToNodeDto(NodeSpec node)
@@ -359,8 +366,6 @@ sealed class WorkflowStore(string file, string baseDirectory)
             dto.Output = execution.Output;
             dto.Mode = execution.Mode.ToString();
             dto.Branch = execution.Branch?.Value;
-            dto.OnReject = execution.OnReject;
-            dto.MaxAttempts = execution.MaxAttempts;
             dto.Split = execution.Split is { } split ? new SplitDto
             {
                 Items = split.Items?.Select(item => new SplitItemDto

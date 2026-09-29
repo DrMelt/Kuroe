@@ -12,7 +12,6 @@ internal static class SettingDefinitions
         Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
         Runtime(nameof(RuntimeSettings.MaxConcurrentRuns), settings => settings.Runtime.MaxConcurrentRuns),
         Runtime(nameof(RuntimeSettings.DefaultFlow), settings => settings.Runtime.DefaultFlow),
-        Runtime(nameof(RuntimeSettings.MaxAttempts), settings => settings.Runtime.MaxAttempts),
     ];
 
     /// <summary>按输入取规范节名，大小写不敏感，未定义的节返回 null。</summary>

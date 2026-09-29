@@ -96,15 +96,6 @@ public sealed class NodeGraph
             .Select(edge => ItemSpace(edge.From))
             .FirstOrDefault(space => space is not null);
 
-    /// <summary>检查节点引用的实施来源：入边来源展开出的全部非 Plan 执行节点，整集、逐条与整份一视同仁。
-    /// 执行节点给自身，容器递归给全部成员，据此从容器汇合引用到容器内实施。</summary>
-    public IReadOnlyList<int> CheckedSources(int checkIndex) =>
-        [.. Incoming(checkIndex)
-            .SelectMany(edge => SourcesIn(edge.From))
-            .Where(from => Nodes[from] is ExecutableNode { Output: not NodeOutput.Plan })
-            .Distinct()
-            .Order()];
-
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
     public IReadOnlyList<int> ExecutablesIn(int containerIndex) =>
         [.. SourcesIn(containerIndex).Distinct()];

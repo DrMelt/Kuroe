@@ -16,9 +16,6 @@ internal static class DefaultFlows
     /// <summary>执行者：实施条目。</summary>
     private static readonly ModelDefinition Executor = new() { Name = new ModelRef("执行者") };
 
-    /// <summary>检查者：交回整体检查结论。</summary>
-    private static readonly ModelDefinition Reviewer = new() { Name = new ModelRef("检查者") };
-
     /// <summary>规划执行节点：把目标拆成条目。</summary>
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
@@ -43,23 +40,10 @@ internal static class DefaultFlows
         },
     };
 
-    /// <summary>检查执行节点：整体检查结论。</summary>
-    private static readonly NodeSpec ReviewNodeDefinition = new()
-    {
-        Name = new NodeName("检查"),
-        Execution = new ExecutableSpec
-        {
-            Model = Reviewer.Name,
-            Output = NodeOutput.Review,
-            OnReject = RejectAction.Retry,
-            MaxAttempts = 2,
-        },
-    };
-
-    /// <summary>交付容器：出一条计划，按条目实施并整体检查。</summary>
+    /// <summary>交付容器：出一条计划，按条目实施。</summary>
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
-        Name = new NodeName("交付并检查"),
+        Name = new NodeName("交付"),
         Inputs = [new NodeName("计划")],
         Nodes =
         [
@@ -69,29 +53,28 @@ internal static class DefaultFlows
                 Use = new NodeName("执行"),
                 From = [new NodeName("@计划")],
             },
-            new NodeSpec
-            {
-                Name = new NodeName("审查"),
-                Use = new NodeName("检查"),
-                From = [new NodeName("@计划"), new NodeName("实施")],
-            },
         ],
     };
 
-    /// <summary>内置内容：规划 → 交付并检查。</summary>
+    /// <summary>内置内容：根容器包住规划与交付。</summary>
     internal static readonly FlowFile Builtin = new(
-        [PlanNodeDefinition, ExecuteNodeDefinition, ReviewNodeDefinition, DeliveryContainerDefinition],
+        [PlanNodeDefinition, ExecuteNodeDefinition, DeliveryContainerDefinition],
         [
-            new Workflow(Name, "内置流程：制定计划、分配执行、整体检查",
-                [Planner, Executor, Reviewer],
-                [
-                    new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划") },
-                    new NodeSpec
-                    {
-                        Name = new NodeName("交付"),
-                        Use = new NodeName("交付并检查"),
-                        In = new Dictionary<NodeName, NodeName> { [new NodeName("计划")] = new NodeName("制定计划") },
-                    },
-                ]),
+            new Workflow(Name, "内置流程：制定计划、分配执行",
+                [Planner, Executor],
+                new NodeSpec
+                {
+                    Name = new NodeName("整体"),
+                    Nodes =
+                    [
+                        new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划") },
+                        new NodeSpec
+                        {
+                            Name = new NodeName("交付"),
+                            Use = new NodeName("交付"),
+                            In = new Dictionary<NodeName, NodeName> { [new NodeName("计划")] = new NodeName("制定计划") },
+                        },
+                    ],
+                }),
         ]);
 }

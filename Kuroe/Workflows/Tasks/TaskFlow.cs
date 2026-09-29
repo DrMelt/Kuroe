@@ -189,13 +189,6 @@ internal sealed class TaskFlow
 
     // ---- 返工 ----
 
-    /// <summary>检查节点返工要退回的实施来源。</summary>
-    public IReadOnlyList<int> ReworkTargets(RuntimeExecutable checkNode) => Graph.CheckedSources(checkNode.Index);
-
-    /// <summary>逐条返工要退回的实施来源：只退回实际承担该条目的执行节点。</summary>
-    public IReadOnlyList<int> ReworkTargets(RuntimeExecutable checkNode, int item) =>
-        [.. Graph.CheckedSources(checkNode.Index).Where(source => Executable(source).HasItem(item))];
-
     /// <summary>顺着出边要通知的下游执行节点，去重保持顺序。</summary>
     public IReadOnlyList<int> Downstream(RuntimeNode node) =>
         [.. Graph.Outgoing(node.Index).Select(edge => edge.To).Distinct()];
@@ -297,7 +290,7 @@ internal sealed class TaskFlow
     /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>
     public sealed record SettlePlan(IReadOnlyList<int> Notify, IReadOnlyList<(int Node, int? Item)> Rerun);
 
-    /// <summary>run 收口：失败与未收口先停驻阻塞，通过后记产出、处理门控与检查结论，
+    /// <summary>run 收口：失败与未收口先停驻阻塞，通过后发布产出并处理门控，
     /// 产出出向下游的通知或重派计划。接收器先经 ReleaseActive 再进入。</summary>
     public SettlePlan Settle(Run run)
     {
@@ -318,49 +311,7 @@ internal sealed class TaskFlow
             return new SettlePlan([], []);
         }
 
-        if (executable.Output == NodeOutput.Review && node.LastCheck(item)?.Origin != run.Id)
-        {
-            run.MarkUncollected("检查执行节点没有交回结论，本步未收口。");
-            node.EnterBlocked([(node.Index, item)]);
-            return new SettlePlan([], []);
-        }
-
-        if (executable.Output == NodeOutput.Plan)
-        {
-            // 拆分已由回执写入 _splits
-            Publish(node, null);
-
-            return Settled(node, node.Park(), Downstream(node));
-        }
-
-        if (executable.Output == NodeOutput.Review)
-        {
-            CheckResult? check = node.LastCheck(item);
-            if (check is { Passed: true })
-            {
-                Publish(node, item);
-
-                return Settled(node, node.Park(), Downstream(node));
-            }
-
-            if (Retryable(executable, check))
-            {
-                List<(int Node, int? Item)> rerun = [];
-                foreach (int source in item is { } index ? ReworkTargets(node, index) : ReworkTargets(node))
-                {
-                    InvalidateNode(Executable(source), item);
-                    rerun.Add((source, item));
-                }
-
-                return new SettlePlan([], rerun);
-            }
-
-            IReadOnlyList<int> sources = item is { } failed ? ReworkTargets(node, failed) : ReworkTargets(node);
-            node.EnterBlocked([.. sources.Select(source => (source, item))]);
-
-            return new SettlePlan([], []);
-        }
-
+        // 拆分已由回执写入 _splits，其余产出直接发布
         Publish(node, item);
 
         return Settled(node, node.Park(), Downstream(node));
@@ -372,19 +323,6 @@ internal sealed class TaskFlow
         IReadOnlyList<int> containers = RefreshContainers(node.Index);
 
         return parked ? new SettlePlan(containers, []) : new SettlePlan([.. downstream, .. containers], []);
-    }
-
-    /// <summary>检查不通过且未达到轮次上限时自动退回返工。</summary>
-    private static bool Retryable(ExecutableNode executable, CheckResult? check)
-    {
-        if (executable.RejectAction == RejectAction.Stop)
-        {
-            return false;
-        }
-
-        int round = check?.Round ?? 1;
-
-        return round < executable.AttemptLimit;
     }
 
     // ---- 宿主入口 ----
@@ -490,37 +428,5 @@ internal sealed class TaskFlow
     /// <summary>解除执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
     public void Unblock(int node, IReadOnlyList<(int Node, int? Item)> handled) =>
         Executable(node).FinishRework(handled);
-
-    /// <summary>实施执行节点要读的返工意见：引用它的检查执行节点最近一次拒绝结论。检查执行节点读自己的结论。要求持有 Gate。</summary>
-    public CheckResult? ReworkFor(RuntimeExecutable executable, int? itemIndex)
-    {
-        if (executable.Output == NodeOutput.Review)
-        {
-            CheckResult? check = executable.LastCheck(itemIndex);
-
-            return check is { Passed: false } ? check : null;
-        }
-
-        foreach (int check in Graph.ExecutableNodes
-                     .Where(candidate => candidate.Output == NodeOutput.Review)
-                     .Select(candidate => candidate.Index))
-        {
-            if (!Graph.CheckedSources(check).Contains(executable.Index))
-            {
-                continue;
-            }
-
-            RuntimeExecutable checkNode = Executable(check);
-            CheckResult? error = itemIndex is { } index
-                ? checkNode.LastCheck(index) ?? checkNode.LastCheck(null)
-                : checkNode.LastCheck(null);
-            if (error is { Passed: false })
-            {
-                return error;
-            }
-        }
-
-        return null;
-    }
 }
 
