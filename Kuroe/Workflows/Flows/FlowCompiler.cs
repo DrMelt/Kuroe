@@ -4,7 +4,7 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，From 引用编译为带消费方式的边。
-/// 要求已通过 WorkflowRules 校验，模型配置引用与节点名字都可解析。</summary>
+/// 要求已通过 WorkflowRules 校验，模型配置引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
     /// <summary>编译流程树。</summary>
@@ -55,9 +55,9 @@ internal static class FlowCompiler
         {
             order[node.Name] = next;
             next++;
-            if (node is Flow.ContainerNode flow)
+            if (node.Nodes is { Count: > 0 } children)
             {
-                next = RegisterNames(flow.Nodes, order, next);
+                next = RegisterNames(children, order, next);
             }
         }
 
@@ -75,54 +75,52 @@ internal static class FlowCompiler
     {
         foreach (Flow.NodeSpec node in specs)
         {
-            switch (node)
+            if (node.Execution is { } execution)
             {
-                case Flow.ExecutableNode executable:
-                    int index = nodes.Count;
-                    nodes.Add(NewExecutable(executable, index, path, models, byName));
-                    if (parent is { } memberContainer)
-                    {
-                        containers[memberContainer].Members.Add(index);
-                    }
+                int index = nodes.Count;
+                nodes.Add(NewExecutable(node, execution, index, path, models, byName));
+                if (parent is { } memberContainer)
+                {
+                    containers[memberContainer].Members.Add(index);
+                }
 
-                    break;
-
-                case Flow.ContainerNode flow:
-                    int container = nodes.Count;
-                    string containerPath = string.Join('/', [.. path, flow.Name.Value]);
-                    containers[container] = new ContainerBuilder(container, flow.Name, containerPath, flow.Gate, [], []);
-                    nodes.Add(new ContainerNode(container, flow.Name, containerPath, flow.Gate, [], []));
-                    if (parent is { } childContainer)
-                    {
-                        containers[childContainer].SubContainers.Add(container);
-                    }
-
-                    path.Add(flow.Name.Value);
-                    SecondPass(flow.Nodes, models, nodes, byName, containers, path, container);
-                    path.RemoveAt(path.Count - 1);
-                    break;
+                continue;
             }
+
+            int container = nodes.Count;
+            string containerPath = string.Join('/', [.. path, node.Name.Value]);
+            containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
+            nodes.Add(new ContainerNode(container, node.Name, containerPath, node.Gate, [], []));
+            if (parent is { } childContainer)
+            {
+                containers[childContainer].SubContainers.Add(container);
+            }
+
+            path.Add(node.Name.Value);
+            SecondPass(node.Nodes!, models, nodes, byName, containers, path, container);
+            path.RemoveAt(path.Count - 1);
         }
     }
 
     private static ExecutableNode NewExecutable(
-        Flow.ExecutableNode executable,
+        Flow.NodeSpec node,
+        Flow.ExecutableSpec execution,
         int index,
         List<string> path,
         Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
         Dictionary<Flow.NodeName, int> order) => new(
         index,
-        executable.Name,
-        string.Join('/', [.. path, executable.Name.Value]),
-        executable.Gate,
-        models[executable.Model],
-        executable.Tools,
-        executable.Prompt,
-        executable.Output,
-        executable.Mode,
-        executable.Branch,
-        [.. executable.From.Select(name => order[name])],
-        executable.OnReject,
-        executable.MaxAttempts,
-        executable.Split);
+        node.Name,
+        string.Join('/', [.. path, node.Name.Value]),
+        node.Gate,
+        models[execution.Model],
+        execution.Tools,
+        execution.Prompt,
+        execution.Output,
+        execution.Mode,
+        execution.Branch,
+        [.. node.From.Select(name => order[name])],
+        execution.OnReject,
+        execution.MaxAttempts,
+        execution.Split);
 }

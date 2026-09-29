@@ -3,23 +3,23 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
-using Flow = Kuroe.Shared.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;
 
-/// <summary>流程模型：执行节点的缺省配置与编译视图的按名定位。</summary>
+/// <summary>流程模型：执行配置的缺省设置与编译视图的按名定位。</summary>
 public sealed class WorkflowModelTests
 {
     [Fact]
     public void Executable_defaults_to_plain_single_auto_without_rework()
     {
-        Flow.ExecutableNode executable = new() { Name = new NodeName("实施"), Model = new ModelRef("执行者") };
+        var node = new NodeSpec { Name = new NodeName("实施"), Execution = new ExecutableSpec { Model = new ModelRef("执行者") } };
 
+        ExecutableSpec executable = node.Execution;
         Assert.Equal(NodeOutput.Plain, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
-        Assert.Equal(NodeGate.Auto, executable.Gate);
-        Assert.Empty(executable.From);
+        Assert.Equal(NodeGate.Auto, node.Gate);
+        Assert.Empty(node.From);
         Assert.Null(executable.OnReject);
         Assert.Null(executable.MaxAttempts);
         Assert.Empty(executable.Tools);
@@ -28,8 +28,13 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Check_executable_defaults_to_retry_once_more()
     {
-        Flow.ExecutableNode executable = new() { Name = new NodeName("检查"), Model = new ModelRef("检查者"), Output = NodeOutput.Review };
+        var node = new NodeSpec
+        {
+            Name = new NodeName("检查"),
+            Execution = new ExecutableSpec { Model = new ModelRef("检查者"), Output = NodeOutput.Review },
+        };
 
+        ExecutableSpec executable = node.Execution;
         Assert.Equal(RejectAction.Retry, executable.RejectAction);
         Assert.Equal(2, executable.AttemptLimit);
     }
@@ -37,15 +42,19 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Declared_rework_overrides_defaults()
     {
-        Flow.ExecutableNode executable = new()
+        var node = new NodeSpec
         {
             Name = new NodeName("检查"),
-            Model = new ModelRef("检查者"),
-            Output = NodeOutput.Review,
-            OnReject = RejectAction.Stop,
-            MaxAttempts = 5,
+            Execution = new ExecutableSpec
+            {
+                Model = new ModelRef("检查者"),
+                Output = NodeOutput.Review,
+                OnReject = RejectAction.Stop,
+                MaxAttempts = 5,
+            },
         };
 
+        ExecutableSpec executable = node.Execution;
         Assert.Equal(RejectAction.Stop, executable.RejectAction);
         Assert.Equal(5, executable.AttemptLimit);
     }

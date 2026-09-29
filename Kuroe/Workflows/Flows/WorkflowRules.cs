@@ -51,13 +51,10 @@ static class WorkflowRules
     /// <summary>收集全部容器名，From 引用允许指向容器。</summary>
     private static void CollectContainers(IReadOnlyList<Flow.NodeSpec> nodes, HashSet<Flow.NodeName> names)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (Flow.NodeSpec node in nodes.Where(node => node.Nodes is { Count: > 0 }))
         {
-            if (node is Flow.ContainerNode flow)
-            {
-                names.Add(node.Name);
-                CollectContainers(flow.Nodes, names);
-            }
+            names.Add(node.Name);
+            CollectContainers(node.Nodes!, names);
         }
     }
 
@@ -66,13 +63,13 @@ static class WorkflowRules
     {
         foreach (Flow.NodeSpec node in nodes)
         {
-            if (node is Flow.ExecutableNode executable)
+            if (node.Execution is not null)
             {
-                names.Add(executable.Name);
+                names.Add(node.Name);
             }
-            else if (node is Flow.ContainerNode flow)
+            else if (node.Nodes is { Count: > 0 } children)
             {
-                CollectExecutables(flow.Nodes, names);
+                CollectExecutables(children, names);
             }
         }
     }
@@ -91,7 +88,7 @@ static class WorkflowRules
         {
             foreach (Flow.NodeName from in node.From)
             {
-                if (node is Flow.ContainerNode)
+                if (node.Nodes is { Count: > 0 })
                 {
                     break;
                 }
@@ -111,42 +108,34 @@ static class WorkflowRules
                 errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "节点名重复。"));
             }
 
-            switch (node)
+            if (node.Nodes is { Count: > 0 } children)
             {
-                case Flow.ContainerNode flow:
-                    if (flow.Nodes.Count == 0)
-                    {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器至少要有一个子节点。"));
-                    }
-                    else if (!HasExecutable(flow.Nodes))
-                    {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器里至少要有一个执行节点。"));
-                    }
-                    else
-                    {
-                        CheckTree(flow.Nodes, names, executableNames, modelNames, containerNames, flowName, errors);
-                    }
+                if (!HasExecutable(children))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器里至少要有一个执行节点。"));
+                }
+                else
+                {
+                    CheckTree(children, names, executableNames, modelNames, containerNames, flowName, errors);
+                }
 
-                    if (flow.From.Count > 0)
-                    {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不支持 From。"));
-                    }
+                if (node.From.Count > 0)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不支持 From。"));
+                }
+            }
+            else if (node.Execution is { } execution)
+            {
+                if (string.IsNullOrWhiteSpace(execution.Model.Value) || !modelNames.Contains(execution.Model))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {execution.Model.Value} 不存在。"));
+                }
 
-                    if (flow.Prompt is not null)
-                    {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不支持 Prompt。"));
-                    }
-
-                    break;
-
-                case Flow.ExecutableNode executable:
-                    if (string.IsNullOrWhiteSpace(executable.Model.Value) || !modelNames.Contains(executable.Model))
-                    {
-                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {executable.Model.Value} 不存在。"));
-                    }
-
-                    ValidateSplit(executable, flowName, errors);
-                    break;
+                ValidateSplit(node, flowName, errors);
+            }
+            else if (node.Use is null)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "节点必须声明执行配置或子节点。"));
             }
         }
     }
@@ -156,12 +145,12 @@ static class WorkflowRules
     {
         foreach (Flow.NodeSpec node in nodes)
         {
-            if (node is Flow.ExecutableNode)
+            if (node.Execution is not null)
             {
                 return true;
             }
 
-            if (node is Flow.ContainerNode flow && HasExecutable(flow.Nodes))
+            if (node.Nodes is { Count: > 0 } children && HasExecutable(children))
             {
                 return true;
             }
@@ -171,59 +160,60 @@ static class WorkflowRules
     }
 
     /// <summary>拆分配置的静态规则：只能写在规划执行节点上，条目与补充上限的取值边界。</summary>
-    private static void ValidateSplit(Flow.ExecutableNode executable, string flowName, List<Error> errors)
+    private static void ValidateSplit(Flow.NodeSpec node, string flowName, List<Error> errors)
     {
-        if (executable.Split is not { } split)
+        Flow.ExecutableSpec? executable = node.Execution;
+        if (executable?.Split is not { } split)
         {
             return;
         }
 
         if (executable.Output != Flow.NodeOutput.Plan)
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split 只能写在规划节点上。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split 只能写在规划节点上。"));
         }
 
         if (split.Items is null && split.ExtrasMax is null)
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split 至少要声明 Items 或 ExtrasMax。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split 至少要声明 Items 或 ExtrasMax。"));
         }
 
         if (split.Items is null && split.ExtrasMax is 0)
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split.ExtrasMax 为 0 时要求声明至少一条 Items。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split.ExtrasMax 为 0 时要求声明至少一条 Items。"));
         }
 
         if (split.Items is not null && split.Items.Count is 0 or > 20)
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split.Items 要有 1 到 20 条。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split.Items 要有 1 到 20 条。"));
         }
 
         if (split.Items is { } items
             && items.Any(item => string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction)))
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
         }
 
         if (split.ExtrasMax is < 0 or > 20)
         {
-            errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "Split.ExtrasMax 必须是 0 到 20 的整数。"));
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Split.ExtrasMax 必须是 0 到 20 的整数。"));
         }
 
         if (executable.IsStaticSplit)
         {
             if (executable.Prompt is not null)
             {
-                errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "纯静态拆分节点不支持 Prompt。"));
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持 Prompt。"));
             }
 
-            if (executable.From.Count > 0)
+            if (node.From.Count > 0)
             {
-                errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "纯静态拆分节点不支持 From。"));
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持 From。"));
             }
 
-            if (executable.Gate == Flow.NodeGate.Review)
+            if (node.Gate == Flow.NodeGate.Review)
             {
-                errors.Add(WorkflowErrors.Node(flowName, executable.Name.Value, "纯静态拆分节点不支持待批准门控。"));
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持待批准门控。"));
             }
         }
     }

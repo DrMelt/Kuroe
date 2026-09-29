@@ -2,14 +2,17 @@ using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>执行节点：自带会话能力配置，是唯一真实执行的节点。</summary>
-public sealed record ExecutableNode : NodeSpec
+/// <summary>执行配置：执行节点带有的能力声明。</summary>
+public sealed record ExecutableSpec
 {
-    /// <summary>引用的模型配置名。</summary>
+    /// <summary>引用的模型配置名，按使用流程的 Models 解析。</summary>
     public required ModelRef Model { get; init; }
 
     /// <summary>能力工具白名单，按函数名匹配。未写或空时不给出任何能力工具。</summary>
     public IReadOnlyList<ToolName> Tools { get; init; } = [];
+
+    /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
+    public string? Prompt { get; init; }
 
     /// <summary>交回什么。</summary>
     public NodeOutput Output { get; init; } = NodeOutput.Plain;

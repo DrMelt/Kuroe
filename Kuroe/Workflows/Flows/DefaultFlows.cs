@@ -3,65 +3,95 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>内置模型选择与内置流程：用户层未指定默认流程时使用，工作目录里还没有 flows.json 时也只有这一条。
-/// 三个模型选择都不写模型名，流程可加载但执行时无法确定模型，派发 run 报错。</summary>
+/// <summary>内置节点库与内置流程：用户层未指定默认流程时使用，工作目录里还没有 flows.json 时也只有这一条。
+/// 模型选择都不写模型名，流程可加载但执行时无法确定模型，派发 run 报错。</summary>
 internal static class DefaultFlows
 {
     /// <summary>内置流程的名字。</summary>
     internal const string Name = "默认";
 
     /// <summary>规划者：交回条目拆分。</summary>
-    internal static readonly ModelDefinition Planner = new()
-    {
-        Name = new ModelRef("规划者"),
-    };
+    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     /// <summary>执行者：实施条目。</summary>
-    internal static readonly ModelDefinition Executor = new()
-    {
-        Name = new ModelRef("执行者"),
-    };
+    private static readonly ModelDefinition Executor = new() { Name = new ModelRef("执行者") };
 
     /// <summary>检查者：交回整体检查结论。</summary>
-    internal static readonly ModelDefinition Reviewer = new()
+    private static readonly ModelDefinition Reviewer = new() { Name = new ModelRef("检查者") };
+
+    /// <summary>规划执行节点：把目标拆成条目。</summary>
+    private static readonly NodeSpec PlanNodeDefinition = new()
     {
-        Name = new ModelRef("检查者"),
+        Name = new NodeName("规划"),
+        Execution = new ExecutableSpec
+        {
+            Model = Planner.Name,
+            Output = NodeOutput.Plan,
+            Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
+        },
     };
 
-    /// <summary>内置流程：制定计划、按条目分配执行、整体检查，不通过退回返工。</summary>
-    internal static readonly Workflow Builtin = new(Name, "内置流程：制定计划、分配执行、整体检查",
-        [Planner, Executor, Reviewer],
+    /// <summary>执行执行节点：按条目实施。</summary>
+    private static readonly NodeSpec ExecuteNodeDefinition = new()
+    {
+        Name = new NodeName("执行"),
+        Execution = new ExecutableSpec
+        {
+            Model = Executor.Name,
+            Tools = [new ToolName("GetLocalTime"), new ToolName("GetWeather")],
+            Mode = NodeMode.PerItem,
+        },
+    };
+
+    /// <summary>检查执行节点：整体检查结论。</summary>
+    private static readonly NodeSpec ReviewNodeDefinition = new()
+    {
+        Name = new NodeName("检查"),
+        Execution = new ExecutableSpec
+        {
+            Model = Reviewer.Name,
+            Output = NodeOutput.Review,
+            OnReject = RejectAction.Retry,
+            MaxAttempts = 2,
+        },
+    };
+
+    /// <summary>交付容器：出一条计划，按条目实施并整体检查。</summary>
+    private static readonly NodeSpec DeliveryContainerDefinition = new()
+    {
+        Name = new NodeName("交付并检查"),
+        Inputs = [new NodeName("计划")],
+        Nodes =
         [
-            new ExecutableNode
+            new NodeSpec
             {
-                Name = new NodeName("制定计划"),
-                Model = Planner.Name,
-                Output = NodeOutput.Plan,
-                Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
+                Name = new NodeName("实施"),
+                Use = new NodeName("执行"),
+                From = [new NodeName("@计划")],
             },
-            new ContainerNode
+            new NodeSpec
             {
-                Name = new NodeName("交付"),
-                Nodes =
+                Name = new NodeName("审查"),
+                Use = new NodeName("检查"),
+                From = [new NodeName("@计划"), new NodeName("实施")],
+            },
+        ],
+    };
+
+    /// <summary>内置内容：规划 → 交付并检查。</summary>
+    internal static readonly FlowFile Builtin = new(
+        [PlanNodeDefinition, ExecuteNodeDefinition, ReviewNodeDefinition, DeliveryContainerDefinition],
+        [
+            new Workflow(Name, "内置流程：制定计划、分配执行、整体检查",
+                [Planner, Executor, Reviewer],
                 [
-                    new ExecutableNode
+                    new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划") },
+                    new NodeSpec
                     {
-                        Name = new NodeName("分配执行"),
-                        Model = Executor.Name,
-                        Tools = [new ToolName("GetLocalTime"), new ToolName("GetWeather")],
-                        Mode = NodeMode.PerItem,
-                        From = [new NodeName("制定计划")],
+                        Name = new NodeName("交付"),
+                        Use = new NodeName("交付并检查"),
+                        In = new Dictionary<NodeName, NodeName> { [new NodeName("计划")] = new NodeName("制定计划") },
                     },
-                    new ExecutableNode
-                    {
-                        Name = new NodeName("整体检查"),
-                        Model = Reviewer.Name,
-                        Output = NodeOutput.Review,
-                        From = [new NodeName("制定计划"), new NodeName("分配执行")],
-                        OnReject = RejectAction.Retry,
-                        MaxAttempts = 2,
-                    },
-                ],
-            },
+                ]),
         ]);
 }

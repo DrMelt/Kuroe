@@ -19,9 +19,9 @@ internal sealed class FlowCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/flow list", "列出流程模板"),
+        ("/flow list", "列出流程与节点库"),
         ("/flow show <流程>", "打印流程的节点"),
-        ("/flow add <文件>", "导入流程，同名覆盖"),
+        ("/flow add <文件>", "导入流程与节点库，同名覆盖"),
         ("/flow default <流程>", "设为提交任务的默认流程"),
     ];
 
@@ -70,7 +70,7 @@ internal sealed class FlowCommands(
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
                 new Text(standard ? $">{flow.Name}" : flow.Name, standard ? Styles.Success : Styles.Key),
-                new Text(string.Join(" → ", FlowCommands.Flatten(flow.Nodes).Select(node => node.Name))),
+                new Text(string.Join(" → ", FlowCommands.Flatten(flow.Nodes).Select(node => node.Name.Value))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
@@ -101,27 +101,27 @@ internal sealed class FlowCommands(
         int index = 0;
         foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.Nodes))
         {
-            if (node is ExecutableNode executable)
+            if (node.Execution is { } executable)
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
-                    new Text(new string(' ', depth * 2) + executable.Name),
+                    new Text(new string(' ', depth * 2) + node.Name.Value),
                     new Text(executable.Model.Value),
                     new Text(executable.Output.Label()),
                     new Text(Labels.Of(executable.Mode)),
-                    new Text(Labels.Of(executable.Gate)),
-                    new Text(Requirement(executable), Styles.Hint));
+                    new Text(Labels.Of(node.Gate)),
+                    new Text(Requirement(node, executable), Styles.Hint));
                 index++;
             }
-            else if (node is ContainerNode flow)
+            else if (node.Nodes is { Count: > 0 })
             {
                 grid.AddRow(
                     new Text(string.Empty),
-                    new Text(new string(' ', depth * 2) + flow.Name),
+                    new Text(new string(' ', depth * 2) + node.Name),
                     new Text("容器", Styles.Hint),
                     new Text(string.Empty),
                     new Text(string.Empty),
-                    new Text(Labels.Of(flow.Gate), Styles.Hint),
+                    new Text(Labels.Of(node.Gate), Styles.Hint),
                     new Text(string.Empty));
             }
         }
@@ -158,7 +158,7 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, name));
     }
 
-    private static string Requirement(ExecutableNode executable)
+    private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
         List<string> parts = [];
         if (executable.Branch is { } branch)
@@ -171,9 +171,9 @@ internal sealed class FlowCommands(
             parts.Add($"工具 {string.Join("、", executable.Tools)}");
         }
 
-        if (executable.From.Count > 0)
+        if (node.From.Count > 0)
         {
-            parts.Add($"取自 {string.Join("、", executable.From)}");
+            parts.Add($"取自 {string.Join("、", node.From)}");
         }
 
         if (executable.Output == NodeOutput.Review)
@@ -209,9 +209,9 @@ internal sealed class FlowCommands(
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node is ContainerNode flow)
+            if (node.Nodes is { Count: > 0 } children)
             {
-                foreach (NodeSpec child in Flatten(flow.Nodes))
+                foreach (NodeSpec child in Flatten(children))
                 {
                     yield return child;
                 }
@@ -229,9 +229,9 @@ internal sealed class FlowCommands(
         foreach (NodeSpec node in nodes)
         {
             yield return (node, depth);
-            if (node is ContainerNode flow)
+            if (node.Nodes is { Count: > 0 } children)
             {
-                foreach ((NodeSpec child, int childDepth) in Walk(flow.Nodes, depth + 1))
+                foreach ((NodeSpec child, int childDepth) in Walk(children, depth + 1))
                 {
                     yield return (child, childDepth);
                 }

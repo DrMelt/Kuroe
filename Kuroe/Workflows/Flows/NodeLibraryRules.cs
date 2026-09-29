@@ -1,0 +1,208 @@
+using ErrorOr;
+using Flow = Kuroe.Shared.Workflows.Flows;
+
+namespace Kuroe.Workflows.Flows;
+
+/// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeExpander 里进行。</summary>
+internal static class NodeLibraryRules
+{
+    private const char PortPrefix = '@';
+    private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
+    private static string PortName(Flow.NodeName name) => name.Value[1..];
+
+    /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。</summary>
+    public static ErrorOr<Success> Validate(IReadOnlyList<Flow.NodeSpec> library)
+    {
+        List<Error> errors = [];
+        var byName = ValidateDefinitions(library, errors);
+
+        foreach (Flow.NodeSpec node in library)
+        {
+            if (node.Nodes is { Count: > 0 })
+            {
+                CheckContainer(node, node.Nodes, byName, errors);
+            }
+            else
+            {
+                CheckLeaf(node, errors);
+            }
+        }
+
+        return errors.Count > 0 ? errors : Result.Success;
+    }
+
+    private static Dictionary<Flow.NodeName, Flow.NodeSpec> ValidateDefinitions(IReadOnlyList<Flow.NodeSpec> library, List<Error> errors)
+    {
+        var byName = new Dictionary<Flow.NodeName, Flow.NodeSpec>();
+        foreach (Flow.NodeSpec node in library)
+        {
+            if (node.Use is not null)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点库定义不能是引用。"));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(node.Name.Value))
+            {
+                errors.Add(WorkflowErrors.Node("节点库", "(未命名)", "节点名不能为空。"));
+                continue;
+            }
+
+            if (!byName.TryAdd(node.Name, node))
+            {
+                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点名重复。"));
+                continue;
+            }
+
+            if (node.Nodes is { Count: > 0 })
+            {
+                if (node.Execution is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "容器不能同时声明执行配置。"));
+                }
+
+                if (node.From.Count > 0)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明 From。"));
+                }
+
+                if (node.In is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明输入端口绑定。"));
+                }
+            }
+            else if (node.Execution is null)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
+            }
+        }
+
+        return byName;
+    }
+    /// <summary>执行节点库叶子：不能再带结构与接线。</summary>
+    private static void CheckLeaf(Flow.NodeSpec node, List<Error> errors)
+    {
+        if (node.Inputs.Count > 0)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "执行节点不能声明输入端口，接线从引用处提供。"));
+        }
+
+        if (node.From.Count > 0)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
+        }
+    }
+
+    /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
+    private static void CheckContainer(
+        Flow.NodeSpec container,
+        IReadOnlyList<Flow.NodeSpec> members,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        List<Error> errors)
+    {
+        var subtreeNames = new HashSet<Flow.NodeName>();
+        CollectSubtreeNames(members, byName, subtreeNames);
+
+        var literalNames = new HashSet<Flow.NodeName>();
+        CheckLiteralNames(members, literalNames, container, errors);
+
+        var ports = new HashSet<Flow.NodeName>([.. container.Inputs]);
+        foreach (Flow.NodeSpec member in members)
+        {
+            CheckMember(member, ports, subtreeNames, byName, errors);
+            if (member.Nodes is { Count: > 0 })
+            {
+                CheckContainer(member, member.Nodes, byName, errors);
+            }
+        }
+    }
+
+    /// <summary>字面子树全部成员名唯一。实例化时成员名映射进同一个作用域，重名会折叠歧义。</summary>
+    private static void CheckLiteralNames(
+        IReadOnlyList<Flow.NodeSpec> nodes,
+        HashSet<Flow.NodeName> seen,
+        Flow.NodeSpec container,
+        List<Error> errors)
+    {
+        foreach (Flow.NodeSpec node in nodes)
+        {
+            Flow.NodeName name = node.Name.Value.Length > 0
+                ? node.Name
+                : new Flow.NodeName(node.Use?.Value ?? string.Empty);
+            if (!seen.Add(name))
+            {
+                errors.Add(WorkflowErrors.Node("节点库", container.Name.Value, $"成员名 {name} 在容器子树内重复。"));
+            }
+
+            if (node.Nodes is { Count: > 0 })
+            {
+                CheckLiteralNames(node.Nodes, seen, container, errors);
+            }
+        }
+    }
+
+    /// <summary>收集容器整棵子树（含被引用容器定义）的全部成员名。</summary>
+    private static void CollectSubtreeNames(
+        IReadOnlyList<Flow.NodeSpec> nodes,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        HashSet<Flow.NodeName> names)
+    {
+        foreach (Flow.NodeSpec node in nodes)
+        {
+            if (node.Name.Value.Length > 0)
+            {
+                names.Add(node.Name);
+            }
+
+            if (node.Nodes is { Count: > 0 })
+            {
+                CollectSubtreeNames(node.Nodes, byName, names);
+            }
+            else if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            {
+                CollectSubtreeNames(referenced.Nodes, byName, names);
+            }
+        }
+    }
+    /// <summary>校验容器的一个成员：结构不混用、引用存在、From 引用自包含。</summary>
+    private static void CheckMember(
+        Flow.NodeSpec member,
+        HashSet<Flow.NodeName> ports,
+        HashSet<Flow.NodeName> subtreeNames,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        List<Error> errors)
+    {
+        if (member.Use is { } use)
+        {
+            if (!byName.ContainsKey(use))
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, $"引用的节点 {use} 不在节点库。"));
+            }
+
+            if (member.Execution is not null || member.Nodes is not null)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "引用成员不能同时声明执行配置或子节点。"));
+            }
+        }
+        else if (member.Execution is not null && member.Nodes is { Count: > 0 })
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "成员不能同时声明执行配置与子节点。"));
+        }
+        else if (member.Execution is null && member.Nodes is not { Count: > 0 })
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
+        }
+
+        foreach (Flow.NodeName from in member.From)
+        {
+            bool inScope = !IsPort(from)
+                ? subtreeNames.Contains(from)
+                : ports.Contains(new Flow.NodeName(PortName(from)));
+            if (!inScope)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value,
+                    IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"From 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
+            }
+        }
+    }
+}

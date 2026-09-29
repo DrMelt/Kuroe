@@ -4,37 +4,40 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>运行期的流程模板集合。加载即校验，全部非法项一次给出；导入合并后落盘。</summary>
+/// <summary>运行期的流程模板集合。加载时先校验节点库，再把每条装配流程展开成具体树并校验，
+/// 全部非法项一次给出；导入合并后落盘。装配版保留引用形态，展开版供运行与展示。</summary>
 public sealed class WorkflowService
 {
     private readonly WorkflowStore _store;
     private readonly SettingsProvider _settings;
     private readonly Lock _gate = new();
+    private FlowFile _source;
     private List<Workflow> _flows;
 
-    private WorkflowService(WorkflowStore store, SettingsProvider settings, List<Workflow> flows)
+    private WorkflowService(WorkflowStore store, SettingsProvider settings, FlowFile source, List<Workflow> flows)
     {
         _store = store;
         _settings = settings;
+        _source = source;
         _flows = flows;
     }
 
-    /// <summary>从流程文件装配。任一条流程不合法时返回全部错误，装配失败。</summary>
+    /// <summary>从流程文件装配。节点库或任一条流程不合法时返回全部错误，装配失败。</summary>
     internal static ErrorOr<WorkflowService> Create(WorkflowStore store, SettingsProvider settings)
     {
-        ErrorOr<List<Workflow>> loaded = store.Load();
+        ErrorOr<FlowFile> loaded = store.Load();
         if (loaded.IsError)
         {
             return loaded.ErrorsOrEmptyList;
         }
 
-        List<Error> errors = Validate(loaded.Value, settings.Current.Runtime.MaxAttempts, out List<Workflow> valid);
-        if (WorkflowRules.Duplicated(loaded.Value) is { } duplicated)
+        List<Error> errors = Validate(loaded.Value, settings.Current.Runtime.MaxAttempts, out List<Workflow> expanded);
+        if (WorkflowRules.Duplicated(expanded) is { } duplicated)
         {
             errors.Add(WorkflowErrors.Body(duplicated, "流程名重复。"));
         }
 
-        return errors.Count > 0 ? errors : new WorkflowService(store, settings, valid);
+        return errors.Count > 0 ? errors : new WorkflowService(store, settings, loaded.Value, expanded);
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
@@ -49,7 +52,7 @@ public sealed class WorkflowService
         }
     }
 
-    /// <summary>按名取流程，不存在时返回错误。</summary>
+    /// <summary>按名取展开后的流程，不存在时返回错误。</summary>
     public ErrorOr<Workflow> Find(string name)
     {
         lock (_gate)
@@ -63,7 +66,7 @@ public sealed class WorkflowService
     /// <summary>提交任务未指定流程时用的那条流程。</summary>
     public ErrorOr<Workflow> Default() => Find(DefaultName);
 
-    /// <summary>从文件导入流程：逐条校验，任一条不合法就整体不生效；同名整条覆盖，新的追加，成功后落盘。</summary>
+    /// <summary>从文件导入流程：节点库按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
     public ErrorOr<WorkflowImport> Import(string source)
     {
         ErrorOr<string> resolved = _store.Resolve(source);
@@ -72,13 +75,23 @@ public sealed class WorkflowService
             return resolved.ErrorsOrEmptyList;
         }
 
-        ErrorOr<List<Workflow>> parsed = WorkflowStore.Read(resolved.Value);
+        ErrorOr<FlowFile> parsed = WorkflowStore.Read(resolved.Value);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
         }
 
-        List<Error> errors = Validate(parsed.Value, _settings.Current.Runtime.MaxAttempts, out List<Workflow> candidates);
+        FlowFile incoming = parsed.Value;
+        if (WorkflowRules.Duplicated(incoming.Flows) is { } duplicated)
+        {
+            return [WorkflowErrors.Body(duplicated, "流程名重复。")];
+        }
+
+        FlowFile merged = new(
+            MergeLibrary(_source.Nodes, incoming.Nodes),
+            MergeFlows(_source.Flows, incoming.Flows));
+
+        List<Error> errors = Validate(merged, _settings.Current.Runtime.MaxAttempts, out List<Workflow> expanded);
         if (errors.Count > 0)
         {
             return errors;
@@ -86,21 +99,13 @@ public sealed class WorkflowService
 
         lock (_gate)
         {
-            List<string> notes = [];
-            List<Workflow> merged = [.. _flows];
-            foreach (Workflow flow in candidates)
-            {
-                int index = merged.FindIndex(candidate => candidate.Name == flow.Name);
-                notes.Add(index < 0 ? $"新增流程 {flow.Name}" : $"覆盖流程 {flow.Name}");
-                if (index < 0)
-                {
-                    merged.Add(flow);
-                }
-                else
-                {
-                    merged[index] = flow;
-                }
-            }
+            List<string> notes =
+            [
+                .. incoming.Flows.Select(flow => merged.Flows.Any(candidate => candidate.Name == flow.Name)
+                    ? $"覆盖流程 {flow.Name}"
+                    : $"新增流程 {flow.Name}"),
+                .. incoming.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
+            ];
 
             ErrorOr<Success> saved = _store.Save(merged);
             if (saved.IsError)
@@ -108,32 +113,79 @@ public sealed class WorkflowService
                 return saved.ErrorsOrEmptyList;
             }
 
-            _flows = merged;
+            _source = merged;
+            _flows = expanded;
 
-            return new WorkflowImport(resolved.Value, [.. candidates.Select(flow => flow.Name)], notes);
+            return new WorkflowImport(resolved.Value, [.. incoming.Flows.Select(flow => flow.Name)], notes);
         }
     }
 
-    /// <summary>逐条校验，合法流程经 valid 交回，返回值是全部错误。</summary>
-    private static List<Error> Validate(IReadOnlyList<Workflow> flows, int attemptLimit, out List<Workflow> valid)
+    /// <summary>校验节点库并逐流程展开校验，合法流程经 valid 交回，返回值是全部错误。</summary>
+    private static List<Error> Validate(FlowFile file, int attemptLimit, out List<Workflow> valid)
     {
         List<Error> errors = [];
-        List<Workflow> accepted = [];
-        foreach (Workflow flow in flows)
+        ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(file.Nodes);
+        if (libraryChecked.IsError)
         {
-            ErrorOr<Success> checkedFlow = WorkflowRules.Validate(flow, attemptLimit);
+            errors.AddRange(libraryChecked.ErrorsOrEmptyList);
+            valid = [];
+            return errors;
+        }
+
+        var library = new Dictionary<NodeName, NodeSpec>();
+        foreach (NodeSpec node in file.Nodes)
+        {
+            library.TryAdd(node.Name, node);
+        }
+
+        List<Workflow> accepted = [];
+        foreach (Workflow flow in file.Flows)
+        {
+            ErrorOr<IReadOnlyList<NodeSpec>> expanded = NodeExpander.Expand(library, flow.Nodes, flow.Name);
+            if (expanded.IsError)
+            {
+                errors.AddRange(expanded.ErrorsOrEmptyList);
+                continue;
+            }
+
+            Workflow concrete = new(flow.Name, flow.Description, flow.Models, expanded.Value);
+            ErrorOr<Success> checkedFlow = WorkflowRules.Validate(concrete, attemptLimit);
             if (checkedFlow.IsError)
             {
                 errors.AddRange(checkedFlow.ErrorsOrEmptyList);
             }
             else
             {
-                accepted.Add(flow);
+                accepted.Add(concrete);
             }
         }
 
         valid = accepted;
 
         return errors;
+    }
+
+    /// <summary>新库按名覆盖旧库、其余保留，顺序是旧在前新在后。</summary>
+    private static List<NodeSpec> MergeLibrary(IReadOnlyList<NodeSpec> current, IReadOnlyList<NodeSpec> incoming)
+    {
+        Dictionary<NodeName, NodeSpec> merged = current.ToDictionary(node => node.Name);
+        foreach (NodeSpec node in incoming)
+        {
+            merged[node.Name] = node;
+        }
+
+        return [.. merged.Values];
+    }
+
+    /// <summary>新流程按名覆盖旧流程、其余保留，顺序是旧在前新在后。</summary>
+    private static List<Workflow> MergeFlows(IReadOnlyList<Workflow> current, IReadOnlyList<Workflow> incoming)
+    {
+        Dictionary<string, Workflow> merged = current.ToDictionary(flow => flow.Name);
+        foreach (Workflow flow in incoming)
+        {
+            merged[flow.Name] = flow;
+        }
+
+        return [.. merged.Values];
     }
 }

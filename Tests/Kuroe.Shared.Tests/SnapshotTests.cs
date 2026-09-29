@@ -88,8 +88,8 @@ public sealed class SnapshotTests
 
     private static readonly Workflow Flow = new("默认", null, [Planner],
     [
-        new Flow.ExecutableNode { Name = new NodeName("制定计划"), Model = Planner.Name, Output = NodeOutput.Plan },
-        new Flow.ExecutableNode { Name = new NodeName("实施"), Model = Planner.Name },
+        new NodeSpec { Name = new NodeName("制定计划"), Execution = new ExecutableSpec { Model = Planner.Name, Output = NodeOutput.Plan } },
+        new NodeSpec { Name = new NodeName("实施"), Execution = new ExecutableSpec { Model = Planner.Name } },
     ]);
 
     private static readonly NodeGraph Graph = new([
