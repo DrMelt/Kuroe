@@ -22,7 +22,6 @@ internal static class DefaultFlows
         Name = new NodeName("规划"),
         Execution = new ExecutableSpec
         {
-            Model = Planner.Name,
             Output = NodeOutput.Plan,
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
         },
@@ -34,13 +33,12 @@ internal static class DefaultFlows
         Name = new NodeName("执行"),
         Execution = new ExecutableSpec
         {
-            Model = Executor.Name,
             Tools = [new ToolName("GetLocalTime"), new ToolName("GetWeather")],
             Mode = NodeMode.PerItem,
         },
     };
 
-    /// <summary>交付容器：出一条计划，按条目实施。</summary>
+    /// <summary>交付容器：出一条计划，按条目实施。实施节点的模型是槽位名，由引用处的模型绑定提供。</summary>
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
@@ -51,12 +49,13 @@ internal static class DefaultFlows
             {
                 Name = new NodeName("实施"),
                 Use = new NodeName("执行"),
+                Model = Executor.Name,
                 From = [new NodeName("@计划")],
             },
         ],
     };
 
-    /// <summary>内置内容：根容器包住规划与交付。</summary>
+    /// <summary>内置内容：根容器包住规划与交付。装配层从外部输入模型，规划引执行叶子写模型配置名，交付绑定组内实施节点的模型槽位。</summary>
     internal static readonly FlowFile Builtin = new(
         [PlanNodeDefinition, ExecuteNodeDefinition, DeliveryContainerDefinition],
         [
@@ -67,12 +66,13 @@ internal static class DefaultFlows
                     Name = new NodeName("整体"),
                     Nodes =
                     [
-                        new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划") },
+                        new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划"), Model = Planner.Name },
                         new NodeSpec
                         {
                             Name = new NodeName("交付"),
                             Use = new NodeName("交付"),
                             In = new Dictionary<NodeName, NodeName> { [new NodeName("计划")] = new NodeName("制定计划") },
+                            Models = new Dictionary<ModelRef, ModelRef> { [Executor.Name] = Executor.Name },
                         },
                     ],
                 }),

@@ -92,8 +92,8 @@ public sealed class SnapshotTests
             Name = new NodeName("整体"),
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Execution = new ExecutableSpec { Model = Planner.Name, Output = NodeOutput.Plan } },
-                new NodeSpec { Name = new NodeName("实施"), Execution = new ExecutableSpec { Model = Planner.Name } },
+                new NodeSpec { Name = new NodeName("制定计划"), Model = Planner.Name, Execution = new ExecutableSpec { Output = NodeOutput.Plan } },
+                new NodeSpec { Name = new NodeName("实施"), Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 

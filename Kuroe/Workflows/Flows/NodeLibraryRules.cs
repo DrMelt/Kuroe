@@ -70,10 +70,28 @@ internal static class NodeLibraryRules
                 {
                     errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明输入端口绑定。"));
                 }
+
+                if (node.Model is not null || node.Models is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不声明模型与模型绑定，绑定由引用处提供。"));
+                }
             }
-            else if (node.Execution is null)
+            else
             {
-                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
+                if (node.Execution is null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
+                }
+
+                if (node.Model is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
+                }
+
+                if (node.Models is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
+                }
             }
         }
 
@@ -110,6 +128,7 @@ internal static class NodeLibraryRules
         foreach (Flow.NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
+            CheckMemberModel(member, byName, errors);
             if (member.Nodes is { Count: > 0 })
             {
                 CheckContainer(member, member.Nodes, byName, errors);
@@ -202,6 +221,71 @@ internal static class NodeLibraryRules
             {
                 errors.Add(WorkflowErrors.Node("节点库", member.Name.Value,
                     IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"From 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
+            }
+        }
+    }
+
+    /// <summary>节点组内成员的模型来源：执行成员写模型槽位名，组内节点的模型从引用处绑定输入，不设全局模型引用。
+    /// 引用不存在的定义只由 CheckMember 报错，这里不叠加槽位消息。</summary>
+    private static void CheckMemberModel(
+        Flow.NodeSpec member,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        List<Error> errors)
+    {
+        if (member.Nodes is { Count: > 0 })
+        {
+            if (member.Model is not null || member.Models is not null)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "内联容器成员不声明模型与模型绑定。"));
+            }
+
+            return;
+        }
+
+        if (member.Use is { } use)
+        {
+            if (!byName.TryGetValue(use, out Flow.NodeSpec? referenced))
+            {
+                return;
+            }
+
+            if (referenced.Nodes is { Count: > 0 })
+            {
+                if (member.Model is not null)
+                {
+                    errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
+                }
+
+                CheckModelBindings(member, errors);
+
+                return;
+            }
+        }
+
+        if (member.Model is null)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
+        }
+
+        if (member.Models is not null)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
+        }
+    }
+
+    /// <summary>引用节点组的模型绑定：键与值都不能为空。</summary>
+    private static void CheckModelBindings(Flow.NodeSpec member, List<Error> errors)
+    {
+        if (member.Models is null)
+        {
+            return;
+        }
+
+        foreach ((Flow.ModelRef slot, Flow.ModelRef bound) in member.Models)
+        {
+            if (string.IsNullOrWhiteSpace(slot.Value) || string.IsNullOrWhiteSpace(bound.Value))
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "模型绑定键与值不能为空。"));
             }
         }
     }

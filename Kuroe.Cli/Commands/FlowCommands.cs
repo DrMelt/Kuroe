@@ -106,7 +106,7 @@ internal sealed class FlowCommands(
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + node.Name.Value),
-                    new Text(executable.Model.Value),
+                    new Text(node.Model?.Value ?? "—"),
                     new Text(executable.Output.Label()),
                     new Text(Labels.Of(executable.Mode)),
                     new Text(Labels.Of(node.Gate)),

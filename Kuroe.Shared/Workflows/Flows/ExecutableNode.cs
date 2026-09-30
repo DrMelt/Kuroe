@@ -2,12 +2,9 @@ using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>执行配置：执行节点带有的能力声明。</summary>
+/// <summary>执行配置：执行节点带有的能力声明。模型选择由节点自身的 Model 引用承载。</summary>
 public sealed record ExecutableSpec
 {
-    /// <summary>引用的模型配置名，按使用流程的 Models 解析。</summary>
-    public required ModelRef Model { get; init; }
-
     /// <summary>能力工具白名单，按函数名匹配。未写或空时不给出任何能力工具。</summary>
     public IReadOnlyList<ToolName> Tools { get; init; } = [];
 

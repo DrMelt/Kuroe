@@ -113,7 +113,7 @@ internal static class FlowCompiler
         node.Name,
         string.Join('/', [.. path, node.Name.Value]),
         node.Gate,
-        models[execution.Model],
+        models[node.Model!.Value],
         execution.Tools,
         execution.Prompt,
         execution.Output,

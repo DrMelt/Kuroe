@@ -9,16 +9,20 @@ internal static class NodeExpander
 {
     private const char PortPrefix = '@';
 
-    /// <summary>展开作用域的一层：容器实例的成员原名到实例名的映射，以及端口绑定。
-    /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口绑定。</summary>
+    /// <summary>展开作用域的一层：容器实例的成员原名到实例名的映射，以及端口绑定与模型槽位绑定。
+    /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口与模型绑定。</summary>
     private sealed class Env(
         Env? parent,
         IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> renames,
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> bindings)
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> bindings,
+        IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         public Env? Parent { get; } = parent;
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Renames { get; } = renames;
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Bindings { get; } = bindings;
+
+        /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型配置名或外层槽位名的映射。</summary>
+        public IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? ModelSlots { get; } = modelSlots;
     }
 
     private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
@@ -69,10 +73,20 @@ internal static class NodeExpander
                     errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用容器不能声明 From，容器自身不接线。"));
                 }
 
+                if (node.Model is not null)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
+                }
+
                 CheckBindings(node, definition, flowName, errors);
-                Env childEnv = BuildContainerEnv(env, definition, instance, node.In);
+                Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
                 List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", flowName, errors);
                 return new Flow.NodeSpec { Name = instance, Gate = definition.Gate, Nodes = members };
+            }
+
+            if (node.Models is not null)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型配置。"));
             }
 
             return new Flow.NodeSpec
@@ -80,6 +94,7 @@ internal static class NodeExpander
                 Name = instance,
                 Gate = definition.Gate,
                 Execution = definition.Execution,
+                Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, flowName, errors),
             };
         }
@@ -104,6 +119,7 @@ internal static class NodeExpander
             Name = own,
             Gate = node.Gate,
             Execution = node.Execution,
+            Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
             From = ResolveAll(node.From, env, flowName, errors),
         };
     }
@@ -148,18 +164,19 @@ internal static class NodeExpander
         }
     }
 
-    /// <summary>构造容器实例的子作用域：整棵子树成员名对齐到带实例前缀的实例名，端口绑定进作用域。
-    /// parent 沿当前环境链挂上，便于 @更外层端口 透传。</summary>
+    /// <summary>构造容器实例的子作用域：整棵子树成员名对齐到带实例前缀的实例名，端口绑定与模型槽位绑定进作用域。
+    /// parent 沿当前环境链挂上，便于 @更外层端口 与更外层模型槽位透传。</summary>
     private static Env BuildContainerEnv(
         Env? parent,
         Flow.NodeSpec container,
         Flow.NodeName instanceName,
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName>? bindings)
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName>? bindings,
+        IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         Dictionary<Flow.NodeName, Flow.NodeName> renames = [];
         CollectRenames(container.Nodes!, renames, instanceName.Value + ".");
 
-        return new Env(parent, renames, bindings ?? new Dictionary<Flow.NodeName, Flow.NodeName>());
+        return new Env(parent, renames, bindings ?? new Dictionary<Flow.NodeName, Flow.NodeName>(), modelSlots);
     }
 
     /// <summary>递归收集容器子树全部成员的实例名映射：成员原名对齐到带实例名前缀的实例名。</summary>
@@ -221,5 +238,52 @@ internal static class NodeExpander
 
         errors.Add(WorkflowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
         return name;
+    }
+
+    /// <summary>执行节点的模型引用：装配层节点直接是流程模型配置名，节点组实例内成员是模型槽位，沿绑定链解析成配置名。
+    /// 装配层引用执行节点未写模型时留空，交 WorkflowRules 报错。</summary>
+    private static Flow.ModelRef? ResolveModel(
+        Flow.ModelRef? model,
+        Env? env,
+        bool inInstance,
+        string flowName,
+        string nodeName,
+        List<Error> errors)
+    {
+        if (model is null || !inInstance)
+        {
+            return model;
+        }
+
+        return ResolveSlot(model.Value, env, mustBind: true, flowName, nodeName, errors);
+    }
+
+    /// <summary>沿模型绑定链解析槽位：当前层命中取绑定值继续向更外层解析，直到装配层拿到流程模型配置名。
+    /// 节点组内执行节点的模型必须从引用处绑定，未命中报错。</summary>
+    private static Flow.ModelRef? ResolveSlot(
+        Flow.ModelRef name,
+        Env? env,
+        bool mustBind,
+        string flowName,
+        string nodeName,
+        List<Error> errors)
+    {
+        if (env is null || env.ModelSlots is null)
+        {
+            if (mustBind)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, nodeName, $"模型槽位 {name} 没有外部绑定，引用节点组时用 Models 提供。"));
+                return null;
+            }
+
+            return name;
+        }
+
+        if (env.ModelSlots.TryGetValue(name, out Flow.ModelRef bound))
+        {
+            return ResolveSlot(bound, env.Parent, mustBind: false, flowName, nodeName, errors);
+        }
+
+        return ResolveSlot(name, env.Parent, mustBind, flowName, nodeName, errors);
     }
 }

@@ -109,6 +109,11 @@ static class WorkflowRules
 
         if (node.Nodes is { Count: > 0 } children)
         {
+            if (node.Model is not null || node.Models is not null)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不声明模型。"));
+            }
+
             if (!HasExecutable(children))
             {
                 errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器里至少要有一个执行节点。"));
@@ -126,11 +131,15 @@ static class WorkflowRules
                 errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不支持 From。"));
             }
         }
-        else if (node.Execution is { } execution)
+        else if (node.Execution is not null)
         {
-            if (string.IsNullOrWhiteSpace(execution.Model.Value) || !modelNames.Contains(execution.Model))
+            if (node.Model is not { } model)
             {
-                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {execution.Model.Value} 不存在。"));
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "执行节点必须声明模型配置。"));
+            }
+            else if (!modelNames.Contains(model))
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {model.Value} 不存在。"));
             }
 
             ValidateSplit(node, flowName, errors);

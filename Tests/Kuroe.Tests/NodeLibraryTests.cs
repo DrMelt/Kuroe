@@ -48,6 +48,30 @@ public sealed class NodeLibraryTests
     }
 
     [Fact]
+    public void Container_model_slot_bound_to_distinct_models_per_flow()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(PerFlowModelBinding);
+
+        Workflow first = harness.Flows.Find("甲").ThrowIfError();
+        NodeSpec firstImplement = first.RootNode.Nodes![1].Nodes![0];
+        Assert.Equal(new ModelRef("执行者"), firstImplement.Model!.Value);
+
+        Workflow second = harness.Flows.Find("乙").ThrowIfError();
+        NodeSpec secondImplement = second.RootNode.Nodes![1].Nodes![0];
+        Assert.Equal(new ModelRef("实施者"), secondImplement.Model!.Value);
+    }
+
+    [Fact]
+    public void Unknown_reference_does_not_report_model_slot_loss()
+    {
+        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(UnknownReferenceWithoutModel);
+
+        Assert.True(harness.IsError);
+        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains("不在节点库"));
+        Assert.DoesNotContain(harness.ErrorsOrEmptyList, error => error.Description.Contains("必须声明模型槽位"));
+    }
+
+    [Fact]
     public void Import_keeps_library_and_reference_shape_on_save()
     {
         using KuroeHarness harness = KuroeHarness.Create();
@@ -61,6 +85,8 @@ public sealed class NodeLibraryTests
         Assert.Contains("\"Use\"", text);
         Assert.Contains("\"In\"", text);
         Assert.Contains("\"Inputs\"", text);
+        Assert.Contains("\"Model\"", text);
+        Assert.Contains("\"Models\"", text);
     }
 
     [Fact]
@@ -118,6 +144,11 @@ public sealed class NodeLibraryTests
     [InlineData(ReferenceWithInputs, "引用节点不能声明输入端口")]
     [InlineData(LeafWithInputs, "执行节点不能声明输入端口")]
     [InlineData(ContainerWithExecutionFields, "不支持执行配置")]
+    [InlineData(LibraryLeafWithModel, "库执行定义不声明模型")]
+    [InlineData(LibraryMemberWithoutSlot, "必须声明模型槽位")]
+    [InlineData(MissingModelBinding, "没有外部绑定")]
+    [InlineData(ContainerReferenceWithModel, "引用节点组不能声明模型")]
+    [InlineData(LeafReferenceWithModelBindings, "引用执行节点不能声明模型绑定")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -129,12 +160,12 @@ public sealed class NodeLibraryTests
     private const string LibraryFlow = """
         {
           "Nodes": [
-            { "Name": "执行", "Model": "执行者", "Mode": "PerItem" },
+            { "Name": "执行", "Mode": "PerItem" },
             {
               "Name": "交付",
               "Inputs": ["计划"],
               "Nodes": [
-                { "Name": "实施", "Use": "执行", "From": ["@计划"] }
+                { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] }
               ]
             }
           ],
@@ -150,7 +181,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" } }
+                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -161,10 +192,10 @@ public sealed class NodeLibraryTests
     private const string DualInstanceFlow = """
         {
           "Nodes": [
-            { "Name": "规划", "Model": "规划者", "Output": "Plan" },
-            { "Name": "执行", "Model": "执行者", "Mode": "PerItem" },
+            { "Name": "规划", "Output": "Plan" },
+            { "Name": "执行", "Mode": "PerItem" },
             { "Name": "交付", "Inputs": ["计划"], "Nodes": [
-              { "Name": "实施", "Use": "执行", "From": ["@计划"] }
+              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] }
             ] }
           ],
           "Flows": [
@@ -178,10 +209,10 @@ public sealed class NodeLibraryTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                { "Name": "制定A", "Use": "规划" },
-                { "Name": "制定B", "Use": "规划" },
-                { "Name": "交付A", "Use": "交付", "In": { "计划": "制定A" } },
-                { "Name": "交付B", "Use": "交付", "In": { "计划": "制定B" } }
+                { "Name": "制定A", "Use": "规划", "Model": "规划者" },
+                { "Name": "制定B", "Use": "规划", "Model": "规划者" },
+                { "Name": "交付A", "Use": "交付", "In": { "计划": "制定A" }, "Models": { "执行者": "执行者" } },
+                { "Name": "交付B", "Use": "交付", "In": { "计划": "制定B" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -190,68 +221,109 @@ public sealed class NodeLibraryTests
         }
         """;
 
+    private const string PerFlowModelBinding = """
+        {
+          "Nodes": [
+            { "Name": "执行", "Mode": "PerItem" },
+            { "Name": "交付", "Inputs": ["计划"], "Nodes": [
+              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] }
+            ] }
+          ],
+          "Flows": [
+            {
+              "Name": "甲",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [ { "Name": "整体", "Nodes": [
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "执行者" } }
+              ] } ]
+            },
+            {
+              "Name": "乙",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" }
+              ],
+              "Nodes": [ { "Name": "整体", "Nodes": [
+                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "实施者" } }
+              ] } ]
+            }
+          ]
+        }
+        """;
+
     private const string LibraryDuplicateName = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "执行", "Model": "执行者" }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "执行", "Mode": "PerItem" }
         ], "Flows": [] }
         """;
 
     private const string LibraryReferenceAtRoot = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者" }, { "Name": "副本", "Use": "执行" } ], "Flows": [] }
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" }, { "Name": "副本", "Use": "执行" } ], "Flows": [] }
         """;
 
     private const string LibraryLeafFrom = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者", "From": ["制定计划"] } ], "Flows": [] }
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem", "From": ["制定计划"] } ], "Flows": [] }
         """;
 
     private const string UnknownLibraryReference = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Nodes": [ { "Name": "实施", "Use": "不存在" } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Nodes": [ { "Name": "实施", "Use": "不存在", "Model": "执行者" } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付" } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+        ] }
+        """;
+
+    private const string UnknownReferenceWithoutModel = """
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" } ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Nodes": [ { "Name": "实施", "Use": "不存在" } ] } ] }
         ] }
         """;
 
     private const string UnboundPort = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"] } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付" } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string PortNotDeclared = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@来源"] } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@来源"] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付" } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string ReferenceWithBody = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"], "Model": "执行者" } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"], "Mode": "PerItem" } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string UnknownPortBinding = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"] } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "来源": "制定计划" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "来源": "制定计划" }, "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string LibraryLeafIn = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者", "In": { "x": "y" } } ], "Flows": [] }
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem", "In": { "x": "y" } } ], "Flows": [] }
         """;
 
     private const string ContainerWithFrom = """
@@ -259,7 +331,7 @@ public sealed class NodeLibraryTests
         """;
 
     private const string ReferenceWithInputs = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者" } ], "Flows": [
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" } ], "Flows": [
           { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Nodes": [ { "Name": "实施", "Use": "执行", "Inputs": ["计划"] } ] } ] }
         ] }
         """;
@@ -271,23 +343,23 @@ public sealed class NodeLibraryTests
         """;
 
     private const string ContainerWithExecutionFields = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Model": "执行者", "Nodes": [ { "Name": "实施", "Use": "执行" } ] } ] }
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" } ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Model": "执行者", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者" } ] } ] }
         ] }
         """;
 
     private const string ReferenceWithGate = """
-        { "Nodes": [ { "Name": "执行", "Model": "执行者" } ], "Flows": [
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" } ], "Flows": [
           { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Nodes": [ { "Name": "实施", "Use": "执行", "Gate": "Review" } ] } ] }
         ] }
         """;
 
     private const string ReferenceContainerFrom = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
-          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"] } ] }
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "From": ["制定计划"] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" }, "From": ["制定计划"] } ] }
         ] }
         """;
 
@@ -299,7 +371,7 @@ public sealed class NodeLibraryTests
 
     private const string DuplicateMemberNames = """
         { "Nodes": [
-          { "Name": "执行", "Model": "执行者" },
+          { "Name": "执行", "Mode": "PerItem" },
           { "Name": "组", "Nodes": [
             { "Name": "实施", "Model": "执行者" },
             { "Name": "内", "Nodes": [ { "Name": "实施", "Model": "执行者" } ] }
@@ -307,15 +379,52 @@ public sealed class NodeLibraryTests
         ], "Flows": [] }
         """;
 
+    private const string LibraryLeafWithModel = """
+        { "Nodes": [ { "Name": "执行", "Model": "执行者", "Mode": "PerItem" } ], "Flows": [] }
+        """;
+
+    private const string LibraryMemberWithoutSlot = """
+        { "Nodes": [
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "From": ["@计划"] } ] }
+        ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+        ] }
+        """;
+
+    private const string MissingModelBinding = """
+        { "Nodes": [
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] } ] }
+        ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付" } ] }
+        ] }
+        """;
+
+    private const string ContainerReferenceWithModel = """
+        { "Nodes": [
+          { "Name": "执行", "Mode": "PerItem" },
+          { "Name": "交付", "Inputs": ["计划"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@计划"] } ] }
+        ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Model": "执行者" } ] }
+        ] }
+        """;
+
+    private const string LeafReferenceWithModelBindings = """
+        { "Nodes": [ { "Name": "执行", "Mode": "PerItem" } ], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Nodes": [ { "Name": "实施", "Use": "执行", "Models": { "执行者": "执行者" } } ] } ] }
+        ] }
+        """;
+
     private const string OuterPortBindingFlow = """
         {
           "Nodes": [
-            { "Name": "执行", "Model": "执行者", "Mode": "PerItem" },
+            { "Name": "执行", "Mode": "PerItem" },
             { "Name": "内层", "Inputs": ["内部"], "Nodes": [
-              { "Name": "实施", "Use": "执行", "From": ["@内部"] }
+              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@内部"] }
             ] },
             { "Name": "外层", "Inputs": ["目标"], "Nodes": [
-              { "Name": "里", "Use": "内层", "In": { "内部": "@目标" } }
+              { "Name": "里", "Use": "内层", "In": { "内部": "@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ],
           "Flows": [
@@ -330,7 +439,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "把目标拆成可独立实施的条目。" },
-                { "Name": "交付", "Use": "外层", "In": { "目标": "制定计划" } }
+                { "Name": "交付", "Use": "外层", "In": { "目标": "制定计划" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -349,13 +458,13 @@ public sealed class NodeLibraryTests
     private const string MemberNameBindingFlow = """
         {
           "Nodes": [
-            { "Name": "执行", "Model": "执行者" },
+            { "Name": "执行", "Mode": "Single" },
             { "Name": "内层", "Inputs": ["内部"], "Nodes": [
-              { "Name": "实施", "Use": "执行", "From": ["@内部"] }
+              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": ["@内部"] }
             ] },
             { "Name": "外层", "Inputs": ["目标"], "Nodes": [
               { "Name": "目标条目", "Model": "执行者" },
-              { "Name": "里", "Use": "内层", "In": { "内部": "目标条目" } }
+              { "Name": "里", "Use": "内层", "In": { "内部": "目标条目" }, "Models": { "执行者": "执行者" } }
             ] }
           ],
           "Flows": [
@@ -370,7 +479,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "规划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "交付", "Use": "外层", "In": { "目标": "规划" } }
+                { "Name": "交付", "Use": "外层", "In": { "目标": "规划" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -396,7 +505,6 @@ public sealed class NodeLibraryTests
           "Nodes": [
             {
               "Name": "允许工具",
-              "Model": "执行者",
               "Tools": ["GetLocalTime", "GetWeather"],
               "Mode": "PerItem"
             },
@@ -404,7 +512,7 @@ public sealed class NodeLibraryTests
               "Name": "交付",
               "Inputs": ["计划"],
               "Nodes": [
-                { "Name": "实施", "Use": "允许工具", "From": ["@计划"] }
+                { "Name": "实施", "Use": "允许工具", "Model": "执行者", "From": ["@计划"] }
               ]
             }
           ],
@@ -421,7 +529,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "把目标拆成可独立实施的条目。" },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" } }
+                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]

@@ -54,8 +54,11 @@ internal sealed class NodeDto
     /// <summary>容器引用把端口绑定到当前作用域可达节点。</summary>
     public Dictionary<string, string>? In { get; set; }
 
-    /// <summary>引用的模型选择配置名。</summary>
+    /// <summary>模型选择引用：装配层执行节点写流程模型配置名，节点组容器成员写模型槽位名。</summary>
     public string? Model { get; set; }
+
+    /// <summary>引用节点组时的模型槽位绑定：槽位名到本流程模型配置名的映射。</summary>
+    public Dictionary<string, string>? Models { get; set; }
 
     /// <summary>能力工具白名单，按函数名匹配。未写或空时不给出任何能力工具。</summary>
     public List<string>? Tools { get; set; }

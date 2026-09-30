@@ -13,7 +13,7 @@ public sealed class WorkflowModelTests
     [Fact]
     public void Executable_defaults_to_plain_single_auto()
     {
-        var node = new NodeSpec { Name = new NodeName("实施"), Execution = new ExecutableSpec { Model = new ModelRef("执行者") } };
+        var node = new NodeSpec { Name = new NodeName("实施"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() };
 
         ExecutableSpec executable = node.Execution;
         Assert.Equal(NodeOutput.Plain, executable.Output);

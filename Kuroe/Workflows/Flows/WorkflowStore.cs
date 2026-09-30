@@ -181,12 +181,17 @@ sealed class WorkflowStore(string file, string baseDirectory)
         if (dto.Use is { Length: > 0 })
         {
             List<Error> useErrors = [];
-            if (dto.Model is not null || dto.Prompt is not null || dto.Tools is { Count: > 0 }
+            if (dto.Prompt is not null || dto.Tools is { Count: > 0 }
                 || dto.Output is not null || dto.Mode is not null || dto.Branch is not null
                 || dto.Split is not null
                 || dto.Nodes is { Count: > 0 })
             {
                 useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
+            }
+
+            if (dto.Model is not null && dto.Models is not null)
+            {
+                useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能同时声明模型与模型绑定。"));
             }
 
             if (dto.Inputs is { Count: > 0 })
@@ -211,6 +216,8 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 Gate = dto.Gate ?? NodeGate.Auto,
                 From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
                 In = ToIn(dto.In),
+                Model = ToModel(dto.Model),
+                Models = ToModelBindings(dto.Models),
             };
         }
 
@@ -236,6 +243,11 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 || dto.Tools is { Count: > 0 } || dto.Split is not null)
             {
                 containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
+            }
+
+            if (dto.Models is not null)
+            {
+                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明模型绑定，模型绑定只用于引用节点组。"));
             }
 
             if (dto.In is { Count: > 0 })
@@ -279,6 +291,11 @@ sealed class WorkflowStore(string file, string baseDirectory)
             leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口绑定。"));
         }
 
+        if (dto.Models is not null)
+        {
+            leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明模型绑定，模型绑定只用于引用节点组。"));
+        }
+
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
         {
@@ -295,9 +312,9 @@ sealed class WorkflowStore(string file, string baseDirectory)
             Name = new NodeName(dto.Name ?? string.Empty),
             Gate = dto.Gate ?? NodeGate.Auto,
             From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
+            Model = ToModel(dto.Model),
             Execution = new ExecutableSpec
             {
-                Model = new ModelRef(dto.Model ?? string.Empty),
                 Tools = [.. (dto.Tools ?? []).Select(name => new ToolName(name))],
                 Prompt = dto.Prompt,
                 Output = dto.Output ?? NodeOutput.Plain,
@@ -309,6 +326,14 @@ sealed class WorkflowStore(string file, string baseDirectory)
     }
     private static Dictionary<NodeName, NodeName>? ToIn(Dictionary<string, string>? bindings) =>
         bindings is { Count: > 0 } ? bindings.ToDictionary(entry => new NodeName(entry.Key), entry => new NodeName(entry.Value)) : null;
+
+    private static ModelRef? ToModel(string? model) =>
+        string.IsNullOrWhiteSpace(model) ? null : new ModelRef(model);
+
+    private static Dictionary<ModelRef, ModelRef>? ToModelBindings(Dictionary<string, string>? bindings) =>
+        bindings is { Count: > 0 }
+            ? bindings.ToDictionary(entry => new ModelRef(entry.Key), entry => new ModelRef(entry.Value))
+            : null;
 
     /// <summary>把文件里的拆分配置装配成模型：缺失的必填字段留空交校验。</summary>
     private static SplitConfig? ToSplit(SplitDto? split) => split is null ? null : new SplitConfig(
@@ -351,6 +376,10 @@ sealed class WorkflowStore(string file, string baseDirectory)
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
                 : null,
+            Model = node.Model?.Value,
+            Models = node.Models is { Count: > 0 } modelBindings
+                ? modelBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
+                : null,
         };
 
         if (node.Nodes is { Count: > 0 })
@@ -360,7 +389,6 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         if (node.Execution is { } execution)
         {
-            dto.Model = execution.Model.Value;
             dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(name => name.Value)];
             dto.Prompt = execution.Prompt;
             dto.Output = execution.Output;
