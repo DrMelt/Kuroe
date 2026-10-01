@@ -209,12 +209,27 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 return useErrors;
             }
 
+            OutputValidation? declareValidation = null;
+            if (dto.Validate is { } validateDeclared)
+            {
+                ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(validateDeclared.Predicate);
+                if (parsedPredicate.IsError)
+                {
+                    useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+                    return useErrors;
+                }
+
+                declareValidation = new OutputValidation(parsedPredicate.Value, validateDeclared.Argument);
+            }
+
             return new NodeSpec
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Use = new NodeName(dto.Use),
                 Gate = dto.Gate ?? NodeGate.Auto,
                 From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
+                AnyOf = ToAnyOf(dto.AnyOf),
+                Validate = declareValidation,
                 In = ToIn(dto.In),
                 Model = ToModel(dto.Model),
                 Models = ToModelBindings(dto.Models),
@@ -260,6 +275,16 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
+            if (dto.AnyOf is { Count: > 0 })
+            {
+                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 AnyOf。"));
+            }
+
+            if (dto.Validate is not null)
+            {
+                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
+            }
+
             ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(dto.Nodes, scope);
             if (children.IsError)
             {
@@ -302,6 +327,20 @@ sealed class WorkflowStore(string file, string baseDirectory)
             leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, leafMode.FirstError.Description));
         }
 
+        OutputValidation? declaredValidation = null;
+        if (dto.Validate is { } leafValidate)
+        {
+            ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(leafValidate.Predicate);
+            if (parsedPredicate.IsError)
+            {
+                leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+            }
+            else
+            {
+                declaredValidation = new OutputValidation(parsedPredicate.Value, leafValidate.Argument);
+            }
+        }
+
         if (leafErrors.Count > 0)
         {
             return leafErrors;
@@ -321,6 +360,8 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
                 Split = ToSplit(dto.Split),
+                AnyOf = ToAnyOf(dto.AnyOf),
+                Validate = declaredValidation,
             },
         };
     }
@@ -334,6 +375,34 @@ sealed class WorkflowStore(string file, string baseDirectory)
         bindings is { Count: > 0 }
             ? bindings.ToDictionary(entry => new ModelRef(entry.Key), entry => new ModelRef(entry.Value))
             : null;
+
+    /// <summary>把可选启动条件组装配成模型：每组是节点名，引用沿展开作用域解析。</summary>
+    private static IReadOnlyList<IReadOnlyList<NodeName>> ToAnyOf(List<List<string>>? groups)
+    {
+        if (groups is null)
+        {
+            return [];
+        }
+
+        return [.. groups.Select(group => (IReadOnlyList<NodeName>)[.. group.Select(name => new NodeName(name))])];
+    }
+
+    /// <summary>把谓词名按名字匹配枚举，只接受白名单名字，数字字面量在装配时拒绝。</summary>
+    private static ErrorOr<ValidationPredicate> ParseValidationPredicate(string? predicate)
+    {
+        if (string.IsNullOrWhiteSpace(predicate))
+        {
+            return Error.Validation(ErrorCodes.WorkflowNode, "Validate.Predicate 不能为空。");
+        }
+
+        string? matched = Enum.GetNames<ValidationPredicate>()
+            .FirstOrDefault(name => string.Equals(name, predicate, StringComparison.OrdinalIgnoreCase));
+
+        return matched is not null
+            ? Enum.Parse<Kuroe.Shared.Workflows.Flows.ValidationPredicate>(matched)
+            : Error.Validation(ErrorCodes.WorkflowNode,
+                $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {predicate}。");
+    }
 
     /// <summary>把文件里的拆分配置装配成模型：缺失的必填字段留空交校验。</summary>
     private static SplitConfig? ToSplit(SplitDto? split) => split is null ? null : new SplitConfig(
@@ -372,6 +441,8 @@ sealed class WorkflowStore(string file, string baseDirectory)
             Use = node.Use?.Value,
             Gate = node.Gate,
             From = node.From.Count == 0 ? null : [.. node.From.Select(name => name.Value)],
+            AnyOf = ToAnyOfDto(node.AnyOf),
+            Validate = ToValidationDto(node.Validate),
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
@@ -394,6 +465,8 @@ sealed class WorkflowStore(string file, string baseDirectory)
             dto.Output = execution.Output;
             dto.Mode = execution.Mode.ToString();
             dto.Branch = execution.Branch?.Value;
+            dto.AnyOf = ToAnyOfDto(execution.AnyOf);
+            dto.Validate = ToValidationDto(execution.Validate);
             dto.Split = execution.Split is { } split ? new SplitDto
             {
                 Items = split.Items?.Select(item => new SplitItemDto
@@ -410,6 +483,14 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         return dto;
     }
+
+    /// <summary>把模型层的可选启动条件组转回文件形状。</summary>
+    private static List<List<string>>? ToAnyOfDto(IReadOnlyList<IReadOnlyList<NodeName>> groups) =>
+        groups.Count == 0 ? null : [.. groups.Select(group => group.Select(name => name.Value).ToList())];
+
+    /// <summary>把模型层的输出校验转回文件形状。</summary>
+    private static ValidationDto? ToValidationDto(OutputValidation? validation) =>
+        validation is null ? null : new ValidationDto { Predicate = validation.Predicate.ToString(), Argument = validation.Argument };
 
     /// <summary>执行节点模式的名字按枚举解析，未写时回退 `Single` 模式。</summary>
     private static ErrorOr<NodeMode> ParseNodeMode(string? mode)

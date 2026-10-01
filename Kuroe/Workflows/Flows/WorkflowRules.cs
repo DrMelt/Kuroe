@@ -98,6 +98,16 @@ static class WorkflowRules
             }
         }
 
+        foreach (Flow.NodeName source in (node.Execution?.AnyOf ?? [])
+            .SelectMany(group => group)
+            .Distinct()
+            .Where(source => !executableNames.Contains(source) && !containerNames.Contains(source)))
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"AnyOf 引用的节点 {source} 不在流程里。"));
+        }
+
+        CheckValidation(node, flowName, errors);
+
         if (string.IsNullOrWhiteSpace(node.Name.Value))
         {
             errors.Add(WorkflowErrors.Node(flowName, "(未命名)", "节点名不能为空。"));
@@ -142,6 +152,7 @@ static class WorkflowRules
                 errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {model.Value} 不存在。"));
             }
 
+            CheckExpansion(node, flowName, errors);
             ValidateSplit(node, flowName, errors);
         }
         else if (node.Use is null)
@@ -228,14 +239,120 @@ static class WorkflowRules
         }
     }
 
+    /// <summary>AnyOf 与 Validate 的组合约束：两个能力都要求整节点执行，且不与 From、纯静态拆分叠用。</summary>
+    private static void CheckExpansion(Flow.NodeSpec node, string flowName, List<Error> errors)
+    {
+        Flow.ExecutableSpec execution = node.Execution!;
+        if (execution.Validate is not null)
+        {
+            if (execution.Mode == Flow.NodeMode.PerItem)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "声明 Validate 的执行节点不能按条目展开，必须是整节点执行。"));
+            }
+
+            if (execution.IsStaticSplit)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持 Validate。"));
+            }
+        }
+
+        if (execution.AnyOf.Count == 0)
+        {
+            return;
+        }
+
+        if (execution.Mode == Flow.NodeMode.PerItem)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "声明 AnyOf 的执行节点不能按条目展开，必须是整节点执行。"));
+        }
+
+        if (execution.IsStaticSplit)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持 AnyOf。"));
+        }
+
+        // 组间判定以成员顺序为准：任两组完全相同视为重复，组内与组间成员允许重复
+        if (execution.AnyOf.Any(group => group.Count == 0))
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "AnyOf 组不能为空。"));
+        }
+
+        bool duplicated = false;
+        for (int i = 0; i < execution.AnyOf.Count && !duplicated; i++)
+        {
+            for (int j = i + 1; j < execution.AnyOf.Count; j++)
+            {
+                if (execution.AnyOf[i].SequenceEqual(execution.AnyOf[j]))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "AnyOf 各组必须整体不同。"));
+                    duplicated = true;
+                    break;
+                }
+            }
+        }
+
+        // 来源与 From 不得重叠，组内与跨组重复不影响判定
+        IReadOnlyList<Flow.NodeName> anySources = [.. execution.AnyOf.SelectMany(group => group).Distinct()];
+        foreach (Flow.NodeName source in node.From.Where(anySources.Contains))
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"节点 {source} 不能同时出现在 From 与 AnyOf。"));
+        }
+    }
+
+    /// <summary>输出校验的取值边界：参数必要性、正则合法性。</summary>
+    private static void CheckValidation(Flow.NodeSpec node, string flowName, List<Error> errors)
+    {
+        Flow.OutputValidation? validation = node.Execution?.Validate;
+        if (validation is null)
+        {
+            return;
+        }
+
+        switch (validation.Predicate)
+        {
+            case Flow.ValidationPredicate.NonEmpty:
+                if (validation.Argument is not null)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "NonEmpty 校验不接受参数。"));
+                }
+
+                break;
+
+            case Flow.ValidationPredicate.Pattern:
+                if (string.IsNullOrEmpty(validation.Argument))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "Pattern 校验需要正则参数。"));
+                }
+                else
+                {
+                    try
+                    {
+                        _ = new System.Text.RegularExpressions.Regex(
+                            validation.Argument, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
+                    }
+                    catch (System.Text.RegularExpressions.RegexParseException)
+                    {
+                        errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"Pattern 校验的正则不合法：{validation.Argument}。"));
+                    }
+                }
+
+                break;
+
+            default:
+                if (string.IsNullOrEmpty(validation.Argument))
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"{validation.Predicate} 校验需要指定文本参数。"));
+                }
+
+                break;
+        }
+    }
+
     /// <summary>展平后的图规则：边组合、分支归属与拆分条目。执行直接按边推进。</summary>
     private static void CheckShape(NodeGraph graph, string flowName, List<Error> errors)
     {
-        if (!IsAcyclic(graph))
-        {
-            errors.Add(WorkflowErrors.Body(flowName, "流程引用关系存在环，请检查 From。"));
-            return;
-        }
+        CheckLoops(graph, flowName, errors);
+        CheckAlignment(graph, flowName, errors);
 
         foreach (FlowEdge edge in graph.Edges)
         {
@@ -320,9 +437,127 @@ static class WorkflowRules
         }
     }
 
-    /// <summary>拓扑排序判定无环。容器来源边按成员展开成执行依赖，执行按边推进，环会让激活永远等不到齐备。
-    /// 成员直接或间接依赖自身所在容器链，展开后就成为自环或容器间交叉环，一并在此拒绝。</summary>
-    private static bool IsAcyclic(NodeGraph graph)
+    /// <summary>引用环的启动不变量：每个环都必须有环外来源，否则环内节点永远等不到输入齐备，任务无法推进。
+    /// 只做一次强连通检查，不产生环对象。整节点依赖构成的迭代环若可从外部启动则合法。</summary>
+    private static void CheckLoops(NodeGraph graph, string flowName, List<Error> errors)
+    {
+        int count = graph.TotalExecutables;
+        int[] global = [.. graph.ExecutableNodes.Select(executable => executable.Index)];
+        var rank = new Dictionary<int, int>();
+        for (int i = 0; i < global.Length; i++)
+        {
+            rank[global[i]] = i;
+        }
+
+        var adjacent = new List<List<int>>(count);
+        for (int i = 0; i < count; i++)
+        {
+            adjacent.Add([]);
+        }
+
+        foreach (FlowEdge edge in graph.Edges)
+        {
+            // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动即死的环
+            if (graph[edge.From] is ContainerNode container
+                && graph.ExecutablesIn(container.Index).Contains(edge.To))
+            {
+                errors.Add(WorkflowErrors.Node(flowName, graph[edge.To].Name.Value,
+                    "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"));
+            }
+
+            foreach (int source in graph.ExecutablesIn(edge.From))
+            {
+                adjacent[rank[source]].Add(rank[edge.To]);
+            }
+        }
+
+        var components = new List<List<int>>();
+        var index = new int[count];
+        var low = new int[count];
+        Array.Fill(index, -1);
+        var stack = new Stack<int>();
+        var onStack = new bool[count];
+        int next = 0;
+        for (int start = 0; start < count; start++)
+        {
+            if (index[start] == -1)
+            {
+                Tarjan(start, adjacent, index, low, ref next, stack, onStack, components);
+            }
+        }
+
+        foreach (List<int> component in components)
+        {
+            bool selfLoop = component.Any(member => adjacent[member].Contains(member));
+            if (component.Count < 2 && !selfLoop)
+            {
+                continue;
+            }
+
+            bool externalEntry = component.Any(member =>
+                graph.Incoming(global[member]).Any(edge =>
+                    graph.ExecutablesIn(edge.From).Any(source => !component.Contains(rank[source]))));
+            if (!externalEntry)
+            {
+                ExecutableNode representative = (ExecutableNode)graph[global[component[0]]];
+                errors.Add(WorkflowErrors.Node(flowName, representative.Name.Value, "引用环没有环外来源，任务无法启动。"));
+            }
+        }
+    }
+
+    /// <summary>递归式 Tarjan 求强连通分量，图小型，递归深度受节点数限制。</summary>
+    private static void Tarjan(
+        int node,
+        List<List<int>> adjacent,
+        int[] index,
+        int[] low,
+        ref int next,
+        Stack<int> stack,
+        bool[] onStack,
+        List<List<int>> components)
+    {
+        index[node] = next;
+        low[node] = next;
+        next++;
+        stack.Push(node);
+        onStack[node] = true;
+
+        foreach (int successor in adjacent[node])
+        {
+            if (index[successor] == -1)
+            {
+                Tarjan(successor, adjacent, index, low, ref next, stack, onStack, components);
+                low[node] = Math.Min(low[node], low[successor]);
+            }
+            else if (onStack[successor])
+            {
+                low[node] = Math.Min(low[node], index[successor]);
+            }
+        }
+
+        if (low[node] != index[node])
+        {
+            return;
+        }
+
+        List<int> component = [];
+        while (true)
+        {
+            int member = stack.Pop();
+            onStack[member] = false;
+            component.Add(member);
+            if (member == node)
+            {
+                break;
+            }
+        }
+
+        components.Add(component);
+    }
+
+    /// <summary>逐条对齐的引用必须无环：按条目展开的实例空间沿对齐边递推，环里的对齐会让它递归不止。
+    /// 整节点依赖构成的环由运行时自然迭代，不在此拒绝。</summary>
+    private static void CheckAlignment(NodeGraph graph, string flowName, List<Error> errors)
     {
         var indegree = new Dictionary<int, int>();
         var outgoing = new Dictionary<int, List<int>>();
@@ -332,7 +567,7 @@ static class WorkflowRules
             outgoing[index] = [];
         }
 
-        foreach (FlowEdge edge in graph.Edges)
+        foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Feed is EdgeFeed.Items or EdgeFeed.Aligned))
         {
             foreach (int source in graph.ExecutablesIn(edge.From))
             {
@@ -355,7 +590,10 @@ static class WorkflowRules
             }
         }
 
-        return visited == graph.ExecutableNodes.Count;
+        if (visited < graph.ExecutableNodes.Count)
+        {
+            errors.Add(WorkflowErrors.Body(flowName, "逐条对齐的引用关系存在环，请检查 From。"));
+        }
     }
 
     /// <summary>一组流程里重复的流程名，没有时为空。</summary>

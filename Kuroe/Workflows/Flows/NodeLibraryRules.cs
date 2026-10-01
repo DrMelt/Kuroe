@@ -223,6 +223,18 @@ internal static class NodeLibraryRules
                     IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"From 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
             }
         }
+
+        foreach (Flow.NodeName from in (member.Execution?.AnyOf.SelectMany(group => group) ?? []).Distinct())
+        {
+            bool inScope = !IsPort(from)
+                ? subtreeNames.Contains(from)
+                : ports.Contains(new Flow.NodeName(PortName(from)));
+            if (!inScope)
+            {
+                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value,
+                    IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"AnyOf 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
+            }
+        }
     }
 
     /// <summary>节点组内成员的模型来源：执行成员写模型槽位名，组内节点的模型从引用处绑定输入，不设全局模型引用。

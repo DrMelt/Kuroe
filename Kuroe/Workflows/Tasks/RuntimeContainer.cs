@@ -16,6 +16,10 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>成员产出曾齐备过，广播只发一次，作废复位后重新广播。</summary>
     public bool Produced => _produced;
 
+    /// <summary>齐备代数：从非齐备到齐备每推进一次递增，是容器作来源时的新语义版本账。</summary>
+    public override long Version => _generation;
+    private int _generation;
+
     /// <summary>产出已放行、可被下游消费：容器自身不停批不取消，且直接成员与子容器都放行。</summary>
     public override bool Released =>
         !_awaiting && !_canceled
@@ -28,8 +32,17 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>成员产出齐备的刷新落点，首次触发时置位。</summary>
-    public void MarkProduced() => _produced = true;
+    /// <summary>成员产出齐备的刷新落点，首次触发时置位并推进齐备代数。</summary>
+    public void MarkProduced()
+    {
+        if (_produced)
+        {
+            return;
+        }
+
+        _produced = true;
+        _generation++;
+    }
 
     /// <summary>成员作废使产出不再齐备时复位。</summary>
     public void ResetProduced() => _produced = false;

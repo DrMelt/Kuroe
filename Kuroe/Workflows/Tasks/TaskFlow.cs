@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
@@ -33,6 +34,17 @@ internal sealed class TaskFlow
         }
 
         _nodes = nodes;
+
+        // 声明 AnyOf 的节点用提供器语义装配输入
+        foreach (RuntimeExecutable executable in nodes.OfType<RuntimeExecutable>())
+        {
+            if (executable.Executable.AnyOf.Count == 0)
+            {
+                continue;
+            }
+
+            executable.Bind(NodeInput.Build(task, executable, index => nodes[index]));
+        }
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
@@ -127,12 +139,18 @@ internal sealed class TaskFlow
     private bool ItemSatisfied(RuntimeExecutable node, int? item) =>
         Graph.Incoming(node.Index).All(edge => FeedSatisfied(edge, item));
 
-    /// <summary>执行节点是否还有待启动的实例。Single 执行节点一次执行，PerItem 执行节点按实例逐步启动。</summary>
+    /// <summary>执行节点是否还有待启动的实例。Single 执行节点一次执行，PerItem 执行节点按实例逐步启动。
+    /// 提供器语义的节点随来源新版本可整节点重启。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
         if (node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
         {
             return false;
+        }
+
+        if (node.Input is not null)
+        {
+            return node.Input.Ready || node.RerunRequested;
         }
 
         if (node.Mode != NodeMode.PerItem)
@@ -146,7 +164,15 @@ internal sealed class TaskFlow
     public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
         List<RunStarter> starters = [];
-        if (node.Mode == NodeMode.PerItem)
+        if (node.Input is not null)
+        {
+            if (node.Input.Ready || node.RerunRequested)
+            {
+                node.RecordExecution(null);
+                starters.Add(new RunStarter(null));
+            }
+        }
+        else if (node.Mode == NodeMode.PerItem)
         {
             foreach (int item in ResolveItems(node).Where(item => !node.Complete(item) && ItemSatisfied(node, item)))
             {
@@ -164,6 +190,8 @@ internal sealed class TaskFlow
         {
             node.AddActive(starters.Count);
             node.ClearAwaiting();
+            node.ClearRerun();
+            node.Input?.Consume();
         }
 
         return starters;
@@ -180,6 +208,12 @@ internal sealed class TaskFlow
     /// <summary>作废实例或整节点的已发表产出并刷新祖先容器，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
     private void InvalidateNode(RuntimeExecutable node, int? item)
     {
+        // 提供器语义的节点没有“未完成”这一状态可回退，作废即记下一次强制重启
+        if (node.Input is not null)
+        {
+            node.RequestRerun();
+        }
+
         node.Invalidate(item);
         RefreshContainers(node.Index);
     }
@@ -311,10 +345,57 @@ internal sealed class TaskFlow
             return new SettlePlan([], []);
         }
 
+        // 输出校验不通过即不发布，节点停驻等返工
+        if (!PassesValidation(executable.Validate, run.Result))
+        {
+            node.EnterBlocked([(node.Index, item)]);
+            return new SettlePlan([], []);
+        }
+
         // 拆分已由回执写入 _splits，其余产出直接发布
         Publish(node, item);
 
         return Settled(node, node.Park(), Downstream(node));
+    }
+
+    /// <summary>输出校验判定：不改动任何状态，只给出模型产出是否合格。空产出只有 NonEmpty 判定接受。</summary>
+    private static bool PassesValidation(OutputValidation? validation, string? result)
+    {
+        if (validation is null)
+        {
+            return true;
+        }
+
+        return validation.Predicate switch
+        {
+            ValidationPredicate.NonEmpty => result is { Length: > 0 },
+            ValidationPredicate.TextContains => Contains(result, validation.Argument),
+            ValidationPredicate.TextNot => result is { Length: > 0 } && !Contains(result, validation.Argument),
+            ValidationPredicate.TextEquals => string.Equals(result, validation.Argument, StringComparison.Ordinal),
+            ValidationPredicate.Pattern => Matches(result, validation.Argument),
+            _ => true,
+        };
+    }
+
+    private static bool Contains(string? text, string? needle) =>
+        needle is { Length: > 0 } && text is not null && text.Contains(needle, StringComparison.Ordinal);
+
+    /// <summary>正则匹配：产物为空或匹配超时一律视为不通过。</summary>
+    private static bool Matches(string? text, string? pattern)
+    {
+        if (text is null || string.IsNullOrEmpty(pattern))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Regex.IsMatch(text, pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return false;
+        }
     }
 
     /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>

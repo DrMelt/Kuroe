@@ -16,6 +16,8 @@ public sealed record ExecutableNode(
     NodeMode Mode,
     BranchName? Branch,
     IReadOnlyList<int> From,
+    IReadOnlyList<IReadOnlyList<int>> AnyOf,
+    OutputValidation? Validate,
     SplitConfig? Split) : GraphNode(Index, Name, Path, Gate)
 {
     /// <summary>拆分只有固定条目，模型不参与补充。</summary>

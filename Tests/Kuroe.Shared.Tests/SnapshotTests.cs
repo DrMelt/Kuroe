@@ -98,7 +98,7 @@ public sealed class SnapshotTests
         });
 
     private static readonly NodeGraph Graph = new([
-        new ExecutableNode(0, new NodeName("制定计划"), "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], null),
-        new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], null),
+        new ExecutableNode(0, new NodeName("制定计划"), "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], [], null, null),
+        new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], [], null, null),
     ], []);
 }

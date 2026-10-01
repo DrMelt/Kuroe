@@ -126,6 +126,70 @@ public sealed class NodeLibraryTests
         Assert.Equal([new NodeName("制定计划")], implement.From);
     }
 
+    [Fact]
+    public void Reference_executable_inherits_library_validate_and_anyof()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
+
+        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        NodeSpec reviewed = flow.RootNode.Nodes![1];
+        Assert.Equal(ValidationPredicate.TextContains, reviewed.Execution!.Validate!.Predicate);
+        Assert.Equal(new NodeName("计划"), reviewed.Execution.AnyOf.Single()[0]);
+    }
+
+    [Fact]
+    public void Reference_validate_overrides_library_definition()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ReferenceOverrideValidateFlow);
+
+        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        NodeSpec reviewed = flow.RootNode.Nodes![1];
+        Assert.Equal(ValidationPredicate.NonEmpty, reviewed.Execution!.Validate!.Predicate);
+    }
+
+    [Fact]
+    public void Reference_executable_with_inherited_validate_blocks_bad_output()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
+        harness.Executor.Output = run => run.Context.NodeIndex switch
+        {
+            1 => "计划产出",
+            _ => "修订产出不达标",
+        };
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot blocked = harness.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 2).State);
+    }
+
+    [Fact]
+    public void Reference_executable_with_inherited_anyof_releases_done()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
+        harness.Executor.Output = run => run.Context.NodeIndex switch
+        {
+            1 => "计划产出",
+            _ => "修订产出已通过",
+        };
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Single(done.Executables[1].Runs);
+    }
+
+    [Fact]
+    public void Reference_inherited_anyof_conflicts_with_injected_from()
+    {
+        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(ReferenceAnyOfFromConflictFlow);
+
+        Assert.True(harness.IsError);
+        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains("不能同时出现在 From 与 AnyOf"));
+    }
+
     [Theory]
     [InlineData(LibraryDuplicateName, "节点名重复")]
     [InlineData(LibraryReferenceAtRoot, "节点库定义不能是引用")]
@@ -149,6 +213,10 @@ public sealed class NodeLibraryTests
     [InlineData(MissingModelBinding, "没有外部绑定")]
     [InlineData(ContainerReferenceWithModel, "引用节点组不能声明模型")]
     [InlineData(LeafReferenceWithModelBindings, "引用执行节点不能声明模型绑定")]
+    [InlineData(GroupReferenceWithAnyOf, "引用节点组不能声明 AnyOf")]
+    [InlineData(GroupReferenceWithValidate, "引用节点组不能声明 Validate")]
+    [InlineData(MemberAnyOfOutsideScope, "AnyOf 引用的节点")]
+    [InlineData(MemberAnyOfUndeclaredPort, "没有在此容器上声明")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -537,4 +605,210 @@ public sealed class NodeLibraryTests
           ]
         }
         """;
+
+    /// <summary>库执行定义带校验与 AnyOf 组，流程引用不覆盖时展开后继承。</summary>
+    private const string ReferenceInheritFlow = """"
+        {
+          "Nodes": [
+            {
+              "Name": "审查",
+              "Mode": "Single",
+              "Validate": { "Predicate": "TextContains", "Argument": "通过" },
+              "AnyOf": [["计划"]]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "计划", "Model": "规划者", "Output": "Plan" },
+                    { "Name": "审查实例", "Use": "审查", "Model": "执行者" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+
+    /// <summary>引用侧显式声明校验时覆盖库定义。</summary>
+    private const string ReferenceOverrideValidateFlow = """"
+        {
+          "Nodes": [
+            {
+              "Name": "审查",
+              "Mode": "Single",
+              "Validate": { "Predicate": "TextContains", "Argument": "通过" }
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "计划", "Model": "规划者", "Output": "Plan" },
+                    { "Name": "审查实例", "Use": "审查", "Model": "执行者",
+                      "Validate": { "Predicate": "NonEmpty" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+
+    /// <summary>库定义继承的 AnyOf 与引用侧注入的 From 引用同一来源，按非重叠约束拒绝。</summary>
+    private const string ReferenceAnyOfFromConflictFlow = """"
+        {
+          "Nodes": [
+            {
+              "Name": "审查",
+              "Mode": "Single",
+              "AnyOf": [["计划"]]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "计划", "Model": "规划者" },
+                    { "Name": "审查实例", "Use": "审查", "Model": "执行者", "From": ["计划"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+    /// <summary>引用节点组不能带 AnyOf，起点条件组只属于执行节点。</summary>
+    private const string GroupReferenceWithAnyOf = """"
+        {
+          "Nodes": [
+            { "Name": "审查", "Mode": "Single" },
+            {
+              "Name": "组",
+              "Nodes": [ { "Name": "甲", "Use": "审查", "Model": "执行者" } ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "计划", "Model": "执行者" },
+                    { "Name": "引用组", "Use": "组", "AnyOf": [["计划"]] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+
+    /// <summary>引用节点组不能带输出校验，校验只属于执行节点。</summary>
+    private const string GroupReferenceWithValidate = """"
+        {
+          "Nodes": [
+            { "Name": "审查", "Mode": "Single" },
+            {
+              "Name": "组",
+              "Nodes": [ { "Name": "甲", "Use": "审查", "Model": "执行者" } ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "计划", "Model": "执行者" },
+                    { "Name": "引用组", "Use": "组", "Validate": { "Predicate": "NonEmpty" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+
+    /// <summary>库容器成员执行节点的 AnyOf 必须落在容器作用域内。</summary>
+    private const string MemberAnyOfOutsideScope = """"
+        {
+          "Nodes": [
+            {
+              "Name": "交付",
+              "Nodes": [
+                { "Name": "甲", "Model": "执行者", "AnyOf": [["局外"]] }
+              ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
+
+    /// <summary>库容器成员执行节点的 AnyOf 端口必须已由容器定义声明。</summary>
+    private const string MemberAnyOfUndeclaredPort = """"
+        {
+          "Nodes": [
+            {
+              "Name": "交付",
+              "Nodes": [
+                { "Name": "甲", "Model": "执行者", "AnyOf": [["@计划"]] }
+              ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """";
 }

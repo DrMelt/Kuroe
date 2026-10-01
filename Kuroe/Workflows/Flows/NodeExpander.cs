@@ -78,6 +78,16 @@ internal static class NodeExpander
                     errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
                 }
 
+                if (node.AnyOf.Count > 0)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 AnyOf，起点条件组只属于执行节点。"));
+                }
+
+                if (node.Validate is not null)
+                {
+                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
+                }
+
                 CheckBindings(node, definition, flowName, errors);
                 Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
                 List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", flowName, errors);
@@ -93,7 +103,13 @@ internal static class NodeExpander
             {
                 Name = instance,
                 Gate = definition.Gate,
-                Execution = definition.Execution,
+                Execution = definition.Execution! with
+                {
+                    AnyOf = node.AnyOf.Count > 0
+                        ? ResolveGroups(node.AnyOf, env, flowName, errors)
+                        : ResolveGroups(definition.Execution.AnyOf, env, flowName, errors),
+                    Validate = node.Validate ?? definition.Execution.Validate,
+                },
                 Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, flowName, errors),
             };
@@ -118,7 +134,11 @@ internal static class NodeExpander
         {
             Name = own,
             Gate = node.Gate,
-            Execution = node.Execution,
+            Execution = node.Execution! with
+            {
+                AnyOf = ResolveGroups(node.Execution.AnyOf, env, flowName, errors),
+                Validate = node.Execution.Validate,
+            },
             Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
             From = ResolveAll(node.From, env, flowName, errors),
         };
@@ -202,6 +222,14 @@ internal static class NodeExpander
     /// <summary>逐个解析 From 引用：普通名沿映射链找实例名，@端口沿绑定链找绑定。</summary>
     private static IReadOnlyList<Flow.NodeName> ResolveAll(IReadOnlyList<Flow.NodeName> from, Env? env, string flowName, List<Error> errors) =>
         [.. from.Select(name => Resolve(name, env, flowName, errors))];
+
+    /// <summary>逐个解析 AnyOf 组：每组内的引用名沿作用域解析，规则同 From。</summary>
+    private static IReadOnlyList<IReadOnlyList<Flow.NodeName>> ResolveGroups(
+        IReadOnlyList<IReadOnlyList<Flow.NodeName>> groups,
+        Env? env,
+        string flowName,
+        List<Error> errors) =>
+        [.. groups.Select(group => ResolveAll(group, env, flowName, errors))];
 
     /// <summary>解析一个引用名：@端口沿环境链找绑定，普通名沿环境链找实例映射。
     /// 都没有则保留原名交既有校验判断。</summary>

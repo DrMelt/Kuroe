@@ -14,7 +14,7 @@ public sealed class WorkflowValidationTests
     [InlineData(ScopeViolation, "From 引用的节点 不存在 不在流程里")]
     [InlineData(FanOutBeforePlan, "按条目展开的执行节点必须从规划执行节点或其它展开执行节点取输入")]
     [InlineData(ExpansionWithoutPlan, "按条目展开的执行节点只能从规划执行节点取拆分")]
-    [InlineData(CyclicReference, "流程引用关系存在环")]
+    [InlineData(CyclicReference, "没有环外来源")]
     [InlineData(ParallelBranchNotPerItem, "声明分支 撰写 的执行节点必须按条目展开并从规划执行节点取拆分")]
     [InlineData(DuplicateNodeName, "节点名重复")]
     [InlineData(DuplicateModelName, "模型配置名重复")]
@@ -34,9 +34,9 @@ public sealed class WorkflowValidationTests
     [InlineData(SplitParallelBranch, "没有对应的分支执行节点")]
     [InlineData(ContainerModeRejected, "容器不支持 Mode")]
     [InlineData(AlignedAcrossSpaces, "逐条对齐的两端必须来自同一个拆分")]
-    [InlineData(SelfReferenceContainer, "流程引用关系存在环")]
-    [InlineData(PartialSelfReferenceContainer, "流程引用关系存在环")]
-    [InlineData(CrossContainerReference, "流程引用关系存在环")]
+    [InlineData(SelfReferenceContainer, "不能从自身所在容器")]
+    [InlineData(PartialSelfReferenceContainer, "不能从自身所在容器")]
+    [InlineData(CrossContainerReference, "没有环外来源")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);

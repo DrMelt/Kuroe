@@ -26,6 +26,9 @@ internal abstract class RuntimeNode(GraphNode node)
     /// <summary>产出已放行、可被下游消费：执行节点按自身发布与停驻，容器递归成员与子容器。</summary>
     public abstract bool Released { get; }
 
+    /// <summary>整节点的产出版本：执行节点给发表号，容器给齐备代数。版本是新语义提供器的消费账依据。</summary>
+    public abstract long Version { get; }
+
     /// <summary>产出停在等人批准。</summary>
     public abstract bool Awaiting { get; }
 
@@ -45,6 +48,12 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
+
+    /// <summary>输入侧提供器，声明 AnyOf 的节点装配，其余节点为空走原有判定。</summary>
+    public NodeInput? Input { get; private set; }
+
+    /// <summary>绑定输入提供器。</summary>
+    public void Bind(NodeInput input) => Input = input;
 
     /// <summary>执行节点的产出契约，决定收口方式与契约工具。</summary>
     public NodeOutput Output => Executable.Output;
@@ -70,6 +79,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     private bool _awaiting;
     private bool _blocked;
     private bool _canceled;
+    private bool _rerunRequested;
 
     public override bool Awaiting => _awaiting;
 
@@ -78,12 +88,25 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     public override bool Canceled => _canceled;
 
+    /// <summary>被作废的重跑目标：下一次启动判定越过提供器的就绪条件直接重启一次。</summary>
+    public bool RerunRequested => _rerunRequested;
+
+    /// <summary>记下重跑请求，供返工作废后的重启判定使用。</summary>
+    public void RequestRerun() => _rerunRequested = true;
+
+    /// <summary>重跑请求已消耗。</summary>
+    public void ClearRerun() => _rerunRequested = false;
+
     /// <summary>产出已放行、可被下游消费：产出已发布且不在等待、阻塞与取消。PerItem 要求全部实例已发布。</summary>
     public override bool Released =>
         (Mode == NodeMode.PerItem
             ? Expanded && Items.All(item => _itemRev.ContainsKey(item))
             : Rev > 0)
         && !Awaiting && !Blocked && !Canceled;
+
+    /// <summary>单调的发布计数，作废归零发表号但不清计数。新语义提供器按它记账，重跑后版本不回退。</summary>
+    public override long Version => _stamp;
+    private long _stamp;
 
     /// <summary>整节点的执行次数，首次启动为 1。</summary>
     public int WholeExecutions { get; private set; }
@@ -115,7 +138,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>实例或整节点是否已有发表产出。</summary>
     public bool Complete(int? item) => item is { } index ? _itemRev.ContainsKey(index) : Rev > 0;
 
-    /// <summary>实例或整节点产出的发表：发表号递增，下游据此重新评估。</summary>
+    /// <summary>实例或整节点产出的发表：发表号递增，单调计数同步推进，下游据此重新评估。</summary>
     public void Publish(int? item)
     {
         if (item is { } index)
@@ -126,6 +149,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         {
             Rev++;
         }
+
+        _stamp++;
     }
 
     /// <summary>作废实例或整节点的已发表产出，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>

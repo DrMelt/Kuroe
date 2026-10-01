@@ -22,6 +22,12 @@ public sealed record NodeSpec
     /// <summary>上下文取自哪些更早节点的产出。执行节点定义上禁止声明，引用处注入。</summary>
     public IReadOnlyList<NodeName> From { get; init; } = [];
 
+    /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动。组内成员并取；组内与组间允许重复引用，任两组按成员顺序不得完全相同。</summary>
+    public IReadOnlyList<IReadOnlyList<NodeName>> AnyOf { get; init; } = [];
+
+    /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
+    public OutputValidation? Validate { get; init; }
+
     /// <summary>有序子节点，非空即容器。容器自身不执行，成员产出齐备时作汇合点。</summary>
     public IReadOnlyList<NodeSpec>? Nodes { get; init; }
 

@@ -48,6 +48,12 @@ internal sealed class NodeDto
     /// <summary>上下文取自哪些更早节点的产出，引用规则由 WorkflowRules 校验。</summary>
     public List<string>? From { get; set; }
 
+    /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动，组内成员并取。组间任一。</summary>
+    public List<List<string>>? AnyOf { get; set; }
+
+    /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
+    public ValidationDto? Validate { get; set; }
+
     /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
     public List<string>? Inputs { get; set; }
 
@@ -101,4 +107,14 @@ internal sealed class SplitItemDto
     public string? Acceptance { get; set; }
 
     public string? Branch { get; set; }
+}
+
+/// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>
+internal sealed class ValidationDto
+{
+    /// <summary>谓词名，读取时按枚举解析。</summary>
+    public string? Predicate { get; set; }
+
+    /// <summary>谓词参数：指定文本或正则，NonEmpty 不需要。</summary>
+    public string? Argument { get; set; }
 }

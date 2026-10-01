@@ -4,6 +4,7 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，From 引用编译为带消费方式的边。
+/// 声明 AnyOf 的执行节点按来源各生成一条单份边，组内与组间重复来源不重复建边。
 /// 要求已通过 WorkflowRules 校验，模型配置引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
@@ -33,6 +34,12 @@ internal static class FlowCompiler
             foreach (int from in executable.From)
             {
                 edges.Add(new FlowEdge(from, executable.Index, EdgeFeedRules.Of(nodes[from], executable.Mode)));
+            }
+
+            // AnyOf 组的成员按来源各接一条单份产出边，组内与组间重复来源不重复建边
+            foreach (int from in executable.AnyOf.SelectMany(group => group).Distinct())
+            {
+                edges.Add(new FlowEdge(from, executable.Index, EdgeFeed.Single));
             }
         }
 
@@ -120,5 +127,7 @@ internal static class FlowCompiler
         execution.Mode,
         execution.Branch,
         [.. node.From.Select(name => order[name])],
+        [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
+        execution.Validate,
         execution.Split);
 }
