@@ -2,10 +2,10 @@ using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>一个执行节点对一条入边的提供器：持有已消费版本账，负责就绪判定与消费登记。
+/// <summary>一个执行节点对一条入边的消费账本：持有已消费版本账，负责就绪判定与消费登记。
 /// 使用它的执行节点必须是整节点执行，入边只可能是 <see cref="EdgeFeed.Single"/> 或 <see cref="EdgeFeed.AllInstances"/>。
 /// 读写要求持有任务 Gate。</summary>
-internal sealed class FeedProvider(RuntimeNode source, EdgeFeed feed)
+internal sealed class FeedLedger(RuntimeNode source, EdgeFeed feed)
 {
     private readonly RuntimeNode _source = source;
     private readonly EdgeFeed _feed = feed;

@@ -13,12 +13,12 @@ namespace Kuroe.Workflows.Tasks;
 
 /// <summary>按图驱动的执行推进：激活、发布、返工与会合。节点状态在运行时节点对象上，这里是图算法面。
 /// 容器随成员推进刷新齐备与门控。所有方法都要求调用者持有所属任务的 Gate。</summary>
-internal sealed class TaskFlow
+internal sealed class TaskRuntime
 {
     private readonly WorkTask _task;
     private readonly RuntimeNode[] _nodes;
 
-    internal TaskFlow(WorkTask task)
+    internal TaskRuntime(WorkTask task)
     {
         _task = task;
         var nodes = new RuntimeNode[task.Graph.Nodes.Count];
@@ -35,7 +35,7 @@ internal sealed class TaskFlow
 
         _nodes = nodes;
 
-        // 声明 AnyOf 的节点用提供器语义装配输入
+        // 声明 AnyOf 的节点用账本语义装配输入
         foreach (RuntimeExecutable executable in nodes.OfType<RuntimeExecutable>())
         {
             if (executable.Executable.AnyOf.Count == 0)
@@ -140,7 +140,7 @@ internal sealed class TaskFlow
         Graph.Incoming(node.Index).All(edge => FeedSatisfied(edge, item));
 
     /// <summary>执行节点是否还有待启动的实例。Single 执行节点一次执行，PerItem 执行节点按实例逐步启动。
-    /// 提供器语义的节点随来源新版本可整节点重启。</summary>
+    /// 账本语义的节点随来源新版本可整节点重启。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
         if (node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
@@ -168,7 +168,6 @@ internal sealed class TaskFlow
         {
             if (node.Input.Ready || node.RerunRequested)
             {
-                node.RecordExecution(null);
                 starters.Add(new RunStarter(null));
             }
         }
@@ -176,13 +175,11 @@ internal sealed class TaskFlow
         {
             foreach (int item in ResolveItems(node).Where(item => !node.Complete(item) && ItemSatisfied(node, item)))
             {
-                node.RecordExecution(item);
                 starters.Add(new RunStarter(item));
             }
         }
         else if (!node.Complete(null) && ItemSatisfied(node, null))
         {
-            node.RecordExecution(null);
             starters.Add(new RunStarter(null));
         }
 
@@ -208,7 +205,7 @@ internal sealed class TaskFlow
     /// <summary>作废实例或整节点的已发表产出并刷新祖先容器，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
     private void InvalidateNode(RuntimeExecutable node, int? item)
     {
-        // 提供器语义的节点没有“未完成”这一状态可回退，作废即记下一次强制重启
+        // 账本语义的节点没有“未完成”这一状态可回退，作废即记下一次强制重启
         if (node.Input is not null)
         {
             node.RequestRerun();
@@ -319,6 +316,7 @@ internal sealed class TaskFlow
             node.Cancel();
         }
     }
+
     // ---- run 收口 ----
 
     /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>

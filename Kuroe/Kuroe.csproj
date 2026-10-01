@@ -28,4 +28,8 @@
     <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kuroe.Tests" />
+  </ItemGroup>
+
 </Project>

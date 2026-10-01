@@ -3,7 +3,7 @@ using Kuroe.Shared.Workflows.Graph;
 namespace Kuroe.Workflows.Tasks;
 
 /// <summary>一个容器在任务内的运行时对象：容器定义与容器门控状态。容器不执行、不派 run，
-/// 放行与门控由 TaskFlow 随成员推进刷新。读写都要求持有任务 Gate。</summary>
+/// 放行与门控由 TaskRuntime 随成员推进刷新。读写都要求持有任务 Gate。</summary>
 internal sealed class RuntimeContainer(ContainerNode container, Func<int, RuntimeNode> resolve) : RuntimeNode(container)
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>

@@ -41,10 +41,10 @@ internal sealed partial class NodeExecutor(
 
         WorkTask task = found.Value;
         List<int> notify = [];
-        List<TaskFlow.RunStarter> starters = [];
+        List<TaskRuntime.RunStarter> starters = [];
         lock (task.Gate)
         {
-            TaskFlow.EvaluateResult result = task.Runtime.Evaluate(node);
+            TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             starters.AddRange(result.Starters);
         }
@@ -79,7 +79,7 @@ internal sealed partial class NodeExecutor(
     }
 
     /// <summary>为一个实例装配、派发并等待收口，再按收口计划通知下游或重派返工实例。</summary>
-    private async ValueTask DispatchAndSettleAsync(WorkTask task, TaskFlow.RunStarter starter, IWorkflowContext context, CancellationToken cancellationToken)
+    private async ValueTask DispatchAndSettleAsync(WorkTask task, TaskRuntime.RunStarter starter, IWorkflowContext context, CancellationToken cancellationToken)
     {
         ExecutableNode executable = node.Executable;
         Run? run;
@@ -101,7 +101,7 @@ internal sealed partial class NodeExecutor(
                 return;
             }
 
-            run = registry.NewRun(ContextComposer.ForExecutable(task, node, starter.Item, model.Value));
+            run = registry.NewRun(RunContextFactory.Create(task, node, starter.Item, model.Value));
             task.Attach(run);
         }
         if (run is null)
@@ -118,7 +118,7 @@ internal sealed partial class NodeExecutor(
             // 取消已由调度侧收口为取消状态，这里退出后按状态处理
         }
 
-        TaskFlow.SettlePlan plan;
+        TaskRuntime.SettlePlan plan;
         lock (task.Gate)
         {
             node.ReleaseActive();

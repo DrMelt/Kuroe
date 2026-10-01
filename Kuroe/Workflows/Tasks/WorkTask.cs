@@ -35,7 +35,7 @@ public sealed class WorkTask
         Graph = graph;
         Session = session;
         Journal = new TurnJournal();
-        Runtime = new TaskFlow(this);
+        Runtime = new TaskRuntime(this);
         _lastActivityAt = DateTimeOffset.UtcNow;
         _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : title;
     }
@@ -61,7 +61,7 @@ public sealed class WorkTask
     internal Lock Gate { get; } = new();
 
     /// <summary>图驱动的执行状态，执行节点就地决定激活与发布。</summary>
-    internal TaskFlow Runtime { get; }
+    internal TaskRuntime Runtime { get; }
 
     /// <summary>任务标题，未给出时取目标首行。</summary>
     public string Title
@@ -147,10 +147,11 @@ public sealed class WorkTask
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>记下一个派出的 run 与它的执行回合。要求持有 <see cref="Gate"/>。</summary>
+    /// <summary>记下一个派出的 run 与它的执行回合，顺带在所属节点记账。要求持有 <see cref="Gate"/>。</summary>
     internal void Attach(Run run)
     {
         _runs.Add(run);
+        Runtime.Executable(run.Context.NodeIndex).RecordRun(run.Context.ItemIndex);
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
 

@@ -12,7 +12,7 @@ namespace Kuroe.Workflows.Tasks;
 
 /// <summary>为执行节点装配上下文。派出的执行只用这里给出的内容，装配规则集中在一处。
 /// 每条依赖边按它的消费方式取值：单份产出、拆分条目、全部实例或按条目对齐。</summary>
-public static class ContextComposer
+public static class RunContextFactory
 {
     /// <summary>单条种子文本的上限。</summary>
     private const int TextLimit = 2000;
@@ -21,13 +21,13 @@ public static class ContextComposer
     private const int DialogueLimit = 6;
 
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
-    internal static RunContext ForExecutable(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
+    internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
     {
         List<ContextMessage> seed = [];
         AppendDialogue(task, seed);
         foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
-            AppendSource(task, edge, itemIndex, seed);
+            AppendUpstreamOutput(task, edge, itemIndex, seed);
         }
 
         PlanItem? item = ItemOf(task, node, itemIndex);
@@ -35,11 +35,11 @@ public static class ContextComposer
         {
             string branch = item.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
             seed.Add(new ContextMessage(MessageRole.User,
-                Limit($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
+                Truncate($"本条目：{item.Title}\n要做：{item.Instruction}\n验收标准：{item.Acceptance}{branch}"),
                 new ItemSource(OriginOf(task, node), item.Index, item.Title)));
         }
 
-        int count = node.ExecutionCount(itemIndex);
+        int count = node.ExecutionCount(itemIndex) + 1;
 
         return new RunContext
         {
@@ -47,17 +47,17 @@ public static class ContextComposer
             Output = node.Output,
             NodeIndex = node.Index,
             NodeName = node.Name,
-            Instruction = Instruction(task, node, item, count),
+            Instruction = BuildInstruction(task, node, item, count),
             Model = model,
             ItemIndex = itemIndex,
             ExecutionCount = count,
-            Tools = ToolsOf(node.Executable),
+            Tools = ToolsFor(node.Executable),
             Seed = seed,
         };
     }
 
     /// <summary>按一条依赖边的消费方式追加上游产出。整份、整集与容器来源走同一个放行产出取数。</summary>
-    private static void AppendSource(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
+    private static void AppendUpstreamOutput(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
         if (edge.Feed == EdgeFeed.Aligned)
         {
@@ -75,7 +75,7 @@ public static class ContextComposer
         }
     }
     /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
-    private static Run? LatestSucceeded(WorkTask task, int node, int? item) =>
+    private static Run? LatestSucceededRun(WorkTask task, int node, int? item) =>
         task.Runs.LastOrDefault(run =>
             run.Context.NodeIndex == node
             && run.Context.ItemIndex == item
@@ -85,7 +85,7 @@ public static class ContextComposer
     /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。</summary>
     private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, List<ContextMessage> seed)
     {
-        if (LatestSucceeded(task, fromIndex, item) is not { } run)
+        if (LatestSucceededRun(task, fromIndex, item) is not { } run)
         {
             return;
         }
@@ -94,7 +94,7 @@ public static class ContextComposer
         string prefix = item is { } index
             ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
             : $"节点「{name}」的产出：\n";
-        seed.Add(new ContextMessage(MessageRole.User, Limit($"{prefix}{run.Result}"),
+        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{run.Result}"),
             new RunSource(run.Id, name)));
     }
 
@@ -108,11 +108,11 @@ public static class ContextComposer
             switch (entry)
             {
                 case PromptEntry prompt:
-                    history.Add(new ContextMessage(MessageRole.User, Limit(prompt.Text), new DialogueSource(task.Id, ++turn)));
+                    history.Add(new ContextMessage(MessageRole.User, Truncate(prompt.Text), new DialogueSource(task.Id, ++turn)));
                     break;
 
                 case TextEntry text when turn > 0:
-                    history.Add(new ContextMessage(MessageRole.Assistant, Limit(text.Text), new DialogueSource(task.Id, turn)));
+                    history.Add(new ContextMessage(MessageRole.Assistant, Truncate(text.Text), new DialogueSource(task.Id, turn)));
                     break;
             }
         }
@@ -137,7 +137,7 @@ public static class ContextComposer
     private static RunId OriginOf(WorkTask task, RuntimeExecutable node)
     {
         if (task.Graph.ItemSource(node.Index) is { } plan
-            && LatestSucceeded(task, plan, null) is { } planRun)
+            && LatestSucceededRun(task, plan, null) is { } planRun)
         {
             return planRun.Id;
         }
@@ -157,7 +157,7 @@ public static class ContextComposer
             : $"条目 {itemIndex + 1}";
 
     /// <summary>指令正文：节点要求、目标与第几轮。</summary>
-    private static string Instruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
+    private static string BuildInstruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
     {
         List<string> lines = [];
         if (node.Executable.Prompt is { Length: > 0 } prompt)
@@ -234,7 +234,7 @@ public static class ContextComposer
     }
 
     /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
-    private static List<ToolName> ToolsOf(ExecutableNode node)
+    private static List<ToolName> ToolsFor(ExecutableNode node)
     {
         List<ToolName> names = [.. node.Tools];
         if (node.Output == NodeOutput.Plan)
@@ -245,6 +245,6 @@ public static class ContextComposer
         return names;
     }
 
-    private static string Limit(string text) =>
+    private static string Truncate(string text) =>
         text.Length <= TextLimit ? text : string.Concat(text.AsSpan(0, TextLimit), "…");
 }
