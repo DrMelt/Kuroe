@@ -33,6 +33,12 @@ public sealed class WorkflowValidationTests
     [InlineData(SplitStaticFrom, "纯静态拆分节点不支持 From")]
     [InlineData(SplitParallelBranch, "没有对应的分支执行节点")]
     [InlineData(ContainerModeRejected, "容器不支持 Mode")]
+    [InlineData(MaxRunsZero, "MaxRuns 必须是正整数")]
+    [InlineData(MaxRunsNegative, "MaxRuns 必须是正整数")]
+    [InlineData(ContainerMaxRunsZero, "MaxRuns 必须是正整数")]
+    [InlineData(ContainerMaxRunsNegative, "MaxRuns 必须是正整数")]
+    [InlineData(LibraryExecutionMaxRunsZero, "MaxRuns 必须是正整数")]
+    [InlineData(LibraryContainerMaxRunsZero, "MaxRuns 必须是正整数")]
     [InlineData(AlignedAcrossSpaces, "逐条对齐的两端必须来自同一个拆分")]
     [InlineData(SelfReferenceContainer, "不能从自身所在容器")]
     [InlineData(PartialSelfReferenceContainer, "不能从自身所在容器")]
@@ -375,5 +381,59 @@ public sealed class WorkflowValidationTests
           { "Name": "实施", "Model": "执行者" },
           { "Name": "收尾", "Model": "执行者", "From": ["实施"] }
         ] } ] }
+        """;
+
+    private const string MaxRunsZero = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "干活", "Model": "执行者", "MaxRuns": 0 }
+          ] }
+        ] } ] }
+        """;
+
+    private const string MaxRunsNegative = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "干活", "Model": "执行者", "MaxRuns": -3 }
+          ] }
+        ] } ] }
+        """;
+
+    private const string ContainerMaxRunsZero = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "MaxRuns": 0, "Nodes": [
+            { "Name": "干活", "Model": "执行者" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string ContainerMaxRunsNegative = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "MaxRuns": -2, "Nodes": [
+            { "Name": "干活", "Model": "执行者" }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>库执行定义声明非正上限，未被引用也在库校验阶段拒绝。</summary>
+    private const string LibraryExecutionMaxRunsZero = """
+        { "Nodes": [ { "Name": "干活库", "Tools": [], "MaxRuns": 0 } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "干活", "Model": "执行者" }
+            ] }
+          ] } ] }
+        """;
+
+    /// <summary>库容器定义声明非正统一上限，未被引用也在库校验阶段拒绝。</summary>
+    private const string LibraryContainerMaxRunsZero = """
+        { "Nodes": [ { "Name": "干活组", "MaxRuns": 0, "Nodes": [
+            { "Name": "干活", "Model": "执行者" }
+          ] } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "干活", "Model": "执行者" }
+            ] }
+          ] } ] }
         """;
 }

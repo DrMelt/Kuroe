@@ -18,8 +18,12 @@ public sealed record ExecutableNode(
     IReadOnlyList<int> From,
     IReadOnlyList<IReadOnlyList<int>> AnyOf,
     OutputValidation? Validate,
+    int MaxRuns,
     SplitConfig? Split) : GraphNode(Index, Name, Path, Gate)
 {
+    /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
+    public const int DefaultMaxRuns = 100;
+
     /// <summary>拆分只有固定条目，模型不参与补充。</summary>
     public bool IsStaticSplit => Split is { Items.Count: > 0, ExtrasMax: null or 0 };
 }

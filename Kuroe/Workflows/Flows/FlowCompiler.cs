@@ -129,5 +129,6 @@ internal static class FlowCompiler
         [.. node.From.Select(name => order[name])],
         [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
         execution.Validate,
+        execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
         execution.Split);
 }

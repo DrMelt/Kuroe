@@ -54,6 +54,9 @@ internal sealed class NodeDto
     /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
     public ValidationDto? Validate { get; set; }
 
+    /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
+    public int? MaxRuns { get; set; }
+
     /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
     public List<string>? Inputs { get; set; }
 

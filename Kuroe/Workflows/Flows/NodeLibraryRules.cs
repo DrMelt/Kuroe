@@ -109,6 +109,11 @@ internal static class NodeLibraryRules
         {
             errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
         }
+
+        if (node.Execution?.MaxRuns is { } limit && limit < 1)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "MaxRuns 必须是正整数。"));
+        }
     }
 
     /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
@@ -118,6 +123,11 @@ internal static class NodeLibraryRules
         Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
         List<Error> errors)
     {
+        if (container.MaxRuns is { } limit && limit < 1)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", container.Name.Value, "MaxRuns 必须是正整数。"));
+        }
+
         var subtreeNames = new HashSet<Flow.NodeName>();
         CollectSubtreeNames(members, byName, subtreeNames);
 
@@ -210,6 +220,16 @@ internal static class NodeLibraryRules
         else if (member.Execution is null && member.Nodes is not { Count: > 0 })
         {
             errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
+        }
+
+        if (member.Use is not null && member.MaxRuns is { } referenceLimit && referenceLimit < 1)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
+        }
+
+        if (member.Use is null && member.Execution is { MaxRuns: { } executionLimit } && executionLimit < 1)
+        {
+            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
         foreach (Flow.NodeName from in member.From)

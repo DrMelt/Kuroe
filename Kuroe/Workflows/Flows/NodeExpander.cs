@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Shared.Workflows.Graph;
 using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
@@ -8,6 +9,9 @@ namespace Kuroe.Workflows.Flows;
 internal static class NodeExpander
 {
     private const char PortPrefix = '@';
+
+    /// <summary>执行次数上限的默认值：整条覆盖链都没有配置时生效。</summary>
+    private const int DefaultMaxRuns = ExecutableNode.DefaultMaxRuns;
 
     /// <summary>展开作用域的一层：容器实例的成员原名到实例名的映射，以及端口绑定与模型槽位绑定。
     /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口与模型绑定。</summary>
@@ -35,7 +39,7 @@ internal static class NodeExpander
         string flowName)
     {
         List<Error> errors = [];
-        Flow.NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, flowName, errors);
+        Flow.NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, currentLimit: null, flowName, errors);
 
         if (errors.Count > 0)
         {
@@ -53,6 +57,7 @@ internal static class NodeExpander
         Env? env,
         string prefix,
         bool inInstance,
+        int? currentLimit,
         string flowName,
         List<Error> errors)
     {
@@ -90,7 +95,8 @@ internal static class NodeExpander
 
                 CheckBindings(node, definition, flowName, errors);
                 Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
-                List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", flowName, errors);
+                int? memberLimit = node.MaxRuns ?? definition.MaxRuns ?? currentLimit;
+                List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", flowName, errors, memberLimit);
                 return new Flow.NodeSpec { Name = instance, Gate = definition.Gate, Nodes = members };
             }
 
@@ -109,6 +115,7 @@ internal static class NodeExpander
                         ? ResolveGroups(node.AnyOf, env, flowName, errors)
                         : ResolveGroups(definition.Execution.AnyOf, env, flowName, errors),
                     Validate = node.Validate ?? definition.Execution.Validate,
+                    MaxRuns = ResolveMaxRuns(node.MaxRuns, definition.Execution.MaxRuns, currentLimit),
                 },
                 Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, flowName, errors),
@@ -120,7 +127,7 @@ internal static class NodeExpander
         {
             // 装配层内联容器成员不再叠加容器名，库实例内成员才叠加实例前缀
             string memberPrefix = inInstance ? own.Value + "." : prefix;
-            List<Flow.NodeSpec> expanded = ExpandMembers(library, children, env, memberPrefix, flowName, errors);
+            List<Flow.NodeSpec> expanded = ExpandMembers(library, children, env, memberPrefix, flowName, errors, node.MaxRuns ?? currentLimit);
             return new Flow.NodeSpec
             {
                 Name = own,
@@ -138,11 +145,16 @@ internal static class NodeExpander
             {
                 AnyOf = ResolveGroups(node.Execution.AnyOf, env, flowName, errors),
                 Validate = node.Execution.Validate,
+                MaxRuns = ResolveMaxRuns(node.Execution.MaxRuns, null, currentLimit),
             },
             Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
             From = ResolveAll(node.From, env, flowName, errors),
         };
     }
+
+    /// <summary>执行节点的生效执行上限：自身显式、库定义、外层容器统一值依次取先，都没有时落到默认值。</summary>
+    private static int ResolveMaxRuns(int? own, int? library, int? currentLimit) =>
+        own ?? library ?? currentLimit ?? DefaultMaxRuns;
 
     private static List<Flow.NodeSpec> ExpandMembers(
         IReadOnlyDictionary<Flow.NodeName, Flow.NodeSpec> library,
@@ -150,12 +162,13 @@ internal static class NodeExpander
         Env? env,
         string prefix,
         string flowName,
-        List<Error> errors)
+        List<Error> errors,
+        int? currentLimit)
     {
         List<Flow.NodeSpec> expanded = [];
         foreach (Flow.NodeSpec member in members)
         {
-            Flow.NodeSpec? item = ExpandNode(library, member, env, prefix, inInstance: prefix.Length > 0, flowName, errors);
+            Flow.NodeSpec? item = ExpandNode(library, member, env, prefix, inInstance: prefix.Length > 0, currentLimit, flowName, errors);
             if (item is not null)
             {
                 expanded.Add(item);

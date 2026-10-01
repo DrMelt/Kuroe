@@ -119,6 +119,11 @@ static class WorkflowRules
 
         if (node.Nodes is { Count: > 0 } children)
         {
+            if (node.MaxRuns is { } containerLimit && containerLimit < 1)
+            {
+                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "MaxRuns 必须是正整数。"));
+            }
+
             if (node.Model is not null || node.Models is not null)
             {
                 errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不声明模型。"));
@@ -243,6 +248,11 @@ static class WorkflowRules
     private static void CheckExpansion(Flow.NodeSpec node, string flowName, List<Error> errors)
     {
         Flow.ExecutableSpec execution = node.Execution!;
+        if (execution.MaxRuns is { } limit && limit < 1)
+        {
+            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "MaxRuns 必须是正整数。"));
+        }
+
         if (execution.Validate is not null)
         {
             if (execution.Mode == Flow.NodeMode.PerItem)

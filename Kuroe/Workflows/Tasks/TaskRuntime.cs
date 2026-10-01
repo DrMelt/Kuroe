@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
@@ -150,35 +151,41 @@ internal sealed class TaskRuntime
 
         if (node.Input is not null)
         {
-            return node.Input.Ready || node.RerunRequested;
+            return (node.Input.Ready || node.RerunRequested) && !AtLimit(node, null);
         }
 
         if (node.Mode != NodeMode.PerItem)
         {
-            return !node.Complete(null) && ItemSatisfied(node, null);
+            return !node.Complete(null) && ItemSatisfied(node, null) && !AtLimit(node, null);
         }
 
-        return ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item));
+        return ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item));
     }
+
+    /// <summary>该执行路径已达执行次数上限，达到后不再启动新 run。</summary>
+    private static bool AtLimit(RuntimeExecutable node, int? item) =>
+        node.ExecutionCount(item) >= node.Executable.MaxRuns;
+
     /// <summary>把执行节点可启动的实例取出来启动。调用者应先用 <see cref="CanStart"/> 判定。</summary>
     public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
         List<RunStarter> starters = [];
         if (node.Input is not null)
         {
-            if (node.Input.Ready || node.RerunRequested)
+            if ((node.Input.Ready || node.RerunRequested) && !AtLimit(node, null))
             {
                 starters.Add(new RunStarter(null));
             }
         }
         else if (node.Mode == NodeMode.PerItem)
         {
-            foreach (int item in ResolveItems(node).Where(item => !node.Complete(item) && ItemSatisfied(node, item)))
+            foreach (int item in ResolveItems(node)
+                .Where(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item)))
             {
                 starters.Add(new RunStarter(item));
             }
         }
-        else if (!node.Complete(null) && ItemSatisfied(node, null))
+        else if (!node.Complete(null) && ItemSatisfied(node, null) && !AtLimit(node, null))
         {
             starters.Add(new RunStarter(null));
         }
@@ -332,6 +339,7 @@ internal sealed class TaskRuntime
         if (run.State != RunState.Succeeded)
         {
             node.EnterBlocked([(node.Index, item)]);
+            NoteLimitReached(node, item);
             return new SettlePlan([], []);
         }
 
@@ -340,6 +348,7 @@ internal sealed class TaskRuntime
         {
             run.MarkUncollected("规划执行节点没有交回条目拆分，本步未收口。");
             node.EnterBlocked([(node.Index, null)]);
+            NoteLimitReached(node, null);
             return new SettlePlan([], []);
         }
 
@@ -347,6 +356,7 @@ internal sealed class TaskRuntime
         if (!PassesValidation(executable.Validate, run.Result))
         {
             node.EnterBlocked([(node.Index, item)]);
+            NoteLimitReached(node, item);
             return new SettlePlan([], []);
         }
 
@@ -394,6 +404,17 @@ internal sealed class TaskRuntime
         {
             return false;
         }
+    }
+
+    /// <summary>失败停驻的路径已达执行上限时记录提示，后续返工不会放行。</summary>
+    private void NoteLimitReached(RuntimeExecutable node, int? item)
+    {
+        if (!AtLimit(node, item))
+        {
+            return;
+        }
+
+        _task.Journal.Append(new ErrorEntry($"节点 {node.Name} 的执行次数已达上限 {node.Executable.MaxRuns} 次，不再重跑。"));
     }
 
     /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
@@ -493,6 +514,11 @@ internal sealed class TaskRuntime
             foreach ((int node, int? item) in Executable(blocked).ReworkTargets)
             {
                 if (itemIndex is { } requested && item != requested)
+                {
+                    continue;
+                }
+
+                if (AtLimit(Executable(node), item))
                 {
                     continue;
                 }

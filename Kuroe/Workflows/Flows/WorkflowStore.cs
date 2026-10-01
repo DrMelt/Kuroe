@@ -230,6 +230,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
                 AnyOf = ToAnyOf(dto.AnyOf),
                 Validate = declareValidation,
+                MaxRuns = dto.MaxRuns,
                 In = ToIn(dto.In),
                 Model = ToModel(dto.Model),
                 Models = ToModelBindings(dto.Models),
@@ -301,6 +302,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Gate = dto.Gate ?? NodeGate.Auto,
                 Inputs = [.. (dto.Inputs ?? []).Select(name => new NodeName(name))],
+                MaxRuns = dto.MaxRuns,
                 Nodes = children.Value,
             };
         }
@@ -362,6 +364,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 Split = ToSplit(dto.Split),
                 AnyOf = ToAnyOf(dto.AnyOf),
                 Validate = declaredValidation,
+                MaxRuns = dto.MaxRuns,
             },
         };
     }
@@ -443,6 +446,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             From = node.From.Count == 0 ? null : [.. node.From.Select(name => name.Value)],
             AnyOf = ToAnyOfDto(node.AnyOf),
             Validate = ToValidationDto(node.Validate),
+            MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
@@ -467,6 +471,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             dto.Branch = execution.Branch?.Value;
             dto.AnyOf = ToAnyOfDto(execution.AnyOf);
             dto.Validate = ToValidationDto(execution.Validate);
+            dto.MaxRuns = execution.MaxRuns;
             dto.Split = execution.Split is { } split ? new SplitDto
             {
                 Items = split.Items?.Select(item => new SplitItemDto
