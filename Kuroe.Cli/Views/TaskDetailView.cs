@@ -12,10 +12,10 @@ internal sealed class TaskDetailView(Terminal terminal)
 
     public void Print(TaskSnapshot task)
     {
-        _terminal.Line($"{task.Id} · {task.Title}\u3000状态：{Labels.Of(task.State)}");
+        _terminal.Line($"{task.Id} · {task.Title}\u3000状态：{ViewLabels.Of(task.State)}");
         _terminal.Line($"目标：{task.Goal}");
         _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
-            + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalNodes}\u3000前台对话 {task.DialogueTurns} 回合");
+            + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}\u3000前台对话 {task.DialogueTurns} 回合");
 
         if (task.Splits.Count > 0)
         {
@@ -40,7 +40,7 @@ internal sealed class TaskDetailView(Terminal terminal)
             _terminal.Line("容器状态：");
             foreach (ContainerSnapshot container in task.Containers)
             {
-                _terminal.Line($"  {container.Path} · {Labels.Of(container.State)}");
+                _terminal.Line($"  {container.Path} · {ViewLabels.Of(container.State)}");
             }
         }
 
@@ -48,7 +48,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
-                + $"（{node.Executable.Output.Label()} · {Labels.Of(node.Executable.Mode)} · {Labels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Output.Label()} · {ViewLabels.Of(node.Executable.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)
             {
@@ -64,7 +64,7 @@ internal sealed class TaskDetailView(Terminal terminal)
 
         _terminal.NewLine();
         _terminal.Line("前台对话：");
-        JournalPrinter.Print(_terminal, task.Dialogue, task.DroppedDialogue);
+        JournalView.Print(_terminal, task.Dialogue, task.DroppedDialogue);
     }
 
     /// <summary>各执行节点的执行状态与条目结论。</summary>
@@ -80,7 +80,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
-            _terminal.Line($"  {task.Graph[node.Index].Name} · {Labels.Of(node.State)}{items}");
+            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}");
         }
     }
 
@@ -90,10 +90,10 @@ internal sealed class TaskDetailView(Terminal terminal)
         List<string> parts =
         [
             run.Id.ToString(),
-            Labels.Item(run.Context.ItemIndex),
+            ViewLabels.Item(run.Context.ItemIndex),
             $"第 {run.Context.ExecutionCount} 轮",
-            Labels.State(run),
-            Labels.Elapsed(run.Elapsed),
+            ViewLabels.State(run),
+            ViewLabels.Elapsed(run.Elapsed),
         ];
 
         return string.Join(" · ", parts);

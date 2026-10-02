@@ -8,16 +8,16 @@ namespace Kuroe.Tools;
 /// <summary>规划执行节点交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 run 在交。</summary>
 public sealed class PlanTool : IScopedTool
 {
-    private readonly UnitSubmitter _intake;
+    private readonly PlanSubmitter _intake;
 
     /// <summary>容器装配用的载体，尚未绑定回合。</summary>
-    public PlanTool(UnitSubmitter intake)
+    public PlanTool(PlanSubmitter intake)
     {
         _intake = intake;
         Functions = Declare(intake, null);
     }
 
-    private PlanTool(UnitSubmitter intake, TurnScope scope)
+    private PlanTool(PlanSubmitter intake, TurnScope scope)
     {
         _intake = intake;
         Functions = Declare(intake, scope);
@@ -30,11 +30,11 @@ public sealed class PlanTool : IScopedTool
     public ITool ForTurn(TurnScope scope) => new PlanTool(_intake, scope);
 
     /// <summary>声明绑定到该回合上的提交函数。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(UnitSubmitter intake, TurnScope? scope) =>
+    private static IReadOnlyList<ToolFunction> Declare(PlanSubmitter intake, TurnScope? scope) =>
     [
         new ToolFunction(ToolName.ContractPlan,
             "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
             [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
-            arguments => intake.SubmitPlan(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
+            arguments => intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
     ];
 }

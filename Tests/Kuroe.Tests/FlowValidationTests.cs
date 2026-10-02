@@ -7,7 +7,7 @@ using Xunit;
 namespace Kuroe.Tests;
 
 /// <summary>流程配置的校验与导入。</summary>
-public sealed class WorkflowValidationTests
+public sealed class FlowValidationTests
 {
     [Theory]
     [InlineData(MissingNodeName, "节点名不能为空")]
@@ -61,11 +61,11 @@ public sealed class WorkflowValidationTests
         File.WriteAllText(source, TwoCustomFlows);
         try
         {
-            WorkflowImport imported = harness.Flows.Import(source).ThrowIfError();
+            FlowImport imported = harness.Flows.Import(source).ThrowIfError();
 
             Assert.Single(imported.Names);
             Assert.Contains(harness.Flows.All(), flow => flow.Name == "两级");
-            Workflow importedFlow = harness.Flows.Find("两级").ThrowIfError();
+            FlowDefinition importedFlow = harness.Flows.Find("两级").ThrowIfError();
             Assert.Equal(2, importedFlow.RootNode.Nodes!.Count);
         }
         finally
@@ -80,7 +80,7 @@ public sealed class WorkflowValidationTests
         using KuroeHarness harness = KuroeHarness.Create();
         File.WriteAllText(Path.Combine(harness.Root, "extra.json"), SingleFunnelFlow);
 
-        WorkflowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
 
         Assert.Single(imported.Names);
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
@@ -95,7 +95,7 @@ public sealed class WorkflowValidationTests
 
         harness.Flows.Import("extra.json").ThrowIfError();
 
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).WorkflowFile);
+        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
         Assert.Contains("\"Output\": \"Plan\"", text);
         Assert.Contains("制定计划", text);
         Assert.Contains("分配执行", text);

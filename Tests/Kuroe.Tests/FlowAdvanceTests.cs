@@ -139,7 +139,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Canceled, canceled.State);
         Assert.DoesNotContain(canceled.ExecutableStates,
             state => state.State is NodeState.Blocked or NodeState.AwaitingApproval);
-        Assert.Equal(1, harness.Registry.ClearFinished());
+        Assert.Equal(1, harness.Registry.ClearSettled());
     }
 
     [Fact]

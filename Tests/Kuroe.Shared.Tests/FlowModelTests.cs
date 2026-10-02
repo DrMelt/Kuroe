@@ -8,15 +8,15 @@ using Xunit;
 namespace Kuroe.Shared.Tests;
 
 /// <summary>流程模型：执行配置的缺省设置与编译视图的按名定位。</summary>
-public sealed class WorkflowModelTests
+public sealed class FlowModelTests
 {
     [Fact]
-    public void Executable_defaults_to_plain_single_auto()
+    public void Executable_defaults_to_text_single_auto()
     {
         var node = new NodeSpec { Name = new NodeName("实施"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() };
 
         ExecutableSpec executable = node.Execution;
-        Assert.Equal(NodeOutput.Plain, executable.Output);
+        Assert.Equal(NodeOutput.Text, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
         Assert.Equal(NodeGate.Auto, node.Gate);
         Assert.Empty(node.From);
@@ -29,7 +29,7 @@ public sealed class WorkflowModelTests
         var graph = new NodeGraph(
         [
             new ExecutableNode(0, new NodeName("规划"), "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], [], null, 100, null),
-            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], [], null, 100, null),
+            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Text, NodeMode.Single, null, [0], [], null, 100, null),
         ], []);
 
         Assert.Equal(2, graph.Count);

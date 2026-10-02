@@ -5,7 +5,7 @@ using Spectre.Console;
 namespace Kuroe.Cli.Views;
 
 /// <summary>目录两张表的终端渲染，供 /provider、/model、/catalog 的 list 共用。</summary>
-internal sealed class CatalogPrinter(Terminal terminal)
+internal sealed class CatalogView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
 

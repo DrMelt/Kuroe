@@ -15,7 +15,7 @@ internal sealed class Repl(
     RunNotifier notifier,
     StartupView startup,
     Terminal terminal,
-    ErrorPrinter errors)
+    ErrorView errors)
 {
     public async Task RunAsync()
     {

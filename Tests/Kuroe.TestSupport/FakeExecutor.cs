@@ -15,7 +15,7 @@ public sealed class FakeExecutor : IRunExecutor
     private int _live;
     private int _peak;
 
-    public UnitSubmitter? Submitter { get; set; }
+    public PlanSubmitter? Submitter { get; set; }
 
     /// <summary>规划执行节点交回的条目拆分。</summary>
     public string ItemsJson { get; set; } = """
@@ -75,7 +75,7 @@ public sealed class FakeExecutor : IRunExecutor
 
             if (run.Context.Output == NodeOutput.Plan && SubmitsPlan)
             {
-                _submissions.Enqueue(Submitter!.SubmitPlan(run.Scope, ItemsJson));
+                _submissions.Enqueue(Submitter!.SubmitItems(run.Scope, ItemsJson));
             }
 
             if (FailsWhen?.Invoke(run) == true)

@@ -59,7 +59,7 @@ internal static class DefaultFlows
     internal static readonly FlowFile Builtin = new(
         [PlanNodeDefinition, ExecuteNodeDefinition, DeliveryContainerDefinition],
         [
-            new Workflow(Name, "内置流程：制定计划、分配执行",
+            new FlowDefinition(Name, "内置流程：制定计划、分配执行",
                 [Planner, Executor],
                 new NodeSpec
                 {

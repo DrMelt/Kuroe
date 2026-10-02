@@ -11,7 +11,7 @@ namespace Kuroe.Workflows.Engine;
 
 /// <summary>按流程模板为单个任务组装 Workflow 图并启动流式运行。一个任务一份图，
 /// 执行器持有任务标识与流程依赖，不跨任务共享状态。</summary>
-internal static class FlowWorkflowFactory
+internal static class FlowEngineFactory
 {
     /// <summary>启动该任务的流程运行。start 与全部根执行节点、每条依赖边各有边，
     /// 激活消息按目标执行器定向投递，就绪判定与发布由执行器内部按边决定。</summary>

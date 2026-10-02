@@ -13,10 +13,10 @@ namespace Kuroe.Workflows.Engine;
 
 /// <summary>任务推进的宿主：提交时组装框架 Workflow 并驱动其流式运行，
 /// 批准、返工与取消经信号恢复或终止。执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
-sealed class WorkflowEngine(
+sealed class FlowEngine(
     TaskRegistry registry,
     RunDispatcher dispatcher,
-    NodeModelResolver models) : IWorkflowDriver
+    NodeModelResolver models) : IFlowRunner
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<TaskId, (StreamingRun Run, Task Driver)> _runs = [];
@@ -27,7 +27,7 @@ sealed class WorkflowEngine(
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     public void Start(WorkTask task)
     {
-        StreamingRun run = FlowWorkflowFactory.Start(task, registry, dispatcher, models);
+        StreamingRun run = FlowEngineFactory.Start(task, registry, dispatcher, models);
         lock (_gate)
         {
             _runs[task.Id] = (run, Task.Run(() => DriveAsync(task.Id)));

@@ -36,11 +36,11 @@ public sealed class WiringTests : IDisposable
 
         Assert.NotNull(provider.GetRequiredService<SettingsProvider>());
         Assert.NotNull(provider.GetRequiredService<CatalogService>());
-        Assert.NotNull(provider.GetRequiredService<WorkflowService>());
+        Assert.NotNull(provider.GetRequiredService<FlowService>());
         Assert.NotNull(provider.GetRequiredService<ModelService>());
         Assert.NotNull(provider.GetRequiredService<ToolCollection>());
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
-        Assert.NotNull(provider.GetRequiredService<UnitSubmitter>());
+        Assert.NotNull(provider.GetRequiredService<PlanSubmitter>());
         Assert.NotNull(provider.GetRequiredService<RunDispatcher>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
         Assert.NotEmpty(provider.GetServices<ITool>());

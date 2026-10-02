@@ -5,7 +5,7 @@ using Kuroe.Shared;
 namespace Kuroe.Cli.Views;
 
 /// <summary>错误到终端的统一输出与可恢复错误的操作指引。</summary>
-internal sealed class ErrorPrinter(Terminal terminal)
+internal sealed class ErrorView(Terminal terminal)
 {
     public void Report(IEnumerable<Error> errors)
     {
@@ -54,16 +54,16 @@ internal sealed class ErrorPrinter(Terminal terminal)
                     terminal.Hint("run 号全局递增，用 /task list 或 /task show <任务号> 查看。");
                     break;
 
-                case ErrorCodes.WorkflowNotFound:
+                case ErrorCodes.FlowNotFound:
                     terminal.Hint("用 /flow list 查看流程名。");
                     break;
 
-                case ErrorCodes.WorkflowInvalidPath:
+                case ErrorCodes.FlowInvalidPath:
                     terminal.Hint("/flow add 的文件参数相对工作目录解析，路径非法时换一个写法。");
                     break;
 
-                case ErrorCodes.WorkflowNode or ErrorCodes.WorkflowBody or ErrorCodes.WorkflowName
-                    or ErrorCodes.WorkflowFormat:
+                case ErrorCodes.FlowNode or ErrorCodes.FlowBody or ErrorCodes.FlowName
+                    or ErrorCodes.FlowFormat:
                     terminal.Hint("流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。");
                     break;
             }

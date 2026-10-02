@@ -17,7 +17,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(LibraryFlow);
 
-        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
 
         // 展开后：根容器包住制定计划与交付容器，容器成员名带实例前缀，@计划 绑定为制定计划
         NodeSpec root = flow.RootNode;
@@ -52,11 +52,11 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(PerFlowModelBinding);
 
-        Workflow first = harness.Flows.Find("甲").ThrowIfError();
+        FlowDefinition first = harness.Flows.Find("甲").ThrowIfError();
         NodeSpec firstImplement = first.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("执行者"), firstImplement.Model!.Value);
 
-        Workflow second = harness.Flows.Find("乙").ThrowIfError();
+        FlowDefinition second = harness.Flows.Find("乙").ThrowIfError();
         NodeSpec secondImplement = second.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("实施者"), secondImplement.Model!.Value);
     }
@@ -77,10 +77,10 @@ public sealed class NodeLibraryTests
         using KuroeHarness harness = KuroeHarness.Create();
         File.WriteAllText(Path.Combine(harness.Root, "library.json"), LibraryFlow);
 
-        WorkflowImport imported = harness.Flows.Import("library.json").ThrowIfError();
+        FlowImport imported = harness.Flows.Import("library.json").ThrowIfError();
         Assert.Contains(imported.Notes, note => note.Contains("节点库"));
 
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).WorkflowFile);
+        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
         Assert.Contains("\"Nodes\"", text);
         Assert.Contains("\"Use\"", text);
         Assert.Contains("\"In\"", text);
@@ -95,7 +95,7 @@ public sealed class NodeLibraryTests
         using KuroeHarness harness = KuroeHarness.Create();
         File.WriteAllText(Path.Combine(harness.Root, "duplicated.json"), DuplicateImportedFlows);
 
-        ErrorOr<WorkflowImport> imported = harness.Flows.Import("duplicated.json");
+        ErrorOr<FlowImport> imported = harness.Flows.Import("duplicated.json");
 
         Assert.True(imported.IsError);
         Assert.Contains(imported.ErrorsOrEmptyList, error => error.Description.Contains("流程名重复"));
@@ -106,7 +106,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(MemberNameBindingFlow);
 
-        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
@@ -119,7 +119,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(OuterPortBindingFlow);
 
-        Workflow flow = harness.Flows.Find("透传").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("透传").ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0].Nodes![0];
@@ -131,7 +131,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
 
-        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.TextContains, reviewed.Execution!.Validate!.Predicate);
         Assert.Equal(new NodeName("计划"), reviewed.Execution.AnyOf.Single()[0]);
@@ -142,7 +142,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceOverrideValidateFlow);
 
-        Workflow flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.NonEmpty, reviewed.Execution!.Validate!.Predicate);
     }
@@ -562,7 +562,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(DocumentExampleFlow);
 
-        Workflow flow = harness.Flows.Find("单线交付").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find("单线交付").ThrowIfError();
         NodeSpec root = flow.RootNode;
         Assert.NotNull(root.Nodes);
         Assert.Equal(2, root.Nodes.Count);

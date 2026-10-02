@@ -11,10 +11,10 @@ namespace Kuroe.Cli.Commands;
 
 /// <summary>/flow 子命令的解析与执行。流程模板的查看、导入与默认流程选择。</summary>
 internal sealed class FlowCommands(
-    WorkflowService flows,
+    FlowService flows,
     SettingsProvider settings,
     Terminal terminal,
-    ResultPrinter results)
+    ResultView results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -65,7 +65,7 @@ internal sealed class FlowCommands(
             new Text("节点", Styles.Hint),
             new Text("说明", Styles.Hint));
 
-        foreach (Workflow flow in flows.All())
+        foreach (FlowDefinition flow in flows.All())
         {
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
@@ -81,7 +81,7 @@ internal sealed class FlowCommands(
 
     private void Show(string name)
     {
-        ErrorOr<Workflow> found = flows.Find(name);
+        ErrorOr<FlowDefinition> found = flows.Find(name);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -108,8 +108,8 @@ internal sealed class FlowCommands(
                     new Text(new string(' ', depth * 2) + node.Name.Value),
                     new Text(node.Model?.Value ?? "—"),
                     new Text(executable.Output.Label()),
-                    new Text(Labels.Of(executable.Mode)),
-                    new Text(Labels.Of(node.Gate)),
+                    new Text(ViewLabels.Of(executable.Mode)),
+                    new Text(ViewLabels.Of(node.Gate)),
                     new Text(Requirement(node, executable), Styles.Hint));
                 index++;
             }
@@ -121,7 +121,7 @@ internal sealed class FlowCommands(
                     new Text("容器", Styles.Hint),
                     new Text(string.Empty),
                     new Text(string.Empty),
-                    new Text(Labels.Of(node.Gate), Styles.Hint),
+                    new Text(ViewLabels.Of(node.Gate), Styles.Hint),
                     new Text(string.Empty));
             }
         }
@@ -132,7 +132,7 @@ internal sealed class FlowCommands(
 
     private void Add(string file)
     {
-        ErrorOr<WorkflowImport> imported = flows.Import(file);
+        ErrorOr<FlowImport> imported = flows.Import(file);
         if (imported.IsError)
         {
             results.Reject(imported.ErrorsOrEmptyList);
@@ -148,7 +148,7 @@ internal sealed class FlowCommands(
 
     private void SetDefault(string name)
     {
-        ErrorOr<Workflow> found = flows.Find(name);
+        ErrorOr<FlowDefinition> found = flows.Find(name);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);

@@ -14,9 +14,9 @@ internal sealed class Ui : IDisposable
         Terminal = NewTerminal(out TestConsole output, out TestConsole errorsOut);
         Output = output;
         ErrorsOut = errorsOut;
-        Errors = new ErrorPrinter(Terminal);
-        Results = new ResultPrinter(Terminal, Errors);
-        Printer = new CatalogPrinter(Terminal);
+        Errors = new ErrorView(Terminal);
+        Results = new ResultView(Terminal, Errors);
+        Printer = new CatalogView(Terminal);
     }
 
     public KuroeHarness Harness { get; }
@@ -27,11 +27,11 @@ internal sealed class Ui : IDisposable
 
     public Terminal Terminal { get; }
 
-    public ErrorPrinter Errors { get; }
+    public ErrorView Errors { get; }
 
-    public ResultPrinter Results { get; }
+    public ResultView Results { get; }
 
-    public CatalogPrinter Printer { get; }
+    public CatalogView Printer { get; }
 
     /// <summary>建一套关闭 ANSI 的测试终端，输出里不含颜色序列，按纯文本断言。</summary>
     public static Terminal NewTerminal(out TestConsole output, out TestConsole error)

@@ -27,7 +27,7 @@ public sealed class WorkTask
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal WorkTask(TaskId id, string goal, Workflow flow, NodeGraph graph, Session session, string? title)
+    internal WorkTask(TaskId id, string goal, FlowDefinition flow, NodeGraph graph, Session session, string? title)
     {
         Id = id;
         Goal = goal;
@@ -47,7 +47,7 @@ public sealed class WorkTask
     public string Goal { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
-    public Workflow Flow { get; }
+    public FlowDefinition Flow { get; }
 
     /// <summary>提交时锁定的流程编译视图。</summary>
     internal NodeGraph Graph { get; }

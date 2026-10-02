@@ -12,7 +12,7 @@ public sealed record ExecutableSpec
     public string? Prompt { get; init; }
 
     /// <summary>交回什么。</summary>
-    public NodeOutput Output { get; init; } = NodeOutput.Plain;
+    public NodeOutput Output { get; init; } = NodeOutput.Text;
 
     /// <summary>整节点一个执行还是按规划条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;

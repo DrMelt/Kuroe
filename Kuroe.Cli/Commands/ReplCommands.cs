@@ -17,7 +17,7 @@ internal sealed class ReplCommands(
     TaskCommands tasks,
     FlowCommands flowCommands,
     Terminal terminal,
-    ErrorPrinter errors)
+    ErrorView errors)
 {
     /// <summary>不属于任何命令族的帮助行。</summary>
     private static readonly (string Command, string Description)[] OwnHelp =

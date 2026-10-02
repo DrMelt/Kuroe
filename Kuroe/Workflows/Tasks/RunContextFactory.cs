@@ -12,7 +12,7 @@ namespace Kuroe.Workflows.Tasks;
 
 /// <summary>为执行节点装配上下文。派出的执行只用这里给出的内容，装配规则集中在一处。
 /// 每条依赖边按它的消费方式取值：单份产出、拆分条目、全部实例或按条目对齐。</summary>
-public static class RunContextFactory
+internal static class RunContextFactory
 {
     /// <summary>单条种子文本的上限。</summary>
     private const int TextLimit = 2000;

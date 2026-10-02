@@ -4,7 +4,7 @@ using Kuroe.Shared.Configuration;
 namespace Kuroe.Cli.Views;
 
 /// <summary>命令结果的终端呈现。</summary>
-internal sealed class ResultPrinter(Terminal terminal, ErrorPrinter errors)
+internal sealed class ResultView(Terminal terminal, ErrorView errors)
 {
     /// <summary>成功时打印完成提示，失败时打印错误与未生效提示。</summary>
     public void Report(ErrorOr<Success> result, string done)

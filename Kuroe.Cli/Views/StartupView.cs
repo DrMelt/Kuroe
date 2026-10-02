@@ -10,7 +10,7 @@ internal sealed class StartupView(
     CatalogService catalog,
     ModelService models,
     ToolCollection tools,
-    WorkflowService flows,
+    FlowService flows,
     Terminal terminal)
 {
     public void Print()

@@ -38,19 +38,19 @@ internal static class NodeLibraryRules
         {
             if (node.Use is not null)
             {
-                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点库定义不能是引用。"));
+                errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点库定义不能是引用。"));
                 continue;
             }
 
             if (string.IsNullOrWhiteSpace(node.Name.Value))
             {
-                errors.Add(WorkflowErrors.Node("节点库", "(未命名)", "节点名不能为空。"));
+                errors.Add(FlowErrors.Node("节点库", "(未命名)", "节点名不能为空。"));
                 continue;
             }
 
             if (!byName.TryAdd(node.Name, node))
             {
-                errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点名重复。"));
+                errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点名重复。"));
                 continue;
             }
 
@@ -58,39 +58,39 @@ internal static class NodeLibraryRules
             {
                 if (node.Execution is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "容器不能同时声明执行配置。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "容器不能同时声明执行配置。"));
                 }
 
                 if (node.From.Count > 0)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明 From。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明 From。"));
                 }
 
                 if (node.In is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明输入端口绑定。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库容器定义不接线，不能声明输入端口绑定。"));
                 }
 
                 if (node.Model is not null || node.Models is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库容器定义不声明模型与模型绑定，绑定由引用处提供。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库容器定义不声明模型与模型绑定，绑定由引用处提供。"));
                 }
             }
             else
             {
                 if (node.Execution is null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
                 }
 
                 if (node.Model is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
                 }
 
                 if (node.Models is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
+                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
                 }
             }
         }
@@ -102,17 +102,17 @@ internal static class NodeLibraryRules
     {
         if (node.Inputs.Count > 0)
         {
-            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "执行节点不能声明输入端口，接线从引用处提供。"));
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "执行节点不能声明输入端口，接线从引用处提供。"));
         }
 
         if (node.From.Count > 0)
         {
-            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
         }
 
         if (node.Execution?.MaxRuns is { } limit && limit < 1)
         {
-            errors.Add(WorkflowErrors.Node("节点库", node.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "MaxRuns 必须是正整数。"));
         }
     }
 
@@ -125,7 +125,7 @@ internal static class NodeLibraryRules
     {
         if (container.MaxRuns is { } limit && limit < 1)
         {
-            errors.Add(WorkflowErrors.Node("节点库", container.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(FlowErrors.Node("节点库", container.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
         var subtreeNames = new HashSet<Flow.NodeName>();
@@ -160,7 +160,7 @@ internal static class NodeLibraryRules
                 : new Flow.NodeName(node.Use?.Value ?? string.Empty);
             if (!seen.Add(name))
             {
-                errors.Add(WorkflowErrors.Node("节点库", container.Name.Value, $"成员名 {name} 在容器子树内重复。"));
+                errors.Add(FlowErrors.Node("节点库", container.Name.Value, $"成员名 {name} 在容器子树内重复。"));
             }
 
             if (node.Nodes is { Count: > 0 })
@@ -205,31 +205,31 @@ internal static class NodeLibraryRules
         {
             if (!byName.ContainsKey(use))
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, $"引用的节点 {use} 不在节点库。"));
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value, $"引用的节点 {use} 不在节点库。"));
             }
 
             if (member.Execution is not null || member.Nodes is not null)
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "引用成员不能同时声明执行配置或子节点。"));
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value, "引用成员不能同时声明执行配置或子节点。"));
             }
         }
         else if (member.Execution is not null && member.Nodes is { Count: > 0 })
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "成员不能同时声明执行配置与子节点。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "成员不能同时声明执行配置与子节点。"));
         }
         else if (member.Execution is null && member.Nodes is not { Count: > 0 })
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
         }
 
         if (member.Use is not null && member.MaxRuns is { } referenceLimit && referenceLimit < 1)
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
         if (member.Use is null && member.Execution is { MaxRuns: { } executionLimit } && executionLimit < 1)
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
         foreach (Flow.NodeName from in member.From)
@@ -239,7 +239,7 @@ internal static class NodeLibraryRules
                 : ports.Contains(new Flow.NodeName(PortName(from)));
             if (!inScope)
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value,
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value,
                     IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"From 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
             }
         }
@@ -251,7 +251,7 @@ internal static class NodeLibraryRules
                 : ports.Contains(new Flow.NodeName(PortName(from)));
             if (!inScope)
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value,
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value,
                     IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"AnyOf 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
             }
         }
@@ -268,7 +268,7 @@ internal static class NodeLibraryRules
         {
             if (member.Model is not null || member.Models is not null)
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "内联容器成员不声明模型与模型绑定。"));
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value, "内联容器成员不声明模型与模型绑定。"));
             }
 
             return;
@@ -285,7 +285,7 @@ internal static class NodeLibraryRules
             {
                 if (member.Model is not null)
                 {
-                    errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
+                    errors.Add(FlowErrors.Node("节点库", member.Name.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
                 }
 
                 CheckModelBindings(member, errors);
@@ -296,12 +296,12 @@ internal static class NodeLibraryRules
 
         if (member.Model is null)
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
         }
 
         if (member.Models is not null)
         {
-            errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
+            errors.Add(FlowErrors.Node("节点库", member.Name.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
         }
     }
 
@@ -317,7 +317,7 @@ internal static class NodeLibraryRules
         {
             if (string.IsNullOrWhiteSpace(slot.Value) || string.IsNullOrWhiteSpace(bound.Value))
             {
-                errors.Add(WorkflowErrors.Node("节点库", member.Name.Value, "模型绑定键与值不能为空。"));
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value, "模型绑定键与值不能为空。"));
             }
         }
     }

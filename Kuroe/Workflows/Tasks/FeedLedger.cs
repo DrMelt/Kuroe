@@ -9,7 +9,7 @@ internal sealed class FeedLedger(RuntimeNode source, EdgeFeed feed)
 {
     private readonly RuntimeNode _source = source;
     private readonly EdgeFeed _feed = feed;
-    private long _consumedVersion;
+    private long _consumedRevision;
     private bool _consumedOnce;
 
     /// <summary>来源当前是否有放行的产出可消费。</summary>
@@ -18,7 +18,7 @@ internal sealed class FeedLedger(RuntimeNode source, EdgeFeed feed)
     /// <summary>来源是否发布了本边尚未消费的新版本。</summary>
     public bool Fresh => _feed switch
     {
-        EdgeFeed.Single => _source.Released && _source.Version > _consumedVersion,
+        EdgeFeed.Single => _source.Released && _source.Revision > _consumedRevision,
         _ => Available && !_consumedOnce,
     };
 
@@ -27,7 +27,7 @@ internal sealed class FeedLedger(RuntimeNode source, EdgeFeed feed)
     {
         if (_feed == EdgeFeed.Single)
         {
-            _consumedVersion = _source.Version;
+            _consumedRevision = _source.Revision;
         }
         else
         {

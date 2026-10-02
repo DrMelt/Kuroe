@@ -6,9 +6,9 @@ namespace Kuroe.Cli.Commands;
 /// <summary>/provider 子命令的解析与执行。</summary>
 internal sealed class ProviderCommands(
     CatalogService catalog,
-    CatalogPrinter printer,
+    CatalogView printer,
     Terminal terminal,
-    ResultPrinter results)
+    ResultView results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -20,9 +20,9 @@ internal sealed class ProviderCommands(
     ];
 
     private readonly CatalogService _catalog = catalog;
-    private readonly CatalogPrinter _printer = printer;
+    private readonly CatalogView _printer = printer;
     private readonly Terminal _terminal = terminal;
-    private readonly ResultPrinter _results = results;
+    private readonly ResultView _results = results;
 
     public void Run(string[] parts)
     {

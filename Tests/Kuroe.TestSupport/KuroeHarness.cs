@@ -24,7 +24,7 @@ public sealed class KuroeHarness : IDisposable
         Executor = executor;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
-        executor.Submitter = provider.GetRequiredService<UnitSubmitter>();
+        executor.Submitter = provider.GetRequiredService<PlanSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -38,9 +38,9 @@ public sealed class KuroeHarness : IDisposable
 
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 
-    public WorkflowService Flows => _provider.GetRequiredService<WorkflowService>();
+    public FlowService Flows => _provider.GetRequiredService<FlowService>();
 
-    public UnitSubmitter Submitter => _provider.GetRequiredService<UnitSubmitter>();
+    public PlanSubmitter Submitter => _provider.GetRequiredService<PlanSubmitter>();
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 
@@ -83,8 +83,8 @@ public sealed class KuroeHarness : IDisposable
         string? flowsText = flowsJson ?? (writeDefaultFlow ? TestDefaultFlow : null);
         if (flowsText is not null)
         {
-            System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.WorkflowFile)!);
-            File.WriteAllText(paths.WorkflowFile, flowsText);
+            System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
+            File.WriteAllText(paths.FlowsFile, flowsText);
         }
 
         var services = new ServiceCollection();

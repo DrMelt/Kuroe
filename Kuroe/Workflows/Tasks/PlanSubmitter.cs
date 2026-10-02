@@ -12,10 +12,10 @@ namespace Kuroe.Workflows.Tasks;
 
 /// <summary>模型侧交回结构化产出的入口：规划交条目拆分。
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
-public sealed class UnitSubmitter(TaskRegistry registry)
+public sealed class PlanSubmitter(TaskRegistry registry)
 {
     /// <summary>规划执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。</summary>
-    public string SubmitPlan(TurnScope? scope, string itemsJson)
+    public string SubmitItems(TurnScope? scope, string itemsJson)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
         {

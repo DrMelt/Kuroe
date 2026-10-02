@@ -24,7 +24,7 @@ public sealed class TaskRegistry
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal WorkTask Create(string goal, Workflow flow, NodeGraph graph, Session session, string? title)
+    internal WorkTask Create(string goal, FlowDefinition flow, NodeGraph graph, Session session, string? title)
     {
         lock (_gate)
         {
@@ -60,7 +60,7 @@ public sealed class TaskRegistry
     }
 
     /// <summary>把前台对话切到该任务，任务是否存在由调用方判定。</summary>
-    internal void Use(TaskId id)
+    internal void Focus(TaskId id)
     {
         lock (_gate)
         {
@@ -113,7 +113,7 @@ public sealed class TaskRegistry
     }
 
     /// <summary>丢掉已收口且没有 run 在跑的任务。判定与移除都在该任务 Gate 之内，保持锁序一致。</summary>
-    public int ClearFinished()
+    public int ClearSettled()
     {
         WorkTask[] all;
         lock (_gate)

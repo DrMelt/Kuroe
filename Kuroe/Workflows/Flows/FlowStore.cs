@@ -8,7 +8,7 @@ using Kuroe.Storage;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>flows.json 的读写。文件形状由 DTO 承载，绑定成 <see cref="FlowFile"/> 后交校验与展开。</summary>
-sealed class WorkflowStore(string file, string baseDirectory)
+sealed class FlowStore(string file, string baseDirectory)
 {
     /// <summary>节点库定义装配用作用域名。输入端口声明只属于库容器定义，装配层不允许。</summary>
     private const string LibraryScope = "节点库";
@@ -28,7 +28,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
         }
         catch (Exception ex) when (ex is ArgumentException or IOException)
         {
-            return [WorkflowErrors.InvalidPath(path, ex.Message)];
+            return [FlowErrors.InvalidPath(path, ex.Message)];
         }
     }
 
@@ -56,7 +56,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [WorkflowErrors.Read(path, ex.Message)];
+            return [FlowErrors.Read(path, ex.Message)];
         }
 
         FlowFileDto? parsed;
@@ -66,10 +66,10 @@ sealed class WorkflowStore(string file, string baseDirectory)
         }
         catch (JsonException ex)
         {
-            return [WorkflowErrors.Format($"{path}：{ex.Message}")];
+            return [FlowErrors.Format($"{path}：{ex.Message}")];
         }
 
-        return parsed is null ? [WorkflowErrors.Format($"{path} 是空文件。")] : ToFile(parsed);
+        return parsed is null ? [FlowErrors.Format($"{path} 是空文件。")] : ToFile(parsed);
     }
 
     private static ErrorOr<Success> Write(string path, FlowFile file)
@@ -83,7 +83,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [WorkflowErrors.Write(path, ex.Message)];
+            return [FlowErrors.Write(path, ex.Message)];
         }
     }
 
@@ -104,17 +104,17 @@ sealed class WorkflowStore(string file, string baseDirectory)
             }
         }
 
-        List<Workflow> flows = [];
-        foreach (WorkflowDto dto in file.Flows)
+        List<FlowDefinition> flows = [];
+        foreach (FlowDto dto in file.Flows)
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
             {
-                errors.Add(WorkflowErrors.MissingName());
+                errors.Add(FlowErrors.MissingName());
 
                 continue;
             }
 
-            ErrorOr<Workflow> flow = ToWorkflow(dto);
+            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto);
             if (flow.IsError)
             {
                 errors.AddRange(flow.ErrorsOrEmptyList);
@@ -127,7 +127,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         return errors.Count > 0 ? errors : new FlowFile(library, flows);
     }
-    private static ErrorOr<Workflow> ToWorkflow(WorkflowDto dto)
+    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto)
     {
         List<ModelDefinition> models = [.. dto.Models.Select(model => new ModelDefinition
         {
@@ -137,19 +137,19 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         if (dto.Nodes.Count == 0)
         {
-            return WorkflowErrors.Body(dto.Name ?? string.Empty, "流程缺少根节点。");
+            return FlowErrors.Body(dto.Name ?? string.Empty, "流程缺少根节点。");
         }
 
         if (dto.Nodes.Count > 1)
         {
-            return WorkflowErrors.Body(dto.Name ?? string.Empty, "流程只能有一个根节点。");
+            return FlowErrors.Body(dto.Name ?? string.Empty, "流程只能有一个根节点。");
         }
 
         ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], dto.Name!);
 
         return root.IsError
             ? root.ErrorsOrEmptyList
-            : new Workflow(dto.Name!, dto.Description, models, root.Value);
+            : new FlowDefinition(dto.Name!, dto.Description, models, root.Value);
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
@@ -186,22 +186,22 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 || dto.Split is not null
                 || dto.Nodes is { Count: > 0 })
             {
-                useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
             }
 
             if (dto.Model is not null && dto.Models is not null)
             {
-                useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能同时声明模型与模型绑定。"));
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能同时声明模型与模型绑定。"));
             }
 
             if (dto.Inputs is { Count: > 0 })
             {
-                useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于容器定义。"));
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于容器定义。"));
             }
 
             if (dto.Gate is not null)
             {
-                useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明 Gate，门控由库定义决定。"));
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明 Gate，门控由库定义决定。"));
             }
 
             if (useErrors.Count > 0)
@@ -215,7 +215,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
                 ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(validateDeclared.Predicate);
                 if (parsedPredicate.IsError)
                 {
-                    useErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+                    useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
                     return useErrors;
                 }
 
@@ -242,48 +242,48 @@ sealed class WorkflowStore(string file, string baseDirectory)
             List<Error> containerErrors = [];
             if (dto.Prompt is not null)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Prompt。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Prompt。"));
             }
 
             if (dto.Mode is not null)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, $"容器不支持 Mode，收到 {dto.Mode}。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, $"容器不支持 Mode，收到 {dto.Mode}。"));
             }
 
             if (dto.From is { Count: > 0 })
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 From。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 From。"));
             }
 
             if (dto.Model is not null || dto.Output is not null || dto.Branch is not null
                 || dto.Tools is { Count: > 0 } || dto.Split is not null)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
             }
 
             if (dto.Models is not null)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明模型绑定，模型绑定只用于引用节点组。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明模型绑定，模型绑定只用于引用节点组。"));
             }
 
             if (dto.In is { Count: > 0 })
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输入端口绑定。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输入端口绑定。"));
             }
 
             if (dto.Inputs is { Count: > 0 } && scope != LibraryScope)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
             if (dto.AnyOf is { Count: > 0 })
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 AnyOf。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 AnyOf。"));
             }
 
             if (dto.Validate is not null)
             {
-                containerErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
             }
 
             ErrorOr<IReadOnlyList<NodeSpec>> children = ToNodes(dto.Nodes, scope);
@@ -310,23 +310,23 @@ sealed class WorkflowStore(string file, string baseDirectory)
         List<Error> leafErrors = [];
         if (dto.Inputs is { Count: > 0 })
         {
-            leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口，接线从引用处提供。"));
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口，接线从引用处提供。"));
         }
 
         if (dto.In is { Count: > 0 })
         {
-            leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口绑定。"));
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口绑定。"));
         }
 
         if (dto.Models is not null)
         {
-            leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明模型绑定，模型绑定只用于引用节点组。"));
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明模型绑定，模型绑定只用于引用节点组。"));
         }
 
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
         {
-            leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, leafMode.FirstError.Description));
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, leafMode.FirstError.Description));
         }
 
         OutputValidation? declaredValidation = null;
@@ -335,7 +335,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(leafValidate.Predicate);
             if (parsedPredicate.IsError)
             {
-                leafErrors.Add(WorkflowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
             }
             else
             {
@@ -358,7 +358,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
             {
                 Tools = [.. (dto.Tools ?? []).Select(name => new ToolName(name))],
                 Prompt = dto.Prompt,
-                Output = dto.Output ?? NodeOutput.Plain,
+                Output = dto.Output ?? NodeOutput.Text,
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
                 Split = ToSplit(dto.Split),
@@ -395,7 +395,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
     {
         if (string.IsNullOrWhiteSpace(predicate))
         {
-            return Error.Validation(ErrorCodes.WorkflowNode, "Validate.Predicate 不能为空。");
+            return Error.Validation(ErrorCodes.FlowNode, "Validate.Predicate 不能为空。");
         }
 
         string? matched = Enum.GetNames<ValidationPredicate>()
@@ -403,7 +403,7 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         return matched is not null
             ? Enum.Parse<Kuroe.Shared.Workflows.Flows.ValidationPredicate>(matched)
-            : Error.Validation(ErrorCodes.WorkflowNode,
+            : Error.Validation(ErrorCodes.FlowNode,
                 $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {predicate}。");
     }
 
@@ -421,10 +421,10 @@ sealed class WorkflowStore(string file, string baseDirectory)
     private static FlowFileDto ToDto(FlowFile file) => new()
     {
         Nodes = [.. file.Nodes.Select(ToNodeDto)],
-        Flows = [.. file.Flows.Select(ToWorkflowDto)],
+        Flows = [.. file.Flows.Select(ToFlowDto)],
     };
 
-    private static WorkflowDto ToWorkflowDto(Workflow flow) => new()
+    private static FlowDto ToFlowDto(FlowDefinition flow) => new()
     {
         Name = flow.Name,
         Description = flow.Description,
@@ -507,6 +507,6 @@ sealed class WorkflowStore(string file, string baseDirectory)
 
         return Enum.TryParse(mode, ignoreCase: true, out NodeMode parsed)
             ? parsed
-            : Error.Validation(ErrorCodes.WorkflowNode, $"Mode 应为 Single 或 PerItem，收到 {mode}。");
+            : Error.Validation(ErrorCodes.FlowNode, $"Mode 应为 Single 或 PerItem，收到 {mode}。");
     }
 }

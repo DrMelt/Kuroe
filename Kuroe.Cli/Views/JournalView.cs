@@ -3,7 +3,7 @@ using Kuroe.Shared.Executions.Turns;
 namespace Kuroe.Cli.Views;
 
 /// <summary>过程记录的逐行呈现，前台对话与 run 详情共用。</summary>
-internal static class JournalPrinter
+internal static class JournalView
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>
     private const int Limit = 40;
@@ -29,7 +29,7 @@ internal static class JournalPrinter
 
         foreach (JournalEntry entry in shown)
         {
-            string at = Labels.Clock(entry.At);
+            string at = ViewLabels.Clock(entry.At);
             switch (entry)
             {
                 case PromptEntry prompt:

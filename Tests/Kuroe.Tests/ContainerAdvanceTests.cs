@@ -136,7 +136,7 @@ public sealed class ContainerAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         // 容器参与编号后图序号有空洞，展示顺位按执行节点表取名次
-        Assert.Equal(4, done.TotalNodes);
+        Assert.Equal(4, done.TotalExecutableNodes);
         Assert.Equal(1, done.OrdinalOf(done.Executables[0].Index));
         Assert.Equal(2, done.OrdinalOf(done.Executables[1].Index));
         Assert.Equal(3, done.OrdinalOf(done.Executables[2].Index));

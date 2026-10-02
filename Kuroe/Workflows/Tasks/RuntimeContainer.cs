@@ -17,8 +17,8 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     public bool Produced => _produced;
 
     /// <summary>齐备代数：从非齐备到齐备每推进一次递增，是容器作来源时的新语义版本账。</summary>
-    public override long Version => _generation;
-    private int _generation;
+    public override long Revision => _revision;
+    private int _revision;
 
     /// <summary>产出已放行、可被下游消费：容器自身不停批不取消，且直接成员与子容器都放行。</summary>
     public override bool Released =>
@@ -41,7 +41,7 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
         }
 
         _produced = true;
-        _generation++;
+        _revision++;
     }
 
     /// <summary>成员作废使产出不再齐备时复位。</summary>

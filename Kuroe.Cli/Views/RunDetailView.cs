@@ -16,9 +16,9 @@ internal sealed class RunDetailView(Terminal terminal)
     public void Print(TaskSnapshot task, RunSnapshot run)
     {
         RunContext context = run.Context;
-        _terminal.Line($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {Labels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
-        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalNodes}\u3000模型 {context.Model}");
-        _terminal.Line($"状态 {Labels.State(run)}\u3000{Labels.Clock(run.StartedAt)} → {Labels.Clock(run.FinishedAt)}\u3000耗时 {Labels.Elapsed(run.Elapsed)}");
+        _terminal.Line($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {ViewLabels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
+        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}\u3000模型 {context.Model}");
+        _terminal.Line($"状态 {ViewLabels.State(run)}\u3000{ViewLabels.Clock(run.StartedAt)} → {ViewLabels.Clock(run.FinishedAt)}\u3000耗时 {ViewLabels.Elapsed(run.Elapsed)}");
 
         foreach (string failure in run.Failures)
         {
@@ -43,7 +43,7 @@ internal sealed class RunDetailView(Terminal terminal)
 
         _terminal.NewLine();
         _terminal.Line("过程：");
-        JournalPrinter.Print(_terminal, run.Journal, run.DroppedEntries);
+        JournalView.Print(_terminal, run.Journal, run.DroppedEntries);
 
         if (run.Result is { Length: > 0 } result)
         {

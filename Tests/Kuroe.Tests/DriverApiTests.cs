@@ -50,7 +50,7 @@ public sealed class DriverApiTests
         harness.Tasks.Rename(id, "文档补齐").ThrowIfError();
 
         Assert.Equal("文档补齐", harness.Snapshot(id).Title);
-        Assert.Equal(1, harness.Registry.ClearFinished());
+        Assert.Equal(1, harness.Registry.ClearSettled());
         Assert.Empty(harness.Registry.Snapshots());
         Assert.Null(harness.Registry.Active);
     }
@@ -64,7 +64,7 @@ public sealed class DriverApiTests
         RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
         TurnScope scope = harness.Registry.FindRun(implement.Id).ThrowIfError().Scope;
 
-        Assert.Contains("被拒绝", harness.Submitter.SubmitPlan(scope, """[{"Title":"甲"}]"""));
+        Assert.Contains("被拒绝", harness.Submitter.SubmitItems(scope, """[{"Title":"甲"}]"""));
     }
 
     [Fact]

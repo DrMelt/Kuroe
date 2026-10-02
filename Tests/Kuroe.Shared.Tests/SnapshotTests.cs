@@ -49,14 +49,14 @@ public sealed class SnapshotTests
         Assert.Equal(2, TaskBuilder.Snap([
             State(0, NodeState.Done),
             State(1, NodeState.Done)]).FrontierNodes);
-        Assert.Equal(2, TaskBuilder.Snap([]).TotalNodes);
+        Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
         Assert.Equal(0, TaskBuilder.Snap([State(0, NodeState.Running)]).FrontierNodes);
-        Assert.Equal(2, TaskBuilder.Snap([]).TotalNodes);
+        Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
     private static RunSnapshot Run(RunState state, DateTimeOffset? started = null, DateTimeOffset? finished = null) =>
@@ -86,7 +86,7 @@ public sealed class SnapshotTests
 
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
-    private static readonly Workflow Flow = new("默认", null, [Planner],
+    private static readonly FlowDefinition Flow = new("默认", null, [Planner],
         new NodeSpec
         {
             Name = new NodeName("整体"),
@@ -99,6 +99,6 @@ public sealed class SnapshotTests
 
     private static readonly NodeGraph Graph = new([
         new ExecutableNode(0, new NodeName("制定计划"), "制定计划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], [], null, 100, null),
-        new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Plain, NodeMode.Single, null, [0], [], null, 100, null),
+        new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Text, NodeMode.Single, null, [0], [], null, 100, null),
     ], []);
 }

@@ -26,10 +26,10 @@ internal sealed class TaskListView(Terminal terminal)
                 new Text(active == task.Id ? $">#{task.Id.Value}" : $"#{task.Id.Value}", Styles.Key),
                 new Text(task.Title),
                 new Text(task.Flow.Name),
-                new Text($"{task.FrontierNodes}/{task.TotalNodes}"),
-                new Text(Labels.Of(task.State), Labels.StyleOf(task.State)),
+                new Text($"{task.FrontierNodes}/{task.TotalExecutableNodes}"),
+                new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State)),
                 new Text($"{task.LiveRuns} 在跑 / {total} 已派"),
-                new Text(Labels.Clock(task.LastActivityAt), Styles.Hint));
+                new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint));
         }
 
         _terminal.NewLine();

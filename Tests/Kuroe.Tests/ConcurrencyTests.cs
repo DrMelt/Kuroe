@@ -49,6 +49,6 @@ public sealed class ConcurrencyTests
             Assert.Equal(3, done.Executables.Sum(node => node.Runs.Count));
         }
 
-        Assert.Equal(3, harness.Registry.ClearFinished());
+        Assert.Equal(3, harness.Registry.ClearSettled());
     }
 }

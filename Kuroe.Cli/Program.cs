@@ -20,7 +20,7 @@ return await root.Parse(args).InvokeAsync();
 static async Task<int> RunAsync(string? workDirectory)
 {
     Terminal terminal = Terminal.Create();
-    ErrorPrinter errors = new(terminal);
+    ErrorView errors = new(terminal);
 
     // 任务浏览与逐级下钻要读键盘，没有输入环境时不再降级呈现
     if (!Terminal.Interactive)
@@ -49,13 +49,13 @@ static async Task<int> RunAsync(string? workDirectory)
     }
 
     // 呈现与通知
-    services.AddSingleton<ResultPrinter>();
+    services.AddSingleton<ResultView>();
     services.AddSingleton<DialogueSink>();
     services.AddSingleton<RunNotifier>();
     services.AddSingleton<TaskListView>();
     services.AddSingleton<TaskDetailView>();
     services.AddSingleton<RunDetailView>();
-    services.AddSingleton<CatalogPrinter>();
+    services.AddSingleton<CatalogView>();
     services.AddSingleton<StartupView>();
     services.AddSingleton<TaskBrowser>();
 

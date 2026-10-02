@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkflowService> flows = WorkflowService.Create(new WorkflowStore(paths.WorkflowFile, paths.WorkingDirectory), settings.Value);
+        ErrorOr<FlowService> flows = FlowService.Create(new FlowStore(paths.FlowsFile, paths.WorkingDirectory), settings.Value);
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;
@@ -49,20 +49,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<ModelService>();
         services.AddSingleton<TaskRegistry>();
-        services.AddSingleton<UnitSubmitter>();
+        services.AddSingleton<PlanSubmitter>();
         services.AddSingleton<RunDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton(sp => new NodeModelResolver(
             sp.GetRequiredService<CatalogService>()));
-        services.AddSingleton(sp => new WorkflowEngine(
+        services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
             sp.GetRequiredService<NodeModelResolver>()));
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<WorkflowEngine>(),
-            sp.GetRequiredService<WorkflowService>(),
+            sp.GetRequiredService<FlowEngine>(),
+            sp.GetRequiredService<FlowService>(),
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<NodeModelResolver>()));
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));

@@ -1,7 +1,7 @@
 namespace Kuroe.Workflows.Tasks;
 
 /// <summary>任务命令对流程宿主的驱动：启动流程运行，批准、返工与取消经信号恢复或终止。由引擎实现。</summary>
-public interface IWorkflowDriver
+public interface IFlowRunner
 {
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     void Start(WorkTask task);

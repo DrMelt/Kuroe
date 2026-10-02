@@ -9,11 +9,11 @@ internal sealed class FlowFileDto
     /// <summary>顶层节点库：节点定义，供流程引用。</summary>
     public List<NodeDto> Nodes { get; set; } = [];
 
-    public List<WorkflowDto> Flows { get; set; } = [];
+    public List<FlowDto> Flows { get; set; } = [];
 }
 
 /// <summary>文件里的一条流程：命名的模型选择与装配树。</summary>
-internal sealed class WorkflowDto
+internal sealed class FlowDto
 {
     public string? Name { get; set; }
 
@@ -45,7 +45,7 @@ internal sealed class NodeDto
     /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
     public string? Prompt { get; set; }
 
-    /// <summary>上下文取自哪些更早节点的产出，引用规则由 WorkflowRules 校验。</summary>
+    /// <summary>上下文取自哪些更早节点的产出，引用规则由 FlowRules 校验。</summary>
     public List<string>? From { get; set; }
 
     /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动，组内成员并取。组间任一。</summary>

@@ -17,7 +17,7 @@ internal sealed class TaskCommands(
     RunDetailView runView,
     TaskBrowser browser,
     Terminal terminal,
-    ResultPrinter results)
+    ResultView results)
 {
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
@@ -68,7 +68,7 @@ internal sealed class TaskCommands(
                 break;
 
             case ("use", 3) when Number(parts[2], "任务号") is { } task:
-                results.Report(tasks.Use(new TaskId(task)), "已切换。");
+                results.Report(tasks.Focus(new TaskId(task)), "已切换。");
                 break;
 
             case ("title", >= 4) when Number(parts[2], "任务号") is { } task:
@@ -97,7 +97,7 @@ internal sealed class TaskCommands(
                 break;
 
             case ("clear", 2):
-                terminal.Ok($"已丢掉 {registry.ClearFinished()} 个任务。");
+                terminal.Ok($"已丢掉 {registry.ClearSettled()} 个任务。");
                 break;
 
             default:

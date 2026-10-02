@@ -18,15 +18,15 @@ namespace Kuroe.Workflows.Tasks;
 public sealed class TaskService
 {
     private readonly TaskRegistry _registry;
-    private readonly IWorkflowDriver _driver;
-    private readonly WorkflowService _flows;
+    private readonly IFlowRunner _driver;
+    private readonly FlowService _flows;
     private readonly SessionFactory _sessions;
     private readonly NodeModelResolver _models;
 
     internal TaskService(
         TaskRegistry registry,
-        IWorkflowDriver driver,
-        WorkflowService flows,
+        IFlowRunner driver,
+        FlowService flows,
         SessionFactory sessions,
         NodeModelResolver models)
     {
@@ -45,7 +45,7 @@ public sealed class TaskService
             return [TaskErrors.EmptyGoal()];
         }
 
-        ErrorOr<Workflow> flow = string.IsNullOrWhiteSpace(flowName) ? _flows.Default() : _flows.Find(flowName);
+        ErrorOr<FlowDefinition> flow = string.IsNullOrWhiteSpace(flowName) ? _flows.Default() : _flows.Find(flowName);
         if (flow.IsError)
         {
             return flow.ErrorsOrEmptyList;
@@ -90,7 +90,7 @@ public sealed class TaskService
     }
 
     /// <summary>把前台对话切到该任务。</summary>
-    public ErrorOr<Success> Use(TaskId id)
+    public ErrorOr<Success> Focus(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
@@ -98,7 +98,7 @@ public sealed class TaskService
             return found.ErrorsOrEmptyList;
         }
 
-        _registry.Use(id);
+        _registry.Focus(id);
 
         return Result.Success;
     }

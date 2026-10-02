@@ -16,7 +16,7 @@ internal sealed class TaskBrowser(
     TaskDetailView detail,
     RunDetailView runView,
     Terminal terminal,
-    ResultPrinter results)
+    ResultView results)
 {
     /// <summary>一个菜单项：进下一级、执行动作或返回。</summary>
     private sealed record Item(string Label, string Action, TaskId? Task = null, RunId? Run = null);
@@ -201,7 +201,7 @@ internal sealed class TaskBrowser(
     }
 
     private static string TaskLabel(TaskSnapshot task) =>
-        $"#{task.Id.Value} {task.Title} · {Labels.Of(task.State)} · 节点 {task.FrontierNodes}/{task.TotalNodes}"
+        $"#{task.Id.Value} {task.Title} · {ViewLabels.Of(task.State)} · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
         + $" · {task.LiveRuns} 在跑";
 }
 

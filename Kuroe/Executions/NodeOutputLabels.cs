@@ -9,7 +9,7 @@ public static class NodeOutputLabels
     public static string Label(this NodeOutput output) => output switch
     {
         NodeOutput.Plan => "规划",
-        NodeOutput.Plain => "实施",
+        NodeOutput.Text => "实施",
         _ => output.ToString(),
     };
 }

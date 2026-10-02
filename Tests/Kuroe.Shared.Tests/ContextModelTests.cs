@@ -58,7 +58,7 @@ public sealed class ContextModelTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Output = NodeOutput.Plain,
+        Output = NodeOutput.Text,
         NodeIndex = 1,
         NodeName = new NodeName("实施"),
         Instruction = "做事",

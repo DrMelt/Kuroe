@@ -65,7 +65,7 @@ internal static class NodeExpander
         {
             if (!library.TryGetValue(use, out Flow.NodeSpec? definition))
             {
-                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"引用的节点 {use} 不在节点库。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"引用的节点 {use} 不在节点库。"));
                 return null;
             }
 
@@ -75,22 +75,22 @@ internal static class NodeExpander
             {
                 if (node.From.Count > 0)
                 {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用容器不能声明 From，容器自身不接线。"));
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用容器不能声明 From，容器自身不接线。"));
                 }
 
                 if (node.Model is not null)
                 {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
                 }
 
                 if (node.AnyOf.Count > 0)
                 {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 AnyOf，起点条件组只属于执行节点。"));
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 AnyOf，起点条件组只属于执行节点。"));
                 }
 
                 if (node.Validate is not null)
                 {
-                    errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
                 }
 
                 CheckBindings(node, definition, flowName, errors);
@@ -102,7 +102,7 @@ internal static class NodeExpander
 
             if (node.Models is not null)
             {
-                errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型配置。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型配置。"));
             }
 
             return new Flow.NodeSpec
@@ -193,7 +193,7 @@ internal static class NodeExpander
         var declared = new HashSet<Flow.NodeName>([.. definition.Inputs]);
         foreach (Flow.NodeName port in bindings.Keys.Where(port => !declared.Contains(port)))
         {
-            errors.Add(WorkflowErrors.Node(flowName, node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
         }
     }
 
@@ -277,12 +277,12 @@ internal static class NodeExpander
             chain = chain.Parent;
         }
 
-        errors.Add(WorkflowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
+        errors.Add(FlowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
         return name;
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型配置名，节点组实例内成员是模型槽位，沿绑定链解析成配置名。
-    /// 装配层引用执行节点未写模型时留空，交 WorkflowRules 报错。</summary>
+    /// 装配层引用执行节点未写模型时留空，交 FlowRules 报错。</summary>
     private static Flow.ModelRef? ResolveModel(
         Flow.ModelRef? model,
         Env? env,
@@ -313,7 +313,7 @@ internal static class NodeExpander
         {
             if (mustBind)
             {
-                errors.Add(WorkflowErrors.Node(flowName, nodeName, $"模型槽位 {name} 没有外部绑定，引用节点组时用 Models 提供。"));
+                errors.Add(FlowErrors.Node(flowName, nodeName, $"模型槽位 {name} 没有外部绑定，引用节点组时用 Models 提供。"));
                 return null;
             }
 

@@ -214,7 +214,7 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_container_source_waits_and_resumes_with_generation()
+    public void AnyOf_container_source_waits_and_resumes_with_revision()
     {
         using KuroeHarness harness = KuroeHarness.Create(ContainerAnyOfGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch

@@ -8,7 +8,7 @@ namespace Kuroe.Cli.Views;
 
 /// <summary>宿主侧的状态与耗时呈现。库内同样要用的展示名（角色、run 状态）由库侧的 Label 扩展给出，
 /// 只在宿主出现的（任务与单元状态、展开方式）在这里。</summary>
-internal static class Labels
+internal static class ViewLabels
 {
     public static string Of(TaskState state) => state switch
     {

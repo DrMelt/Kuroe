@@ -10,7 +10,7 @@ public sealed record TaskSnapshot(
     TaskId Id,
     string Title,
     string Goal,
-    Workflow Flow,
+    FlowDefinition Flow,
     NodeGraph Graph,
     TaskState State,
     int DialogueTurns,
@@ -24,7 +24,7 @@ public sealed record TaskSnapshot(
     DateTimeOffset LastActivityAt)
 {
     /// <summary>流程的执行节点数。</summary>
-    public int TotalNodes => Graph.TotalExecutables;
+    public int TotalExecutableNodes => Graph.TotalExecutables;
 
     /// <summary>已发布产出的最远执行节点在执行节点表里的位置，用于列表里的进度。</summary>
     public int FrontierNodes

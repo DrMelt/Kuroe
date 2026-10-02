@@ -312,7 +312,7 @@ internal sealed class TaskRuntime
         return [.. outlets.Distinct()];
     }
 
-    /// <summary>容器内一个执行节点，作为祖先链刷新的起点。容器内执行节点非空由提交时的 WorkflowRules 校验保证。</summary>
+    /// <summary>容器内一个执行节点，作为祖先链刷新的起点。容器内执行节点非空由提交时的 FlowRules 校验保证。</summary>
     private int FirstExecutableIn(RuntimeContainer container) => Graph.ExecutablesIn(container.Index)[0];
 
     /// <summary>取消任务：全部节点进入取消态。</summary>

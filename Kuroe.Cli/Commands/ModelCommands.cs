@@ -9,10 +9,10 @@ namespace Kuroe.Cli.Commands;
 internal sealed class ModelCommands(
     CatalogService catalog,
     ModelService models,
-    CatalogPrinter printer,
+    CatalogView printer,
     Terminal terminal,
-    ResultPrinter results,
-    ErrorPrinter errors)
+    ResultView results,
+    ErrorView errors)
 {
     /// <summary>取消选择的参数值。</summary>
     private const string NoneValue = "none";
@@ -30,10 +30,10 @@ internal sealed class ModelCommands(
 
     private readonly CatalogService _catalog = catalog;
     private readonly ModelService _models = models;
-    private readonly CatalogPrinter _printer = printer;
+    private readonly CatalogView _printer = printer;
     private readonly Terminal _terminal = terminal;
-    private readonly ResultPrinter _results = results;
-    private readonly ErrorPrinter _errors = errors;
+    private readonly ResultView _results = results;
+    private readonly ErrorView _errors = errors;
 
     public void Run(string[] parts)
     {

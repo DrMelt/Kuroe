@@ -1,8 +1,0 @@
-namespace Kuroe.Shared.Workflows.Flows;
-
-/// <summary>任务流程模板：命名的模型选择与根节点，根节点通常是承载流程全部内容的容器。配置读写由 WorkflowService 负责。</summary>
-public sealed record Workflow(
-    string Name,
-    string? Description,
-    IReadOnlyList<ModelDefinition> Models,
-    NodeSpec RootNode);
