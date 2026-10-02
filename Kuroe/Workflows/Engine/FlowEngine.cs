@@ -1,40 +1,44 @@
 using Kuroe.Executions.Runs;
-using Kuroe.Executions.Turns;
-using Kuroe.Configuration;
 using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
-using Microsoft.Agents.AI.Workflows;
 
 namespace Kuroe.Workflows.Engine;
 
-/// <summary>任务推进的宿主：提交时组装框架 Workflow 并驱动其流式运行，
-/// 批准、返工与取消经信号恢复或终止。执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
+/// <summary>任务推进的宿主：每次提交为任务建一个推进循环，批准、返工与取消经信号恢复或终止。
+/// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 sealed class FlowEngine(
     TaskRegistry registry,
     RunDispatcher dispatcher,
     NodeModelResolver models) : IFlowRunner
 {
     private readonly Lock _gate = new();
-    private readonly Dictionary<TaskId, (StreamingRun Run, Task Driver)> _runs = [];
-    private readonly Dictionary<TaskId, TaskCompletionSource> _recovery = [];
-    private readonly HashSet<TaskId> _cancelling = [];
-    private bool _stopping;
+    private readonly Dictionary<TaskId, TaskDriver> _runs = [];
 
-    /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
+    /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
     {
-        StreamingRun run = FlowEngineFactory.Start(task, registry, dispatcher, models);
+        TaskDriver driver = new(task, registry, dispatcher, models);
+        driver.Start();
+
+        // 注册在推进循环启动之后，宿主拿到的推进循环一定已就绪
         lock (_gate)
         {
-            _runs[task.Id] = (run, Task.Run(() => DriveAsync(task.Id)));
+            _runs[task.Id] = driver;
         }
+
+        // 推进循环结束后把驱动移出索引，任务仍留在注册表里供查询
+        _ = Task.Run(async () =>
+        {
+            await driver.Loop.ConfigureAwait(false);
+            lock (_gate)
+            {
+                _runs.Remove(task.Id);
+            }
+        });
     }
 
-    /// <summary>要求持有任务 Gate：批准等待放行的节点与容器，再向流程运行发出继续信号，返回被批准的节点数。</summary>
+    /// <summary>要求持有任务 Gate：批准等待放行的节点与容器，再发出继续信号，返回被批准的节点数。</summary>
     public int Approve(WorkTask task)
     {
         int waiting;
@@ -47,9 +51,9 @@ sealed class FlowEngine(
             }
         }
 
-        if (waiting > 0)
+        if (waiting > 0 && Find(task.Id) is { } driver)
         {
-            Signal(task.Id, new FlowMessage { Intent = FlowIntent.Approved });
+            driver.Approve();
         }
 
         return waiting;
@@ -78,232 +82,62 @@ sealed class FlowEngine(
             }
         }
 
-        if (targets.Count > 0)
+        if (targets.Count > 0 && Find(task.Id) is { } driver)
         {
-            Signal(task.Id, new FlowMessage { Intent = FlowIntent.Reworked, Rerun = targets });
+            driver.Rework(targets);
         }
 
         return targets.Count;
     }
 
-    /// <summary>取消任务：任务对象停止全部 run，流程运行终止。</summary>
+    /// <summary>取消任务：任务对象停止全部 run，推进循环随之终止。推进循环已收口时只停任务。</summary>
     public void Cancel(WorkTask task)
     {
+        if (Find(task.Id) is { } driver)
+        {
+            driver.Stop();
+            return;
+        }
+
         lock (task.Gate)
         {
             task.Cancel();
         }
-
-        _ = StopAsync(task.Id);
     }
 
-    /// <summary>退出时取消全部任务与流程运行并等待收口。</summary>
+    /// <summary>退出时取消全部任务与推进循环并等待收口。</summary>
     public async Task ShutdownAsync()
     {
-        List<(TaskId Id, StreamingRun Run, Task Driver)> live;
+        List<TaskDriver> drivers;
         lock (_gate)
         {
-            _stopping = true;
-            live = [.. _runs.Select(entry => (entry.Key, entry.Value.Run, entry.Value.Driver))];
+            drivers = [.. _runs.Values];
         }
 
-        // 先停运行再唤醒宿主循环，避免宿主清理与取消并发触碰框架已释放的资源
-        foreach ((TaskId taskId, StreamingRun _, Task _) in live)
+        foreach (TaskDriver driver in drivers)
         {
-            await CancelOnceAsync(taskId).ConfigureAwait(false);
+            driver.Stop();
         }
 
-        foreach ((TaskId taskId, StreamingRun _, Task _) in live)
+        foreach (TaskDriver driver in drivers)
         {
-            Awaken(taskId);
-        }
-
-        foreach ((TaskId _, StreamingRun _, Task driver) in live)
-        {
-            await driver.ConfigureAwait(false);
+            await driver.Loop.ConfigureAwait(false);
         }
 
         lock (_gate)
         {
             _runs.Clear();
-            _recovery.Clear();
         }
 
         await dispatcher.ShutdownAsync();
         registry.Forget();
     }
 
-    /// <summary>唤醒该任务宿主循环的暂停点。没有挂起或已结束时不动作。</summary>
-    private void Awaken(TaskId id)
+    private TaskDriver? Find(TaskId id)
     {
         lock (_gate)
         {
-            if (_recovery.Remove(id, out TaskCompletionSource? gate))
-            {
-                gate.TrySetResult();
-            }
+            return _runs.GetValueOrDefault(id);
         }
-    }
-
-    /// <summary>向该任务的流程运行投递意图消息并唤醒宿主循环。</summary>
-    private void Signal(TaskId id, FlowMessage message)
-    {
-        (StreamingRun Run, Task Driver)? entry;
-        TaskCompletionSource? gate;
-        lock (_gate)
-        {
-            if (!_runs.TryGetValue(id, out var found))
-            {
-                registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 的信号丢失：流程运行已结束。"));
-                return;
-            }
-
-            entry = found;
-            gate = _recovery.GetValueOrDefault(id);
-        }
-
-        // run 尚未收口时消息入队待下个 superstep 处理
-        entry.Value.Run.TrySendMessageAsync(message).AsTask().GetAwaiter().GetResult();
-        gate?.TrySetResult();
-    }
-
-    /// <summary>取消该任务的流程运行。停止后不再有新事件，宿主循环随之退出。</summary>
-    private async Task StopAsync(TaskId id)
-    {
-        (StreamingRun Run, Task Driver)? entry;
-        lock (_gate)
-        {
-            if (!_runs.TryGetValue(id, out var found))
-            {
-                return;
-            }
-
-            entry = found;
-        }
-
-        Awaken(id);
-        await CancelOnceAsync(id).ConfigureAwait(false);
-        await entry.Value.Driver.ConfigureAwait(false);
-        lock (_gate)
-        {
-            _runs.Remove(id);
-            _recovery.Remove(id);
-        }
-    }
-
-    /// <summary>每个流程运行只取消一次，取消与退出的并发线程不会重复进入框架的取消路径。</summary>
-    private async Task CancelOnceAsync(TaskId id)
-    {
-        StreamingRun? run;
-        lock (_gate)
-        {
-            if (!_cancelling.Add(id) || !_runs.TryGetValue(id, out var entry))
-            {
-                return;
-            }
-
-            run = entry.Run;
-        }
-
-        await CancelQuietlyAsync(run);
-    }
-
-    /// <summary>运行可能已被宿主循环的收尾路径取消或释放，取消竞争视为已处理。</summary>
-    private static async Task CancelQuietlyAsync(StreamingRun run)
-    {
-        try
-        {
-            await run.CancelRunAsync().ConfigureAwait(false);
-        }
-        catch (ObjectDisposedException)
-        {
-            // 运行可能已随任务收尾释放，取消竞争视为已处理
-        }
-    }
-
-    /// <summary>消费流程事件流。事件流在 RequestHalt 处结束：任务已完成则结束，否则等待宿主信号后继续。</summary>
-    private async Task DriveAsync(TaskId id)
-    {
-        (StreamingRun Run, Task Driver) entry;
-        lock (_gate)
-        {
-            if (!_runs.TryGetValue(id, out entry))
-            {
-                return;
-            }
-        }
-
-        StreamingRun run = entry.Run;
-        try
-        {
-            await DriveLoopAsync(id, run).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 的流程运行异常：{ex.Message}"));
-        }
-
-        lock (_gate)
-        {
-            _runs.Remove(id);
-            _recovery.Remove(id);
-        }
-
-        try
-        {
-            await run.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (ObjectDisposedException)
-        {
-            // run 已随任务收尾释放，竞争视为已处理
-        }
-    }
-
-    /// <summary>消费流程事件流。事件流在 RequestHalt 处结束：任务已完成则结束，否则等待宿主信号后继续。
-    /// 恢复后的消费用阻塞模式，让新投递的宿主意图进入执行器后再回到暂停点判定。</summary>
-    private async Task DriveLoopAsync(TaskId id, StreamingRun run)
-    {
-        while (true)
-        {
-            await foreach (WorkflowEvent _ in run.WatchStreamAsync(blockOnPendingRequest: false))
-            {
-                // 事件流只为推进执行器，事件由后续等待与暂停点消费
-            }
-
-            RunStatus status = await run.GetStatusAsync().ConfigureAwait(false);
-            if (status is RunStatus.Ended or RunStatus.NotStarted || _stopping)
-            {
-                break;
-            }
-
-            if (IsDone(id))
-            {
-                break;
-            }
-
-            // RequestHalt 暂停点：等待宿主批准或返工信号
-            var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            lock (_gate)
-            {
-                _recovery[id] = gate;
-            }
-
-            await gate.Task.ConfigureAwait(false);
-            _recovery.Remove(id);
-        }
-    }
-
-    /// <summary>任务是否已走完。任务已被清理时视为结束。</summary>
-    private bool IsDone(TaskId id)
-    {
-        if (registry.Find(id) is { IsError: false } found)
-        {
-            lock (found.Value.Gate)
-            {
-                return found.Value.State == TaskState.Done;
-            }
-        }
-
-        return true;
     }
 }

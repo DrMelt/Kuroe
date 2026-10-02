@@ -120,6 +120,11 @@ public sealed class KuroeHarness : IDisposable
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();
 
+    /// <summary>执行节点状态摘要，用于超时信息里的定位。</summary>
+    private static string NodeStates(TaskSnapshot snapshot) =>
+        string.Join("、", snapshot.ExecutableStates.Select(state =>
+            $"{state.Index} {state.State}" + (state.Items.Count > 0 ? $" {state.CompletedItems}/{state.Items.Count}" : string.Empty)));
+
     /// <summary>等到任务满足条件为止，超时即失败。</summary>
     public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 5000)
     {
@@ -134,7 +139,7 @@ public sealed class KuroeHarness : IDisposable
 
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException($"任务 {id} 未在 {milliseconds} 毫秒内满足条件，当前状态 {snapshot.State}。");
+                throw new TimeoutException($"任务 {id} 未在 {milliseconds} 毫秒内满足条件，状态 {snapshot.State}、执行节点 [{NodeStates(snapshot)}]。");
             }
 
             Thread.Sleep(20);
@@ -164,7 +169,7 @@ public sealed class KuroeHarness : IDisposable
 
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException($"任务 {id} 未在超时内稳定，当前状态 {snapshot.State}。");
+                throw new TimeoutException($"任务 {id} 未在超时内稳定，状态 {snapshot.State}、LiveRuns {snapshot.LiveRuns}、执行节点 [{NodeStates(snapshot)}]。");
             }
 
             previous = snapshot.State;

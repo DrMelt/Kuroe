@@ -31,6 +31,9 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>单个 run 的人为耗时，用于并发与取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
+    /// <summary>按 run 差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
+    public Func<Run, int>? DelayFor { get; set; }
+
     /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
     public Func<Run, bool>? FailsWhen { get; set; }
 
@@ -71,7 +74,7 @@ public sealed class FakeExecutor : IRunExecutor
 
         try
         {
-            await Task.Delay(DelayMs, cancellationToken);
+            await Task.Delay(DelayFor?.Invoke(run) ?? DelayMs, cancellationToken);
 
             if (run.Context.Output == NodeOutput.Plan && SubmitsPlan)
             {
