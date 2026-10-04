@@ -104,6 +104,24 @@ public sealed class CommandRouteTests
     }
 
     [Fact]
+    public void Tool_list_reports_no_configured_command_tools_by_default()
+    {
+        using Ui ui = new();
+        new ToolCommands(ui.Harness.CommandTools, ui.Terminal).Run(["/tool", "list"]);
+
+        Assert.Contains("没有配置命令工具", ui.Output.Output);
+    }
+
+    [Fact]
+    public void Tool_list_with_wrong_argument_count_shows_usage()
+    {
+        using Ui ui = new();
+        new ToolCommands(ui.Harness.CommandTools, ui.Terminal).Run(["/tool"]);
+
+        Assert.Contains("用法：/tool", ui.Output.Output);
+    }
+
+    [Fact]
     public void Settings_set_writes_and_echoes_the_effect()
     {
         using Ui ui = new();

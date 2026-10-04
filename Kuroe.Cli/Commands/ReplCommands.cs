@@ -1,4 +1,3 @@
-using System.Text;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
 using Kuroe.Workflows.Tasks;
@@ -16,6 +15,7 @@ internal sealed class ReplCommands(
     SettingsCommands settingsCommands,
     TaskCommands tasks,
     FlowCommands flowCommands,
+    ToolCommands toolCommands,
     Terminal terminal,
     ErrorView errors)
 {
@@ -28,7 +28,7 @@ internal sealed class ReplCommands(
 
     public void Execute(string input)
     {
-        string[] parts = Split(input);
+        string[] parts = Arguments.Split(input);
 
         switch (parts[0].ToLowerInvariant())
         {
@@ -64,6 +64,10 @@ internal sealed class ReplCommands(
                 flowCommands.Run(parts);
                 break;
 
+            case "/tool":
+                toolCommands.Run(parts);
+                break;
+
             case "/set":
                 settingsCommands.Set(parts);
                 break;
@@ -91,45 +95,6 @@ internal sealed class ReplCommands(
         terminal.Ok($"{found.Value.Id} 的上下文已清空。");
     }
 
-    /// <summary>按空白拆分命令，双引号内的空白不作为分隔符，引号本身不出现在结果中。未闭合的引号按到输入末尾处理。</summary>
-    internal static string[] Split(string input)
-    {
-        List<string> parts = [];
-        StringBuilder part = new();
-        bool quoted = false;
-        bool started = false;
-
-        foreach (char character in input)
-        {
-            if (character == '"')
-            {
-                quoted = !quoted;
-                started = true;
-            }
-            else if (!quoted && character is ' ' or '\t')
-            {
-                if (started)
-                {
-                    parts.Add(part.ToString());
-                    part.Clear();
-                    started = false;
-                }
-            }
-            else
-            {
-                part.Append(character);
-                started = true;
-            }
-        }
-
-        if (started)
-        {
-            parts.Add(part.ToString());
-        }
-
-        return [.. parts];
-    }
-
     /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
     public void GuideCurrentModel() => errors.GuideModelRegistration(models, models.Current);
 
@@ -140,6 +105,7 @@ internal sealed class ReplCommands(
         [
             .. TaskCommands.Help,
             .. FlowCommands.Help,
+            .. ToolCommands.Help,
             .. SettingsCommands.Help,
             .. ProviderCommands.Help,
             .. ModelCommands.Help,

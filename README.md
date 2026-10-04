@@ -15,6 +15,7 @@
 - 提供商与模型在命令行登记，目录可脱敏导出、合并导入
 - 偏好改动立即生效，需要重启或会使旧上下文失效时当场提示
 - 内置时间、天气两个示例工具，实现 `ITool` 声明函数即可扩展
+- 命令工具可配置：`.kuroe/tools.json` 里声明命令模板，带参数占位符，模型调用时在工作目录执行
 
 ## 快速开始
 
@@ -44,7 +45,7 @@ dotnet run --project Kuroe.Cli -- -d <工作目录>
 /task new 查明北京今天的天气，给出穿衣建议
 ```
 
-工作目录的 `.kuroe/` 下存放 `settings.json`、`catalog.json` 与 `flows.json` 三个配置文件，分别是偏好、模型目录与流程模板；`catalog.json` 含明文凭据。
+工作目录的 `.kuroe/` 下存放 `settings.json`、`catalog.json`、`flows.json` 与 `tools.json` 四个配置文件，分别是偏好、模型目录、流程模板与命令工具；`catalog.json` 含明文凭据，`tools.json` 声明由模型实参调用的命令，两者都要来源可信。
 
 ## 文档
 

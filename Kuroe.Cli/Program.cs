@@ -65,6 +65,7 @@ static async Task<int> RunAsync(string? workDirectory)
     services.AddSingleton<ModelCommands>();
     services.AddSingleton<CatalogCommands>();
     services.AddSingleton<FlowCommands>();
+    services.AddSingleton<ToolCommands>();
     services.AddSingleton<TaskCommands>();
     services.AddSingleton<ReplCommands>();
     services.AddSingleton<Repl>();

@@ -7,6 +7,7 @@ using Kuroe.Configuration;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
+using Kuroe.Tools.CommandTools;
 using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
@@ -40,16 +41,25 @@ public static class ServiceCollectionExtensions
             return flows.ErrorsOrEmptyList;
         }
 
+        ErrorOr<IReadOnlyList<CommandToolDefinition>> configuredTools = CommandToolStore.Load(paths.CommandToolsFile, paths.WorkingDirectory);
+        if (configuredTools.IsError)
+        {
+            return configuredTools.ErrorsOrEmptyList;
+        }
+
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
         services.AddSingleton(flows.Value);
-        services.AddSingleton<ITool>(new TimeTool());
-        services.AddSingleton<ITool>(new WeatherTool());
-        services.AddSingleton<ITool, PlanTool>();
+        services.AddSingleton(configuredTools.Value);
+
+        ErrorOr<Success> registered = RegisterTools(services, configuredTools.Value, paths.WorkingDirectory);
+        if (registered.IsError)
+        {
+            return registered.ErrorsOrEmptyList;
+        }
+
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<ModelService>();
-        services.AddSingleton<TaskRegistry>();
-        services.AddSingleton<PlanSubmitter>();
         services.AddSingleton<RunDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
@@ -74,6 +84,44 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRunExecutor>(sp => new RunExecutor(sp.GetRequiredService<SessionFactory>()));
 
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
+    }
+
+    /// <summary>装配工具载体并注册：内置工具、命令工具与契约工具一次创建，注册前重名校验。
+    /// TaskRegistry 与 PlanSubmitter 在此建实例并注册，PlanTool 的提交链与其它消费者共享。</summary>
+    private static ErrorOr<Success> RegisterTools(
+        IServiceCollection services,
+        IReadOnlyList<CommandToolDefinition> definitions,
+        string workingDirectory)
+    {
+        TaskRegistry taskRegistry = new();
+        PlanSubmitter planSubmitter = new(taskRegistry);
+
+        List<ITool> tools =
+        [
+            new TimeTool(),
+            new WeatherTool(),
+            new PlanTool(planSubmitter),
+            .. definitions.Select(definition => (ITool)new CommandTool(definition, workingDirectory)),
+        ];
+
+        IReadOnlyList<ToolName> duplicates = [.. tools
+            .SelectMany(tool => tool.Functions)
+            .GroupBy(function => function.Name)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)];
+        if (duplicates.Count > 0)
+        {
+            return duplicates.Select(name => CommandToolErrors.Duplicate(name.Value)).ToList();
+        }
+
+        services.AddSingleton(taskRegistry);
+        services.AddSingleton(planSubmitter);
+        foreach (ITool tool in tools)
+        {
+            services.AddSingleton<ITool>(tool);
+        }
+
+        return Result.Success;
     }
 }
 

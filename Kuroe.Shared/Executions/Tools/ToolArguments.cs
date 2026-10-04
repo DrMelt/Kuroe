@@ -31,5 +31,25 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         _ => null,
     };
 
+    /// <summary>按参数名取字符串列表。数组元素按文本给出，非字符串元素按文本表示；缺参、JSON null 或类型不符时为空。</summary>
+    public IReadOnlyList<string>? List(ToolName name) => Value(name) switch
+    {
+        JsonElement { ValueKind: JsonValueKind.Array } element =>
+            [.. element.EnumerateArray().Select(TextOf)],
+        string[] array => [.. array],
+        IReadOnlyList<string> list => [.. list],
+        _ => null,
+    };
+
+    /// <summary>数组元素按文本给出，JSON null 或 undefined 按空文本。</summary>
+    private static string TextOf(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.String => element.GetString() ?? string.Empty,
+        JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+        JsonValueKind.True => "true",
+        JsonValueKind.False => "false",
+        _ => element.ToString(),
+    };
+
     private object? Value(ToolName name) => values.TryGetValue(name.Value, out object? value) ? value : null;
 }

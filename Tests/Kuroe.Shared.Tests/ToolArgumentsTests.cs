@@ -52,6 +52,31 @@ public sealed class ToolArgumentsTests
 
         Assert.False(parameter.Flag);
         Assert.False(parameter.Required);
+        Assert.False(parameter.List);
+    }
+
+    [Fact]
+    public void List_reads_json_arrays_as_texts()
+    {
+        ToolArguments arguments = Arguments("""{"files": ["a", "b", "", null], "single": "x", "none": null}""");
+
+        Assert.Equal(["a", "b", "", ""], [.. arguments.List(new ToolName("files"))!]);
+        Assert.Null(arguments.List(new ToolName("single")));
+        Assert.Null(arguments.List(new ToolName("none")));
+        Assert.Null(arguments.List(new ToolName("missing")));
+    }
+
+    private static readonly string[] values = ["a", "b"];
+
+    [Fact]
+    public void List_reads_clr_string_arrays()
+    {
+        ToolArguments arguments = new(new Dictionary<string, object?>
+        {
+            ["files"] = values,
+        });
+
+        Assert.Equal(["a", "b"], [.. arguments.List(new ToolName("files"))!]);
     }
 
     /// <summary>实参按模型给出的 JSON 值构造，值各自持有，不随文档释放失效。</summary>

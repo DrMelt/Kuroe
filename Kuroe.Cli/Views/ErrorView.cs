@@ -66,6 +66,10 @@ internal sealed class ErrorView(Terminal terminal)
                     or ErrorCodes.FlowFormat:
                     terminal.Hint("流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。");
                     break;
+
+                case ErrorCodes.ToolDuplicate or ErrorCodes.ToolInvalid or ErrorCodes.ToolFormat:
+                    terminal.Hint("命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完用 /tool list 确认是否加载成功。");
+                    break;
             }
         }
     }

@@ -46,6 +46,9 @@ public sealed class KuroeHarness : IDisposable
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
+    public IReadOnlyList<Kuroe.Tools.CommandTools.CommandToolDefinition> CommandTools =>
+        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tools.CommandTools.CommandToolDefinition>>();
+
     /// <summary>测试默认流程：结构同内置「默认」流程，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
     private const string TestDefaultFlow = """
         {

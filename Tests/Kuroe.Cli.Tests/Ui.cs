@@ -85,9 +85,10 @@ internal sealed class Ui : IDisposable
             SettingsCommands settings = Settings;
             TaskCommands tasks = Tasks;
             FlowCommands flows = Flows;
+            ToolCommands tools = new(Harness.CommandTools, Terminal);
 
             return new ReplCommands(Harness.Registry, Harness.Models, providers, models, catalogs,
-                settings, tasks, flows, Terminal, Errors);
+                settings, tasks, flows, tools, Terminal, Errors);
         }
     }
 

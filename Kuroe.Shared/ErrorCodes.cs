@@ -32,4 +32,16 @@ public static class ErrorCodes
 
     /// <summary>命令里的文件参数无法解析为路径。</summary>
     public const string FlowInvalidPath = "Flow.InvalidPath";
+
+    /// <summary>命令工具文件无法读取。</summary>
+    public const string ToolRead = "Tool.Read";
+
+    /// <summary>命令工具文件不是合法 JSON 或结构不符。</summary>
+    public const string ToolFormat = "Tool.Format";
+
+    /// <summary>命令工具定义本身不合规，如占位符与参数声明不匹配。</summary>
+    public const string ToolInvalid = "Tool.Invalid";
+
+    /// <summary>命令工具与其他已注册工具重名。</summary>
+    public const string ToolDuplicate = "Tool.Duplicate";
 }

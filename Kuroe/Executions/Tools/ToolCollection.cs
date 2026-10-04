@@ -137,7 +137,18 @@ public sealed class ToolCollection
                 foreach (ToolParameter parameter in parameters)
                 {
                     writer.WriteStartObject(parameter.Name.Value);
-                    writer.WriteString("type", parameter.Flag ? "boolean" : "string");
+                    if (parameter.List)
+                    {
+                        writer.WriteString("type", "array");
+                        writer.WriteStartObject("items");
+                        writer.WriteString("type", "string");
+                        writer.WriteEndObject();
+                    }
+                    else
+                    {
+                        writer.WriteString("type", parameter.Flag ? "boolean" : "string");
+                    }
+
                     writer.WriteString("description", parameter.Description);
                     writer.WriteEndObject();
                 }
