@@ -28,7 +28,7 @@ internal sealed class TaskListView(Terminal terminal)
                 new Text(task.Flow.Name),
                 new Text($"{task.FrontierNodes}/{task.TotalExecutableNodes}"),
                 new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State)),
-                new Text($"{task.LiveRuns} 在跑 / {total} 已派"),
+                new Text($"{task.LiveRuns} 在跑 / {total} 已启动"),
                 new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint));
         }
 

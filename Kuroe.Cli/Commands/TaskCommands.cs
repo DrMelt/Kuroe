@@ -24,13 +24,13 @@ internal sealed class TaskCommands(
     [
         ("/task", "打开任务浏览器，逐级进入 run 详情"),
         ("/task list", "列出任务"),
-        ("/task new <目标>", "提交任务，按默认流程开第一步"),
+        ("/task new <目标>", "提交任务，按默认流程启动 run"),
         ("/task new --flow <流程> <目标>", "用指定流程提交任务"),
         ("/task show <任务号>", "打印该任务的节点与 run"),
         ("/task run <run号>", "打印该 run 的上下文来源与过程"),
         ("/task use <任务号>", "把前台对话切到该任务"),
         ("/task title <任务号> <文本>", "改任务标题"),
-        ("/task approve <任务号>", "批准等待放行的节点"),
+        ("/task approve <任务号>", "批准待批准的节点"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
         ("/task adopt <run号>", "把 run 结论写进任务历史"),
         ("/task stop <任务号>", "取消任务"),
@@ -131,7 +131,7 @@ internal sealed class TaskCommands(
         }
 
         TaskSnapshot task = submitted.Value;
-        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已派出。");
+        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已启动。");
         list.Print([task], task.Id);
     }
 

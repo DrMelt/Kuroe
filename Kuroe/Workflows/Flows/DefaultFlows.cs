@@ -4,7 +4,7 @@ using Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>内置节点库与内置流程：用户层未指定默认流程时使用，工作目录 `.kuroe/` 里还没有 flows.json 时也只有这一条。
-/// 模型选择都不写模型名，流程可加载但执行时无法确定模型，派发 run 报错。</summary>
+/// 模型选择都不写模型名，流程可加载但执行时无法确定模型，启动 run 时报错。</summary>
 internal static class DefaultFlows
 {
     /// <summary>内置流程的名字。</summary>
@@ -55,7 +55,7 @@ internal static class DefaultFlows
         ],
     };
 
-    /// <summary>内置内容：根容器包住规划与交付。装配层从外部输入模型，规划引执行叶子写模型配置名，交付绑定组内实施节点的模型槽位。</summary>
+    /// <summary>内置内容：根容器包住规划与交付。装配层从外部输入模型，规划引执行叶子写模型选择名，交付绑定组内实施节点的模型槽位。</summary>
     internal static readonly FlowFile Builtin = new(
         [PlanNodeDefinition, ExecuteNodeDefinition, DeliveryContainerDefinition],
         [

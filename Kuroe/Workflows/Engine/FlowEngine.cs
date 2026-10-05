@@ -38,7 +38,7 @@ sealed class FlowEngine(
         });
     }
 
-    /// <summary>要求持有任务 Gate：批准等待放行的节点与容器，再发出继续信号，返回被批准的节点数。</summary>
+    /// <summary>要求持有任务 Gate：批准待批准的节点与容器，再发出继续信号，返回被批准的节点数。</summary>
     public int Approve(WorkTask task)
     {
         int waiting;

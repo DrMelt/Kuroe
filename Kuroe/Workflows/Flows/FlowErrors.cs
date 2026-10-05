@@ -26,7 +26,7 @@ static class FlowErrors
         Error.Validation(ErrorCodes.FlowNode, $"流程 {flow} 的节点 {node}：{message}");
 
     public static Error Model(string flow, string model, string message) =>
-        Error.Validation(ErrorCodes.FlowNode, $"流程 {flow} 的模型配置 {model}：{message}");
+        Error.Validation(ErrorCodes.FlowNode, $"流程 {flow} 的模型选择 {model}：{message}");
 
     public static Error Body(string flow, string message) =>
         Error.Validation(ErrorCodes.FlowBody, $"流程 {flow}：{message}");

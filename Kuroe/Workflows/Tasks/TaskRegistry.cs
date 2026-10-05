@@ -100,7 +100,7 @@ public sealed class TaskRegistry
         return [.. all.Select(task => task.Snapshot())];
     }
 
-    /// <summary>在跑的 run，含排队中的，按派出先后。</summary>
+    /// <summary>在跑的 run，含排队中的，按启动先后。</summary>
     public IReadOnlyList<RunSnapshot> LiveRuns()
     {
         Run[] all;

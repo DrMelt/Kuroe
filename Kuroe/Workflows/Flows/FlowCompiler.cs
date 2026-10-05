@@ -5,7 +5,7 @@ namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，From 引用编译为带消费方式的边。
 /// 声明 AnyOf 的执行节点按来源各生成一条单份边，组内与组间重复来源不重复建边。
-/// 要求已通过 FlowRules 校验，模型配置引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
+/// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
     /// <summary>编译流程树。</summary>

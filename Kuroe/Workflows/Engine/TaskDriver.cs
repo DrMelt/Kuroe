@@ -45,7 +45,7 @@ internal sealed class TaskDriver(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>批准语义：放行等待的容器并连同等待放行的执行节点入队，推进入下一步评估。</summary>
+    /// <summary>批准语义：放行等待批准的容器并连同等待批准的执行节点入队，进入下一步评估。</summary>
     public void Approve()
     {
         List<int> targets;
@@ -141,7 +141,7 @@ internal sealed class TaskDriver(
                 lock (_gate)
                 {
                     // 挂起判定与入队之间可能又有目标，队列非空则不去挂起重新取批。
-                    // 停止位单独不足挂起：在途 run 尚多，收口回调会逐个唤醒，无需空转
+                    // 停止位单独不足挂起：在途 run 仍多，收口回调会逐个唤醒，无需空转
                     recheck = _pending.Count > 0;
                     if (!recheck)
                     {
@@ -170,7 +170,7 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>一个执行节点收到评估意图：静态拆分就地产出、等待批准的放行、输入齐备启动实例。
+    /// <summary>一个执行节点收到评估意图：静态拆分就地产出、放行待批准的节点、输入齐备启动实例。
     /// 启动的 run 异步派发由收口回调处理，通知的下游即时入队。</summary>
     private void Activate(int nodeIndex)
     {
@@ -201,7 +201,7 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>run 装配与派发的包装：收口异常上报为推进异常，不越过调度循环。</summary>
+    /// <summary>run 装配与启动的包装：收口异常上报为推进异常，不越过调度循环。</summary>
     private async Task DispatchAndSettleAsync(RuntimeExecutable node, TaskRuntime.RunStarter starter)
     {
         try
@@ -272,8 +272,8 @@ internal sealed class TaskDriver(
             {
                 node.ReleaseActive();
                 plan = task.Runtime.Settle(run);
-                // 活跃屏障可能吞掉一次来源新版本的通知：活跃释放后这里补一次评估，
-                // 否则该节点停在可启动状态而无人再激活，任务会永远挂着
+                // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
+                // 否则该节点停在可启动状态而无人再激活，任务会一直等待
                 selfActivate = task.Runtime.CanStart(node);
             }
 

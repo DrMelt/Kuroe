@@ -3,7 +3,7 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Executions;
 
-/// <summary>一次执行的上下文。派出的执行只用这里声明的内容，不继承任何未声明的历史。</summary>
+/// <summary>一次执行的上下文。启动的执行只用这里声明的内容，不继承任何未声明的历史。</summary>
 public sealed record RunContext
 {
     /// <summary>所属任务。</summary>

@@ -6,8 +6,8 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>推进引擎的调度时序：run 收口即推下游，不被同层无关的慢 run 挡门；
-/// 活跃屏障吞掉来源新版本通知后，run 收口必须补一次评估把节点放行。</summary>
+/// <summary>推进引擎的调度时序：run 收口即推下游，不因同层无关的慢 run 阻塞；
+/// 活跃屏障使来源新版本通知丢失后，run 收口必须补一次评估把节点放行。</summary>
 public sealed class EngineAdvanceTests
 {
     [Fact]
@@ -18,7 +18,7 @@ public sealed class EngineAdvanceTests
 
         TaskId id = harness.Submit("并行推进");
 
-        // 等慢工下游链的末端启动，此刻慢工自身应尚未收口
+        // 慢 run 的下游链末端已启动，慢 run 自身应尚未收口
         harness.Wait(id, snapshot => snapshot.Executables.Any(node =>
             node.Executable.Name.Value == "收官" && node.Runs.Count > 0));
 
@@ -28,7 +28,7 @@ public sealed class EngineAdvanceTests
     }
 
     /// <summary>AnyOf 组内重复来源的汇合：某来源先发布拉起汇合 run，另一来源随后发布的通知
-    /// 撞上活跃屏障被吞掉时，汇合 run 收口后必须补评估重新启动，否则任务停在运行态。</summary>
+    /// 因活跃屏障丢失时，汇合 run 收口后必须补评估重新启动，否则任务停在运行态。</summary>
     [Fact]
     public void AnyOf_repeats_advance_past_interleaved_source_release()
     {

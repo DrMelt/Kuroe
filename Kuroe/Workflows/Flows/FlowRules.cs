@@ -18,11 +18,11 @@ static class FlowRules
         {
             if (string.IsNullOrWhiteSpace(name.Value))
             {
-                errors.Add(FlowErrors.Model(flow.Name, "(未命名)", "模型配置名不能为空。"));
+                errors.Add(FlowErrors.Model(flow.Name, "(未命名)", "模型选择名不能为空。"));
             }
             else if (!modelNames.Add(name))
             {
-                errors.Add(FlowErrors.Model(flow.Name, name.Value, "模型配置名重复。"));
+                errors.Add(FlowErrors.Model(flow.Name, name.Value, "模型选择名重复。"));
             }
         }
 
@@ -35,7 +35,7 @@ static class FlowRules
         var names = new HashSet<Flow.NodeName>();
         CheckTree(flow.RootNode, names, executableNames, modelNames, containerNames, flow.Name, errors);
 
-        // 引用类错误不存在时才展平，避免编译时的模型配置查表落空
+        // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
         {
             CheckShape(FlowCompiler.Compile(flow), flow.Name, errors);
@@ -75,7 +75,7 @@ static class FlowRules
         }
     }
 
-    /// <summary>递归校验名字、From 引用、容器与模型配置引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
+    /// <summary>递归校验名字、From 引用、容器与模型选择引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
     private static void CheckTree(
         Flow.NodeSpec node,
         HashSet<Flow.NodeName> names,
@@ -150,11 +150,11 @@ static class FlowRules
         {
             if (node.Model is not { } model)
             {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "执行节点必须声明模型配置。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "执行节点必须声明模型选择。"));
             }
             else if (!modelNames.Contains(model))
             {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"引用的模型配置 {model.Value} 不存在。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
             }
 
             CheckExpansion(node, flowName, errors);
@@ -467,7 +467,7 @@ static class FlowRules
 
         foreach (FlowEdge edge in graph.Edges)
         {
-            // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动即死的环
+            // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动条件永不满足的环
             if (graph[edge.From] is ContainerNode container
                 && graph.ExecutablesIn(container.Index).Contains(edge.To))
             {

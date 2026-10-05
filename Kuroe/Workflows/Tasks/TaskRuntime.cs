@@ -54,7 +54,7 @@ internal sealed class TaskRuntime
     /// <summary>图上的运行时节点对象，按先根序与全节点一一对应。读写要求持有 Gate。</summary>
     public IReadOnlyList<RuntimeNode> Nodes => _nodes;
 
-    /// <summary>图上的运行时执行节点对象，只含会派发 run 的节点。</summary>
+    /// <summary>图上的运行时执行节点对象，只含会启动 run 的节点。</summary>
     public IReadOnlyList<RuntimeExecutable> Executables => [.. _nodes.OfType<RuntimeExecutable>()];
 
     /// <summary>按序号取运行时节点对象。</summary>
@@ -201,7 +201,7 @@ internal sealed class TaskRuntime
         return starters;
     }
 
-    /// <summary>一个待派发的实例：条目序可为空（整节点）。</summary>
+    /// <summary>一个待启动的实例：条目序可为空（整节点）。</summary>
     public readonly record struct RunStarter(int? Item);
 
     // ---- 发布与作废 ----
@@ -276,20 +276,20 @@ internal sealed class TaskRuntime
 
     // ---- 汇总 ----
 
-    /// <summary>是否有执行节点或容器停在等人批准。</summary>
+    /// <summary>是否有执行节点或容器停在等待批准。</summary>
     public bool HasAwaiting => _nodes.Any(node => node.Awaiting);
 
-    /// <summary>是否有执行节点停在等人返工。</summary>
+    /// <summary>是否有执行节点停在等待返工。</summary>
     public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.Blocked);
 
     /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
     public bool HasWork => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node));
 
-    /// <summary>正在等人批准的执行节点。</summary>
+    /// <summary>正在等待批准的执行节点。</summary>
     public IReadOnlyList<int> AwaitingNodes =>
         [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Awaiting).Select(node => node.Index)];
 
-    /// <summary>正在等人批准的容器。</summary>
+    /// <summary>正在等待批准的容器。</summary>
     public IReadOnlyList<int> AwaitingContainers =>
         [.. _nodes.OfType<RuntimeContainer>().Where(container => container.Awaiting).Select(container => container.Index)];
 
@@ -427,14 +427,14 @@ internal sealed class TaskRuntime
 
     // ---- 宿主入口 ----
 
-    /// <summary>一个执行节点被激活后的评估：静态拆分就地产出、等待批准的放行、输入齐备启动实例。
-    /// 返回要通知的下游与要派发的实例。要求持有 Gate。</summary>
+    /// <summary>一个执行节点被激活后的评估：静态拆分就地产出、放行待批准的节点、输入齐备启动实例。
+    /// 返回要通知的下游与要启动的实例。要求持有 Gate。</summary>
     public EvaluateResult Evaluate(RuntimeExecutable node)
     {
         ExecutableNode executable = node.Executable;
         if (executable.IsStaticSplit && _task.SplitFor(node.Index) is null)
         {
-            // 纯静态拆分不派 run，激活即产出
+            // 纯静态拆分不启动 run，激活即产出
             _task.SetSplit(node.Index, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Split!, []).Value));
             Publish(node, null);
 
@@ -455,7 +455,7 @@ internal sealed class TaskRuntime
         return new EvaluateResult([], []);
     }
 
-    /// <summary>一次评估的结果：要通知的下游执行节点与要派发的实例。</summary>
+    /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
     public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
 
     /// <summary>无入边的执行节点，任务启动的第一批。</summary>
@@ -464,7 +464,7 @@ internal sealed class TaskRuntime
             .Where(node => Graph.Incoming(node.Index).Count == 0)
             .Select(node => node.Index)];
 
-    /// <summary>被阻塞的执行节点，等人返工或放行。</summary>
+    /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
     public IReadOnlyList<int> BlockedNodes =>
         [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Blocked).Select(node => node.Index)];
 

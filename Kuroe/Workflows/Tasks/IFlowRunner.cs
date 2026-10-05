@@ -6,7 +6,7 @@ public interface IFlowRunner
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     void Start(WorkTask task);
 
-    /// <summary>要求持有任务 Gate：批准等待放行的节点并发出继续信号，返回被批准的节点数。</summary>
+    /// <summary>要求持有任务 Gate：批准待批准的节点并发出继续信号，返回被批准的节点数。</summary>
     int Approve(WorkTask task);
 
     /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>

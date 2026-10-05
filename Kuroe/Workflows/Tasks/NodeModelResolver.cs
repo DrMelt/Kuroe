@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>执行节点到可用模型的解析：取引用的模型配置声明的模型名，未写或目录里没有时报错。</summary>
+/// <summary>执行节点到可用模型的解析：取引用的模型选择声明的模型名，未写或目录里没有时报错。</summary>
 sealed class NodeModelResolver(CatalogService catalog)
 {
     public ErrorOr<string> For(ExecutableNode executable)

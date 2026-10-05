@@ -2,7 +2,7 @@ using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>一个容器在任务内的运行时对象：容器定义与容器门控状态。容器不执行、不派 run，
+/// <summary>一个容器在任务内的运行时对象：容器定义与容器门控状态。容器不执行、不启动 run，
 /// 放行与门控由 TaskRuntime 随成员推进刷新。读写都要求持有任务 Gate。</summary>
 internal sealed class RuntimeContainer(ContainerNode container, Func<int, RuntimeNode> resolve) : RuntimeNode(container)
 {
@@ -20,13 +20,13 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     public override long Revision => _revision;
     private int _revision;
 
-    /// <summary>产出已放行、可被下游消费：容器自身不停批不取消，且直接成员与子容器都放行。</summary>
+    /// <summary>产出已放行、可被下游消费：容器自身不等待批准、不取消，且直接成员与子容器都放行。</summary>
     public override bool Released =>
         !_awaiting && !_canceled
         && Container.Members.All(member => resolve(member).Released)
         && Container.SubContainers.All(sub => resolve(sub).Released);
 
-    /// <summary>成员产出齐备后停在等人批准。</summary>
+    /// <summary>成员产出齐备后停在等待批准。</summary>
     public override bool Awaiting => _awaiting;
 
     /// <summary>随任务取消。</summary>
@@ -47,7 +47,7 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>成员作废使产出不再齐备时复位。</summary>
     public void ResetProduced() => _produced = false;
 
-    /// <summary>容器门控：产出齐备后停在等人批准。</summary>
+    /// <summary>容器门控：产出齐备后停在等待批准。</summary>
     public void Park() => _awaiting = true;
 
     /// <summary>清除容器等待批准的状态。</summary>

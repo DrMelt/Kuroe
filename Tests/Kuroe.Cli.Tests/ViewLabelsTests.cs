@@ -23,7 +23,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Mode_and_gate_labels_cover_the_scope()
     {
-        Assert.Equal("推进中", ViewLabels.Of(NodeState.Running));
+        Assert.Equal("执行中", ViewLabels.Of(NodeState.Running));
         Assert.Equal("按条目", ViewLabels.Of(NodeMode.PerItem));
         Assert.Equal("整节点", ViewLabels.Of(NodeMode.Single));
         Assert.Equal("自动放行", ViewLabels.Of(NodeGate.Auto));

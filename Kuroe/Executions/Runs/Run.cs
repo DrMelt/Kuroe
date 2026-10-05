@@ -49,7 +49,7 @@ public sealed class Run
     /// <summary>本次执行的回合归属，工具与提交通道用它认定身份。</summary>
     public TurnScope Scope { get; }
 
-    /// <summary>登记时刻。</summary>
+    /// <summary>run 创建时刻。</summary>
     public DateTimeOffset CreatedAt { get; }
 
     /// <summary>当前执行状态。</summary>

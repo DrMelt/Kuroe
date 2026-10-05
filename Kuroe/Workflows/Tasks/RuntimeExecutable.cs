@@ -41,10 +41,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>已有发表产出的实例。返工作废后对应项移除。只经 Publish 与 Invalidate 改动。</summary>
     private readonly HashSet<int> _publishedItems = [];
 
-    /// <summary>整节点的已派发 run 数，只经 RecordRun 改动。</summary>
+    /// <summary>整节点的已启动 run 数，只经 RecordRun 改动。</summary>
     private int _wholeRuns;
 
-    /// <summary>逐条目的已派发 run 数，只经 RecordRun 改动。</summary>
+    /// <summary>逐条目的已启动 run 数，只经 RecordRun 改动。</summary>
     private readonly Dictionary<int, int> _itemRuns = [];
 
     private bool _awaiting;
@@ -54,7 +54,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     public override bool Awaiting => _awaiting;
 
-    /// <summary>停在等人返工或放行。</summary>
+    /// <summary>停在等待返工或放行。</summary>
     public bool Blocked => _blocked;
 
     public override bool Canceled => _canceled;
@@ -131,11 +131,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>某实例或整节点当前已派发的 run 数，尚未派发过为 0。</summary>
+    /// <summary>某实例或整节点当前已启动的 run 数，尚未启动过为 0。</summary>
     public int ExecutionCount(int? item) =>
         item is { } index ? _itemRuns.GetValueOrDefault(index) : _wholeRuns;
 
-    /// <summary>节点内最高的执行次数：整节点与各条目已派发 run 数的最大值，未执行过为 0。</summary>
+    /// <summary>节点内最高的执行次数：整节点与各条目已启动 run 数的最大值，未执行过为 0。</summary>
     public int MaxExecutionCount => Math.Max(_wholeRuns, _itemRuns.Values.Prepend(0).Max());
 
     /// <summary>作废实例或整节点的已发表产出，返工起点用它让下游重新等待。PerItem 执行节点不带条目时清空全部实例。</summary>
@@ -155,7 +155,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>一个已派发的实例终结，在跑数减一。</summary>
+    /// <summary>一个已启动的实例终结，在跑数减一。</summary>
     public void ReleaseActive()
     {
         if (Active > 0)
@@ -164,7 +164,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>记下新派发的实例数。</summary>
+    /// <summary>记下新启动的实例数。</summary>
     public void AddActive(int count) => Active += count;
 
     /// <summary>清除等待批准，返回是否确实在等。</summary>
@@ -180,7 +180,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         return true;
     }
 
-    /// <summary>产出后按门控停在等人批准，Auto 不停。返回是否停留。</summary>
+    /// <summary>产出后按门控停在等待批准，Auto 不停。返回是否停留。</summary>
     public bool Park()
     {
         if (Gate != NodeGate.Review)

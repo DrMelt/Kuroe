@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>容器作为节点实体的推进：容器门控等待放行、容器汇合后才放下游。</summary>
+/// <summary>容器作为节点实体的推进：容器门控停在待批准、容器汇合后才放下游。</summary>
 public sealed class ContainerAdvanceTests
 {
     [Fact]
@@ -76,14 +76,14 @@ public sealed class ContainerAdvanceTests
         TaskSnapshot parked = harness.Settle(id);
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
         Assert.Empty(parked.Executables[2].Runs);
-        // 子容器停在待批，父容器不广播下游
+        // 子容器停在待批准，父容器不广播下游
         Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path == "整体/交付/撰写组").State);
 
         harness.Tasks.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 子容器获批后一容器广播接续到收拢节点，只跑一轮
+        // 子容器获得批准后，容器广播接续到收拢节点，只跑一轮
         Assert.Single(done.Executables[2].Runs);
         Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }

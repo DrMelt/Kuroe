@@ -13,7 +13,7 @@ using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>任务 = 一条长期会话线程：自己的对话历史、按流程推进的执行节点状态、派出的全部 run。
+/// <summary>任务 = 一条长期会话线程：自己的对话历史、按流程推进的执行节点状态、启动的全部 run。
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask
 {
@@ -147,7 +147,7 @@ public sealed class WorkTask
         _lastActivityAt = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>记下一个派出的 run 与它的执行回合，顺带在所属节点记账。要求持有 <see cref="Gate"/>。</summary>
+    /// <summary>记下一个启动的 run 与它的执行回合，顺带在所属节点记账。要求持有 <see cref="Gate"/>。</summary>
     internal void Attach(Run run)
     {
         _runs.Add(run);
@@ -200,7 +200,7 @@ public sealed class WorkTask
     /// <summary>丢弃前台对话的上下文，回到起点。</summary>
     public void ResetDialogue() => Session.Reset();
 
-    /// <summary>把 run 的结论作为一条用户消息写进会话历史，后续对话才用得上它。</summary>
+    /// <summary>把 run 的结论作为一条用户消息写进会话历史，后续对话才可引用它。</summary>
     internal void Adopt(string text)
     {
         lock (Gate)

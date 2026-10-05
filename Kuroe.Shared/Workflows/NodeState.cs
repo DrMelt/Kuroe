@@ -9,10 +9,10 @@ public enum NodeState
     /// <summary>有 run 在跑。</summary>
     Running,
 
-    /// <summary>本节点产出已就绪，等人批准才向下游发布。</summary>
+    /// <summary>本节点产出已就绪，待批准后才向下游发布。</summary>
     AwaitingApproval,
 
-    /// <summary>停在执行错误或未收口，等人返工或放行。</summary>
+    /// <summary>停在执行错误或未收口，等待返工或放行。</summary>
     Blocked,
 
     /// <summary>产出已发布，后续不会再自动执行。</summary>

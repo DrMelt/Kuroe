@@ -11,7 +11,7 @@ internal sealed class ToolCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/tool list", "列出命令工具及路径"),
+        ("/tool list", "列出配置的命令工具及路径"),
     ];
 
     public void Run(string[] parts)

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>执行次数账在节点上，按整节点与条目分开累计，峰值取其中最大值，以派发的 run 记录为核算真相。</summary>
+/// <summary>执行次数账在节点上，按整节点与条目分开累计，峰值取其中最大值，以启动的 run 记录为核算真相。</summary>
 public sealed class ExecutionCountTests
 {
     [Fact]

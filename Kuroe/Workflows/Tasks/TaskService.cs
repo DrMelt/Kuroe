@@ -37,7 +37,7 @@ public sealed class TaskService
         _models = models;
     }
 
-    /// <summary>提交任务：按流程建任务并开第一步。</summary>
+    /// <summary>提交任务：按流程建任务并启动 run。</summary>
     public ErrorOr<TaskSnapshot> Submit(string goal, string? flowName, string? title)
     {
         if (string.IsNullOrWhiteSpace(goal))
@@ -103,7 +103,7 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>批准等待放行的节点，开下一步。</summary>
+    /// <summary>批准待批准的节点，进入下一步。</summary>
     public ErrorOr<Success> Approve(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);

@@ -25,7 +25,7 @@ internal static class NodeExpander
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Renames { get; } = renames;
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Bindings { get; } = bindings;
 
-        /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型配置名或外层槽位名的映射。</summary>
+        /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型选择名或外层槽位名的映射。</summary>
         public IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? ModelSlots { get; } = modelSlots;
     }
 
@@ -102,7 +102,7 @@ internal static class NodeExpander
 
             if (node.Models is not null)
             {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型配置。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型选择。"));
             }
 
             return new Flow.NodeSpec
@@ -281,7 +281,7 @@ internal static class NodeExpander
         return name;
     }
 
-    /// <summary>执行节点的模型引用：装配层节点直接是流程模型配置名，节点组实例内成员是模型槽位，沿绑定链解析成配置名。
+    /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。
     /// 装配层引用执行节点未写模型时留空，交 FlowRules 报错。</summary>
     private static Flow.ModelRef? ResolveModel(
         Flow.ModelRef? model,
@@ -299,7 +299,7 @@ internal static class NodeExpander
         return ResolveSlot(model.Value, env, mustBind: true, flowName, nodeName, errors);
     }
 
-    /// <summary>沿模型绑定链解析槽位：当前层命中取绑定值继续向更外层解析，直到装配层拿到流程模型配置名。
+    /// <summary>沿模型绑定链解析槽位：当前层命中取绑定值继续向更外层解析，直到装配层拿到流程模型选择名。
     /// 节点组内执行节点的模型必须从引用处绑定，未命中报错。</summary>
     private static Flow.ModelRef? ResolveSlot(
         Flow.ModelRef name,

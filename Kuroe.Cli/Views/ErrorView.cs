@@ -15,7 +15,7 @@ internal sealed class ErrorView(Terminal terminal)
         }
     }
 
-    /// <summary>模型不可用时给出可用操作：未选择时给出登记流程，名称合法但未注册时给出该模型的注册命令。
+    /// <summary>模型不可用时给出可用操作：未选择时给出注册流程，名称合法但未注册时给出该模型的注册命令。
     /// 空或全空白的名称不给指引，按这样的名字注册无从下手。</summary>
     public void GuideModelRegistration(ModelService models, string? model)
     {

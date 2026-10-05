@@ -20,7 +20,7 @@ internal abstract class RuntimeNode(GraphNode node)
     /// <summary>节点名。</summary>
     public NodeName Name => Node.Name;
 
-    /// <summary>节点进展到待批点时是否停人批准。</summary>
+    /// <summary>节点产出后是否停在等待批准。</summary>
     public NodeGate Gate => Node.Gate;
 
     /// <summary>产出已放行、可被下游消费：执行节点按自身发布与停驻，容器递归成员与子容器。</summary>
@@ -29,7 +29,7 @@ internal abstract class RuntimeNode(GraphNode node)
     /// <summary>整节点的产出版本：执行节点给发表号，容器给齐备代数。版本是消费账的版本依据。</summary>
     public abstract long Revision { get; }
 
-    /// <summary>产出停在等人批准。</summary>
+    /// <summary>产出停在等待批准。</summary>
     public abstract bool Awaiting { get; }
 
     /// <summary>随任务取消。</summary>

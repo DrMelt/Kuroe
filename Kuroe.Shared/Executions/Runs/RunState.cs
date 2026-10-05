@@ -3,7 +3,7 @@ namespace Kuroe.Shared.Executions.Runs;
 /// <summary>run 的执行状态，只表达跑没跑完。</summary>
 public enum RunState
 {
-    /// <summary>已登记，等待并发额度。</summary>
+    /// <summary>入队后等待并发额度。</summary>
     Queued,
 
     /// <summary>正在执行。</summary>
