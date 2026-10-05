@@ -29,6 +29,7 @@ public sealed class DialogueTests
             [
                 new ToolPath("GetLocalTime"),
                 new ToolPath("info"),
+                new ToolPath("files"),
             ],
             DialogueDefaults.Tools);
     }

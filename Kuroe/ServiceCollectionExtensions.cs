@@ -113,6 +113,7 @@ public static class ServiceCollectionExtensions
         List<ITool> tools =
         [
             new TimeTool(),
+            new FileTool(workingDirectory),
             new PlanTool(planSubmitter),
             new TaskInfoTool(taskRegistry),
             new CatalogInfoTool(catalog, models),

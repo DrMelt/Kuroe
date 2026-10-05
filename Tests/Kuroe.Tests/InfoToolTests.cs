@@ -163,6 +163,7 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("前台对话可用函数", noTools);
         Assert.Contains("GetLocalTime", noTools);
         Assert.Contains("info", noTools);
+        Assert.Contains("files", noTools);
         Assert.Contains("没有配置命令工具", noTools);
 
         CommandToolDefinition diff = new(
