@@ -12,8 +12,11 @@ internal sealed class CommandToolFileDto
 /// <summary>文件里的一个命令工具。</summary>
 internal sealed class CommandToolDto
 {
-    /// <summary>函数名，节点白名单按它匹配。</summary>
+    /// <summary>函数名，节点白名单按路径匹配。</summary>
     public string? Name { get; set; }
+
+    /// <summary>工具路径的分组部分，完整路径由分组加函数名构成；省略时完整路径即函数名。</summary>
+    public string? Path { get; set; }
 
     /// <summary>给模型的说明。</summary>
     public string? Description { get; set; }

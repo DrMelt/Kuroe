@@ -10,7 +10,7 @@ public sealed record ExecutableNode(
     string Path,
     NodeGate Gate,
     ModelDefinition Model,
-    IReadOnlyList<ToolName> Tools,
+    IReadOnlyList<ToolPath> Tools,
     string? Prompt,
     NodeOutput Output,
     NodeMode Mode,

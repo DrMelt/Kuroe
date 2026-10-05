@@ -176,11 +176,12 @@ public sealed class WorkTask
                 {
                     Task = Id,
                     Run = null,
-                    Output = null,
-                    NodeName = NodeName.Dialogue,
+                    Output = DialogueDefaults.Output,
+                    NodeName = DialogueDefaults.Name,
                     ItemIndex = null,
                     Journal = Journal,
                     Sink = TurnSinks.For(Journal, observer),
+                    Tools = DialogueDefaults.Tools,
                 };
             }
 

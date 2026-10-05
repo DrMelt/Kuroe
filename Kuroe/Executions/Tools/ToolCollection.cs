@@ -26,8 +26,9 @@ public sealed class ToolCollection
     /// <summary>工具名，供宿主展示可用性。</summary>
     public IReadOnlyList<ToolName> Names { get; }
 
-    /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。</summary>
-    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<ToolName>? tools)
+    /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
+    /// 工具面从回合的归属取用：null 表示全部，路径名单表示只给这些函数及其子树。</summary>
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<ToolPath>? tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
@@ -35,7 +36,7 @@ public sealed class ToolCollection
             ITool bound = carrier is IScopedTool scoped ? scoped.ForTurn(scope) : carrier;
             IEnumerable<ToolFunction> allowed = tools is null
                 ? bound.Functions
-                : bound.Functions.Where(function => tools.Contains(function.Name));
+                : bound.Functions.Where(function => tools.Any(entry => function.Path.IsUnder(entry)));
             result.AddRange(allowed.Select(function => new DeclaredFunction(function, sink)));
         }
 

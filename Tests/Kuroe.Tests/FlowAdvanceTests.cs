@@ -360,7 +360,7 @@ public sealed class FlowAdvanceTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划"] }
                   ]
                 }
               ]
@@ -454,7 +454,7 @@ public sealed class FlowAdvanceTests
                   "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
                   "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" }, { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" } ], "ExtrasMax": 0 } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划"] }
                   ]
                 }
               ]
@@ -477,7 +477,7 @@ public sealed class FlowAdvanceTests
                   "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
                   "Split": { "Items": [ { "Title": "固定任务", "Instruction": "做固定", "Acceptance": "固定验收" } ], "ExtrasMax": 2, "Acceptance": "统一验收" } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划"] }
                   ]
                 }
               ]
@@ -499,7 +499,7 @@ public sealed class FlowAdvanceTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 1 } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划"] }
                   ]
                 }
               ]

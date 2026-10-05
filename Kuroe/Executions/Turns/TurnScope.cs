@@ -14,7 +14,7 @@ public sealed record TurnScope
     /// <summary>前台对话回合没有对应 run。</summary>
     public required RunId? Run { get; init; }
 
-    /// <summary>产出的契约，前台对话回合为空。</summary>
+    /// <summary>产出的契约。</summary>
     public required NodeOutput? Output { get; init; }
 
     /// <summary>所属执行节点名，前台对话回合为「对话」。</summary>
@@ -29,6 +29,6 @@ public sealed record TurnScope
     /// <summary>本回合的过程写给谁。</summary>
     public required ITurnSink Sink { get; init; }
 
-    /// <summary>本轮可用的工具名单，空表示全部工具。</summary>
-    public IReadOnlyList<ToolName>? Tools { get; init; }
+    /// <summary>本轮可用的工具路径白名单，null 表示全部工具，空列表表示不放行任何工具。</summary>
+    public IReadOnlyList<ToolPath>? Tools { get; init; }
 }

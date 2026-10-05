@@ -65,7 +65,7 @@ public sealed class KuroeHarness : IDisposable
                   "Nodes": [
                     { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。" },
                     { "Name": "交付", "Nodes": [
-                      { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime", "GetWeather"], "Mode": "PerItem", "From": ["制定计划"] }
+                      { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划"] }
                     ] }
                   ]
                 }

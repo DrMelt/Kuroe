@@ -1,10 +1,9 @@
-using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools.CommandTools;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
-/// <summary>/tool 子命令的解析与执行，列出配置的命令工具。</summary>
+/// <summary>/tool 子命令的解析与执行，列出配置的命令工具及路径。</summary>
 internal sealed class ToolCommands(
     IReadOnlyList<CommandToolDefinition> commandTools,
     Terminal terminal)
@@ -12,7 +11,7 @@ internal sealed class ToolCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/tool list", "列出命令工具"),
+        ("/tool list", "列出命令工具及路径"),
     ];
 
     public void Run(string[] parts)
@@ -41,8 +40,9 @@ internal sealed class ToolCommands(
         }
 
         terminal.Line("命令工具：");
-        Grid grid = Terminal.Columns(4, wrapColumns: 3);
+        Grid grid = Terminal.Columns(5, wrapColumns: 4);
         grid.AddRow(
+            new Text("路径", Styles.Hint),
             new Text("名称", Styles.Hint),
             new Text("说明", Styles.Hint),
             new Text("模板", Styles.Hint),
@@ -51,31 +51,14 @@ internal sealed class ToolCommands(
         foreach (CommandToolDefinition tool in commandTools)
         {
             grid.AddRow(
+                new Text(tool.FullPath.Value, Styles.Hint),
                 new Text(tool.Name.Value, Styles.Key),
                 new Text(tool.Description),
-                new Text(Template(tool.Template), Styles.Hint),
-                new Text(Parameters(tool.Parameters), Styles.Hint));
+                new Text(CommandToolPresentation.Template(tool.Template), Styles.Hint),
+                new Text(CommandToolPresentation.Parameters(tool.Parameters), Styles.Hint));
         }
 
         terminal.NewLine();
         terminal.Write(grid);
-    }
-
-    /// <summary>模板呈现：对象项在文字后加 ? 表示关联参数缺省时整项消失。</summary>
-    private static string Template(IReadOnlyList<CommandToolTemplateItem> template) =>
-        string.Join(" ", template.Select(item => item.OmitWhenMissing is null ? item.Text : $"{item.Text}?"));
-
-    /// <summary>参数呈现：名字与是否列表、是否必填。</summary>
-    private static string Parameters(IReadOnlyList<ToolParameter> parameters)
-    {
-        if (parameters.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return string.Join("、", parameters.Select(parameter =>
-            parameter.Name.Value
-            + (parameter.List ? "[]" : string.Empty)
-            + (parameter.Required ? "*" : string.Empty)));
     }
 }

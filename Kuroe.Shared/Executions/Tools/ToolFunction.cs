@@ -6,7 +6,8 @@ public sealed class ToolFunction(
     ToolName name,
     string description,
     IReadOnlyList<ToolParameter> parameters,
-    Func<ToolArguments, string> invoke)
+    Func<ToolArguments, string> invoke,
+    ToolPath? path = null)
 {
 
     /// <summary>函数名，宿主按它列出可用性。</summary>
@@ -20,4 +21,7 @@ public sealed class ToolFunction(
 
     /// <summary>调用体，实参由库解析后传入。</summary>
     public Func<ToolArguments, string> Invoke { get; } = invoke;
+
+    /// <summary>函数在工具层级里的路径，白名单按它匹配；未写时即函数名。</summary>
+    public ToolPath Path { get; } = path is { Value.Length: > 0 } declared ? declared : new ToolPath(name.Value);
 }

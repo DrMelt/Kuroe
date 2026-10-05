@@ -43,6 +43,8 @@ public sealed class FlowValidationTests
     [InlineData(SelfReferenceContainer, "不能从自身所在容器")]
     [InlineData(PartialSelfReferenceContainer, "不能从自身所在容器")]
     [InlineData(CrossContainerReference, "没有环外来源")]
+    [InlineData(BadToolPathSegment, "不能为空或含空白与花括号")]
+    [InlineData(BadToolPathSlash, "不能以 / 开头或结尾")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -213,7 +215,7 @@ public sealed class FlowValidationTests
               "Name": "默认",
               "Models": [
                 { "Name": "规划者" },
-                { "Name": "执行者", "Tools": ["GetLocalTime", "GetWeather"] }
+                { "Name": "执行者", "Tools": ["GetLocalTime"] }
               ],
               "Nodes": [
                 {
@@ -372,6 +374,24 @@ public sealed class FlowValidationTests
           { "Name": "容器乙", "Nodes": [
             { "Name": "乙", "Model": "执行者", "From": ["容器甲"] }
           ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>能力工具白名单声明含空白的非法路径，装载期拒绝。</summary>
+    private const string BadToolPathSegment = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "干活", "Model": "执行者", "Tools": ["a b"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>能力工具白名单声明以 / 结尾的非法路径，装载期拒绝。</summary>
+    private const string BadToolPathSlash = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "干活", "Model": "执行者", "Tools": ["git/"] }
           ] }
         ] } ] }
         """;

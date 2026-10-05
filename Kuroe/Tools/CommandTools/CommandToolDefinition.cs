@@ -14,4 +14,9 @@ public sealed record CommandToolDefinition(
     IReadOnlyList<ToolParameter> Parameters,
     string? Directory,
     int TimeoutSeconds,
-    int OutputLimit);
+    int OutputLimit,
+    ToolPath? Path = null)
+{
+    /// <summary>完整工具路径：分组加函数名，未给分组时即函数名。白名单按它匹配。</summary>
+    public ToolPath FullPath => Path is { } path ? new ToolPath($"{path.Value}/{Name.Value}") : new ToolPath(Name.Value);
+}

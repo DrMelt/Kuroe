@@ -33,8 +33,8 @@ public sealed record RunContext
     /// <summary>当前节点下本实例的执行次数，按节点与条目各自累计，从 1 起。</summary>
     public int ExecutionCount { get; init; } = 1;
 
-    /// <summary>本轮可用的工具名单：节点声明的能力工具加契约工具。</summary>
-    public IReadOnlyList<ToolName> Tools { get; init; } = [];
+    /// <summary>本轮可用的工具路径：节点声明的能力工具加契约工具。</summary>
+    public IReadOnlyList<ToolPath> Tools { get; init; } = [];
 
     /// <summary>上游装配进来的已有内容，按序置于指令之前。</summary>
     public IReadOnlyList<ContextMessage> Seed { get; init; } = [];

@@ -12,6 +12,7 @@ public sealed class CommandTool(CommandToolDefinition definition, string baseDir
             definition.Name,
             definition.Description,
             definition.Parameters,
-            arguments => CommandToolRunner.Execute(definition, baseDirectory, arguments)),
+            arguments => CommandToolRunner.Execute(definition, baseDirectory, arguments),
+            definition.FullPath),
     ];
 }

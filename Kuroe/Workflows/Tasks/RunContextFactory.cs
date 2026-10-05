@@ -234,12 +234,12 @@ internal static class RunContextFactory
     }
 
     /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
-    private static List<ToolName> ToolsFor(ExecutableNode node)
+    private static List<ToolPath> ToolsFor(ExecutableNode node)
     {
-        List<ToolName> names = [.. node.Tools];
+        List<ToolPath> names = [.. node.Tools];
         if (node.Output == NodeOutput.Plan)
         {
-            names.Add(ToolName.ContractPlan);
+            names.Add(ToolPath.ContractPlan);
         }
 
         return names;

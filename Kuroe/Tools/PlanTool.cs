@@ -35,6 +35,7 @@ public sealed class PlanTool : IScopedTool
         new ToolFunction(ToolName.ContractPlan,
             "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
             [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
-            arguments => intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
+            arguments => intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty),
+            ToolPath.ContractPlan),
     ];
 }

@@ -33,7 +33,7 @@ internal static class DefaultFlows
         Name = new NodeName("执行"),
         Execution = new ExecutableSpec
         {
-            Tools = [new ToolName("GetLocalTime"), new ToolName("GetWeather")],
+            Tools = [new ToolPath("GetLocalTime")],
             Mode = NodeMode.PerItem,
         },
     };

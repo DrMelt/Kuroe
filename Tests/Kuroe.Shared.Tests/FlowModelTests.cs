@@ -49,5 +49,13 @@ public sealed class FlowModelTests
         Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())));
     }
 
+    [Fact]
+    public void ToolFunction_path_defaults_to_name()
+    {
+        ToolFunction function = new(new ToolName("GetTime"), "取时间", [], _ => "现在");
+
+        Assert.Equal(new ToolPath("GetTime"), function.Path);
+    }
+
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("执行者") };
 }

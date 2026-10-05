@@ -8,6 +8,7 @@ using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
 using Kuroe.Tools.CommandTools;
+using Kuroe.Tools.KuroeTools;
 using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
@@ -52,14 +53,23 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(flows.Value);
         services.AddSingleton(configuredTools.Value);
 
-        ErrorOr<Success> registered = RegisterTools(services, configuredTools.Value, paths.WorkingDirectory);
+        ModelService modelService = new(settings.Value, catalog.Value);
+        services.AddSingleton(modelService);
+
+        ErrorOr<Success> registered = RegisterTools(
+            services,
+            configuredTools.Value,
+            settings.Value,
+            catalog.Value,
+            flows.Value,
+            modelService,
+            paths.WorkingDirectory);
         if (registered.IsError)
         {
             return registered.ErrorsOrEmptyList;
         }
 
         services.AddSingleton<ToolCollection>();
-        services.AddSingleton<ModelService>();
         services.AddSingleton<RunDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
@@ -86,11 +96,15 @@ public static class ServiceCollectionExtensions
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 
-    /// <summary>装配工具载体并注册：内置工具、命令工具与契约工具一次创建，注册前重名校验。
+    /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前重名校验。
     /// TaskRegistry 与 PlanSubmitter 在此建实例并注册，PlanTool 的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         IReadOnlyList<CommandToolDefinition> definitions,
+        SettingsProvider settings,
+        CatalogService catalog,
+        FlowService flows,
+        ModelService models,
         string workingDirectory)
     {
         TaskRegistry taskRegistry = new();
@@ -99,8 +113,12 @@ public static class ServiceCollectionExtensions
         List<ITool> tools =
         [
             new TimeTool(),
-            new WeatherTool(),
             new PlanTool(planSubmitter),
+            new TaskInfoTool(taskRegistry),
+            new CatalogInfoTool(catalog, models),
+            new FlowInfoTool(flows),
+            new SettingsInfoTool(settings),
+            new ToolboxInfoTool(definitions),
             .. definitions.Select(definition => (ITool)new CommandTool(definition, workingDirectory)),
         ];
 

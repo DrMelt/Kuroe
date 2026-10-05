@@ -105,6 +105,8 @@ internal static class CommandToolStore
             errors.AddRange(template.ErrorsOrEmptyList);
         }
 
+        CheckPath(dto.Name ?? "(未命名)", dto.Path, errors);
+
         if (dto.OutputLimit is { } outputLimit && outputLimit < 1)
         {
             errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", "OutputLimit 必须是正整数。"));
@@ -152,7 +154,19 @@ internal static class CommandToolStore
             list,
             dto.Directory,
             dto.TimeoutSeconds ?? CommandToolRunner.DefaultTimeoutSeconds,
-            dto.OutputLimit ?? CommandToolRunner.DefaultOutputLimit);
+            dto.OutputLimit ?? CommandToolRunner.DefaultOutputLimit,
+            dto.Path is { Length: > 0 } path ? new ToolPath(path) : null);
+    }
+
+    /// <summary>校验工具路径分组：未写或空合法，格式非法时给出配置错误。</summary>
+    private static void CheckPath(string tool, string? raw, List<Error> errors)
+    {
+        if (raw is null || ToolPath.InvalidReason(raw) is not { } reason)
+        {
+            return;
+        }
+
+        errors.Add(CommandToolErrors.Invalid(tool, reason));
     }
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号，同一工具内不能重复。</summary>

@@ -59,6 +59,66 @@ public sealed class CommandToolTests
         Assert.False(log.Parameters[0].Required);
     }
 
+    [Fact]
+    public void Presentation_renders_template_and_parameters()
+    {
+        CommandToolDefinition tool = new(
+            new ToolName("RunDiff"),
+            "说明",
+            [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
+            [new ToolParameter(new ToolName("path"), "路径", Required: true)],
+            null,
+            5,
+            200);
+
+        Assert.Equal("git diff {path}", CommandToolPresentation.Template(tool.Template));
+        Assert.Equal("path*", CommandToolPresentation.Parameters(tool.Parameters));
+    }
+
+    [Fact]
+    public void Presentation_marks_omitted_items_and_list_parameters()
+    {
+        CommandToolDefinition tool = new(
+            new ToolName("RunDeploy"),
+            "说明",
+            [new CommandToolTemplateItem("--env={env}", "env"), new CommandToolTemplateItem("--noop", null)],
+            [new ToolParameter(new ToolName("env"), "环境"), new ToolParameter(new ToolName("files"), "文件", List: true, Required: true)],
+            null,
+            5,
+            200);
+
+        Assert.Equal("--env={env}? --noop", CommandToolPresentation.Template(tool.Template));
+        Assert.Equal("env、files[]*", CommandToolPresentation.Parameters(tool.Parameters));
+    }
+
+    [Fact]
+    public void Load_accepts_path_group_forming_full_path()
+    {
+        string file = Write("""
+            {
+              "Tools": [
+                { "Name": "RunDiff", "Path": "git", "Template": ["git", "diff", "{path}"], "Parameters": [ { "Name": "path", "Required": true } ] }
+              ]
+            }
+            """);
+
+        ErrorOr<IReadOnlyList<CommandToolDefinition>> loaded = CommandToolStore.Load(file, Path.GetTempPath());
+        Assert.False(loaded.IsError);
+
+        CommandToolDefinition tool = loaded.Value[0];
+        Assert.Equal(new ToolPath("git/RunDiff"), tool.FullPath);
+        Assert.Equal(new ToolPath("git/RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Path);
+    }
+
+    [Fact]
+    public void Load_defaults_path_to_function_name()
+    {
+        CommandToolDefinition tool = new(new ToolName("RunDiff"), "说明", Items(["x"]), [], null, 5, 200);
+
+        Assert.Equal(new ToolPath("RunDiff"), tool.FullPath);
+        Assert.Equal(new ToolPath("RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Path);
+    }
+
     [Theory]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{missing}"] } ] }""", "没有对应的参数声明")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
@@ -83,6 +143,11 @@ public sealed class CommandToolTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ "x", { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ 3 ] } ] }""", "必须是字符串或")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "/git", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "git/", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "git//x", "Template": ["x"] } ] }""", "不能为空或含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "gi t", "Template": ["x"] } ] }""", "含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "a{b}", "Template": ["x"] } ] }""", "含空白与花括号")]
     public void Load_rejects_invalid_definitions(string json, string expected)
     {
         ErrorOr<IReadOnlyList<CommandToolDefinition>> loaded = CommandToolStore.Load(Write(json), Path.GetTempPath());

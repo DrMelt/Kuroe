@@ -323,6 +323,14 @@ sealed class FlowStore(string file, string baseDirectory)
             leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明模型绑定，模型绑定只用于引用节点组。"));
         }
 
+        foreach (string toolPath in dto.Tools ?? [])
+        {
+            if (ToolPath.InvalidReason(toolPath) is { } reason)
+            {
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, reason));
+            }
+        }
+
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
         {
@@ -356,7 +364,7 @@ sealed class FlowStore(string file, string baseDirectory)
             Model = ToModel(dto.Model),
             Execution = new ExecutableSpec
             {
-                Tools = [.. (dto.Tools ?? []).Select(name => new ToolName(name))],
+                Tools = [.. (dto.Tools ?? []).Select(name => new ToolPath(name))],
                 Prompt = dto.Prompt,
                 Output = dto.Output ?? NodeOutput.Text,
                 Mode = leafMode.Value,
@@ -464,7 +472,7 @@ sealed class FlowStore(string file, string baseDirectory)
 
         if (node.Execution is { } execution)
         {
-            dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(name => name.Value)];
+            dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(path => path.Value)];
             dto.Prompt = execution.Prompt;
             dto.Output = execution.Output;
             dto.Mode = execution.Mode.ToString();

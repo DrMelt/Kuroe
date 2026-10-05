@@ -573,7 +573,7 @@ public sealed class NodeLibraryTests
           "Nodes": [
             {
               "Name": "允许工具",
-              "Tools": ["GetLocalTime", "GetWeather"],
+              "Tools": ["GetLocalTime"],
               "Mode": "PerItem"
             },
             {
