@@ -1,4 +1,5 @@
 using System.Text;
+using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Shared.Configuration;
 using Kuroe.Shared.Executions.Tools;
@@ -25,7 +26,7 @@ internal sealed class SettingsInfoTool : ITool
     }
 
     /// <summary>配置各节的文本概况。</summary>
-    private string Describe()
+    private ErrorOr<string> Describe()
     {
         var text = new StringBuilder();
         text.AppendLine($"用户层文件：{_settings.UserSettingsFile}");

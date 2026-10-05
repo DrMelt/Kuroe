@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe;
 using Kuroe.Configuration;
 using Kuroe.Executions.Tools;
 using Kuroe.Shared;
@@ -9,7 +8,6 @@ using Kuroe.TestSupport;
 using Kuroe.Tools.CommandTools;
 using Kuroe.Tools.KuroeTools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -235,8 +233,8 @@ public sealed class InfoToolTests : IDisposable
     }
 
     private static string Call(ITool tool, string name, params (string Key, object? Value)[] args) =>
-        tool.Functions.Single(function => function.Name.Value == name)
-            .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value)));
+        ToolResult.Render(tool.Functions.Single(function => function.Name.Value == name)
+            .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()
     {

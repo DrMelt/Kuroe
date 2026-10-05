@@ -31,7 +31,7 @@ internal sealed class FlowInfoTool : ITool
     }
 
     /// <summary>流程列表。</summary>
-    private string List()
+    private ErrorOr<string> List()
     {
         var text = new StringBuilder();
         foreach (FlowDefinition flow in _flows.All())
@@ -46,19 +46,19 @@ internal sealed class FlowInfoTool : ITool
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>按流程名查看展开节点表，流程不存在时返回拒绝文本。</summary>
-    private string Show(ToolArguments arguments)
+    /// <summary>按流程名查看展开节点表，流程不存在时返回拒绝错误。</summary>
+    private ErrorOr<string> Show(ToolArguments arguments)
     {
         string? name = arguments.Text(new ToolName("flowName"));
         if (string.IsNullOrWhiteSpace(name))
         {
-            return "被拒绝：缺少流程名。";
+            return ToolErrors.Argument("缺少流程名。");
         }
 
         ErrorOr<FlowDefinition> found = _flows.Find(name);
         if (found.IsError)
         {
-            return string.Join("；", found.ErrorsOrEmptyList.Select(error => error.Description));
+            return found.ErrorsOrEmptyList;
         }
 
         var text = new StringBuilder();

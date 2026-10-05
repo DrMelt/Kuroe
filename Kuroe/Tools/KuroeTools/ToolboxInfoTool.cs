@@ -1,4 +1,5 @@
 using System.Text;
+using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools.CommandTools;
 using Kuroe.Workflows.Tasks;
@@ -25,7 +26,7 @@ internal sealed class ToolboxInfoTool : ITool
     }
 
     /// <summary>工具面的文本概况。</summary>
-    private string Describe()
+    private ErrorOr<string> Describe()
     {
         var text = new StringBuilder();
         text.AppendLine("前台对话可用函数与分组：");

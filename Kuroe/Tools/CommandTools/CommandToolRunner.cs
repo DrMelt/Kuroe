@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Tools.CommandTools;
@@ -32,30 +33,30 @@ internal static partial class CommandToolRunner
     private static IEnumerable<string> PlaceholdersOf(string text) =>
         Placeholder().Matches(text).Select(match => match.Groups[1].Value);
 
-    /// <summary>按定义展开模板并执行命令，结果与拒绝都写成文本。工作目录缺省为项目工作目录根。</summary>
-    public static string Execute(CommandToolDefinition definition, string baseDirectory, ToolArguments arguments)
+    /// <summary>按定义展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。工作目录缺省为项目工作目录根。</summary>
+    public static ErrorOr<string> Execute(CommandToolDefinition definition, string baseDirectory, ToolArguments arguments)
     {
         var argv = new List<string>();
 
         foreach (CommandToolTemplateItem item in definition.Template)
         {
-            string? rejected = ExpandItem(definition, arguments, item, argv);
+            Error? rejected = ExpandItem(definition, arguments, item, argv);
             if (rejected is not null)
             {
-                return rejected;
+                return rejected.Value;
             }
         }
 
         if (argv.Count == 0)
         {
-            return "被拒绝：模板展开后没有任何可执行的程序。";
+            return ToolErrors.Argument("模板展开后没有任何可执行的程序。");
         }
 
         return RunProcess(definition, baseDirectory, argv);
     }
 
-    /// <summary>展开一个参数项。对象项的关联参数缺省时整项消失，必填仍拒绝；其余参数项按占位符展开。</summary>
-    private static string? ExpandItem(CommandToolDefinition definition, ToolArguments arguments, CommandToolTemplateItem item, List<string> argv)
+    /// <summary>展开一个参数项。对象项的关联参数缺省时整项消失，必填仍拒绝；其余参数项按占位符展开。返回非空表示中断调用。</summary>
+    private static Error? ExpandItem(CommandToolDefinition definition, ToolArguments arguments, CommandToolTemplateItem item, List<string> argv)
     {
         if (item.OmitWhenMissing is { } linkedName)
         {
@@ -68,7 +69,7 @@ internal static partial class CommandToolRunner
 
                 if (missing)
                 {
-                    return linked.Required ? $"被拒绝：缺少参数 {linkedName}。" : null;
+                    return linked.Required ? ToolErrors.Argument($"缺少参数 {linkedName}。") : null;
                 }
             }
         }
@@ -83,8 +84,8 @@ internal static partial class CommandToolRunner
         return ExpandToken(definition, arguments, item.Text, argv);
     }
 
-    /// <summary>展开一个含占位符的参数项。展开后追加参数项，返回非空表示直接拒绝。</summary>
-    private static string? ExpandToken(CommandToolDefinition definition, ToolArguments arguments, string token, List<string> argv)
+    /// <summary>展开一个含占位符的参数项。展开后追加参数项，返回非空表示中断调用。</summary>
+    private static Error? ExpandToken(CommandToolDefinition definition, ToolArguments arguments, string token, List<string> argv)
     {
         // 独立占位符：整个参数项就是 {name}。列表参数只允许这种写法。
         MatchCollection matches = Placeholder().Matches(token);
@@ -94,7 +95,7 @@ internal static partial class CommandToolRunner
             ToolParameter? parameter = definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
-                return $"被拒绝：模板占位符 {{{name}}} 没有对应参数声明。";
+                return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");
             }
 
             if (parameter.List)
@@ -102,7 +103,7 @@ internal static partial class CommandToolRunner
                 List<string> values = [.. arguments.List(parameter.Name) ?? []];
                 if (values.Count == 0)
                 {
-                    return parameter.Required ? $"被拒绝：缺少参数 {name}。" : null;
+                    return parameter.Required ? ToolErrors.Argument($"缺少参数 {name}。") : null;
                 }
 
                 argv.AddRange(values);
@@ -113,7 +114,7 @@ internal static partial class CommandToolRunner
             string? text = arguments.Text(parameter.Name);
             if (text is null)
             {
-                return parameter.Required ? $"被拒绝：缺少参数 {name}。" : null;
+                return parameter.Required ? ToolErrors.Argument($"缺少参数 {name}。") : null;
             }
 
             argv.Add(text);
@@ -129,12 +130,12 @@ internal static partial class CommandToolRunner
             ToolParameter? parameter = definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
-                return $"被拒绝：模板占位符 {{{name}}} 没有对应参数声明。";
+                return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");
             }
 
             if (parameter.List)
             {
-                return $"被拒绝：列表参数 {name} 只能写成独立的 {{{name}}} 参数项。";
+                return ToolErrors.Internal($"列表参数 {name} 只能写成独立的 {{{name}}} 参数项。");
             }
 
             string? value = arguments.Text(parameter.Name);
@@ -142,7 +143,7 @@ internal static partial class CommandToolRunner
             {
                 if (parameter.Required)
                 {
-                    return $"被拒绝：缺少参数 {name}。";
+                    return ToolErrors.Argument($"缺少参数 {name}。");
                 }
 
                 continue;
@@ -159,8 +160,8 @@ internal static partial class CommandToolRunner
         return null;
     }
 
-    /// <summary>启动进程并等待结果，stdout 与 stderr 合并成文本交回，附退出码；超时或启动失败也写成文本。</summary>
-    private static string RunProcess(CommandToolDefinition definition, string baseDirectory, List<string> argv)
+    /// <summary>启动进程并等待结果，stdout 与 stderr 合并成文本交回，附退出码；超时或启动失败以 ErrorOr 表达。</summary>
+    private static ErrorOr<string> RunProcess(CommandToolDefinition definition, string baseDirectory, List<string> argv)
     {
         string working = definition.Directory is { Length: > 0 } directory
             ? Path.GetFullPath(directory, baseDirectory)
@@ -192,12 +193,12 @@ internal static partial class CommandToolRunner
         {
             if (!process.Start())
             {
-                return $"被拒绝：无法启动 {argv[0]}。";
+                return ToolErrors.Execute($"无法启动 {argv[0]}。");
             }
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            return $"被拒绝：无法启动 {argv[0]}：{ex.Message}";
+            return ToolErrors.Execute($"无法启动 {argv[0]}：{ex.Message}");
         }
 
         process.BeginOutputReadLine();
@@ -208,7 +209,7 @@ internal static partial class CommandToolRunner
         {
             KillTree(process);
             process.WaitForExit(5000);
-            return $"被拒绝：命令在 {definition.TimeoutSeconds} 秒内未结束，已终止。";
+            return ToolErrors.Execute($"命令在 {definition.TimeoutSeconds} 秒内未结束，已终止。");
         }
 
         process.WaitForExit();

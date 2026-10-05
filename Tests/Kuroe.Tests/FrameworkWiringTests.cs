@@ -1,6 +1,5 @@
 using ApiHub.ChatClient;
 using ApiHub.Shared.Models;
-using Kuroe;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -42,7 +42,15 @@ internal static class JournalView
 
                 case ToolCallEntry call:
                     terminal.ToolCall($"[{at}] 工具 > {call.Call.Name} {call.Call.Arguments}");
-                    terminal.ToolResult($"        结果 > {call.Call.Outcome}");
+                    if (call.Call.Failed)
+                    {
+                        terminal.Warn($"        失败 > {call.Call.Outcome}");
+                    }
+                    else
+                    {
+                        terminal.ToolResult($"        结果 > {call.Call.Outcome}");
+                    }
+
                     break;
 
                 case ErrorEntry error:

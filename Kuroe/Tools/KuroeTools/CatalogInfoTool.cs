@@ -1,5 +1,6 @@
 using System.Text;
 using ApiHub.Shared.Models;
+using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Shared.Executions.Tools;
 
@@ -27,7 +28,7 @@ internal sealed class CatalogInfoTool : ITool
     }
 
     /// <summary>目录的文本概况。</summary>
-    private string Describe()
+    private ErrorOr<string> Describe()
     {
         CatalogContents contents = _catalog.Snapshot();
         var text = new StringBuilder();

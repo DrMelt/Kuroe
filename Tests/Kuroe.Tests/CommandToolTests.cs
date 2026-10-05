@@ -473,7 +473,7 @@ public sealed class CommandToolTests
     }
 
     private static string Invoke(CommandTool tool, Dictionary<string, object?> values) =>
-        tool.Functions[0].Invoke(new ToolArguments(values));
+        ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
     private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
         new(new CommandToolDefinition(new ToolName("Run"), "说明", Items(template), parameters, null, 5, 200),

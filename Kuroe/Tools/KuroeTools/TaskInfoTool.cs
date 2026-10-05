@@ -48,7 +48,7 @@ internal sealed class TaskInfoTool : ITool
     }
 
     /// <summary>任务列表。</summary>
-    private string List()
+    private ErrorOr<string> List()
     {
         IReadOnlyList<TaskSnapshot> tasks = _registry.Snapshots();
         if (tasks.Count == 0)
@@ -71,7 +71,7 @@ internal sealed class TaskInfoTool : ITool
     }
 
     /// <summary>当前前台对话所在任务的详情。</summary>
-    private string ActiveTask()
+    private ErrorOr<string> ActiveTask()
     {
         if (_registry.Active is not { } id || _registry.Find(id) is not { IsError: false } found)
         {
@@ -81,39 +81,47 @@ internal sealed class TaskInfoTool : ITool
         return DescribeTask(found.Value.Snapshot());
     }
 
-    /// <summary>按任务号查看详情，任务号非法或不存在时返回拒绝文本。</summary>
-    private string ShowTask(ToolArguments arguments)
+    /// <summary>按任务号查看详情，任务号非法或不存在时返回拒绝错误。</summary>
+    private ErrorOr<string> ShowTask(ToolArguments arguments)
     {
         string? text = arguments.Text(new ToolName("taskId"));
         if (text is null || !int.TryParse(text, out int id) || id <= 0)
         {
-            return $"被拒绝：任务号要写成数字，收到 {text ?? "空"}。";
+            return ToolErrors.Argument($"任务号要写成数字，收到 {text ?? "空"}。");
         }
 
         ErrorOr<WorkTask> found = _registry.Find(new TaskId(id));
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
 
-        return found.IsError ? Errors(found.ErrorsOrEmptyList) : DescribeTask(found.Value.Snapshot());
+        return DescribeTask(found.Value.Snapshot());
     }
 
-    /// <summary>按 run 号查看详情，run 号非法或不存在时返回拒绝文本。</summary>
-    private string ShowRun(ToolArguments arguments)
+    /// <summary>按 run 号查看详情，run 号非法或不存在时返回拒绝错误。</summary>
+    private ErrorOr<string> ShowRun(ToolArguments arguments)
     {
         string? text = arguments.Text(new ToolName("runId"));
         if (text is null || !int.TryParse(text, out int id) || id <= 0)
         {
-            return $"被拒绝：run号要写成数字，收到 {text ?? "空"}。";
+            return ToolErrors.Argument($"run号要写成数字，收到 {text ?? "空"}。");
         }
 
         ErrorOr<Run> found = _registry.FindRun(new RunId(id));
         if (found.IsError)
         {
-            return Errors(found.ErrorsOrEmptyList);
+            return found.ErrorsOrEmptyList;
         }
 
         RunSnapshot run = found.Value.Snapshot();
         ErrorOr<WorkTask> owner = _registry.Find(run.Context.Task);
+        if (owner.IsError)
+        {
+            return owner.ErrorsOrEmptyList;
+        }
 
-        return owner.IsError ? Errors(owner.ErrorsOrEmptyList) : DescribeRun(owner.Value.Snapshot(), run);
+        return DescribeRun(owner.Value.Snapshot(), run);
     }
 
     /// <summary>任务的完整详情文本。</summary>
@@ -283,8 +291,4 @@ internal sealed class TaskInfoTool : ITool
 
         return flat.Length <= SeedLimit ? flat : string.Concat(flat.AsSpan(0, SeedLimit), "…");
     }
-
-    /// <summary>错误列表拼成一段说明文本。</summary>
-    private static string Errors(IReadOnlyList<Error> errors) =>
-        string.Join("；", errors.Select(error => error.Description));
 }

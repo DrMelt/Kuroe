@@ -1,12 +1,11 @@
+using System.Text;
 using ErrorOr;
-using Kuroe;
 using Kuroe.Configuration;
 using Kuroe.Executions.Tools;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -317,6 +316,18 @@ public sealed class FileToolTests : IDisposable
     }
 
     [Fact]
+    public void WriteFile_creates_empty_file_with_empty_content()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call(new FileTool(_root), "WriteFile", ("path", "empty.txt"), ("content", ""));
+
+        Assert.Equal("已写入 0 字符到 empty.txt。", output);
+        Assert.True(File.Exists(Path.Combine(_root, "empty.txt")));
+        Assert.Empty(File.ReadAllText(Path.Combine(_root, "empty.txt")));
+    }
+
+    [Fact]
     public void WriteFile_rejects_missing_arguments()
     {
         Assert.Contains("缺少参数 path", Call(new FileTool(_root), "WriteFile", ("content", "x")));
@@ -355,6 +366,50 @@ public sealed class FileToolTests : IDisposable
     }
 
     [Fact]
+    public void WriteFile_writes_utf16_with_bom_when_encoding_set()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call(new FileTool(_root), "WriteFile",
+            ("path", "utf16.txt"), ("content", "内容"), ("encoding", "utf-16"));
+
+        Assert.Equal("已写入 2 字符到 utf16.txt。", output);
+        byte[] written = File.ReadAllBytes(Path.Combine(_root, "utf16.txt"));
+        Assert.Equal(0xFF, written[0]);
+        Assert.Equal(0xFE, written[1]);
+        Assert.Equal("内容", Encoding.Unicode.GetString(written, 2, written.Length - 2));
+    }
+
+    [Fact]
+    public void WriteFile_rejects_unknown_encoding()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call(new FileTool(_root), "WriteFile",
+            ("path", "bad.txt"), ("content", "x"), ("encoding", "gbk"));
+
+        Assert.Contains("encoding 只支持", output);
+        Assert.False(File.Exists(Path.Combine(_root, "bad.txt")));
+    }
+
+    [Fact]
+    public void ReadFiles_truncates_when_total_exceeds_limit()
+    {
+        Directory.CreateDirectory(_root);
+        for (int i = 0; i < 5; i++)
+        {
+            File.WriteAllText(Path.Combine(_root, $"{i}.txt"), new string('x', 9000));
+        }
+
+        string[] paths = [.. Enumerable.Range(0, 5).Select(i => $"{i}.txt")];
+        string output = Call(new FileTool(_root), "ReadFiles", ("paths", paths));
+
+        Assert.Contains("批量读取已截断", output);
+        Assert.Contains("=== 0.txt ===", output);
+        Assert.DoesNotContain("=== 4.txt ===", output);
+    }
+
+    [Fact]
     public void PatchFile_replaces_lines_within_file()
     {
         Directory.CreateDirectory(_root);
@@ -369,7 +424,7 @@ public sealed class FileToolTests : IDisposable
     }
 
     [Fact]
-    public void PatchFile_matches_original_across_crlf_files()
+    public void PatchFile_matches_original_in_crlf_file_and_writes_lf()
     {
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "win.txt"), "一\r\n二\r\n三");
@@ -380,6 +435,54 @@ public sealed class FileToolTests : IDisposable
 
         Assert.Equal("已替换 win.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
         Assert.Equal("一\n改二\n三", File.ReadAllText(Path.Combine(_root, "win.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_writes_utf8_bom_when_encoding_set()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
+
+        string output = Call(new FileTool(_root), "PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "2"),
+            ("original", "二"), ("replacement", "改二"), ("encoding", "utf-8-bom"));
+
+        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
+        byte[] written = File.ReadAllBytes(Path.Combine(_root, "code.txt"));
+        Assert.Equal(0xEF, written[0]);
+        Assert.Equal(0xBB, written[1]);
+        Assert.Equal(0xBF, written[2]);
+    }
+
+    [Fact]
+    public void PatchFile_writes_utf16_when_encoding_set()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
+
+        string output = Call(new FileTool(_root), "PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "2"),
+            ("original", "二"), ("replacement", "改二"), ("encoding", "utf-16"));
+
+        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
+        byte[] written = File.ReadAllBytes(Path.Combine(_root, "code.txt"));
+        Assert.Equal(0xFF, written[0]);
+        Assert.Equal(0xFE, written[1]);
+        Assert.Equal("一\n改二\n三", Encoding.Unicode.GetString(written, 2, written.Length - 2));
+    }
+
+    [Fact]
+    public void PatchFile_rejects_unknown_encoding()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
+
+        string output = Call(new FileTool(_root), "PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "2"),
+            ("original", "二"), ("replacement", "改二"), ("encoding", "gbk"));
+
+        Assert.Contains("encoding 只支持", output);
+        Assert.Equal("一\n二\n三", File.ReadAllText(Path.Combine(_root, "code.txt")));
     }
 
     [Fact]
@@ -453,9 +556,9 @@ public sealed class FileToolTests : IDisposable
     [Fact]
     public void PatchFile_rejects_non_numeric_line_numbers()
     {
-        Assert.Contains("from 要写成从 1 起的数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("参数 from 要写成数字", Call(new FileTool(_root), "PatchFile",
             ("path", "a.txt"), ("from", "x"), ("to", "3"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("to 要写成从 1 起的数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("参数 to 要写成数字", Call(new FileTool(_root), "PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "x"), ("original", "x"), ("replacement", "y")));
     }
 
@@ -468,9 +571,9 @@ public sealed class FileToolTests : IDisposable
             ("path", "a.txt"), ("from", "1"), ("to", "1"), ("replacement", "y")));
         Assert.Contains("缺少参数 replacement", Call(new FileTool(_root), "PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "1"), ("original", "x")));
-        Assert.Contains("from 要写成从 1 起的数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("from 从 1 起", Call(new FileTool(_root), "PatchFile",
             ("path", "a.txt"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("to 要写成从 1 起的数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("to 从 1 起", Call(new FileTool(_root), "PatchFile",
             ("path", "a.txt"), ("from", "1"), ("original", "x"), ("replacement", "y")));
     }
 
@@ -533,8 +636,8 @@ public sealed class FileToolTests : IDisposable
     }
 
     private static string Call(FileTool tool, string name, params (string Key, object? Value)[] args) =>
-        tool.Functions.Single(function => function.Name.Value == name)
-            .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value)));
+        ToolResult.Render(tool.Functions.Single(function => function.Name.Value == name)
+            .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()
     {

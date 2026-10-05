@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Executions.Turns;
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
@@ -14,25 +15,25 @@ namespace Kuroe.Workflows.Tasks;
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
 public sealed class PlanSubmitter(TaskRegistry registry)
 {
-    /// <summary>规划执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。</summary>
-    public string SubmitItems(TurnScope? scope, string itemsJson)
+    /// <summary>规划执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
+    public ErrorOr<string> SubmitItems(TurnScope? scope, string itemsJson)
     {
         if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
         {
-            return "被拒绝：只有进行中的规划 run 能提交条目拆分。";
+            return ToolErrors.Argument("只有进行中的规划 run 能提交条目拆分。");
         }
 
         ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
         if (found.IsError)
         {
-            return "内部错误：该 run 没有归属任务。";
+            return ToolErrors.Internal("该 run 没有归属任务。");
         }
 
         WorkTask task = found.Value;
         ErrorOr<IReadOnlyList<PlanItem>> parsed = PlanItems.Parse(itemsJson);
         if (parsed.IsError)
         {
-            return $"被拒绝：{parsed.FirstError.Description}";
+            return parsed.ErrorsOrEmptyList;
         }
 
         lock (task.Gate)
@@ -48,7 +49,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 : SplitMerge.Apply(split, parsed.Value);
             if (merged.IsError)
             {
-                return $"被拒绝：{merged.FirstError.Description}";
+                return merged.ErrorsOrEmptyList;
             }
 
             List<BranchName> branches = [];
@@ -66,12 +67,12 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 {
                     if (branch is not { } name)
                     {
-                        return "被拒绝：分流任务的条目必须写明分支 Branch。";
+                        return ToolErrors.Argument("分流任务的条目必须写明分支 Branch。");
                     }
 
                     if (!branches.Contains(name))
                     {
-                        return $"被拒绝：分支 {name} 没有对应的分支执行节点。";
+                        return ToolErrors.Argument($"分支 {name} 没有对应的分支执行节点。");
                     }
                 }
             }

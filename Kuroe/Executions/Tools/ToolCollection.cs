@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using ErrorOr;
 using Kuroe.Executions.Turns;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
@@ -64,10 +65,10 @@ public sealed class ToolCollection
         {
             string parameters = Describe(arguments);
 
-            string result;
+            ErrorOr<string> outcome;
             try
             {
-                result = declaration.Invoke(new ToolArguments(arguments));
+                outcome = declaration.Invoke(new ToolArguments(arguments));
             }
             catch (Exception ex)
             {
@@ -75,7 +76,8 @@ public sealed class ToolCollection
                 throw;
             }
 
-            sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, result, false));
+            string result = ToolResult.Render(outcome);
+            sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, result, outcome.IsError));
 
             return new ValueTask<object?>(result);
         }

@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Executions;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 
@@ -78,7 +79,7 @@ public sealed class FakeExecutor : IRunExecutor
 
             if (run.Context.Output == NodeOutput.Plan && SubmitsPlan)
             {
-                _submissions.Enqueue(Submitter!.SubmitItems(run.Scope, ItemsJson));
+                _submissions.Enqueue(ToolResult.Render(Submitter!.SubmitItems(run.Scope, ItemsJson)));
             }
 
             if (FailsWhen?.Invoke(run) == true)

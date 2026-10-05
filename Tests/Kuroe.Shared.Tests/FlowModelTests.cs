@@ -46,7 +46,7 @@ public sealed class FlowModelTests
         Assert.Equal(new ToolName("GetTime"), function.Name);
         Assert.Equal("取时间", function.Description);
         Assert.Empty(function.Parameters);
-        Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())));
+        Assert.Equal("现在", function.Invoke(new ToolArguments(new Dictionary<string, object?>())).Value);
     }
 
     [Fact]

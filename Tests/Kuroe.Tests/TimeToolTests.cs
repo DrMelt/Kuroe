@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
 using Xunit;
@@ -12,9 +13,9 @@ public sealed class TimeToolTests
     {
         TimeTool tool = new();
 
-        string output = tool.Functions.Single().Invoke(new ToolArguments(new Dictionary<string, object?>()));
+        ErrorOr<string> output = tool.Functions.Single().Invoke(new ToolArguments(new Dictionary<string, object?>()));
 
-        Assert.StartsWith("当前系统时间是：", output);
-        Assert.Contains($"时区 UTC{DateTimeOffset.Now:zzz}", output);
+        Assert.StartsWith("当前系统时间是：", output.Value);
+        Assert.Contains($"时区 UTC{DateTimeOffset.Now:zzz}", output.Value);
     }
 }
