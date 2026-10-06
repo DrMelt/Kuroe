@@ -181,7 +181,7 @@ internal sealed class TaskInfoTool : ITool
             + $" · 第 {context.ExecutionCount} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}"
             + $" · 模型 {context.Model}");
-        text.AppendLine($"状态 {run.State.Label()}"
+        text.AppendLine($"状态 {InfoLabels.State(run)}"
             + $" · {InfoLabels.Clock(run.StartedAt)} → {InfoLabels.Clock(run.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(run.Elapsed)}");
 
@@ -278,7 +278,7 @@ internal sealed class TaskInfoTool : ITool
             run.Id.ToString(),
             InfoLabels.Item(run.Context.ItemIndex),
             $"第 {run.Context.ExecutionCount} 轮",
-            run.State.Label(),
+            InfoLabels.State(run),
             InfoLabels.Elapsed(run.Elapsed));
 
     /// <summary>当前对话所在任务的标记。</summary>

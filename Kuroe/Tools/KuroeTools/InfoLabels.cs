@@ -1,3 +1,5 @@
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 
@@ -42,6 +44,12 @@ public static class InfoLabels
         NodeGate.Review => "需批准",
         _ => "自动放行",
     };
+
+    /// <summary>run 状态的展示名，有正在进行的工具调用时附在其后。</summary>
+    public static string State(RunSnapshot run) =>
+        run.IsSettled || run.Progress.Length == 0
+            ? run.State.Label()
+            : $"{run.State.Label()}（{run.Progress}）";
 
     /// <summary>按条目序号或整体展开的展示名。</summary>
     public static string Item(int? itemIndex) => itemIndex is { } index ? $"条目 {index + 1}" : "整体";

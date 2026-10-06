@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration;
+using Kuroe.Executions.Runs;
 using Kuroe.Executions.Tools;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions;
@@ -92,6 +93,31 @@ public sealed class InfoToolTests : IDisposable
 
         Assert.Contains("run号要写成数字", Call(tool, "GetRun", ("runId", "x")));
         Assert.Contains("没有 run", Call(tool, "GetRun", ("runId", "99")));
+    }
+
+    [Fact]
+    public void Run_state_attaches_ongoing_tool_call_progress()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        harness.Executor.DelayMs = 60_000;
+
+        TaskId id = harness.Submit("做一个测试任务");
+        harness.Wait(id, snapshot => snapshot.LiveRuns > 0);
+
+        RunId runId = harness.Snapshot(id).Executables
+            .SelectMany(node => node.Runs)
+            .First(run => !run.IsSettled)
+            .Id;
+        Run run = harness.Registry.FindRun(runId).Value;
+        run.MarkRunning();
+        run.Report("调用工具 files/ReadFile");
+
+        TaskInfoTool tool = new(harness.Registry);
+
+        Assert.Contains("执行中（调用工具 files/ReadFile）",
+            Call(tool, "GetRun", ("runId", runId.Value.ToString())));
+        Assert.Contains("执行中（调用工具 files/ReadFile）",
+            Call(tool, "GetTask", ("taskId", id.Value.ToString())));
     }
 
     [Fact]
