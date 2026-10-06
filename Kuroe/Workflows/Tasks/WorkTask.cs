@@ -9,7 +9,6 @@ using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
-using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -21,6 +20,7 @@ public sealed class WorkTask
 
     private readonly List<Run> _runs = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
+    private readonly Dictionary<int, IReadOnlyDictionary<string, string>> _portValues = [];
     private readonly SemaphoreSlim _turn = new(1, 1);
     private string _title;
     private int _dialogueTurns;
@@ -94,6 +94,15 @@ public sealed class WorkTask
     /// <summary>记录某执行节点的条目拆分。要求持有 <see cref="Gate"/>。</summary>
     internal void SetSplit(int executableIndex, PlanOutput output) => _splits[executableIndex] = output;
 
+    /// <summary>某执行节点交回的命名输出端口值，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal IReadOnlyDictionary<string, string>? PortValuesFor(int executableIndex) => _portValues.GetValueOrDefault(executableIndex);
+
+    /// <summary>记录某执行节点的输出端口值。要求持有 <see cref="Gate"/>。</summary>
+    internal void SetPortValues(int executableIndex, IReadOnlyDictionary<string, string> values) => _portValues[executableIndex] = values;
+
+    /// <summary>移除某执行节点的输出端口值，返工作废后端口随产出重交。要求持有 <see cref="Gate"/>。</summary>
+    internal void ClearPortValues(int executableIndex) => _portValues.Remove(executableIndex);
+
     /// <summary>提交顺序排列的 run。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<Run> Runs => _runs;
 
@@ -119,6 +128,11 @@ public sealed class WorkTask
         if (_runs.Any(run => run.IsLive))
         {
             return TaskState.Running;
+        }
+
+        if (Runtime.HasAwaitingInput)
+        {
+            return TaskState.AwaitingInput;
         }
 
         if (Runtime.HasAwaiting)

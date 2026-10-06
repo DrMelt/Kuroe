@@ -203,7 +203,7 @@ public sealed class NodeLibraryTests
     [InlineData(ReferenceContainerFrom, "引用容器不能声明 From")]
     [InlineData(AssemblyContainerInputs, "端口声明属于节点库容器定义")]
     [InlineData(DuplicateMemberNames, "在容器子树内重复")]
-    [InlineData(LibraryLeafIn, "执行节点不能声明输入端口绑定")]
+    [InlineData(LibraryLeafIn, "只能声明隐式 ContextInput 端口")]
     [InlineData(ContainerWithFrom, "不支持 From")]
     [InlineData(ReferenceWithInputs, "引用节点不能声明输入端口")]
     [InlineData(LeafWithInputs, "执行节点不能声明输入端口")]
@@ -217,6 +217,16 @@ public sealed class NodeLibraryTests
     [InlineData(GroupReferenceWithValidate, "引用节点组不能声明 Validate")]
     [InlineData(MemberAnyOfOutsideScope, "AnyOf 引用的节点")]
     [InlineData(MemberAnyOfUndeclaredPort, "没有在此容器上声明")]
+    [InlineData(LibraryInputWithModel, "不声明模型槽位")]
+    [InlineData(LibraryInputWithModels, "不能声明模型绑定")]
+    [InlineData(LibraryPortOnInput, "不能声明输出端口与系统指令")]
+    [InlineData(LibraryOutputsReservedInput, "是保留名")]
+    [InlineData(LibraryQuestionOnText, "Question 只属于输入节点")]
+    [InlineData(LibraryPortOnPlan, "输出端口只能声明在整节点文本产出上")]
+    [InlineData(LibraryContainerWithOutputs, "不支持输出端口与系统指令")]
+    [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
+    [InlineData(LibraryNameWithAt, "节点名不能含 @")]
+    [InlineData(MemberNameWithAt, "成员名 甲@乙 不能含 @")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -811,4 +821,83 @@ public sealed class NodeLibraryTests
           ]
         }
         """";
+
+    /// <summary>输入成员在节点库声明模型槽位，装配校验拒绝。</summary>
+    private const string LibraryInputWithModel = """
+        {
+          "Nodes": [
+            { "Name": "收集", "Output": "Input", "Model": "执行者" }
+          ]
+        }
+        """;
+
+    /// <summary>输入成员在节点库声明模型绑定，装配校验拒绝。</summary>
+    private const string LibraryInputWithModels = """
+        {
+          "Nodes": [
+            { "Name": "收集", "Output": "Input", "Models": { "执行者": "伪造" } }
+          ]
+        }
+        """;
+
+    /// <summary>输入成员在节点库声明输出端口，装配校验拒绝。</summary>
+    private const string LibraryPortOnInput = """
+        {
+          "Nodes": [
+            { "Name": "收集", "Output": "Input", "Outputs": ["结论"] }
+          ]
+        }
+        """;
+
+    /// <summary>库执行定义声明输入端口保留名，装配校验拒绝。</summary>
+    private const string LibraryOutputsReservedInput = """
+        {
+          "Nodes": [
+            { "Name": "分析库", "Output": "Text", "Outputs": ["ContextInput"] }
+          ]
+        }
+        """;
+
+    /// <summary>库执行定义声明 Question，装配校验拒绝。</summary>
+    private const string LibraryQuestionOnText = """
+        { "Nodes": [ { "Name": "干活库", "Output": "Text", "Question": "你想问什么" } ], "Flows": [] }
+        """;
+
+    /// <summary>规划定义在节点库声明输出端口，装配校验拒绝。</summary>
+    private const string LibraryPortOnPlan = """
+        {
+          "Nodes": [
+            { "Name": "规划库", "Output": "Plan", "Outputs": ["结论"] }
+          ]
+        }
+        """;
+
+    /// <summary>库容器定义声明输出端口，装配校验拒绝。</summary>
+    private const string LibraryContainerWithOutputs = """
+        { "Nodes": [
+          { "Name": "交付", "Outputs": ["结论"], "Nodes": [ { "Name": "实施", "Mode": "PerItem" } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>容器子树里的引用成员声明输出端口，装配校验拒绝。</summary>
+    private const string MemberReferenceWithOutputs = """
+        { "Nodes": [
+          { "Name": "执行", "Output": "Text" },
+          { "Name": "交付", "Nodes": [
+            { "Name": "实施", "Use": "执行", "Model": "执行者", "Outputs": ["结论"] }
+          ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>库定义节点名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    private const string LibraryNameWithAt = """
+        { "Nodes": [ { "Name": "甲@乙", "Output": "Text" } ], "Flows": [] }
+        """;
+
+    /// <summary>库容器成员名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    private const string MemberNameWithAt = """
+        { "Nodes": [
+          { "Name": "交付", "Nodes": [ { "Name": "甲@乙", "Model": "执行者" } ] }
+        ], "Flows": [] }
+        """;
 }

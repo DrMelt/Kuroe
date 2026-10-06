@@ -6,6 +6,9 @@ public readonly record struct ToolPath(string Value)
     /// <summary>规划的契约路径：规划执行节点按产出契约附上的工具。</summary>
     public static ToolPath ContractPlan { get; } = new(ToolName.ContractPlan.Value);
 
+    /// <summary>输出端口的契约路径：声明输出端口的执行节点按产出契约附上的工具。</summary>
+    public static ToolPath ContractPortValues { get; } = new(ToolName.ContractPortValues.Value);
+
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
 

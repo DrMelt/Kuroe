@@ -157,7 +157,7 @@ internal sealed class TaskInfoTool : ITool
 
             IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
             text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
-                + $"（{node.Executable.Output.Label()} · {InfoLabels.Of(node.Executable.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Execution.Output.Label()} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
             foreach (RunSnapshot run in node.Runs)
             {
                 text.AppendLine($"    {RunLine(run, awaitingRuns)}");

@@ -89,6 +89,10 @@ internal sealed class TaskBrowser(
                     Act(tasks.Approve(id));
                     break;
 
+                case "answer":
+                    PromptAnswer(id);
+                    break;
+
                 case "rework":
                     Act(tasks.Rework(id, null));
                     break;
@@ -102,6 +106,36 @@ internal sealed class TaskBrowser(
                     break;
             }
         }
+    }
+
+    private void PromptAnswer(TaskId id)
+    {
+        if (registry.Find(id) is not { IsError: false } found)
+        {
+            return;
+        }
+
+        TaskSnapshot task = found.Value.Snapshot();
+        string[] waiting = [.. task.ExecutableStates
+            .Where(state => state.State == NodeState.AwaitingInput)
+            .Select(state => task.Graph[state.Index].Name.Value)];
+
+        if (waiting.Length != 1)
+        {
+            terminal.Hint(waiting.Length == 0
+                ? "该任务没有等待输入的节点。"
+                : $"该任务有 {waiting.Length} 个等待输入的节点，请用 /task answer <任务号> <节点名> 回答。");
+            return;
+        }
+
+        TextPrompt<string> prompt = new($"回答「{waiting[0]}」：");
+        string input = terminal.Prompt(prompt);
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return;
+        }
+
+        Act(tasks.Answer(id, waiting[0], input));
     }
 
     private void ShowRun(RunId runId)
@@ -176,20 +210,33 @@ internal sealed class TaskBrowser(
 
     private static void AddTaskActions(List<Item> items, TaskSnapshot task)
     {
-        if (task.State == TaskState.AwaitingApproval)
+        if (task.State is TaskState.Done or TaskState.Canceled)
+        {
+            return;
+        }
+
+        // 多个等待并存时任务级状态只表达其一，入口按节点与容器的实际停留各自给出
+        bool awaitingApproval = task.ExecutableStates.Any(state => state.State == NodeState.AwaitingApproval)
+            || task.Containers.Any(container => container.State == NodeState.AwaitingApproval);
+        bool awaitingInput = task.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput);
+        bool blocked = task.ExecutableStates.Any(state => state.State == NodeState.Blocked);
+
+        if (awaitingApproval)
         {
             items.Add(new Item("✓ 批准当前节点，开下一步", "approve", Task: task.Id));
         }
 
-        if (task.State == TaskState.Blocked)
+        if (awaitingInput)
+        {
+            items.Add(new Item("✎ 回答等待输入的节点", "answer", Task: task.Id));
+        }
+
+        if (blocked)
         {
             items.Add(new Item("↺ 返工被阻塞的单元", "rework", Task: task.Id));
         }
 
-        if (task.State is not TaskState.Done and not TaskState.Canceled)
-        {
-            items.Add(new Item("✕ 取消整个任务", "stopTask", Task: task.Id));
-        }
+        items.Add(new Item("✕ 取消整个任务", "stopTask", Task: task.Id));
     }
 
     private void Act(ErrorOr<Success> result)

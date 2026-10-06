@@ -109,12 +109,14 @@ public static class ServiceCollectionExtensions
     {
         TaskRegistry taskRegistry = new();
         PlanSubmitter planSubmitter = new(taskRegistry);
+        PortSubmitter portSubmitter = new(taskRegistry);
 
         List<ITool> tools =
         [
             new TimeTool(),
             new FileTool(workingDirectory),
             new PlanTool(planSubmitter),
+            new PortTool(portSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),
             new CatalogInfoTool(catalog, models),
             new FlowInfoTool(flows),
@@ -135,6 +137,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(taskRegistry);
         services.AddSingleton(planSubmitter);
+        services.AddSingleton(portSubmitter);
         foreach (ITool tool in tools)
         {
             services.AddSingleton<ITool>(tool);

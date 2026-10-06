@@ -24,16 +24,33 @@ internal static class FlowCompiler
         // 用登记好的成员与子容器固化容器定义
         foreach (ContainerBuilder builder in containers.Values)
         {
-            nodes[builder.Index] = new ContainerNode(builder.Index, builder.Name, builder.Path, builder.Gate,
-                builder.Members, builder.SubContainers);
+            nodes[builder.Index] = new ContainerNode
+            {
+                Index = builder.Index,
+                Name = builder.Name,
+                Path = builder.Path,
+                Gate = builder.Gate,
+                Members = builder.Members,
+                SubContainers = builder.SubContainers,
+            };
         }
 
         List<FlowEdge> edges = [];
         foreach (ExecutableNode executable in nodes.OfType<ExecutableNode>())
         {
-            foreach (int from in executable.From)
+            foreach (Dependency dependency in executable.From)
             {
-                edges.Add(new FlowEdge(from, executable.Index, EdgeFeedRules.Of(nodes[from], executable.Mode)));
+                // 端口引用取来源的整份内一段，按单份消费；整节点引用按来源与目标模式推导
+                EdgeFeed feed = dependency.Port is not null
+                    ? EdgeFeed.Single
+                    : EdgeFeedRules.Of(nodes[dependency.From], executable.Execution.Mode);
+                edges.Add(new FlowEdge(dependency.From, executable.Index, feed, dependency.Port));
+            }
+
+            // 上下文输入端口：来源放行产出按单份消费，内容置于目标上下文开头
+            if (executable.ContextInput is { } contextInputFrom)
+            {
+                edges.Add(new FlowEdge(contextInputFrom, executable.Index, EdgeFeed.Single, IsContextInput: true));
             }
 
             // AnyOf 组的成员按来源各接一条单份产出边，组内与组间重复来源不重复建边
@@ -95,7 +112,15 @@ internal static class FlowCompiler
         int container = nodes.Count;
         string containerPath = string.Join('/', [.. path, node.Name.Value]);
         containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
-        nodes.Add(new ContainerNode(container, node.Name, containerPath, node.Gate, [], []));
+        nodes.Add(new ContainerNode
+        {
+            Index = container,
+            Name = node.Name,
+            Path = containerPath,
+            Gate = node.Gate,
+            Members = [],
+            SubContainers = [],
+        });
         if (parent is { } childContainer)
         {
             containers[childContainer].SubContainers.Add(container);
@@ -115,20 +140,24 @@ internal static class FlowCompiler
         int index,
         List<string> path,
         Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
-        Dictionary<Flow.NodeName, int> order) => new(
-        index,
-        node.Name,
-        string.Join('/', [.. path, node.Name.Value]),
-        node.Gate,
-        models[node.Model!.Value],
-        execution.Tools,
-        execution.Prompt,
-        execution.Output,
-        execution.Mode,
-        execution.Branch,
-        [.. node.From.Select(name => order[name])],
-        [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
-        execution.Validate,
-        execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
-        execution.Split);
+        Dictionary<Flow.NodeName, int> order) => new()
+        {
+            Index = index,
+            Name = node.Name,
+            Path = string.Join('/', [.. path, node.Name.Value]),
+            Gate = node.Gate,
+            Model = node.Model is { } modelReference ? models[modelReference] : null,
+            Execution = execution,
+            From = [.. node.From.Select(name => PortRef.Split(name) is { } portRef
+            ? new Dependency(order[portRef.Source], portRef.Port)
+            : new Dependency(order[name], null))],
+            AnyOf = [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
+            Outputs = node.Outputs,
+            SystemPrompt = node.SystemPrompt,
+            MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
+            ContextInput = node.In is { } inBindings && inBindings.TryGetValue(ExecutableNode.ContextInputPort, out Flow.NodeName boundContextInput)
+            ? order[boundContextInput]
+            : null,
+        };
+
 }

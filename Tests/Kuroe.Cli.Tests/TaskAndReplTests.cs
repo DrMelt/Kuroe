@@ -1,4 +1,5 @@
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
 using Xunit;
@@ -68,6 +69,59 @@ public sealed class TaskAndReplTests
         ExecutableStateSnapshot still = Assert.Single(ui.Harness.Snapshot(new TaskId(1)).ExecutableStates,
             state => state.Index == parked.Executables[1].Index);
         Assert.Single(still.AwaitingRuns);
+    }
+
+    [Fact]
+    public void Task_answer_requires_node_name_when_multiple_inputs_wait()
+    {
+        using Ui ui = new(flowsJson: TestFlows.TwoInputFlow);
+        ui.Tasks.Run(["/task", "new", "目标"]);
+        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+
+        // 文本首词命中节点名不会隐式点名，未点名回答仍被拒
+        ui.Tasks.Run(["/task", "answer", "1", "输入二", "内容"]);
+        Assert.Contains("有 2 个输入节点等待回答", ui.ErrorsOut.Output);
+
+        ui.Tasks.Run(["/task", "answer", "1", "@输入二", "乙"]);
+        ui.Tasks.Run(["/task", "answer", "1", "@输入一", "甲"]);
+        ui.Harness.Settle(new TaskId(1));
+
+        Assert.Equal(TaskState.Done, ui.Harness.Snapshot(new TaskId(1)).State);
+    }
+
+    [Fact]
+    public void Task_answer_with_single_waiting_keeps_leading_node_name_in_text()
+    {
+        using Ui ui = new(flowsJson: TestFlows.InputFlow);
+        ui.Tasks.Run(["/task", "new", "补齐 README"]);
+        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+
+        ui.Tasks.Run(["/task", "answer", "1", "用户输入", "需要", "补充多语言"]);
+        ui.Harness.Settle(new TaskId(1));
+
+        Assert.Contains(ui.Harness.Snapshot(new TaskId(1)).Executables
+            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Runs.Single().Context.Seed,
+            message => message.Text.Contains("用户输入 需要 补充多语言"));
+    }
+
+    [Fact]
+    public void Task_approve_and_answer_work_side_by_side_on_parallel_waits()
+    {
+        using Ui ui = new(flowsJson: TestFlows.ParallelInputAndReviewFlow);
+        ui.Tasks.Run(["/task", "new", "目标"]);
+        ui.Harness.Wait(new TaskId(1), snapshot =>
+            snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput)
+            && snapshot.Containers.Any(container => container.Name == "审查分支" && container.State == NodeState.AwaitingApproval));
+
+        ui.Tasks.Run(["/task", "approve", "1"]);
+        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput
+            && snapshot.Containers.Single(container => container.Name == "审查分支").State == NodeState.Done);
+
+        ui.Tasks.Run(["/task", "answer", "1", "用户输入", "补充背景"]);
+        ui.Harness.Settle(new TaskId(1));
+
+        Assert.Equal(TaskState.Done, ui.Harness.Snapshot(new TaskId(1)).State);
     }
 
     [Fact]

@@ -10,6 +10,7 @@ public static class NodeOutputLabels
     {
         NodeOutput.Plan => "规划",
         NodeOutput.Text => "实施",
+        NodeOutput.Input => "输入",
         _ => output.ToString(),
     };
 }

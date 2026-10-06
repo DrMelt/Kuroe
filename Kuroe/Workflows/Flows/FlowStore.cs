@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Storage;
 
 namespace Kuroe.Workflows.Flows;
@@ -199,6 +200,11 @@ sealed class FlowStore(string file, string baseDirectory)
                 useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于容器定义。"));
             }
 
+            if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
+            {
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输出端口与系统指令。"));
+            }
+
             if (dto.Gate is not null)
             {
                 useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明 Gate，门控由库定义决定。"));
@@ -276,6 +282,11 @@ sealed class FlowStore(string file, string baseDirectory)
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
+            if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
+            {
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输出端口与系统指令。"));
+            }
+
             if (dto.AnyOf is { Count: > 0 })
             {
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 AnyOf。"));
@@ -313,9 +324,20 @@ sealed class FlowStore(string file, string baseDirectory)
             leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口，接线从引用处提供。"));
         }
 
-        if (dto.In is { Count: > 0 })
+        if (dto.In is { Count: > 0 } inBindings)
         {
-            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口绑定。"));
+            if (inBindings.Keys.Any(key => key != ExecutableNode.ContextInputPort.Value))
+            {
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点的输入端口绑定只能声明隐式 ContextInput 端口。"));
+            }
+            else if (string.IsNullOrWhiteSpace(inBindings[ExecutableNode.ContextInputPort.Value]))
+            {
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "ContextInput 端口绑定来源不能为空。"));
+            }
+            else if (inBindings[ExecutableNode.ContextInputPort.Value].StartsWith('@'))
+            {
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "ContextInput 端口绑定来源必须是节点名，不能引用容器端口。"));
+            }
         }
 
         if (dto.Models is not null)
@@ -361,11 +383,15 @@ sealed class FlowStore(string file, string baseDirectory)
             Name = new NodeName(dto.Name ?? string.Empty),
             Gate = dto.Gate ?? NodeGate.Auto,
             From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
+            In = ToIn(dto.In),
             Model = ToModel(dto.Model),
+            Outputs = [.. (dto.Outputs ?? []).Select(name => new NodeName(name))],
+            SystemPrompt = [.. dto.SystemPrompt ?? []],
             Execution = new ExecutableSpec
             {
                 Tools = [.. (dto.Tools ?? []).Select(name => new ToolPath(name))],
                 Prompt = dto.Prompt,
+                Question = dto.Question,
                 Output = dto.Output ?? NodeOutput.Text,
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
@@ -456,6 +482,8 @@ sealed class FlowStore(string file, string baseDirectory)
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
+            Outputs = node.Outputs.Count == 0 ? null : [.. node.Outputs.Select(name => name.Value)],
+            SystemPrompt = node.SystemPrompt.Count == 0 ? null : [.. node.SystemPrompt],
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
                 : null,
@@ -474,6 +502,7 @@ sealed class FlowStore(string file, string baseDirectory)
         {
             dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(path => path.Value)];
             dto.Prompt = execution.Prompt;
+            dto.Question = execution.Question;
             dto.Output = execution.Output;
             dto.Mode = execution.Mode.ToString();
             dto.Branch = execution.Branch?.Value;

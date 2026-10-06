@@ -18,6 +18,9 @@ public sealed class FakeExecutor : IRunExecutor
 
     public PlanSubmitter? Submitter { get; set; }
 
+    /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
+    public PortSubmitter? PortSubmitter { get; set; }
+
     /// <summary>规划执行节点交回的条目拆分。</summary>
     public string ItemsJson { get; set; } = """
         [
@@ -26,8 +29,19 @@ public sealed class FakeExecutor : IRunExecutor
         ]
         """;
 
+    /// <summary>声明输出端口的执行节点交回的命名段。</summary>
+    public string PortValuesJson { get; set; } = """
+        { "结论": "结论产出", "理由": "理由产出" }
+        """;
+
     /// <summary>规划执行节点是否交回条目，关掉用于验证未收口。</summary>
     public bool SubmitsPlan { get; set; } = true;
+
+    /// <summary>输出端口节点是否交回命名段，关掉用于验证未收口。</summary>
+    public bool SubmitsPorts { get; set; } = true;
+
+    /// <summary>端口节点连续提交两次取值，第二次用于验证重复提交被拒。</summary>
+    public bool DoubleSubmitPorts { get; set; }
 
     /// <summary>单个 run 的人为耗时，用于并发与取消断言。</summary>
     public int DelayMs { get; set; } = 10;
@@ -80,6 +94,15 @@ public sealed class FakeExecutor : IRunExecutor
             if (run.Context.Output == NodeOutput.Plan && SubmitsPlan)
             {
                 _submissions.Enqueue(ToolResult.Render(Submitter!.SubmitItems(run.Scope, ItemsJson)));
+            }
+
+            if (run.Context.OutputPorts.Count > 0 && SubmitsPorts)
+            {
+                _submissions.Enqueue(ToolResult.Render(PortSubmitter!.SubmitValues(run.Scope, PortValuesJson)));
+                if (DoubleSubmitPorts)
+                {
+                    _submissions.Enqueue(ToolResult.Render(PortSubmitter.SubmitValues(run.Scope, PortValuesJson)));
+                }
             }
 
             if (FailsWhen?.Invoke(run) == true)

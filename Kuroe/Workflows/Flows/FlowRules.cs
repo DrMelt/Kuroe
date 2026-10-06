@@ -32,8 +32,16 @@ static class FlowRules
         var executableNames = new HashSet<Flow.NodeName>();
         CollectExecutables(flow.RootNode, executableNames);
 
+        var inputNames = new HashSet<Flow.NodeName>();
+        CollectInputs(flow.RootNode, inputNames);
+
+        var perItemNames = new HashSet<Flow.NodeName>();
+        CollectPerItem(flow.RootNode, perItemNames);
+
         var names = new HashSet<Flow.NodeName>();
-        CheckTree(flow.RootNode, names, executableNames, modelNames, containerNames, flow.Name, errors);
+        var outputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>>();
+        CollectOutputs(flow.RootNode, outputs);
+        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flow.Name, errors);
 
         // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
@@ -59,7 +67,7 @@ static class FlowRules
         }
     }
 
-    /// <summary>收集全部执行节点名，From 引用据此判定存在。</summary>
+    /// <summary>收集执行节点名，From 引用据此判定存在。</summary>
     private static void CollectExecutables(Flow.NodeSpec node, HashSet<Flow.NodeName> names)
     {
         if (node.Execution is not null)
@@ -75,13 +83,64 @@ static class FlowRules
         }
     }
 
+    /// <summary>收集输入节点名，上下文端口来源据此拦截。</summary>
+    private static void CollectInputs(Flow.NodeSpec node, HashSet<Flow.NodeName> names)
+    {
+        if (node.Execution is { Output: Flow.NodeOutput.Input })
+        {
+            names.Add(node.Name);
+        }
+        else if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (Flow.NodeSpec child in children)
+            {
+                CollectInputs(child, names);
+            }
+        }
+    }
+
+    /// <summary>收集按条目展开的执行节点名，上下文输入端口来源据此拦截。</summary>
+    private static void CollectPerItem(Flow.NodeSpec node, HashSet<Flow.NodeName> names)
+    {
+        if (node.Execution is { Mode: Flow.NodeMode.PerItem })
+        {
+            names.Add(node.Name);
+        }
+        else if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (Flow.NodeSpec child in children)
+            {
+                CollectPerItem(child, names);
+            }
+        }
+    }
+
+    /// <summary>收集执行节点的命名输出端口表，From 引用据此判定端口存在。</summary>
+    private static void CollectOutputs(Flow.NodeSpec node, Dictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>> outputs)
+    {
+        if (node.Execution is not null)
+        {
+            outputs[node.Name] = node.Outputs;
+        }
+        else if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (Flow.NodeSpec child in children)
+            {
+                CollectOutputs(child, outputs);
+            }
+        }
+    }
+
     /// <summary>递归校验名字、From 引用、容器与模型选择引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
     private static void CheckTree(
         Flow.NodeSpec node,
         HashSet<Flow.NodeName> names,
         HashSet<Flow.NodeName> executableNames,
+        HashSet<Flow.NodeName> inputNames,
+        HashSet<Flow.NodeName> perItemNames,
         HashSet<Flow.ModelRef> modelNames,
         HashSet<Flow.NodeName> containerNames,
+        IReadOnlyDictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>> outputs,
         string flowName,
         List<Error> errors)
     {
@@ -92,7 +151,30 @@ static class FlowRules
                 break;
             }
 
-            if (!executableNames.Contains(from) && !containerNames.Contains(from))
+            if (PortRef.Split(from) is { } portRef)
+            {
+                if (!executableNames.Contains(portRef.Source))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {portRef.Source} 不在流程里，输出端口只能引用执行节点。"));
+                    continue;
+                }
+
+                if (portRef.Port == ExecutableNode.ContextOutputPort)
+                {
+                    if (inputNames.Contains(portRef.Source))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输入节点不启动 run，不能作为上下文端口来源。"));
+                    }
+
+                    continue;
+                }
+
+                if (!outputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.NodeName>? declared) || !declared.Contains(portRef.Port))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"节点 {portRef.Source} 没有输出端口 {portRef.Port}。"));
+                }
+            }
+            else if (!executableNames.Contains(from) && !containerNames.Contains(from))
             {
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {from} 不在流程里。"));
             }
@@ -112,9 +194,27 @@ static class FlowRules
         {
             errors.Add(FlowErrors.Node(flowName, "(未命名)", "节点名不能为空。"));
         }
+        else if (node.Name.Value.Contains('@'))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
+        }
         else if (!names.Add(node.Name))
         {
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, "节点名重复。"));
+        }
+
+        if (node.In is { } inBindings && inBindings.TryGetValue(ExecutableNode.ContextInputPort, out Flow.NodeName contextInput))
+        {
+            if (!executableNames.Contains(contextInput) || inputNames.Contains(contextInput))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                    $"ContextInput 端口绑定来源 {contextInput} 必须是流程里的非输入执行节点。"));
+            }
+            else if (perItemNames.Contains(contextInput))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                    $"ContextInput 端口绑定来源 {contextInput} 不能是按条目展开的节点。"));
+            }
         }
 
         if (node.Nodes is { Count: > 0 } children)
@@ -137,7 +237,7 @@ static class FlowRules
             {
                 foreach (Flow.NodeSpec child in children)
                 {
-                    CheckTree(child, names, executableNames, modelNames, containerNames, flowName, errors);
+                    CheckTree(child, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flowName, errors);
                 }
             }
 
@@ -146,19 +246,25 @@ static class FlowRules
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value, "容器节点不是执行节点，不支持 From。"));
             }
         }
-        else if (node.Execution is not null)
+        else if (node.Execution is { } execution)
         {
-            if (node.Model is not { } model)
+            // 输入节点不启动 run，不需要模型选择
+            if (execution.Output != Flow.NodeOutput.Input)
             {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "执行节点必须声明模型选择。"));
-            }
-            else if (!modelNames.Contains(model))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
+                if (node.Model is not { } model)
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "执行节点必须声明模型选择。"));
+                }
+                else if (!modelNames.Contains(model))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
+                }
             }
 
             CheckExpansion(node, flowName, errors);
             ValidateSplit(node, flowName, errors);
+            ValidateInput(node, flowName, errors);
+            ValidateInterface(node, flowName, errors);
         }
         else if (node.Use is null)
         {
@@ -183,6 +289,78 @@ static class FlowRules
         }
 
         return false;
+    }
+
+    /// <summary>输入节点的静态规则：只以用户输入为产出，不接受执行配置与门控。</summary>
+    private static void ValidateInput(Flow.NodeSpec node, string flowName, List<Error> errors)
+    {
+        Flow.ExecutableSpec? executable = node.Execution;
+        if (executable?.Output != Flow.NodeOutput.Input)
+        {
+            return;
+        }
+
+        void Reject(bool condition, string message)
+        {
+            if (condition)
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, message));
+            }
+        }
+
+        Reject(node.Model is not null, "输入节点不启动 run，不能声明模型选择。");
+        Reject(executable.Tools.Count > 0, "输入节点不启动 run，不能声明 Tools。");
+        Reject(executable.Prompt is { Length: > 0 }, "输入节点不启动 run，不能声明 Prompt。");
+        Reject(executable.Validate is not null, "输入节点不启动 run，不能声明 Validate。");
+        Reject(executable.AnyOf.Count > 0, "输入节点不启动 run，不能声明 AnyOf。");
+        Reject(executable.Mode != Flow.NodeMode.Single, "输入节点只能整节点等待用户输入。");
+        Reject(executable.Branch is not null, "输入节点不启动 run，不能声明 Branch。");
+        Reject(node.Gate == Flow.NodeGate.Review, "输入节点回答即放行，不能声明 Review 门控。");
+        Reject(node.In is { Count: > 0 }, "输入节点不启动 run，不能声明输入端口绑定。");
+        Reject(node.Outputs.Count > 0, "输入节点不启动 run，不能声明输出端口。");
+        Reject(node.SystemPrompt.Count > 0, "输入节点不启动 run，不能声明系统指令。");
+    }
+
+    /// <summary>节点接口的静态规则：输出端口只声明在整节点文本产出上，端口名与前置块合法。</summary>
+    private static void ValidateInterface(Flow.NodeSpec node, string flowName, List<Error> errors)
+    {
+        if (node.Execution is not { } executable || executable.Output == Flow.NodeOutput.Input)
+        {
+            return;
+        }
+
+        if (executable.Question is { Length: > 0 })
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "Question 只属于输入节点。"));
+        }
+
+        if (node.Outputs.Count > 0 && (executable.Output != Flow.NodeOutput.Text || executable.Mode != Flow.NodeMode.Single))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "输出端口只能声明在整节点文本产出上。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => string.IsNullOrWhiteSpace(port.Value) || port.Value.Contains('@')))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输出端口名 {port.Value} 非法，不能为空或含 @。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输出端口名 {port.Value} 是保留名，隐式端口无需声明。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => !string.IsNullOrWhiteSpace(port.Value) && !port.Value.Contains('@'))
+            .GroupBy(port => port)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输出端口 {port.Value} 重复。"));
+        }
+
+        foreach (string block in node.SystemPrompt.Where(block => string.IsNullOrWhiteSpace(block)))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "系统指令块不能为空。"));
+        }
     }
 
     /// <summary>拆分配置的静态规则：只能写在规划执行节点上，条目与补充上限的取值边界。</summary>
@@ -372,14 +550,14 @@ static class FlowRules
                 continue;
             }
 
-            if (target.Mode == Flow.NodeMode.Single
-                && source is ExecutableNode { Mode: Flow.NodeMode.PerItem }
-                && target.Output == Flow.NodeOutput.Plan)
+            if (target.Execution.Mode == Flow.NodeMode.Single
+                && source is ExecutableNode { Execution.Mode: Flow.NodeMode.PerItem }
+                && target.Execution.Output == Flow.NodeOutput.Plan)
             {
                 errors.Add(FlowErrors.Node(flowName, target.Name.Value, "规划执行节点不能从按条目展开的执行节点取输入。"));
             }
 
-            if (edge.Feed == EdgeFeed.Items && source is not ExecutableNode { Output: Flow.NodeOutput.Plan })
+            if (edge.Feed == EdgeFeed.Items && source is not ExecutableNode { Execution.Output: Flow.NodeOutput.Plan })
             {
                 errors.Add(FlowErrors.Node(flowName, target.Name.Value, "按条目展开的执行节点只能从规划执行节点取拆分。"));
             }
@@ -392,8 +570,8 @@ static class FlowRules
                 errors.Add(FlowErrors.Node(flowName, target.Name.Value, "逐条对齐的两端必须来自同一个拆分。"));
             }
 
-            if (target.Branch is { } branch
-                && (target.Mode != Flow.NodeMode.PerItem || graph.ItemSource(target.Index) is null))
+            if (target.Execution.Branch is { } branch
+                && (target.Execution.Mode != Flow.NodeMode.PerItem || graph.ItemSource(target.Index) is null))
             {
                 errors.Add(FlowErrors.Node(flowName, target.Name.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从规划执行节点取拆分。"));
             }
@@ -402,7 +580,7 @@ static class FlowRules
         // 按条目展开必须能确定实例集：从规划执行节点取拆分，或从其它展开执行节点取对齐
         foreach (ExecutableNode executable in graph.ExecutableNodes)
         {
-            if (executable.Mode != Flow.NodeMode.PerItem)
+            if (executable.Execution.Mode != Flow.NodeMode.PerItem)
             {
                 continue;
             }
@@ -422,7 +600,7 @@ static class FlowRules
         // 分支声明必须落在引用它的静态拆分条目里
         foreach (ExecutableNode executable in graph.ExecutableNodes)
         {
-            if (!executable.IsStaticSplit || executable.Split?.Items is not { } fixedItems)
+            if (!executable.IsStaticSplit || executable.Execution.Split?.Items is not { } fixedItems)
             {
                 continue;
             }
@@ -437,7 +615,7 @@ static class FlowRules
                 bool owned = graph.Outgoing(executable.Index).Any(edge =>
                     edge.Feed == EdgeFeed.Items
                     && graph[edge.To] is ExecutableNode target
-                    && target.Branch == branch);
+                    && target.Execution.Branch == branch);
                 if (!owned)
                 {
                     errors.Add(FlowErrors.Node(flowName, executable.Name.Value,

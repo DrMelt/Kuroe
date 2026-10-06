@@ -28,8 +28,8 @@ public static class EdgeFeedRules
         ContainerNode => EdgeFeed.Single,
         ExecutableNode executable => targetMode switch
         {
-            NodeMode.PerItem => executable.Mode == NodeMode.PerItem ? EdgeFeed.Aligned : EdgeFeed.Items,
-            _ => executable.Mode == NodeMode.PerItem ? EdgeFeed.AllInstances : EdgeFeed.Single,
+            NodeMode.PerItem => executable.Execution.Mode == NodeMode.PerItem ? EdgeFeed.Aligned : EdgeFeed.Items,
+            _ => executable.Execution.Mode == NodeMode.PerItem ? EdgeFeed.AllInstances : EdgeFeed.Single,
         },
         _ => throw new ArgumentException($"不支持的来源节点类型：{source.GetType().Name}"),
     };

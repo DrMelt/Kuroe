@@ -24,11 +24,16 @@ internal static class RunContextFactory
     internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
     {
         List<ContextMessage> seed = [];
-        AppendDialogue(task, seed);
+        List<ContextMessage> contextInput = [];
         foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
-            AppendUpstreamOutput(task, edge, itemIndex, seed);
+            List<ContextMessage> target = edge.IsContextInput ? contextInput : seed;
+            AppendUpstreamOutput(task, edge, itemIndex, target);
         }
+
+        // 上下文输入端口的内容置于对话之前，与 SystemPrompt 一起构成稳定的请求前缀段
+        AppendDialogue(task, seed);
+        seed.InsertRange(0, contextInput);
 
         PlanItem? item = ItemOf(task, node, itemIndex);
         if (item is not null)
@@ -53,6 +58,8 @@ internal static class RunContextFactory
             ExecutionCount = count,
             Tools = ToolsFor(node.Executable),
             Seed = seed,
+            SystemPrompt = node.Executable.SystemPrompt.Count == 0 ? null : string.Join('\n', node.Executable.SystemPrompt),
+            OutputPorts = node.Executable.Outputs,
         };
     }
 
@@ -63,7 +70,7 @@ internal static class RunContextFactory
         {
             if (itemIndex is { } index)
             {
-                AppendLatestRun(task, edge.From, index, seed);
+                AppendLatestRun(task, edge.From, index, port: null, seed);
             }
 
             return;
@@ -71,7 +78,7 @@ internal static class RunContextFactory
 
         foreach ((int source, int? item) in task.Runtime[edge.From].ReleasedOutputs())
         {
-            AppendLatestRun(task, source, item, seed);
+            AppendLatestRun(task, source, item, edge.FromPort, seed);
         }
     }
     /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
@@ -82,19 +89,62 @@ internal static class RunContextFactory
             && run.State == RunState.Succeeded
             && run.Result is { Length: > 0 });
 
-    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。</summary>
-    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, List<ContextMessage> seed)
+    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。带端口时取该轮交回的命名段。</summary>
+    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, NodeName? port, List<ContextMessage> seed)
     {
+        NodeName name = task.Graph[fromIndex].Name;
+
+        // 输入节点的产出是用户回答，不落在 run 上
+        if (task.Graph[fromIndex] is ExecutableNode { Execution.Output: NodeOutput.Input })
+        {
+            if (task.Runtime.Executable(fromIndex).InputAnswer is { Length: > 0 } answer)
+            {
+                seed.Add(new ContextMessage(MessageRole.User, Truncate($"节点「{name}」的输入：\n{answer}"),
+                    new InputSource(name)));
+            }
+
+            return;
+        }
+
         if (LatestSucceededRun(task, fromIndex, item) is not { } run)
         {
             return;
         }
 
-        NodeName name = task.Graph[fromIndex].Name;
+        // 隐式上下文端口：上游 run 的装配上下文统一结构整体注入，每条消息的角色与出处原样保留，指令单列
+        if (port == ExecutableNode.ContextOutputPort)
+        {
+            ContextFrame frame = new(run.Id, name, item, run.Context.Seed, run.Context.Instruction);
+
+            foreach (ContextMessage message in frame.Messages)
+            {
+                seed.Add(new ContextMessage(message.Role, Truncate(message.Text), message.Source));
+            }
+
+            seed.Add(new ContextMessage(MessageRole.User,
+                Truncate($"节点「{frame.Node}」的指令：\n{frame.Instruction}"),
+                new ContextFrameSource(frame.Run, frame.Node, frame.Item)));
+            return;
+        }
+
+        // 端口引用只取该轮交回的命名段：未交回不属于可注入的产出，不回退到整份文本
+        if (port is { } outputPort)
+        {
+            if (task.PortValuesFor(fromIndex)?.GetValueOrDefault(outputPort.Value) is { Length: > 0 } portContent)
+            {
+                seed.Add(new ContextMessage(MessageRole.User,
+                    Truncate($"节点「{name}」的端口「{outputPort}」产出：\n{portContent}"),
+                    new RunSource(run.Id, name)));
+            }
+
+            return;
+        }
+
+        string content = run.Result ?? string.Empty;
         string prefix = item is { } index
             ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
             : $"节点「{name}」的产出：\n";
-        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{run.Result}"),
+        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{content}"),
             new RunSource(run.Id, name)));
     }
 
@@ -160,7 +210,7 @@ internal static class RunContextFactory
     private static string BuildInstruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
     {
         List<string> lines = [];
-        if (node.Executable.Prompt is { Length: > 0 } prompt)
+        if (node.Executable.Execution.Prompt is { Length: > 0 } prompt)
         {
             lines.Add(prompt);
         }
@@ -193,7 +243,7 @@ internal static class RunContextFactory
             return;
         }
 
-        if (node.Executable.Split is { } split)
+        if (node.Executable.Execution.Split is { } split)
         {
             if (split.Items is { Count: > 0 } items)
             {
@@ -221,7 +271,7 @@ internal static class RunContextFactory
         List<string> branches = [];
         foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
-            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } name })
+            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } name })
             {
                 branches.Add(name.Value);
             }
@@ -236,10 +286,15 @@ internal static class RunContextFactory
     /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
     private static List<ToolPath> ToolsFor(ExecutableNode node)
     {
-        List<ToolPath> names = [.. node.Tools];
-        if (node.Output == NodeOutput.Plan)
+        List<ToolPath> names = [.. node.Execution.Tools];
+        if (node.Execution.Output == NodeOutput.Plan)
         {
             names.Add(ToolPath.ContractPlan);
+        }
+
+        if (node.HasOutputPorts)
+        {
+            names.Add(ToolPath.ContractPortValues);
         }
 
         return names;

@@ -6,6 +6,9 @@ public enum TaskState
     /// <summary>有 run 在跑或排队。</summary>
     Running,
 
+    /// <summary>停在等待用户回答的输入节点上。</summary>
+    AwaitingInput,
+
     /// <summary>停在待批准的执行节点上。</summary>
     AwaitingApproval,
 

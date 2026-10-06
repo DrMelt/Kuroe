@@ -8,4 +8,7 @@ public enum NodeOutput
 
     /// <summary>拆分目标，交回可独立实施的条目列表。</summary>
     Plan,
+
+    /// <summary>用户输入：节点不启动 run，输入齐备后停下等待用户回答，回答即产出。</summary>
+    Input,
 }

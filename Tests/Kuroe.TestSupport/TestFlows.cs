@@ -26,4 +26,188 @@ public static class TestFlows
           ]
         }
         """;
+
+    /// <summary>根输入节点后接一个实施节点：回答后下游 run 消费回答。</summary>
+    public const string InputFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "用户输入", "Output": "Input", "Question": "请补充需要的背景" },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>并行分支：一分支停在输入等待回答，另一分支 Review 容器停在待批准。</summary>
+    public const string ParallelInputAndReviewFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    {
+                      "Name": "输入分支",
+                      "Nodes": [
+                        { "Name": "用户输入", "Output": "Input", "Question": "补充背景" }
+                      ]
+                    },
+                    {
+                      "Name": "审查分支",
+                      "Gate": "Review",
+                      "Nodes": [
+                        { "Name": "准备", "Output": "Text", "Model": "执行者" }
+                      ]
+                    },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["输入分支", "审查分支"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>两个并行输入节点：不带节点名回答时要求点名。</summary>
+    public const string TwoInputFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "输入一", "Output": "Input", "Question": "问题一" },
+                    { "Name": "输入二", "Output": "Input", "Question": "问题二" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>输入节点接在实施节点之后，等上游发布才停驻。</summary>
+    public const string InputFromUpstreamFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "准备", "Output": "Text", "Model": "执行者" },
+                    { "Name": "用户输入", "Output": "Input", "Question": "补充背景", "From": ["准备"] },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>声明输出端口的文本节点把命名段交给下游，下游按端口精确消费；不写端口时整份取用。</summary>
+    public const string PortFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["结论", "理由"], "Prompt": "给出结论与理由" },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["分析@结论"] },
+                    { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["分析"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>执行节点绑定隐式「ContextInput」输入端口：来源产出置于上下文开头，同时普通 From 照常注入。</summary>
+    public const string ContextInputFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "准备", "Output": "Text", "Model": "执行者" },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "准备" }, "From": ["准备"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>下游消费上游的隐式上下文输出端口：上游 run 的上下文按统一结构整体注入，角色与出处保留，指令单列。</summary>
+    public const string ContextOutputFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "制定", "Output": "Plan", "Model": "规划者", "Prompt": "拆分目标" },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定"] },
+                    { "Name": "汇报", "Output": "Text", "Model": "执行者", "From": ["实施@ContextOutput"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>声明恒定系统指令的文本节点：指令随 run 装配进请求最前的系统指令通道。</summary>
+    public const string SystemPromptFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "SystemPrompt": ["固定背景一", "固定背景二"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
 }

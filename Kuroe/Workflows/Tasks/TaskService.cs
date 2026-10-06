@@ -58,10 +58,14 @@ public sealed class TaskService
             return [TaskErrors.NoRoot()];
         }
 
-        ErrorOr<string> model = _models.For(root);
-        if (model.IsError)
+        // 输入节点不启动 run，不需要模型；其余根节点要求模型可解析
+        if (root.Execution.Output != NodeOutput.Input)
         {
-            return model.ErrorsOrEmptyList;
+            ErrorOr<string> model = _models.For(root);
+            if (model.IsError)
+            {
+                return model.ErrorsOrEmptyList;
+            }
         }
 
         WorkTask task = _registry.Create(goal.Trim(), flow.Value, graph, _sessions.NewDialogue(), title);
@@ -125,6 +129,37 @@ public sealed class TaskService
         }
 
         _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{id} 已批准，继续下一步。"));
+
+        return Result.Success;
+    }
+
+    /// <summary>回答停在等待的输入节点。nodeName 为空时回答唯一待输入节点，多个时必须指定。输入经 TaskDriver.Answer 放行下游。</summary>
+    public ErrorOr<Success> Answer(TaskId id, string? nodeName, string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return [TaskErrors.EmptyAnswer()];
+        }
+
+        ErrorOr<WorkTask> found = _registry.Find(id);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        WorkTask task = found.Value;
+        ErrorOr<Success> result;
+        lock (task.Gate)
+        {
+            result = _driver.Answer(task, nodeName, input);
+        }
+
+        if (result.IsError)
+        {
+            return result.ErrorsOrEmptyList;
+        }
+
+        _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{id} 已收到回答，继续下一步。"));
 
         return Result.Success;
     }

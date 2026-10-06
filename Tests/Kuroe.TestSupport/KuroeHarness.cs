@@ -25,6 +25,7 @@ public sealed class KuroeHarness : IDisposable
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
         executor.Submitter = provider.GetRequiredService<PlanSubmitter>();
+        executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -166,6 +167,13 @@ public sealed class KuroeHarness : IDisposable
             if (snapshot.LiveRuns == 0
                 && snapshot.State == TaskState.AwaitingApproval
                 && previous == TaskState.AwaitingApproval)
+            {
+                return snapshot;
+            }
+
+            if (snapshot.LiveRuns == 0
+                && snapshot.State == TaskState.AwaitingInput
+                && previous == TaskState.AwaitingInput)
             {
                 return snapshot;
             }

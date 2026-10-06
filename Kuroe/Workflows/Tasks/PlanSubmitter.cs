@@ -1,9 +1,7 @@
 using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Executions.Turns;
-using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
@@ -43,7 +41,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
-            SplitConfig? split = task.Runtime.Executable(run.Context.NodeIndex).Executable.Split;
+            SplitConfig? split = task.Runtime.Executable(run.Context.NodeIndex).Executable.Execution.Split;
             ErrorOr<IReadOnlyList<PlanItem>> merged = split is null
                 ? parsed
                 : SplitMerge.Apply(split, parsed.Value);
@@ -55,7 +53,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
             List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Branch: { } branch })
+                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } branch })
                 {
                     branches.Add(branch);
                 }

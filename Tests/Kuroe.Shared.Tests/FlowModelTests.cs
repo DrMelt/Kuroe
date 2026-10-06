@@ -28,8 +28,36 @@ public sealed class FlowModelTests
     {
         var graph = new NodeGraph(
         [
-            new ExecutableNode(0, new NodeName("规划"), "规划", NodeGate.Auto, Planner, [], null, NodeOutput.Plan, NodeMode.Single, null, [], [], null, 100, null),
-            new ExecutableNode(1, new NodeName("实施"), "实施", NodeGate.Auto, Planner, [], null, NodeOutput.Text, NodeMode.Single, null, [0], [], null, 100, null),
+            new ExecutableNode
+            {
+                Index = 0,
+                Name = new NodeName("规划"),
+                Path = "规划",
+                Gate = NodeGate.Auto,
+                Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
+                Model = Planner,
+                From = [],
+                AnyOf = [],
+                Outputs = [],
+                SystemPrompt = [],
+                MaxRuns = 100,
+                ContextInput = null,
+            },
+            new ExecutableNode
+            {
+                Index = 1,
+                Name = new NodeName("实施"),
+                Path = "实施",
+                Gate = NodeGate.Auto,
+                Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
+                Model = Planner,
+                From = [new Dependency(0, null)],
+                AnyOf = [],
+                Outputs = [],
+                SystemPrompt = [],
+                MaxRuns = 100,
+                ContextInput = null,
+            },
         ], []);
 
         Assert.Equal(2, graph.Count);

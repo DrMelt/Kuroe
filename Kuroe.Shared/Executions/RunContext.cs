@@ -38,4 +38,10 @@ public sealed record RunContext
 
     /// <summary>上游装配进来的已有内容，按序置于指令之前。</summary>
     public IReadOnlyList<ContextMessage> Seed { get; init; } = [];
+
+    /// <summary>恒定系统指令：由节点 SystemPrompt 槽位装配，置于请求最前。未声明时为空。</summary>
+    public string? SystemPrompt { get; init; }
+
+    /// <summary>节点声明的命名输出端口，未声明时为空。交回契约据此给模型。</summary>
+    public IReadOnlyList<NodeName> OutputPorts { get; init; } = [];
 }

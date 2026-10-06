@@ -3,6 +3,7 @@ using Kuroe.Executions.Runs;
 using Kuroe.Cli.Views;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
@@ -32,6 +33,7 @@ internal sealed class TaskCommands(
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准待批准的产出"),
         ("/task approve <任务号> run <run号>", "批准单个 run 的产出"),
+        ("/task answer <任务号> [<@节点名>] <文本>", "回答等待输入的节点，多个待输入时用 @节点名 点名"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
         ("/task adopt <run号>", "把 run 结论写进任务历史"),
         ("/task stop <任务号>", "取消任务"),
@@ -84,6 +86,10 @@ internal sealed class TaskCommands(
                 && Number(parts[2], "任务号") is { } task
                 && Number(parts[4], "run号") is { } run:
                 Act(tasks.Approve(new TaskId(task), [new RunId(run)]));
+                break;
+
+            case ("answer", >= 4) when Number(parts[2], "任务号") is { } task:
+                Answer(task, parts[3..]);
                 break;
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:
@@ -140,6 +146,40 @@ internal sealed class TaskCommands(
         TaskSnapshot task = submitted.Value;
         terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已启动。");
         list.Print([task], task.Id);
+    }
+
+    /// <summary>回答等待输入的节点。首词以 @ 开头且命中等待节点名时按点名回答，唯一待输入节点不需点名。</summary>
+    private void Answer(int number, string[] inputParts)
+    {
+        ErrorOr<WorkTask> found = registry.Find(new TaskId(number));
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        TaskSnapshot snapshot = found.Value.Snapshot();
+        HashSet<string> waiting = [.. snapshot.ExecutableStates
+            .Where(state => state.State == NodeState.AwaitingInput)
+            .Select(state => snapshot.Graph[state.Index].Name.Value)];
+
+        string? nodeName;
+        string input;
+        if (inputParts.Length > 1
+            && inputParts[0].Length > 1
+            && inputParts[0][0] == '@'
+            && waiting.Contains(inputParts[0][1..]))
+        {
+            nodeName = inputParts[0][1..];
+            input = string.Join(' ', inputParts[1..]);
+        }
+        else
+        {
+            nodeName = null;
+            input = string.Join(' ', inputParts);
+        }
+
+        Act(tasks.Answer(new TaskId(number), nodeName, input));
     }
 
     private void Show(int number)

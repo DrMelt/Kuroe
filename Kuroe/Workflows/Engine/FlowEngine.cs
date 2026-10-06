@@ -1,6 +1,6 @@
+using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
-using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Engine;
@@ -59,6 +59,28 @@ sealed class FlowEngine(
         }
 
         return approved;
+    }
+
+    /// <summary>要求持有任务 Gate：回答等待输入的节点，回答即产出并放行下游，然后发出继续信号。</summary>
+    public ErrorOr<Success> Answer(WorkTask task, string? nodeName, string input)
+    {
+        ErrorOr<List<int>> result;
+        lock (task.Gate)
+        {
+            result = task.Runtime.Answer(nodeName, input);
+            if (!result.IsError)
+            {
+                task.Touch();
+            }
+        }
+
+        // 推进循环只在任务收口后移除，回答成功时任务必未收口，推进循环一定还在
+        if (!result.IsError)
+        {
+            Find(task.Id)?.Answer(result.Value);
+        }
+
+        return result.IsError ? result.ErrorsOrEmptyList : Result.Success;
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>

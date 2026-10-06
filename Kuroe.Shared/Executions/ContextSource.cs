@@ -38,3 +38,22 @@ public sealed record ItemSource(RunId Plan, int Index, string Title) : ContextSo
     /// <inheritdoc/>
     public override RunId? FromRun => Plan;
 }
+
+/// <summary>输入节点收到的一段用户回答。</summary>
+public sealed record InputSource(NodeName NodeName) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => $"节点「{NodeName}」的输入";
+}
+
+/// <summary>某个 run 的上下文帧，供统一结构传输后的出处标记与详情回跳。</summary>
+public sealed record ContextFrameSource(RunId Run, NodeName NodeName, int? Item) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => Item is { } index
+        ? $"{Run} · {NodeName} 条目 {index + 1} 的上下文"
+        : $"{Run} · {NodeName} 的上下文";
+
+    /// <inheritdoc/>
+    public override RunId? FromRun => Run;
+}

@@ -111,6 +111,21 @@ internal sealed class FlowInfoTool : ITool
             parts.Add($"取自 {string.Join("、", node.From)}");
         }
 
+        if (executable.Question is { Length: > 0 })
+        {
+            parts.Add($"提问 {executable.Question}");
+        }
+
+        if (node.Outputs.Count > 0)
+        {
+            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Value))}");
+        }
+
+        if (node.SystemPrompt.Count > 0)
+        {
+            parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
+        }
+
         if (node.AnyOf.Count > 0)
         {
             parts.Add($"任选一组满足 {string.Join(" 或 ", node.AnyOf.Select(group => string.Join("、", group)))}");

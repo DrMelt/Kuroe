@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Shared.Executions;
 
 namespace Kuroe.Workflows.Tasks;
@@ -10,6 +11,9 @@ public interface IFlowRunner
 
     /// <summary>要求持有任务 Gate：批准待批准的产出，空列表时放行全部待批准节点与容器并发出继续信号，返回被批准的数量。</summary>
     int Approve(WorkTask task, IReadOnlyList<RunId> runs);
+
+    /// <summary>要求持有任务 Gate：回答等待输入的节点并放行下游。</summary>
+    ErrorOr<Success> Answer(WorkTask task, string? nodeName, string input);
 
     /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     int Rework(WorkTask task, int? itemIndex);

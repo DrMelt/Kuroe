@@ -24,7 +24,7 @@ internal static class ViewLabels
     {
         TaskState.Done => Styles.Success,
         TaskState.Running => Styles.Key,
-        TaskState.AwaitingApproval or TaskState.Blocked => Styles.Warning,
+        TaskState.AwaitingApproval or TaskState.AwaitingInput or TaskState.Blocked => Styles.Warning,
         _ => Styles.Hint,
     };
 

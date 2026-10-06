@@ -1,7 +1,6 @@
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
@@ -21,10 +20,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     public void Bind(NodeInput input) => Input = input;
 
     /// <summary>执行节点的产出契约，决定收口方式与契约工具。</summary>
-    public NodeOutput Output => Executable.Output;
+    public NodeOutput Output => Executable.Execution.Output;
 
     /// <summary>执行节点的展开模式：整节点一次执行还是按实例逐步启动。</summary>
-    public NodeMode Mode => Executable.Mode;
+    public NodeMode Mode => Executable.Execution.Mode;
 
     /// <summary>PerItem 执行节点的实例条目集，Single 执行节点为空。实例集确定后不再变化。</summary>
     public IReadOnlyList<int> Items { get; private set; } = [];
@@ -51,9 +50,23 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     private bool _blocked;
     private bool _canceled;
     private bool _rerunRequested;
+    private bool _awaitingInput;
+    private string? _inputAnswer;
 
     /// <summary>有待批准的产出 run。</summary>
     public override bool Awaiting => _awaitingRuns.Count > 0;
+
+    /// <summary>产出契约是否为用户输入：不启动 run，回答即产出。</summary>
+    public bool IsInputOutput => Executable.Execution.Output == NodeOutput.Input;
+
+    /// <summary>输入节点停在等待用户回答。</summary>
+    public bool AwaitingInput => _awaitingInput;
+
+    /// <summary>输入节点已收到的回答，未回答时为空。</summary>
+    public string? InputAnswer => _inputAnswer;
+
+    /// <summary>输入节点对用户的提示文本，未写时为通用提示。</summary>
+    public string? Question => Executable.Execution.Question;
 
     /// <summary>等待批准的产出 run。</summary>
     public IReadOnlyCollection<RunId> AwaitingRuns => _awaitingRuns;
@@ -190,6 +203,25 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         return true;
     }
 
+    /// <summary>输入节点停驻等待用户回答，重复停驻不改变状态。</summary>
+    public void ParkInput()
+    {
+        if (!IsInputOutput)
+        {
+            return;
+        }
+
+        _awaitingInput = true;
+    }
+
+    /// <summary>记下回答并发布产出，输入节点只回答一次。</summary>
+    public void Answer(string text)
+    {
+        _awaitingInput = false;
+        _inputAnswer = text;
+        Publish(null);
+    }
+
     /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
     public void EnterBlocked(IReadOnlyList<(int Node, int? Item)> targets)
     {
@@ -252,6 +284,17 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         {
             state = NodeState.Canceled;
         }
+        else if (IsInputOutput)
+        {
+            if (AwaitingInput)
+            {
+                state = NodeState.AwaitingInput;
+            }
+            else
+            {
+                state = Published ? NodeState.Done : NodeState.Pending;
+            }
+        }
         else if (Awaiting)
         {
             state = NodeState.AwaitingApproval;
@@ -273,6 +316,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             state = Published ? NodeState.Done : NodeState.Pending;
         }
 
-        return new ExecutableStateSnapshot(Index, state, items, completed, [.. _awaitingRuns.OrderBy(run => run.Value)]);
+        return new ExecutableStateSnapshot(Index, state, items, completed, [.. _awaitingRuns.OrderBy(run => run.Value)], _inputAnswer);
     }
 }

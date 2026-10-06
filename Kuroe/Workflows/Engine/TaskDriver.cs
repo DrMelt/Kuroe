@@ -1,12 +1,8 @@
 using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
-using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 using Run = Kuroe.Executions.Runs.Run;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
@@ -66,6 +62,12 @@ internal sealed class TaskDriver(
     public void Rework(IReadOnlyList<(int Blocked, int Node, int? Item)> targets)
     {
         Enqueue(targets.Select(target => target.Node));
+    }
+
+    /// <summary>回答语义：回答已产出的输入节点要放行的下游入队，由推进循环重新评估。</summary>
+    public void Answer(IReadOnlyList<int> targets)
+    {
+        Enqueue(targets);
     }
 
     /// <summary>停止推进循环：取消任务停掉全部 run，唤醒挂起点后主循环按停止位退出。</summary>

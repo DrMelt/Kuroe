@@ -12,6 +12,7 @@ public static class InfoLabels
     public static string Of(TaskState state) => state switch
     {
         TaskState.Running => "执行中",
+        TaskState.AwaitingInput => "待输入",
         TaskState.AwaitingApproval => "待批准",
         TaskState.Blocked => "已阻塞",
         TaskState.Done => "已完成",
@@ -24,6 +25,7 @@ public static class InfoLabels
     {
         NodeState.Pending => "待执行",
         NodeState.Running => "执行中",
+        NodeState.AwaitingInput => "待输入",
         NodeState.AwaitingApproval => "待批准",
         NodeState.Blocked => "已阻塞",
         NodeState.Done => "已完成",

@@ -105,6 +105,11 @@ internal static class NodeExpander
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型选择。"));
             }
 
+            if (node.In is { Count: > 0 } inBindings && inBindings.Keys.Any(key => key != ExecutableNode.ContextInputPort))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点只能绑定隐式 ContextInput 端口。"));
+            }
+
             return new Flow.NodeSpec
             {
                 Name = instance,
@@ -119,6 +124,9 @@ internal static class NodeExpander
                 },
                 Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, flowName, errors),
+                In = ResolveIn(node.In, env),
+                Outputs = definition.Outputs,
+                SystemPrompt = definition.SystemPrompt,
             };
         }
 
@@ -149,6 +157,9 @@ internal static class NodeExpander
             },
             Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
             From = ResolveAll(node.From, env, flowName, errors),
+            Outputs = node.Outputs,
+            SystemPrompt = node.SystemPrompt,
+            In = ResolveIn(node.In, env),
         };
     }
 
@@ -244,41 +255,73 @@ internal static class NodeExpander
         List<Error> errors) =>
         [.. groups.Select(group => ResolveAll(group, env, flowName, errors))];
 
-    /// <summary>解析一个引用名：@端口沿环境链找绑定，普通名沿环境链找实例映射。
+    /// <summary>解析一个引用名：@端口沿绑定链找来源，来源@端口 拆来源沿实例映射解析并保留端口，普通名沿环境链找实例映射。
     /// 都没有则保留原名交既有校验判断。</summary>
     private static Flow.NodeName Resolve(Flow.NodeName name, Env? env, string flowName, List<Error> errors)
     {
-        if (!IsPort(name))
+        if (name.Value.StartsWith(PortPrefix))
         {
-            Env? scope = env;
-            while (scope is not null)
+            string port = PortName(name);
+            Env? chain = env;
+            while (chain is not null)
             {
-                if (scope.Renames.TryGetValue(name, out Flow.NodeName renamed))
+                if (chain.Bindings.TryGetValue(new Flow.NodeName(port), out Flow.NodeName bound))
                 {
-                    return renamed;
+                    // @绑定值沿更外层作用域透传；普通名绑定在所在作用域解析成实例名
+                    return IsPort(bound) ? Resolve(bound, chain.Parent, flowName, errors) : ResolveName(bound, chain);
                 }
 
-                scope = scope.Parent;
+                chain = chain.Parent;
             }
 
+            errors.Add(FlowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
             return name;
         }
 
-        string port = PortName(name);
-        Env? chain = env;
-        while (chain is not null)
+        if (PortRef.Split(name) is { } reference)
         {
-            if (chain.Bindings.TryGetValue(new Flow.NodeName(port), out Flow.NodeName bound))
+            Flow.NodeName source = ResolveName(reference.Source, env);
+            if (reference.Port.Value.Contains(PortPrefix))
             {
-                // @绑定值沿更外层作用域透传；普通名绑定在所在作用域解析成实例名
-                return IsPort(bound) ? Resolve(bound, chain.Parent, flowName, errors) : Resolve(bound, chain, flowName, errors);
+                errors.Add(FlowErrors.Node(flowName, name.Value, $"输出端口名 {reference.Port.Value} 不能含 @。"));
             }
 
-            chain = chain.Parent;
+            return new Flow.NodeName($"{source.Value}@{reference.Port.Value}");
         }
 
-        errors.Add(FlowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
+        return ResolveName(name, env);
+    }
+
+    /// <summary>普通节点引用沿环境链找实例映射，找不到时保留原名。</summary>
+    private static Flow.NodeName ResolveName(Flow.NodeName name, Env? env)
+    {
+        Env? scope = env;
+        while (scope is not null)
+        {
+            if (scope.Renames.TryGetValue(name, out Flow.NodeName renamed))
+            {
+                return renamed;
+            }
+
+            scope = scope.Parent;
+        }
+
         return name;
+    }
+
+    /// <summary>执行节点的输入绑定：把「ContextInput」键的来源名沿作用域解析成实例名，未声明时为空。</summary>
+    private static Dictionary<Flow.NodeName, Flow.NodeName>? ResolveIn(
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName>? inBindings,
+        Env? env)
+    {
+        if (inBindings is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        return inBindings.ToDictionary(
+            entry => entry.Key,
+            entry => ResolveName(entry.Value, env));
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。

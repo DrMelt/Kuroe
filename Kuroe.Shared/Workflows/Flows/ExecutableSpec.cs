@@ -11,6 +11,9 @@ public sealed record ExecutableSpec
     /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
     public string? Prompt { get; init; }
 
+    /// <summary>输入节点的提示文本，控制台呈现给用户，未写时用通用提示。</summary>
+    public string? Question { get; init; }
+
     /// <summary>交回什么。</summary>
     public NodeOutput Output { get; init; } = NodeOutput.Text;
 

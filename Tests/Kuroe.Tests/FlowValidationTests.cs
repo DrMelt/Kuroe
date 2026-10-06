@@ -45,6 +45,30 @@ public sealed class FlowValidationTests
     [InlineData(CrossContainerReference, "没有环外来源")]
     [InlineData(BadToolPathSegment, "不能为空或含空白与花括号")]
     [InlineData(BadToolPathSlash, "不能以 / 开头或结尾")]
+    [InlineData(InputWithTools, "不能声明 Tools")]
+    [InlineData(InputWithPrompt, "不能声明 Prompt")]
+    [InlineData(InputWithModel, "不能声明模型选择")]
+    [InlineData(InputPerItem, "只能整节点等待用户输入")]
+    [InlineData(InputWithBranch, "不能声明 Branch")]
+    [InlineData(InputWithAnyOf, "不能声明 AnyOf")]
+    [InlineData(InputWithValidate, "不能声明 Validate")]
+    [InlineData(InputGateReview, "不能声明 Review 门控")]
+    [InlineData(InputWithIn, "输入节点不启动 run，不能声明输入端口绑定。")]
+    [InlineData(InputWithSplit, "Split 只能写在规划节点上")]
+    [InlineData(QuestionOnImplement, "Question 只属于输入节点")]
+    [InlineData(PortRefMissing, "没有输出端口")]
+    [InlineData(PortOnPlan, "输出端口只能声明在整节点文本产出上")]
+    [InlineData(PortOnInput, "不能声明输出端口")]
+    [InlineData(InputWithSystemPrompt, "不能声明系统指令")]
+    [InlineData(OutputsReservedContext, "是保留名")]
+    [InlineData(OutputsReservedContextInput, "是保留名")]
+    [InlineData(FromInputContext, "不能作为上下文端口来源")]
+    [InlineData(ContextInputWithExtraKey, "只能声明隐式 ContextInput 端口")]
+    [InlineData(ContextInputFromInput, "ContextInput 端口绑定来源")]
+    [InlineData(ContextInputFromPerItem, "不能是按条目展开")]
+    [InlineData(PortDuplicate, "输出端口 结论 重复")]
+    [InlineData(ReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
+    [InlineData(NodeNameWithAt, "节点名不能含 @")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -411,6 +435,88 @@ public sealed class FlowValidationTests
         ] } ] }
         """;
 
+    private const string InputWithTools = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Tools": ["GetLocalTime"] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithPrompt = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Prompt": "多想想" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithModel = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Model": "执行者" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputPerItem = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Mode": "PerItem" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithBranch = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Branch": "甲" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithAnyOf = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "AnyOf": [["来源"]] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithValidate = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Validate": { "Predicate": "NonEmpty" } }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputGateReview = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Gate": "Review" }
+          ] }
+        ] } ] }
+        """;
+
+    private const string InputWithSplit = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Split": { "Items": [{ "Title": "甲" }] } }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输入节点声明输入端口绑定，装配校验拒绝。</summary>
+    private const string InputWithIn = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "In": { "ContextInput": "准备" } },
+            { "Name": "准备", "Output": "Text", "Model": "执行者" }
+          ] }
+        ] } ] }
+        """;
+
     private const string MaxRunsNegative = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
@@ -455,5 +561,138 @@ public sealed class FlowValidationTests
               { "Name": "干活", "Model": "执行者" }
             ] }
           ] } ] }
+        """;
+    /// <summary>From 引用不存在的输出端口，装配校验拒绝。</summary>
+    private const string PortRefMissing = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["分析@不存在"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口声明在规划节点上，装配校验拒绝。</summary>
+    private const string PortOnPlan = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Plan", "Model": "执行者", "Outputs": ["结论"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输入节点声明输出端口，装配校验拒绝。</summary>
+    private const string PortOnInput = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "Outputs": ["结论"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>非输入执行节点声明 Question，装配校验拒绝。</summary>
+    private const string QuestionOnImplement = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "干活", "Output": "Text", "Model": "执行者", "Question": "你想问什么" }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输入节点声明系统指令，装配校验拒绝。</summary>
+    private const string InputWithSystemPrompt = """
+        { "Flows": [ { "Name": "默认", "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收集", "Output": "Input", "SystemPrompt": ["背景"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口声明保留名，装配校验拒绝。</summary>
+    private const string OutputsReservedContext = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["ContextOutput"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口声明输入端口保留名，装配校验拒绝。</summary>
+    private const string OutputsReservedContextInput = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["ContextInput"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输入节点作为上下文端口来源，装配校验拒绝。</summary>
+    private const string FromInputContext = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "用户输入", "Output": "Input" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入@ContextOutput"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>上下文输入端口绑定之外的键，装配校验拒绝。</summary>
+    private const string ContextInputWithExtraKey = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "准备", "Output": "Text", "Model": "执行者" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "准备", "其它": "准备" } }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>上下文输入端口绑定输入节点，装配校验拒绝。</summary>
+    private const string ContextInputFromInput = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "用户输入", "Output": "Input" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "用户输入" } }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>上下文输入端口绑定按条目展开的节点，装配校验拒绝。</summary>
+    private const string ContextInputFromPerItem = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "制定", "Output": "Plan", "Model": "执行者" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定"] },
+            { "Name": "汇报", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "实施" } }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口名重复，装配校验拒绝。</summary>
+    private const string PortDuplicate = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["结论", "结论"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>引用执行节点声明输出端口，装配校验拒绝。</summary>
+    private const string ReferenceWithOutputs = """
+        { "Nodes": [ { "Name": "分析库", "Output": "Text" } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "分析", "Use": "分析库", "Model": "执行者", "Outputs": ["结论"] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    /// <summary>流程内节点名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    private const string NodeNameWithAt = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "甲@乙", "Output": "Text", "Model": "执行者" }
+          ] }
+        ] } ] }
         """;
 }

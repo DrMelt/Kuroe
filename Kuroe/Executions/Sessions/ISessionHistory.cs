@@ -13,6 +13,9 @@ internal interface ISessionHistory
     /// <summary>当前历史是否已不适用。</summary>
     bool Stale { get; }
 
+    /// <summary>恒定系统指令，作为系统指令置于请求最前，未声明时为空。</summary>
+    string? SystemPrompt { get; }
+
     /// <summary>重铺历史。</summary>
     void LayOut(List<ChatMessage> messages);
 }
@@ -25,6 +28,9 @@ internal sealed class DialogueHistory(SettingsProvider settings) : ISessionHisto
     public string? Model => settings.Current.Runtime.Model;
 
     public bool Stale => _bound is null || settings.Current.Runtime.InvalidatesHistory(_bound);
+
+    /// <summary>前台对话没有恒定系统指令。</summary>
+    public string? SystemPrompt => null;
 
     public void LayOut(List<ChatMessage> messages)
     {
@@ -42,6 +48,9 @@ internal sealed class RunHistory(RunContext context) : ISessionHistory
     public string? Model => context.Model;
 
     public bool Stale => !_laidOut;
+
+    /// <summary>该 run 恒定系统指令：由节点 SystemPrompt 装配，置于请求最前。</summary>
+    public string? SystemPrompt => context.SystemPrompt;
 
     public void LayOut(List<ChatMessage> messages)
     {

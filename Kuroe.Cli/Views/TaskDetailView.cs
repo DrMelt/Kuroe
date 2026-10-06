@@ -2,6 +2,7 @@ using Kuroe.Executions;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
@@ -49,7 +50,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
-                + $"（{node.Executable.Output.Label()} · {ViewLabels.Of(node.Executable.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Execution.Output.Label()} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)
             {
@@ -82,7 +83,22 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
-            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}");
+            string question = node.State == NodeState.AwaitingInput
+                && task.Graph[node.Index] is ExecutableNode input
+                && input.Execution.Question is { Length: > 0 } questionText
+                    ? $" · {questionText}"
+                    : string.Empty;
+            string ports = task.Graph[node.Index] is ExecutableNode { Outputs.Count: > 0 } ported
+                ? $" · 端口：{string.Join('、', ported.Outputs.Select(port => port.Value))}"
+                : string.Empty;
+            string systemPrompt = task.Graph[node.Index] is ExecutableNode { SystemPrompt.Count: > 0 } systemPrompted
+                ? $" · 系统指令：{systemPrompted.SystemPrompt.Count} 块"
+                : string.Empty;
+            string answered = node.State == NodeState.Done
+                && node.InputAnswer is { Length: > 0 } answerText
+                    ? $" · 回答：{answerText}"
+                    : string.Empty;
+            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{question}{ports}{systemPrompt}{answered}");
         }
     }
 

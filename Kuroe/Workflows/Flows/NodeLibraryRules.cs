@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Shared.Workflows.Graph;
 using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
@@ -48,6 +49,12 @@ internal static class NodeLibraryRules
                 continue;
             }
 
+            if (node.Name.Value.Contains('@'))
+            {
+                errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
+                continue;
+            }
+
             if (!byName.TryAdd(node.Name, node))
             {
                 errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点名重复。"));
@@ -83,14 +90,24 @@ internal static class NodeLibraryRules
                     errors.Add(FlowErrors.Node("节点库", node.Name.Value, "节点必须声明执行配置或子节点。"));
                 }
 
-                if (node.Model is not null)
+                if (node.Execution?.Output == Flow.NodeOutput.Input)
                 {
-                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
+                    if (node.Model is not null)
+                    {
+                        errors.Add(FlowErrors.Node("节点库", node.Name.Value, "输入成员不启动 run，不声明模型槽位。"));
+                    }
                 }
-
-                if (node.Models is not null)
+                else
                 {
-                    errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
+                    if (node.Model is not null)
+                    {
+                        errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
+                    }
+
+                    if (node.Models is not null)
+                    {
+                        errors.Add(FlowErrors.Node("节点库", node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
+                    }
                 }
             }
         }
@@ -110,9 +127,63 @@ internal static class NodeLibraryRules
             errors.Add(FlowErrors.Node("节点库", node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
         }
 
+        if (node.In is not null)
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "执行节点库定义不绑定输入端口，接线从引用处提供。"));
+        }
+
         if (node.Execution?.MaxRuns is { } limit && limit < 1)
         {
             errors.Add(FlowErrors.Node("节点库", node.Name.Value, "MaxRuns 必须是正整数。"));
+        }
+
+        ValidateInterface(node, errors);
+    }
+
+    /// <summary>节点接口的库规则：输出端口只声明在整节点文本产出上，输入成员免端口与前置。</summary>
+    private static void ValidateInterface(Flow.NodeSpec node, List<Error> errors)
+    {
+        if (node.Execution is not { } executable || executable.Output == Flow.NodeOutput.Input)
+        {
+            if (node.Outputs.Count > 0 || node.SystemPrompt.Count > 0)
+            {
+                errors.Add(FlowErrors.Node("节点库", node.Name.Value, "输入成员不启动 run，不能声明输出端口与系统指令。"));
+            }
+
+            return;
+        }
+
+        if (executable.Question is { Length: > 0 })
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "Question 只属于输入节点。"));
+        }
+
+        if (node.Outputs.Count > 0 && (executable.Output != Flow.NodeOutput.Text || executable.Mode != Flow.NodeMode.Single))
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "输出端口只能声明在整节点文本产出上。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => string.IsNullOrWhiteSpace(port.Value) || port.Value.Contains('@')))
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, $"输出端口名 {port.Value} 非法，不能为空或含 @。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, $"输出端口名 {port.Value} 是保留名，隐式端口无需声明。"));
+        }
+
+        foreach (Flow.NodeName port in node.Outputs.Where(port => !string.IsNullOrWhiteSpace(port.Value) && !port.Value.Contains('@'))
+            .GroupBy(port => port)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key))
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, $"输出端口 {port.Value} 重复。"));
+        }
+
+        foreach (string block in node.SystemPrompt.Where(block => string.IsNullOrWhiteSpace(block)))
+        {
+            errors.Add(FlowErrors.Node("节点库", node.Name.Value, "系统指令块不能为空。"));
         }
     }
 
@@ -139,6 +210,7 @@ internal static class NodeLibraryRules
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
             CheckMemberModel(member, byName, errors);
+            ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
             {
                 CheckContainer(member, member.Nodes, byName, errors);
@@ -158,7 +230,11 @@ internal static class NodeLibraryRules
             Flow.NodeName name = node.Name.Value.Length > 0
                 ? node.Name
                 : new Flow.NodeName(node.Use?.Value ?? string.Empty);
-            if (!seen.Add(name))
+            if (name.Value.Contains('@'))
+            {
+                errors.Add(FlowErrors.Node("节点库", container.Name.Value, $"成员名 {name} 不能含 @，@ 是端口引用的分隔符。"));
+            }
+            else if (!seen.Add(name))
             {
                 errors.Add(FlowErrors.Node("节点库", container.Name.Value, $"成员名 {name} 在容器子树内重复。"));
             }
@@ -292,6 +368,16 @@ internal static class NodeLibraryRules
 
                 return;
             }
+        }
+
+        if (member.Execution?.Output == Flow.NodeOutput.Input)
+        {
+            if (member.Model is not null)
+            {
+                errors.Add(FlowErrors.Node("节点库", member.Name.Value, "输入成员不启动 run，不声明模型槽位。"));
+            }
+
+            return;
         }
 
         if (member.Model is null)

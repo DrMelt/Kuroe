@@ -211,6 +211,7 @@ public sealed class Session
             Tools = [.. _tools.Build(scope, scope.Sink, scope.Tools)],
             Temperature = current.Temperature,
             MaxOutputTokens = current.MaxOutputTokens,
+            Instructions = _history.SystemPrompt,
         });
     }
 }

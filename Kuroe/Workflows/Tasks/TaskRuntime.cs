@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
@@ -78,7 +79,7 @@ internal sealed class TaskRuntime
         if (Graph.ItemSource(node.Index) is { } plan && _task.SplitFor(plan) is { } output)
         {
             items = [.. output.Items
-                .Where(item => executable.Branch is null || item.Branch == executable.Branch)
+                .Where(item => executable.Execution.Branch is null || item.Branch == executable.Execution.Branch)
                 .Select(item => item.Index)];
         }
         else
@@ -144,7 +145,7 @@ internal sealed class TaskRuntime
     /// 账本语义的节点随来源新版本可整节点重启。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
-        if (node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
+        if (node.IsInputOutput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
         {
             return false;
         }
@@ -219,6 +220,11 @@ internal sealed class TaskRuntime
         }
 
         node.Invalidate(item);
+        if (node.Executable.HasOutputPorts)
+        {
+            _task.ClearPortValues(node.Index);
+        }
+
         RefreshContainers(node.Index);
     }
 
@@ -397,7 +403,7 @@ internal sealed class TaskRuntime
         }
 
         ExecutableNode executable = node.Executable;
-        if (executable.Output == NodeOutput.Plan && _task.SplitFor(node.Index)?.Origin != run.Id)
+        if (executable.Execution.Output == NodeOutput.Plan && _task.SplitFor(node.Index)?.Origin != run.Id)
         {
             run.MarkUncollected("规划执行节点没有交回条目拆分，本步未收口。");
             node.EnterBlocked([(node.Index, null)]);
@@ -405,8 +411,16 @@ internal sealed class TaskRuntime
             return new SettlePlan([], []);
         }
 
+        if (executable.HasOutputPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index)))
+        {
+            run.MarkUncollected("输出端口内容未交回，本步未收口。");
+            node.EnterBlocked([(node.Index, null)]);
+            NoteLimitReached(node, null);
+            return new SettlePlan([], []);
+        }
+
         // 输出校验不通过即不发布，节点停驻等返工
-        if (!PassesValidation(executable.Validate, run.Result))
+        if (!PassesValidation(executable.Execution.Validate, run.Result))
         {
             node.EnterBlocked([(node.Index, item)]);
             NoteLimitReached(node, item);
@@ -437,6 +451,10 @@ internal sealed class TaskRuntime
             _ => true,
         };
     }
+
+    /// <summary>输出端口的声明是否都已交回内容。</summary>
+    private static bool HasAllPortValues(ExecutableNode executable, IReadOnlyDictionary<string, string>? values) =>
+        values is { Count: > 0 } && executable.Outputs.All(port => values.ContainsKey(port.Value));
 
     private static bool Contains(string? text, string? needle) =>
         needle is { Length: > 0 } && text is not null && text.Contains(needle, StringComparison.Ordinal);
@@ -480,15 +498,68 @@ internal sealed class TaskRuntime
 
     // ---- 宿主入口 ----
 
+    /// <summary>是否有输入节点停在等待回答。</summary>
+    public bool HasAwaitingInput => _nodes.OfType<RuntimeExecutable>().Any(node => node.AwaitingInput);
+
+    /// <summary>回答一个停在等待的输入节点，回答即产出并放行下游。已随任务取消的节点不再接受回答。未指定节点名时回答唯一等待节点。要求持有 Gate。</summary>
+    public ErrorOr<List<int>> Answer(string? nodeName, string text)
+    {
+        List<RuntimeExecutable> awaiting = [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.AwaitingInput && !node.Canceled)];
+
+        RuntimeExecutable? target;
+        if (nodeName is null)
+        {
+            target = awaiting.Count == 1 ? awaiting[0] : null;
+        }
+        else
+        {
+            target = awaiting.FirstOrDefault(node => node.Name.Value == nodeName);
+        }
+
+        if (target is null)
+        {
+            if (nodeName is null)
+            {
+                if (awaiting.Count == 0)
+                {
+                    return [TaskErrors.NoAwaitingInput(_task.Id)];
+                }
+
+                return [TaskErrors.AmbiguousInput(_task.Id, awaiting.Count)];
+            }
+
+            return [TaskErrors.NoAwaitingInputNode(nodeName)];
+        }
+
+        target.Answer(text);
+
+        List<int> notify = [.. Downstream(target), .. RefreshContainers(target.Index)];
+
+        List<int> notified = [.. notify.Distinct()];
+
+        return notified;
+    }
+
     /// <summary>一个执行节点被激活后的评估：静态拆分就地产出、放行待批准的节点、输入齐备启动实例。
     /// 返回要通知的下游与要启动的实例。要求持有 Gate。</summary>
     public EvaluateResult Evaluate(RuntimeExecutable node)
     {
         ExecutableNode executable = node.Executable;
+        if (node.IsInputOutput)
+        {
+            // 输入节点不启动 run：输入齐备时停驻等待回答，已回答后不再动作
+            if (!node.Complete(null) && ItemSatisfied(node, null))
+            {
+                node.ParkInput();
+            }
+
+            return new EvaluateResult([], []);
+        }
+
         if (executable.IsStaticSplit && _task.SplitFor(node.Index) is null)
         {
             // 纯静态拆分不启动 run，激活即产出
-            _task.SetSplit(node.Index, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Split!, []).Value));
+            _task.SetSplit(node.Index, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Execution.Split!, []).Value));
             Publish(node, null);
 
             return new EvaluateResult(Settled(node, false, Downstream(node)).Notify, []);
@@ -537,13 +608,21 @@ internal sealed class TaskRuntime
             {
                 state = NodeState.Done;
             }
+            else if (Graph.ExecutablesIn(container.Index).Any(executable =>
+            {
+                RuntimeExecutable item = Executable(executable);
+                return item.Active > 0 || item.Complete(null) || item.Expanded;
+            }))
+            {
+                state = NodeState.Running;
+            }
+            else if (Graph.ExecutablesIn(container.Index).Any(executable => Executable(executable).AwaitingInput))
+            {
+                state = NodeState.AwaitingInput;
+            }
             else
             {
-                state = Graph.ExecutablesIn(container.Index).Any(executable =>
-                {
-                    RuntimeExecutable item = Executable(executable);
-                    return item.Active > 0 || item.Complete(null) || item.Expanded;
-                }) ? NodeState.Running : NodeState.Pending;
+                state = NodeState.Pending;
             }
 
             snapshots.Add(new ContainerSnapshot(container.Index, container.Name.Value, container.Container.Path, state, container.Container.Members));
