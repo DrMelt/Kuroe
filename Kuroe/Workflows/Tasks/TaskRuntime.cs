@@ -193,7 +193,7 @@ internal sealed class TaskRuntime
         if (starters.Count > 0)
         {
             node.AddActive(starters.Count);
-            node.ClearAwaiting();
+            node.ClearAllAwaiting();
             node.ClearRerun();
             node.Input?.Consume();
         }
@@ -285,13 +285,66 @@ internal sealed class TaskRuntime
     /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
     public bool HasWork => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node));
 
-    /// <summary>正在等待批准的执行节点。</summary>
-    public IReadOnlyList<int> AwaitingNodes =>
-        [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Awaiting).Select(node => node.Index)];
-
     /// <summary>正在等待批准的容器。</summary>
     public IReadOnlyList<int> AwaitingContainers =>
         [.. _nodes.OfType<RuntimeContainer>().Where(container => container.Awaiting).Select(container => container.Index)];
+
+    /// <summary>全部等待批准的产出 run。</summary>
+    public IReadOnlyList<RunId> AwaitingRuns =>
+        [.. _nodes.OfType<RuntimeExecutable>().SelectMany(node => node.AwaitingRuns)];
+
+    /// <summary>给定 run 中此刻在等待批准的数量。</summary>
+    public int CountAwaitingRuns(IReadOnlyList<RunId> runs)
+    {
+        HashSet<RunId> awaiting = [.. AwaitingRuns];
+
+        return runs.Count(awaiting.Contains);
+    }
+
+    /// <summary>批准一批产出 run：清掉各自等待，节点等待清空后放行下游并刷新容器。
+    /// runs 为空时批准全部等待。返回要通知的执行节点。要求持有 Gate。</summary>
+    public IReadOnlyList<int> ApproveRuns(IReadOnlyList<RunId> runs)
+    {
+        List<RuntimeExecutable> released = [];
+        if (runs.Count == 0)
+        {
+            foreach (RuntimeExecutable node in _nodes.OfType<RuntimeExecutable>())
+            {
+                if (node.AwaitingRuns.Count == 0)
+                {
+                    continue;
+                }
+
+                node.ClearAllAwaiting();
+                released.Add(node);
+            }
+        }
+        else
+        {
+            foreach (RunId run in runs)
+            {
+                if (_nodes.OfType<RuntimeExecutable>().FirstOrDefault(node => node.AwaitingRuns.Contains(run)) is not { } owner)
+                {
+                    continue;
+                }
+
+                owner.ClearAwaiting(run);
+                if (!owner.Awaiting)
+                {
+                    released.Add(owner);
+                }
+            }
+        }
+
+        List<int> notify = [];
+        foreach (RuntimeExecutable node in released.Distinct())
+        {
+            notify.AddRange(Downstream(node));
+            notify.AddRange(RefreshContainers(node.Index));
+        }
+
+        return [.. notify.Distinct()];
+    }
 
     /// <summary>放行等待批准的容器：撤等待、收集容器出边目标，并沿祖先链刷新出随放行新齐备的广播。批准信号落地时调用。</summary>
     public IReadOnlyList<int> ReleaseContainers()
@@ -363,7 +416,7 @@ internal sealed class TaskRuntime
         // 拆分已由回执写入 _splits，其余产出直接发布
         Publish(node, item);
 
-        return Settled(node, node.Park(), Downstream(node));
+        return Settled(node, node.Park(run.Id), Downstream(node));
     }
 
     /// <summary>输出校验判定：不改动任何状态，只给出模型产出是否合格。空产出只有 NonEmpty 判定接受。</summary>
@@ -439,12 +492,6 @@ internal sealed class TaskRuntime
             Publish(node, null);
 
             return new EvaluateResult(Settled(node, false, Downstream(node)).Notify, []);
-        }
-
-        if (node.ClearAwaiting())
-        {
-            return new EvaluateResult(
-                [.. Downstream(node).Concat(RefreshContainers(node.Index)).Distinct()], []);
         }
 
         if (CanStart(node))

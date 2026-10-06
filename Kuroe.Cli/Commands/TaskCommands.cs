@@ -30,7 +30,8 @@ internal sealed class TaskCommands(
         ("/task run <run号>", "打印该 run 的上下文来源与过程"),
         ("/task use <任务号>", "把前台对话切到该任务"),
         ("/task title <任务号> <文本>", "改任务标题"),
-        ("/task approve <任务号>", "批准待批准的节点"),
+        ("/task approve <任务号>", "批准待批准的产出"),
+        ("/task approve <任务号> run <run号>", "批准单个 run 的产出"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
         ("/task adopt <run号>", "把 run 结论写进任务历史"),
         ("/task stop <任务号>", "取消任务"),
@@ -77,6 +78,12 @@ internal sealed class TaskCommands(
 
             case ("approve", 3) when Number(parts[2], "任务号") is { } task:
                 Act(tasks.Approve(new TaskId(task)));
+                break;
+
+            case ("approve", 5) when parts[3].Equals("run", StringComparison.OrdinalIgnoreCase)
+                && Number(parts[2], "任务号") is { } task
+                && Number(parts[4], "run号") is { } run:
+                Act(tasks.Approve(new TaskId(task), [new RunId(run)]));
                 break;
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:

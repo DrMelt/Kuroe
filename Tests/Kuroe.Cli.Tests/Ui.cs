@@ -8,9 +8,9 @@ namespace Kuroe.Cli.Tests;
 /// <summary>一套与库装配对应的命令对象和两个方向独立的终端捕获。</summary>
 internal sealed class Ui : IDisposable
 {
-    public Ui(bool seedCatalog = true)
+    public Ui(bool seedCatalog = true, string? flowsJson = null)
     {
-        Harness = KuroeHarness.Create(seedCatalog: seedCatalog);
+        Harness = KuroeHarness.Create(flowsJson, seedCatalog: seedCatalog);
         Terminal = NewTerminal(out TestConsole output, out TestConsole errorsOut);
         Output = output;
         ErrorsOut = errorsOut;

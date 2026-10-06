@@ -103,8 +103,8 @@ public sealed class TaskService
         return Result.Success;
     }
 
-    /// <summary>批准待批准的节点，进入下一步。</summary>
-    public ErrorOr<Success> Approve(TaskId id)
+    /// <summary>批准待批准的产出。runs 为空时放行该任务全部待批准的节点与容器。</summary>
+    public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<RunId>? runs = null)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
@@ -116,7 +116,7 @@ public sealed class TaskService
         int approved;
         lock (task.Gate)
         {
-            approved = _driver.Approve(task);
+            approved = _driver.Approve(task, runs ?? []);
         }
 
         if (approved == 0)

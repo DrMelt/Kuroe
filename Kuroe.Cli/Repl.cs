@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
 using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli;
@@ -56,8 +57,19 @@ internal sealed class Repl(
         await tasks.ShutdownAsync();
     }
 
-    /// <summary>前台对话发生在当前任务上。</summary>
-    private string Prompt => registry.Active is { } id ? $"{id} 用户 > " : "用户 > ";
+    /// <summary>提示符显示当前位置：没有活动任务时在根层，有则带上任务与节点进度。</summary>
+    private string Prompt => RenderPrompt(registry);
+
+    internal static string RenderPrompt(TaskRegistry registry)
+    {
+        if (registry.Active is not { } id || registry.Find(id) is not { IsError: false } found)
+        {
+            return "root > ";
+        }
+
+        TaskSnapshot task = found.Value.Snapshot();
+        return $"任务 #{task.Id.Value} · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes} > ";
+    }
 
     private async Task AskAsync(string input, TurnCancellation cancellation)
     {

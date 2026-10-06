@@ -67,9 +67,10 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
             detail.Print(task);
 
+            HashSet<RunId> awaiting = [.. task.ExecutableStates.SelectMany(state => state.AwaitingRuns)];
             List<Item> items = [.. task.Executables.SelectMany(node => node.Runs)
                 .OrderBy(run => run.Id.Value)
-                .Select(run => new Item("  " + TaskDetailView.RunLabel(run), "run", Task: id, Run: run.Id))];
+                .Select(run => new Item("  " + TaskDetailView.RunLabel(run, awaiting.Contains(run.Id)), "run", Task: id, Run: run.Id))];
             AddTaskActions(items, task);
             items.Add(Refresh);
             items.Add(Back);
@@ -127,6 +128,14 @@ internal sealed class TaskBrowser(
                 .Select(message => new Item($"↑ {message.Source.Label}", "run", Run: message.Source.FromRun))
                 .DistinctBy(item => item.Run)];
 
+            bool awaitingRun = task.ExecutableStates.Any(state =>
+                state.Index == snapshot.Context.NodeIndex && state.AwaitingRuns.Contains(runId));
+
+            if (awaitingRun)
+            {
+                items.Add(new Item("✓ 批准该 run 的产出", "approveRun", Task: task.Id, Run: runId));
+            }
+
             if (snapshot is { State: RunState.Succeeded, Result.Length: > 0 })
             {
                 items.Add(new Item("⇩ 采纳该结论到任务历史", "adopt", Run: runId));
@@ -148,6 +157,10 @@ internal sealed class TaskBrowser(
 
                 case "run" when picked.Run is { } upstream:
                     runId = upstream;
+                    break;
+
+                case "approveRun" when picked.Task is { } owner:
+                    Act(tasks.Approve(owner, [runId]));
                     break;
 
                 case "adopt":

@@ -1,4 +1,5 @@
 using Kuroe.Executions;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -58,7 +59,8 @@ internal sealed class TaskDetailView(Terminal terminal)
 
             foreach (RunSnapshot run in node.Runs)
             {
-                _terminal.Line($"  {RunLabel(run)}");
+                IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
+                _terminal.Line($"  {RunLabel(run, awaitingRuns.Contains(run.Id))}");
             }
         }
 
@@ -84,8 +86,8 @@ internal sealed class TaskDetailView(Terminal terminal)
         }
     }
 
-    /// <summary>列表里一行的 run 概况。</summary>
-    internal static string RunLabel(RunSnapshot run)
+    /// <summary>列表里一行的 run 概况，待批准的 run 标出。</summary>
+    internal static string RunLabel(RunSnapshot run, bool awaiting = false)
     {
         List<string> parts =
         [
@@ -95,6 +97,10 @@ internal sealed class TaskDetailView(Terminal terminal)
             ViewLabels.State(run),
             ViewLabels.Elapsed(run.Elapsed),
         ];
+        if (awaiting)
+        {
+            parts.Add("待批准");
+        }
 
         return string.Join(" · ", parts);
     }

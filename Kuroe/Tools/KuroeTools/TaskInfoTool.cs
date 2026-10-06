@@ -155,11 +155,12 @@ internal sealed class TaskInfoTool : ITool
                 continue;
             }
 
+            IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
             text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
                 + $"（{node.Executable.Output.Label()} · {InfoLabels.Of(node.Executable.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
             foreach (RunSnapshot run in node.Runs)
             {
-                text.AppendLine($"    {RunLine(run)}");
+                text.AppendLine($"    {RunLine(run, awaitingRuns)}");
             }
         }
 
@@ -272,14 +273,24 @@ internal sealed class TaskInfoTool : ITool
         }
     }
 
-    /// <summary>列表里一行的 run 概况。</summary>
-    private static string RunLine(RunSnapshot run) =>
-        string.Join(" · ",
+    /// <summary>列表里一行的 run 概况，停在待批准的 run 标出。</summary>
+    private static string RunLine(RunSnapshot run, IReadOnlyList<RunId> awaitingRuns)
+    {
+        List<string> parts =
+        [
             run.Id.ToString(),
             InfoLabels.Item(run.Context.ItemIndex),
             $"第 {run.Context.ExecutionCount} 轮",
             InfoLabels.State(run),
-            InfoLabels.Elapsed(run.Elapsed));
+            InfoLabels.Elapsed(run.Elapsed),
+        ];
+        if (awaitingRuns.Contains(run.Id))
+        {
+            parts.Add("待批准");
+        }
+
+        return string.Join(" · ", parts);
+    }
 
     /// <summary>当前对话所在任务的标记。</summary>
     private static string Marker(TaskId? active, TaskId id) => active == id ? "当前对话 " : string.Empty;

@@ -47,12 +47,16 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>逐条目的已启动 run 数，只经 RecordRun 改动。</summary>
     private readonly Dictionary<int, int> _itemRuns = [];
 
-    private bool _awaiting;
+    private readonly HashSet<RunId> _awaitingRuns = [];
     private bool _blocked;
     private bool _canceled;
     private bool _rerunRequested;
 
-    public override bool Awaiting => _awaiting;
+    /// <summary>有待批准的产出 run。</summary>
+    public override bool Awaiting => _awaitingRuns.Count > 0;
+
+    /// <summary>等待批准的产出 run。</summary>
+    public IReadOnlyCollection<RunId> AwaitingRuns => _awaitingRuns;
 
     /// <summary>停在等待返工或放行。</summary>
     public bool Blocked => _blocked;
@@ -167,28 +171,21 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>记下新启动的实例数。</summary>
     public void AddActive(int count) => Active += count;
 
-    /// <summary>清除等待批准，返回是否确实在等。</summary>
-    public bool ClearAwaiting()
-    {
-        if (!_awaiting)
-        {
-            return false;
-        }
+    /// <summary>清掉一个产出 run 的等待，返回该 run 原本在等待中。</summary>
+    public bool ClearAwaiting(RunId run) => _awaitingRuns.Remove(run);
 
-        _awaiting = false;
-
-        return true;
-    }
+    /// <summary>清掉全部等待批准。</summary>
+    public void ClearAllAwaiting() => _awaitingRuns.Clear();
 
     /// <summary>产出后按门控停在等待批准，Auto 不停。返回是否停留。</summary>
-    public bool Park()
+    public bool Park(RunId run)
     {
         if (Gate != NodeGate.Review)
         {
             return false;
         }
 
-        _awaiting = true;
+        _awaitingRuns.Add(run);
 
         return true;
     }
@@ -276,6 +273,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             state = Published ? NodeState.Done : NodeState.Pending;
         }
 
-        return new ExecutableStateSnapshot(Index, state, items, completed);
+        return new ExecutableStateSnapshot(Index, state, items, completed, [.. _awaitingRuns.OrderBy(run => run.Value)]);
     }
 }

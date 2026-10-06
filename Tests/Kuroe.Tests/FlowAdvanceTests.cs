@@ -330,6 +330,52 @@ public sealed class FlowAdvanceTests
         Assert.All(done.Executables[3].Runs, run => Assert.InRange(run.Context.ItemIndex!.Value, 0, 1));
     }
 
+    [Fact]
+    public void Review_per_item_parks_each_run_until_its_run_approved()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ReviewPerItemFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot parked = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+        Assert.Equal(2, parked.Executables[1].Runs.Count);
+
+        // 每个条目 run 各自停在待批准，批准其中一个后剩下的仍停
+        RunId[] parkedRuns = [.. parked.Executables[1].Runs.Select(run => run.Id)];
+        Assert.Equal(2, Assert.Single(parked.ExecutableStates, state => state.Index == parked.Executables[1].Index).AwaitingRuns.Count);
+
+        harness.Tasks.Approve(id, [parkedRuns[0]]).ThrowIfError();
+        TaskSnapshot partial = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, partial.State);
+        ExecutableStateSnapshot still = Assert.Single(partial.ExecutableStates, state => state.Index == partial.Executables[1].Index);
+        Assert.Equal([parkedRuns[1]], still.AwaitingRuns);
+
+        // 批准剩下的 run 后节点放行，任务走完
+        harness.Tasks.Approve(id, [parkedRuns[1]]).ThrowIfError();
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Empty(Assert.Single(done.ExecutableStates, state => state.Index == done.Executables[1].Index).AwaitingRuns);
+    }
+
+    [Fact]
+    public void Approve_one_run_keeps_downstream_waiting_for_the_other()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ReviewPerItemFlow);
+
+        TaskId id = harness.Submit("补齐 README");
+        TaskSnapshot parked = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+
+        RunId first = parked.Executables[1].Runs[0].Id;
+        harness.Tasks.Approve(id, [first]).ThrowIfError();
+
+        // 还差一个 run 未批准，节点不放行，汇总不启动
+        TaskSnapshot partial = harness.Settle(id);
+        Assert.Equal(TaskState.AwaitingApproval, partial.State);
+        Assert.Single(partial.ExecutableStates, state => state.State == NodeState.AwaitingApproval);
+    }
+
     private const string BranchedItemsJson = """
         [
           { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见", "Branch": "撰写" },

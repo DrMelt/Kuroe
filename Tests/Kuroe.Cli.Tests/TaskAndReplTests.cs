@@ -1,4 +1,6 @@
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -35,7 +37,7 @@ public sealed class TaskAndReplTests
 
         ui.Tasks.Run(["/task", "approve", "1"]);
 
-        Assert.Contains("没有等待批准的节点", ui.ErrorsOut.Output);
+        Assert.Contains("没有等待批准的产出", ui.ErrorsOut.Output);
         Assert.Contains("未生效。", ui.ErrorsOut.Output);
     }
 
@@ -50,6 +52,22 @@ public sealed class TaskAndReplTests
 
         Assert.Contains("已丢掉 1 个任务。", ui.Output.Output);
         Assert.Empty(ui.Harness.Registry.Snapshots());
+    }
+
+    [Fact]
+    public void Task_approve_run_approves_only_that_run()
+    {
+        using Ui ui = new(flowsJson: TestFlows.ReviewPerItemFlow);
+        ui.Tasks.Run(["/task", "new", "补齐 README"]);
+        ui.Harness.Settle(new TaskId(1));
+
+        TaskSnapshot parked = ui.Harness.Snapshot(new TaskId(1));
+        RunId first = parked.Executables[1].Runs[0].Id;
+        ui.Tasks.Run(["/task", "approve", "1", "run", first.Value.ToString()]);
+
+        ExecutableStateSnapshot still = Assert.Single(ui.Harness.Snapshot(new TaskId(1)).ExecutableStates,
+            state => state.Index == parked.Executables[1].Index);
+        Assert.Single(still.AwaitingRuns);
     }
 
     [Fact]
@@ -79,5 +97,26 @@ public sealed class TaskAndReplTests
         Assert.Contains("/task", ui.Output.Output);
         Assert.Contains("/flow", ui.Output.Output);
         Assert.Contains("/provider", ui.Output.Output);
+    }
+
+    [Fact]
+    public void Repl_prompt_renders_root_without_active_task()
+    {
+        using Ui ui = new();
+
+        Assert.Equal("root > ", Repl.RenderPrompt(ui.Harness.Registry));
+    }
+
+    [Fact]
+    public void Repl_prompt_renders_task_and_node_progress()
+    {
+        using Ui ui = new();
+        TaskId id = ui.Harness.Submit("补齐 README");
+        ui.Harness.Settle(id);
+
+        string prompt = Repl.RenderPrompt(ui.Harness.Registry);
+
+        Assert.Equal($"任务 #{id.Value} · 节点 {ui.Harness.Snapshot(id).FrontierNodes}/{ui.Harness.Snapshot(id).TotalExecutableNodes} > ", prompt);
+        Assert.Contains($"任务 #{id.Value}", prompt);
     }
 }

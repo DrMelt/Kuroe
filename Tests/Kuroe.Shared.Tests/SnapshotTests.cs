@@ -64,7 +64,7 @@ public sealed class SnapshotTests
             started, finished, null, [], [], 0);
 
     private static ExecutableStateSnapshot State(int index, NodeState state) =>
-        new(index, state, [], 0);
+        new(index, state, [], 0, []);
 
     private static RunContext Context() => new()
     {

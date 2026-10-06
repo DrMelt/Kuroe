@@ -45,17 +45,18 @@ internal sealed class TaskDriver(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>批准语义：放行等待批准的容器并连同等待批准的执行节点入队，进入下一步评估。</summary>
-    public void Approve()
+    /// <summary>批准语义：清掉指定 run 的等待，等待清空的节点放行下游并刷新容器，再连同待批准容器入队进入下一步评估。
+    /// runs 为空时批准全部等待。</summary>
+    public void Approve(IReadOnlyList<RunId> runs)
     {
         List<int> targets;
         lock (task.Gate)
         {
-            IReadOnlyList<int> waiting = task.Runtime.AwaitingNodes;
-            IReadOnlyList<int> containerOutlets = task.Runtime.ReleaseContainers();
-            targets = waiting.Count == 0 && containerOutlets.Count == 0
-                ? [.. task.Runtime.Roots()]
-                : [.. waiting, .. containerOutlets];
+            targets = [.. task.Runtime.ApproveRuns(runs)];
+            if (runs.Count == 0)
+            {
+                targets.AddRange(task.Runtime.ReleaseContainers());
+            }
         }
 
         Enqueue(targets.Distinct());

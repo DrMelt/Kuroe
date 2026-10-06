@@ -38,25 +38,27 @@ sealed class FlowEngine(
         });
     }
 
-    /// <summary>要求持有任务 Gate：批准待批准的节点与容器，再发出继续信号，返回被批准的节点数。</summary>
-    public int Approve(WorkTask task)
+    /// <summary>要求持有任务 Gate：批准待批准的产出，空列表时放行全部待批准节点与容器，再发出继续信号，返回被批准的数量。</summary>
+    public int Approve(WorkTask task, IReadOnlyList<RunId> runs)
     {
-        int waiting;
+        int approved;
         lock (task.Gate)
         {
-            waiting = task.Runtime.AwaitingNodes.Count + task.Runtime.AwaitingContainers.Count;
-            if (waiting > 0)
+            approved = runs.Count == 0
+                ? task.Runtime.AwaitingRuns.Count + task.Runtime.AwaitingContainers.Count
+                : task.Runtime.CountAwaitingRuns(runs);
+            if (approved > 0)
             {
                 task.Touch();
             }
         }
 
-        if (waiting > 0 && Find(task.Id) is { } driver)
+        if (approved > 0 && Find(task.Id) is { } driver)
         {
-            driver.Approve();
+            driver.Approve(runs);
         }
 
-        return waiting;
+        return approved;
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
