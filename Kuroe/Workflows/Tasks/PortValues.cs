@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ErrorOr;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Workflows;
 
@@ -9,7 +10,7 @@ namespace Kuroe.Workflows.Tasks;
 /// <summary>输出端口交回的命名段：把模型给的 JSON 对象解析成端口名到文本，不合法时给出一条可回给模型的原因。</summary>
 static class PortValues
 {
-    public static ErrorOr<IReadOnlyDictionary<string, string>> Parse(string valuesJson)
+    public static ErrorOr<IReadOnlyDictionary<PortName, string>> Parse(string valuesJson)
     {
         Dictionary<string, string>? parsed;
         try
@@ -26,15 +27,24 @@ static class PortValues
             return [TaskErrors.Ports("端口产出为空")];
         }
 
+        Dictionary<PortName, string> result = [];
         foreach ((string port, string text) in parsed)
         {
-            if (string.IsNullOrWhiteSpace(port) || string.IsNullOrWhiteSpace(text))
+            ErrorOr<PortName> parsedPort = PortName.Create(port);
+            if (parsedPort.IsError)
             {
-                return [TaskErrors.Ports($"端口 {port} 或它的产出为空")];
+                return parsedPort.ErrorsOrEmptyList;
             }
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return [TaskErrors.Ports($"端口 {parsedPort.Value} 或它的产出为空")];
+            }
+
+            result[parsedPort.Value] = text;
         }
 
-        return parsed;
+        return result;
     }
 }
 

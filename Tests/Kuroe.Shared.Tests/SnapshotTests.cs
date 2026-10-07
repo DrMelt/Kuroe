@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Turns;
@@ -73,7 +74,7 @@ public sealed class SnapshotTests
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
-        Model = "fake",
+        Model = ModelName.Create("fake").Value,
     };
 
     private static class TaskBuilder
@@ -84,9 +85,9 @@ public sealed class SnapshotTests
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
 
-    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
+    private static readonly Flow.ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
-    private static readonly FlowDefinition Flow = new("默认", null, [Planner],
+    private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
         new NodeSpec
         {
             Name = new NodeName("整体"),

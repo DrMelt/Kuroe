@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Shared;
@@ -25,7 +26,7 @@ internal sealed class ErrorView(Terminal terminal)
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(model) && !models.IsRegistered(model))
+        if (!string.IsNullOrWhiteSpace(model) && ModelName.Create(model.Trim()) is { IsError: false } parsed && !models.IsRegistered(parsed.Value))
         {
             terminal.Hint($"用 /model add {model} <提供商> 注册该模型。");
         }

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Xunit;
@@ -62,6 +63,6 @@ public sealed class ContextModelTests
         NodeIndex = 1,
         NodeName = new NodeName("实施"),
         Instruction = "做事",
-        Model = "fake",
+        Model = ModelName.Create("fake").Value,
     };
 }

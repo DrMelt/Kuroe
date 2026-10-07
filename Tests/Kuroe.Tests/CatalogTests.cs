@@ -15,11 +15,11 @@ public sealed class CatalogTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        harness.Catalog.AddModel("m2", "test").ThrowIfError();
+        harness.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
 
-        Assert.True(harness.Models.IsRegistered("m2"));
-        harness.Models.Select("m2").ThrowIfError();
-        Assert.Equal("m2", harness.Models.Current);
+        Assert.True(harness.Models.IsRegistered(ModelName.Create("m2").Value));
+        harness.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
+        Assert.Equal("m2", harness.Models.Current?.Value);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Executions;
 using Kuroe.Catalogs;
@@ -9,15 +10,15 @@ namespace Kuroe.Workflows.Tasks;
 /// 输入节点不启动 run，不进入解析路径。</summary>
 sealed class NodeModelResolver(CatalogService catalog)
 {
-    public ErrorOr<string> For(ExecutableNode executable)
+    public ErrorOr<ModelName> For(ExecutableNode executable)
     {
         if (executable.Model is not { } definition)
         {
             return [RunErrors.ModelMissing(executable.Name.Value)];
         }
 
-        string? model = definition.Model;
-        if (string.IsNullOrWhiteSpace(model))
+        ModelName? model = definition.Model;
+        if (model is null)
         {
             return [RunErrors.ModelNotConfigured(definition.Name.Value)];
         }

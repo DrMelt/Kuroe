@@ -130,6 +130,18 @@ public sealed class PortNodeTests
     }
 
     [Fact]
+    public void Port_submission_with_at_in_key_is_rejected()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        harness.Executor.PortValuesJson = """{ "结论@甲": "结论产出", "理由": "理由产出" }""";
+
+        TaskId id = harness.Submit("目标");
+        harness.Settle(id);
+
+        Assert.Contains(harness.Executor.Submissions, text => text.Contains("端口名不能为空或含 @"));
+    }
+
+    [Fact]
     public void Duplicate_port_submission_is_rejected()
     {
         using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);

@@ -33,7 +33,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
         }
 
         WorkTask task = found.Value;
-        ErrorOr<IReadOnlyDictionary<string, string>> parsed = PortValues.Parse(valuesJson);
+        ErrorOr<IReadOnlyDictionary<PortName, string>> parsed = PortValues.Parse(valuesJson);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -52,7 +52,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument("端口产出已提交，无需重复提交。");
             }
 
-            HashSet<string> declared = [.. executable.Outputs.Select(port => port.Value)];
+            HashSet<PortName> declared = [.. executable.Outputs];
             if (!declared.SetEquals(parsed.Value.Keys))
             {
                 return ToolErrors.Argument($"端口必须与声明一一对应，应提交 {string.Join('、', declared)}。");

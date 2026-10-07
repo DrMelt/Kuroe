@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ErrorOr;
@@ -95,9 +96,9 @@ public sealed class SettingsProvider
     }
 
     /// <summary>写入或清除模型选择，注册状态的校验由 <see cref="Catalogs.ModelService"/> 负责，因此不经 <see cref="ResolvePath"/>。</summary>
-    internal ErrorOr<SettingsEffect> SetModel(string? model) => model is null
+    internal ErrorOr<SettingsEffect> SetModel(ModelName? model) => model is null
         ? Apply(root => UserSettingsStore.RemoveValue(root, RuntimeSettings.ModelPath))
-        : Apply(root => UserSettingsStore.SetValue(root, RuntimeSettings.ModelPath, JsonValue.Create(model)));
+        : Apply(root => UserSettingsStore.SetValue(root, RuntimeSettings.ModelPath, JsonValue.Create(model.Value)));
 
     private ErrorOr<SettingsEffect> WithResolved(string path, Action<JsonObject, string> mutate)
     {

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Configuration;
 using Kuroe.Shared.Executions;
 using Microsoft.Extensions.AI;
@@ -8,7 +9,7 @@ namespace Kuroe.Executions.Sessions;
 internal interface ISessionHistory
 {
     /// <summary>本轮使用的模型，未选择时为空。</summary>
-    string? Model { get; }
+    ModelName? Model { get; }
 
     /// <summary>当前历史是否已不适用。</summary>
     bool Stale { get; }
@@ -25,7 +26,7 @@ internal sealed class DialogueHistory(SettingsProvider settings) : ISessionHisto
 {
     private RuntimeSettings? _bound;
 
-    public string? Model => settings.Current.Runtime.Model;
+    public ModelName? Model => settings.Current.Runtime.Model;
 
     public bool Stale => _bound is null || settings.Current.Runtime.InvalidatesHistory(_bound);
 
@@ -45,7 +46,7 @@ internal sealed class RunHistory(RunContext context) : ISessionHistory
 {
     private bool _laidOut;
 
-    public string? Model => context.Model;
+    public ModelName? Model => context.Model;
 
     public bool Stale => !_laidOut;
 

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Executions;
 using Kuroe.Executions.Runs;
@@ -38,14 +39,14 @@ public sealed class TaskService
     }
 
     /// <summary>提交任务：按流程建任务并启动 run。</summary>
-    public ErrorOr<TaskSnapshot> Submit(string goal, string? flowName, string? title)
+    public ErrorOr<TaskSnapshot> Submit(string goal, FlowName? flowName, string? title)
     {
         if (string.IsNullOrWhiteSpace(goal))
         {
             return [TaskErrors.EmptyGoal()];
         }
 
-        ErrorOr<FlowDefinition> flow = string.IsNullOrWhiteSpace(flowName) ? _flows.Default() : _flows.Find(flowName);
+        ErrorOr<FlowDefinition> flow = flowName is null ? _flows.Default() : _flows.Find(flowName.Value);
         if (flow.IsError)
         {
             return flow.ErrorsOrEmptyList;
@@ -61,7 +62,7 @@ public sealed class TaskService
         // 输入节点不启动 run，不需要模型；其余根节点要求模型可解析
         if (root.Execution.Output != NodeOutput.Input)
         {
-            ErrorOr<string> model = _models.For(root);
+            ErrorOr<ModelName> model = _models.For(root);
             if (model.IsError)
             {
                 return model.ErrorsOrEmptyList;

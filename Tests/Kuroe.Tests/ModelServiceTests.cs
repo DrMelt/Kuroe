@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Shared.Catalogs;
 using Kuroe.TestSupport;
@@ -13,10 +14,10 @@ public sealed class ModelServiceTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        ErrorOr<ModelSelection> selected = harness.Models.Select("nope");
+        ErrorOr<ModelSelection> selected = harness.Models.Select(ModelName.Create("nope").Value);
 
         Assert.True(selected.IsError);
-        Assert.Equal("fake", harness.Models.Current);
+        Assert.Equal("fake", harness.Models.Current?.Value);
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public sealed class ModelServiceTests
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
-        ModelRemoval removal = harness.Models.Remove("fake").ThrowIfError();
+        ModelRemoval removal = harness.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
 
         Assert.Null(harness.Models.Current);
         Assert.Empty(removal.Failures);
@@ -47,12 +48,12 @@ public sealed class ModelServiceTests
     public void Removing_an_unselected_model_keeps_the_selection()
     {
         using KuroeHarness harness = KuroeHarness.Create();
-        harness.Catalog.AddModel("m2", "test").ThrowIfError();
-        harness.Models.Select("m2").ThrowIfError();
+        harness.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
+        harness.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
 
-        ModelRemoval removal = harness.Models.Remove("fake").ThrowIfError();
+        ModelRemoval removal = harness.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
 
-        Assert.Equal("m2", harness.Models.Current);
+        Assert.Equal("m2", harness.Models.Current?.Value);
         Assert.Empty(removal.Failures);
     }
 }

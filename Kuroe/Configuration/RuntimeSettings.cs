@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
+using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Configuration;
 
@@ -16,7 +17,7 @@ internal sealed record RuntimeSettings
     public const string ModelPath = $"{SectionName}:{nameof(Model)}";
 
     /// <summary>当前选用的模型名，必须在目录中注册。空或全空白的文本视为未选择，由调用方给出选择指引。</summary>
-    public string? Model { get; init; }
+    public ModelName? Model { get; init; }
 
     /// 低于该级别的日志不产生输出。
     public LogLevel LogLevel { get; init; } = LogLevel.Warning;
@@ -29,7 +30,7 @@ internal sealed record RuntimeSettings
     public int MaxConcurrentRuns { get; init; } = 4;
 
     /// <summary>提交任务时未指定流程则用该流程，未设置时用内置流程。</summary>
-    public string? DefaultFlow { get; init; }
+    public FlowName? DefaultFlow { get; init; }
 
     /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端由 <see cref="Executions.Sessions.ClientProvider"/> 按模型重建。</summary>
     public bool InvalidatesHistory(RuntimeSettings other) => Model != other.Model;
@@ -55,27 +56,41 @@ internal sealed record RuntimeSettings
             return new RuntimeSettings();
         }
 
-        RuntimeSettings defaults = new();
-        RuntimeSettings bound = defaults with
+        ModelName? model = null;
+        if (!string.IsNullOrWhiteSpace(file.Model))
         {
-            Model = file.Model,
+            ErrorOr<ModelName> parsed = ModelName.Create(file.Model.Trim());
+            if (parsed.IsError)
+            {
+                return parsed.ErrorsOrEmptyList;
+            }
+
+            model = parsed.Value;
+        }
+
+        FlowName? defaultFlow = null;
+        if (!string.IsNullOrWhiteSpace(file.DefaultFlow))
+        {
+            ErrorOr<FlowName> parsed = FlowName.Create(file.DefaultFlow);
+            if (parsed.IsError)
+            {
+                return parsed.ErrorsOrEmptyList;
+            }
+
+            defaultFlow = parsed.Value;
+        }
+
+        RuntimeSettings defaults = new();
+
+        return defaults with
+        {
+            Model = model,
             LogLevel = file.LogLevel ?? defaults.LogLevel,
             Temperature = file.Temperature,
             MaxOutputTokens = file.MaxOutputTokens,
             MaxConcurrentRuns = file.MaxConcurrentRuns ?? defaults.MaxConcurrentRuns,
-            DefaultFlow = file.DefaultFlow,
+            DefaultFlow = defaultFlow,
         };
-
-        if (string.IsNullOrWhiteSpace(bound.Model))
-        {
-            return bound with { Model = null };
-        }
-
-        ErrorOr<ModelName> parsed = ModelName.Create(bound.Model);
-
-        return parsed.IsError
-            ? parsed.ErrorsOrEmptyList
-            : bound with { Model = parsed.Value.Value };
     }
 }
 
@@ -94,4 +109,3 @@ internal sealed class RuntimeSectionDto
 
     public string? DefaultFlow { get; set; }
 }
-

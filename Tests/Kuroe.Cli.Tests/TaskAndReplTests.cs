@@ -20,6 +20,16 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
+    public void Task_new_with_blank_flow_falls_back_to_default()
+    {
+        using Ui ui = new();
+        ui.Tasks.Run(["/task", "new", "--flow", "", "补齐 README"]);
+
+        Assert.Contains("已提交 任务 #1", ui.Output.Output);
+        Assert.Single(ui.Harness.Registry.Snapshots());
+    }
+
+    [Fact]
     public void Task_show_prints_the_detail()
     {
         using Ui ui = new();

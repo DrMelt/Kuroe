@@ -69,7 +69,7 @@ internal sealed class FlowCommands(
         {
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
-                new Text(standard ? $">{flow.Name}" : flow.Name, standard ? Styles.Success : Styles.Key),
+                new Text(standard ? $">{flow.Name}" : flow.Name.Value, standard ? Styles.Success : Styles.Key),
                 new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Name.Value))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
@@ -81,7 +81,14 @@ internal sealed class FlowCommands(
 
     private void Show(string name)
     {
-        ErrorOr<FlowDefinition> found = flows.Find(name);
+        ErrorOr<FlowName> flowName = FlowName.Create(name);
+        if (flowName.IsError)
+        {
+            results.Reject(flowName.ErrorsOrEmptyList);
+            return;
+        }
+
+        ErrorOr<FlowDefinition> found = flows.Find(flowName.Value);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -148,14 +155,21 @@ internal sealed class FlowCommands(
 
     private void SetDefault(string name)
     {
-        ErrorOr<FlowDefinition> found = flows.Find(name);
+        ErrorOr<FlowName> flowName = FlowName.Create(name);
+        if (flowName.IsError)
+        {
+            results.Reject(flowName.ErrorsOrEmptyList);
+            return;
+        }
+
+        ErrorOr<FlowDefinition> found = flows.Find(flowName.Value);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
             return;
         }
 
-        results.Apply(settings.SetText(DefaultFlowPath, name));
+        results.Apply(settings.SetText(DefaultFlowPath, flowName.Value.Value));
     }
 
     private static string Requirement(NodeSpec node, ExecutableSpec executable)

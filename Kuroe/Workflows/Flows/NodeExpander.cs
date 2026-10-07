@@ -18,19 +18,19 @@ internal static class NodeExpander
     private sealed class Env(
         Env? parent,
         IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> renames,
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> bindings,
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName> bindings,
         IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         public Env? Parent { get; } = parent;
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Renames { get; } = renames;
-        public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Bindings { get; } = bindings;
+        public IReadOnlyDictionary<Flow.PortName, Flow.NodeName> Bindings { get; } = bindings;
 
         /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型选择名或外层槽位名的映射。</summary>
         public IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? ModelSlots { get; } = modelSlots;
     }
 
     private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
-    private static string PortName(Flow.NodeName name) => name.Value[1..];
+    private static string PortOf(Flow.NodeName name) => name.Value[1..];
 
     /// <summary>展开流程根节点。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
     public static ErrorOr<Flow.NodeSpec> Expand(
@@ -201,8 +201,8 @@ internal static class NodeExpander
             return;
         }
 
-        var declared = new HashSet<Flow.NodeName>([.. definition.Inputs]);
-        foreach (Flow.NodeName port in bindings.Keys.Where(port => !declared.Contains(port)))
+        var declared = new HashSet<Flow.PortName>([.. definition.Inputs]);
+        foreach (Flow.PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
         {
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
         }
@@ -214,13 +214,13 @@ internal static class NodeExpander
         Env? parent,
         Flow.NodeSpec container,
         Flow.NodeName instanceName,
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName>? bindings,
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? bindings,
         IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         Dictionary<Flow.NodeName, Flow.NodeName> renames = [];
         CollectRenames(container.Nodes!, renames, instanceName.Value + ".");
 
-        return new Env(parent, renames, bindings ?? new Dictionary<Flow.NodeName, Flow.NodeName>(), modelSlots);
+        return new Env(parent, renames, bindings ?? new Dictionary<Flow.PortName, Flow.NodeName>(), modelSlots);
     }
 
     /// <summary>递归收集容器子树全部成员的实例名映射：成员原名对齐到带实例名前缀的实例名。</summary>
@@ -261,11 +261,11 @@ internal static class NodeExpander
     {
         if (name.Value.StartsWith(PortPrefix))
         {
-            string port = PortName(name);
+            string port = PortOf(name);
             Env? chain = env;
             while (chain is not null)
             {
-                if (chain.Bindings.TryGetValue(new Flow.NodeName(port), out Flow.NodeName bound))
+                if (chain.Bindings.TryGetValue(new Flow.PortName(port), out Flow.NodeName bound))
                 {
                     // @绑定值沿更外层作用域透传；普通名绑定在所在作用域解析成实例名
                     return IsPort(bound) ? Resolve(bound, chain.Parent, flowName, errors) : ResolveName(bound, chain);
@@ -310,8 +310,8 @@ internal static class NodeExpander
     }
 
     /// <summary>执行节点的输入绑定：把「ContextInput」键的来源名沿作用域解析成实例名，未声明时为空。</summary>
-    private static Dictionary<Flow.NodeName, Flow.NodeName>? ResolveIn(
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName>? inBindings,
+    private static Dictionary<Flow.PortName, Flow.NodeName>? ResolveIn(
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? inBindings,
         Env? env)
     {
         if (inBindings is not { Count: > 0 })

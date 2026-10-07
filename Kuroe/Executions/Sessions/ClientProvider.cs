@@ -15,11 +15,11 @@ sealed class ClientProvider(ILoggerFactory loggerFactory) : IDisposable
     private readonly Dictionary<string, (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client)> _clients = [];
 
     /// <summary>该模型的会话客户端，接入信息与上次不同则重建。缓存未命中时没有旧客户端可释放。</summary>
-    public ChatClientAgent GetAgent(string model, ModelConnection connection)
+    public ChatClientAgent GetAgent(ModelName model, ModelConnection connection)
     {
         lock (_gate)
         {
-            if (_clients.TryGetValue(model, out (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client) cached) && cached.Connection == connection)
+            if (_clients.TryGetValue(model.Value, out (ModelConnection Connection, ChatClientAgent Agent, IChatClient Client) cached) && cached.Connection == connection)
             {
                 return cached.Agent;
             }
@@ -30,8 +30,8 @@ sealed class ClientProvider(ILoggerFactory loggerFactory) : IDisposable
             }
 
             IChatClient client = connection.CreateChatClient();
-            ChatClientAgent agent = client.AsAIAgent(new ChatClientAgentOptions { Name = model }, loggerFactory);
-            _clients[model] = (connection, agent, client);
+            ChatClientAgent agent = client.AsAIAgent(new ChatClientAgentOptions { Name = model.Value }, loggerFactory);
+            _clients[model.Value] = (connection, agent, client);
 
             return agent;
         }

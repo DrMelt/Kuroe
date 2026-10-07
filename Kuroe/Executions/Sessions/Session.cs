@@ -73,7 +73,7 @@ public sealed class Session
         LastTurnDiscarded = false;
         scope.Journal.Append(new PromptEntry(input));
 
-        if (_history.Model is not { Length: > 0 } model)
+        if (_history.Model is not { } model)
         {
             return [RunErrors.ModelNotSelected()];
         }

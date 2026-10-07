@@ -16,7 +16,7 @@ internal sealed class StartupView(
     public void Print()
     {
         CatalogContents contents = catalog.Snapshot();
-        string model = models.Current ?? "未选择";
+        string model = models.Current?.Value ?? "未选择";
         terminal.Line($"Kuroe 已启动，当前模型 {model}，" +
             $"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型，" +
             $"流程模板 {flows.All().Count} 条（默认 {flows.DefaultName}）。");

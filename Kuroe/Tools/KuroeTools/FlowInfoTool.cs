@@ -55,7 +55,13 @@ internal sealed class FlowInfoTool : ITool
             return ToolErrors.Argument("缺少流程名。");
         }
 
-        ErrorOr<FlowDefinition> found = _flows.Find(name);
+        ErrorOr<FlowName> flowName = FlowName.Create(name);
+        if (flowName.IsError)
+        {
+            return flowName.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<FlowDefinition> found = _flows.Find(flowName.Value);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;

@@ -8,7 +8,7 @@ namespace Kuroe.Workflows.Flows;
 internal static class DefaultFlows
 {
     /// <summary>内置流程的名字。</summary>
-    internal const string Name = "默认";
+    internal static FlowName Name { get; } = new("默认");
 
     /// <summary>规划者：交回条目拆分。</summary>
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
@@ -42,7 +42,7 @@ internal static class DefaultFlows
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
-        Inputs = [new NodeName("计划")],
+        Inputs = [new PortName("计划")],
         Nodes =
         [
             new NodeSpec
@@ -71,7 +71,7 @@ internal static class DefaultFlows
                         {
                             Name = new NodeName("交付"),
                             Use = new NodeName("交付"),
-                            In = new Dictionary<NodeName, NodeName> { [new NodeName("计划")] = new NodeName("制定计划") },
+                            In = new Dictionary<PortName, NodeName> { [new PortName("计划")] = new NodeName("制定计划") },
                             Models = new Dictionary<ModelRef, ModelRef> { [Executor.Name] = Executor.Name },
                         },
                     ],

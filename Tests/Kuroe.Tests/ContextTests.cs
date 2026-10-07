@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows.Tasks;
@@ -18,7 +19,7 @@ public sealed class ContextTests
         RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
 
         Assert.Contains("补齐 README", plan.Context.Instruction);
-        Assert.Equal("fake", plan.Context.Model);
+        Assert.Equal(ModelName.Create("fake").Value, plan.Context.Model);
         Assert.Empty(plan.Context.Seed);
     }
 

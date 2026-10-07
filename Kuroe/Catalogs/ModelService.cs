@@ -13,13 +13,13 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
     private readonly CatalogService _catalog = catalog;
 
     /// <summary>当前选中的模型名，未选择时为空。</summary>
-    public string? Current => _settings.Current.Runtime.Model;
+    public ModelName? Current => _settings.Current.Runtime.Model;
 
     /// <summary>模型是否已在目录中注册。</summary>
-    public bool IsRegistered(string modelName) => _catalog.HasModel(modelName);
+    public bool IsRegistered(ModelName modelName) => _catalog.HasModel(modelName);
 
     /// <summary>选择模型，要求已注册。名称非法或未注册时返回错误，选择不改动。</summary>
-    public ErrorOr<ModelSelection> Select(string modelName)
+    public ErrorOr<ModelSelection> Select(ModelName modelName)
     {
         ErrorOr<ModelConnection> connection = _catalog.Connect(modelName);
         if (connection.IsError)
@@ -46,7 +46,7 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
     }
 
     /// <summary>从目录注销模型。注销的是当前选中模型时一并取消选择，两处改动分别落盘。</summary>
-    public ErrorOr<ModelRemoval> Remove(string modelName)
+    public ErrorOr<ModelRemoval> Remove(ModelName modelName)
     {
         ErrorOr<Success> removed = _catalog.RemoveModel(modelName);
         if (removed.IsError)
@@ -54,7 +54,7 @@ public sealed class ModelService(SettingsProvider settings, CatalogService catal
             return removed.ErrorsOrEmptyList;
         }
 
-        if (!string.Equals(modelName, Current, StringComparison.Ordinal))
+        if (!modelName.Equals(Current))
         {
             return new ModelRemoval(SettingsEffect.None, []);
         }

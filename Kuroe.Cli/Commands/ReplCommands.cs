@@ -96,7 +96,7 @@ internal sealed class ReplCommands(
     }
 
     /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
-    public void GuideCurrentModel() => errors.GuideModelRegistration(models, models.Current);
+    public void GuideCurrentModel() => errors.GuideModelRegistration(models, models.Current?.Value);
 
     /// <summary>各命令族的帮助行按固定顺序汇总，命令列与说明列由栅格对齐。</summary>
     private void PrintHelp()

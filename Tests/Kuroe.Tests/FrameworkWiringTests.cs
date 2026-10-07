@@ -51,8 +51,8 @@ public sealed class FrameworkWiringTests
 
         ModelConnection connection = Connection();
 
-        ChatClientAgent first = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, ["fake", connection]));
-        ChatClientAgent second = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, ["fake", connection]));
+        ChatClientAgent first = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, [ModelName.Create("fake").Value, connection]));
+        ChatClientAgent second = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, [ModelName.Create("fake").Value, connection]));
 
         Assert.Same(first, second);
 

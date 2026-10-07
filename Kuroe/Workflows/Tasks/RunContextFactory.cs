@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
@@ -21,7 +22,7 @@ internal static class RunContextFactory
     private const int DialogueLimit = 6;
 
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
-    internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, string model)
+    internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, ModelName model)
     {
         List<ContextMessage> seed = [];
         List<ContextMessage> contextInput = [];
@@ -90,7 +91,7 @@ internal static class RunContextFactory
             && run.Result is { Length: > 0 });
 
     /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。带端口时取该轮交回的命名段。</summary>
-    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, NodeName? port, List<ContextMessage> seed)
+    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, PortName? port, List<ContextMessage> seed)
     {
         NodeName name = task.Graph[fromIndex].Name;
 
@@ -130,7 +131,7 @@ internal static class RunContextFactory
         // 端口引用只取该轮交回的命名段：未交回不属于可注入的产出，不回退到整份文本
         if (port is { } outputPort)
         {
-            if (task.PortValuesFor(fromIndex)?.GetValueOrDefault(outputPort.Value) is { Length: > 0 } portContent)
+            if (task.PortValuesFor(fromIndex)?.GetValueOrDefault(outputPort) is { Length: > 0 } portContent)
             {
                 seed.Add(new ContextMessage(MessageRole.User,
                     Truncate($"节点「{name}」的端口「{outputPort}」产出：\n{portContent}"),

@@ -472,8 +472,8 @@ internal sealed class TaskRuntime
     }
 
     /// <summary>输出端口的声明是否都已交回内容。</summary>
-    private static bool HasAllPortValues(ExecutableNode executable, IReadOnlyDictionary<string, string>? values) =>
-        values is { Count: > 0 } && executable.Outputs.All(port => values.ContainsKey(port.Value));
+    private static bool HasAllPortValues(ExecutableNode executable, IReadOnlyDictionary<PortName, string>? values) =>
+        values is { Count: > 0 } && executable.Outputs.All(port => values.ContainsKey(port));
 
     private static bool Contains(string? text, string? needle) =>
         needle is { Length: > 0 } && text is not null && text.Contains(needle, StringComparison.Ordinal);

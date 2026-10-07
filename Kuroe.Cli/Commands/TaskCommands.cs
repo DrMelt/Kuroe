@@ -4,6 +4,7 @@ using Kuroe.Cli.Views;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Workflows.Tasks;
 
@@ -121,7 +122,7 @@ internal sealed class TaskCommands(
 
     private void Submit(string[] parts)
     {
-        string? flow = null;
+        FlowName? flow = null;
         int from = 2;
         if (parts[2].Equals(FlowOption, StringComparison.OrdinalIgnoreCase))
         {
@@ -131,7 +132,8 @@ internal sealed class TaskCommands(
                 return;
             }
 
-            flow = parts[3];
+            // 空白流程名视为未指定，回退默认流程
+            flow = FlowName.Create(parts[3]) is { IsError: false } parsed ? parsed.Value : null;
             from = 4;
         }
 

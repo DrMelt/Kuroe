@@ -1,10 +1,12 @@
 using System.Text.Json;
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Storage;
+using ModelDefinition = Kuroe.Shared.Workflows.Flows.ModelDefinition;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -130,11 +132,31 @@ sealed class FlowStore(string file, string baseDirectory)
     }
     private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto)
     {
-        List<ModelDefinition> models = [.. dto.Models.Select(model => new ModelDefinition
+        List<ModelDefinition> models = [];
+        List<Error> modelErrors = [];
+        foreach (ModelDto model in dto.Models)
         {
-            Name = new ModelRef(model.Name ?? string.Empty),
-            Model = model.Model,
-        })];
+            ModelName? modelName = null;
+            if (model.Model is { Length: > 0 } text && !string.IsNullOrWhiteSpace(text))
+            {
+                ErrorOr<ModelName> parsed = ModelName.Create(text.Trim());
+                if (parsed.IsError)
+                {
+                    modelErrors.Add(FlowErrors.Model(dto.Name ?? string.Empty, model.Name ?? string.Empty, parsed.FirstError.Description));
+                }
+                else
+                {
+                    modelName = parsed.Value;
+                }
+            }
+
+            models.Add(new ModelDefinition { Name = new ModelRef(model.Name ?? string.Empty), Model = modelName });
+        }
+
+        if (modelErrors.Count > 0)
+        {
+            return modelErrors;
+        }
 
         if (dto.Nodes.Count == 0)
         {
@@ -147,10 +169,18 @@ sealed class FlowStore(string file, string baseDirectory)
         }
 
         ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], dto.Name!);
+        if (root.IsError)
+        {
+            return root.ErrorsOrEmptyList;
+        }
 
-        return root.IsError
-            ? root.ErrorsOrEmptyList
-            : new FlowDefinition(dto.Name!, dto.Description, models, root.Value);
+        ErrorOr<FlowName> flowName = FlowName.Create(dto.Name!);
+        if (flowName.IsError)
+        {
+            return flowName.ErrorsOrEmptyList;
+        }
+
+        return new FlowDefinition(flowName.Value, dto.Description, models, root.Value);
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
@@ -228,6 +258,13 @@ sealed class FlowStore(string file, string baseDirectory)
                 declareValidation = new OutputValidation(parsedPredicate.Value, validateDeclared.Argument);
             }
 
+            ErrorOr<Dictionary<PortName, NodeName>?> resolvedIn = ToIn(dto.In);
+            if (resolvedIn.IsError)
+            {
+                useErrors.AddRange(resolvedIn.ErrorsOrEmptyList);
+                return useErrors;
+            }
+
             return new NodeSpec
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
@@ -237,7 +274,7 @@ sealed class FlowStore(string file, string baseDirectory)
                 AnyOf = ToAnyOf(dto.AnyOf),
                 Validate = declareValidation,
                 MaxRuns = dto.MaxRuns,
-                In = ToIn(dto.In),
+                In = resolvedIn.Value,
                 Model = ToModel(dto.Model),
                 Models = ToModelBindings(dto.Models),
             };
@@ -303,6 +340,20 @@ sealed class FlowStore(string file, string baseDirectory)
                 containerErrors.AddRange(children.ErrorsOrEmptyList);
             }
 
+            List<PortName> inputs = [];
+            foreach (string name in dto.Inputs ?? [])
+            {
+                ErrorOr<PortName> port = PortName.Create(name);
+                if (port.IsError)
+                {
+                    containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, port.FirstError.Description));
+                }
+                else
+                {
+                    inputs.Add(port.Value);
+                }
+            }
+
             if (containerErrors.Count > 0)
             {
                 return containerErrors;
@@ -312,7 +363,7 @@ sealed class FlowStore(string file, string baseDirectory)
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Gate = dto.Gate ?? NodeGate.Auto,
-                Inputs = [.. (dto.Inputs ?? []).Select(name => new NodeName(name))],
+                Inputs = inputs,
                 MaxRuns = dto.MaxRuns,
                 Nodes = children.Value,
             };
@@ -373,6 +424,26 @@ sealed class FlowStore(string file, string baseDirectory)
             }
         }
 
+        ErrorOr<Dictionary<PortName, NodeName>?> parsedIn = ToIn(dto.In);
+        if (parsedIn.IsError)
+        {
+            leafErrors.AddRange(parsedIn.ErrorsOrEmptyList);
+        }
+
+        List<PortName> outputs = [];
+        foreach (string name in dto.Outputs ?? [])
+        {
+            ErrorOr<PortName> port = PortName.Create(name);
+            if (port.IsError)
+            {
+                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, port.FirstError.Description));
+            }
+            else
+            {
+                outputs.Add(port.Value);
+            }
+        }
+
         if (leafErrors.Count > 0)
         {
             return leafErrors;
@@ -383,9 +454,9 @@ sealed class FlowStore(string file, string baseDirectory)
             Name = new NodeName(dto.Name ?? string.Empty),
             Gate = dto.Gate ?? NodeGate.Auto,
             From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
-            In = ToIn(dto.In),
+            In = parsedIn.Value,
             Model = ToModel(dto.Model),
-            Outputs = [.. (dto.Outputs ?? []).Select(name => new NodeName(name))],
+            Outputs = outputs,
             SystemPrompt = [.. dto.SystemPrompt ?? []],
             Execution = new ExecutableSpec
             {
@@ -402,8 +473,30 @@ sealed class FlowStore(string file, string baseDirectory)
             },
         };
     }
-    private static Dictionary<NodeName, NodeName>? ToIn(Dictionary<string, string>? bindings) =>
-        bindings is { Count: > 0 } ? bindings.ToDictionary(entry => new NodeName(entry.Key), entry => new NodeName(entry.Value)) : null;
+    private static ErrorOr<Dictionary<PortName, NodeName>?> ToIn(Dictionary<string, string>? bindings)
+    {
+        if (bindings is not { Count: > 0 })
+        {
+            return (Dictionary<PortName, NodeName>?)null;
+        }
+
+        Dictionary<PortName, NodeName> result = [];
+        List<Error> errors = [];
+        foreach ((string key, string value) in bindings)
+        {
+            ErrorOr<PortName> port = PortName.Create(key);
+            if (port.IsError)
+            {
+                errors.AddRange(port.ErrorsOrEmptyList);
+            }
+            else
+            {
+                result[port.Value] = new NodeName(value);
+            }
+        }
+
+        return errors.Count > 0 ? errors : result;
+    }
 
     private static ModelRef? ToModel(string? model) =>
         string.IsNullOrWhiteSpace(model) ? null : new ModelRef(model);
@@ -460,12 +553,12 @@ sealed class FlowStore(string file, string baseDirectory)
 
     private static FlowDto ToFlowDto(FlowDefinition flow) => new()
     {
-        Name = flow.Name,
+        Name = flow.Name.Value,
         Description = flow.Description,
         Models = [.. flow.Models.Select(model => new ModelDto
         {
             Name = model.Name.Value,
-            Model = model.Model,
+            Model = model.Model?.Value,
         })],
         Nodes = [ToNodeDto(flow.RootNode)],
     };

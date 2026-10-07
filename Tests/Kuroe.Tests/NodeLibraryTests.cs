@@ -17,7 +17,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(LibraryFlow);
 
-        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
 
         // 展开后：根容器包住制定计划与交付容器，容器成员名带实例前缀，@计划 绑定为制定计划
         NodeSpec root = flow.RootNode;
@@ -42,7 +42,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(DualInstanceFlow);
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README", "双线"));
+        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README", new FlowName("双线")));
 
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -52,11 +52,11 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(PerFlowModelBinding);
 
-        FlowDefinition first = harness.Flows.Find("甲").ThrowIfError();
+        FlowDefinition first = harness.Flows.Find(new FlowName("甲")).ThrowIfError();
         NodeSpec firstImplement = first.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("执行者"), firstImplement.Model!.Value);
 
-        FlowDefinition second = harness.Flows.Find("乙").ThrowIfError();
+        FlowDefinition second = harness.Flows.Find(new FlowName("乙")).ThrowIfError();
         NodeSpec secondImplement = second.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("实施者"), secondImplement.Model!.Value);
     }
@@ -106,7 +106,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(MemberNameBindingFlow);
 
-        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
@@ -119,7 +119,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(OuterPortBindingFlow);
 
-        FlowDefinition flow = harness.Flows.Find("透传").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("透传")).ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0].Nodes![0];
@@ -131,7 +131,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
 
-        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.TextContains, reviewed.Execution!.Validate!.Predicate);
         Assert.Equal(new NodeName("计划"), reviewed.Execution.AnyOf.Single()[0]);
@@ -142,7 +142,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceOverrideValidateFlow);
 
-        FlowDefinition flow = harness.Flows.Find("默认").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.NonEmpty, reviewed.Execution!.Validate!.Predicate);
     }
@@ -227,6 +227,7 @@ public sealed class NodeLibraryTests
     [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
     [InlineData(LibraryNameWithAt, "节点名不能含 @")]
     [InlineData(MemberNameWithAt, "成员名 甲@乙 不能含 @")]
+    [InlineData(LibraryInputPortWithAt, "端口名不能为空或含 @")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -572,7 +573,7 @@ public sealed class NodeLibraryTests
     {
         using KuroeHarness harness = KuroeHarness.Create(DocumentExampleFlow);
 
-        FlowDefinition flow = harness.Flows.Find("单线交付").ThrowIfError();
+        FlowDefinition flow = harness.Flows.Find(new FlowName("单线交付")).ThrowIfError();
         NodeSpec root = flow.RootNode;
         Assert.NotNull(root.Nodes);
         Assert.Equal(2, root.Nodes.Count);
@@ -898,6 +899,13 @@ public sealed class NodeLibraryTests
     private const string MemberNameWithAt = """
         { "Nodes": [
           { "Name": "交付", "Nodes": [ { "Name": "甲@乙", "Model": "执行者" } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>库容器输入端口名含 @，装配校验拒绝。</summary>
+    private const string LibraryInputPortWithAt = """
+        { "Nodes": [
+          { "Name": "交付", "Inputs": ["计划@甲"], "Nodes": [ { "Name": "实施", "Mode": "PerItem" } ] }
         ], "Flows": [] }
         """;
 }

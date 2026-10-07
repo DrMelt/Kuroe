@@ -34,7 +34,7 @@ public sealed class PortTool : IScopedTool
     public ITool ForTurn(TurnScope scope) => new PortTool(_intake, _registry, scope);
 
     /// <summary>绑定回合所属 run 声明的输出端口，前台对话或没有声明时为空。</summary>
-    private IReadOnlyList<NodeName>? PortsOf(TurnScope scope) =>
+    private IReadOnlyList<PortName>? PortsOf(TurnScope scope) =>
         scope.Run is not { } id
         || _registry.FindRun(id) is not { IsError: false } found
         || found.Value.Context.OutputPorts is not { Count: > 0 } ports
@@ -42,7 +42,7 @@ public sealed class PortTool : IScopedTool
             : ports;
 
     /// <summary>声明绑定到该回合上的提交函数。有端口清单时把端口名写进描述，模型按声明的键值提交。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<NodeName>? ports)
+    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<PortName>? ports)
     {
         string listed = ports is null ? string.Empty : $"本节点声明端口：{string.Join('、', ports.Select(port => port.Value))}。";
 

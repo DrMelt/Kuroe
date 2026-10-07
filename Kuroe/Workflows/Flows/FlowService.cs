@@ -34,14 +34,14 @@ public sealed class FlowService
         List<Error> errors = Validate(loaded.Value, out List<FlowDefinition> expanded);
         if (FlowRules.Duplicated(expanded) is { } duplicated)
         {
-            errors.Add(FlowErrors.Body(duplicated, "流程名重复。"));
+            errors.Add(FlowErrors.Body(duplicated.Value, "流程名重复。"));
         }
 
         return errors.Count > 0 ? errors : new FlowService(store, settings, loaded.Value, expanded);
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
-    public string DefaultName => _settings.Current.Runtime.DefaultFlow ?? DefaultFlows.Name;
+    public FlowName DefaultName => _settings.Current.Runtime.DefaultFlow ?? DefaultFlows.Name;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -53,13 +53,13 @@ public sealed class FlowService
     }
 
     /// <summary>按名取展开后的流程，不存在时返回错误。</summary>
-    public ErrorOr<FlowDefinition> Find(string name)
+    public ErrorOr<FlowDefinition> Find(FlowName name)
     {
         lock (_gate)
         {
             FlowDefinition? flow = _flows.Find(candidate => candidate.Name == name);
 
-            return flow is null ? [FlowErrors.FlowNotFound(name)] : flow;
+            return flow is null ? [FlowErrors.FlowNotFound(name.Value)] : flow;
         }
     }
 
@@ -84,7 +84,7 @@ public sealed class FlowService
         FlowFile incoming = parsed.Value;
         if (FlowRules.Duplicated(incoming.Flows) is { } duplicated)
         {
-            return [FlowErrors.Body(duplicated, "流程名重复。")];
+            return [FlowErrors.Body(duplicated.Value, "流程名重复。")];
         }
 
         FlowFile merged = new(
@@ -141,7 +141,7 @@ public sealed class FlowService
         List<FlowDefinition> accepted = [];
         foreach (FlowDefinition flow in file.Flows)
         {
-            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, flow.Name);
+            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, flow.Name.Value);
             if (expanded.IsError)
             {
                 errors.AddRange(expanded.ErrorsOrEmptyList);
@@ -180,7 +180,7 @@ public sealed class FlowService
     /// <summary>新流程按名覆盖旧流程、其余保留，顺序是旧在前新在后。</summary>
     private static List<FlowDefinition> MergeFlows(IReadOnlyList<FlowDefinition> current, IReadOnlyList<FlowDefinition> incoming)
     {
-        Dictionary<string, FlowDefinition> merged = current.ToDictionary(flow => flow.Name);
+        Dictionary<FlowName, FlowDefinition> merged = current.ToDictionary(flow => flow.Name);
         foreach (FlowDefinition flow in incoming)
         {
             merged[flow.Name] = flow;

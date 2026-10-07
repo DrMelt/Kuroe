@@ -25,7 +25,7 @@ internal sealed class TaskListView(Terminal terminal)
             grid.AddRow(
                 new Text(active == task.Id ? $">#{task.Id.Value}" : $"#{task.Id.Value}", Styles.Key),
                 new Text(task.Title),
-                new Text(task.Flow.Name),
+                new Text(task.Flow.Name.Value),
                 new Text($"{task.FrontierNodes}/{task.TotalExecutableNodes}"),
                 new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State)),
                 new Text($"{task.LiveRuns} 在跑 / {total} 已启动"),

@@ -20,7 +20,7 @@ public sealed class WorkTask
 
     private readonly List<Run> _runs = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
-    private readonly Dictionary<int, IReadOnlyDictionary<string, string>> _portValues = [];
+    private readonly Dictionary<int, IReadOnlyDictionary<PortName, string>> _portValues = [];
     private readonly SemaphoreSlim _turn = new(1, 1);
     private string _title;
     private int _dialogueTurns;
@@ -95,10 +95,10 @@ public sealed class WorkTask
     internal void SetSplit(int executableIndex, PlanOutput output) => _splits[executableIndex] = output;
 
     /// <summary>某执行节点交回的命名输出端口值，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal IReadOnlyDictionary<string, string>? PortValuesFor(int executableIndex) => _portValues.GetValueOrDefault(executableIndex);
+    internal IReadOnlyDictionary<PortName, string>? PortValuesFor(int executableIndex) => _portValues.GetValueOrDefault(executableIndex);
 
     /// <summary>记录某执行节点的输出端口值。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetPortValues(int executableIndex, IReadOnlyDictionary<string, string> values) => _portValues[executableIndex] = values;
+    internal void SetPortValues(int executableIndex, IReadOnlyDictionary<PortName, string> values) => _portValues[executableIndex] = values;
 
     /// <summary>移除某执行节点的输出端口值，返工作废后端口随产出重交。要求持有 <see cref="Gate"/>。</summary>
     internal void ClearPortValues(int executableIndex) => _portValues.Remove(executableIndex);

@@ -18,7 +18,7 @@ public sealed record ExecutableNode : GraphNode
     public required IReadOnlyList<IReadOnlyList<int>> AnyOf { get; init; }
 
     /// <summary>命名输出端口表，空表即隐式单端口（整份产出）。</summary>
-    public required IReadOnlyList<NodeName> Outputs { get; init; }
+    public required IReadOnlyList<PortName> Outputs { get; init; }
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public required IReadOnlyList<string> SystemPrompt { get; init; }
@@ -33,10 +33,10 @@ public sealed record ExecutableNode : GraphNode
     public const int DefaultMaxRuns = 100;
 
     /// <summary>隐式上下文输出端口的保留名：每个执行节点无需声明即具备，下游用 From 按「来源@ContextOutput」消费。</summary>
-    public static NodeName ContextOutputPort { get; } = new("ContextOutput");
+    public static PortName ContextOutputPort { get; } = new("ContextOutput");
 
     /// <summary>隐式上下文输入端口的保留名：每个执行节点具备，装配层用 In 的「ContextInput」键绑定来源，内容置于上下文开头。</summary>
-    public static NodeName ContextInputPort { get; } = new("ContextInput");
+    public static PortName ContextInputPort { get; } = new("ContextInput");
 
     /// <summary>拆分只有固定条目，模型不参与补充。</summary>
     public bool IsStaticSplit => Execution.IsStaticSplit;

@@ -1,5 +1,6 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.TestSupport;
 using Spectre.Console.Testing;
 using Xunit;
@@ -15,6 +16,17 @@ public sealed class CommandRouteTests
         using Ui ui = new();
         ProviderCommands commands = new(ui.Harness.Catalog, ui.Printer, ui.Terminal, ui.Results);
         commands.Run(["/provider", "add", "备用", "https://example.invalid/v2", "k"]);
+
+        Assert.Contains("已保存。", ui.Output.Output);
+        Assert.Contains(ui.Harness.Catalog.Snapshot().Providers,
+            provider => provider.ProviderName.Value == "备用");
+    }
+
+    [Fact]
+    public void Provider_add_normalizes_surrounding_spaces()
+    {
+        using Ui ui = new();
+        ui.Providers.Run(["/provider", "add", "备用 ", "https://example.invalid/v2", "k"]);
 
         Assert.Contains("已保存。", ui.Output.Output);
         Assert.Contains(ui.Harness.Catalog.Snapshot().Providers,
@@ -39,7 +51,38 @@ public sealed class CommandRouteTests
 
         ui.Models.Run(["/model", "m2"]);
         Assert.Contains("已保存并生效。", ui.Output.Output);
-        Assert.Equal("m2", ui.Harness.Models.Current);
+        Assert.Equal("m2", ui.Harness.Models.Current?.Value);
+    }
+
+    [Fact]
+    public void Model_add_and_select_normalize_surrounding_spaces()
+    {
+        using Ui ui = new();
+        ui.Models.Run(["/model", "add", "m2 ", "test "]);
+        Assert.Contains("已注册。", ui.Output.Output);
+
+        ui.Models.Run(["/model", " m2 "]);
+        Assert.Equal("m2", ui.Harness.Models.Current?.Value);
+    }
+
+    [Fact]
+    public void Model_select_with_blank_name_is_rejected()
+    {
+        using Ui ui = new();
+        ui.Models.Run(["/model", "   "]);
+
+        Assert.Contains("错误：ModelName.Invalid：模型名不能为空。", ui.ErrorsOut.Output);
+        Assert.Contains("未生效。", ui.ErrorsOut.Output);
+    }
+
+    [Fact]
+    public void Model_remove_with_surrounding_spaces_removes_the_selection()
+    {
+        using Ui ui = new();
+        ui.Models.Run(["/model", "rm", " fake "]);
+
+        Assert.Contains("已注销当前模型，选择一并取消。", ui.Output.Output);
+        Assert.Null(ui.Harness.Models.Current);
     }
 
     [Fact]
@@ -100,7 +143,7 @@ public sealed class CommandRouteTests
         ui.Flows.Run(["/flow", "default", "默认"]);
 
         Assert.Contains("已保存并生效。", ui.Output.Output);
-        Assert.Equal("默认", ui.Harness.Flows.DefaultName);
+        Assert.Equal(new FlowName("默认"), ui.Harness.Flows.DefaultName);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
@@ -234,7 +235,7 @@ internal sealed class TaskDriver(
                     return;
                 }
 
-                ErrorOr<string> model = models.For(executable);
+                ErrorOr<ModelName> model = models.For(executable);
                 if (model.IsError)
                 {
                     node.ReleaseActive();

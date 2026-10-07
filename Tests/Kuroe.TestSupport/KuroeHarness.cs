@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Catalogs;
@@ -109,8 +110,8 @@ public sealed class KuroeHarness : IDisposable
         {
             CatalogService catalog = provider.GetRequiredService<CatalogService>();
             catalog.AddProvider("test", "https://example.invalid/v1", "key").ThrowIfError();
-            catalog.AddModel("fake", "test").ThrowIfError();
-            provider.GetRequiredService<ModelService>().Select("fake").ThrowIfError();
+            catalog.AddModel(ModelName.Create("fake").Value, ProviderName.Create("test").Value).ThrowIfError();
+            provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
         return new KuroeHarness(root, provider, executor);
@@ -119,7 +120,7 @@ public sealed class KuroeHarness : IDisposable
     public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, bool writeDefaultFlow = true) =>
         TryCreate(flowsJson, seedCatalog, writeDefaultFlow).ThrowIfError();
 
-    public TaskId Submit(string goal, string? flow = null) =>
+    public TaskId Submit(string goal, Kuroe.Shared.Workflows.Flows.FlowName? flow = null) =>
         Tasks.Submit(goal, flow, null).ThrowIfError().Id;
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();

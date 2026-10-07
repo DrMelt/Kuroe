@@ -18,11 +18,11 @@ static class FlowRules
         {
             if (string.IsNullOrWhiteSpace(name.Value))
             {
-                errors.Add(FlowErrors.Model(flow.Name, "(未命名)", "模型选择名不能为空。"));
+                errors.Add(FlowErrors.Model(flow.Name.Value, "(未命名)", "模型选择名不能为空。"));
             }
             else if (!modelNames.Add(name))
             {
-                errors.Add(FlowErrors.Model(flow.Name, name.Value, "模型选择名重复。"));
+                errors.Add(FlowErrors.Model(flow.Name.Value, name.Value, "模型选择名重复。"));
             }
         }
 
@@ -39,14 +39,14 @@ static class FlowRules
         CollectPerItem(flow.RootNode, perItemNames);
 
         var names = new HashSet<Flow.NodeName>();
-        var outputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>>();
+        var outputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>>();
         CollectOutputs(flow.RootNode, outputs);
-        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flow.Name, errors);
+        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flow.Name.Value, errors);
 
         // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
         {
-            CheckShape(FlowCompiler.Compile(flow), flow.Name, errors);
+            CheckShape(FlowCompiler.Compile(flow), flow.Name.Value, errors);
         }
 
         return errors.Count > 0 ? errors : Result.Success;
@@ -116,7 +116,7 @@ static class FlowRules
     }
 
     /// <summary>收集执行节点的命名输出端口表，From 引用据此判定端口存在。</summary>
-    private static void CollectOutputs(Flow.NodeSpec node, Dictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>> outputs)
+    private static void CollectOutputs(Flow.NodeSpec node, Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs)
     {
         if (node.Execution is not null)
         {
@@ -140,7 +140,7 @@ static class FlowRules
         HashSet<Flow.NodeName> perItemNames,
         HashSet<Flow.ModelRef> modelNames,
         HashSet<Flow.NodeName> containerNames,
-        IReadOnlyDictionary<Flow.NodeName, IReadOnlyList<Flow.NodeName>> outputs,
+        IReadOnlyDictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs,
         string flowName,
         List<Error> errors)
     {
@@ -169,7 +169,7 @@ static class FlowRules
                     continue;
                 }
 
-                if (!outputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.NodeName>? declared) || !declared.Contains(portRef.Port))
+                if (!outputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.PortName>? declared) || !declared.Contains(portRef.Port))
                 {
                     errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"节点 {portRef.Source} 没有输出端口 {portRef.Port}。"));
                 }
@@ -339,17 +339,12 @@ static class FlowRules
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, "输出端口只能声明在整节点文本产出上。"));
         }
 
-        foreach (Flow.NodeName port in node.Outputs.Where(port => string.IsNullOrWhiteSpace(port.Value) || port.Value.Contains('@')))
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输出端口名 {port.Value} 非法，不能为空或含 @。"));
-        }
-
-        foreach (Flow.NodeName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
+        foreach (Flow.PortName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
         {
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输出端口名 {port.Value} 是保留名，隐式端口无需声明。"));
         }
 
-        foreach (Flow.NodeName port in node.Outputs.Where(port => !string.IsNullOrWhiteSpace(port.Value) && !port.Value.Contains('@'))
+        foreach (Flow.PortName port in node.Outputs
             .GroupBy(port => port)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key))
@@ -785,6 +780,6 @@ static class FlowRules
     }
 
     /// <summary>一组流程里重复的流程名，没有时为空。</summary>
-    public static string? Duplicated(IReadOnlyList<Flow.FlowDefinition> flows) =>
+    public static Flow.FlowName? Duplicated(IReadOnlyList<Flow.FlowDefinition> flows) =>
         flows.GroupBy(flow => flow.Name).FirstOrDefault(group => group.Count() > 1)?.Key;
 }

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Cli.Views;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
@@ -70,6 +71,6 @@ public sealed class ViewLabelsTests
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
-        Model = "fake",
+        Model = ModelName.Create("fake").Value,
     };
 }

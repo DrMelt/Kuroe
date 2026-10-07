@@ -9,7 +9,7 @@ internal static class NodeLibraryRules
 {
     private const char PortPrefix = '@';
     private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
-    private static string PortName(Flow.NodeName name) => name.Value[1..];
+    private static string PortOf(Flow.NodeName name) => name.Value[1..];
 
     /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。</summary>
     public static ErrorOr<Success> Validate(IReadOnlyList<Flow.NodeSpec> library)
@@ -163,17 +163,12 @@ internal static class NodeLibraryRules
             errors.Add(FlowErrors.Node("节点库", node.Name.Value, "输出端口只能声明在整节点文本产出上。"));
         }
 
-        foreach (Flow.NodeName port in node.Outputs.Where(port => string.IsNullOrWhiteSpace(port.Value) || port.Value.Contains('@')))
-        {
-            errors.Add(FlowErrors.Node("节点库", node.Name.Value, $"输出端口名 {port.Value} 非法，不能为空或含 @。"));
-        }
-
-        foreach (Flow.NodeName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
+        foreach (Flow.PortName port in node.Outputs.Where(port => port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort))
         {
             errors.Add(FlowErrors.Node("节点库", node.Name.Value, $"输出端口名 {port.Value} 是保留名，隐式端口无需声明。"));
         }
 
-        foreach (Flow.NodeName port in node.Outputs.Where(port => !string.IsNullOrWhiteSpace(port.Value) && !port.Value.Contains('@'))
+        foreach (Flow.PortName port in node.Outputs
             .GroupBy(port => port)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key))
@@ -205,7 +200,7 @@ internal static class NodeLibraryRules
         var literalNames = new HashSet<Flow.NodeName>();
         CheckLiteralNames(members, literalNames, container, errors);
 
-        var ports = new HashSet<Flow.NodeName>([.. container.Inputs]);
+        var ports = new HashSet<Flow.PortName>([.. container.Inputs]);
         foreach (Flow.NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
@@ -272,7 +267,7 @@ internal static class NodeLibraryRules
     /// <summary>校验容器的一个成员：结构不混用、引用存在、From 引用自包含。</summary>
     private static void CheckMember(
         Flow.NodeSpec member,
-        HashSet<Flow.NodeName> ports,
+        HashSet<Flow.PortName> ports,
         HashSet<Flow.NodeName> subtreeNames,
         Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
         List<Error> errors)
@@ -312,7 +307,7 @@ internal static class NodeLibraryRules
         {
             bool inScope = !IsPort(from)
                 ? subtreeNames.Contains(from)
-                : ports.Contains(new Flow.NodeName(PortName(from)));
+                : ports.Contains(new Flow.PortName(PortOf(from)));
             if (!inScope)
             {
                 errors.Add(FlowErrors.Node("节点库", member.Name.Value,
@@ -324,7 +319,7 @@ internal static class NodeLibraryRules
         {
             bool inScope = !IsPort(from)
                 ? subtreeNames.Contains(from)
-                : ports.Contains(new Flow.NodeName(PortName(from)));
+                : ports.Contains(new Flow.PortName(PortOf(from)));
             if (!inScope)
             {
                 errors.Add(FlowErrors.Node("节点库", member.Name.Value,

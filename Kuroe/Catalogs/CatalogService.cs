@@ -45,10 +45,7 @@ public sealed class CatalogService
     }
 
     /// <summary>模型是否已在目录中注册。</summary>
-    internal bool HasModel(string modelName) =>
-        CatalogValues.Model(modelName) is { IsError: false } model && HasModel(model.Value);
-
-    private bool HasModel(ModelName modelName)
+    internal bool HasModel(ModelName modelName)
     {
         lock (_gate)
         {
@@ -57,14 +54,7 @@ public sealed class CatalogService
     }
 
     /// <summary>按模型名解析接入信息，模型未注册时返回错误。</summary>
-    internal ErrorOr<ModelConnection> Connect(string modelName)
-    {
-        ErrorOr<ModelName> model = CatalogValues.Model(modelName);
-
-        return model.IsError ? model.ErrorsOrEmptyList : Connect(model.Value);
-    }
-
-    private ErrorOr<ModelConnection> Connect(ModelName modelName)
+    internal ErrorOr<ModelConnection> Connect(ModelName modelName)
     {
         lock (_gate)
         {
@@ -79,7 +69,7 @@ public sealed class CatalogService
     }
 
     /// <summary>模型可接入时成功，否则给出接入信息解析的错误，供不持有客户端的调用方判可用性。</summary>
-    internal ErrorOr<Success> Check(string modelName)
+    internal ErrorOr<Success> Check(ModelName modelName)
     {
         ErrorOr<ModelConnection> connection = Connect(modelName);
 
@@ -135,29 +125,12 @@ public sealed class CatalogService
     }
 
     /// <summary>把模型注册到提供商，提供商不存在时返回错误。</summary>
-    public ErrorOr<Success> AddModel(string modelName, string providerName)
-    {
-        ErrorOr<(ModelName Model, ProviderName Provider)> parsed =
-            CatalogValues.ModelReference(modelName, providerName);
-        if (parsed.IsError)
-        {
-            return parsed.ErrorsOrEmptyList;
-        }
-
-        (ModelName model, ProviderName provider) = parsed.Value;
-
-        return Mutate(catalog => catalog.AddModel(ModelDefinition.Create(model, provider)));
-    }
+    public ErrorOr<Success> AddModel(ModelName modelName, ProviderName providerName) =>
+        Mutate(catalog => catalog.AddModel(ModelDefinition.Create(modelName, providerName)));
 
     /// <summary>从目录注销模型。注销当前选中模型时的取消选择由 <see cref="ModelService"/> 负责。</summary>
-    internal ErrorOr<Success> RemoveModel(string modelName)
-    {
-        ErrorOr<ModelName> model = CatalogValues.Model(modelName);
-
-        return model.IsError
-            ? model.ErrorsOrEmptyList
-            : Mutate(catalog => catalog.RemoveModel(model.Value));
-    }
+    internal ErrorOr<Success> RemoveModel(ModelName modelName) =>
+        Mutate(catalog => catalog.RemoveModel(modelName));
 
     /// <summary>把文件参数解析为绝对路径，相对参数按工作目录解析。</summary>
     private ErrorOr<string> ResolveFile(string path)

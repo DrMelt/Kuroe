@@ -14,18 +14,18 @@ public sealed record NodeSpec
     public NodeGate Gate { get; init; } = NodeGate.Auto;
 
     /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
-    public IReadOnlyList<NodeName> Inputs { get; init; } = [];
+    public IReadOnlyList<PortName> Inputs { get; init; } = [];
 
     /// <summary>输入端口绑定：引用容器时是端口名到当前作用域可达节点的映射，值可以是节点名或 @更外层端口；
     /// 装配层执行节点只可绑定隐式「ContextInput」端口，来源产出置于上下文开头。绑定值须是本流程内节点名。</summary>
-    public IReadOnlyDictionary<NodeName, NodeName>? In { get; init; }
+    public IReadOnlyDictionary<PortName, NodeName>? In { get; init; }
 
     /// <summary>上下文取自哪些更早节点的产出。执行节点定义上禁止声明，引用处注入。
     /// 条目可写 来源@端口 引用来源的命名输出端口，不带端口即取整份产出。</summary>
     public IReadOnlyList<NodeName> From { get; init; } = [];
 
     /// <summary>执行节点的命名输出端口表，空表即隐式单端口（整份产出）。端口只随定义，引用处不能修改。</summary>
-    public IReadOnlyList<NodeName> Outputs { get; init; } = [];
+    public IReadOnlyList<PortName> Outputs { get; init; } = [];
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。仅执行节点声明。</summary>
     public IReadOnlyList<string> SystemPrompt { get; init; } = [];

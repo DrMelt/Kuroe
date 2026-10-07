@@ -60,7 +60,7 @@ internal sealed class CatalogInfoTool : ITool
             }
         }
 
-        string current = string.IsNullOrEmpty(_models.Current) ? "未选择" : _models.Current;
+        string current = _models.Current?.Value ?? "未选择";
         text.Append($"当前模型：{current}");
 
         return text.ToString().TrimEnd();

@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 
@@ -22,7 +23,7 @@ public sealed record RunContext
     public required string Instruction { get; init; }
 
     /// <summary>派生时锁定的模型，运行期间不随选择变化。</summary>
-    public required string Model { get; init; }
+    public required ModelName Model { get; init; }
 
     /// <summary>所属条目序号，非按条目展开时为空。</summary>
     public int? ItemIndex { get; init; }
@@ -43,5 +44,5 @@ public sealed record RunContext
     public string? SystemPrompt { get; init; }
 
     /// <summary>节点声明的命名输出端口，未声明时为空。交回契约据此给模型。</summary>
-    public IReadOnlyList<NodeName> OutputPorts { get; init; } = [];
+    public IReadOnlyList<PortName> OutputPorts { get; init; } = [];
 }

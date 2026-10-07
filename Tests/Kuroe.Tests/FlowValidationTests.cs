@@ -62,6 +62,8 @@ public sealed class FlowValidationTests
     [InlineData(InputWithSystemPrompt, "不能声明系统指令")]
     [InlineData(OutputsReservedContext, "是保留名")]
     [InlineData(OutputsReservedContextInput, "是保留名")]
+    [InlineData(OutputPortWithAt, "端口名不能为空或含 @")]
+    [InlineData(OutputPortBlank, "端口名不能为空或含 @")]
     [InlineData(FromInputContext, "不能作为上下文端口来源")]
     [InlineData(ContextInputWithExtraKey, "只能声明隐式 ContextInput 端口")]
     [InlineData(ContextInputFromInput, "ContextInput 端口绑定来源")]
@@ -81,7 +83,7 @@ public sealed class FlowValidationTests
     public void Valid_custom_flow_loads_and_imports()
     {
         using KuroeHarness harness = KuroeHarness.Create(SingleFunnelFlow);
-        Assert.Contains(harness.Flows.All(), flow => flow.Name == "默认");
+        Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("默认"));
 
         string source = Path.Combine(Path.GetTempPath(), $"kuroe-flow-{Guid.NewGuid():N}.json");
         File.WriteAllText(source, TwoCustomFlows);
@@ -90,14 +92,24 @@ public sealed class FlowValidationTests
             FlowImport imported = harness.Flows.Import(source).ThrowIfError();
 
             Assert.Single(imported.Names);
-            Assert.Contains(harness.Flows.All(), flow => flow.Name == "两级");
-            FlowDefinition importedFlow = harness.Flows.Find("两级").ThrowIfError();
+            Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("两级"));
+            FlowDefinition importedFlow = harness.Flows.Find(new FlowName("两级")).ThrowIfError();
             Assert.Equal(2, importedFlow.RootNode.Nodes!.Count);
         }
         finally
         {
             File.Delete(source);
         }
+    }
+
+    [Fact]
+    public void Flow_name_with_surrounding_spaces_is_normalized()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(FlowNameWithSurroundingSpaces);
+
+        FlowDefinition flow = Assert.Single(harness.Flows.All());
+        Assert.Equal(new FlowName("默认"), flow.Name);
+        Assert.True(harness.Flows.Find(new FlowName("默认")).IsSuccess);
     }
 
     [Fact]
@@ -685,6 +697,33 @@ public sealed class FlowValidationTests
             ] }
           ] } ]
         }
+        """;
+
+    /// <summary>输出端口名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    private const string OutputPortWithAt = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["结论@甲"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口名空白，装配校验拒绝。</summary>
+    private const string OutputPortBlank = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["  "] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>流程名带首尾空白，装配时按解析口规范化。</summary>
+    private const string FlowNameWithSurroundingSpaces = """
+        { "Flows": [ { "Name": "  默认 ", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者" }
+          ] }
+        ] } ] }
         """;
 
     /// <summary>流程内节点名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>

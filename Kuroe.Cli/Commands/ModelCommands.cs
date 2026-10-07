@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Cli.Views;
@@ -73,11 +74,18 @@ internal sealed class ModelCommands(
         }
     }
 
-    private string CurrentModel => _models.Current ?? "未选择";
+    private string CurrentModel => _models.Current?.Value ?? "未选择";
 
     private void Select(string modelName)
     {
-        ErrorOr<ModelSelection> selected = _models.Select(modelName);
+        ErrorOr<ModelName> parsed = ModelName.Create(modelName.Trim());
+        if (parsed.IsError)
+        {
+            _results.Reject(parsed.ErrorsOrEmptyList);
+            return;
+        }
+
+        ErrorOr<ModelSelection> selected = _models.Select(parsed.Value);
         if (selected.IsError)
         {
             _results.Reject(selected.ErrorsOrEmptyList);
@@ -107,13 +115,30 @@ internal sealed class ModelCommands(
         _results.Apply(unselected.Value.Effect);
     }
 
-    private void Add(string modelName, string providerName) =>
-        _results.Report(_catalog.AddModel(modelName, providerName), "已注册。");
+    private void Add(string modelName, string providerName)
+    {
+        ErrorOr<ModelName> model = ModelName.Create(modelName.Trim());
+        ErrorOr<ProviderName> provider = ProviderName.Create(providerName.Trim());
+        if (model.IsError || provider.IsError)
+        {
+            _results.Reject([.. model.ErrorsOrEmptyList, .. provider.ErrorsOrEmptyList]);
+            return;
+        }
+
+        _results.Report(_catalog.AddModel(model.Value, provider.Value), "已注册。");
+    }
 
     private void Remove(string modelName)
     {
-        bool wasSelected = string.Equals(modelName, _models.Current, StringComparison.Ordinal);
-        ErrorOr<ModelRemoval> removed = _models.Remove(modelName);
+        ErrorOr<ModelName> parsed = ModelName.Create(modelName.Trim());
+        if (parsed.IsError)
+        {
+            _results.Reject(parsed.ErrorsOrEmptyList);
+            return;
+        }
+
+        bool wasSelected = _models.Current is { } current && parsed.Value.Equals(current);
+        ErrorOr<ModelRemoval> removed = _models.Remove(parsed.Value);
         if (removed.IsError)
         {
             _results.Reject(removed.ErrorsOrEmptyList);

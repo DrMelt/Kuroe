@@ -1,6 +1,7 @@
 using System.Reflection;
 using Kuroe.Configuration;
 using Kuroe.Shared.Configuration;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.TestSupport;
 using Xunit;
 
@@ -24,7 +25,7 @@ public sealed class SettingsTests
 
         harness.Settings.SetText("Runtime:DefaultFlow", "3").ThrowIfError();
 
-        Assert.Equal("3", harness.Flows.DefaultName);
+        Assert.Equal(new FlowName("3"), harness.Flows.DefaultName);
     }
 
     /// <summary>列出的节与项来自声明表，路径与设置项同源。</summary>
