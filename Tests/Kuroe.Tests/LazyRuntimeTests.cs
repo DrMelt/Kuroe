@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>运行时节点按激活懒物化：只有触达的节点才从图定义创建对象。</summary>
+/// <summary>运行时节点按激活懒实例化：只有触达的节点才从图定义创建对象。</summary>
 public sealed class LazyRuntimeTests
 {
     /// <summary>计划完成后按条目停在待批准，下游收尾永不触达。</summary>
