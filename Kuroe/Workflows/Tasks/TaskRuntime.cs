@@ -18,51 +18,69 @@ namespace Kuroe.Workflows.Tasks;
 internal sealed class TaskRuntime
 {
     private readonly WorkTask _task;
-    private readonly RuntimeNode[] _nodes;
+    private readonly RuntimeNode?[] _nodes;
+    private bool _taskCanceled;
 
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        var nodes = new RuntimeNode[task.Graph.Nodes.Count];
-        int i = 0;
-        foreach (GraphNode node in task.Graph.Nodes)
-        {
-            nodes[i++] = node switch
-            {
-                ExecutableNode executable => new RuntimeExecutable(executable),
-                ContainerNode container => new RuntimeContainer(container, index => nodes[index]),
-                _ => throw new InvalidOperationException($"不支持的节点类型：{node.GetType().Name}"),
-            };
-        }
-
-        _nodes = nodes;
-
-        // 声明 AnyOf 的节点用账本语义装配输入
-        foreach (RuntimeExecutable executable in nodes.OfType<RuntimeExecutable>())
-        {
-            if (executable.Executable.AnyOf.Count == 0)
-            {
-                continue;
-            }
-
-            executable.Bind(NodeInput.Build(task, executable, index => nodes[index]));
-        }
+        _nodes = new RuntimeNode?[task.Graph.Nodes.Count];
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
     public NodeGraph Graph => _task.Graph;
 
-    /// <summary>图上的运行时节点对象，按先根序与全节点一一对应。读写要求持有 Gate。</summary>
-    public IReadOnlyList<RuntimeNode> Nodes => _nodes;
+    /// <summary>已物化的运行时节点数，诊断与测试观测懒物化的边界。</summary>
+    internal int MaterializedCount => _nodes.Count(node => node is not null);
 
-    /// <summary>图上的运行时执行节点对象，只含会启动 run 的节点。</summary>
-    public IReadOnlyList<RuntimeExecutable> Executables => [.. _nodes.OfType<RuntimeExecutable>()];
-
-    /// <summary>按序号取运行时节点对象。</summary>
-    public RuntimeNode this[int index] => _nodes[index];
+    /// <summary>按序号取运行时节点对象，未物化时按图定义物化。读写要求持有 Gate。</summary>
+    public RuntimeNode this[int index] => Ensure(index);
 
     /// <summary>按序号取运行时执行节点对象，序号必须是执行节点。</summary>
-    public RuntimeExecutable Executable(int index) => (RuntimeExecutable)_nodes[index];
+    public RuntimeExecutable Executable(int index) => (RuntimeExecutable)Ensure(index);
+
+    /// <summary>序号对应的运行时节点对象，尚未物化时按图定义创建，创建后若任务已取消直接落在取消态。</summary>
+    private RuntimeNode Ensure(int index)
+    {
+        if (_nodes[index] is { } existing)
+        {
+            return existing;
+        }
+
+        RuntimeNode created = Graph.Nodes[index] switch
+        {
+            ExecutableNode executable => CreateExecutable(executable),
+            ContainerNode container => new RuntimeContainer(container, Ensure),
+            _ => throw new InvalidOperationException($"不支持的节点类型：{Graph.Nodes[index].GetType().Name}"),
+        };
+
+        if (_taskCanceled)
+        {
+            created.Cancel();
+        }
+
+        _nodes[index] = created;
+
+        return created;
+    }
+
+    /// <summary>创建执行节点的运行时对象，声明 AnyOf 的节点在物化时装配输入账本。</summary>
+    private RuntimeExecutable CreateExecutable(ExecutableNode executable)
+    {
+        RuntimeExecutable node = new(executable);
+        if (executable.AnyOf.Count > 0)
+        {
+            node.Bind(NodeInput.Build(_task, node, Ensure));
+        }
+
+        return node;
+    }
+
+    /// <summary>执行节点在快照里的一刻状态，未物化的执行节点按默认待办报告。</summary>
+    public ExecutableStateSnapshot SnapshotState(int index) =>
+        _nodes[index] is RuntimeExecutable node
+            ? node.StateSnapshot()
+            : new ExecutableStateSnapshot(index, NodeState.Pending, [], 0, [], null);
 
     // ---- 实例展开 ----
 
@@ -245,7 +263,7 @@ internal sealed class TaskRuntime
     {
         List<int> notify = [];
         int nodeIndex = executableIndex;
-        while (Graph.ContainerOf(nodeIndex) is { } parent && this[parent.Index] is RuntimeContainer container)
+        while (Graph.ContainerOf(nodeIndex) is { } parent && Ensure(parent.Index) is RuntimeContainer container)
         {
             if (!container.Released)
             {
@@ -282,13 +300,13 @@ internal sealed class TaskRuntime
 
     // ---- 汇总 ----
 
-    /// <summary>是否有执行节点或容器停在等待批准。</summary>
-    public bool HasAwaiting => _nodes.Any(node => node.Awaiting);
+    /// <summary>是否有执行节点或容器停在等待批准。未物化的节点不可能在等待。</summary>
+    public bool HasAwaiting => _nodes.Any(node => node is { Awaiting: true });
 
     /// <summary>是否有执行节点停在等待返工。</summary>
     public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.Blocked);
 
-    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。</summary>
+    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。可启动的执行节点依赖齐备时已被通知并物化，未物化的不可启动。</summary>
     public bool HasWork => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node));
 
     /// <summary>正在等待批准的容器。</summary>
@@ -374,10 +392,11 @@ internal sealed class TaskRuntime
     /// <summary>容器内一个执行节点，作为祖先链刷新的起点。容器内执行节点非空由提交时的 FlowRules 校验保证。</summary>
     private int FirstExecutableIn(RuntimeContainer container) => Graph.ExecutablesIn(container.Index)[0];
 
-    /// <summary>取消任务：全部节点进入取消态。</summary>
+    /// <summary>取消任务：置任务取消位，已物化的节点全部进入取消态，迟物化的节点创建即取消。</summary>
     public void Cancel()
     {
-        foreach (RuntimeNode node in _nodes)
+        _taskCanceled = true;
+        foreach (RuntimeNode node in _nodes.OfType<RuntimeNode>())
         {
             node.Cancel();
         }
@@ -576,11 +595,11 @@ internal sealed class TaskRuntime
     /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
     public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
 
-    /// <summary>无入边的执行节点，任务启动的第一批。</summary>
+    /// <summary>无入边的执行节点，任务启动的第一批，返回前全部物化。</summary>
     public IReadOnlyList<int> Roots() =>
-        [.. _nodes.OfType<RuntimeExecutable>()
+        [.. Graph.ExecutableNodes
             .Where(node => Graph.Incoming(node.Index).Count == 0)
-            .Select(node => node.Index)];
+            .Select(node => Ensure(node.Index).Index)];
 
     /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
     public IReadOnlyList<int> BlockedNodes =>
@@ -588,48 +607,96 @@ internal sealed class TaskRuntime
 
     // ---- 容器快照 ----
 
-    /// <summary>各容器在快照里的一刻状态：成员产出放行情况与门控停留。</summary>
+    /// <summary>各容器在快照里的一刻状态：成员产出放行情况与门控停留。快照不物化节点。</summary>
     public IReadOnlyList<ContainerSnapshot> ContainerSnapshots()
     {
         List<ContainerSnapshot> snapshots = [];
-        foreach (RuntimeContainer container in _nodes.OfType<RuntimeContainer>())
+        foreach (ContainerNode container in Graph.Containers)
         {
-            bool released = container.Released;
-            NodeState state;
-            if (container.Canceled)
-            {
-                state = NodeState.Canceled;
-            }
-            else if (container.Awaiting)
-            {
-                state = NodeState.AwaitingApproval;
-            }
-            else if (released)
-            {
-                state = NodeState.Done;
-            }
-            else if (Graph.ExecutablesIn(container.Index).Any(executable =>
-            {
-                RuntimeExecutable item = Executable(executable);
-                return item.Active > 0 || item.Complete(null) || item.Expanded;
-            }))
-            {
-                state = NodeState.Running;
-            }
-            else if (Graph.ExecutablesIn(container.Index).Any(executable => Executable(executable).AwaitingInput))
-            {
-                state = NodeState.AwaitingInput;
-            }
-            else
-            {
-                state = NodeState.Pending;
-            }
-
-            snapshots.Add(new ContainerSnapshot(container.Index, container.Name.Value, container.Container.Path, state, container.Container.Members));
+            snapshots.Add(_nodes[container.Index] is RuntimeContainer runtime
+                ? ContainerSnapshotOf(runtime)
+                : UnmaterializedSnapshotOf(container));
         }
 
         return snapshots;
     }
+
+    /// <summary>未物化容器的一刻状态：没有门控停留与产出，状态全由已物化的成员活动决定。</summary>
+    private ContainerSnapshot UnmaterializedSnapshotOf(ContainerNode container) =>
+        new(container.Index, container.Name.Value, container.Path, ContainerActivityState(container), container.Members);
+
+    /// <summary>已物化容器的一刻状态。成员状态只在已物化成员上读，未物化成员视为没有活动，快照不物化节点。</summary>
+    private ContainerSnapshot ContainerSnapshotOf(RuntimeContainer container)
+    {
+        NodeState state;
+        if (container.Canceled)
+        {
+            state = NodeState.Canceled;
+        }
+        else if (container.Awaiting)
+        {
+            state = NodeState.AwaitingApproval;
+        }
+        else if (ContainerReleased(container))
+        {
+            state = NodeState.Done;
+        }
+        else
+        {
+            state = ContainerActivityState(container.Container);
+        }
+
+        return new ContainerSnapshot(container.Index, container.Name.Value, container.Container.Path, state, container.Container.Members);
+    }
+
+    /// <summary>容器里已物化成员的活动状态：有在跑或已展开则运行中，停在等回答则待输入，否则待办。</summary>
+    private NodeState ContainerActivityState(ContainerNode container)
+    {
+        if (Graph.ExecutablesIn(container.Index).Any(MemberActive))
+        {
+            return NodeState.Running;
+        }
+
+        return Graph.ExecutablesIn(container.Index).Any(MemberAwaitingInput)
+            ? NodeState.AwaitingInput
+            : NodeState.Pending;
+    }
+
+    /// <summary>容器产出已放行：自身不等待不取消，直接成员与子容器都已放行。未物化的成员视为未放行。</summary>
+    private bool ContainerReleased(RuntimeContainer container)
+    {
+        if (container.Awaiting || container.Canceled)
+        {
+            return false;
+        }
+
+        foreach (int member in container.Container.Members)
+        {
+            if (_nodes[member] is not RuntimeExecutable node || !node.Released)
+            {
+                return false;
+            }
+        }
+
+        foreach (int child in container.Container.SubContainers)
+        {
+            if (_nodes[child] is not RuntimeContainer childContainer || !ContainerReleased(childContainer))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>成员执行节点是否有在跑或已展开的实例，未物化的成员没有活动。</summary>
+    private bool MemberActive(int executableIndex) =>
+        _nodes[executableIndex] is RuntimeExecutable node
+            && (node.Active > 0 || node.Complete(null) || node.Expanded);
+
+    /// <summary>成员执行节点是否停在等待回答，未物化的成员不在等待。</summary>
+    private bool MemberAwaitingInput(int executableIndex) =>
+        _nodes[executableIndex] is RuntimeExecutable node && node.AwaitingInput;
 
     /// <summary>计算返工会作废并重跑的目标：各阻塞节点记录的目标按条目过滤，配对其阻塞节点。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<(int Blocked, int Node, int? Item)> PlanRework(int? itemIndex)

@@ -177,11 +177,12 @@ internal sealed class TaskDriver(
     /// 启动的 run 异步派发由收口回调处理，通知的下游即时入队。</summary>
     private void Activate(int nodeIndex)
     {
-        RuntimeExecutable node = task.Runtime.Executable(nodeIndex);
         List<int> notify = [];
         List<TaskRuntime.RunStarter> starters = [];
+        RuntimeExecutable node;
         lock (task.Gate)
         {
+            node = task.Runtime.Executable(nodeIndex);
             TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             starters.AddRange(result.Starters);

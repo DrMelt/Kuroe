@@ -233,11 +233,11 @@ public sealed class WorkTask
 
             List<ExecutableSnapshot> executables =
             [
-                .. Runtime.Executables.Select(node => new ExecutableSnapshot(node.Index, node.Executable,
+                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node.Index, node,
                     [.. _runs.Where(run => run.Context.NodeIndex == node.Index).Select(run => runs[run.Id])])),
             ];
 
-            List<ExecutableStateSnapshot> executableStates = [.. Runtime.Executables.Select(node => node.StateSnapshot())];
+            List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Index))];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
                 _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), executables, executableStates,
