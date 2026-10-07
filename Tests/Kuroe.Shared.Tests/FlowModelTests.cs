@@ -32,7 +32,7 @@ public sealed class FlowModelTests
             {
                 Index = 0,
                 Name = new NodeName("规划"),
-                Path = "规划",
+                Path = new NodePath([new NodeName("规划")]),
                 Gate = NodeGate.Auto,
                 Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
                 Model = Planner,
@@ -47,7 +47,7 @@ public sealed class FlowModelTests
             {
                 Index = 1,
                 Name = new NodeName("实施"),
-                Path = "实施",
+                Path = new NodePath([new NodeName("实施")]),
                 Gate = NodeGate.Auto,
                 Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
                 Model = Planner,

@@ -12,8 +12,8 @@ public abstract record GraphNode
     /// <summary>节点名。</summary>
     public required NodeName Name { get; init; }
 
-    /// <summary>从根滑下来的路径，用于展示与定位。</summary>
-    public required string Path { get; init; }
+    /// <summary>从根到本节点的路径，用于展示与定位。</summary>
+    public required NodePath Path { get; init; }
 
     /// <summary>产出后是否停在等待批准。</summary>
     public required NodeGate Gate { get; init; }

@@ -67,7 +67,7 @@ internal static class FlowCompiler
     private sealed record ContainerBuilder(
         int Index,
         Flow.NodeName Name,
-        string Path,
+        Flow.NodePath Path,
         Flow.NodeGate Gate,
         List<int> Members,
         List<int> SubContainers);
@@ -94,7 +94,7 @@ internal static class FlowCompiler
         List<GraphNode> nodes,
         Dictionary<Flow.NodeName, int> byName,
         Dictionary<int, ContainerBuilder> containers,
-        List<string> path,
+        List<Flow.NodeName> path,
         int? parent)
     {
         if (node.Execution is { } execution)
@@ -110,7 +110,7 @@ internal static class FlowCompiler
         }
 
         int container = nodes.Count;
-        string containerPath = string.Join('/', [.. path, node.Name.Value]);
+        Flow.NodePath containerPath = new([.. path, node.Name]);
         containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
         nodes.Add(new ContainerNode
         {
@@ -126,7 +126,7 @@ internal static class FlowCompiler
             containers[childContainer].SubContainers.Add(container);
         }
 
-        path.Add(node.Name.Value);
+        path.Add(node.Name);
         foreach (Flow.NodeSpec child in node.Nodes!)
         {
             SecondPass(child, models, nodes, byName, containers, path, container);
@@ -138,13 +138,13 @@ internal static class FlowCompiler
         Flow.NodeSpec node,
         Flow.ExecutableSpec execution,
         int index,
-        List<string> path,
+        List<Flow.NodeName> path,
         Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
         Dictionary<Flow.NodeName, int> order) => new()
         {
             Index = index,
             Name = node.Name,
-            Path = string.Join('/', [.. path, node.Name.Value]),
+            Path = new Flow.NodePath([.. path, node.Name]),
             Gate = node.Gate,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,

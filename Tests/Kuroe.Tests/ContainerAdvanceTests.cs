@@ -77,7 +77,7 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
         Assert.Empty(parked.Executables[2].Runs);
         // 子容器停在待批准，父容器不广播下游
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path == "整体/交付/撰写组").State);
+        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path.Value == "整体/交付/撰写组").State);
 
         harness.Tasks.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);

@@ -1,4 +1,5 @@
 using Kuroe.Shared.Workflows;
+using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Tasks;
 
@@ -6,6 +7,6 @@ namespace Kuroe.Shared.Workflows.Tasks;
 public sealed record ContainerSnapshot(
     int Index,
     string Name,
-    string Path,
+    NodePath Path,
     NodeState State,
     IReadOnlyList<int> Members);

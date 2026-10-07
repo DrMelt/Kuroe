@@ -102,7 +102,7 @@ public sealed class SnapshotTests
         {
             Index = 0,
             Name = new NodeName("制定计划"),
-            Path = "制定计划",
+            Path = new NodePath([new NodeName("制定计划")]),
             Gate = NodeGate.Auto,
             Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
             Model = Planner,
@@ -117,7 +117,7 @@ public sealed class SnapshotTests
         {
             Index = 1,
             Name = new NodeName("实施"),
-            Path = "实施",
+            Path = new NodePath([new NodeName("实施")]),
             Gate = NodeGate.Auto,
             Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
             Model = Planner,
