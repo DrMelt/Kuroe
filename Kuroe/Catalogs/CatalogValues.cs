@@ -6,8 +6,6 @@ namespace Kuroe.Catalogs;
 /// <summary>把宿主提交的文本解析为值对象，同一请求内的全部非法项一次给出。</summary>
 internal static class CatalogValues
 {
-    internal static ErrorOr<ProviderName> Provider(string name) => ProviderName.Create(name);
-
     internal static ErrorOr<(ProviderName Provider, ProviderEndpoint Endpoint, ApiKey Key)> Provider(
         string name, string endpoint, string apiKey)
     {
@@ -19,8 +17,6 @@ internal static class CatalogValues
             ? errors
             : (provider.Value, address.Value, key.Value);
     }
-
-    internal static ErrorOr<ApiKey> Key(string apiKey) => ApiKey.Create(apiKey);
 
     internal static ErrorOr<(ProviderName Provider, ApiKey Key)> ProviderKey(string name, string apiKey)
     {

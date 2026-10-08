@@ -117,7 +117,7 @@ public sealed class CatalogService
     /// <summary>删除提供商，仍被模型引用时由目录拒绝。</summary>
     public ErrorOr<Success> RemoveProvider(string name)
     {
-        ErrorOr<ProviderName> providerName = CatalogValues.Provider(name);
+        ErrorOr<ProviderName> providerName = ProviderName.Create(name);
 
         return providerName.IsError
             ? providerName.ErrorsOrEmptyList
