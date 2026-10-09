@@ -96,6 +96,112 @@ public sealed class NodeGraph
             .Select(edge => ItemSpace(edge.From))
             .FirstOrDefault(space => space is not null);
 
+    /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环校验与运行时环迭代。</summary>
+    public IReadOnlyList<int[]> Loops()
+    {
+        ExecutableNode[] executables = [.. ExecutableNodes];
+        var rank = new Dictionary<int, int>();
+        for (int i = 0; i < executables.Length; i++)
+        {
+            rank[executables[i].Index] = i;
+        }
+
+        var adjacent = new List<List<int>>(executables.Length);
+        for (int i = 0; i < executables.Length; i++)
+        {
+            adjacent.Add([]);
+        }
+
+        foreach (FlowEdge edge in Edges)
+        {
+            foreach (int source in SourcesIn(edge.From))
+            {
+                adjacent[rank[source]].Add(rank[edge.To]);
+            }
+        }
+
+        var loops = new List<int[]>();
+        var index = new int[executables.Length];
+        var low = new int[executables.Length];
+        Array.Fill(index, -1);
+        var stack = new Stack<int>();
+        var onStack = new bool[executables.Length];
+        int next = 0;
+
+        void Tarjan(int node)
+        {
+            index[node] = next;
+            low[node] = next;
+            next++;
+            stack.Push(node);
+            onStack[node] = true;
+
+            foreach (int successor in adjacent[node])
+            {
+                if (index[successor] == -1)
+                {
+                    Tarjan(successor);
+                    low[node] = Math.Min(low[node], low[successor]);
+                }
+                else if (onStack[successor])
+                {
+                    low[node] = Math.Min(low[node], index[successor]);
+                }
+            }
+
+            if (low[node] != index[node])
+            {
+                return;
+            }
+
+            List<int> members = [];
+            bool selfLoop = false;
+            while (true)
+            {
+                int member = stack.Pop();
+                onStack[member] = false;
+                members.Add(member);
+                selfLoop |= adjacent[member].Contains(member);
+                if (member == node)
+                {
+                    break;
+                }
+            }
+
+            if (members.Count > 1 || selfLoop)
+            {
+                loops.Add([.. members.Select(member => executables[member].Index)]);
+            }
+        }
+
+        for (int start = 0; start < executables.Length; start++)
+        {
+            if (index[start] == -1)
+            {
+                Tarjan(start);
+            }
+        }
+
+        return loops;
+    }
+
+    /// <summary>带挂点环的成员：环内存在输入节点的真环分量成员。挂点无需环外来源即可启动，一轮由外部回答驱动。</summary>
+    public IReadOnlySet<int> HangingLoopMembers() =>
+        new HashSet<int>(Loops()
+            .Where(members => members.Any(member =>
+                Nodes[member] is ExecutableNode { Execution.Output: NodeOutput.Input }))
+            .SelectMany(members => members));
+
+    /// <summary>任务启动候选：无入边的执行节点与环内输入节点。环内输入节点是挂点，无需环外来源即可启动。</summary>
+    public IReadOnlyList<ExecutableNode> StartCandidates()
+    {
+        IReadOnlySet<int> hangingLoops = HangingLoopMembers();
+
+        return [.. ExecutableNodes.Where(node =>
+            Incoming(node.Index).Count == 0
+            || (hangingLoops.Contains(node.Index) && node.Execution.Output == NodeOutput.Input))];
+    }
+
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
     public IReadOnlyList<int> ExecutablesIn(int containerIndex) =>
         [.. SourcesIn(containerIndex).Distinct()];

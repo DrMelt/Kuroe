@@ -10,4 +10,7 @@ public sealed record ModelDefinition
 
     /// <summary>使用的模型名，未写时该模型选择无法用于执行。</summary>
     public ModelName? Model { get; init; }
+
+    /// <summary>运行时模型：执行时取宿主当前选中的模型，未选中时执行报错。与 Model 互斥。</summary>
+    public bool Runtime { get; init; }
 }

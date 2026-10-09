@@ -197,6 +197,14 @@ internal static class NodeLibraryRules
         var subtreeNames = new HashSet<Flow.NodeName>();
         CollectSubtreeNames(members, byName, subtreeNames);
 
+        var subtreeOutputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>>();
+        CollectSubtreeOutputs(members, byName, subtreeOutputs);
+
+        if (container.Out is { } outs)
+        {
+            CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, errors);
+        }
+
         var literalNames = new HashSet<Flow.NodeName>();
         CheckLiteralNames(members, literalNames, container, errors);
 
@@ -209,6 +217,63 @@ internal static class NodeLibraryRules
             if (member.Nodes is { Count: > 0 })
             {
                 CheckContainer(member, member.Nodes, byName, errors);
+            }
+        }
+    }
+
+    /// <summary>收集子树内全部执行节点的命名输出端口表，供容器输出端口的绑定目标校验。被引用执行节点取定义上的端口表。</summary>
+    private static void CollectSubtreeOutputs(
+        IReadOnlyList<Flow.NodeSpec> nodes,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs)
+    {
+        foreach (Flow.NodeSpec node in nodes)
+        {
+            if (node.Execution is not null)
+            {
+                outputs[node.Name] = node.Outputs;
+            }
+            else if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? definition) && definition.Execution is not null)
+            {
+                outputs[node.Name] = definition.Outputs;
+            }
+
+            if (node.Nodes is { Count: > 0 })
+            {
+                CollectSubtreeOutputs(node.Nodes, byName, outputs);
+            }
+        }
+    }
+
+    /// <summary>容器输出端口：端口名是保留名时拒绝；绑定目标必须落在容器子树内，带成员端口时该端口必须是目标执行节点声明的命名输出端口或隐式 ContextOutput。</summary>
+    private static void CheckContainerOutputs(
+        Flow.NodeSpec container,
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName> outs,
+        HashSet<Flow.NodeName> subtreeNames,
+        Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> subtreeOutputs,
+        List<Error> errors)
+    {
+        foreach ((Flow.PortName port, Flow.NodeName target) in outs)
+        {
+            if (port == ExecutableNode.ContextOutputPort || port == ExecutableNode.ContextInputPort)
+            {
+                errors.Add(FlowErrors.Node("节点库", container.Name.Value, $"容器输出端口名 {port.Value} 是保留名，隐式端口无需声明。"));
+                continue;
+            }
+
+            if (PortRef.Split(target) is { } portRef)
+            {
+                if (!subtreeOutputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.PortName>? memberPorts)
+                    || (!memberPorts.Contains(portRef.Port) && portRef.Port != ExecutableNode.ContextOutputPort))
+                {
+                    errors.Add(FlowErrors.Node("节点库", container.Name.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标 {target} 无法取用，目标必须是执行节点且声明了端口 {portRef.Port}。"));
+                }
+            }
+            else if (!subtreeNames.Contains(target))
+            {
+                errors.Add(FlowErrors.Node("节点库", container.Name.Value,
+                    $"容器输出端口 {port.Value} 的绑定目标 {target} 不在容器 {container.Name} 的子树里。"));
             }
         }
     }

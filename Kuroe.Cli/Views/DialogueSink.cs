@@ -3,21 +3,41 @@ using Kuroe.Shared.Executions.Turns;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>前台回合的终端呈现：文本增量直接写出，工具调用写成调用行与结果行。</summary>
+/// <summary>对话回合的终端呈现：文本增量直接写出，工具调用前先补齐换行以保证调用行独立。</summary>
 internal sealed class DialogueSink(Terminal terminal) : ITurnSink
 {
-    public void OnText(string delta) => terminal.Append(delta);
+    private bool _lineOpen;
+
+    public void OnText(string delta)
+    {
+        terminal.Append(delta);
+        _lineOpen = !delta.EndsWith('\n');
+    }
 
     public void OnToolCall(ToolCallRecord record)
     {
-        terminal.ToolCall($"工具 > {record.Name} {record.Arguments}");
+        if (_lineOpen)
+        {
+            terminal.NewLine();
+            _lineOpen = false;
+        }
+
+        terminal.ToolCall("工具 > ");
+        terminal.ToolCall(record.Arguments.Length == 0
+            ? record.Name.Value
+            : $"{record.Name} {record.Arguments}");
 
         if (record.Failed)
         {
-            terminal.Warn($"失败 > {record.Outcome}");
+            terminal.Warn("失败 > ");
+            terminal.Warn(record.Outcome);
             return;
         }
 
-        terminal.ToolResult($"结果 > {record.Outcome}");
+        terminal.ToolResult("结果 > ");
+        terminal.ToolResult(record.Outcome);
     }
+
+    /// <summary>清掉行状态，供新回合开始时调用。</summary>
+    public void Reset() => _lineOpen = false;
 }

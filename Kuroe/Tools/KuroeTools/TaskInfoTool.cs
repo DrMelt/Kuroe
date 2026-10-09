@@ -31,7 +31,7 @@ internal sealed class TaskInfoTool : ITool
         Functions =
         [
             new ToolFunction(new ToolName("ListTasks"),
-                "列出全部任务：编号、标题、状态、节点进度与 run 数，标出当前对话所在任务。",
+                "列出全部任务：编号、标题、状态、节点进度与 run 数。",
                 [], _ => List(), new ToolPath("info/ListTasks")),
             new ToolFunction(new ToolName("GetTask"),
                 "查看指定任务的详情：目标、流程、执行节点状态、run 列表与拆分条目。",
@@ -41,9 +41,6 @@ internal sealed class TaskInfoTool : ITool
                 "查看指定 run 的详情：上下文来源、执行过程与结论。",
                 [new ToolParameter(new ToolName("runId"), "要查看的 run 号", Required: true)],
                 arguments => ShowRun(arguments), new ToolPath("info/GetRun")),
-            new ToolFunction(new ToolName("GetActiveTask"),
-                "查看当前前台对话所在任务的详情。",
-                [], _ => ActiveTask(), new ToolPath("info/GetActiveTask")),
         ];
     }
 
@@ -56,29 +53,17 @@ internal sealed class TaskInfoTool : ITool
             return "还没有任务，用 /task new <目标> 提交一个。";
         }
 
-        TaskId? active = _registry.Active;
         var text = new StringBuilder();
         foreach (TaskSnapshot task in tasks)
         {
             int total = task.Executables.Sum(node => node.Runs.Count);
-            text.AppendLine($"{Marker(active, task.Id)}#{task.Id.Value} · {task.Title} · {InfoLabels.Of(task.State)}"
+            text.AppendLine($"#{task.Id.Value} · {task.Title} · {InfoLabels.Of(task.State)}"
                 + $" · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
                 + $" · run {task.LiveRuns} 在跑 / {total} 已派"
                 + $" · 最近 {InfoLabels.Clock(task.LastActivityAt)}");
         }
 
         return text.ToString().TrimEnd();
-    }
-
-    /// <summary>当前前台对话所在任务的详情。</summary>
-    private ErrorOr<string> ActiveTask()
-    {
-        if (_registry.Active is not { } id || _registry.Find(id) is not { IsError: false } found)
-        {
-            return "还没有任务，先 /task new <目标> 提交一个。";
-        }
-
-        return DescribeTask(found.Value.Snapshot());
     }
 
     /// <summary>按任务号查看详情，任务号非法或不存在时返回拒绝错误。</summary>
@@ -132,8 +117,7 @@ internal sealed class TaskInfoTool : ITool
         text.AppendLine($"目标：{task.Goal}");
         text.AppendLine($"流程：{task.Flow.Name}"
             + $"（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
-            + $" · 节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}"
-            + $" · 前台对话 {task.DialogueTurns} 回合");
+            + $" · 节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");
 
         AppendSplits(text, task);
 
@@ -169,7 +153,7 @@ internal sealed class TaskInfoTool : ITool
             text.AppendLine($"容器 {container.Path} · {InfoLabels.Of(container.State)}");
         }
 
-        AppendJournal(text, task.Dialogue, task.DroppedDialogue);
+        AppendJournal(text, task.Journal, task.DroppedJournal);
 
         return text.ToString().TrimEnd();
     }
@@ -200,7 +184,8 @@ internal sealed class TaskInfoTool : ITool
 
         foreach (ContextMessage message in context.Seed)
         {
-            text.AppendLine($"  {message.Source.Label} {OneLine(message.Text)}");
+            text.AppendLine($"  {message.Source.Label}");
+            text.AppendLine($"    {OneLine(message.Text)}");
         }
 
         text.AppendLine("过程：");
@@ -291,9 +276,6 @@ internal sealed class TaskInfoTool : ITool
 
         return string.Join(" · ", parts);
     }
-
-    /// <summary>当前对话所在任务的标记。</summary>
-    private static string Marker(TaskId? active, TaskId id) => active == id ? "当前对话 " : string.Empty;
 
     /// <summary>上下文内容压成一行并截断。</summary>
     private static string OneLine(string text)

@@ -30,13 +30,11 @@ internal sealed class TaskCommands(
         ("/task new --flow <流程> <目标>", "用指定流程提交任务"),
         ("/task show <任务号>", "打印该任务的节点与 run"),
         ("/task run <run号>", "打印该 run 的上下文来源与过程"),
-        ("/task use <任务号>", "把前台对话切到该任务"),
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准待批准的产出"),
         ("/task approve <任务号> run <run号>", "批准单个 run 的产出"),
         ("/task answer <任务号> [<@节点名>] <文本>", "回答等待输入的节点，多个待输入时用 @节点名 点名"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
-        ("/task adopt <run号>", "把 run 结论写进任务历史"),
         ("/task stop <任务号>", "取消任务"),
         ("/task stop run <run号>", "取消单个 run"),
         ("/task clear", "丢掉已完成或已取消的任务"),
@@ -56,7 +54,7 @@ internal sealed class TaskCommands(
                 break;
 
             case ("list", 2):
-                list.Print(registry.Snapshots(), registry.Active);
+                list.Print(registry.Snapshots());
                 break;
 
             case ("new", >= 3):
@@ -69,10 +67,6 @@ internal sealed class TaskCommands(
 
             case ("run", 3) when Number(parts[2], "run号") is { } run:
                 ShowRun(run);
-                break;
-
-            case ("use", 3) when Number(parts[2], "任务号") is { } task:
-                results.Report(tasks.Focus(new TaskId(task)), "已切换。");
                 break;
 
             case ("title", >= 4) when Number(parts[2], "任务号") is { } task:
@@ -95,10 +89,6 @@ internal sealed class TaskCommands(
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:
                 Act(tasks.Rework(new TaskId(task), null));
-                break;
-
-            case ("adopt", 3) when Number(parts[2], "run号") is { } runId:
-                Act(tasks.Adopt(new RunId(runId)));
                 break;
 
             case ("stop", 3) when Number(parts[2], "任务号") is { } task:
@@ -147,7 +137,7 @@ internal sealed class TaskCommands(
 
         TaskSnapshot task = submitted.Value;
         terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已启动。");
-        list.Print([task], task.Id);
+        list.Print([task]);
     }
 
     /// <summary>回答等待输入的节点。首词以 @ 开头且命中等待节点名时按点名回答，唯一待输入节点不需点名。</summary>

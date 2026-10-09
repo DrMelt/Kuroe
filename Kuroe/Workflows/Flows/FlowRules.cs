@@ -26,6 +26,14 @@ static class FlowRules
             }
         }
 
+        foreach (Flow.ModelDefinition model in flow.Models)
+        {
+            if (model.Runtime && model.Model is not null)
+            {
+                errors.Add(FlowErrors.Model(flow.Name.Value, model.Name.Value, "运行时模型与固定模型不能同时声明。"));
+            }
+        }
+
         var containerNames = new HashSet<Flow.NodeName>();
         CollectContainers(flow.RootNode, containerNames);
 
@@ -41,7 +49,14 @@ static class FlowRules
         var names = new HashSet<Flow.NodeName>();
         var outputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>>();
         CollectOutputs(flow.RootNode, outputs);
-        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flow.Name.Value, errors);
+
+        var containerOutputs = new Dictionary<Flow.NodeName, IReadOnlyDictionary<Flow.PortName, Flow.NodeName>>();
+        CollectContainerOutputs(flow.RootNode, containerOutputs);
+
+        var parentOf = new Dictionary<Flow.NodeName, Flow.NodeName>();
+        CollectParents(flow.RootNode, parentOf, parent: null);
+
+        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, flow.Name.Value, errors);
 
         // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
@@ -131,6 +146,79 @@ static class FlowRules
         }
     }
 
+    /// <summary>收集容器实例的输出端口表，装配层 From 引用容器端口据此判定端口存在。</summary>
+    private static void CollectContainerOutputs(
+        Flow.NodeSpec node,
+        Dictionary<Flow.NodeName, IReadOnlyDictionary<Flow.PortName, Flow.NodeName>> containerOutputs)
+    {
+        if (node.Nodes is not { Count: > 0 } children)
+        {
+            return;
+        }
+
+        if (node.Out is { Count: > 0 } outs)
+        {
+            containerOutputs[node.Name] = outs;
+        }
+
+        foreach (Flow.NodeSpec child in children)
+        {
+            CollectContainerOutputs(child, containerOutputs);
+        }
+    }
+
+    /// <summary>收集每个节点的直接所属容器名，容器封装据此判定引用作用域。</summary>
+    private static void CollectParents(
+        Flow.NodeSpec node,
+        Dictionary<Flow.NodeName, Flow.NodeName> parentOf,
+        Flow.NodeName? parent)
+    {
+        if (parent is { } container)
+        {
+            parentOf[node.Name] = container;
+        }
+
+        if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (Flow.NodeSpec child in children)
+            {
+                CollectParents(child, parentOf, node.Name);
+            }
+        }
+    }
+
+    /// <summary>引用来源是否落在当前节点可见的容器作用域内：同层成员或外层容器成员可见，嵌套更深容器的成员对容器外不可见。
+    /// 引用者本身没有父容器时只允许引用同根下节点。</summary>
+    private static bool IsInScope(
+        Flow.NodeName source,
+        Flow.NodeName referrer,
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> parentOf)
+    {
+        if (!parentOf.TryGetValue(source, out Flow.NodeName sourceContainer))
+        {
+            return false;
+        }
+
+        if (!parentOf.TryGetValue(referrer, out Flow.NodeName referrerContainer))
+        {
+            return false;
+        }
+
+        // 沿引用者所在容器链上溯，遇到来源所在容器即可见
+        Flow.NodeName? current = referrerContainer;
+        while (current is { } container)
+        {
+            if (container == sourceContainer)
+            {
+                return true;
+            }
+
+            current = parentOf.TryGetValue(container, out Flow.NodeName parent) ? parent : null;
+        }
+
+        return false;
+    }
+
     /// <summary>递归校验名字、From 引用、容器与模型选择引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
     private static void CheckTree(
         Flow.NodeSpec node,
@@ -141,6 +229,8 @@ static class FlowRules
         HashSet<Flow.ModelRef> modelNames,
         HashSet<Flow.NodeName> containerNames,
         IReadOnlyDictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs,
+        IReadOnlyDictionary<Flow.NodeName, IReadOnlyDictionary<Flow.PortName, Flow.NodeName>> containerOutputs,
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> parentOf,
         string flowName,
         List<Error> errors)
     {
@@ -153,9 +243,28 @@ static class FlowRules
 
             if (PortRef.Split(from) is { } portRef)
             {
+                if (containerNames.Contains(portRef.Source))
+                {
+                    if (!containerOutputs.TryGetValue(portRef.Source, out IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? containerPorts)
+                        || !containerPorts.ContainsKey(portRef.Port))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                            $"容器 {portRef.Source} 没有输出端口 {portRef.Port}。"));
+                    }
+
+                    continue;
+                }
+
                 if (!executableNames.Contains(portRef.Source))
                 {
                     errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {portRef.Source} 不在流程里，输出端口只能引用执行节点。"));
+                    continue;
+                }
+
+                if (!IsInScope(portRef.Source, node.Name, parentOf))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                        $"不能从容器外直接引用容器内成员或端口 {portRef.Source}，容器对外只暴露输出端口。"));
                     continue;
                 }
 
@@ -178,6 +287,11 @@ static class FlowRules
             {
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {from} 不在流程里。"));
             }
+            else if (executableNames.Contains(from) && !IsInScope(from, node.Name, parentOf))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                    $"不能从容器外直接引用容器内成员 {from}，容器对外只暴露输出端口。"));
+            }
         }
 
         foreach (Flow.NodeName source in (node.Execution?.AnyOf ?? [])
@@ -186,6 +300,15 @@ static class FlowRules
             .Where(source => !executableNames.Contains(source) && !containerNames.Contains(source)))
         {
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"AnyOf 引用的节点 {source} 不在流程里。"));
+        }
+
+        foreach (Flow.NodeName source in (node.Execution?.AnyOf ?? [])
+            .SelectMany(group => group)
+            .Distinct()
+            .Where(source => executableNames.Contains(source) && !IsInScope(source, node.Name, parentOf)))
+        {
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                $"不能从容器外直接引用容器内成员 {source}，容器对外只暴露输出端口。"));
         }
 
         CheckValidation(node, flowName, errors);
@@ -215,6 +338,11 @@ static class FlowRules
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value,
                     $"ContextInput 端口绑定来源 {contextInput} 不能是按条目展开的节点。"));
             }
+            else if (!IsInScope(contextInput, node.Name, parentOf))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                    $"不能从容器外直接引用容器内成员 {contextInput}，容器对外只暴露输出端口。"));
+            }
         }
 
         if (node.Nodes is { Count: > 0 } children)
@@ -237,7 +365,7 @@ static class FlowRules
             {
                 foreach (Flow.NodeSpec child in children)
                 {
-                    CheckTree(child, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, flowName, errors);
+                    CheckTree(child, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, flowName, errors);
                 }
             }
 
@@ -618,26 +746,13 @@ static class FlowRules
                 }
             }
         }
+
     }
 
-    /// <summary>引用环的启动不变量：每个环都必须有环外来源，否则环内节点永远等不到输入齐备，任务无法推进。
-    /// 只做一次强连通检查，不产生环对象。整节点依赖构成的迭代环若可从外部启动则合法。</summary>
+    /// <summary>引用环的启动不变量：环必须有环外来源或环内输入节点，否则环内节点永远等不到启动条件，任务无法推进。
+    /// 输入节点每轮从外部接收回答，本身构成周期性外源。整节点依赖构成的迭代环若可启动则合法。</summary>
     private static void CheckLoops(NodeGraph graph, string flowName, List<Error> errors)
     {
-        int count = graph.TotalExecutables;
-        int[] global = [.. graph.ExecutableNodes.Select(executable => executable.Index)];
-        var rank = new Dictionary<int, int>();
-        for (int i = 0; i < global.Length; i++)
-        {
-            rank[global[i]] = i;
-        }
-
-        var adjacent = new List<List<int>>(count);
-        for (int i = 0; i < count; i++)
-        {
-            adjacent.Add([]);
-        }
-
         foreach (FlowEdge edge in graph.Edges)
         {
             // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动条件永不满足的环
@@ -647,95 +762,26 @@ static class FlowRules
                 errors.Add(FlowErrors.Node(flowName, graph[edge.To].Name.Value,
                     "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"));
             }
-
-            foreach (int source in graph.ExecutablesIn(edge.From))
-            {
-                adjacent[rank[source]].Add(rank[edge.To]);
-            }
         }
 
-        var components = new List<List<int>>();
-        var index = new int[count];
-        var low = new int[count];
-        Array.Fill(index, -1);
-        var stack = new Stack<int>();
-        var onStack = new bool[count];
-        int next = 0;
-        for (int start = 0; start < count; start++)
+        foreach (int[] members in graph.Loops())
         {
-            if (index[start] == -1)
-            {
-                Tarjan(start, adjacent, index, low, ref next, stack, onStack, components);
-            }
-        }
-
-        foreach (List<int> component in components)
-        {
-            bool selfLoop = component.Any(member => adjacent[member].Contains(member));
-            if (component.Count < 2 && !selfLoop)
+            // 环内输入节点是挂点也是周期外源，无需环外来源即可启动
+            if (members.Any(member => graph[member] is ExecutableNode { Execution.Output: Flow.NodeOutput.Input }))
             {
                 continue;
             }
 
-            bool externalEntry = component.Any(member =>
-                graph.Incoming(global[member]).Any(edge =>
-                    graph.ExecutablesIn(edge.From).Any(source => !component.Contains(rank[source]))));
+            bool externalEntry = members.Any(member =>
+                graph.Incoming(member).Any(edge =>
+                    graph.ExecutablesIn(edge.From).Any(source => !members.Contains(source))));
             if (!externalEntry)
             {
-                ExecutableNode representative = (ExecutableNode)graph[global[component[0]]];
-                errors.Add(FlowErrors.Node(flowName, representative.Name.Value, "引用环没有环外来源，任务无法启动。"));
+                ExecutableNode representative = (ExecutableNode)graph[members[0]];
+                errors.Add(FlowErrors.Node(flowName, representative.Name.Value,
+                    "引用环没有环外来源且环内没有输入节点，任务无法启动。"));
             }
         }
-    }
-
-    /// <summary>递归式 Tarjan 求强连通分量，图小型，递归深度受节点数限制。</summary>
-    private static void Tarjan(
-        int node,
-        List<List<int>> adjacent,
-        int[] index,
-        int[] low,
-        ref int next,
-        Stack<int> stack,
-        bool[] onStack,
-        List<List<int>> components)
-    {
-        index[node] = next;
-        low[node] = next;
-        next++;
-        stack.Push(node);
-        onStack[node] = true;
-
-        foreach (int successor in adjacent[node])
-        {
-            if (index[successor] == -1)
-            {
-                Tarjan(successor, adjacent, index, low, ref next, stack, onStack, components);
-                low[node] = Math.Min(low[node], low[successor]);
-            }
-            else if (onStack[successor])
-            {
-                low[node] = Math.Min(low[node], index[successor]);
-            }
-        }
-
-        if (low[node] != index[node])
-        {
-            return;
-        }
-
-        List<int> component = [];
-        while (true)
-        {
-            int member = stack.Pop();
-            onStack[member] = false;
-            component.Add(member);
-            if (member == node)
-            {
-                break;
-            }
-        }
-
-        components.Add(component);
     }
 
     /// <summary>逐条对齐的引用必须无环：按条目展开的实例空间沿对齐边递推，环里的对齐会让它递归不止。

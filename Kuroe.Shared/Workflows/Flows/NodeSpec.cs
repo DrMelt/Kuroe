@@ -16,6 +16,10 @@ public sealed record NodeSpec
     /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
     public IReadOnlyList<PortName> Inputs { get; init; } = [];
 
+    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名 或 成员名@端口。
+    /// 只属于节点库容器定义，引用处不能修改；下游执行节点用 From: ["容器@端口"] 精确取成员产出。</summary>
+    public IReadOnlyDictionary<PortName, NodeName>? Out { get; init; }
+
     /// <summary>输入端口绑定：引用容器时是端口名到当前作用域可达节点的映射，值可以是节点名或 @更外层端口；
     /// 装配层执行节点只可绑定隐式「ContextInput」端口，来源产出置于上下文开头。绑定值须是本流程内节点名。</summary>
     public IReadOnlyDictionary<PortName, NodeName>? In { get; init; }

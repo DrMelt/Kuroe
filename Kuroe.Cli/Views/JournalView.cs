@@ -2,7 +2,7 @@ using Kuroe.Shared.Executions.Turns;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>过程记录的逐行呈现，前台对话与 run 详情共用。</summary>
+/// <summary>过程记录的逐行呈现，任务与 run 详情共用。</summary>
 internal static class JournalView
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>
@@ -41,14 +41,22 @@ internal static class JournalView
                     break;
 
                 case ToolCallEntry call:
-                    terminal.ToolCall($"[{at}] 工具 > {call.Call.Name} {call.Call.Arguments}");
+                    string callLine = call.Call.Arguments.Length == 0
+                        ? call.Call.Name.Value
+                        : $"{call.Call.Name} {call.Call.Arguments}";
+
+                    terminal.ToolCall($"[{at}] 工具 > ");
+                    terminal.ToolCall($"        {callLine}");
+
                     if (call.Call.Failed)
                     {
-                        terminal.Warn($"        失败 > {call.Call.Outcome}");
+                        terminal.Warn($"        失败 > ");
+                        terminal.Warn($"        {call.Call.Outcome}");
                     }
                     else
                     {
-                        terminal.ToolResult($"        结果 > {call.Call.Outcome}");
+                        terminal.ToolResult($"        结果 > ");
+                        terminal.ToolResult($"        {call.Call.Outcome}");
                     }
 
                     break;

@@ -1,4 +1,6 @@
+using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
@@ -214,12 +216,25 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         _awaitingInput = true;
     }
 
-    /// <summary>记下回答并发布产出，输入节点只回答一次。</summary>
+    /// <summary>记下回答并发布产出。环内输入节点复位后可再次回答。</summary>
     public void Answer(string text)
     {
         _awaitingInput = false;
         _inputAnswer = text;
         Publish(null);
+    }
+
+    /// <summary>环内输入节点复位：清掉发表位与当前回答，回到可挂起状态。</summary>
+    public void ResetInput()
+    {
+        if (!IsInputOutput || _inputAnswer is null)
+        {
+            return;
+        }
+
+        _inputAnswer = null;
+        Published = false;
+        _awaitingInput = false;
     }
 
     /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
@@ -264,6 +279,56 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             ? [.. Items.Select(item => (Index, (int?)item))]
             : [(Index, null)];
     }
+
+    /// <summary>命名输出端口的产出文本：命名端口取该轮交回的命名段，ContextOutput 取整份上下文拼合文本，
+    /// 整份取最近成功收口的产出，PerItem 整份拼接全部已发布实例。输入节点的产出是当前回答。</summary>
+    public override string? OutputText(WorkTask task, PortName? port)
+    {
+        if (IsInputOutput)
+        {
+            return InputAnswer is { Length: > 0 } answer ? answer : null;
+        }
+
+        if (port == ExecutableNode.ContextOutputPort)
+        {
+            if (LatestSucceededRun(task, Index, null) is not { } frameRun)
+            {
+                return null;
+            }
+
+            ContextFrame frame = new(frameRun.Id, Name, null, frameRun.Context.Seed, frameRun.Context.Instruction);
+            string content = string.Join("\n\n", frame.Messages.Select(message => message.Text));
+
+            return $"{content}\n\n指令：\n{frame.Instruction}";
+        }
+
+        if (port is { } outputPort)
+        {
+            return task.PortValuesFor(Index)?.GetValueOrDefault(outputPort);
+        }
+
+        return Mode == NodeMode.PerItem ? AggregateItems(task) : LatestSucceededRun(task, Index, null)?.Result;
+    }
+
+    /// <summary>全部已发布实例的最近成功产出，按实例序拼接。未发布任何实例时为空。</summary>
+    private string? AggregateItems(WorkTask task)
+    {
+        string[] parts = [.. Items
+            .Where(item => _publishedItems.Contains(item))
+            .Select(item => LatestSucceededRun(task, Index, item)?.Result)
+            .OfType<string>()
+            .Where(result => result.Length > 0)];
+
+        return parts.Length == 0 ? null : string.Join("\n\n", parts);
+    }
+
+    /// <summary>本节点某实例最近一次成功收口且产出非空的 run。</summary>
+    private static Run? LatestSucceededRun(WorkTask task, int node, int? item) =>
+        task.Runs.LastOrDefault(run =>
+            run.Context.NodeIndex == node
+            && run.Context.ItemIndex == item
+            && run.State == RunState.Succeeded
+            && run.Result is { Length: > 0 });
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
     public ExecutableStateSnapshot StateSnapshot()

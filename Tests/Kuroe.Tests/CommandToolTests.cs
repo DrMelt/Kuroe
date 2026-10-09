@@ -496,7 +496,7 @@ public sealed class CommandToolTests
         Task = new TaskId(1),
         Run = new RunId(1),
         Output = null,
-        NodeName = NodeName.Dialogue,
+        NodeName = new NodeName("对话"),
         ItemIndex = null,
         Journal = new TurnJournal(),
         Sink = new NullSink(),

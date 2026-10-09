@@ -7,7 +7,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与前台对话。</summary>
+/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与过程记录。</summary>
 internal sealed class TaskDetailView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -17,7 +17,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         _terminal.Line($"{task.Id} · {task.Title}\u3000状态：{ViewLabels.Of(task.State)}");
         _terminal.Line($"目标：{task.Goal}");
         _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
-            + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}\u3000前台对话 {task.DialogueTurns} 回合");
+            + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");
 
         if (task.Splits.Count > 0)
         {
@@ -66,8 +66,8 @@ internal sealed class TaskDetailView(Terminal terminal)
         }
 
         _terminal.NewLine();
-        _terminal.Line("前台对话：");
-        JournalView.Print(_terminal, task.Dialogue, task.DroppedDialogue);
+        _terminal.Line("过程记录：");
+        JournalView.Print(_terminal, task.Journal, task.DroppedJournal);
     }
 
     /// <summary>各执行节点的执行状态与条目结论。</summary>

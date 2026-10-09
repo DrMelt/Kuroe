@@ -2,11 +2,12 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools.CommandTools;
+using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Tools.KuroeTools;
 
-/// <summary>工具面的信息查询工具。列出前台对话可用的函数与配置的命令工具及其路径。</summary>
+/// <summary>工具面的信息查询工具。列出内置对话可用的函数与配置的命令工具及其路径。</summary>
 internal sealed class ToolboxInfoTool : ITool
 {
     private readonly IReadOnlyList<CommandToolDefinition> _commandTools;
@@ -20,7 +21,7 @@ internal sealed class ToolboxInfoTool : ITool
         Functions =
         [
             new ToolFunction(new ToolName("ListTools"),
-                "列出前台对话可用的函数与配置的命令工具及其路径。",
+                "列出内置对话可用的函数与配置的命令工具及其路径。",
                 [], _ => Describe(), new ToolPath("info/ListTools")),
         ];
     }
@@ -29,8 +30,8 @@ internal sealed class ToolboxInfoTool : ITool
     private ErrorOr<string> Describe()
     {
         var text = new StringBuilder();
-        text.AppendLine("前台对话可用函数与分组：");
-        text.AppendLine($"  {string.Join("、", DialogueDefaults.Tools.OrderBy(path => path.Value))}");
+        text.AppendLine("内置对话可用函数与分组：");
+        text.AppendLine($"  {string.Join("、", DialogueFlow.Tools.OrderBy(path => path.Value))}");
 
         if (_commandTools.Count == 0)
         {

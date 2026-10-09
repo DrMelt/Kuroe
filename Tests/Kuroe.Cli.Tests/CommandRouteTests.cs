@@ -23,14 +23,14 @@ public sealed class CommandRouteTests
     }
 
     [Fact]
-    public void Provider_add_normalizes_surrounding_spaces()
+    public void Provider_add_keeps_surrounding_spaces()
     {
         using Ui ui = new();
         ui.Providers.Run(["/provider", "add", "备用 ", "https://example.invalid/v2", "k"]);
 
         Assert.Contains("已保存。", ui.Output.Output);
         Assert.Contains(ui.Harness.Catalog.Snapshot().Providers,
-            provider => provider.ProviderName.Value == "备用");
+            provider => provider.ProviderName.Value == "备用 ");
     }
 
     [Fact]

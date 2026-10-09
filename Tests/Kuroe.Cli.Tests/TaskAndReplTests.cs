@@ -144,12 +144,26 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Repl_reset_without_task_hints()
+    public void Repl_reset_restarts_dialogue()
     {
         using Ui ui = new();
         ui.Repl.Execute("/reset");
 
-        Assert.Contains("还没有任务", ui.Output.Output);
+        Assert.Contains("对话已重置", ui.Output.Output);
+    }
+
+    [Fact]
+    public void Repl_exit_requests_termination()
+    {
+        using Ui ui = new();
+        Assert.True(ui.Repl.Execute("/exit"));
+    }
+
+    [Fact]
+    public void Repl_other_command_does_not_terminate()
+    {
+        using Ui ui = new();
+        Assert.False(ui.Repl.Execute("/help"));
     }
 
     [Fact]
@@ -161,26 +175,5 @@ public sealed class TaskAndReplTests
         Assert.Contains("/task", ui.Output.Output);
         Assert.Contains("/flow", ui.Output.Output);
         Assert.Contains("/provider", ui.Output.Output);
-    }
-
-    [Fact]
-    public void Repl_prompt_renders_root_without_active_task()
-    {
-        using Ui ui = new();
-
-        Assert.Equal("root > ", Repl.RenderPrompt(ui.Harness.Registry));
-    }
-
-    [Fact]
-    public void Repl_prompt_renders_task_and_node_progress()
-    {
-        using Ui ui = new();
-        TaskId id = ui.Harness.Submit("补齐 README");
-        ui.Harness.Settle(id);
-
-        string prompt = Repl.RenderPrompt(ui.Harness.Registry);
-
-        Assert.Equal($"任务 #{id.Value} · 节点 {ui.Harness.Snapshot(id).FrontierNodes}/{ui.Harness.Snapshot(id).TotalExecutableNodes} > ", prompt);
-        Assert.Contains($"任务 #{id.Value}", prompt);
     }
 }

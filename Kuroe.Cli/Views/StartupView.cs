@@ -35,7 +35,7 @@ internal sealed class StartupView(
             terminal.Hint($"默认流程 {flows.DefaultName} 不可用，用 /flow default <流程> 指定或 /flow add <文件> 导入。");
         }
 
-        terminal.Hint("普通输入在当前任务里对话；/task new <目标> 提交任务，按流程启动 run。");
-        terminal.Hint("/task 打开任务浏览器，任务 → run → 详情逐级进入；exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
+        terminal.Hint("普通输入与常驻对话任务对话；/task new <目标> 提交任务，按流程启动 run。");
+        terminal.Hint("/task 打开任务浏览器，任务 → run → 详情逐级进入；/exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
     }
 }

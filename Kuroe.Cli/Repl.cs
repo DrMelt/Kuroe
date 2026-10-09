@@ -2,12 +2,12 @@ using ErrorOr;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
 using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Workflows;
 using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli;
 
-/// <summary>终端对话循环。</summary>
+/// <summary>终端对话循环。提示符恒定在根层，普通输入全部交给常驻对话任务。</summary>
 internal sealed class Repl(
     TaskRegistry registry,
     TaskService tasks,
@@ -16,7 +16,8 @@ internal sealed class Repl(
     RunNotifier notifier,
     StartupView startup,
     Terminal terminal,
-    ErrorView errors)
+    ErrorView errors,
+    DialogueHost dialogue)
 {
     public async Task RunAsync()
     {
@@ -28,7 +29,7 @@ internal sealed class Repl(
 
         while (true)
         {
-            terminal.Append($"\n{Prompt}");
+            terminal.Append($"\n{Prompt}\n");
             string? input = Terminal.ReadLine()?.Trim();
             if (input is null)
             {
@@ -40,14 +41,13 @@ internal sealed class Repl(
                 continue;
             }
 
-            if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
             if (input.StartsWith('/'))
             {
-                commands.Execute(input);
+                if (commands.Execute(input))
+                {
+                    break;
+                }
+
                 continue;
             }
 
@@ -57,36 +57,19 @@ internal sealed class Repl(
         await tasks.ShutdownAsync();
     }
 
-    /// <summary>提示符显示当前位置：没有活动任务时在根层，有则带上任务与节点进度。</summary>
-    private string Prompt => RenderPrompt(registry);
-
-    internal static string RenderPrompt(TaskRegistry registry)
-    {
-        if (registry.Active is not { } id || registry.Find(id) is not { IsError: false } found)
-        {
-            return "root > ";
-        }
-
-        TaskSnapshot task = found.Value.Snapshot();
-        return $"任务 #{task.Id.Value} · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes} > ";
-    }
+    /// <summary>提示符固定在根层，常驻对话任务随时可答。提示符来源行独立，输入从下一行开始。</summary>
+    private static string Prompt => "root >";
 
     private async Task AskAsync(string input, TurnCancellation cancellation)
     {
-        if (registry.Active is not { } id || registry.Find(id) is not { IsError: false } found)
-        {
-            terminal.Hint("还没有任务可对话，先 /task new <目标> 提交一个。");
-            return;
-        }
-
-        WorkTask task = found.Value;
         ErrorOr<DialogueReply> reply;
         using (terminal.Exclusive())
         {
-            terminal.Append("智能体 > ");
+            terminal.Line("对话 > ");
+            sink.Reset();
             try
             {
-                reply = await task.AskDialogueAsync(input, sink, cancellation.Begin());
+                reply = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
             }
             catch (OperationCanceledException)
             {
@@ -112,11 +95,6 @@ internal sealed class Repl(
         if (!reply.Value.Text.EndsWith('\n'))
         {
             terminal.NewLine();
-        }
-
-        if (reply.Value.Discarded)
-        {
-            terminal.Hint("本轮内容未计入上下文。");
         }
     }
 }

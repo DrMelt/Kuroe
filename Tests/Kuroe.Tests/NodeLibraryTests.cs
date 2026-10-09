@@ -225,6 +225,12 @@ public sealed class NodeLibraryTests
     [InlineData(LibraryPortOnPlan, "输出端口只能声明在整节点文本产出上")]
     [InlineData(LibraryContainerWithOutputs, "不支持输出端口与系统指令")]
     [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
+    [InlineData(LibraryContainerOutReserved, "是保留名")]
+    [InlineData(LibraryContainerOutMissingMember, "不在容器 交付 的子树里")]
+    [InlineData(LibraryContainerOutBadPort, "无法取用")]
+    [InlineData(LeafWithOut, "执行节点不能声明容器输出端口")]
+    [InlineData(ReferenceWithOut, "引用节点不能声明输出端口")]
+    [InlineData(AssemblyContainerOut, "输出端口声明属于节点库容器定义")]
     [InlineData(LibraryNameWithAt, "节点名不能含 @")]
     [InlineData(MemberNameWithAt, "成员名 甲@乙 不能含 @")]
     [InlineData(LibraryInputPortWithAt, "端口名不能为空或含 @")]
@@ -907,5 +913,52 @@ public sealed class NodeLibraryTests
         { "Nodes": [
           { "Name": "交付", "Inputs": ["计划@甲"], "Nodes": [ { "Name": "实施", "Mode": "PerItem" } ] }
         ], "Flows": [] }
+        """;
+
+    /// <summary>库容器输出端口名是保留名，装配校验拒绝。</summary>
+    private const string LibraryContainerOutReserved = """
+        { "Nodes": [
+          { "Name": "交付", "Out": { "ContextOutput": "实施" }, "Nodes": [ { "Name": "实施", "Output": "Text" } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>库容器输出端口绑定目标不在容器子树内，装配校验拒绝。</summary>
+    private const string LibraryContainerOutMissingMember = """
+        { "Nodes": [
+          { "Name": "交付", "Out": { "结论": "外部" }, "Nodes": [ { "Name": "实施", "Output": "Text" } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>库容器输出端口绑定目标端口未声明，装配校验拒绝。</summary>
+    private const string LibraryContainerOutBadPort = """
+        { "Nodes": [
+          {
+            "Name": "交付",
+            "Out": { "结论": "实施@不存在" },
+            "Nodes": [ { "Name": "实施", "Output": "Text", "Outputs": ["结论"] } ]
+          }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>执行节点声明容器输出端口，装配校验拒绝。</summary>
+    private const string LeafWithOut = """
+        { "Nodes": [
+          { "Name": "交付", "Nodes": [ { "Name": "实施", "Output": "Text", "Out": { "结论": "实施" } } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>引用节点声明容器输出端口，装配校验拒绝。</summary>
+    private const string ReferenceWithOut = """
+        { "Nodes": [
+          { "Name": "执行", "Output": "Text" },
+          { "Name": "交付", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "Out": { "结论": "实施" } } ] }
+        ], "Flows": [] }
+        """;
+
+    /// <summary>装配层内联容器声明输出端口，输出端口声明只属于节点库容器定义。</summary>
+    private const string AssemblyContainerOut = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Out": { "结论": "实施" }, "Nodes": [ { "Name": "实施", "Output": "Text", "Model": "执行者" } ] }
+        ] } ] }
         """;
 }

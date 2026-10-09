@@ -1,10 +1,8 @@
 using ErrorOr;
 using Kuroe.Executions.Runs;
-using Kuroe.Executions.Sessions;
 using Kuroe.Executions.Turns;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
@@ -12,7 +10,7 @@ using Kuroe.Shared.Workflows.Tasks;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>任务 = 一条长期会话线程：自己的对话历史、按流程推进的执行节点状态、启动的全部 run。
+/// <summary>任务 = 一条长期执行线程：按流程推进的执行节点状态与启动的全部 run。
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask
 {
@@ -21,19 +19,16 @@ public sealed class WorkTask
     private readonly List<Run> _runs = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
     private readonly Dictionary<int, IReadOnlyDictionary<PortName, string>> _portValues = [];
-    private readonly SemaphoreSlim _turn = new(1, 1);
     private string _title;
-    private int _dialogueTurns;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal WorkTask(TaskId id, string goal, FlowDefinition flow, NodeGraph graph, Session session, string? title)
+    internal WorkTask(TaskId id, string goal, FlowDefinition flow, NodeGraph graph, string? title)
     {
         Id = id;
         Goal = goal;
         Flow = flow;
         Graph = graph;
-        Session = session;
         Journal = new TurnJournal();
         Runtime = new TaskRuntime(this);
         _lastActivityAt = DateTimeOffset.UtcNow;
@@ -52,13 +47,24 @@ public sealed class WorkTask
     /// <summary>提交时锁定的流程编译视图。</summary>
     internal NodeGraph Graph { get; }
 
-    internal Session Session { get; }
-
-    /// <summary>前台对话的过程记录。</summary>
+    /// <summary>任务的过程记录，只记执行侧诊断内容。</summary>
     internal TurnJournal Journal { get; }
 
     /// <summary>任务内状态改动的串行点。锁序固定为任务 Gate、注册表、派发器。</summary>
     internal Lock Gate { get; } = new();
+
+    private event Action<Run>? RunSettled;
+
+    /// <summary>run 收口后的通知，回答等待方借此取回本轮产出。要求持有 Gate 触发。</summary>
+    internal void NotifyRunSettled(Run run) => RunSettled?.Invoke(run);
+
+    /// <summary>订阅 run 收口通知，返回解除订阅的委托。</summary>
+    internal Action SubscribeRunSettled(Action<Run> handler)
+    {
+        RunSettled += handler;
+
+        return () => RunSettled -= handler;
+    }
 
     /// <summary>图驱动的执行状态，执行节点就地决定激活与发布。</summary>
     internal TaskRuntime Runtime { get; }
@@ -167,64 +173,22 @@ public sealed class WorkTask
         _runs.Add(run);
         Runtime.Executable(run.Context.NodeIndex).RecordRun(run.Context.ItemIndex);
         _lastActivityAt = DateTimeOffset.UtcNow;
+        RunAttached?.Invoke(run);
+    }
+
+    private event Action<Run>? RunAttached;
+
+    /// <summary>订阅新 run 启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
+    internal Action SubscribeRunAttached(Action<Run> handler)
+    {
+        RunAttached += handler;
+
+        return () => RunAttached -= handler;
     }
 
     internal void Touch() => _lastActivityAt = DateTimeOffset.UtcNow;
 
-    /// <summary>当前任务的一轮前台对话。增量交给 observer，过程同时记进任务的记录。</summary>
-    public async Task<ErrorOr<DialogueReply>> AskDialogueAsync(string input, ITurnSink? observer, CancellationToken cancellationToken)
-    {
-        if (!await _turn.WaitAsync(0, cancellationToken))
-        {
-            return [TaskErrors.Busy(Id)];
-        }
-
-        try
-        {
-            TurnScope scope;
-            lock (Gate)
-            {
-                _dialogueTurns++;
-                _lastActivityAt = DateTimeOffset.UtcNow;
-                scope = new TurnScope
-                {
-                    Task = Id,
-                    Run = null,
-                    Output = DialogueDefaults.Output,
-                    NodeName = DialogueDefaults.Name,
-                    ItemIndex = null,
-                    Journal = Journal,
-                    Sink = TurnSinks.For(Journal, observer),
-                    Tools = DialogueDefaults.Tools,
-                };
-            }
-
-            ErrorOr<string> reply = await Session.AskAsync(input, scope, cancellationToken);
-
-            return reply.IsError
-                ? reply.ErrorsOrEmptyList
-                : new DialogueReply(reply.Value, Session.LastTurnDiscarded);
-        }
-        finally
-        {
-            _turn.Release();
-        }
-    }
-
-    /// <summary>丢弃前台对话的上下文，回到起点。</summary>
-    public void ResetDialogue() => Session.Reset();
-
-    /// <summary>把 run 的结论作为一条用户消息写进会话历史，后续对话才可引用它。</summary>
-    internal void Adopt(string text)
-    {
-        lock (Gate)
-        {
-            Session.Adopt(text);
-            Journal.Append(new PromptEntry(text));
-            _lastActivityAt = DateTimeOffset.UtcNow;
-        }
-    }
-    /// <summary>当前状态的只读快照，含执行节点、执行节点状态、条目结论、run 与前台对话。</summary>
+    /// <summary>当前状态的只读快照，含执行节点、执行节点状态、条目结论、run 与过程记录。</summary>
     public TaskSnapshot Snapshot()
     {
         lock (Gate)
@@ -239,7 +203,7 @@ public sealed class WorkTask
 
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Index))];
 
-            return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(), _dialogueTurns,
+            return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
                 _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), executables, executableStates,
                 Runtime.ContainerSnapshots(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }

@@ -1,6 +1,6 @@
 using ApiHub.Shared.Models;
-using Kuroe.Configuration;
 using Kuroe.Shared.Executions;
+using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Executions.Sessions;
@@ -19,26 +19,6 @@ internal interface ISessionHistory
 
     /// <summary>重铺历史。</summary>
     void LayOut(List<ChatMessage> messages);
-}
-
-/// <summary>前台对话的历史：模型改动后旧上下文不再适用，未写入过设置时按初次使用重铺。</summary>
-internal sealed class DialogueHistory(SettingsProvider settings) : ISessionHistory
-{
-    private RuntimeSettings? _bound;
-
-    public ModelName? Model => settings.Current.Runtime.Model;
-
-    public bool Stale => _bound is null || settings.Current.Runtime.InvalidatesHistory(_bound);
-
-    /// <summary>前台对话没有恒定系统指令。</summary>
-    public string? SystemPrompt => null;
-
-    public void LayOut(List<ChatMessage> messages)
-    {
-        _bound = settings.Current.Runtime;
-
-        messages.Clear();
-    }
 }
 
 /// <summary>一次执行的会话：只在来源丢失时重铺一次，执行期间来源不再改变。</summary>

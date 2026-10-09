@@ -64,6 +64,8 @@ public sealed class FlowValidationTests
     [InlineData(OutputsReservedContextInput, "是保留名")]
     [InlineData(OutputPortWithAt, "端口名不能为空或含 @")]
     [InlineData(OutputPortBlank, "端口名不能为空或含 @")]
+    [InlineData(ContainerOutPortMissing, "容器 交付 没有输出端口")]
+    [InlineData(ContainerOutCrossContainer, "不能从容器外直接引用容器内成员")]
     [InlineData(FromInputContext, "不能作为上下文端口来源")]
     [InlineData(ContextInputWithExtraKey, "只能声明隐式 ContextInput 端口")]
     [InlineData(ContextInputFromInput, "ContextInput 端口绑定来源")]
@@ -77,6 +79,15 @@ public sealed class FlowValidationTests
 
         Assert.True(harness.IsError);
         Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains(expected));
+    }
+
+    /// <summary>引用环内含输入节点时没有环外来源也可启动，输入节点是挂点也是周期外源。</summary>
+    [Fact]
+    public void Loop_with_input_node_loads_while_plain_loop_is_rejected()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(LoopWithInputNode);
+
+        Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("默认"));
     }
 
     [Fact]
@@ -240,6 +251,16 @@ public sealed class FlowValidationTests
           { "Name": "整体", "Nodes": [
           { "Name": "甲", "Model": "执行者", "From": ["乙"] },
           { "Name": "乙", "Model": "执行者", "From": ["甲"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>引用环内含输入节点，输入节点是挂点也是周期外源，无需环外来源即可启动。</summary>
+    private const string LoopWithInputNode = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "收话", "Output": "Input", "From": ["回话"] },
+            { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
           ] }
         ] } ] }
         """;
@@ -733,5 +754,43 @@ public sealed class FlowValidationTests
             { "Name": "甲@乙", "Output": "Text", "Model": "执行者" }
           ] }
         ] } ] }
+        """;
+
+    /// <summary>引用容器上不存在的输出端口，装配校验拒绝。</summary>
+    private const string ContainerOutPortMissing = """
+        { "Nodes": [
+            { "Name": "允许工具", "Output": "Text" },
+            {
+              "Name": "交付",
+              "Out": { "结论": "实施" },
+              "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
+            }
+          ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
+              { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付@不存在"] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    /// <summary>装配层直接引用容器实例内部成员，容器封装拒绝，对外只暴露输出端口。</summary>
+    private const string ContainerOutCrossContainer = """
+        { "Nodes": [
+            { "Name": "允许工具", "Output": "Text" },
+            {
+              "Name": "交付",
+              "Out": { "结论": "实施" },
+              "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
+            }
+          ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
+              { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付.实施"] }
+            ] }
+          ] } ]
+        }
         """;
 }

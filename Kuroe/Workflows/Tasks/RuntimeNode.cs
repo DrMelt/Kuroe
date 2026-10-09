@@ -34,6 +34,10 @@ internal abstract class RuntimeNode(GraphNode node)
     /// <summary>已放行产出的位置集合：执行节点给整节点或已发布实例，容器递归给全部成员。</summary>
     public abstract IReadOnlyList<(int Node, int? Item)> ReleasedOutputs();
 
+    /// <summary>命名输出端口的产出文本：port 为空取整份产出，非空取该端口的命名段。
+    /// 执行节点按 run 与交回的账本取值，容器按端口绑定解析到成员取值。端口未交回或成员未放行时为空。</summary>
+    public abstract string? OutputText(WorkTask task, PortName? port);
+
     /// <summary>随任务进入取消态。</summary>
     public abstract void Cancel();
 }

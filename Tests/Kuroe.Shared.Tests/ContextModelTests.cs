@@ -38,15 +38,6 @@ public sealed class ContextModelTests
     }
 
     [Fact]
-    public void DialogueSource_has_no_jump_target()
-    {
-        DialogueSource source = new(new TaskId(3), 2);
-
-        Assert.Equal("任务 #3 第 2 回合", source.Label);
-        Assert.Null(source.FromRun);
-    }
-
-    [Fact]
     public void ItemSource_points_back_to_plan()
     {
         RunId plan = new(1);

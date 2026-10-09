@@ -210,4 +210,47 @@ public static class TestFlows
           ]
         }
         """;
+
+    /// <summary>库容器声明命名输出端口：装配层下游按 容器@端口 消费容器内成员的命名段。</summary>
+    public const string ContainerOutFlow = """
+        {
+          "Nodes": [
+            { "Name": "允许工具", "Tools": ["GetLocalTime"], "Outputs": ["结论", "理由"] },
+            {
+              "Name": "交付",
+              "Inputs": ["计划"],
+              "Out": { "结论": "实施@结论", "理由": "实施@理由" },
+              "Nodes": [
+                {
+                  "Name": "实施",
+                  "Use": "允许工具",
+                  "Model": "执行者",
+                  "From": ["@计划"]
+                }
+              ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "制定计划", "Model": "执行者", "Output": "Plan" },
+                    {
+                      "Name": "交付",
+                      "Use": "交付",
+                      "In": { "计划": "制定计划" },
+                      "Models": { "执行者": "执行者" }
+                    },
+                    { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付@结论"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
 }

@@ -4,12 +4,12 @@ using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务列表：一行一个任务，标出当前对话所在的任务。</summary>
+/// <summary>任务列表：一行一个任务。</summary>
 internal sealed class TaskListView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
 
-    public void Print(IReadOnlyList<TaskSnapshot> tasks, TaskId? active)
+    public void Print(IReadOnlyList<TaskSnapshot> tasks)
     {
         if (tasks.Count == 0)
         {
@@ -23,7 +23,7 @@ internal sealed class TaskListView(Terminal terminal)
         {
             int total = task.Executables.Sum(node => node.Runs.Count);
             grid.AddRow(
-                new Text(active == task.Id ? $">#{task.Id.Value}" : $"#{task.Id.Value}", Styles.Key),
+                new Text($"#{task.Id.Value}", Styles.Key),
                 new Text(task.Title),
                 new Text(task.Flow.Name.Value),
                 new Text($"{task.FrontierNodes}/{task.TotalExecutableNodes}"),

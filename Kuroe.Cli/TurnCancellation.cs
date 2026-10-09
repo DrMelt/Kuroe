@@ -4,7 +4,7 @@ using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Cli;
 
-/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 run，多个时只给出提示。</summary>
+/// <summary>Ctrl+C 的取消范围：先当前对话回合，其次唯一的在跑 run，多个时只给出提示。</summary>
 internal sealed class TurnCancellation(TaskRegistry registry, Terminal terminal) : IDisposable
 {
     private readonly Lock _gate = new();

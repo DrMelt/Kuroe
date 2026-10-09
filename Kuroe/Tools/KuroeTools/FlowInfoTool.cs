@@ -89,6 +89,10 @@ internal sealed class FlowInfoTool : ITool
             else if (node.Nodes is { Count: > 0 })
             {
                 text.AppendLine($"  {Indent(depth)}{node.Name.Value}（容器）· 放行 {InfoLabels.Of(node.Gate)}");
+                if (node.Out is { Count: > 0 } outs)
+                {
+                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => $"{entry.Key.Value} ← {entry.Value.Value}"))}");
+                }
             }
         }
 

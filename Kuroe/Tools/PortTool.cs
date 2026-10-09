@@ -33,10 +33,9 @@ public sealed class PortTool : IScopedTool
     /// <summary>换一份绑定到该回合的载体。</summary>
     public ITool ForTurn(TurnScope scope) => new PortTool(_intake, _registry, scope);
 
-    /// <summary>绑定回合所属 run 声明的输出端口，前台对话或没有声明时为空。</summary>
+    /// <summary>绑定回合所属 run 声明的输出端口，没有声明时为空。</summary>
     private IReadOnlyList<PortName>? PortsOf(TurnScope scope) =>
-        scope.Run is not { } id
-        || _registry.FindRun(id) is not { IsError: false } found
+        _registry.FindRun(scope.Run) is not { IsError: false } found
         || found.Value.Context.OutputPorts is not { Count: > 0 } ports
             ? null
             : ports;

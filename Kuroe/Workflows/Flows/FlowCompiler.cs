@@ -32,6 +32,7 @@ internal static class FlowCompiler
                 Gate = builder.Gate,
                 Members = builder.Members,
                 SubContainers = builder.SubContainers,
+                PortBindings = builder.PortBindings,
             };
         }
 
@@ -70,7 +71,8 @@ internal static class FlowCompiler
         Flow.NodePath Path,
         Flow.NodeGate Gate,
         List<int> Members,
-        List<int> SubContainers);
+        List<int> SubContainers,
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? PortBindings);
 
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
     private static int RegisterNames(Flow.NodeSpec node, Dictionary<Flow.NodeName, int> order, int next)
@@ -111,7 +113,7 @@ internal static class FlowCompiler
 
         int container = nodes.Count;
         Flow.NodePath containerPath = new([.. path, node.Name]);
-        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], []);
+        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], [], node.Out);
         nodes.Add(new ContainerNode
         {
             Index = container,
@@ -120,6 +122,7 @@ internal static class FlowCompiler
             Gate = node.Gate,
             Members = [],
             SubContainers = [],
+            PortBindings = node.Out,
         });
         if (parent is { } childContainer)
         {
@@ -148,9 +151,7 @@ internal static class FlowCompiler
             Gate = node.Gate,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
-            From = [.. node.From.Select(name => PortRef.Split(name) is { } portRef
-            ? new Dependency(order[portRef.Source], portRef.Port)
-            : new Dependency(order[name], null))],
+            From = [.. node.From.Select(name => ResolveFrom(name, order))],
             AnyOf = [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
             Outputs = node.Outputs,
             SystemPrompt = node.SystemPrompt,
@@ -160,4 +161,9 @@ internal static class FlowCompiler
             : null,
         };
 
+    /// <summary>把一条 From 引用解析成图依赖：带端口的引用落 来源序号+端口，来源可以是执行节点或容器。</summary>
+    private static Dependency ResolveFrom(Flow.NodeName name, Dictionary<Flow.NodeName, int> order) =>
+        PortRef.Split(name) is { } portRef
+            ? new Dependency(order[portRef.Source], portRef.Port)
+            : new Dependency(order[name], null);
 }

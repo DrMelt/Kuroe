@@ -81,6 +81,9 @@ public sealed class Run
 
     internal CancellationToken CancellationToken => _cancellation.Token;
 
+    /// <summary>回复文本增量，宿主用它做流式呈现。</summary>
+    public event Action<string>? TextReceived;
+
     internal void MarkRunning()
     {
         lock (_gate)
@@ -102,6 +105,9 @@ public sealed class Run
             _progress = progress;
         }
     }
+
+    /// <summary>回复文本增量触发事件，供对话观察者流式呈现。</summary>
+    internal void ReportText(string delta) => TextReceived?.Invoke(delta);
 
     internal void MarkSucceeded(string result) => Settle(RunState.Succeeded, result, []);
 
@@ -179,7 +185,7 @@ public sealed class Run
     /// <summary>把过程写成当前活动，只有进行中的工具调用值得标出。</summary>
     private sealed class ProgressSink(Run run) : ITurnSink
     {
-        public void OnText(string delta) => run.Report(string.Empty);
+        public void OnText(string delta) => run.ReportText(delta);
 
         public void OnToolCall(ToolCallRecord record) => run.Report($"调用工具 {record.Name}");
     }

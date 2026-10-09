@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Cli.Tests;
 
-/// <summary>Ctrl+C 的取消范围：先前台对话，其次唯一的在跑 run，多个时只给出提示。</summary>
+/// <summary>Ctrl+C 的取消范围：先当前对话回合，其次唯一的在跑 run，多个时只给出提示。</summary>
 public sealed class TurnCancellationTests
 {
     private const int LongDelay = 20000;

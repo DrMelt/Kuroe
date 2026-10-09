@@ -83,8 +83,8 @@ public sealed class PlanSubmitter(TaskRegistry registry)
 
     /// <summary>提交者必须绑定了执行回合，且是该契约仍在跑的 run。</summary>
     private Run? Owner(TurnScope? scope) =>
-        scope?.Run is { } id
-        && registry.FindRun(id) is { IsError: false } found
+        scope is { } s
+        && registry.FindRun(s.Run) is { IsError: false } found
         && found.Value.IsLive
             ? found.Value
             : null;

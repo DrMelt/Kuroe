@@ -9,6 +9,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Tools;
 using Kuroe.Tools.CommandTools;
 using Kuroe.Tools.KuroeTools;
+using Kuroe.Workflows;
 using Kuroe.Workflows.Engine;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
@@ -74,7 +75,8 @@ public static class ServiceCollectionExtensions
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton(sp => new NodeModelResolver(
-            sp.GetRequiredService<CatalogService>()));
+            sp.GetRequiredService<CatalogService>(),
+            sp.GetRequiredService<SettingsProvider>()));
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
@@ -83,8 +85,11 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<FlowService>(),
-            sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<NodeModelResolver>()));
+        services.AddSingleton(sp => new DialogueHost(
+            sp.GetRequiredService<TaskService>(),
+            sp.GetRequiredService<ModelService>(),
+            sp.GetRequiredService<TaskRegistry>()));
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ClientProvider>(),

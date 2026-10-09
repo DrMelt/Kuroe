@@ -97,7 +97,13 @@ internal static class NodeExpander
                 Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
                 int? memberLimit = node.MaxRuns ?? definition.MaxRuns ?? currentLimit;
                 List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", flowName, errors, memberLimit);
-                return new Flow.NodeSpec { Name = instance, Gate = definition.Gate, Nodes = members };
+                return new Flow.NodeSpec
+                {
+                    Name = instance,
+                    Gate = definition.Gate,
+                    Nodes = members,
+                    Out = ResolveOuts(definition.Out, childEnv, flowName, errors),
+                };
             }
 
             if (node.Models is not null)
@@ -307,6 +313,23 @@ internal static class NodeExpander
         }
 
         return name;
+    }
+
+    /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上。</summary>
+    private static Dictionary<Flow.PortName, Flow.NodeName>? ResolveOuts(
+        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? outs,
+        Env? env,
+        string flowName,
+        List<Error> errors)
+    {
+        if (outs is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        return outs.ToDictionary(
+            entry => entry.Key,
+            entry => Resolve(entry.Value, env, flowName, errors));
     }
 
     /// <summary>执行节点的输入绑定：把「ContextInput」键的来源名沿作用域解析成实例名，未声明时为空。</summary>

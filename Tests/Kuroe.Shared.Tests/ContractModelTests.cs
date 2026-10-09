@@ -35,11 +35,10 @@ public sealed class ContractModelTests
     }
 
     [Fact]
-    public void DialogueReply_carries_its_discarded_flag()
+    public void DialogueReply_carries_the_reply_text()
     {
-        DialogueReply reply = new("好的", true);
+        DialogueReply reply = new("好的");
 
         Assert.Equal("好的", reply.Text);
-        Assert.True(reply.Discarded);
     }
 }

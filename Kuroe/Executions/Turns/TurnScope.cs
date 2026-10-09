@@ -11,13 +11,13 @@ public sealed record TurnScope
     /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }
 
-    /// <summary>前台对话回合没有对应 run。</summary>
-    public required RunId? Run { get; init; }
+    /// <summary>所属 run。</summary>
+    public required RunId Run { get; init; }
 
     /// <summary>产出的契约。</summary>
     public required NodeOutput? Output { get; init; }
 
-    /// <summary>所属执行节点名，前台对话回合为「对话」。</summary>
+    /// <summary>所属执行节点名。</summary>
     public required NodeName NodeName { get; init; }
 
     /// <summary>所属条目序号，非按条目展开时为空。</summary>

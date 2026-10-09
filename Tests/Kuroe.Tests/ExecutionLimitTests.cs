@@ -25,7 +25,7 @@ public sealed class ExecutionLimitTests
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(2, task.Runtime.Executable(1).ExecutionCount(null));
-        Assert.Contains(blocked.Dialogue, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
+        Assert.Contains(blocked.Journal, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
         Assert.True(harness.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
 

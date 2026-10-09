@@ -230,6 +230,11 @@ sealed class FlowStore(string file, string baseDirectory)
                 useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于容器定义。"));
             }
 
+            if (dto.Out is { Count: > 0 })
+            {
+                useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输出端口，输出端口随容器定义。"));
+            }
+
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
             {
                 useErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "引用节点不能声明输出端口与系统指令。"));
@@ -319,6 +324,11 @@ sealed class FlowStore(string file, string baseDirectory)
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
+            if (dto.Out is { Count: > 0 } && scope != LibraryScope)
+            {
+                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输出端口，输出端口声明属于节点库容器定义。"));
+            }
+
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
             {
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输出端口与系统指令。"));
@@ -354,6 +364,12 @@ sealed class FlowStore(string file, string baseDirectory)
                 }
             }
 
+            ErrorOr<Dictionary<PortName, NodeName>?> outputPorts = ToOut(dto.Out);
+            if (outputPorts.IsError)
+            {
+                containerErrors.AddRange(outputPorts.ErrorsOrEmptyList);
+            }
+
             if (containerErrors.Count > 0)
             {
                 return containerErrors;
@@ -364,6 +380,7 @@ sealed class FlowStore(string file, string baseDirectory)
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Gate = dto.Gate ?? NodeGate.Auto,
                 Inputs = inputs,
+                Out = outputPorts.Value,
                 MaxRuns = dto.MaxRuns,
                 Nodes = children.Value,
             };
@@ -373,6 +390,11 @@ sealed class FlowStore(string file, string baseDirectory)
         if (dto.Inputs is { Count: > 0 })
         {
             leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明输入端口，接线从引用处提供。"));
+        }
+
+        if (dto.Out is { Count: > 0 })
+        {
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明容器输出端口，命名输出端口用 Outputs。"));
         }
 
         if (dto.In is { Count: > 0 } inBindings)
@@ -473,6 +495,9 @@ sealed class FlowStore(string file, string baseDirectory)
             },
         };
     }
+    /// <summary>解析容器输出端口表：键与值是「端口名到成员引用」，形状与输入绑定一致，走同一个装配。</summary>
+    private static ErrorOr<Dictionary<PortName, NodeName>?> ToOut(Dictionary<string, string>? bindings) => ToIn(bindings);
+
     private static ErrorOr<Dictionary<PortName, NodeName>?> ToIn(Dictionary<string, string>? bindings)
     {
         if (bindings is not { Count: > 0 })
@@ -575,6 +600,9 @@ sealed class FlowStore(string file, string baseDirectory)
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
+            Out = node.Out is { Count: > 0 } outputs
+                ? outputs.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
+                : null,
             Outputs = node.Outputs.Count == 0 ? null : [.. node.Outputs.Select(name => name.Value)],
             SystemPrompt = node.SystemPrompt.Count == 0 ? null : [.. node.SystemPrompt],
             In = node.In is { Count: > 0 } inBindings

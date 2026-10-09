@@ -7,6 +7,7 @@ using Kuroe.Shared;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Workflows;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,9 @@ public sealed class KuroeHarness : IDisposable
     public TaskRegistry Registry { get; }
 
     public TaskService Tasks { get; }
+
+    /// <summary>常驻对话任务的管理层宿主。</summary>
+    public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
 
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 

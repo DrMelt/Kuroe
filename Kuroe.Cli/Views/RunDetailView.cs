@@ -38,7 +38,8 @@ internal sealed class RunDetailView(Terminal terminal)
 
         foreach (ContextMessage message in context.Seed)
         {
-            _terminal.Line($"  {message.Source.Label}\u3000{OneLine(message.Text)}");
+            _terminal.Line($"  {message.Source.Label}");
+            _terminal.Line($"    {OneLine(message.Text)}");
         }
 
         _terminal.NewLine();

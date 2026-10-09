@@ -80,7 +80,7 @@ public sealed class SnapshotTests
     private static class TaskBuilder
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
-            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, 0, new Dictionary<int, PlanOutput>(),
+            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<int, PlanOutput>(),
             [.. Graph.ExecutableNodes.Select((executable, index) => new ExecutableSnapshot(index, executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow);
     }

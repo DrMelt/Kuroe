@@ -21,10 +21,6 @@ public sealed class SessionFactory
         _tools = tools;
     }
 
-    /// <summary>任务的前台会话，历史按当前设置装配。</summary>
-    internal Session NewDialogue() =>
-        new(_clients, _settings, _catalog, _tools, new DialogueHistory(_settings));
-
     /// <summary>一次执行的会话，历史由上游装配的上下文给出。</summary>
     internal Session ForRun(RunContext context) =>
         new(_clients, _settings, _catalog, _tools, new RunHistory(context));

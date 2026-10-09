@@ -20,7 +20,6 @@ public sealed class Session
     private readonly CatalogService _catalog;
     private readonly ToolCollection _tools;
     private readonly ISessionHistory _history;
-    private readonly List<ChatMessage> _adopts = [];
     private ChatClientAgentSession? _session;
 
     internal Session(
@@ -37,30 +36,15 @@ public sealed class Session
         _history = history;
     }
 
-    /// <summary>上一轮的输入与输出是否未计入上下文。</summary>
-    public bool LastTurnDiscarded { get; private set; }
+    /// <summary>当前是否选定了对话模型，未选定无法发起请求。</summary>
+    public bool HasModel => _history.Model is not null;
 
     /// <summary>丢弃当前上下文，回到该历史来源的起点。</summary>
     public void Reset()
     {
-        _adopts.Clear();
         if (_session is not null)
         {
             Relayout();
-        }
-    }
-
-    /// <summary>把外部结论作为一条用户消息接进历史。框架会话尚未创建时先记下来，创建时一并写入。</summary>
-    internal void Adopt(string text)
-    {
-        var message = new ChatMessage(ChatRole.User, text);
-        if (_session is not null && _session.TryGetInMemoryChatHistory(out List<ChatMessage>? history))
-        {
-            history.Add(message);
-        }
-        else
-        {
-            _adopts.Add(message);
         }
     }
 
@@ -70,7 +54,6 @@ public sealed class Session
         TurnScope scope,
         CancellationToken cancellationToken = default)
     {
-        LastTurnDiscarded = false;
         scope.Journal.Append(new PromptEntry(input));
 
         if (_history.Model is not { } model)
@@ -118,7 +101,7 @@ public sealed class Session
         return reply.ToString();
     }
 
-    /// <summary>首次使用时创建框架会话并按来源布局历史，顺带写入来源确定后已采纳的结论。</summary>
+    /// <summary>首次使用时创建框架会话并按来源布局历史。</summary>
     private async Task EnsureSessionAsync(ChatClientAgent agent, CancellationToken cancellationToken)
     {
         if (_session is not null)
@@ -128,11 +111,6 @@ public sealed class Session
 
         _session = (ChatClientAgentSession)await agent.CreateSessionAsync(cancellationToken);
         Relayout();
-        if (_adopts.Count > 0 && _session.TryGetInMemoryChatHistory(out List<ChatMessage>? history))
-        {
-            history.AddRange(_adopts);
-            _adopts.Clear();
-        }
     }
 
     /// <summary>按历史来源重铺会话历史。</summary>
@@ -166,7 +144,6 @@ public sealed class Session
     /// <summary>撤掉本轮期间写入历史的消息，该轮输出保留在记录里。</summary>
     private void DiscardTurn(TurnJournal journal, int historyStart)
     {
-        LastTurnDiscarded = true;
         if (_session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
         {
             history.RemoveRange(historyStart, history.Count - historyStart);

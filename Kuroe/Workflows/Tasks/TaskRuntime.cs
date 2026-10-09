@@ -19,12 +19,17 @@ internal sealed class TaskRuntime
 {
     private readonly WorkTask _task;
     private readonly RuntimeNode?[] _nodes;
+    private readonly HashSet<int> _loopMembers;
+    private readonly HashSet<int> _iteratingMembers;
     private bool _taskCanceled;
 
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
         _nodes = new RuntimeNode?[task.Graph.Nodes.Count];
+        _loopMembers = [.. task.Graph.Loops().SelectMany(members => members)];
+        // 含输入节点的环有挂点，一轮由外部回答驱动、一轮后回到挂点停止，成员随来源新版本迭代
+        _iteratingMembers = [.. task.Graph.HangingLoopMembers()];
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
@@ -49,7 +54,7 @@ internal sealed class TaskRuntime
 
         RuntimeNode created = Graph.Nodes[index] switch
         {
-            ExecutableNode executable => CreateExecutable(executable),
+            ExecutableNode executable => new RuntimeExecutable(executable),
             ContainerNode container => new RuntimeContainer(container, Ensure),
             _ => throw new InvalidOperationException($"不支持的节点类型：{Graph.Nodes[index].GetType().Name}"),
         };
@@ -59,22 +64,20 @@ internal sealed class TaskRuntime
             created.Cancel();
         }
 
+        // 先入表再绑账本，环成员互相引用的来源解析返回已入表对象，不会递归
         _nodes[index] = created;
+
+        if (created is RuntimeExecutable executableNode && ShouldBind(executableNode.Executable))
+        {
+            executableNode.Bind(NodeInput.Build(_task, executableNode, Ensure));
+        }
 
         return created;
     }
 
-    /// <summary>创建执行节点的运行时对象，声明 AnyOf 的节点在实例化时装配输入账本。</summary>
-    private RuntimeExecutable CreateExecutable(ExecutableNode executable)
-    {
-        RuntimeExecutable node = new(executable);
-        if (executable.AnyOf.Count > 0)
-        {
-            node.Bind(NodeInput.Build(_task, node, Ensure));
-        }
-
-        return node;
-    }
+    /// <summary>声明 AnyOf 或处在带挂点环的节点装配输入账本：挂点环成员随来源新版本整节点重启，无挂点环不额外账本化。</summary>
+    private bool ShouldBind(ExecutableNode executable) =>
+        executable.AnyOf.Count > 0 || _iteratingMembers.Contains(executable.Index);
 
     /// <summary>执行节点在快照里的一刻状态，未实例化的执行节点按默认待办报告。</summary>
     public ExecutableStateSnapshot SnapshotState(int index) =>
@@ -416,6 +419,7 @@ internal sealed class TaskRuntime
 
         if (run.State != RunState.Succeeded)
         {
+            _task.NotifyRunSettled(run);
             node.EnterBlocked([(node.Index, item)]);
             NoteLimitReached(node, item);
             return new SettlePlan([], []);
@@ -448,6 +452,7 @@ internal sealed class TaskRuntime
 
         // 拆分已由回执写入 _splits，其余产出直接发布
         Publish(node, item);
+        _task.NotifyRunSettled(run);
 
         return Settled(node, node.Park(run.Id), Downstream(node));
     }
@@ -566,8 +571,20 @@ internal sealed class TaskRuntime
         ExecutableNode executable = node.Executable;
         if (node.IsInputOutput)
         {
-            // 输入节点不启动 run：输入齐备时停驻等待回答，已回答后不再动作
-            if (!node.Complete(null) && ItemSatisfied(node, null))
+            if (_loopMembers.Contains(node.Index))
+            {
+                // 环内输入节点是挂点：反馈通知到达时本轮已回答即复位，随后重新挂着等下一轮
+                if (node.Complete(null))
+                {
+                    node.ResetInput();
+                }
+
+                if (!node.Complete(null))
+                {
+                    node.ParkInput();
+                }
+            }
+            else if (!node.Complete(null) && ItemSatisfied(node, null))
             {
                 node.ParkInput();
             }
@@ -595,11 +612,9 @@ internal sealed class TaskRuntime
     /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
     public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
 
-    /// <summary>无入边的执行节点，任务启动的第一批，返回前全部实例化。</summary>
+    /// <summary>任务启动的第一批，返回前全部实例化：无入边的执行节点与环内输入节点。</summary>
     public IReadOnlyList<int> Roots() =>
-        [.. Graph.ExecutableNodes
-            .Where(node => Graph.Incoming(node.Index).Count == 0)
-            .Select(node => Ensure(node.Index).Index)];
+        [.. Graph.StartCandidates().Select(node => Ensure(node.Index).Index)];
 
     /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
     public IReadOnlyList<int> BlockedNodes =>

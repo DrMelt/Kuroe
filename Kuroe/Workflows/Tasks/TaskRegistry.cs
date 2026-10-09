@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Executions;
 using Kuroe.Executions.Runs;
-using Kuroe.Executions.Sessions;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
@@ -19,18 +18,16 @@ public sealed class TaskRegistry
     private readonly Dictionary<RunId, Run> _runs = [];
     private int _nextTask = 1;
     private int _nextRun = 1;
-    private TaskId? _active;
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal WorkTask Create(string goal, FlowDefinition flow, NodeGraph graph, Session session, string? title)
+    internal WorkTask Create(string goal, FlowDefinition flow, NodeGraph graph, string? title)
     {
         lock (_gate)
         {
-            WorkTask task = new(new TaskId(_nextTask++), goal, flow, graph, session, title);
+            WorkTask task = new(new TaskId(_nextTask++), goal, flow, graph, title);
             _tasks.Add(task);
-            _active = task.Id;
 
             return task;
         }
@@ -44,27 +41,6 @@ public sealed class TaskRegistry
             _runs[run.Id] = run;
 
             return run;
-        }
-    }
-
-    /// <summary>前台对话发生在它身上：最近提交或被切换的任务。</summary>
-    public TaskId? Active
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _active;
-            }
-        }
-    }
-
-    /// <summary>把前台对话切到该任务，任务是否存在由调用方判定。</summary>
-    internal void Focus(TaskId id)
-    {
-        lock (_gate)
-        {
-            _active = id;
         }
     }
 
@@ -146,11 +122,6 @@ public sealed class TaskRegistry
             }
         }
 
-        lock (_gate)
-        {
-            _active = _tasks.Count == 0 ? null : _tasks[^1].Id;
-        }
-
         return cleared;
     }
 
@@ -161,7 +132,6 @@ public sealed class TaskRegistry
         {
             _runs.Clear();
             _tasks.Clear();
-            _active = null;
         }
     }
 

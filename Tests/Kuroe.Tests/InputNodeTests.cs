@@ -235,6 +235,58 @@ public sealed class InputNodeTests
         Assert.Contains(parked.Containers, container => container.Name == "审查分支" && container.State == NodeState.AwaitingApproval);
     }
 
+    /// <summary>环内输入节点每轮回答驱动一轮迭代：回话随来源新版本重跑，反馈复位后重新挂起。</summary>
+    [Fact]
+    public void Loop_input_node_repeats_rounds_until_limit()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(DialogueLoopFlow);
+        harness.Executor.Output = run => $"回复第{run.Context.ExecutionCount}轮";
+
+        TaskId id = harness.Submit("对话");
+        TaskSnapshot parked = WaitForInputs(harness, id, 1);
+        Assert.Equal(TaskState.AwaitingInput, parked.State);
+
+        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
+        TaskSnapshot first = WaitForInputs(harness, id, 1);
+        Assert.Equal(TaskState.AwaitingInput, first.State);
+        ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Name.Value == "回话");
+        RunSnapshot firstRun = Assert.Single(replyNode.Runs);
+        Assert.Contains(firstRun.Context.Seed, message => message.Text.Contains("第一问"));
+        Assert.Equal("回复第1轮", firstRun.Result);
+        // 本轮回答已被回话消费并随反馈复位，等待下一次输入
+        Assert.Null(first.ExecutableStates.Single(state => state.Index == replyNode.Index).InputAnswer);
+
+        harness.Tasks.Answer(id, null, "第二问").ThrowIfError();
+        TaskSnapshot second = WaitForInputs(harness, id, 1);
+        Assert.Equal(TaskState.AwaitingInput, second.State);
+        ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Name.Value == "回话");
+        Assert.Equal(2, replyNodeSecond.Runs.Count);
+        RunSnapshot secondRun = replyNodeSecond.Runs[^1];
+        Assert.Contains(secondRun.Context.Seed, message => message.Text.Contains("第二问"));
+        Assert.Equal("回复第2轮", secondRun.Result);
+    }
+
+    /// <summary>回话 run 在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起。</summary>
+    [Fact]
+    public void Answer_while_loop_replying_fails_as_no_awaiting_input()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(DialogueLoopFlow);
+        harness.Executor.DelayMs = 300;
+
+        TaskId id = harness.Submit("对话");
+        WaitForInputs(harness, id, 1);
+
+        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
+        harness.Wait(id, snapshot => snapshot.LiveRuns == 1);
+
+        ErrorOr<Success> busy = harness.Tasks.Answer(id, null, "挤进来");
+        Assert.True(busy.IsError);
+        Assert.Contains(busy.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
+
+        TaskSnapshot back = WaitForInputs(harness, id, 1);
+        Assert.Equal(TaskState.AwaitingInput, back.State);
+    }
+
     /// <summary>输入节点包在自动容器里，回答后容器放行，下游实施消费回答。</summary>
     private const string InputInAutoContainerFlow = """
         {
@@ -278,6 +330,27 @@ public sealed class InputNodeTests
                         { "Name": "用户输入", "Output": "Input", "Question": "请补充背景" }
                       ]
                     }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>对话环：输入节点与回话互引构成环，输入节点是挂点，一轮回答驱动一轮迭代后回到挂起。</summary>
+    private const string DialogueLoopFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "收话", "Output": "Input", "From": ["回话"] },
+                    { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
                   ]
                 }
               ]

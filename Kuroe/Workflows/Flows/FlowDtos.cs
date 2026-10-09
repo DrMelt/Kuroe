@@ -69,6 +69,9 @@ internal sealed class NodeDto
     /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
     public List<string>? Inputs { get; set; }
 
+    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名 或 成员名@端口。</summary>
+    public Dictionary<string, string>? Out { get; set; }
+
     /// <summary>容器引用把端口绑定到当前作用域可达节点。</summary>
     public Dictionary<string, string>? In { get; set; }
 

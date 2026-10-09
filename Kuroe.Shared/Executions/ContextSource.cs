@@ -12,13 +12,6 @@ public abstract record ContextSource
     public virtual RunId? FromRun => null;
 }
 
-/// <summary>任务的某轮前台对话。</summary>
-public sealed record DialogueSource(TaskId Task, int Turn) : ContextSource
-{
-    /// <inheritdoc/>
-    public override string Label => $"{Task} 第 {Turn} 回合";
-}
-
 /// <summary>某个 run 在某执行节点上的产出。</summary>
 public sealed record RunSource(RunId Run, NodeName NodeName) : ContextSource
 {
@@ -44,6 +37,13 @@ public sealed record InputSource(NodeName NodeName) : ContextSource
 {
     /// <inheritdoc/>
     public override string Label => $"节点「{NodeName}」的输入";
+}
+
+/// <summary>容器命名输出端口的产出，出处指向容器而不落到具体成员 run。</summary>
+public sealed record ContainerPortSource(NodeName Container, PortName Port) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => $"容器「{Container}」端口「{Port}」";
 }
 
 /// <summary>某个 run 的上下文帧，供统一结构传输后的出处标记与详情回跳。</summary>

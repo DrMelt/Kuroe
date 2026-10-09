@@ -13,13 +13,13 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>前台对话的信息查询工具：输出文本供模型回答，值来自各服务的只读快照。</summary>
+/// <summary>内置对话的信息查询工具：输出文本供模型回答，值来自各服务的只读快照。</summary>
 public sealed class InfoToolTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ListTasks_lists_tasks_and_marks_active()
+    public void ListTasks_lists_tasks()
     {
         using KuroeHarness harness = KuroeHarness.Create();
         TaskId id = harness.Submit("写一段百字以内的欢迎致辞");
@@ -29,7 +29,6 @@ public sealed class InfoToolTests : IDisposable
 
         Assert.Contains($"#{id.Value}", output);
         Assert.Contains("写一段百字以内的欢迎致辞", output);
-        Assert.Contains("当前对话", output);
     }
 
     [Fact]
@@ -40,7 +39,6 @@ public sealed class InfoToolTests : IDisposable
         TaskInfoTool tool = new(harness.Registry);
 
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
-        Assert.Contains("还没有任务", Call(tool, "GetActiveTask"));
     }
 
     [Fact]
@@ -184,7 +182,7 @@ public sealed class InfoToolTests : IDisposable
         ToolboxInfoTool empty = new(harness.CommandTools);
         string noTools = Call(empty, "ListTools");
 
-        Assert.Contains("前台对话可用函数", noTools);
+        Assert.Contains("内置对话可用函数", noTools);
         Assert.Contains("GetLocalTime", noTools);
         Assert.Contains("info", noTools);
         Assert.Contains("files", noTools);

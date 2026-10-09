@@ -1,4 +1,6 @@
 using Kuroe.Shared.Workflows.Graph;
+using Kuroe.Workflows.Flows;
+using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Tasks;
 
@@ -66,5 +68,28 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
 
         return [.. Container.Members.SelectMany(member => resolve(member).ReleasedOutputs())
             .Concat(Container.SubContainers.SelectMany(sub => resolve(sub).ReleasedOutputs()))];
+    }
+
+    /// <summary>命名输出端口的产出文本：按端口绑定解析到成员，带端口取成员命名段，不带端口取成员整份。
+    /// 成员未放行、端口未交回或绑定目标不是执行节点时为空。</summary>
+    public override string? OutputText(WorkTask task, Flow.PortName? port)
+    {
+        if (port is not { } name
+            || Container.PortBindings is not { } bindings
+            || !bindings.TryGetValue(name, out Flow.NodeName target))
+        {
+            return null;
+        }
+
+        if (PortRef.Split(target) is { } memberRef
+            && task.Graph.IndexOf(memberRef.Source) is { } memberIndex
+            && resolve(memberIndex) is RuntimeExecutable member)
+        {
+            return member.OutputText(task, memberRef.Port);
+        }
+
+        return task.Graph.IndexOf(target) is { } wholeIndex && resolve(wholeIndex) is RuntimeExecutable whole
+            ? whole.OutputText(task, port: null)
+            : null;
     }
 }

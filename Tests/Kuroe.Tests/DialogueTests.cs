@@ -4,26 +4,30 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.Tools;
 using Kuroe.Tools.KuroeTools;
+using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.AI;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>前台对话的固定节点配置：节点名、产出契约与工具白名单的应用。</summary>
+/// <summary>内置对话流程的节点配置与工具白名单在工具面上的应用。</summary>
 public sealed class DialogueTests
 {
     [Fact]
-    public void Defaults_declare_dialogue_node_with_text_output()
+    public void Dialogue_flow_builds_input_and_text_reply_nodes()
     {
-        Assert.Equal(NodeName.Dialogue, DialogueDefaults.Name);
-        Assert.Equal(NodeOutput.Text, DialogueDefaults.Output);
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
+
+        Assert.Equal(NodeOutput.Input, nodes[0].Execution!.Output);
+        Assert.Equal(NodeOutput.Text, nodes[1].Execution!.Output);
     }
 
     [Fact]
-    public void Defaults_whitelist_declares_dialogue_tools_by_path()
+    public void Dialogue_flow_whitelists_dialogue_tools_by_path()
     {
         Assert.Equal(
             [
@@ -31,7 +35,7 @@ public sealed class DialogueTests
                 new ToolPath("info"),
                 new ToolPath("files"),
             ],
-            DialogueDefaults.Tools);
+            DialogueFlow.Tools);
     }
 
     [Fact]
@@ -45,10 +49,10 @@ public sealed class DialogueTests
         ]);
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), DialogueDefaults.Tools);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), DialogueFlow.Tools);
 
         Assert.Equal(
-            ["GetLocalTime", "ListTasks", "GetTask", "GetRun", "GetActiveTask"],
+            ["GetLocalTime", "ListTasks", "GetTask", "GetRun"],
             built.Select(tool => tool.Name));
     }
 
@@ -66,7 +70,7 @@ public sealed class DialogueTests
         IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info")]);
 
         Assert.Equal(
-            ["ListTasks", "GetTask", "GetRun", "GetActiveTask"],
+            ["ListTasks", "GetTask", "GetRun"],
             built.Select(tool => tool.Name));
     }
 
@@ -100,8 +104,8 @@ public sealed class DialogueTests
     {
         Task = new TaskId(1),
         Run = new RunId(1),
-        Output = DialogueDefaults.Output,
-        NodeName = DialogueDefaults.Name,
+        Output = NodeOutput.Text,
+        NodeName = DialogueFlow.ReplyNodeName,
         ItemIndex = null,
         Journal = new TurnJournal(),
         Sink = new NullSink(),

@@ -3,7 +3,6 @@ using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
@@ -18,9 +17,6 @@ internal static class RunContextFactory
     /// <summary>单条种子文本的上限。</summary>
     private const int TextLimit = 2000;
 
-    /// <summary>带进上下文的任务对话条数。</summary>
-    private const int DialogueLimit = 6;
-
     /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
     internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, ModelName model)
     {
@@ -32,8 +28,7 @@ internal static class RunContextFactory
             AppendUpstreamOutput(task, edge, itemIndex, target);
         }
 
-        // 上下文输入端口的内容置于对话之前，与 SystemPrompt 一起构成稳定的请求前缀段
-        AppendDialogue(task, seed);
+        // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于种子最前
         seed.InsertRange(0, contextInput);
 
         PlanItem? item = ItemOf(task, node, itemIndex);
@@ -64,7 +59,8 @@ internal static class RunContextFactory
         };
     }
 
-    /// <summary>按一条依赖边的消费方式追加上游产出。整份、整集与容器来源走同一个放行产出取数。</summary>
+    /// <summary>按一条依赖边的消费方式追加上游产出。整份、整集与执行节点端口走放行产出位置逐条取数，
+    /// 容器命名输出端口按容器端口绑定取值单条注入。</summary>
     private static void AppendUpstreamOutput(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
         if (edge.Feed == EdgeFeed.Aligned)
@@ -72,6 +68,21 @@ internal static class RunContextFactory
             if (itemIndex is { } index)
             {
                 AppendLatestRun(task, edge.From, index, port: null, seed);
+            }
+
+            return;
+        }
+
+        // 容器命名输出端口：容器已放行时按端口绑定取成员产出，单条注入，出处指向容器
+        if (edge.FromPort is { } port && task.Graph[edge.From] is ContainerNode)
+        {
+            if (task.Runtime[edge.From] is RuntimeContainer container
+                && container.Released
+                && container.OutputText(task, port) is { Length: > 0 } content)
+            {
+                seed.Add(new ContextMessage(MessageRole.User,
+                    Truncate($"节点「{container.Name}」的端口「{port}」产出：\n{content}"),
+                    new ContainerPortSource(container.Name, port)));
             }
 
             return;
@@ -107,15 +118,15 @@ internal static class RunContextFactory
             return;
         }
 
-        if (LatestSucceededRun(task, fromIndex, item) is not { } run)
-        {
-            return;
-        }
-
         // 隐式上下文端口：上游 run 的装配上下文统一结构整体注入，每条消息的角色与出处原样保留，指令单列
         if (port == ExecutableNode.ContextOutputPort)
         {
-            ContextFrame frame = new(run.Id, name, item, run.Context.Seed, run.Context.Instruction);
+            if (LatestSucceededRun(task, fromIndex, item) is not { } frameRun)
+            {
+                return;
+            }
+
+            ContextFrame frame = new(frameRun.Id, name, item, frameRun.Context.Seed, frameRun.Context.Instruction);
 
             foreach (ContextMessage message in frame.Messages)
             {
@@ -128,47 +139,33 @@ internal static class RunContextFactory
             return;
         }
 
-        // 端口引用只取该轮交回的命名段：未交回不属于可注入的产出，不回退到整份文本
-        if (port is { } outputPort)
+        if (LatestSucceededRun(task, fromIndex, item) is not { } run)
         {
-            if (task.PortValuesFor(fromIndex)?.GetValueOrDefault(outputPort) is { Length: > 0 } portContent)
-            {
-                seed.Add(new ContextMessage(MessageRole.User,
-                    Truncate($"节点「{name}」的端口「{outputPort}」产出：\n{portContent}"),
-                    new RunSource(run.Id, name)));
-            }
-
             return;
         }
 
-        string content = run.Result ?? string.Empty;
-        string prefix = item is { } index
-            ? $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n"
-            : $"节点「{name}」的产出：\n";
-        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{content}"),
-            new RunSource(run.Id, name)));
-    }
-
-    /// <summary>任务已有的对话只带最近几条，更早的内容由上游产出概括。</summary>
-    private static void AppendDialogue(WorkTask task, List<ContextMessage> seed)
-    {
-        List<ContextMessage> history = [];
-        int turn = 0;
-        foreach (JournalEntry entry in task.Journal.Entries)
+        // 命名端口与整份统一取运行时节点文本：未交回不注入，端口不存在的引用已被装配校验拦截
+        if (task.Runtime[fromIndex].OutputText(task, port) is not { Length: > 0 } content)
         {
-            switch (entry)
-            {
-                case PromptEntry prompt:
-                    history.Add(new ContextMessage(MessageRole.User, Truncate(prompt.Text), new DialogueSource(task.Id, ++turn)));
-                    break;
-
-                case TextEntry text when turn > 0:
-                    history.Add(new ContextMessage(MessageRole.Assistant, Truncate(text.Text), new DialogueSource(task.Id, turn)));
-                    break;
-            }
+            return;
         }
 
-        seed.AddRange(history.Skip(Math.Max(0, history.Count - DialogueLimit)));
+        string prefix;
+        if (port is { } outputPort)
+        {
+            prefix = $"节点「{name}」的端口「{outputPort}」产出：\n";
+        }
+        else if (item is { } index)
+        {
+            prefix = $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n";
+        }
+        else
+        {
+            prefix = $"节点「{name}」的产出：\n";
+        }
+
+        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{content}"),
+            new RunSource(run.Id, name)));
     }
 
     /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>

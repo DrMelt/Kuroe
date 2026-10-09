@@ -38,7 +38,7 @@ internal sealed class TaskBrowser(
         while (true)
         {
             IReadOnlyList<TaskSnapshot> snapshots = registry.Snapshots();
-            list.Print(snapshots, registry.Active);
+            list.Print(snapshots);
 
             Item picked = Choose("选择任务",
                 [.. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), Refresh, Exit]);
@@ -170,11 +170,6 @@ internal sealed class TaskBrowser(
                 items.Add(new Item("✓ 批准该 run 的产出", "approveRun", Task: task.Id, Run: runId));
             }
 
-            if (snapshot is { State: RunState.Succeeded, Result.Length: > 0 })
-            {
-                items.Add(new Item("⇩ 采纳该结论到任务历史", "adopt", Run: runId));
-            }
-
             if (!snapshot.IsSettled)
             {
                 items.Add(new Item("✕ 取消该 run", "stopRun", Run: runId));
@@ -195,10 +190,6 @@ internal sealed class TaskBrowser(
 
                 case "approveRun" when picked.Task is { } owner:
                     Act(tasks.Approve(owner, [runId]));
-                    break;
-
-                case "adopt":
-                    Act(tasks.Adopt(runId));
                     break;
 
                 case "stopRun":
