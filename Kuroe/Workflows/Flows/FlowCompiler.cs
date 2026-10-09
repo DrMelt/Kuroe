@@ -3,8 +3,8 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，From 引用编译为带消费方式的边。
-/// 声明 AnyOf 的执行节点按来源各生成一条单份边，组内与组间重复来源不重复建边。
+/// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，
+/// From 条目编译为带消费方式与角色的边：可选组条目按单份消费、信号条目固定单份只发触发信号。
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
@@ -41,23 +41,21 @@ internal static class FlowCompiler
         {
             foreach (Dependency dependency in executable.From)
             {
-                // 端口引用取来源的整份内一段，按单份消费；整节点引用按来源与目标模式推导
-                EdgeFeed feed = dependency.Port is not null
+                // 端口、可选组、上下文与信号条目按单份消费；整节点引用按来源与目标模式推导
+                EdgeFeed feed = dependency.Port is not null || dependency.Or is not null || dependency.Signal || dependency.Context
                     ? EdgeFeed.Single
                     : EdgeFeedRules.Of(nodes[dependency.From], executable.Execution.Mode);
-                edges.Add(new FlowEdge(dependency.From, executable.Index, feed, dependency.Port));
-            }
+                EdgeRole role;
+                if (dependency.Signal)
+                {
+                    role = EdgeRole.Trigger;
+                }
+                else
+                {
+                    role = dependency.Context ? EdgeRole.ContextInput : EdgeRole.Data;
+                }
 
-            // 上下文输入端口：来源放行产出按单份消费，内容置于目标上下文开头
-            if (executable.ContextInput is { } contextInputFrom)
-            {
-                edges.Add(new FlowEdge(contextInputFrom, executable.Index, EdgeFeed.Single, IsContextInput: true));
-            }
-
-            // AnyOf 组的成员按来源各接一条单份产出边，组内与组间重复来源不重复建边
-            foreach (int from in executable.AnyOf.SelectMany(group => group).Distinct())
-            {
-                edges.Add(new FlowEdge(from, executable.Index, EdgeFeed.Single));
+                edges.Add(new FlowEdge(dependency.From, executable.Index, feed, dependency.Port, role, dependency.Or));
             }
         }
 
@@ -151,19 +149,16 @@ internal static class FlowCompiler
             Gate = node.Gate,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
-            From = [.. node.From.Select(name => ResolveFrom(name, order))],
-            AnyOf = [.. execution.AnyOf.Select(group => (IReadOnlyList<int>)[.. group.Select(name => order[name])])],
+            From = [.. node.From.Select(source => ResolveFrom(source, order))],
             Outputs = node.Outputs,
             SystemPrompt = node.SystemPrompt,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
-            ContextInput = node.In is { } inBindings && inBindings.TryGetValue(ExecutableNode.ContextInputPort, out Flow.NodeName boundContextInput)
-            ? order[boundContextInput]
-            : null,
         };
 
-    /// <summary>把一条 From 引用解析成图依赖：带端口的引用落 来源序号+端口，来源可以是执行节点或容器。</summary>
-    private static Dependency ResolveFrom(Flow.NodeName name, Dictionary<Flow.NodeName, int> order) =>
-        PortRef.Split(name) is { } portRef
-            ? new Dependency(order[portRef.Source], portRef.Port)
-            : new Dependency(order[name], null);
+    /// <summary>把一条上游接线条目解析成图依赖：带端口的引用落 来源序号+端口，来源可以是执行节点或容器，
+    /// Or、Signal 与 Context 标记原样保留。</summary>
+    private static Dependency ResolveFrom(Flow.SourceRef source, Dictionary<Flow.NodeName, int> order) =>
+        PortRef.Split(source.Name) is { } portRef
+            ? new Dependency(order[portRef.Source], portRef.Port, source.Or, source.Signal, source.Context)
+            : new Dependency(order[source.Name], null, source.Or, source.Signal, source.Context);
 }

@@ -24,7 +24,13 @@ internal static class RunContextFactory
         List<ContextMessage> contextInput = [];
         foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
-            List<ContextMessage> target = edge.IsContextInput ? contextInput : seed;
+            if (edge.Role == EdgeRole.Trigger)
+            {
+                // 触发输入端口不取数，来源产出不进上下文，只作启动信号
+                continue;
+            }
+
+            List<ContextMessage> target = edge.Role == EdgeRole.ContextInput ? contextInput : seed;
             AppendUpstreamOutput(task, edge, itemIndex, target);
         }
 

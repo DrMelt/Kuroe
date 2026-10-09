@@ -21,21 +21,20 @@ public sealed record NodeSpec
     public IReadOnlyDictionary<PortName, NodeName>? Out { get; init; }
 
     /// <summary>输入端口绑定：引用容器时是端口名到当前作用域可达节点的映射，值可以是节点名或 @更外层端口；
-    /// 装配层执行节点只可绑定隐式「ContextInput」端口，来源产出置于上下文开头。绑定值须是本流程内节点名。</summary>
+    /// 执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, NodeName>? In { get; init; }
 
-    /// <summary>上下文取自哪些更早节点的产出。执行节点定义上禁止声明，引用处注入。
-    /// 条目可写 来源@端口 引用来源的命名输出端口，不带端口即取整份产出。</summary>
-    public IReadOnlyList<NodeName> From { get; init; } = [];
+    /// <summary>上游接线条目：上下文取自条目的来源产出，条目可写 来源@端口 引用命名输出端口，不带端口即取整份产出。
+    /// <see cref="SourceRef.Or"/> 把条目归入可选启动组，<see cref="SourceRef.Signal"/> 让来源产出不进上下文只作触发信号，
+    /// <see cref="SourceRef.Context"/> 把来源产出置于目标上下文最前。
+    /// 执行节点定义与节点组成员上禁止声明，引用处注入。</summary>
+    public IReadOnlyList<SourceRef> From { get; init; } = [];
 
     /// <summary>执行节点的命名输出端口表，空表即隐式单端口（整份产出）。端口只随定义，引用处不能修改。</summary>
     public IReadOnlyList<PortName> Outputs { get; init; } = [];
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。仅执行节点声明。</summary>
     public IReadOnlyList<string> SystemPrompt { get; init; } = [];
-
-    /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动。组内成员并取；组内与组间允许重复引用，任两组按成员顺序不得完全相同。</summary>
-    public IReadOnlyList<IReadOnlyList<NodeName>> AnyOf { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
     public OutputValidation? Validate { get; init; }

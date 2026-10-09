@@ -100,6 +100,33 @@ public sealed class PortNodeTests
         Assert.Contains("节点「准备」的产出", implement.Context.Seed[0].Text);
     }
 
+    /// <summary>只写 Context 条目、无数据 From 的节点也能启动：来源放行后启动，前缀置于上下文开头。</summary>
+    [Fact]
+    public void Context_only_node_starts_after_source_releases()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+                { "Name": "整体", "Nodes": [
+                  { "Name": "准备", "Output": "Text", "Model": "执行者" },
+                  { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备", "Context": true } ] }
+                ] }
+              ] } ]
+            }
+            """;
+
+        using KuroeHarness harness = KuroeHarness.Create(flow);
+
+        TaskId id = harness.Submit("目标");
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        RunSnapshot implement = done.Executables
+            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Runs.Single();
+        Assert.Contains("节点「准备」的产出", implement.Context.Seed[0].Text);
+    }
+
     [Fact]
     public void System_prompt_is_assembled_into_run_context()
     {

@@ -11,22 +11,22 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
 
-    private bool _produced;
+    private readonly Dictionary<int, long> _publishedSources = [];
+    private int _revision;
     private bool _awaiting;
     private bool _canceled;
 
-    /// <summary>成员产出曾齐备过，广播只发一次，作废复位后重新广播。</summary>
-    public bool Produced => _produced;
-
-    /// <summary>齐备代数：从非齐备到齐备每推进一次递增，是容器作来源时的新语义版本账。</summary>
+    /// <summary>内容版本：任一直接来源发布新版本且容器重新齐备即递增，是容器作来源时与执行节点一致的版本账。</summary>
     public override long Revision => _revision;
-    private int _revision;
 
-    /// <summary>产出已放行、可被下游消费：容器自身不等待批准、不取消，且直接成员与子容器都放行。</summary>
-    public override bool Released =>
-        !_awaiting && !_canceled
+    /// <summary>内容齐备：取消或任一直接成员、子容器未放行时不齐备，不受自身批准等待影响。</summary>
+    public bool ContentReady =>
+        !_canceled
         && Container.Members.All(member => resolve(member).Released)
         && Container.SubContainers.All(sub => resolve(sub).Released);
+
+    /// <summary>产出已放行、可被下游消费：内容齐备且容器自身不等待批准。</summary>
+    public override bool Released => ContentReady && !_awaiting;
 
     /// <summary>成员产出齐备后停在等待批准。</summary>
     public override bool Awaiting => _awaiting;
@@ -34,20 +34,25 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>成员产出齐备的刷新落点，首次触发时置位并推进齐备代数。</summary>
-    public void MarkProduced()
+    /// <summary>内容齐备的发布落点：来源版本账有变化时记新账并推进内容版本，返回是否产生新版本。</summary>
+    public bool PublishIfChanged(IReadOnlyDictionary<int, long> sources)
     {
-        if (_produced)
+        bool changed = sources.Count != _publishedSources.Count
+            || sources.Any(pair => _publishedSources.GetValueOrDefault(pair.Key) != pair.Value);
+        if (!changed)
         {
-            return;
+            return false;
         }
 
-        _produced = true;
-        _revision++;
-    }
+        _publishedSources.Clear();
+        foreach ((int index, long revision) in sources)
+        {
+            _publishedSources[index] = revision;
+        }
 
-    /// <summary>成员作废使产出不再齐备时复位。</summary>
-    public void ResetProduced() => _produced = false;
+        _revision++;
+        return true;
+    }
 
     /// <summary>容器门控：产出齐备后停在等待批准。</summary>
     public void Park() => _awaiting = true;

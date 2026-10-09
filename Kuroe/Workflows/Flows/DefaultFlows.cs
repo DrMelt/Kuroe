@@ -50,7 +50,7 @@ internal static class DefaultFlows
                 Name = new NodeName("实施"),
                 Use = new NodeName("执行"),
                 Model = Executor.Name,
-                From = [new NodeName("@计划")],
+                From = [new SourceRef(new NodeName("@计划"))],
             },
         ],
     };

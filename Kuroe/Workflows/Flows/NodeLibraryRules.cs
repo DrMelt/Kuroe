@@ -368,7 +368,7 @@ internal static class NodeLibraryRules
             errors.Add(FlowErrors.Node("节点库", member.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
-        foreach (Flow.NodeName from in member.From)
+        foreach (Flow.NodeName from in member.From.Select(source => source.Name))
         {
             bool inScope = !IsPort(from)
                 ? subtreeNames.Contains(from)
@@ -377,18 +377,6 @@ internal static class NodeLibraryRules
             {
                 errors.Add(FlowErrors.Node("节点库", member.Name.Value,
                     IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"From 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
-            }
-        }
-
-        foreach (Flow.NodeName from in (member.Execution?.AnyOf.SelectMany(group => group) ?? []).Distinct())
-        {
-            bool inScope = !IsPort(from)
-                ? subtreeNames.Contains(from)
-                : ports.Contains(new Flow.PortName(PortOf(from)));
-            if (!inScope)
-            {
-                errors.Add(FlowErrors.Node("节点库", member.Name.Value,
-                    IsPort(from) ? $"端口 {from} 没有在此容器上声明。" : $"AnyOf 引用的节点 {from} 不在容器 {member.Name} 的作用域里。"));
             }
         }
     }

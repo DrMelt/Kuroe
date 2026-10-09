@@ -26,9 +26,6 @@ public sealed record ExecutableSpec
     /// <summary>拆分源的固定配置：静态条目与模型补充约束。</summary>
     public SplitConfig? Split { get; init; }
 
-    /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动。组内成员并取；组内与组间允许重复引用，任两组按成员顺序不得完全相同。</summary>
-    public IReadOnlyList<IReadOnlyList<NodeName>> AnyOf { get; init; } = [];
-
     /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
     public OutputValidation? Validate { get; init; }
 

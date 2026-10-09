@@ -73,14 +73,14 @@ public sealed class LazyRuntimeTests
     }
 
     [Fact]
-    public void Anyof_rejoin_never_double_starts()
+    public void Or_groups_rejoin_never_double_starts()
     {
         const string flow = """
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
               { "Name": "整体", "Nodes": [
                 { "Name": "甲", "Model": "执行者" },
                 { "Name": "乙", "Model": "执行者" },
-                { "Name": "汇合", "Model": "执行者", "AnyOf": [["甲", "乙"], ["乙", "甲"]] }
+                { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "甲组" }, { "Node": "乙", "Or": "甲组" }, { "Node": "乙", "Or": "乙组" }, { "Node": "甲", "Or": "乙组" }] }
               ] }
             ] } ] }
             """;

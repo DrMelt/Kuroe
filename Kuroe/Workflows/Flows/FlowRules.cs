@@ -234,81 +234,14 @@ static class FlowRules
         string flowName,
         List<Error> errors)
     {
-        foreach (Flow.NodeName from in node.From)
+        CheckSourceReferences(node.From, node, executableNames, inputNames, perItemNames, containerNames, outputs, containerOutputs, parentOf, flowName, errors);
+
+        foreach (Flow.SourceRef duplicate in node.From
+            .GroupBy(source => (source.Name, source.Or, source.Signal, source.Context))
+            .Where(group => group.Count() > 1)
+            .Select(group => group.First()))
         {
-            if (node.Nodes is { Count: > 0 })
-            {
-                break;
-            }
-
-            if (PortRef.Split(from) is { } portRef)
-            {
-                if (containerNames.Contains(portRef.Source))
-                {
-                    if (!containerOutputs.TryGetValue(portRef.Source, out IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? containerPorts)
-                        || !containerPorts.ContainsKey(portRef.Port))
-                    {
-                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                            $"容器 {portRef.Source} 没有输出端口 {portRef.Port}。"));
-                    }
-
-                    continue;
-                }
-
-                if (!executableNames.Contains(portRef.Source))
-                {
-                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {portRef.Source} 不在流程里，输出端口只能引用执行节点。"));
-                    continue;
-                }
-
-                if (!IsInScope(portRef.Source, node.Name, parentOf))
-                {
-                    errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                        $"不能从容器外直接引用容器内成员或端口 {portRef.Source}，容器对外只暴露输出端口。"));
-                    continue;
-                }
-
-                if (portRef.Port == ExecutableNode.ContextOutputPort)
-                {
-                    if (inputNames.Contains(portRef.Source))
-                    {
-                        errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输入节点不启动 run，不能作为上下文端口来源。"));
-                    }
-
-                    continue;
-                }
-
-                if (!outputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.PortName>? declared) || !declared.Contains(portRef.Port))
-                {
-                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"节点 {portRef.Source} 没有输出端口 {portRef.Port}。"));
-                }
-            }
-            else if (!executableNames.Contains(from) && !containerNames.Contains(from))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {from} 不在流程里。"));
-            }
-            else if (executableNames.Contains(from) && !IsInScope(from, node.Name, parentOf))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                    $"不能从容器外直接引用容器内成员 {from}，容器对外只暴露输出端口。"));
-            }
-        }
-
-        foreach (Flow.NodeName source in (node.Execution?.AnyOf ?? [])
-            .SelectMany(group => group)
-            .Distinct()
-            .Where(source => !executableNames.Contains(source) && !containerNames.Contains(source)))
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"AnyOf 引用的节点 {source} 不在流程里。"));
-        }
-
-        foreach (Flow.NodeName source in (node.Execution?.AnyOf ?? [])
-            .SelectMany(group => group)
-            .Distinct()
-            .Where(source => executableNames.Contains(source) && !IsInScope(source, node.Name, parentOf)))
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                $"不能从容器外直接引用容器内成员 {source}，容器对外只暴露输出端口。"));
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {duplicate.Name} 出现多次。"));
         }
 
         CheckValidation(node, flowName, errors);
@@ -324,25 +257,6 @@ static class FlowRules
         else if (!names.Add(node.Name))
         {
             errors.Add(FlowErrors.Node(flowName, node.Name.Value, "节点名重复。"));
-        }
-
-        if (node.In is { } inBindings && inBindings.TryGetValue(ExecutableNode.ContextInputPort, out Flow.NodeName contextInput))
-        {
-            if (!executableNames.Contains(contextInput) || inputNames.Contains(contextInput))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                    $"ContextInput 端口绑定来源 {contextInput} 必须是流程里的非输入执行节点。"));
-            }
-            else if (perItemNames.Contains(contextInput))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                    $"ContextInput 端口绑定来源 {contextInput} 不能是按条目展开的节点。"));
-            }
-            else if (!IsInScope(contextInput, node.Name, parentOf))
-            {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
-                    $"不能从容器外直接引用容器内成员 {contextInput}，容器对外只暴露输出端口。"));
-            }
         }
 
         if (node.Nodes is { Count: > 0 } children)
@@ -400,6 +314,110 @@ static class FlowRules
         }
     }
 
+    /// <summary>校验上游接线条目：来源节点存在、端口存在、容器封装不泄漏。</summary>
+    private static void CheckSourceReferences(
+        IReadOnlyList<Flow.SourceRef> sources,
+        Flow.NodeSpec node,
+        HashSet<Flow.NodeName> executableNames,
+        HashSet<Flow.NodeName> inputNames,
+        HashSet<Flow.NodeName> perItemNames,
+        HashSet<Flow.NodeName> containerNames,
+        IReadOnlyDictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs,
+        IReadOnlyDictionary<Flow.NodeName, IReadOnlyDictionary<Flow.PortName, Flow.NodeName>> containerOutputs,
+        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> parentOf,
+        string flowName,
+        List<Error> errors)
+    {
+        foreach (Flow.SourceRef entry in sources)
+        {
+            Flow.NodeName source = entry.Name;
+            if (node.Nodes is { Count: > 0 })
+            {
+                break;
+            }
+
+            if (entry.Context)
+            {
+                if (source.Value.StartsWith('@'))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                        "Context 条目来源必须写节点名或 来源@端口，不能引用绑定端口。"));
+                }
+                else
+                {
+                    Flow.NodeName contextSource = PortRef.Split(source)?.Source ?? source;
+                    if (!executableNames.Contains(contextSource))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                            $"Context 条目来源 {contextSource} 必须是非输入执行节点。"));
+                    }
+                    else if (inputNames.Contains(contextSource))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                            $"Context 条目来源 {contextSource} 不能是输入节点。"));
+                    }
+                    else if (perItemNames.Contains(contextSource))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                            $"Context 条目来源 {contextSource} 不能是按条目展开的节点。"));
+                    }
+                }
+            }
+
+            if (PortRef.Split(source) is { } portRef)
+            {
+                if (containerNames.Contains(portRef.Source))
+                {
+                    if (!containerOutputs.TryGetValue(portRef.Source, out IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? containerPorts)
+                        || !containerPorts.ContainsKey(portRef.Port))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                            $"容器 {portRef.Source} 没有输出端口 {portRef.Port}。"));
+                    }
+
+                    continue;
+                }
+
+                if (!executableNames.Contains(portRef.Source))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {portRef.Source} 不在流程里，输出端口只能引用执行节点。"));
+                    continue;
+                }
+
+                if (!IsInScope(portRef.Source, node.Name, parentOf))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                        $"不能从容器外直接引用容器内成员或端口 {portRef.Source}，容器对外只暴露输出端口。"));
+                    continue;
+                }
+
+                if (portRef.Port == ExecutableNode.ContextOutputPort)
+                {
+                    if (inputNames.Contains(portRef.Source))
+                    {
+                        errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"输入节点不启动 run，不能作为上下文端口来源。"));
+                    }
+
+                    continue;
+                }
+
+                if (!outputs.TryGetValue(portRef.Source, out IReadOnlyList<Flow.PortName>? declared) || !declared.Contains(portRef.Port))
+                {
+                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"节点 {portRef.Source} 没有输出端口 {portRef.Port}。"));
+                }
+            }
+            else if (!executableNames.Contains(source) && !containerNames.Contains(source))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"From 引用的节点 {source} 不在流程里。"));
+            }
+            else if (executableNames.Contains(source) && !IsInScope(source, node.Name, parentOf))
+            {
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value,
+                    $"不能从容器外直接引用容器内成员 {source}，容器对外只暴露输出端口。"));
+            }
+        }
+    }
+
     /// <summary>子树里是否至少有一个执行节点。</summary>
     private static bool HasExecutable(IReadOnlyList<Flow.NodeSpec> nodes)
     {
@@ -440,11 +458,12 @@ static class FlowRules
         Reject(executable.Tools.Count > 0, "输入节点不启动 run，不能声明 Tools。");
         Reject(executable.Prompt is { Length: > 0 }, "输入节点不启动 run，不能声明 Prompt。");
         Reject(executable.Validate is not null, "输入节点不启动 run，不能声明 Validate。");
-        Reject(executable.AnyOf.Count > 0, "输入节点不启动 run，不能声明 AnyOf。");
+        Reject(node.From.Any(source => source.Or is not null), "输入节点不启动 run，不能声明可选启动组。");
+        Reject(node.From.Any(source => source.Signal), "输入节点不启动 run，不能声明触发信号。");
+        Reject(node.From.Any(source => source.Context), "输入节点不启动 run，不能声明上下文输入。");
         Reject(executable.Mode != Flow.NodeMode.Single, "输入节点只能整节点等待用户输入。");
         Reject(executable.Branch is not null, "输入节点不启动 run，不能声明 Branch。");
         Reject(node.Gate == Flow.NodeGate.Review, "输入节点回答即放行，不能声明 Review 门控。");
-        Reject(node.In is { Count: > 0 }, "输入节点不启动 run，不能声明输入端口绑定。");
         Reject(node.Outputs.Count > 0, "输入节点不启动 run，不能声明输出端口。");
         Reject(node.SystemPrompt.Count > 0, "输入节点不启动 run，不能声明系统指令。");
     }
@@ -545,7 +564,7 @@ static class FlowRules
         }
     }
 
-    /// <summary>AnyOf 与 Validate 的组合约束：两个能力都要求整节点执行，且不与 From、纯静态拆分叠用。</summary>
+    /// <summary>Validate 与 From 条目标记的组合约束：输出校验与可选/信号条目都要求整节点执行，不与纯静态拆分享。</summary>
     private static void CheckExpansion(Flow.NodeSpec node, string flowName, List<Error> errors)
     {
         Flow.ExecutableSpec execution = node.Execution!;
@@ -567,46 +586,9 @@ static class FlowRules
             }
         }
 
-        if (execution.AnyOf.Count == 0)
+        if (execution.Mode == Flow.NodeMode.PerItem && node.From.Any(source => source.Or is not null || source.Signal || source.Context))
         {
-            return;
-        }
-
-        if (execution.Mode == Flow.NodeMode.PerItem)
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "声明 AnyOf 的执行节点不能按条目展开，必须是整节点执行。"));
-        }
-
-        if (execution.IsStaticSplit)
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "纯静态拆分节点不支持 AnyOf。"));
-        }
-
-        // 组间判定以成员顺序为准：任两组完全相同视为重复，组内与组间成员允许重复
-        if (execution.AnyOf.Any(group => group.Count == 0))
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "AnyOf 组不能为空。"));
-        }
-
-        bool duplicated = false;
-        for (int i = 0; i < execution.AnyOf.Count && !duplicated; i++)
-        {
-            for (int j = i + 1; j < execution.AnyOf.Count; j++)
-            {
-                if (execution.AnyOf[i].SequenceEqual(execution.AnyOf[j]))
-                {
-                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "AnyOf 各组必须整体不同。"));
-                    duplicated = true;
-                    break;
-                }
-            }
-        }
-
-        // 来源与 From 不得重叠，组内与跨组重复不影响判定
-        IReadOnlyList<Flow.NodeName> anySources = [.. execution.AnyOf.SelectMany(group => group).Distinct()];
-        foreach (Flow.NodeName source in node.From.Where(anySources.Contains))
-        {
-            errors.Add(FlowErrors.Node(flowName, node.Name.Value, $"节点 {source} 不能同时出现在 From 与 AnyOf。"));
+            errors.Add(FlowErrors.Node(flowName, node.Name.Value, "声明可选启动组、触发信号或上下文输入的执行节点不能按条目展开，必须是整节点执行。"));
         }
     }
 

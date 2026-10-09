@@ -15,7 +15,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
 
-    /// <summary>输入侧消费账本，声明 AnyOf 的节点装配，其余节点为空走原有判定。</summary>
+    /// <summary>输入侧消费账本，有入边的整节点执行节点装配，其余节点为空走原有判定。</summary>
     public NodeInput? Input { get; private set; }
 
     /// <summary>绑定输入消费账本。</summary>
@@ -216,7 +216,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         _awaitingInput = true;
     }
 
-    /// <summary>记下回答并发布产出。环内输入节点复位后可再次回答。</summary>
+    /// <summary>记下回答并发布产出。输入节点复位后可再次回答。</summary>
     public void Answer(string text)
     {
         _awaitingInput = false;
@@ -224,7 +224,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         Publish(null);
     }
 
-    /// <summary>环内输入节点复位：清掉发表位与当前回答，回到可挂起状态。</summary>
+    /// <summary>输入节点复位：清掉发表位与当前回答，回到可挂起状态。</summary>
     public void ResetInput()
     {
         if (!IsInputOutput || _inputAnswer is null)

@@ -63,9 +63,9 @@ public sealed class ExecutionLimitTests
 
     /// <summary>环迭代触发的新来源版本被上限拦截：上限低于自然停止点时，修订不再被审查新版本重启。</summary>
     [Fact]
-    public void AnyOf_loop_stops_restarting_at_limit()
+    public void Or_loop_stops_restarting_at_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfLoopWithLimitFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrLoopWithLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
 
         TaskId id = harness.Submit("补齐 README");
@@ -76,19 +76,20 @@ public sealed class ExecutionLimitTests
         Assert.Single(done.Executables.Single(node => node.Index == 4).Runs);
     }
 
-    /// <summary>同结构无上限时修订按来源版本自然迭代到无新版本为止，作为上限拦截的对照组。</summary>
+    /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证账本环受 MaxRuns 约束。</summary>
     [Fact]
-    public void AnyOf_loop_without_limit_stops_at_natural_revisions()
+    public void Or_loop_iterates_to_max_runs()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfLoopWithoutLimitFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrLoopWithoutLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(node => node.Index == 2).Runs.Count);
-        Assert.Single(done.Executables.Single(node => node.Index == 4).Runs);
+        Assert.Equal(5, done.Executables.Single(node => node.Index == 2).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Index == 3).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Index == 4).Runs.Count);
     }
 
     /// <summary>PerItem 展开后各条目独立计数，一条到上限不影响另一条。</summary>
@@ -144,12 +145,12 @@ public sealed class ExecutionLimitTests
         """;
 
     /// <summary>修订被计划与审查交替驱动，执行满 1 次即达上限，不再被审查新版本重启。</summary>
-    private const string AnyOfLoopWithLimitFlow = """
+    private const string OrLoopWithLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "计划", "Model": "执行者" },
-              { "Name": "修订", "Model": "执行者", "MaxRuns": 1, "AnyOf": [["计划"], ["审查"]] },
+              { "Name": "修订", "Model": "执行者", "MaxRuns": 1, "From": [{ "Node": "计划", "Or": "初始" }, { "Node": "审查", "Or": "返工" }] },
               { "Name": "审查", "Model": "执行者", "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
               { "Name": "交付", "Model": "执行者", "From": ["审查"] }
             ] }
@@ -157,15 +158,15 @@ public sealed class ExecutionLimitTests
         }
         """;
 
-    /// <summary>同结构不设上限的对照组，修订的迭代次数为自然停止点。</summary>
-    private const string AnyOfLoopWithoutLimitFlow = """
+    /// <summary>无环外终止的互驱动环：修订被计划与审查交替驱动，全部节点迭代到显式上限后任务收敛为完成。</summary>
+    private const string OrLoopWithoutLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "计划", "Model": "执行者" },
-              { "Name": "修订", "Model": "执行者", "AnyOf": [["计划"], ["审查"]] },
-              { "Name": "审查", "Model": "执行者", "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "From": ["审查"] }
+              { "Name": "修订", "Model": "执行者", "MaxRuns": 5, "From": [{ "Node": "计划", "Or": "初始" }, { "Node": "审查", "Or": "返工" }] },
+              { "Name": "审查", "Model": "执行者", "MaxRuns": 5, "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Model": "执行者", "MaxRuns": 5, "From": ["审查"] }
             ] }
           ] } ]
         }

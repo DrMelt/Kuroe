@@ -83,11 +83,6 @@ internal static class NodeExpander
                     errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
                 }
 
-                if (node.AnyOf.Count > 0)
-                {
-                    errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 AnyOf，起点条件组只属于执行节点。"));
-                }
-
                 if (node.Validate is not null)
                 {
                     errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
@@ -111,9 +106,9 @@ internal static class NodeExpander
                 errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型选择。"));
             }
 
-            if (node.In is { Count: > 0 } inBindings && inBindings.Keys.Any(key => key != ExecutableNode.ContextInputPort))
+            if (node.In is { Count: > 0 })
             {
-                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点只能绑定隐式 ContextInput 端口。"));
+                errors.Add(FlowErrors.Node(flowName, node.Name.Value, "引用执行节点不写输入端口绑定，ContextInput 用 From 条目的 Context 标记。"));
             }
 
             return new Flow.NodeSpec
@@ -122,15 +117,11 @@ internal static class NodeExpander
                 Gate = definition.Gate,
                 Execution = definition.Execution! with
                 {
-                    AnyOf = node.AnyOf.Count > 0
-                        ? ResolveGroups(node.AnyOf, env, flowName, errors)
-                        : ResolveGroups(definition.Execution.AnyOf, env, flowName, errors),
                     Validate = node.Validate ?? definition.Execution.Validate,
                     MaxRuns = ResolveMaxRuns(node.MaxRuns, definition.Execution.MaxRuns, currentLimit),
                 },
                 Model = ResolveModel(node.Model, env, inInstance, flowName, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, flowName, errors),
-                In = ResolveIn(node.In, env),
                 Outputs = definition.Outputs,
                 SystemPrompt = definition.SystemPrompt,
             };
@@ -157,7 +148,6 @@ internal static class NodeExpander
             Gate = node.Gate,
             Execution = node.Execution! with
             {
-                AnyOf = ResolveGroups(node.Execution.AnyOf, env, flowName, errors),
                 Validate = node.Execution.Validate,
                 MaxRuns = ResolveMaxRuns(node.Execution.MaxRuns, null, currentLimit),
             },
@@ -165,7 +155,6 @@ internal static class NodeExpander
             From = ResolveAll(node.From, env, flowName, errors),
             Outputs = node.Outputs,
             SystemPrompt = node.SystemPrompt,
-            In = ResolveIn(node.In, env),
         };
     }
 
@@ -249,17 +238,20 @@ internal static class NodeExpander
         }
     }
 
-    /// <summary>逐个解析 From 引用：普通名沿映射链找实例名，@端口沿绑定链找绑定。</summary>
-    private static IReadOnlyList<Flow.NodeName> ResolveAll(IReadOnlyList<Flow.NodeName> from, Env? env, string flowName, List<Error> errors) =>
-        [.. from.Select(name => Resolve(name, env, flowName, errors))];
-
-    /// <summary>逐个解析 AnyOf 组：每组内的引用名沿作用域解析，规则同 From。</summary>
-    private static IReadOnlyList<IReadOnlyList<Flow.NodeName>> ResolveGroups(
-        IReadOnlyList<IReadOnlyList<Flow.NodeName>> groups,
+    /// <summary>逐个解析上游接线条目：来源名沿实例映射链与端口绑定链解析，Or 与 Signal 标记保留。</summary>
+    private static IReadOnlyList<Flow.SourceRef> ResolveAll(
+        IReadOnlyList<Flow.SourceRef> from,
         Env? env,
         string flowName,
         List<Error> errors) =>
-        [.. groups.Select(group => ResolveAll(group, env, flowName, errors))];
+        [.. from.Select(source => Resolve(source, env, flowName, errors))];
+
+    /// <summary>解析一条上游接线条目：来源名按引用名规则解析，标记保留。</summary>
+    private static Flow.SourceRef Resolve(Flow.SourceRef source, Env? env, string flowName, List<Error> errors)
+    {
+        Flow.NodeName name = Resolve(source.Name, env, flowName, errors);
+        return source with { Name = name };
+    }
 
     /// <summary>解析一个引用名：@端口沿绑定链找来源，来源@端口 拆来源沿实例映射解析并保留端口，普通名沿环境链找实例映射。
     /// 都没有则保留原名交既有校验判断。</summary>
@@ -330,21 +322,6 @@ internal static class NodeExpander
         return outs.ToDictionary(
             entry => entry.Key,
             entry => Resolve(entry.Value, env, flowName, errors));
-    }
-
-    /// <summary>执行节点的输入绑定：把「ContextInput」键的来源名沿作用域解析成实例名，未声明时为空。</summary>
-    private static Dictionary<Flow.PortName, Flow.NodeName>? ResolveIn(
-        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? inBindings,
-        Env? env)
-    {
-        if (inBindings is not { Count: > 0 })
-        {
-            return null;
-        }
-
-        return inBindings.ToDictionary(
-            entry => entry.Key,
-            entry => ResolveName(entry.Value, env));
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。

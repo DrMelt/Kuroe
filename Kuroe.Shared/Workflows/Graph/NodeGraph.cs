@@ -96,7 +96,7 @@ public sealed class NodeGraph
             .Select(edge => ItemSpace(edge.From))
             .FirstOrDefault(space => space is not null);
 
-    /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环校验与运行时环迭代。</summary>
+    /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环合法性校验。</summary>
     public IReadOnlyList<int[]> Loops()
     {
         ExecutableNode[] executables = [.. ExecutableNodes];
@@ -185,21 +185,12 @@ public sealed class NodeGraph
         return loops;
     }
 
-    /// <summary>带挂点环的成员：环内存在输入节点的真环分量成员。挂点无需环外来源即可启动，一轮由外部回答驱动。</summary>
-    public IReadOnlySet<int> HangingLoopMembers() =>
-        new HashSet<int>(Loops()
-            .Where(members => members.Any(member =>
-                Nodes[member] is ExecutableNode { Execution.Output: NodeOutput.Input }))
-            .SelectMany(members => members));
-
-    /// <summary>任务启动候选：无入边的执行节点与环内输入节点。环内输入节点是挂点，无需环外来源即可启动。</summary>
+    /// <summary>任务启动候选：无入边的执行节点与全部输入节点。输入节点总是起点，不依赖环形态。</summary>
     public IReadOnlyList<ExecutableNode> StartCandidates()
     {
-        IReadOnlySet<int> hangingLoops = HangingLoopMembers();
-
         return [.. ExecutableNodes.Where(node =>
             Incoming(node.Index).Count == 0
-            || (hangingLoops.Contains(node.Index) && node.Execution.Output == NodeOutput.Input))];
+            || node.Execution.Output == NodeOutput.Input)];
     }
 
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>

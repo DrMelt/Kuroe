@@ -47,7 +47,7 @@ internal static class DialogueFlow
                         Output = NodeOutput.Input,
                         Question = "请输入",
                     },
-                    From = [ReplyNodeName],
+                    From = [new SourceRef(ReplyNodeName)],
                 },
                 new NodeSpec
                 {
@@ -59,7 +59,7 @@ internal static class DialogueFlow
                         Prompt = Prompt,
                     },
                     Model = RuntimeModel,
-                    From = [InputNodeName],
+                    From = [new SourceRef(InputNodeName)],
                 },
             ],
         });

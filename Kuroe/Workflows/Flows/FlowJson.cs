@@ -11,6 +11,8 @@ namespace Kuroe.Workflows.Flows;
     AllowTrailingCommas = true,
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(FlowFileDto))]
+[JsonSerializable(typeof(FromEntryDto))]
+[JsonSerializable(typeof(string))]
 internal sealed partial class FlowJson : JsonSerializerContext
 {
     private static readonly Lazy<JsonSerializerOptions> LazyWrite = new(static () => new JsonSerializerOptions

@@ -118,7 +118,7 @@ internal sealed class FlowInfoTool : ITool
 
         if (node.From.Count > 0)
         {
-            parts.Add($"取自 {string.Join("、", node.From)}");
+            parts.Add($"取自 {string.Join("、", node.From.Select(DescribeSource))}");
         }
 
         if (executable.Question is { Length: > 0 })
@@ -134,11 +134,6 @@ internal sealed class FlowInfoTool : ITool
         if (node.SystemPrompt.Count > 0)
         {
             parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
-        }
-
-        if (node.AnyOf.Count > 0)
-        {
-            parts.Add($"任选一组满足 {string.Join(" 或 ", node.AnyOf.Select(group => string.Join("、", group)))}");
         }
 
         if (executable.Split is { } split)
@@ -160,6 +155,22 @@ internal sealed class FlowInfoTool : ITool
         }
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
+    }
+
+    /// <summary>节点的上游接线条目展示：信号条目标「信号」，上下文条目标「上下文」，可选组条目带组名。</summary>
+    private static string DescribeSource(SourceRef source)
+    {
+        if (source.Signal)
+        {
+            return $"信号 {source.Name}";
+        }
+
+        if (source.Context)
+        {
+            return $"上下文 {source.Name}";
+        }
+
+        return source.Or is { } group ? $"{source.Name}（组 {group}）" : source.Name.Value;
     }
 
     /// <summary>递归收集流程里的全部执行节点名。</summary>

@@ -101,7 +101,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>输入节点接在实施节点之后，等上游发布才停驻。</summary>
+    /// <summary>输入节点 From 上游：上游发布提供背景，输入节点提交即停驻等待回答。</summary>
     public const string InputFromUpstreamFlow = """
         {
           "Flows": [
@@ -123,6 +123,26 @@ public static class TestFlows
         }
         """;
 
+    /// <summary>挂点环：收话与回话互引，输入节点每轮回答发布后沿环回绕被消费，复位重挂等下一轮。</summary>
+    public const string InputLoopFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "收话", "Output": "Input", "Question": "请说", "From": ["回话"] },
+                    { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
     /// <summary>声明输出端口的文本节点把命名段交给下游，下游按端口精确消费；不写端口时整份取用。</summary>
     public const string PortFlow = """
         {
@@ -145,7 +165,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>执行节点绑定隐式「ContextInput」输入端口：来源产出置于上下文开头，同时普通 From 照常注入。</summary>
+    /// <summary>执行节点用 From 条目的 Context 标记绑定上下文输入：来源产出置于上下文开头，同时普通数据条目照常注入。</summary>
     public const string ContextInputFlow = """
         {
           "Flows": [
@@ -157,7 +177,7 @@ public static class TestFlows
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "准备", "Output": "Text", "Model": "执行者" },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "准备" }, "From": ["准备"] }
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["准备", { "Node": "准备", "Context": true }] }
                   ]
                 }
               ]

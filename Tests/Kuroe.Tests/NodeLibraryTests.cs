@@ -34,7 +34,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.NotNull(implement.Execution);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
-        Assert.Equal([new NodeName("制定计划")], implement.From);
+        Assert.Equal([new SourceRef(new NodeName("制定计划"))], implement.From);
     }
 
     [Fact]
@@ -89,6 +89,17 @@ public sealed class NodeLibraryTests
         Assert.Contains("\"Models\"", text);
     }
 
+    /// <summary>库容器内成员的上游接线条目必须落在子树或声明端口内，环外成员不可见。</summary>
+    [Fact]
+    public void Member_from_outside_container_scope_is_rejected()
+    {
+        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(MemberFromOutOfScope);
+
+        Assert.True(harness.IsError);
+        Assert.Contains(harness.ErrorsOrEmptyList,
+            error => error.Description.Contains("From 引用的节点 外来 不在容器 实施 的作用域里"));
+    }
+
     [Fact]
     public void Import_rejects_duplicated_flow_names()
     {
@@ -111,7 +122,7 @@ public sealed class NodeLibraryTests
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
         Assert.Equal(new NodeName("交付.里.实施"), implement.Name);
-        Assert.Equal([new NodeName("交付.目标条目")], implement.From);
+        Assert.Equal([new SourceRef(new NodeName("交付.目标条目"))], implement.From);
     }
 
     [Fact]
@@ -123,18 +134,18 @@ public sealed class NodeLibraryTests
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0].Nodes![0];
-        Assert.Equal([new NodeName("制定计划")], implement.From);
+        Assert.Equal([new SourceRef(new NodeName("制定计划"))], implement.From);
     }
 
     [Fact]
-    public void Reference_executable_inherits_library_validate_and_anyof()
+    public void Reference_executable_inherits_library_validate_and_injects_from()
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
 
         FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.TextContains, reviewed.Execution!.Validate!.Predicate);
-        Assert.Equal(new NodeName("计划"), reviewed.Execution.AnyOf.Single()[0]);
+        Assert.Equal(new SourceRef(new NodeName("计划"), "任选"), Assert.Single(reviewed.From));
     }
 
     [Fact]
@@ -165,7 +176,7 @@ public sealed class NodeLibraryTests
     }
 
     [Fact]
-    public void Reference_executable_with_inherited_anyof_releases_done()
+    public void Reference_executable_with_injected_or_group_releases_done()
     {
         using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
@@ -181,15 +192,6 @@ public sealed class NodeLibraryTests
         Assert.Single(done.Executables[1].Runs);
     }
 
-    [Fact]
-    public void Reference_inherited_anyof_conflicts_with_injected_from()
-    {
-        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(ReferenceAnyOfFromConflictFlow);
-
-        Assert.True(harness.IsError);
-        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains("不能同时出现在 From 与 AnyOf"));
-    }
-
     [Theory]
     [InlineData(LibraryDuplicateName, "节点名重复")]
     [InlineData(LibraryReferenceAtRoot, "节点库定义不能是引用")]
@@ -203,7 +205,7 @@ public sealed class NodeLibraryTests
     [InlineData(ReferenceContainerFrom, "引用容器不能声明 From")]
     [InlineData(AssemblyContainerInputs, "端口声明属于节点库容器定义")]
     [InlineData(DuplicateMemberNames, "在容器子树内重复")]
-    [InlineData(LibraryLeafIn, "只能声明隐式 ContextInput 端口")]
+    [InlineData(LibraryLeafIn, "执行节点不写输入端口绑定")]
     [InlineData(ContainerWithFrom, "不支持 From")]
     [InlineData(ReferenceWithInputs, "引用节点不能声明输入端口")]
     [InlineData(LeafWithInputs, "执行节点不能声明输入端口")]
@@ -213,10 +215,11 @@ public sealed class NodeLibraryTests
     [InlineData(MissingModelBinding, "没有外部绑定")]
     [InlineData(ContainerReferenceWithModel, "引用节点组不能声明模型")]
     [InlineData(LeafReferenceWithModelBindings, "引用执行节点不能声明模型绑定")]
-    [InlineData(GroupReferenceWithAnyOf, "引用节点组不能声明 AnyOf")]
+    [InlineData(GroupReferenceWithFrom, "引用容器不能声明 From")]
     [InlineData(GroupReferenceWithValidate, "引用节点组不能声明 Validate")]
-    [InlineData(MemberAnyOfOutsideScope, "AnyOf 引用的节点")]
-    [InlineData(MemberAnyOfUndeclaredPort, "没有在此容器上声明")]
+    [InlineData(MemberFromOutOfScope, "From 引用的节点")]
+    [InlineData(MemberOrOutsideScope, "From 引用的节点")]
+    [InlineData(MemberOrUndeclaredPort, "没有在此容器上声明")]
     [InlineData(LibraryInputWithModel, "不声明模型槽位")]
     [InlineData(LibraryInputWithModels, "不能声明模型绑定")]
     [InlineData(LibraryPortOnInput, "不能声明输出端口与系统指令")]
@@ -267,6 +270,35 @@ public sealed class NodeLibraryTests
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
                 { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划" }, "Models": { "执行者": "执行者" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+    /// <summary>库容器内成员的上游接线条目引用环外节点，装配校验拒绝。</summary>
+    private const string MemberFromOutOfScope = """
+        {
+          "Nodes": [
+            { "Name": "干活库", "Output": "Text" },
+            {
+              "Name": "交付",
+              "Inputs": ["计划"],
+              "Nodes": [
+                { "Name": "实施", "Use": "干活库", "Model": "执行者", "From": [{ "Node": "外来", "Signal": true }] }
+              ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者" } ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "交付组", "Use": "交付", "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -623,15 +655,14 @@ public sealed class NodeLibraryTests
         }
         """;
 
-    /// <summary>库执行定义带校验与 AnyOf 组，流程引用不覆盖时展开后继承。</summary>
-    private const string ReferenceInheritFlow = """"
+    /// <summary>库执行定义带校验，引用处注入可选启动组与数据接线。</summary>
+    private const string ReferenceInheritFlow = """
         {
           "Nodes": [
             {
               "Name": "审查",
               "Mode": "Single",
-              "Validate": { "Predicate": "TextContains", "Argument": "通过" },
-              "AnyOf": [["计划"]]
+              "Validate": { "Predicate": "TextContains", "Argument": "通过" }
             }
           ],
           "Flows": [
@@ -646,14 +677,15 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "计划", "Model": "规划者", "Output": "Plan" },
-                    { "Name": "审查实例", "Use": "审查", "Model": "执行者" }
+                    { "Name": "审查实例", "Use": "审查", "Model": "执行者",
+                      "From": [{ "Node": "计划", "Or": "任选" }] }
                   ]
                 }
               ]
             }
           ]
         }
-        """";
+        """;
 
     /// <summary>引用侧显式声明校验时覆盖库定义。</summary>
     private const string ReferenceOverrideValidateFlow = """"
@@ -687,38 +719,8 @@ public sealed class NodeLibraryTests
         }
         """";
 
-    /// <summary>库定义继承的 AnyOf 与引用侧注入的 From 引用同一来源，按非重叠约束拒绝。</summary>
-    private const string ReferenceAnyOfFromConflictFlow = """"
-        {
-          "Nodes": [
-            {
-              "Name": "审查",
-              "Mode": "Single",
-              "AnyOf": [["计划"]]
-            }
-          ],
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Nodes": [
-                    { "Name": "计划", "Model": "规划者" },
-                    { "Name": "审查实例", "Use": "审查", "Model": "执行者", "From": ["计划"] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """";
-    /// <summary>引用节点组不能带 AnyOf，起点条件组只属于执行节点。</summary>
-    private const string GroupReferenceWithAnyOf = """"
+    /// <summary>引用节点组不能声明 From，接线只属于执行节点。</summary>
+    private const string GroupReferenceWithFrom = """"
         {
           "Nodes": [
             { "Name": "审查", "Mode": "Single" },
@@ -736,7 +738,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "计划", "Model": "执行者" },
-                    { "Name": "引用组", "Use": "组", "AnyOf": [["计划"]] }
+                    { "Name": "引用组", "Use": "组", "From": [{ "Node": "计划", "Or": "任选" }] }
                   ]
                 }
               ]
@@ -744,7 +746,6 @@ public sealed class NodeLibraryTests
           ]
         }
         """";
-
     /// <summary>引用节点组不能带输出校验，校验只属于执行节点。</summary>
     private const string GroupReferenceWithValidate = """"
         {
@@ -773,14 +774,14 @@ public sealed class NodeLibraryTests
         }
         """";
 
-    /// <summary>库容器成员执行节点的 AnyOf 必须落在容器作用域内。</summary>
-    private const string MemberAnyOfOutsideScope = """"
+    /// <summary>库容器成员执行节点的可选组来源必须落在容器作用域内。</summary>
+    private const string MemberOrOutsideScope = """"
         {
           "Nodes": [
             {
               "Name": "交付",
               "Nodes": [
-                { "Name": "甲", "Model": "执行者", "AnyOf": [["局外"]] }
+                { "Name": "甲", "Model": "执行者", "From": [{ "Node": "局外", "Or": "任选" }] }
               ]
             }
           ],
@@ -801,14 +802,14 @@ public sealed class NodeLibraryTests
         }
         """";
 
-    /// <summary>库容器成员执行节点的 AnyOf 端口必须已由容器定义声明。</summary>
-    private const string MemberAnyOfUndeclaredPort = """"
+    /// <summary>库容器成员执行节点的可选组端口必须已由容器定义声明。</summary>
+    private const string MemberOrUndeclaredPort = """"
         {
           "Nodes": [
             {
               "Name": "交付",
               "Nodes": [
-                { "Name": "甲", "Model": "执行者", "AnyOf": [["@计划"]] }
+                { "Name": "甲", "Model": "执行者", "From": [{ "Node": "@计划", "Or": "任选" }] }
               ]
             }
           ],

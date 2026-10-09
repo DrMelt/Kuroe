@@ -91,21 +91,47 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Done, done.State);
     }
 
+    /// <summary>有上游的输入节点提交即停驻等待回答，上游发布后作答放行下游。</summary>
     [Fact]
-    public void Input_node_with_upstream_parks_after_upstream_releases()
+    public void Input_node_with_upstream_answers_after_upstream_releases()
     {
         using KuroeHarness harness = KuroeHarness.Create(TestFlows.InputFromUpstreamFlow);
 
         TaskId id = harness.Submit("目标");
-        TaskSnapshot parked = WaitForInputs(harness, id, 1);
+        _ = harness.Wait(id, snapshot =>
+            harness.Executor.Started.Any(run => run.Context.NodeName.Value == "准备" && run.State == RunState.Succeeded)
+            && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        TaskSnapshot parked = harness.Snapshot(id);
 
         Assert.Equal(TaskState.AwaitingInput, parked.State);
-        Assert.Single(harness.Executor.Started,
-            run => run.Context.NodeName.Value == "准备" && run.State == RunState.Succeeded);
 
         harness.Tasks.Answer(id, "用户输入", "回答").ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
+    }
+
+    /// <summary>挂点环中输入节点每轮回答被反馈复位并重新挂起，回话随每轮发布的新版本重启。</summary>
+    [Fact]
+    public void Input_node_in_loop_resets_and_reparks_each_round()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.InputLoopFlow);
+        harness.Executor.Output = run => $"回复{run.Context.ExecutionCount}";
+
+        TaskId id = harness.Submit("目标");
+        harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+
+        harness.Tasks.Answer(id, "收话", "第一问").ThrowIfError();
+        _ = harness.Wait(id, snapshot =>
+            harness.Executor.Started.Any(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
+            && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+
+        harness.Tasks.Answer(id, "收话", "第二问").ThrowIfError();
+        TaskSnapshot done = harness.Settle(id);
+
+        Assert.Equal(TaskState.AwaitingInput, done.State);
+        Assert.Equal([1, 2], [.. harness.Executor.Started
+            .Where(run => run.Context.NodeName.Value == "回话")
+            .Select(run => run.Context.ExecutionCount)]);
     }
 
     [Fact]

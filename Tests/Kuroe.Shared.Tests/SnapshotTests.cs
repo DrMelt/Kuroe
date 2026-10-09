@@ -108,11 +108,9 @@ public sealed class SnapshotTests
             Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
             Model = Planner,
             From = [],
-            AnyOf = [],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,
-            ContextInput = null,
         },
         new ExecutableNode
         {
@@ -123,11 +121,9 @@ public sealed class SnapshotTests
             Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
             Model = Planner,
             From = [new Dependency(0, null)],
-            AnyOf = [],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,
-            ContextInput = null,
         },
     ], []);
 }

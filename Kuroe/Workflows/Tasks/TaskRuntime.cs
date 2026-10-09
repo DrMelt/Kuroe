@@ -19,17 +19,12 @@ internal sealed class TaskRuntime
 {
     private readonly WorkTask _task;
     private readonly RuntimeNode?[] _nodes;
-    private readonly HashSet<int> _loopMembers;
-    private readonly HashSet<int> _iteratingMembers;
     private bool _taskCanceled;
 
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
         _nodes = new RuntimeNode?[task.Graph.Nodes.Count];
-        _loopMembers = [.. task.Graph.Loops().SelectMany(members => members)];
-        // 含输入节点的环有挂点，一轮由外部回答驱动、一轮后回到挂点停止，成员随来源新版本迭代
-        _iteratingMembers = [.. task.Graph.HangingLoopMembers()];
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
@@ -64,7 +59,7 @@ internal sealed class TaskRuntime
             created.Cancel();
         }
 
-        // 先入表再绑账本，环成员互相引用的来源解析返回已入表对象，不会递归
+        // 先入表再绑账本，来源解析对互引的节点返回已入表对象，不会递归
         _nodes[index] = created;
 
         if (created is RuntimeExecutable executableNode && ShouldBind(executableNode.Executable))
@@ -75,9 +70,12 @@ internal sealed class TaskRuntime
         return created;
     }
 
-    /// <summary>声明 AnyOf 或处在带挂点环的节点装配输入账本：挂点环成员随来源新版本整节点重启，无挂点环不额外账本化。</summary>
+    /// <summary>有入边的 Single 执行节点装配输入消费账本：来源齐备且发布新版本才启动。
+    /// 输入节点不启动 run，无入边节点与 PerItem 执行节点不经账本。</summary>
     private bool ShouldBind(ExecutableNode executable) =>
-        executable.AnyOf.Count > 0 || _iteratingMembers.Contains(executable.Index);
+        executable.Execution.Output != NodeOutput.Input
+        && executable.Execution.Mode != NodeMode.PerItem
+        && Graph.Incoming(executable.Index).Count > 0;
 
     /// <summary>执行节点在快照里的一刻状态，未实例化的执行节点按默认待办报告。</summary>
     public ExecutableStateSnapshot SnapshotState(int index) =>
@@ -162,8 +160,8 @@ internal sealed class TaskRuntime
     private bool ItemSatisfied(RuntimeExecutable node, int? item) =>
         Graph.Incoming(node.Index).All(edge => FeedSatisfied(edge, item));
 
-    /// <summary>执行节点是否还有待启动的实例。Single 执行节点一次执行，PerItem 执行节点按实例逐步启动。
-    /// 账本语义的节点随来源新版本可整节点重启。</summary>
+    /// <summary>执行节点是否还有待启动的实例。账本节点随来源新版本整节点重启，
+    /// 无入边节点发表即终态，PerItem 执行节点按实例逐步启动。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
         if (node.IsInputOutput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
@@ -176,13 +174,14 @@ internal sealed class TaskRuntime
             return (node.Input.Ready || node.RerunRequested) && !AtLimit(node, null);
         }
 
-        if (node.Mode != NodeMode.PerItem)
-        {
-            return !node.Complete(null) && ItemSatisfied(node, null) && !AtLimit(node, null);
-        }
-
-        return ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item));
+        return CanStartWhole(node);
     }
+
+    /// <summary>无账本执行节点的启动判定：PerItem 按实例，整节点未发表则启动。</summary>
+    private bool CanStartWhole(RuntimeExecutable node) =>
+        node.Mode == NodeMode.PerItem
+            ? ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item))
+            : !node.Complete(null) && !AtLimit(node, null);
 
     /// <summary>该执行路径已达执行次数上限，达到后不再启动新 run。</summary>
     private static bool AtLimit(RuntimeExecutable node, int? item) =>
@@ -199,17 +198,9 @@ internal sealed class TaskRuntime
                 starters.Add(new RunStarter(null));
             }
         }
-        else if (node.Mode == NodeMode.PerItem)
+        else
         {
-            foreach (int item in ResolveItems(node)
-                .Where(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item)))
-            {
-                starters.Add(new RunStarter(item));
-            }
-        }
-        else if (!node.Complete(null) && ItemSatisfied(node, null) && !AtLimit(node, null))
-        {
-            starters.Add(new RunStarter(null));
+            starters.AddRange(StartWhole(node));
         }
 
         if (starters.Count > 0)
@@ -221,6 +212,19 @@ internal sealed class TaskRuntime
         }
 
         return starters;
+    }
+
+    /// <summary>无账本执行节点的可启动实例：PerItem 按条目，整节点未发表给一个整节点实例。</summary>
+    private IReadOnlyList<RunStarter> StartWhole(RuntimeExecutable node)
+    {
+        if (node.Mode == NodeMode.PerItem)
+        {
+            return [.. ResolveItems(node)
+                .Where(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item))
+                .Select(item => new RunStarter(item))];
+        }
+
+        return !node.Complete(null) && !AtLimit(node, null) ? [new RunStarter(null)] : [];
     }
 
     /// <summary>一个待启动的实例：条目序可为空（整节点）。</summary>
@@ -260,37 +264,30 @@ internal sealed class TaskRuntime
 
     // ---- 容器推进 ----
 
-    /// <summary>沿着执行节点所在的祖先链刷新容器：成员产出已放行时置齐备位并按门控停留或广播出边，
-    /// 成员停驻或作废时复位齐备份并撤容器等待，不齐备的祖先一并复位。返回本次新齐备容器的出边目标。</summary>
+    /// <summary>沿着执行节点所在的祖先链刷新容器：来源版本账有变化且内容齐备时推进内容版本，
+    /// 按门控停留待批准或广播出边；内容未齐备时撤容器等待。返回内容版本变化的 Auto 容器出边目标。</summary>
     public IReadOnlyList<int> RefreshContainers(int executableIndex)
     {
         List<int> notify = [];
         int nodeIndex = executableIndex;
         while (Graph.ContainerOf(nodeIndex) is { } parent && Ensure(parent.Index) is RuntimeContainer container)
         {
-            if (!container.Released)
+            if (!container.ContentReady)
             {
-                container.ResetProduced();
                 container.ClearAwaiting();
                 nodeIndex = container.Index;
                 continue;
             }
 
+            bool changed = container.PublishIfChanged(SourceRevisions(container.Index));
             if (container.Gate == NodeGate.Review)
             {
-                if (!container.Produced)
+                if (changed)
                 {
-                    container.MarkProduced();
                     container.Park();
                 }
-
-                nodeIndex = container.Index;
-                continue;
             }
-
-            bool first = !container.Produced;
-            container.MarkProduced();
-            if (first)
+            else if (changed)
             {
                 notify.AddRange(Downstream(container));
             }
@@ -299,6 +296,19 @@ internal sealed class TaskRuntime
         }
 
         return notify;
+    }
+
+    /// <summary>容器直接来源的版本快照：直接成员与子容器逐个取运行时版本。</summary>
+    private Dictionary<int, long> SourceRevisions(int containerIndex)
+    {
+        ContainerNode container = (ContainerNode)Graph[containerIndex];
+        Dictionary<int, long> sources = [];
+        foreach (int source in container.Members.Concat(container.SubContainers))
+        {
+            sources[source] = Ensure(source).Revision;
+        }
+
+        return sources;
     }
 
     // ---- 汇总 ----
@@ -571,23 +581,9 @@ internal sealed class TaskRuntime
         ExecutableNode executable = node.Executable;
         if (node.IsInputOutput)
         {
-            if (_loopMembers.Contains(node.Index))
-            {
-                // 环内输入节点是挂点：反馈通知到达时本轮已回答即复位，随后重新挂着等下一轮
-                if (node.Complete(null))
-                {
-                    node.ResetInput();
-                }
-
-                if (!node.Complete(null))
-                {
-                    node.ParkInput();
-                }
-            }
-            else if (!node.Complete(null) && ItemSatisfied(node, null))
-            {
-                node.ParkInput();
-            }
+            // 输入节点每次被激活即复位已答内容并重新挂起等待回答，与来源反馈或启动评估相同
+            node.ResetInput();
+            node.ParkInput();
 
             return new EvaluateResult([], []);
         }
@@ -612,7 +608,7 @@ internal sealed class TaskRuntime
     /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
     public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
 
-    /// <summary>任务启动的第一批，返回前全部实例化：无入边的执行节点与环内输入节点。</summary>
+    /// <summary>任务启动的第一批，返回前全部实例化：无入边的执行节点与全部输入节点。</summary>
     public IReadOnlyList<int> Roots() =>
         [.. Graph.StartCandidates().Select(node => Ensure(node.Index).Index)];
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
@@ -54,11 +55,9 @@ internal sealed class NodeDto
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public List<string>? SystemPrompt { get; set; }
 
-    /// <summary>上下文取自哪些更早节点的产出，引用规则由 FlowRules 校验。</summary>
-    public List<string>? From { get; set; }
-
-    /// <summary>可选启动条件组：From 组必须先齐备，再满足任一组成员齐备才启动，组内成员并取。组间任一。</summary>
-    public List<List<string>>? AnyOf { get; set; }
+    /// <summary>上游接线条目：字符串条目是来源名（可含 @端口），对象条目写 Node、Or、Signal 键。
+    /// 引用规则由 FlowRules 校验。</summary>
+    public List<JsonElement>? From { get; set; }
 
     /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
     public ValidationDto? Validate { get; set; }
@@ -98,6 +97,18 @@ internal sealed class NodeDto
     public SplitDto? Split { get; set; }
 
     public List<NodeDto>? Nodes { get; set; }
+}
+
+/// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。</summary>
+internal sealed class FromEntryDto
+{
+    public string? Node { get; set; }
+
+    public string? Or { get; set; }
+
+    public bool? Signal { get; set; }
+
+    public bool? Context { get; set; }
 }
 
 /// <summary>拆分源的固定配置：静态条目、模型补充上限与统一验收文本。</summary>

@@ -4,7 +4,6 @@ using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Storage;
 using ModelDefinition = Kuroe.Shared.Workflows.Flows.ModelDefinition;
 
@@ -270,13 +269,18 @@ sealed class FlowStore(string file, string baseDirectory)
                 return useErrors;
             }
 
+            ErrorOr<IReadOnlyList<SourceRef>> resolvedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+            if (resolvedFrom.IsError)
+            {
+                return resolvedFrom.ErrorsOrEmptyList;
+            }
+
             return new NodeSpec
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Use = new NodeName(dto.Use),
                 Gate = dto.Gate ?? NodeGate.Auto,
-                From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
-                AnyOf = ToAnyOf(dto.AnyOf),
+                From = resolvedFrom.Value,
                 Validate = declareValidation,
                 MaxRuns = dto.MaxRuns,
                 In = resolvedIn.Value,
@@ -332,11 +336,6 @@ sealed class FlowStore(string file, string baseDirectory)
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
             {
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输出端口与系统指令。"));
-            }
-
-            if (dto.AnyOf is { Count: > 0 })
-            {
-                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 AnyOf。"));
             }
 
             if (dto.Validate is not null)
@@ -397,20 +396,10 @@ sealed class FlowStore(string file, string baseDirectory)
             leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点不能声明容器输出端口，命名输出端口用 Outputs。"));
         }
 
-        if (dto.In is { Count: > 0 } inBindings)
+        if (dto.In is { Count: > 0 })
         {
-            if (inBindings.Keys.Any(key => key != ExecutableNode.ContextInputPort.Value))
-            {
-                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "执行节点的输入端口绑定只能声明隐式 ContextInput 端口。"));
-            }
-            else if (string.IsNullOrWhiteSpace(inBindings[ExecutableNode.ContextInputPort.Value]))
-            {
-                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "ContextInput 端口绑定来源不能为空。"));
-            }
-            else if (inBindings[ExecutableNode.ContextInputPort.Value].StartsWith('@'))
-            {
-                leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "ContextInput 端口绑定来源必须是节点名，不能引用容器端口。"));
-            }
+            leafErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty,
+                "执行节点不写输入端口绑定，ContextInput 用 From 条目的 Context 标记。"));
         }
 
         if (dto.Models is not null)
@@ -446,12 +435,6 @@ sealed class FlowStore(string file, string baseDirectory)
             }
         }
 
-        ErrorOr<Dictionary<PortName, NodeName>?> parsedIn = ToIn(dto.In);
-        if (parsedIn.IsError)
-        {
-            leafErrors.AddRange(parsedIn.ErrorsOrEmptyList);
-        }
-
         List<PortName> outputs = [];
         foreach (string name in dto.Outputs ?? [])
         {
@@ -471,12 +454,17 @@ sealed class FlowStore(string file, string baseDirectory)
             return leafErrors;
         }
 
+        ErrorOr<IReadOnlyList<SourceRef>> parsedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+        if (parsedFrom.IsError)
+        {
+            return parsedFrom.ErrorsOrEmptyList;
+        }
+
         return new NodeSpec
         {
             Name = new NodeName(dto.Name ?? string.Empty),
             Gate = dto.Gate ?? NodeGate.Auto,
-            From = [.. (dto.From ?? []).Select(name => new NodeName(name))],
-            In = parsedIn.Value,
+            From = parsedFrom.Value,
             Model = ToModel(dto.Model),
             Outputs = outputs,
             SystemPrompt = [.. dto.SystemPrompt ?? []],
@@ -489,7 +477,6 @@ sealed class FlowStore(string file, string baseDirectory)
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
                 Split = ToSplit(dto.Split),
-                AnyOf = ToAnyOf(dto.AnyOf),
                 Validate = declaredValidation,
                 MaxRuns = dto.MaxRuns,
             },
@@ -531,15 +518,107 @@ sealed class FlowStore(string file, string baseDirectory)
             ? bindings.ToDictionary(entry => new ModelRef(entry.Key), entry => new ModelRef(entry.Value))
             : null;
 
-    /// <summary>把可选启动条件组装配成模型：每组是节点名，引用沿展开作用域解析。</summary>
-    private static IReadOnlyList<IReadOnlyList<NodeName>> ToAnyOf(List<List<string>>? groups)
+    /// <summary>把上游接线条目装配成模型：字符串条目是来源名，对象条目允许写 Node、Or、Signal、Context 键。
+    /// 字段类型不符记入错误，不抛异常。</summary>
+    private static ErrorOr<IReadOnlyList<SourceRef>> ToFrom(List<JsonElement>? entries, string scope, string nodeName)
     {
-        if (groups is null)
+        if (entries is not { Count: > 0 })
         {
-            return [];
+            return Array.Empty<SourceRef>();
         }
 
-        return [.. groups.Select(group => (IReadOnlyList<NodeName>)[.. group.Select(name => new NodeName(name))])];
+        List<SourceRef> result = [];
+        List<Error> errors = [];
+        foreach (JsonElement entry in entries)
+        {
+            if (entry.ValueKind == JsonValueKind.String)
+            {
+                result.Add(new SourceRef(new NodeName(entry.GetString() ?? string.Empty)));
+                continue;
+            }
+
+            if (entry.ValueKind != JsonValueKind.Object)
+            {
+                errors.Add(FlowErrors.Node(scope, nodeName, "From 条目必须是来源名或带 Node 键的对象。"));
+                continue;
+            }
+
+            string? node = null;
+            string? or = null;
+            bool signal = false;
+            bool context = false;
+            foreach (JsonProperty property in entry.EnumerateObject())
+            {
+                switch (property.Name.ToLowerInvariant())
+                {
+                    case "node":
+                        if (property.Value.ValueKind != JsonValueKind.String)
+                        {
+                            errors.Add(FlowErrors.Node(scope, nodeName, "From 条目的 Node 键必须是来源名。"));
+                        }
+                        else
+                        {
+                            node = property.Value.GetString();
+                        }
+                        break;
+
+                    case "or":
+                        if (property.Value.ValueKind != JsonValueKind.String)
+                        {
+                            errors.Add(FlowErrors.Node(scope, nodeName, "From 条目的 Or 键必须是组名。"));
+                        }
+                        else
+                        {
+                            or = property.Value.GetString();
+                        }
+                        break;
+
+                    case "signal":
+                        if (property.Value.ValueKind != JsonValueKind.True && property.Value.ValueKind != JsonValueKind.False)
+                        {
+                            errors.Add(FlowErrors.Node(scope, nodeName, "From 条目的 Signal 键必须是布尔值。"));
+                        }
+                        else
+                        {
+                            signal = property.Value.GetBoolean();
+                        }
+                        break;
+
+                    case "context":
+                        if (property.Value.ValueKind != JsonValueKind.True && property.Value.ValueKind != JsonValueKind.False)
+                        {
+                            errors.Add(FlowErrors.Node(scope, nodeName, "From 条目的 Context 键必须是布尔值。"));
+                        }
+                        else
+                        {
+                            context = property.Value.GetBoolean();
+                        }
+                        break;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(node))
+            {
+                errors.Add(FlowErrors.Node(scope, nodeName, "From 对象条目必须写 Node 键提供来源名。"));
+                continue;
+            }
+
+            if (context && node.StartsWith('@'))
+            {
+                errors.Add(FlowErrors.Node(scope, nodeName, "Context 条目来源必须写节点名或 来源@端口，不能引用绑定端口。"));
+                continue;
+            }
+
+            if ((or is not null ? 1 : 0) + (signal ? 1 : 0) + (context ? 1 : 0) > 1)
+            {
+                errors.Add(FlowErrors.Node(scope, nodeName, "From 条目不能同时写 Or、Signal、Context。"));
+                continue;
+            }
+
+            result.Add(new SourceRef(new NodeName(node), or, signal, context));
+        }
+
+        return errors.Count > 0 ? errors : result;
     }
 
     /// <summary>把谓词名按名字匹配枚举，只接受白名单名字，数字字面量在装配时拒绝。</summary>
@@ -595,8 +674,7 @@ sealed class FlowStore(string file, string baseDirectory)
             Name = node.Name.Value,
             Use = node.Use?.Value,
             Gate = node.Gate,
-            From = node.From.Count == 0 ? null : [.. node.From.Select(name => name.Value)],
-            AnyOf = ToAnyOfDto(node.AnyOf),
+            From = node.From.Count == 0 ? null : [.. node.From.Select(ToFromDto)],
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
@@ -627,7 +705,6 @@ sealed class FlowStore(string file, string baseDirectory)
             dto.Output = execution.Output;
             dto.Mode = execution.Mode.ToString();
             dto.Branch = execution.Branch?.Value;
-            dto.AnyOf = ToAnyOfDto(execution.AnyOf);
             dto.Validate = ToValidationDto(execution.Validate);
             dto.MaxRuns = execution.MaxRuns;
             dto.Split = execution.Split is { } split ? new SplitDto
@@ -647,9 +724,22 @@ sealed class FlowStore(string file, string baseDirectory)
         return dto;
     }
 
-    /// <summary>把模型层的可选启动条件组转回文件形状。</summary>
-    private static List<List<string>>? ToAnyOfDto(IReadOnlyList<IReadOnlyList<NodeName>> groups) =>
-        groups.Count == 0 ? null : [.. groups.Select(group => group.Select(name => name.Value).ToList())];
+    /// <summary>把一条上游接线条目转回文件形状：无标记条目按来源名写字符串，带标记条目写对象。</summary>
+    private static JsonElement ToFromDto(SourceRef source)
+    {
+        if (source.Or is null && !source.Signal && !source.Context)
+        {
+            return JsonSerializer.SerializeToElement(source.Name.Value, FlowJson.Default.String);
+        }
+
+        return JsonSerializer.SerializeToElement(new FromEntryDto
+        {
+            Node = source.Name.Value,
+            Or = source.Or,
+            Signal = source.Signal ? true : null,
+            Context = source.Context ? true : null,
+        }, FlowJson.Default.FromEntryDto);
+    }
 
     /// <summary>把模型层的输出校验转回文件形状。</summary>
     private static ValidationDto? ToValidationDto(OutputValidation? validation) =>

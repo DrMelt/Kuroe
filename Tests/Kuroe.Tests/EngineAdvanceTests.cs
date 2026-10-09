@@ -27,12 +27,12 @@ public sealed class EngineAdvanceTests
         Assert.Equal(TaskState.Done, harness.Settle(id).State);
     }
 
-    /// <summary>AnyOf 组内重复来源的汇合：某来源先发布拉起汇合 run，另一来源随后发布的通知
+    /// <summary>可选组重复来源的汇合：某来源先发布拉起汇合 run，另一来源随后发布的通知
     /// 因活跃屏障丢失时，汇合 run 收口后必须补评估重新启动，否则任务停在运行态。</summary>
     [Fact]
-    public void AnyOf_repeats_advance_past_interleaved_source_release()
+    public void Or_groups_advance_past_interleaved_source_release()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfRepeatsFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrRepeatsFlow);
         harness.Executor.DelayMs = 30;
 
         for (int i = 0; i < 10; i++)
@@ -69,13 +69,13 @@ public sealed class EngineAdvanceTests
         }
         """;
 
-    /// <summary>AnyOf 组内与组间重复引用来源：甲独占一组并组内重复，甲与乙组成的另一组跨组共享甲。</summary>
-    private const string AnyOfRepeatsFlow = """
+    /// <summary>可选组来源重复：甲独占的单组与甲、乙组成的另一组跨组共享甲。</summary>
+    private const string OrRepeatsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "甲", "Model": "执行者" },
             { "Name": "乙", "Model": "执行者" },
-            { "Name": "汇合", "Model": "执行者", "AnyOf": [["甲", "甲"], ["甲", "乙"]] }
+            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "单独" }, { "Node": "甲", "Or": "双组" }, { "Node": "乙", "Or": "双组" }] }
           ] }
         ] } ] }
         """;

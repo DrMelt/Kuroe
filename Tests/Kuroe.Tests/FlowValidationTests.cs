@@ -50,10 +50,10 @@ public sealed class FlowValidationTests
     [InlineData(InputWithModel, "不能声明模型选择")]
     [InlineData(InputPerItem, "只能整节点等待用户输入")]
     [InlineData(InputWithBranch, "不能声明 Branch")]
-    [InlineData(InputWithAnyOf, "不能声明 AnyOf")]
+    [InlineData(InputWithOrGroup, "不能声明可选启动组")]
     [InlineData(InputWithValidate, "不能声明 Validate")]
     [InlineData(InputGateReview, "不能声明 Review 门控")]
-    [InlineData(InputWithIn, "输入节点不启动 run，不能声明输入端口绑定。")]
+    [InlineData(InputWithIn, "执行节点不写输入端口绑定")]
     [InlineData(InputWithSplit, "Split 只能写在规划节点上")]
     [InlineData(QuestionOnImplement, "Question 只属于输入节点")]
     [InlineData(PortRefMissing, "没有输出端口")]
@@ -67,12 +67,24 @@ public sealed class FlowValidationTests
     [InlineData(ContainerOutPortMissing, "容器 交付 没有输出端口")]
     [InlineData(ContainerOutCrossContainer, "不能从容器外直接引用容器内成员")]
     [InlineData(FromInputContext, "不能作为上下文端口来源")]
-    [InlineData(ContextInputWithExtraKey, "只能声明隐式 ContextInput 端口")]
-    [InlineData(ContextInputFromInput, "ContextInput 端口绑定来源")]
-    [InlineData(ContextInputFromPerItem, "不能是按条目展开")]
+    [InlineData(ExecutionWithIn, "执行节点不写输入端口绑定")]
+    [InlineData(ContextFromInput, "不能是输入节点")]
+    [InlineData(ContextFromPerItem, "不能是按条目展开")]
     [InlineData(PortDuplicate, "输出端口 结论 重复")]
     [InlineData(ReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
     [InlineData(NodeNameWithAt, "节点名不能含 @")]
+    [InlineData(ContainerSignal, "不支持 From")]
+    [InlineData(InputWithSignal, "不能声明触发信号")]
+    [InlineData(PerItemWithSignal, "可选启动组、触发信号")]
+    [InlineData(SignalSourceMissing, "不在流程里")]
+    [InlineData(SplitStaticSignal, "纯静态拆分节点不支持 From")]
+    [InlineData(ContextWithSignal, "不能同时写 Or、Signal、Context")]
+    [InlineData(ContextWithOr, "不能同时写 Or、Signal、Context")]
+    [InlineData(ContextSourceContainer, "必须是非输入执行节点")]
+    [InlineData(ContextSourceBindingPort, "不能引用绑定端口")]
+    [InlineData(LibraryLeafFrom, "不能写 From")]
+    [InlineData(ReferenceContainerFrom, "引用容器不能声明 From")]
+    [InlineData(DuplicateFrom, "出现多次")]
     public void Invalid_flow_fails_setup(string flowsJson, string expected)
     {
         ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
@@ -263,6 +275,73 @@ public sealed class FlowValidationTests
             { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
           ] }
         ] } ] }
+        """;
+
+    private const string ContainerSignal = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Nodes": [
+          { "Name": "容器", "From": [{ "Node": "规划", "Signal": true }], "Nodes": [ { "Name": "规划", "Model": "规划者", "Output": "Plan" } ] }
+        ] } ] }
+        """;
+
+    private const string InputWithSignal = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "准备", "Model": "执行者" },
+            { "Name": "收集", "Output": "Input", "From": [{ "Node": "准备", "Signal": true }] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string PerItemWithSignal = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
+            { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": [{ "Node": "制定计划", "Signal": true }] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string SignalSourceMissing = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "触发", "Model": "执行者", "From": [{ "Node": "不存在", "Signal": true }] }
+        ] } ] }
+        """;
+
+    private const string DuplicateFrom = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "来源", "Model": "执行者" },
+            { "Name": "接收", "Model": "执行者", "From": ["来源", "来源"] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string SplitStaticSignal = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "拆分", "Model": "执行者", "Output": "Plan", "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] }, "From": [{ "Node": "来源", "Signal": true }] }
+          ] }
+        ] } ] }
+        """;
+
+    private const string LibraryLeafFrom = """
+        {
+          "Nodes": [ { "Name": "干活库", "Output": "Text", "From": [{ "Node": "任务", "Signal": true }] } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+            { "Name": "干活", "Use": "干活库", "Model": "执行者" }
+          ] } ]
+        }
+        """;
+
+    private const string ReferenceContainerFrom = """
+        {
+          "Nodes": [ { "Name": "组", "Nodes": [ { "Name": "做", "Model": "执行者" } ] } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "组实例", "Use": "组", "From": [{ "Node": "做", "Signal": true }] }
+            ] }
+          ] } ]
+        }
         """;
 
     private const string SingleFunnelFlow = """
@@ -508,10 +587,10 @@ public sealed class FlowValidationTests
         ] } ] }
         """;
 
-    private const string InputWithAnyOf = """
+    private const string InputWithOrGroup = """
         { "Flows": [ { "Name": "默认", "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "收集", "Output": "Input", "AnyOf": [["来源"]] }
+            { "Name": "收集", "Output": "Input", "From": [{ "Node": "来源", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
@@ -669,33 +748,73 @@ public sealed class FlowValidationTests
         ] } ] }
         """;
 
-    /// <summary>上下文输入端口绑定之外的键，装配校验拒绝。</summary>
-    private const string ContextInputWithExtraKey = """
+    /// <summary>执行节点声明输入端口绑定，装配校验拒绝。</summary>
+    private const string ExecutionWithIn = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "准备", "Output": "Text", "Model": "执行者" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "准备", "其它": "准备" } }
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "准备" } }
           ] }
         ] } ] }
         """;
 
-    /// <summary>上下文输入端口绑定输入节点，装配校验拒绝。</summary>
-    private const string ContextInputFromInput = """
+    /// <summary>Context 条目来源是输入节点，装配校验拒绝。</summary>
+    private const string ContextFromInput = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "用户输入", "Output": "Input" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "用户输入" } }
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "用户输入", "Context": true } ] }
           ] }
         ] } ] }
         """;
 
-    /// <summary>上下文输入端口绑定按条目展开的节点，装配校验拒绝。</summary>
-    private const string ContextInputFromPerItem = """
+    /// <summary>Context 条目来源是按条目展开的节点，装配校验拒绝。</summary>
+    private const string ContextFromPerItem = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "制定", "Output": "Plan", "Model": "执行者" },
             { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定"] },
-            { "Name": "汇报", "Output": "Text", "Model": "执行者", "In": { "ContextInput": "实施" } }
+            { "Name": "汇报", "Output": "Text", "Model": "执行者", "From": [ { "Node": "实施", "Context": true } ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>Context 条目与 Signal 并存，装配校验拒绝。</summary>
+    private const string ContextWithSignal = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "准备", "Output": "Text", "Model": "执行者" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备", "Context": true, "Signal": true } ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>Context 条目与可选组并存，装配校验拒绝。</summary>
+    private const string ContextWithOr = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "准备", "Output": "Text", "Model": "执行者" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备", "Context": true, "Or": "组" } ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>Context 条目来源是容器，装配校验拒绝。</summary>
+    private const string ContextSourceContainer = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "箱子", "Nodes": [ { "Name": "干活", "Output": "Text", "Model": "执行者" } ] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "箱子", "Context": true } ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>Context 条目来源写绑定端口引用，装配校验拒绝。</summary>
+    private const string ContextSourceBindingPort = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "准备", "Output": "Text", "Model": "执行者" },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "@输入", "Context": true } ] }
           ] }
         ] } ] }
         """;

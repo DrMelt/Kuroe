@@ -119,9 +119,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_node_stays_gated_until_source_releases_new_version()
+    public void Or_group_stays_gated_until_source_releases_new_version()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfFreshGateFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrFreshGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "计划产出",
@@ -145,9 +145,7 @@ public sealed class ValidationAdvanceTests
     [InlineData(BadPredicate, "Validate.Predicate 应为")]
     [InlineData(BadPattern, "正则不合法")]
     [InlineData(ValidateOnPerItem, "不能按条目展开")]
-    [InlineData(AnyOfMissingNode, "不在流程里")]
-    [InlineData(AnyOfEmptyGroup, "组不能为空")]
-    [InlineData(AnyOfDuplicateGroup, "各组必须整体不同")]
+    [InlineData(OrMissingNode, "不在流程里")]
     [InlineData(NumericPredicate, "Validate.Predicate 应为")]
     [InlineData(NonEmptyWithArgument, "不接受参数")]
     [InlineData(TextAssertMissingArgument, "需要指定文本参数")]
@@ -160,9 +158,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_repeats_within_and_across_groups_are_allowed()
+    public void Or_repeats_within_and_across_groups_are_allowed()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfRepeatsFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrRepeatsFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "甲产出",
@@ -178,9 +176,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_reordered_groups_are_distinct()
+    public void Or_reordered_groups_are_distinct()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfReorderedFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrReorderedFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "甲产出",
@@ -196,9 +194,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_from_must_be_ready_before_any_group_starts()
+    public void Or_from_must_be_ready_before_any_group_starts()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfFromGateFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrFromGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "甲产出",
@@ -214,9 +212,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_container_source_waits_and_resumes_with_revision()
+    public void Or_container_source_waits_and_resumes_with_revision()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerAnyOfGateFlow);
+        using KuroeHarness harness = KuroeHarness.Create(ContainerOrGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
@@ -239,9 +237,9 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void AnyOf_loop_restarts_writer_on_reviewer_new_version()
+    public void Or_loop_restarts_writer_on_reviewer_new_version()
     {
-        using KuroeHarness harness = KuroeHarness.Create(AnyOfLoopFlow);
+        using KuroeHarness harness = KuroeHarness.Create(OrLoopFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "计划产出",
@@ -345,95 +343,78 @@ public sealed class ValidationAdvanceTests
         ] } ] }
         """";
 
-    private const string AnyOfMissingNode = """"
+    private const string OrMissingNode = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "计划", "Model": "执行者" },
-            { "Name": "修订", "Model": "执行者", "AnyOf": [["不存在的节点"]] }
+            { "Name": "修订", "Model": "执行者", "From": [{ "Node": "不存在的节点", "Or": "任选" }] }
           ] }
         ] } ] }
         """";
 
-    private const string AnyOfEmptyGroup = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者" },
-            { "Name": "修订", "Model": "执行者", "AnyOf": [[]] }
-          ] }
-        ] } ] }
-        """;
-
-    private const string AnyOfDuplicateGroup = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者" },
-            { "Name": "修订", "Model": "执行者", "AnyOf": [["计划", "修订"], ["计划", "修订"]] }
-          ] }
-        ] } ] }
-        """;
-
     /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>
-    private const string AnyOfFromGateFlow = """
+    private const string OrFromGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "甲", "Model": "执行者", "From": ["乙"] },
             { "Name": "乙", "Model": "执行者" },
-            { "Name": "汇合", "Model": "执行者", "From": ["甲"], "AnyOf": [["乙"]] }
+            { "Name": "汇合", "Model": "执行者", "From": ["甲", { "Node": "乙", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
 
-    private const string AnyOfFreshGateFlow = """
+    private const string OrFreshGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "计划", "Model": "执行者" },
             { "Name": "修订", "Model": "执行者", "From": ["计划"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-            { "Name": "汇合", "Model": "执行者", "AnyOf": [["修订"]] }
+            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "修订", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
 
-    /// <summary>组内与组间允许重复引用来源：甲独占一组并组内重复，甲与乙组成的另一组跨组共享甲。</summary>
-    private const string AnyOfRepeatsFlow = """
+    /// <summary>组内与组间允许来源重复：甲独占的单组与甲、乙组成的另一组跨组共享甲。</summary>
+    private const string OrRepeatsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "甲", "Model": "执行者" },
             { "Name": "乙", "Model": "执行者" },
-            { "Name": "汇合", "Model": "执行者", "AnyOf": [["甲", "甲"], ["甲", "乙"]] }
+            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "单独" }, { "Node": "甲", "Or": "双组" }, { "Node": "乙", "Or": "双组" }] }
           ] }
         ] } ] }
         """;
 
-    /// <summary>成员顺序不同的组是不同组，可同时声明。</summary>
-    private const string AnyOfReorderedFlow = """
+    /// <summary>开关按组名独立：甲、乙与乙、甲作为两个可选组可同时声明。</summary>
+    private const string OrReorderedFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "甲", "Model": "执行者" },
             { "Name": "乙", "Model": "执行者" },
-            { "Name": "汇合", "Model": "执行者", "AnyOf": [["甲", "乙"], ["乙", "甲"]] }
+            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "ab" }, { "Node": "乙", "Or": "ab" }, { "Node": "乙", "Or": "ba" }, { "Node": "甲", "Or": "ba" }] }
           ] }
         ] } ] }
         """;
 
-    /// <summary>容器作 AnyOf 来源：成员阻塞时容器不可用，成员恢复齐备后按容器代数驱动启动。</summary>
-    private const string ContainerAnyOfGateFlow = """
+    /// <summary>容器作可选组来源：成员阻塞时容器不可用，成员恢复齐备后按容器代数驱动启动。</summary>
+    private const string ContainerOrGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "汇聚", "Nodes": [
               { "Name": "甲", "Model": "执行者", "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] },
-            { "Name": "闸门", "Model": "执行者", "AnyOf": [["汇聚"]] }
+            { "Name": "闸门", "Model": "执行者", "From": [{ "Node": "汇聚", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
-    /// <summary>允许的环：修订被计划驱动，审查按修订产出复核，返工后审查放行又驱动修订重写，交付取审查放行后的定稿。</summary>
-    private const string AnyOfLoopFlow = """"
+    /// <summary>允许的环：修订被计划驱动，审查按修订产出复核，返工后审查放行又驱动修订重写，交付取审查放行后的定稿。
+    /// 审查以 MaxRuns 封顶，避免放行后修订互驱无限迭代。</summary>
+    private const string OrLoopFlow = """"
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "计划", "Model": "执行者" },
-              { "Name": "修订", "Model": "执行者", "AnyOf": [["计划"], ["审查"]] },
-              { "Name": "审查", "Model": "执行者", "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "修订", "Model": "执行者", "From": [{ "Node": "计划", "Or": "初始" }, { "Node": "审查", "Or": "返工" }] },
+              { "Name": "审查", "Model": "执行者", "MaxRuns": 2, "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
               { "Name": "交付", "Model": "执行者", "From": ["审查"] }
             ] }
           ] } ]
