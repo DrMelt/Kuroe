@@ -21,4 +21,8 @@ static class FlowErrors
     /// <summary>没有该名称的流程模板。</summary>
     public static Error FlowNotFound(string name) =>
         Error.NotFound(ErrorCodes.FlowNotFound, $"没有名为 {name} 的流程。");
+
+    /// <summary>导入的文件不能独立装配。</summary>
+    public static Error ImportStandalone() =>
+        Error.Validation(ErrorCodes.FlowImport, "导入的文件必须能独立装配：流程引用的节点库定义要写在同一文件里。");
 }

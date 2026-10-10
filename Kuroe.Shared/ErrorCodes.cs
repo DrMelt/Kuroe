@@ -34,6 +34,9 @@ public static class ErrorCodes
     /// <summary>命令里的文件参数无法解析为路径。</summary>
     public const string FlowInvalidPath = "Flow.InvalidPath";
 
+    /// <summary>导入的文件按自身装配失败。</summary>
+    public const string FlowImport = "Flow.Import";
+
     /// <summary>命令工具文件无法读取。</summary>
     public const string ToolRead = "Tool.Read";
 

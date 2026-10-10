@@ -61,7 +61,7 @@ public sealed class FlowService
     /// <summary>提交任务未指定流程时用的那条流程。</summary>
     public ErrorOr<FlowDefinition> Default() => Find(DefaultName);
 
-    /// <summary>从文件导入流程：节点库按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
+    /// <summary>从文件导入流程：导入的文件要能独立装配；节点库按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
     public ErrorOr<FlowImport> Import(string source)
     {
         ErrorOr<string> resolved = _store.Resolve(source);
@@ -70,15 +70,23 @@ public sealed class FlowService
             return resolved.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> incoming = FlowAssembler.Read(resolved.Value);
-        if (incoming.IsError)
+        ErrorOr<FlowFile> read = FlowAssembler.Read(resolved.Value);
+        if (read.IsError)
         {
-            return incoming.ErrorsOrEmptyList;
+            return read.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<AssembledFlows> standalone = FlowAssembler.Assemble(read.Value);
+        if (standalone.IsError)
+        {
+            List<Error> errors = [.. standalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
+
+            return errors;
         }
 
         FlowFile merged = new(
-            MergeLibrary(_source.Nodes, incoming.Value.Source.Nodes),
-            MergeFlows(_source.Flows, incoming.Value.Source.Flows));
+            MergeLibrary(_source.Nodes, read.Value.Nodes),
+            MergeFlows(_source.Flows, read.Value.Flows));
 
         ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(merged);
         if (assembled.IsError)
@@ -90,10 +98,10 @@ public sealed class FlowService
         {
             List<string> notes =
             [
-                .. incoming.Value.Source.Flows.Select(flow => merged.Flows.Any(candidate => candidate.Name == flow.Name)
+                .. read.Value.Flows.Select(flow => _source.Flows.Any(candidate => candidate.Name == flow.Name)
                     ? $"覆盖流程 {flow.Name}"
                     : $"新增流程 {flow.Name}"),
-                .. incoming.Value.Source.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
+                .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
             ErrorOr<Success> saved = FlowAssembler.Save(_store, merged);
@@ -105,7 +113,7 @@ public sealed class FlowService
             _source = merged;
             _flows = [.. assembled.Value.Expanded];
 
-            return new FlowImport(resolved.Value, [.. incoming.Value.Source.Flows.Select(flow => flow.Name)], notes);
+            return new FlowImport(resolved.Value, [.. read.Value.Flows.Select(flow => flow.Name)], notes);
         }
     }
 

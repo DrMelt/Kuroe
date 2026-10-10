@@ -5,6 +5,7 @@ using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
+using Kuroe.Workflows.FlowAssembly;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -110,6 +111,66 @@ public sealed class NodeLibraryTests
 
         Assert.True(imported.IsError);
         Assert.Contains(imported.ErrorsOrEmptyList, error => error.Description.Contains("流程名重复"));
+    }
+
+    /// <summary>库执行定义的次数上限非正，未经引用也在库校验阶段拒绝。</summary>
+    [Fact]
+    public void Library_executable_with_non_positive_max_runs_is_rejected() =>
+        Assert.Equal(
+            ["流程 节点库 的节点 干活库：MaxRuns 必须是正整数。"],
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Execution = new ExecutableSpec { MaxRuns = 0 } }));
+
+    /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
+    [Fact]
+    public void Library_container_with_non_positive_max_runs_is_rejected() =>
+        Assert.Equal(
+            ["流程 节点库 的节点 干活组：MaxRuns 必须是正整数。"],
+            LibraryErrors(new NodeSpec
+            {
+                Name = new NodeName("干活组"),
+                MaxRuns = 0,
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+            }));
+
+    /// <summary>导入的文件要能独立装配：流程引用的节点库定义不在同一文件里时不生效。</summary>
+    [Fact]
+    public void Import_rejects_flow_referencing_library_node_outside_the_file()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(LibraryFlow);
+        File.WriteAllText(Path.Combine(harness.Root, "reuse.json"), LibraryReferenceOnlyFlow);
+
+        ErrorOr<FlowImport> imported = harness.Flows.Import("reuse.json");
+
+        Assert.Equal(
+            [
+                "流程 复用 的节点 干活：引用的节点 执行 不在节点库。",
+                "导入的文件必须能独立装配：流程引用的节点库定义要写在同一文件里。",
+            ],
+            imported.ErrorsOrEmptyList.Select(error => error.Description));
+    }
+
+    /// <summary>导入新名字的流程时逐条说明新增。</summary>
+    [Fact]
+    public void Import_reports_new_flow()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), ExtraFlow);
+
+        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+
+        Assert.Equal(["新增流程 额外"], imported.Notes);
+    }
+
+    /// <summary>导入与现有流程同名的流程时逐条说明覆盖。</summary>
+    [Fact]
+    public void Import_reports_overwritten_flow()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), OverwritingFlow);
+
+        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+
+        Assert.Equal(["覆盖流程 默认"], imported.Notes);
     }
 
     [Fact]
@@ -611,6 +672,39 @@ public sealed class NodeLibraryTests
         ] }
         """;
 
+    /// <summary>只写流程，引用的节点库定义不在文件里，按文件自身装配会报缺定义。</summary>
+    private const string LibraryReferenceOnlyFlow = """
+        { "Flows": [
+          { "Name": "复用", "Models": [{ "Name": "执行者" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "干活", "Use": "执行", "Model": "执行者" }
+            ] }
+          ] }
+        ] }
+        """;
+
+    /// <summary>一条新名字的流程，可独立装配。</summary>
+    private const string ExtraFlow = """
+        { "Flows": [
+          { "Name": "额外", "Models": [{ "Name": "执行者" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "干活", "Model": "执行者" }
+            ] }
+          ] }
+        ] }
+        """;
+
+    /// <summary>一条与默认流程同名的流程，可独立装配。</summary>
+    private const string OverwritingFlow = """
+        { "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+            { "Name": "整体", "Nodes": [
+              { "Name": "干活", "Model": "执行者" }
+            ] }
+          ] }
+        ] }
+        """;
+
     private const string MemberNameBindingFlow = """
         {
           "Nodes": [
@@ -1023,4 +1117,8 @@ public sealed class NodeLibraryTests
           { "Name": "整体", "Out": { "结论": "实施@不存在" }, "Nodes": [ { "Name": "实施", "Output": "Text", "Model": "执行者" } ] }
         ] } ] }
         """;
+
+    /// <summary>校验节点库，取错误说明。</summary>
+    private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library) =>
+        [.. NodeLibraryRules.Validate(library).ErrorsOrEmptyList.Select(error => error.Description)];
 }

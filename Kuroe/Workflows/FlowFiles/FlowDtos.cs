@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.FlowFiles;
@@ -99,15 +100,19 @@ internal sealed class NodeDto
     public List<NodeDto>? Nodes { get; set; }
 }
 
-/// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。</summary>
+/// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。
+/// 未用的标记不写，回读时缺键即视为未提供。</summary>
 internal sealed class FromEntryDto
 {
     public string? Node { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Or { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Signal { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Context { get; set; }
 }
 

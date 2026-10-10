@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace Kuroe.Workflows.FlowFiles;
 
-/// <summary>流程文件的 JSON 绑定。读法由源生成固定，写侧只改缩进与转义。</summary>
+/// <summary>流程文件的 JSON 绑定。读法由源生成固定，本上下文的写侧选项只改缩进与转义，
+/// 字段是否写出由 DTO 上的特性决定。</summary>
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip,

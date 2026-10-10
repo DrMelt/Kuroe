@@ -28,12 +28,12 @@ static class FlowAssembler
         return loaded.Value is null ? Assemble(DefaultFlows.Builtin) : Assemble(loaded.Value);
     }
 
-    /// <summary>从指定文件读取并装配模板集合，供导入使用。</summary>
-    public static ErrorOr<AssembledFlows> Read(string path)
+    /// <summary>从指定文件读取流程内容，供导入使用。</summary>
+    public static ErrorOr<FlowFile> Read(string path)
     {
         ErrorOr<FlowFileDto> read = FlowStore.ReadDto(path);
 
-        return read.IsError ? read.ErrorsOrEmptyList : Assemble(read.Value);
+        return read.IsError ? read.ErrorsOrEmptyList : ToFile(read.Value);
     }
 
     /// <summary>把模板集合写回流程文件。</summary>
@@ -47,7 +47,7 @@ static class FlowAssembler
         return file.IsError ? file.ErrorsOrEmptyList : Assemble(file.Value);
     }
 
-    /// <summary>校验并展开模型内容：节点库与各条流程的错误一次给全，流程名重复一并报出。</summary>
+    /// <summary>校验并展开模型内容：节点库合法时逐流程展开，错误一次给全，流程名重复一并报出。</summary>
     public static ErrorOr<AssembledFlows> Assemble(FlowFile file)
     {
         List<Error> errors = Validate(file, out List<FlowDefinition> expanded);
@@ -59,7 +59,7 @@ static class FlowAssembler
         return errors.Count > 0 ? errors : new AssembledFlows(file, expanded);
     }
 
-    /// <summary>校验节点库并逐流程展开校验，合法流程经 valid 交回，返回值是全部错误。</summary>
+    /// <summary>校验节点库，合法时逐流程展开校验。节点库不合法时只给节点库错误，合法流程经 valid 交回。</summary>
     private static List<Error> Validate(FlowFile file, out List<FlowDefinition> valid)
     {
         List<Error> errors = [];
