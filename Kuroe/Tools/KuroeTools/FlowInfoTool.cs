@@ -91,7 +91,7 @@ internal sealed class FlowInfoTool : ITool
                 text.AppendLine($"  {Indent(depth)}{node.Name.Value}（容器）· 放行 {InfoLabels.Of(node.Gate)}");
                 if (node.Out is { Count: > 0 } outs)
                 {
-                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => $"{entry.Key.Value} ← {entry.Value.Value}"))}");
+                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => $"{entry.Key.Value} ← {entry.Value.Display}"))}");
                 }
             }
         }
@@ -162,15 +162,15 @@ internal sealed class FlowInfoTool : ITool
     {
         if (source.Signal)
         {
-            return $"信号 {source.Name}";
+            return $"信号 {source.Ref.Display}";
         }
 
         if (source.Context)
         {
-            return $"上下文 {source.Name}";
+            return $"上下文 {source.Ref.Display}";
         }
 
-        return source.Or is { } group ? $"{source.Name}（组 {group}）" : source.Name.Value;
+        return source.Or is { } group ? $"{source.Ref.Display}（组 {group}）" : source.Ref.Display;
     }
 
     /// <summary>递归收集流程里的全部执行节点名。</summary>

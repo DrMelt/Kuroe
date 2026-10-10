@@ -247,7 +247,7 @@ internal sealed class TaskRuntime
         node.Invalidate(item);
         if (node.Executable.HasOutputPorts)
         {
-            _task.ClearPortValues(node.Index);
+            _task.ClearPortValues(node.Index, item);
         }
 
         RefreshContainers(node.Index);
@@ -319,8 +319,34 @@ internal sealed class TaskRuntime
     /// <summary>是否有执行节点停在等待返工。</summary>
     public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.Blocked);
 
-    /// <summary>还有在跑的 run 或可启动的执行节点，任务就没走完。可启动的执行节点依赖齐备时已被通知并实例化，未实例化的不可启动。</summary>
-    public bool HasWork => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node));
+    /// <summary>还有在跑的 run、可启动的执行节点或已齐备等待激活的下游，任务就没走完。</summary>
+    public bool HasWork =>
+        _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node))
+        || HasUnmaterializedStartCandidates();
+
+    /// <summary>尚未实例化的执行节点里有没有已具备启动条件的：任一来源已放行或拆分支票已就绪。
+    /// 未实例化说明推进循环还没把它激活；来源在运行侧已实例化时才可能被放行，未实例化的来源不可能满足边。</summary>
+    private bool HasUnmaterializedStartCandidates()
+    {
+        foreach (ExecutableNode executable in Graph.ExecutableNodes)
+        {
+            if (_nodes[executable.Index] is not null || executable.Execution.Output == NodeOutput.Input)
+            {
+                continue;
+            }
+
+            foreach (FlowEdge edge in Graph.Incoming(executable.Index))
+            {
+                if (_nodes[edge.From] is RuntimeNode { Released: true }
+                    || (edge.Feed == EdgeFeed.Items && _task.SplitFor(edge.From) is not null))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>正在等待批准的容器。</summary>
     public IReadOnlyList<int> AwaitingContainers =>
@@ -444,16 +470,16 @@ internal sealed class TaskRuntime
             return new SettlePlan([], []);
         }
 
-        if (executable.HasOutputPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index)))
+        if (executable.HasOutputPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index, item)))
         {
             run.MarkUncollected("输出端口内容未交回，本步未收口。");
-            node.EnterBlocked([(node.Index, null)]);
-            NoteLimitReached(node, null);
+            node.EnterBlocked([(node.Index, item)]);
+            NoteLimitReached(node, item);
             return new SettlePlan([], []);
         }
 
         // 输出校验不通过即不发布，节点停驻等返工
-        if (!PassesValidation(executable.Execution.Validate, run.Result))
+        if (!PassesValidation(executable.Execution.Validate, executable, _task.PortValuesFor(node.Index, item)))
         {
             node.EnterBlocked([(node.Index, item)]);
             NoteLimitReached(node, item);
@@ -467,13 +493,18 @@ internal sealed class TaskRuntime
         return Settled(node, node.Park(run.Id), Downstream(node));
     }
 
-    /// <summary>输出校验判定：不改动任何状态，只给出模型产出是否合格。空产出只有 NonEmpty 判定接受。</summary>
-    private static bool PassesValidation(OutputValidation? validation, string? result)
+    /// <summary>输出校验判定：不改动任何状态，只给出端口产出是否合格。校验对象是各声明端口按声明序拼接的文本。</summary>
+    private static bool PassesValidation(
+        OutputValidation? validation,
+        ExecutableNode executable,
+        IReadOnlyDictionary<PortName, string>? portValues)
     {
         if (validation is null)
         {
             return true;
         }
+
+        string? result = JoinedPorts(executable, portValues);
 
         return validation.Predicate switch
         {
@@ -484,6 +515,22 @@ internal sealed class TaskRuntime
             ValidationPredicate.Pattern => Matches(result, validation.Argument),
             _ => true,
         };
+    }
+
+    /// <summary>按声明顺序拼接端口值，端口未全部交回时为空。校验发生在端口完整性检查之后，缺失只可能缘于单端口空值。</summary>
+    private static string? JoinedPorts(ExecutableNode executable, IReadOnlyDictionary<PortName, string>? portValues)
+    {
+        if (portValues is null)
+        {
+            return null;
+        }
+
+        string[] parts = [.. executable.Outputs
+            .Select(port => portValues.GetValueOrDefault(port))
+            .Where(value => value is { Length: > 0 })
+            .Cast<string>()];
+
+        return parts.Length == 0 ? null : string.Join("\n", parts);
     }
 
     /// <summary>输出端口的声明是否都已交回内容。</summary>

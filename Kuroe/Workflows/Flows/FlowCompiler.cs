@@ -41,10 +41,10 @@ internal static class FlowCompiler
         {
             foreach (Dependency dependency in executable.From)
             {
-                // 端口、可选组、上下文与信号条目按单份消费；整节点引用按来源与目标模式推导
-                EdgeFeed feed = dependency.Port is not null || dependency.Or is not null || dependency.Signal || dependency.Context
+                // 可选组、上下文与信号条目按单份消费，其余按来源与目标模式推导，端口与消费方式正交
+                EdgeFeed feed = dependency.Or is not null || dependency.Signal || dependency.Context
                     ? EdgeFeed.Single
-                    : EdgeFeedRules.Of(nodes[dependency.From], executable.Execution.Mode);
+                    : EdgeFeedRules.Of(nodes[dependency.From], executable.Execution.Mode, dependency.Port);
                 EdgeRole role;
                 if (dependency.Signal)
                 {
@@ -70,7 +70,7 @@ internal static class FlowCompiler
         Flow.NodeGate Gate,
         List<int> Members,
         List<int> SubContainers,
-        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? PortBindings);
+        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? PortBindings);
 
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
     private static int RegisterNames(Flow.NodeSpec node, Dictionary<Flow.NodeName, int> order, int next)
@@ -155,10 +155,16 @@ internal static class FlowCompiler
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
         };
 
-    /// <summary>把一条上游接线条目解析成图依赖：带端口的引用落 来源序号+端口，来源可以是执行节点或容器，
-    /// Or、Signal 与 Context 标记原样保留。</summary>
-    private static Dependency ResolveFrom(Flow.SourceRef source, Dictionary<Flow.NodeName, int> order) =>
-        PortRef.Split(source.Name) is { } portRef
-            ? new Dependency(order[portRef.Source], portRef.Port, source.Or, source.Signal, source.Context)
-            : new Dependency(order[source.Name], null, source.Or, source.Signal, source.Context);
+    /// <summary>把一条上游接线条目解析成图依赖：来源序号经查表落定，Or、Signal 与 Context 标记原样保留。
+    /// 绑定端口引用在 From 里不成立，编译前应由校验层拦截，这里给防御性错误。</summary>
+    private static Dependency ResolveFrom(Flow.SourceRef source, Dictionary<Flow.NodeName, int> order)
+    {
+        if (source.Ref.Source is not { } name)
+        {
+            throw new InvalidOperationException(
+                $"From 条目 {source.Ref.Display} 是对绑定端口的引用，编译只接受已展开的流程树。");
+        }
+
+        return new Dependency(order[name], source.Ref.Port, source.Or, source.Signal, source.Context);
+    }
 }

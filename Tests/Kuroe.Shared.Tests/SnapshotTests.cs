@@ -120,7 +120,7 @@ public sealed class SnapshotTests
             Gate = NodeGate.Auto,
             Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(0, null)],
+            From = [new Dependency(0, PortNames.Split)],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

@@ -13,6 +13,6 @@ public sealed record ContainerNode : GraphNode
     /// <summary>直接子容器，先根序。</summary>
     public required IReadOnlyList<int> SubContainers { get; init; }
 
-    /// <summary>命名输出端口到子树内成员引用的映射，值可写 成员名 或 成员名@端口。未声明时为空。</summary>
-    public required IReadOnlyDictionary<PortName, NodeName>? PortBindings { get; init; }
+    /// <summary>命名输出端口到子树内成员引用的映射，值可写 成员名@端口 取成员命名段。未声明时为空。</summary>
+    public required IReadOnlyDictionary<PortName, PortRef>? PortBindings { get; init; }
 }

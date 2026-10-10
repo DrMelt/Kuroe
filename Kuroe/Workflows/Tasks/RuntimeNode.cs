@@ -1,3 +1,4 @@
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 
@@ -31,12 +32,14 @@ internal abstract class RuntimeNode(GraphNode node)
     /// <summary>随任务取消。</summary>
     public abstract bool Canceled { get; }
 
-    /// <summary>已放行产出的位置集合：执行节点给整节点或已发布实例，容器递归给全部成员。</summary>
-    public abstract IReadOnlyList<(int Node, int? Item)> ReleasedOutputs();
+    /// <summary>按输出端口取单段文本：命名端口取声明段，上下文端口给拼合文本。
+    /// 容器按绑定解析成员取值。端口未交回或成员未放行时为空。</summary>
+    public abstract string? PortText(WorkTask task, PortName port);
 
-    /// <summary>命名输出端口的产出文本：port 为空取整份产出，非空取该端口的命名段。
-    /// 执行节点按 run 与交回的账本取值，容器按端口绑定解析到成员取值。端口未交回或成员未放行时为空。</summary>
-    public abstract string? OutputText(WorkTask task, PortName? port);
+    /// <summary>按输出端口取可注入的产出消息集：命名端口按声明段取值，逐实例给全部实例的该端口产出，
+    /// ContextOutput 给装配上下文帧。item 指定时只取该实例的产出。
+    /// 容器按绑定转成一条容器端口消息。</summary>
+    public abstract IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item);
 
     /// <summary>随任务进入取消态。</summary>
     public abstract void Cancel();

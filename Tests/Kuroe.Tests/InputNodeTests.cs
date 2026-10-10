@@ -326,11 +326,12 @@ public sealed class InputNodeTests
                   "Nodes": [
                     {
                       "Name": "收集",
+                      "Out": { "回答": "用户输入@回答" },
                       "Nodes": [
-                        { "Name": "用户输入", "Output": "Input", "Question": "请补充背景" }
+                        { "Name": "用户输入", "Output": "Input", "Question": "请补充背景", "Outputs": ["回答"] }
                       ]
                     },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["收集"] }
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["收集@回答"] }
                   ]
                 }
               ]
@@ -375,8 +376,8 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "收话", "Output": "Input", "From": ["回话"] },
-                    { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
+                    { "Name": "收话", "Output": "Input", "Outputs": ["回答"], "From": ["回话@回复"] },
+                    { "Name": "回话", "Output": "Text", "Model": "执行者", "Outputs": ["回复"], "From": ["收话@回答"] }
                   ]
                 }
               ]

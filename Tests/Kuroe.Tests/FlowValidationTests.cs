@@ -57,15 +57,18 @@ public sealed class FlowValidationTests
     [InlineData(InputWithSplit, "Split 只能写在规划节点上")]
     [InlineData(QuestionOnImplement, "Question 只属于输入节点")]
     [InlineData(PortRefMissing, "没有输出端口")]
-    [InlineData(PortOnPlan, "输出端口只能声明在整节点文本产出上")]
-    [InlineData(PortOnInput, "不能声明输出端口")]
+    [InlineData(PortOnPlan, "输出端口只能声明在文本执行节点上")]
+    [InlineData(PortOnInput, "输入节点最多声明一个输出端口")]
     [InlineData(InputWithSystemPrompt, "不能声明系统指令")]
+    [InlineData(OutputsReservedOutput, "是保留名")]
     [InlineData(OutputsReservedContext, "是保留名")]
     [InlineData(OutputsReservedContextInput, "是保留名")]
     [InlineData(OutputPortWithAt, "端口名不能为空或含 @")]
     [InlineData(OutputPortBlank, "端口名不能为空或含 @")]
     [InlineData(ContainerOutPortMissing, "容器 交付 没有输出端口")]
     [InlineData(ContainerOutCrossContainer, "不能从容器外直接引用容器内成员")]
+    [InlineData(ContainerOutSubContainer, "绑定目标节点 撰写组 不是执行节点")]
+    [InlineData(ContainerOutInputContext, "是输入节点，不能作为上下文端口来源")]
     [InlineData(FromInputContext, "不能作为上下文端口来源")]
     [InlineData(ExecutionWithIn, "执行节点不写输入端口绑定")]
     [InlineData(ContextFromInput, "不能是输入节点")]
@@ -183,7 +186,7 @@ public sealed class FlowValidationTests
           { "Name": "整体", "Nodes": [
           { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
           { "Name": "容器", "Nodes": [
-            { "Name": "内部", "Model": "执行者", "From": ["不存在"] }
+            { "Name": "内部", "Model": "执行者", "From": ["不存在@结论"] }
           ] }
           ] }
         ] } ] }
@@ -192,9 +195,9 @@ public sealed class FlowValidationTests
     private const string FanOutBeforePlan = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "实施", "Model": "执行者", "Mode": "PerItem" },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"] },
           { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施"] }
+          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施@结论"] }
           ] }
         ] } ] }
         """;
@@ -243,7 +246,7 @@ public sealed class FlowValidationTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
           { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-          { "Name": "撰写", "Model": "执行者", "Branch": "撰写", "From": ["制定计划"] }
+          { "Name": "撰写", "Model": "执行者", "Branch": "撰写", "From": ["制定计划@拆分"] }
           ] }
         ] } ] }
         """;
@@ -251,9 +254,9 @@ public sealed class FlowValidationTests
     private const string ExpansionWithoutPlan = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "准备", "Model": "执行者" },
-          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": ["准备"] },
-          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施"] }
+          { "Name": "准备", "Model": "执行者", "Outputs": ["结论"] },
+          { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "From": ["准备@拆分"] },
+          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施@结论"] }
           ] }
         ] } ] }
         """;
@@ -261,8 +264,8 @@ public sealed class FlowValidationTests
     private const string CyclicReference = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "甲", "Model": "执行者", "From": ["乙"] },
-          { "Name": "乙", "Model": "执行者", "From": ["甲"] }
+          { "Name": "甲", "Model": "执行者", "Outputs": ["结论"], "From": ["乙@结论"] },
+          { "Name": "乙", "Model": "执行者", "Outputs": ["结论"], "From": ["甲@结论"] }
           ] }
         ] } ] }
         """;
@@ -271,8 +274,8 @@ public sealed class FlowValidationTests
     private const string LoopWithInputNode = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "收话", "Output": "Input", "From": ["回话"] },
-            { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
+            { "Name": "收话", "Output": "Input", "Outputs": ["回答"], "From": ["回话@回复"] },
+            { "Name": "回话", "Output": "Text", "Model": "执行者", "Outputs": ["回复"], "From": ["收话@回答"] }
           ] }
         ] } ] }
         """;
@@ -286,8 +289,8 @@ public sealed class FlowValidationTests
     private const string InputWithSignal = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "准备", "Model": "执行者" },
-            { "Name": "收集", "Output": "Input", "From": [{ "Node": "准备", "Signal": true }] }
+            { "Name": "准备", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "收集", "Output": "Input", "From": [{ "Node": "准备@结论", "Signal": true }] }
           ] }
         ] } ] }
         """;
@@ -295,23 +298,23 @@ public sealed class FlowValidationTests
     private const string PerItemWithSignal = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }, { "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-            { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": [{ "Node": "制定计划", "Signal": true }] }
+            { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Outputs": ["结论"] },
+            { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "From": [{ "Node": "制定计划@结论", "Signal": true }] }
           ] }
         ] } ] }
         """;
 
     private const string SignalSourceMissing = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "触发", "Model": "执行者", "From": [{ "Node": "不存在", "Signal": true }] }
+          { "Name": "触发", "Model": "执行者", "From": [{ "Node": "不存在@结论", "Signal": true }] }
         ] } ] }
         """;
 
     private const string DuplicateFrom = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "来源", "Model": "执行者" },
-            { "Name": "接收", "Model": "执行者", "From": ["来源", "来源"] }
+            { "Name": "来源", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "接收", "Model": "执行者", "From": ["来源@结论", "来源@结论"] }
           ] }
         ] } ] }
         """;
@@ -319,14 +322,14 @@ public sealed class FlowValidationTests
     private const string SplitStaticSignal = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "拆分", "Model": "执行者", "Output": "Plan", "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] }, "From": [{ "Node": "来源", "Signal": true }] }
+            { "Name": "拆分", "Model": "执行者", "Output": "Plan", "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] }, "From": [{ "Node": "来源@结论", "Signal": true }] }
           ] }
         ] } ] }
         """;
 
     private const string LibraryLeafFrom = """
         {
-          "Nodes": [ { "Name": "干活库", "Output": "Text", "From": [{ "Node": "任务", "Signal": true }] } ],
+          "Nodes": [ { "Name": "干活库", "Output": "Text", "From": [{ "Node": "任务@结论", "Signal": true }] } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
             { "Name": "干活", "Use": "干活库", "Model": "执行者" }
           ] } ]
@@ -338,7 +341,7 @@ public sealed class FlowValidationTests
           "Nodes": [ { "Name": "组", "Nodes": [ { "Name": "做", "Model": "执行者" } ] } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
             { "Name": "整体", "Nodes": [
-              { "Name": "组实例", "Use": "组", "From": [{ "Node": "做", "Signal": true }] }
+              { "Name": "组实例", "Use": "组", "From": [{ "Node": "做@结论", "Signal": true }] }
             ] }
           ] } ]
         }
@@ -358,7 +361,7 @@ public sealed class FlowValidationTests
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Prompt": "拆分条目。" },
-                    { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] }
+                    { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -381,7 +384,7 @@ public sealed class FlowValidationTests
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                    { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] }
+                    { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -445,7 +448,7 @@ public sealed class FlowValidationTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
           { "Name": "上游", "Model": "执行者" },
-          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "From": ["上游"],
+          { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "From": ["上游@结论"],
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲" } ] } }
           ] }
         ] } ] }
@@ -456,7 +459,7 @@ public sealed class FlowValidationTests
           { "Name": "整体", "Nodes": [
           { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
             "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Branch": "不存在" } ] } },
-          { "Name": "撰写", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划"] }
+          { "Name": "撰写", "Model": "执行者", "Mode": "PerItem", "From": ["制定计划@拆分"] }
           ] }
         ] } ] }
         """;
@@ -473,9 +476,9 @@ public sealed class FlowValidationTests
           { "Name": "整体", "Nodes": [
           { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
           { "Name": "制定B计划", "Model": "规划者", "Output": "Plan" },
-          { "Name": "实施A", "Model": "执行者", "Mode": "PerItem", "From": ["制定A计划"] },
-          { "Name": "实施B", "Model": "执行者", "Mode": "PerItem", "From": ["制定B计划"] },
-          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施A", "实施B"] }
+          { "Name": "实施A", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "From": ["制定A计划@拆分"] },
+          { "Name": "实施B", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "From": ["制定B计划@拆分"] },
+          { "Name": "收尾", "Model": "执行者", "Mode": "PerItem", "From": ["实施A@结论", "实施B@结论"] }
           ] }
         ] } ] }
         """;
@@ -483,8 +486,8 @@ public sealed class FlowValidationTests
     private const string SelfReferenceContainer = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "交付", "Nodes": [
-            { "Name": "撰写", "Model": "执行者", "From": ["交付"] }
+          { "Name": "交付", "Out": { "结论": "撰写@结论" }, "Nodes": [
+            { "Name": "撰写", "Model": "执行者", "Outputs": ["结论"], "From": ["交付@结论"] }
           ] }
           ] }
         ] } ] }
@@ -493,8 +496,8 @@ public sealed class FlowValidationTests
     private const string PartialSelfReferenceContainer = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "交付", "Nodes": [
-            { "Name": "撰写", "Model": "执行者", "From": ["交付"] },
+          { "Name": "交付", "Out": { "结论": "撰写@结论" }, "Nodes": [
+            { "Name": "撰写", "Model": "执行者", "Outputs": ["结论"], "From": ["交付@结论"] },
             { "Name": "排版", "Model": "执行者" }
           ] }
           ] }
@@ -504,11 +507,11 @@ public sealed class FlowValidationTests
     private const string CrossContainerReference = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-          { "Name": "容器甲", "Nodes": [
-            { "Name": "甲", "Model": "执行者", "From": ["容器乙"] }
+          { "Name": "容器甲", "Out": { "结论": "甲@结论" }, "Nodes": [
+            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"], "From": ["容器乙@结论"] }
           ] },
-          { "Name": "容器乙", "Nodes": [
-            { "Name": "乙", "Model": "执行者", "From": ["容器甲"] }
+          { "Name": "容器乙", "Out": { "结论": "乙@结论" }, "Nodes": [
+            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"], "From": ["容器甲@结论"] }
           ] }
           ] }
         ] } ] }
@@ -535,7 +538,7 @@ public sealed class FlowValidationTests
     private const string MultipleRootNodes = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "实施", "Model": "执行者" },
-          { "Name": "收尾", "Model": "执行者", "From": ["实施"] }
+          { "Name": "收尾", "Model": "执行者", "From": ["实施@结论"] }
         ] } ] }
         """;
 
@@ -590,7 +593,7 @@ public sealed class FlowValidationTests
     private const string InputWithOrGroup = """
         { "Flows": [ { "Name": "默认", "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "收集", "Output": "Input", "From": [{ "Node": "来源", "Or": "任选" }] }
+            { "Name": "收集", "Output": "Input", "From": [{ "Node": "来源@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
@@ -693,11 +696,11 @@ public sealed class FlowValidationTests
         ] } ] }
         """;
 
-    /// <summary>输入节点声明输出端口，装配校验拒绝。</summary>
+    /// <summary>输入节点声明两个输出端口，装配校验拒绝。</summary>
     private const string PortOnInput = """
         { "Flows": [ { "Name": "默认", "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "收集", "Output": "Input", "Outputs": ["结论"] }
+            { "Name": "收集", "Output": "Input", "Outputs": ["结论", "理由"] }
           ] }
         ] } ] }
         """;
@@ -716,6 +719,15 @@ public sealed class FlowValidationTests
         { "Flows": [ { "Name": "默认", "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "收集", "Output": "Input", "SystemPrompt": ["背景"] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输出端口声明拆分端口保留名，装配校验拒绝。</summary>
+    private const string OutputsReservedOutput = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["拆分"] }
           ] }
         ] } ] }
         """;
@@ -762,8 +774,8 @@ public sealed class FlowValidationTests
     private const string ContextFromInput = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "用户输入", "Output": "Input" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "用户输入", "Context": true } ] }
+            { "Name": "用户输入", "Output": "Input", "Outputs": ["回答"] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "用户输入@回答", "Context": true } ] }
           ] }
         ] } ] }
         """;
@@ -773,8 +785,8 @@ public sealed class FlowValidationTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
             { "Name": "制定", "Output": "Plan", "Model": "执行者" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定"] },
-            { "Name": "汇报", "Output": "Text", "Model": "执行者", "From": [ { "Node": "实施", "Context": true } ] }
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "From": ["制定@拆分"] },
+            { "Name": "汇报", "Output": "Text", "Model": "执行者", "From": [ { "Node": "实施@结论", "Context": true } ] }
           ] }
         ] } ] }
         """;
@@ -783,8 +795,8 @@ public sealed class FlowValidationTests
     private const string ContextWithSignal = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "准备", "Output": "Text", "Model": "执行者" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备", "Context": true, "Signal": true } ] }
+            { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备@结论", "Context": true, "Signal": true } ] }
           ] }
         ] } ] }
         """;
@@ -793,8 +805,8 @@ public sealed class FlowValidationTests
     private const string ContextWithOr = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "准备", "Output": "Text", "Model": "执行者" },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备", "Context": true, "Or": "组" } ] }
+            { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备@结论", "Context": true, "Or": "组" } ] }
           ] }
         ] } ] }
         """;
@@ -803,8 +815,8 @@ public sealed class FlowValidationTests
     private const string ContextSourceContainer = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "箱子", "Nodes": [ { "Name": "干活", "Output": "Text", "Model": "执行者" } ] },
-            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "箱子", "Context": true } ] }
+            { "Name": "箱子", "Nodes": [ { "Name": "干活", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] } ] },
+            { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "箱子@结论", "Context": true } ] }
           ] }
         ] } ] }
         """;
@@ -878,10 +890,10 @@ public sealed class FlowValidationTests
     /// <summary>引用容器上不存在的输出端口，装配校验拒绝。</summary>
     private const string ContainerOutPortMissing = """
         { "Nodes": [
-            { "Name": "允许工具", "Output": "Text" },
+            { "Name": "允许工具", "Output": "Text", "Outputs": ["结论"] },
             {
               "Name": "交付",
-              "Out": { "结论": "实施" },
+              "Out": { "结论": "实施@结论" },
               "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
           ],
@@ -897,19 +909,41 @@ public sealed class FlowValidationTests
     /// <summary>装配层直接引用容器实例内部成员，容器封装拒绝，对外只暴露输出端口。</summary>
     private const string ContainerOutCrossContainer = """
         { "Nodes": [
-            { "Name": "允许工具", "Output": "Text" },
+            { "Name": "允许工具", "Output": "Text", "Outputs": ["结论"] },
             {
               "Name": "交付",
-              "Out": { "结论": "实施" },
+              "Out": { "结论": "实施@结论" },
               "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
-              { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付.实施"] }
+              { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付.实施@结论"] }
             ] }
           ] } ]
         }
+        """;
+
+    /// <summary>装配层容器输出端口绑定输入节点，输入节点不落 run，不能作为上下文端口来源。</summary>
+    private const string ContainerOutInputContext = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "交付", "Out": { "结果": "收集@ContextOutput" }, "Nodes": [
+              { "Name": "收集", "Output": "Input", "Outputs": ["回答"] }
+            ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>装配层容器输出端口绑定子容器，子容器不是执行节点，无法取产出。</summary>
+    private const string ContainerOutSubContainer = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+          { "Name": "整体", "Nodes": [
+            { "Name": "交付", "Out": { "结果": "撰写组@ContextOutput" }, "Nodes": [
+              { "Name": "撰写组", "Nodes": [ { "Name": "撰写", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] } ] }
+            ] }
+          ] }
+        ] } ] }
         """;
 }

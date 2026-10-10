@@ -81,8 +81,8 @@ public sealed class ContainerLimitTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "MaxRuns": 2, "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Output": "Plan" },
-              { "Name": "干活", "Model": "执行者", "From": ["计划"] }
+              { "Name": "计划", "Model": "执行者", "Output": "Text", "Outputs": ["结论"] },
+              { "Name": "干活", "Model": "执行者", "From": ["计划@结论"] }
             ] }
           ] } ]
         }
@@ -103,9 +103,9 @@ public sealed class ContainerLimitTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "MaxRuns": 2, "Nodes": [
-              { "Name": "外层干活", "Model": "执行者" },
+              { "Name": "外层干活", "Model": "执行者", "Outputs": ["结论"] },
               { "Name": "内部", "MaxRuns": 5, "Nodes": [
-                { "Name": "内层干活", "Model": "执行者", "From": ["外层干活"] }
+                { "Name": "内层干活", "Model": "执行者", "From": ["外层干活@结论"] }
               ] }
             ] }
           ] } ]

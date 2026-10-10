@@ -65,38 +65,28 @@ internal static class RunContextFactory
         };
     }
 
-    /// <summary>按一条依赖边的消费方式追加上游产出。整份、整集与执行节点端口走放行产出位置逐条取数，
-    /// 容器命名输出端口按容器端口绑定取值单条注入。</summary>
+    /// <summary>按一条依赖边的消费方式追加上游产出：对齐边按目标实例取来源实例的整份，其余按边上的端口取来源产出消息集。</summary>
     private static void AppendUpstreamOutput(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
         if (edge.Feed == EdgeFeed.Aligned)
         {
             if (itemIndex is { } index)
             {
-                AppendLatestRun(task, edge.From, index, port: null, seed);
+                AppendPortMessages(task, edge.From, edge.Port, index, seed);
             }
 
             return;
         }
 
-        // 容器命名输出端口：容器已放行时按端口绑定取成员产出，单条注入，出处指向容器
-        if (edge.FromPort is { } port && task.Graph[edge.From] is ContainerNode)
-        {
-            if (task.Runtime[edge.From] is RuntimeContainer container
-                && container.Released
-                && container.OutputText(task, port) is { Length: > 0 } content)
-            {
-                seed.Add(new ContextMessage(MessageRole.User,
-                    Truncate($"节点「{container.Name}」的端口「{port}」产出：\n{content}"),
-                    new ContainerPortSource(container.Name, port)));
-            }
+        AppendPortMessages(task, edge.From, edge.Port, null, seed);
+    }
 
-            return;
-        }
-
-        foreach ((int source, int? item) in task.Runtime[edge.From].ReleasedOutputs())
+    /// <summary>取来源节点某端口的注入消息集并入种子：整份直接取放行产出，命名端口与上下文端口返回节点已构造的消息。</summary>
+    private static void AppendPortMessages(WorkTask task, int fromIndex, PortName port, int? item, List<ContextMessage> seed)
+    {
+        foreach (ContextMessage message in task.Runtime[fromIndex].OutputMessages(task, port, item))
         {
-            AppendLatestRun(task, source, item, edge.FromPort, seed);
+            seed.Add(new ContextMessage(message.Role, Truncate(message.Text), message.Source));
         }
     }
     /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
@@ -106,73 +96,6 @@ internal static class RunContextFactory
             && run.Context.ItemIndex == item
             && run.State == RunState.Succeeded
             && run.Result is { Length: > 0 });
-
-    /// <summary>整节点或实例产出作为一条上下文，出处标注到该 run。带端口时取该轮交回的命名段。</summary>
-    private static void AppendLatestRun(WorkTask task, int fromIndex, int? item, PortName? port, List<ContextMessage> seed)
-    {
-        NodeName name = task.Graph[fromIndex].Name;
-
-        // 输入节点的产出是用户回答，不落在 run 上
-        if (task.Graph[fromIndex] is ExecutableNode { Execution.Output: NodeOutput.Input })
-        {
-            if (task.Runtime.Executable(fromIndex).InputAnswer is { Length: > 0 } answer)
-            {
-                seed.Add(new ContextMessage(MessageRole.User, Truncate($"节点「{name}」的输入：\n{answer}"),
-                    new InputSource(name)));
-            }
-
-            return;
-        }
-
-        // 隐式上下文端口：上游 run 的装配上下文统一结构整体注入，每条消息的角色与出处原样保留，指令单列
-        if (port == ExecutableNode.ContextOutputPort)
-        {
-            if (LatestSucceededRun(task, fromIndex, item) is not { } frameRun)
-            {
-                return;
-            }
-
-            ContextFrame frame = new(frameRun.Id, name, item, frameRun.Context.Seed, frameRun.Context.Instruction);
-
-            foreach (ContextMessage message in frame.Messages)
-            {
-                seed.Add(new ContextMessage(message.Role, Truncate(message.Text), message.Source));
-            }
-
-            seed.Add(new ContextMessage(MessageRole.User,
-                Truncate($"节点「{frame.Node}」的指令：\n{frame.Instruction}"),
-                new ContextFrameSource(frame.Run, frame.Node, frame.Item)));
-            return;
-        }
-
-        if (LatestSucceededRun(task, fromIndex, item) is not { } run)
-        {
-            return;
-        }
-
-        // 命名端口与整份统一取运行时节点文本：未交回不注入，端口不存在的引用已被装配校验拦截
-        if (task.Runtime[fromIndex].OutputText(task, port) is not { Length: > 0 } content)
-        {
-            return;
-        }
-
-        string prefix;
-        if (port is { } outputPort)
-        {
-            prefix = $"节点「{name}」的端口「{outputPort}」产出：\n";
-        }
-        else if (item is { } index)
-        {
-            prefix = $"条目「{ItemTitle(task, fromIndex, index)}」在节点「{name}」的产出：\n";
-        }
-        else
-        {
-            prefix = $"节点「{name}」的产出：\n";
-        }
-
-        seed.Add(new ContextMessage(MessageRole.User, Truncate($"{prefix}{content}"),
-            new RunSource(run.Id, name)));
-    }
 
     /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
     private static PlanItem? ItemOf(WorkTask task, RuntimeExecutable node, int? itemIndex)
@@ -203,12 +126,6 @@ internal static class RunContextFactory
 
         return new RunId(0);
     }
-
-    /// <summary>条目的标题，取不到时退回序号。条目身份只在归属空间内有效。</summary>
-    private static string ItemTitle(WorkTask task, int fromIndex, int itemIndex) =>
-        task.Graph.ItemSpace(fromIndex) is { } space && task.SplitFor(space) is { } split
-            ? split.Items.FirstOrDefault(item => item.Index == itemIndex)?.Title ?? $"条目 {itemIndex + 1}"
-            : $"条目 {itemIndex + 1}";
 
     /// <summary>指令正文：节点要求、目标与第几轮。</summary>
     private static string BuildInstruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)

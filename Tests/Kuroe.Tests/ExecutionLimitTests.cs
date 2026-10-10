@@ -67,6 +67,11 @@ public sealed class ExecutionLimitTests
     {
         using KuroeHarness harness = KuroeHarness.Create(OrLoopWithLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
+        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        {
+            3 => """{"结论": "审查通过"}""",
+            _ => null,
+        };
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot done = harness.Settle(id);
@@ -82,6 +87,11 @@ public sealed class ExecutionLimitTests
     {
         using KuroeHarness harness = KuroeHarness.Create(OrLoopWithoutLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
+        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        {
+            3 => """{"结论": "审查通过"}""",
+            _ => null,
+        };
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot done = harness.Settle(id);
@@ -137,7 +147,7 @@ public sealed class ExecutionLimitTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Model": "执行者", "MaxRuns": 2,
+              { "Name": "干活", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 2,
                 "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -149,10 +159,10 @@ public sealed class ExecutionLimitTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者" },
-              { "Name": "修订", "Model": "执行者", "MaxRuns": 1, "From": [{ "Node": "计划", "Or": "初始" }, { "Node": "审查", "Or": "返工" }] },
-              { "Name": "审查", "Model": "执行者", "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "From": ["审查"] }
+              { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
+              { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 1, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
+              { "Name": "审查", "Model": "执行者", "Outputs": ["结论"], "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Model": "执行者", "From": ["审查@结论"] }
             ] }
           ] } ]
         }
@@ -163,10 +173,10 @@ public sealed class ExecutionLimitTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者" },
-              { "Name": "修订", "Model": "执行者", "MaxRuns": 5, "From": [{ "Node": "计划", "Or": "初始" }, { "Node": "审查", "Or": "返工" }] },
-              { "Name": "审查", "Model": "执行者", "MaxRuns": 5, "From": ["修订"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "MaxRuns": 5, "From": ["审查"] }
+              { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
+              { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 5, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
+              { "Name": "审查", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 5, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Model": "执行者", "MaxRuns": 5, "From": ["审查@结论"] }
             ] }
           ] } ]
         }
@@ -178,7 +188,7 @@ public sealed class ExecutionLimitTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "计划", "Model": "执行者", "Output": "Plan" },
-              { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划"] }
+              { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划@拆分"] }
             ] }
           ] } ]
         }

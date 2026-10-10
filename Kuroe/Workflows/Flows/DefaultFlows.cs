@@ -50,7 +50,7 @@ internal static class DefaultFlows
                 Name = new NodeName("实施"),
                 Use = new NodeName("执行"),
                 Model = Executor.Name,
-                From = [new SourceRef(new NodeName("@计划"))],
+                From = [new SourceRef(PortRef.Bound(new PortName("计划")))],
             },
         ],
     };
@@ -71,7 +71,7 @@ internal static class DefaultFlows
                         {
                             Name = new NodeName("交付"),
                             Use = new NodeName("交付"),
-                            In = new Dictionary<PortName, NodeName> { [new PortName("计划")] = new NodeName("制定计划") },
+                            In = new Dictionary<PortName, PortRef> { [new PortName("计划")] = PortRef.Named(new NodeName("制定计划"), PortNames.Split) },
                             Models = new Dictionary<ModelRef, ModelRef> { [Executor.Name] = Executor.Name },
                         },
                     ],

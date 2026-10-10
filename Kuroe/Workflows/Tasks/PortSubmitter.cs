@@ -21,9 +21,9 @@ public sealed class PortSubmitter(TaskRegistry registry)
             return ToolErrors.Argument("只有进行中的文本 run 能提交端口产出。");
         }
 
-        if (run.Context.Output != NodeOutput.Text || run.Context.ItemIndex is not null)
+        if (run.Context.Output != NodeOutput.Text)
         {
-            return ToolErrors.Argument("端口产出只属于整节点的文本执行。");
+            return ToolErrors.Argument("端口产出只属于文本执行。");
         }
 
         ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
@@ -47,7 +47,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument("该节点没有声明输出端口。");
             }
 
-            if (task.PortValuesFor(run.Context.NodeIndex) is not null)
+            if (task.PortValuesFor(run.Context.NodeIndex, run.Context.ItemIndex) is not null)
             {
                 return ToolErrors.Argument("端口产出已提交，无需重复提交。");
             }
@@ -58,7 +58,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument($"端口必须与声明一一对应，应提交 {string.Join('、', declared)}。");
             }
 
-            task.SetPortValues(run.Context.NodeIndex, parsed.Value);
+            task.SetPortValues(run.Context.NodeIndex, run.Context.ItemIndex, parsed.Value);
 
             return $"已记录 {declared.Count} 个端口的产出。";
         }

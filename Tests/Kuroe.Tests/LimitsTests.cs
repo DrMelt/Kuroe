@@ -35,16 +35,30 @@ public sealed class LimitsTests
     [Fact]
     public void Upstream_output_in_context_is_capped_with_an_ellipsis()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        const string flow = """
+            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+              { "Name": "整体", "Nodes": [
+                { "Name": "来源", "Model": "执行者", "Outputs": ["结论"] },
+                { "Name": "接收", "Model": "执行者", "From": ["来源@结论"] }
+              ] }
+            ] } ] }
+            """;
+
+        using KuroeHarness harness = KuroeHarness.Create(flow);
         harness.Executor.Output = _ => new string('长', 3000);
+        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 1
+            ? $$"""{"结论": "{{new string('长', 3000)}}"}"""
+            : null;
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
-        RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
+        RunSnapshot implement = done.Executables
+            .Single(entry => entry.Executable.Name.Value == "接收")
+            .Runs.Single();
         ContextMessage upstream = Assert.Single(implement.Context.Seed,
             message => message.Source is RunSource);
 
         Assert.Equal(2001, upstream.Text.Length);
-        Assert.StartsWith("节点「制定计划」的产出", upstream.Text);
+        Assert.StartsWith("节点「来源」的端口「结论」产出", upstream.Text);
         Assert.EndsWith("…", upstream.Text);
     }
 }

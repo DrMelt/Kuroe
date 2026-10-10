@@ -18,7 +18,7 @@ public static class TestFlows
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Gate": "Review", "From": ["制定计划"] }
+                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Gate": "Review", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -38,8 +38,8 @@ public static class TestFlows
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "用户输入", "Output": "Input", "Question": "请补充需要的背景" },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入"] }
+                    { "Name": "用户输入", "Output": "Input", "Question": "请补充需要的背景", "Outputs": ["回答"] },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入@回答"] }
                   ]
                 }
               ]
@@ -61,18 +61,20 @@ public static class TestFlows
                   "Nodes": [
                     {
                       "Name": "输入分支",
+                      "Out": { "回答": "用户输入@回答" },
                       "Nodes": [
-                        { "Name": "用户输入", "Output": "Input", "Question": "补充背景" }
+                        { "Name": "用户输入", "Output": "Input", "Question": "补充背景", "Outputs": ["回答"] }
                       ]
                     },
                     {
                       "Name": "审查分支",
                       "Gate": "Review",
+                      "Out": { "结论": "准备@结论" },
                       "Nodes": [
-                        { "Name": "准备", "Output": "Text", "Model": "执行者" }
+                        { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] }
                       ]
                     },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["输入分支", "审查分支"] }
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["输入分支@回答", "审查分支@结论"] }
                   ]
                 }
               ]
@@ -112,9 +114,9 @@ public static class TestFlows
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "准备", "Output": "Text", "Model": "执行者" },
-                    { "Name": "用户输入", "Output": "Input", "Question": "补充背景", "From": ["准备"] },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入"] }
+                    { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
+                    { "Name": "用户输入", "Output": "Input", "Question": "补充背景", "Outputs": ["回答"], "From": ["准备@结论"] },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["用户输入@回答"] }
                   ]
                 }
               ]
@@ -134,8 +136,8 @@ public static class TestFlows
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "收话", "Output": "Input", "Question": "请说", "From": ["回话"] },
-                    { "Name": "回话", "Output": "Text", "Model": "执行者", "From": ["收话"] }
+                    { "Name": "收话", "Output": "Input", "Question": "请说", "Outputs": ["回答"], "From": ["回话@回复"] },
+                    { "Name": "回话", "Output": "Text", "Model": "执行者", "Outputs": ["回复"], "From": ["收话@回答"] }
                   ]
                 }
               ]
@@ -143,7 +145,7 @@ public static class TestFlows
           ]
         }
         """;
-    /// <summary>声明输出端口的文本节点把命名段交给下游，下游按端口精确消费；不写端口时整份取用。</summary>
+    /// <summary>声明输出端口的文本节点把命名段交给下游，下游按端口精确消费。</summary>
     public const string PortFlow = """
         {
           "Flows": [
@@ -156,7 +158,7 @@ public static class TestFlows
                   "Nodes": [
                     { "Name": "分析", "Output": "Text", "Model": "执行者", "Outputs": ["结论", "理由"], "Prompt": "给出结论与理由" },
                     { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["分析@结论"] },
-                    { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["分析"] }
+                    { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["分析@理由"] }
                   ]
                 }
               ]
@@ -176,8 +178,8 @@ public static class TestFlows
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "准备", "Output": "Text", "Model": "执行者" },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["准备", { "Node": "准备", "Context": true }] }
+                    { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["准备@结论", { "Node": "准备@结论", "Context": true }] }
                   ]
                 }
               ]
@@ -201,7 +203,7 @@ public static class TestFlows
                   "Name": "整体",
                   "Nodes": [
                     { "Name": "制定", "Output": "Plan", "Model": "规划者", "Prompt": "拆分目标" },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定"] },
+                    { "Name": "实施", "Output": "Text", "Model": "执行者", "Mode": "PerItem", "From": ["制定@拆分"] },
                     { "Name": "汇报", "Output": "Text", "Model": "执行者", "From": ["实施@ContextOutput"] }
                   ]
                 }
@@ -235,7 +237,7 @@ public static class TestFlows
     public const string ContainerOutFlow = """
         {
           "Nodes": [
-            { "Name": "允许工具", "Tools": ["GetLocalTime"], "Outputs": ["结论", "理由"] },
+            { "Name": "允许工具", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Outputs": ["结论", "理由"] },
             {
               "Name": "交付",
               "Inputs": ["计划"],
@@ -262,7 +264,7 @@ public static class TestFlows
                     {
                       "Name": "交付",
                       "Use": "交付",
-                      "In": { "计划": "制定计划" },
+                      "In": { "计划": "制定计划@拆分" },
                       "Models": { "执行者": "执行者" }
                     },
                     { "Name": "复盘", "Output": "Text", "Model": "执行者", "From": ["交付@结论"] }

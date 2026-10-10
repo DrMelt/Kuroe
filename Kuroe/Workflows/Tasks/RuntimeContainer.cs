@@ -1,3 +1,4 @@
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Workflows.Flows;
 using Flow = Kuroe.Shared.Workflows.Flows;
@@ -63,38 +64,46 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>已放行产出的位置集合：递归给容器内全部执行节点与子容器。</summary>
-    public override IReadOnlyList<(int Node, int? Item)> ReleasedOutputs()
+    /// <summary>按输出端口取单段文本：声明的命名端口按绑定转发成员产出，其余端口为空。成员未放行或端口未交回时为空。</summary>
+    public override string? PortText(WorkTask task, Flow.PortName port)
     {
-        if (!Released)
-        {
-            return [];
-        }
-
-        return [.. Container.Members.SelectMany(member => resolve(member).ReleasedOutputs())
-            .Concat(Container.SubContainers.SelectMany(sub => resolve(sub).ReleasedOutputs()))];
-    }
-
-    /// <summary>命名输出端口的产出文本：按端口绑定解析到成员，带端口取成员命名段，不带端口取成员整份。
-    /// 成员未放行、端口未交回或绑定目标不是执行节点时为空。</summary>
-    public override string? OutputText(WorkTask task, Flow.PortName? port)
-    {
-        if (port is not { } name
-            || Container.PortBindings is not { } bindings
-            || !bindings.TryGetValue(name, out Flow.NodeName target))
+        if (Container.PortBindings is not { } bindings
+            || !bindings.TryGetValue(port, out Flow.PortRef target)
+            || target.Source is not { } memberName
+            || task.Graph.IndexOf(memberName) is not { } memberIndex
+            || resolve(memberIndex) is not RuntimeExecutable member)
         {
             return null;
         }
 
-        if (PortRef.Split(target) is { } memberRef
-            && task.Graph.IndexOf(memberRef.Source) is { } memberIndex
-            && resolve(memberIndex) is RuntimeExecutable member)
+        return member.PortText(task, target.Port);
+    }
+
+    /// <summary>按输出端口取可注入的产出消息集：声明的输出端口按绑定转成一条容器端口消息，出处指向容器。
+    /// 容器没有整份产出，一切对外内容都经声明端口。</summary>
+    public override IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, Flow.PortName port, int? item)
+    {
+        if (item is not null)
         {
-            return member.OutputText(task, memberRef.Port);
+            return [];
         }
 
-        return task.Graph.IndexOf(target) is { } wholeIndex && resolve(wholeIndex) is RuntimeExecutable whole
-            ? whole.OutputText(task, port: null)
-            : null;
+        if (Released
+            && Container.PortBindings is { } bindings
+            && bindings.TryGetValue(port, out Flow.PortRef target)
+            && target.Source is { } memberName
+            && task.Graph.IndexOf(memberName) is { } memberIndex
+            && resolve(memberIndex) is RuntimeExecutable member)
+        {
+            string? content = member.PortText(task, target.Port);
+            if (content is { Length: > 0 })
+            {
+                return [new ContextMessage(MessageRole.User,
+                    $"节点「{Name}」的端口「{port}」产出：\n{content}",
+                    new ContainerPortSource(Name, port))];
+            }
+        }
+
+        return [];
     }
 }

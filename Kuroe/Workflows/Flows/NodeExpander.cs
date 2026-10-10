@@ -8,8 +8,6 @@ namespace Kuroe.Workflows.Flows;
 /// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
 internal static class NodeExpander
 {
-    private const char PortPrefix = '@';
-
     /// <summary>执行次数上限的默认值：整条覆盖链都没有配置时生效。</summary>
     private const int DefaultMaxRuns = ExecutableNode.DefaultMaxRuns;
 
@@ -18,19 +16,16 @@ internal static class NodeExpander
     private sealed class Env(
         Env? parent,
         IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> renames,
-        IReadOnlyDictionary<Flow.PortName, Flow.NodeName> bindings,
+        IReadOnlyDictionary<Flow.PortName, Flow.PortRef> bindings,
         IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         public Env? Parent { get; } = parent;
         public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Renames { get; } = renames;
-        public IReadOnlyDictionary<Flow.PortName, Flow.NodeName> Bindings { get; } = bindings;
+        public IReadOnlyDictionary<Flow.PortName, Flow.PortRef> Bindings { get; } = bindings;
 
         /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型选择名或外层槽位名的映射。</summary>
         public IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? ModelSlots { get; } = modelSlots;
     }
-
-    private static bool IsPort(Flow.NodeName name) => name.Value.StartsWith(PortPrefix);
-    private static string PortOf(Flow.NodeName name) => name.Value[1..];
 
     /// <summary>展开流程根节点。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
     public static ErrorOr<Flow.NodeSpec> Expand(
@@ -138,6 +133,7 @@ internal static class NodeExpander
                 Name = own,
                 Gate = node.Gate,
                 From = ResolveAll(node.From, env, flowName, errors),
+                Out = ResolveOuts(node.Out, env, flowName, errors),
                 Nodes = expanded,
             };
         }
@@ -209,13 +205,13 @@ internal static class NodeExpander
         Env? parent,
         Flow.NodeSpec container,
         Flow.NodeName instanceName,
-        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? bindings,
+        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? bindings,
         IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         Dictionary<Flow.NodeName, Flow.NodeName> renames = [];
         CollectRenames(container.Nodes!, renames, instanceName.Value + ".");
 
-        return new Env(parent, renames, bindings ?? new Dictionary<Flow.PortName, Flow.NodeName>(), modelSlots);
+        return new Env(parent, renames, bindings ?? new Dictionary<Flow.PortName, Flow.PortRef>(), modelSlots);
     }
 
     /// <summary>递归收集容器子树全部成员的实例名映射：成员原名对齐到带实例名前缀的实例名。</summary>
@@ -238,56 +234,39 @@ internal static class NodeExpander
         }
     }
 
-    /// <summary>逐个解析上游接线条目：来源名沿实例映射链与端口绑定链解析，Or 与 Signal 标记保留。</summary>
+    /// <summary>逐个解析上游接线条目：来源名沿实例映射链与端口绑定链解析，Or、Signal 与 Context 标记保留。</summary>
     private static IReadOnlyList<Flow.SourceRef> ResolveAll(
         IReadOnlyList<Flow.SourceRef> from,
         Env? env,
         string flowName,
         List<Error> errors) =>
-        [.. from.Select(source => Resolve(source, env, flowName, errors))];
+        [.. from.Select(source => source with { Ref = ResolveRef(source.Ref, env, flowName, errors) })];
 
-    /// <summary>解析一条上游接线条目：来源名按引用名规则解析，标记保留。</summary>
-    private static Flow.SourceRef Resolve(Flow.SourceRef source, Env? env, string flowName, List<Error> errors)
+    /// <summary>解析一个端口引用：来源为空（@端口）沿绑定链找实际来源，普通来源名沿实例映射解析并保留选取。
+    /// 绑定链找不到来源时保留原引用并报错，交既有校验判断。</summary>
+    private static Flow.PortRef ResolveRef(Flow.PortRef reference, Env? env, string flowName, List<Error> errors)
     {
-        Flow.NodeName name = Resolve(source.Name, env, flowName, errors);
-        return source with { Name = name };
-    }
-
-    /// <summary>解析一个引用名：@端口沿绑定链找来源，来源@端口 拆来源沿实例映射解析并保留端口，普通名沿环境链找实例映射。
-    /// 都没有则保留原名交既有校验判断。</summary>
-    private static Flow.NodeName Resolve(Flow.NodeName name, Env? env, string flowName, List<Error> errors)
-    {
-        if (name.Value.StartsWith(PortPrefix))
+        if (reference.Source is { } source)
         {
-            string port = PortOf(name);
-            Env? chain = env;
-            while (chain is not null)
-            {
-                if (chain.Bindings.TryGetValue(new Flow.PortName(port), out Flow.NodeName bound))
-                {
-                    // @绑定值沿更外层作用域透传；普通名绑定在所在作用域解析成实例名
-                    return IsPort(bound) ? Resolve(bound, chain.Parent, flowName, errors) : ResolveName(bound, chain);
-                }
-
-                chain = chain.Parent;
-            }
-
-            errors.Add(FlowErrors.Node(flowName, name.Value, $"端口 {name} 没有绑定来源。"));
-            return name;
+            return reference with { Source = ResolveName(source, env) };
         }
 
-        if (PortRef.Split(name) is { } reference)
+        // @端口：沿绑定链找到绑定来源，绑定值沿更外层作用域透传，普通名绑定在所在作用域解析成实例名
+        Env? chain = env;
+        while (chain is not null)
         {
-            Flow.NodeName source = ResolveName(reference.Source, env);
-            if (reference.Port.Value.Contains(PortPrefix))
+            if (chain.Bindings.TryGetValue(reference.Port, out Flow.PortRef bound))
             {
-                errors.Add(FlowErrors.Node(flowName, name.Value, $"输出端口名 {reference.Port.Value} 不能含 @。"));
+                return bound.Source is null
+                    ? ResolveRef(bound, chain.Parent, flowName, errors)
+                    : bound with { Source = ResolveName(bound.Source.Value, chain) };
             }
 
-            return new Flow.NodeName($"{source.Value}@{reference.Port.Value}");
+            chain = chain.Parent;
         }
 
-        return ResolveName(name, env);
+        errors.Add(FlowErrors.Node(flowName, reference.Port.Value, $"端口 @{reference.Port.Value} 没有绑定来源。"));
+        return reference;
     }
 
     /// <summary>普通节点引用沿环境链找实例映射，找不到时保留原名。</summary>
@@ -308,8 +287,8 @@ internal static class NodeExpander
     }
 
     /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上。</summary>
-    private static Dictionary<Flow.PortName, Flow.NodeName>? ResolveOuts(
-        IReadOnlyDictionary<Flow.PortName, Flow.NodeName>? outs,
+    private static Dictionary<Flow.PortName, Flow.PortRef>? ResolveOuts(
+        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? outs,
         Env? env,
         string flowName,
         List<Error> errors)
@@ -321,7 +300,7 @@ internal static class NodeExpander
 
         return outs.ToDictionary(
             entry => entry.Key,
-            entry => Resolve(entry.Value, env, flowName, errors));
+            entry => ResolveRef(entry.Value, env, flowName, errors));
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。

@@ -57,10 +57,10 @@ public sealed class EngineAdvanceTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                    { "Name": "切入", "Model": "执行者" },
+                    { "Name": "切入", "Model": "执行者", "Outputs": ["结论"] },
                     { "Name": "慢工", "Model": "执行者" },
-                    { "Name": "衔接", "Model": "执行者", "From": ["切入"] },
-                    { "Name": "收官", "Model": "执行者", "From": ["衔接"] }
+                    { "Name": "衔接", "Model": "执行者", "Outputs": ["结论"], "From": ["切入@结论"] },
+                    { "Name": "收官", "Model": "执行者", "From": ["衔接@结论"] }
                   ]
                 }
               ]
@@ -73,9 +73,9 @@ public sealed class EngineAdvanceTests
     private const string OrRepeatsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
           { "Name": "整体", "Nodes": [
-            { "Name": "甲", "Model": "执行者" },
-            { "Name": "乙", "Model": "执行者" },
-            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "单独" }, { "Node": "甲", "Or": "双组" }, { "Node": "乙", "Or": "双组" }] }
+            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
+            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
           ] }
         ] } ] }
         """;

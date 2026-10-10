@@ -33,10 +33,10 @@ public sealed class ContextTests
         RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
 
         Assert.Contains(implement.Context.Seed, message =>
-            message.Source is RunSource { NodeName.Value: "制定计划", FromRun: not null } source && source.FromRun == plan.Id);
-        Assert.Contains(implement.Context.Seed, message =>
             message.Source is ItemSource { Index: 0 } source && source.FromRun == plan.Id);
         Assert.Contains("条目 1", implement.Context.Instruction);
+        // 拆分边只驱动实例展开，不把规划文本注入实例上下文
+        Assert.DoesNotContain(implement.Context.Seed, message => message.Text.Contains("节点「制定计划」"));
 
         string visible = implement.Context.Instruction
             + string.Concat(implement.Context.Seed.Select(message => message.Text));

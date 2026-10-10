@@ -16,7 +16,7 @@ public enum EdgeRole
 }
 
 /// <summary>图上的一条依赖边：目标执行节点的上下文取自来源节点，来源可以是执行节点或容器，
-/// 消费方式由 <see cref="Feed"/> 描述，取整份产出或来源的命名输出端口由 <see cref="FromPort"/> 指明。
+/// 消费方式由 <see cref="Feed"/> 描述，输出端口经 <see cref="Port"/> 指明（保留端口或声明端口）。
 /// 角色由 <see cref="Role"/> 描述，决定来源产出是否进入目标上下文，<see cref="Or"/> 把边归入可选启动组。
 /// 边只汇入执行节点。</summary>
-public sealed record FlowEdge(int From, int To, EdgeFeed Feed, PortName? FromPort = null, EdgeRole Role = EdgeRole.Data, string? Or = null);
+public sealed record FlowEdge(int From, int To, EdgeFeed Feed, PortName Port, EdgeRole Role = EdgeRole.Data, string? Or = null);

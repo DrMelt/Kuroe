@@ -29,10 +29,11 @@ public sealed class FakeExecutor : IRunExecutor
         ]
         """;
 
-    /// <summary>声明输出端口的执行节点交回的命名段。</summary>
-    public string PortValuesJson { get; set; } = """
-        { "结论": "结论产出", "理由": "理由产出" }
-        """;
+    /// <summary>声明输出端口的执行节点交回的命名段。空时按 run 声明的端口名逐个生成同名校验文本。</summary>
+    public string PortValuesJson { get; set; } = string.Empty;
+
+    /// <summary>按 run 生成端口值 JSON，设置后优先于 <see cref="PortValuesJson"/> 与默认逐端口名生成；返回 null 时回退。用于按执行轮次区分端口内容的装配。</summary>
+    public Func<Run, string?>? PortValuesJsonFor { get; set; }
 
     /// <summary>规划执行节点是否交回条目，关掉用于验证未收口。</summary>
     public bool SubmitsPlan { get; set; } = true;
@@ -48,6 +49,13 @@ public sealed class FakeExecutor : IRunExecutor
 
     /// <summary>按 run 差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
     public Func<Run, int>? DelayFor { get; set; }
+
+    /// <summary>按声明的端口名逐个生成同名校验文本，提交与声明一一对应。</summary>
+    private static string PortValuesFor(IReadOnlyList<PortName> ports)
+    {
+        string body = string.Join(", ", ports.Select(port => $"\"{port.Value}\": \"{port.Value}产出\""));
+        return "{ " + body + " }";
+    }
 
     /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
     public Func<Run, bool>? FailsWhen { get; set; }
@@ -98,10 +106,12 @@ public sealed class FakeExecutor : IRunExecutor
 
             if (run.Context.OutputPorts.Count > 0 && SubmitsPorts)
             {
-                _submissions.Enqueue(ToolResult.Render(PortSubmitter!.SubmitValues(run.Scope, PortValuesJson)));
+                string json = PortValuesJsonFor?.Invoke(run)
+                    ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(run.Context.OutputPorts));
+                _submissions.Enqueue(ToolResult.Render(PortSubmitter!.SubmitValues(run.Scope, json)));
                 if (DoubleSubmitPorts)
                 {
-                    _submissions.Enqueue(ToolResult.Render(PortSubmitter.SubmitValues(run.Scope, PortValuesJson)));
+                    _submissions.Enqueue(ToolResult.Render(PortSubmitter.SubmitValues(run.Scope, json)));
                 }
             }
 

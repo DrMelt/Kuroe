@@ -18,7 +18,7 @@ public sealed class WorkTask
 
     private readonly List<Run> _runs = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
-    private readonly Dictionary<int, IReadOnlyDictionary<PortName, string>> _portValues = [];
+    private readonly Dictionary<(int Node, int? Item), IReadOnlyDictionary<PortName, string>> _portValues = [];
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
@@ -100,14 +100,28 @@ public sealed class WorkTask
     /// <summary>记录某执行节点的条目拆分。要求持有 <see cref="Gate"/>。</summary>
     internal void SetSplit(int executableIndex, PlanOutput output) => _splits[executableIndex] = output;
 
-    /// <summary>某执行节点交回的命名输出端口值，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal IReadOnlyDictionary<PortName, string>? PortValuesFor(int executableIndex) => _portValues.GetValueOrDefault(executableIndex);
+    /// <summary>某执行节点某实例交回的命名输出端口值，整节点实例不写实例序，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal IReadOnlyDictionary<PortName, string>? PortValuesFor(int executableIndex, int? item) =>
+        _portValues.GetValueOrDefault((executableIndex, item));
 
-    /// <summary>记录某执行节点的输出端口值。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetPortValues(int executableIndex, IReadOnlyDictionary<PortName, string> values) => _portValues[executableIndex] = values;
+    /// <summary>记录某执行节点某实例的输出端口值。要求持有 <see cref="Gate"/>。</summary>
+    internal void SetPortValues(int executableIndex, int? item, IReadOnlyDictionary<PortName, string> values) =>
+        _portValues[(executableIndex, item)] = values;
 
-    /// <summary>移除某执行节点的输出端口值，返工作废后端口随产出重交。要求持有 <see cref="Gate"/>。</summary>
-    internal void ClearPortValues(int executableIndex) => _portValues.Remove(executableIndex);
+    /// <summary>移除某执行节点某实例的端口值，item 为空时清空该节点全部实例，返工作废后端口随产出重交。要求持有 <see cref="Gate"/>。</summary>
+    internal void ClearPortValues(int executableIndex, int? item)
+    {
+        if (item is { } index)
+        {
+            _portValues.Remove((executableIndex, index));
+            return;
+        }
+
+        foreach ((int node, int? entry) in _portValues.Keys.Where(pair => pair.Node == executableIndex).ToList())
+        {
+            _portValues.Remove((node, entry));
+        }
+    }
 
     /// <summary>提交顺序排列的 run。仅在持有 <see cref="Gate"/> 时读写。</summary>
     internal IReadOnlyList<Run> Runs => _runs;

@@ -16,8 +16,8 @@ public sealed class LazyRuntimeTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
             { "Name": "整体", "Nodes": [
               { "Name": "制定计划", "Model": "执行者", "Output": "Plan" },
-              { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "Gate": "Review", "From": ["制定计划"] },
-              { "Name": "收尾", "Model": "执行者", "From": ["分配执行"] }
+              { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "Gate": "Review", "From": ["制定计划@拆分"] },
+              { "Name": "收尾", "Model": "执行者", "From": ["分配执行@结论"] }
             ] }
           ] } ]
         }
@@ -78,9 +78,9 @@ public sealed class LazyRuntimeTests
         const string flow = """
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
               { "Name": "整体", "Nodes": [
-                { "Name": "甲", "Model": "执行者" },
-                { "Name": "乙", "Model": "执行者" },
-                { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲", "Or": "甲组" }, { "Node": "乙", "Or": "甲组" }, { "Node": "乙", "Or": "乙组" }, { "Node": "甲", "Or": "乙组" }] }
+                { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
+                { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
+                { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "乙组" }, { "Node": "甲@结论", "Or": "乙组" }] }
               ] }
             ] } ] }
             """;

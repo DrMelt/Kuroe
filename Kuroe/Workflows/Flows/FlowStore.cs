@@ -262,7 +262,7 @@ sealed class FlowStore(string file, string baseDirectory)
                 declareValidation = new OutputValidation(parsedPredicate.Value, validateDeclared.Argument);
             }
 
-            ErrorOr<Dictionary<PortName, NodeName>?> resolvedIn = ToIn(dto.In);
+            ErrorOr<Dictionary<PortName, PortRef>?> resolvedIn = ToBindings(dto.In);
             if (resolvedIn.IsError)
             {
                 useErrors.AddRange(resolvedIn.ErrorsOrEmptyList);
@@ -328,11 +328,6 @@ sealed class FlowStore(string file, string baseDirectory)
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
-            if (dto.Out is { Count: > 0 } && scope != LibraryScope)
-            {
-                containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不能声明输出端口，输出端口声明属于节点库容器定义。"));
-            }
-
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
             {
                 containerErrors.Add(FlowErrors.Node(scope, dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输出端口与系统指令。"));
@@ -363,7 +358,7 @@ sealed class FlowStore(string file, string baseDirectory)
                 }
             }
 
-            ErrorOr<Dictionary<PortName, NodeName>?> outputPorts = ToOut(dto.Out);
+            ErrorOr<Dictionary<PortName, PortRef>?> outputPorts = ToBindings(dto.Out);
             if (outputPorts.IsError)
             {
                 containerErrors.AddRange(outputPorts.ErrorsOrEmptyList);
@@ -482,17 +477,15 @@ sealed class FlowStore(string file, string baseDirectory)
             },
         };
     }
-    /// <summary>解析容器输出端口表：键与值是「端口名到成员引用」，形状与输入绑定一致，走同一个装配。</summary>
-    private static ErrorOr<Dictionary<PortName, NodeName>?> ToOut(Dictionary<string, string>? bindings) => ToIn(bindings);
-
-    private static ErrorOr<Dictionary<PortName, NodeName>?> ToIn(Dictionary<string, string>? bindings)
+    /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>
+    private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(Dictionary<string, string>? bindings)
     {
         if (bindings is not { Count: > 0 })
         {
-            return (Dictionary<PortName, NodeName>?)null;
+            return (Dictionary<PortName, PortRef>?)null;
         }
 
-        Dictionary<PortName, NodeName> result = [];
+        Dictionary<PortName, PortRef> result = [];
         List<Error> errors = [];
         foreach ((string key, string value) in bindings)
         {
@@ -500,14 +493,49 @@ sealed class FlowStore(string file, string baseDirectory)
             if (port.IsError)
             {
                 errors.AddRange(port.ErrorsOrEmptyList);
+                continue;
             }
-            else
+
+            ErrorOr<PortRef> parsed = ParsePortRef(value);
+            if (parsed.IsError)
             {
-                result[port.Value] = new NodeName(value);
+                errors.AddRange(parsed.ErrorsOrEmptyList);
+                continue;
             }
+
+            result[port.Value] = parsed.Value;
         }
 
         return errors.Count > 0 ? errors : result;
+    }
+
+    /// <summary>解析端口引用语法：@端口 是绑定引用，来源@端口 指向来源节点输出端口，
+    /// 保留的拆分与上下文端口与声明端口同形。不带 @ 的裸名不是合法引用。</summary>
+    private static ErrorOr<PortRef> ParsePortRef(string text)
+    {
+        if (text.StartsWith('@'))
+        {
+            ErrorOr<PortName> bound = PortName.Create(text[1..]);
+            return bound.IsError ? bound.ErrorsOrEmptyList : PortRef.Bound(bound.Value);
+        }
+
+        int at = text.IndexOf('@');
+        if (at > 0 && at < text.Length - 1)
+        {
+            ErrorOr<PortName> port = PortName.Create(text[(at + 1)..]);
+            if (port.IsError)
+            {
+                return port.ErrorsOrEmptyList;
+            }
+
+            NodeName source = new(text[..at]);
+            return port.Value == PortNames.ContextOutput
+                ? PortRef.Context(source)
+                : PortRef.Named(source, port.Value);
+        }
+
+        return Error.Validation(ErrorCodes.FlowNode,
+            $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
     }
 
     private static ModelRef? ToModel(string? model) =>
@@ -533,7 +561,16 @@ sealed class FlowStore(string file, string baseDirectory)
         {
             if (entry.ValueKind == JsonValueKind.String)
             {
-                result.Add(new SourceRef(new NodeName(entry.GetString() ?? string.Empty)));
+                ErrorOr<PortRef> parsedString = ParsePortRef(entry.GetString() ?? string.Empty);
+                if (parsedString.IsError)
+                {
+                    errors.AddRange(parsedString.ErrorsOrEmptyList);
+                }
+                else
+                {
+                    result.Add(new SourceRef(parsedString.Value));
+                }
+
                 continue;
             }
 
@@ -615,7 +652,14 @@ sealed class FlowStore(string file, string baseDirectory)
                 continue;
             }
 
-            result.Add(new SourceRef(new NodeName(node), or, signal, context));
+            ErrorOr<PortRef> parsedRef = ParsePortRef(node);
+            if (parsedRef.IsError)
+            {
+                errors.AddRange(parsedRef.ErrorsOrEmptyList);
+                continue;
+            }
+
+            result.Add(new SourceRef(parsedRef.Value, or, signal, context));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -679,12 +723,12 @@ sealed class FlowStore(string file, string baseDirectory)
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : [.. node.Inputs.Select(name => name.Value)],
             Out = node.Out is { Count: > 0 } outputs
-                ? outputs.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
+                ? outputs.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
                 : null,
             Outputs = node.Outputs.Count == 0 ? null : [.. node.Outputs.Select(name => name.Value)],
             SystemPrompt = node.SystemPrompt.Count == 0 ? null : [.. node.SystemPrompt],
             In = node.In is { Count: > 0 } inBindings
-                ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
+                ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
                 : null,
             Model = node.Model?.Value,
             Models = node.Models is { Count: > 0 } modelBindings
@@ -729,12 +773,12 @@ sealed class FlowStore(string file, string baseDirectory)
     {
         if (source.Or is null && !source.Signal && !source.Context)
         {
-            return JsonSerializer.SerializeToElement(source.Name.Value, FlowJson.Default.String);
+            return JsonSerializer.SerializeToElement(source.Ref.Display, FlowJson.Default.String);
         }
 
         return JsonSerializer.SerializeToElement(new FromEntryDto
         {
-            Node = source.Name.Value,
+            Node = source.Ref.Display,
             Or = source.Or,
             Signal = source.Signal ? true : null,
             Context = source.Context ? true : null,

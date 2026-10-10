@@ -24,8 +24,8 @@ public sealed class NodeInputLedgerTests
     private static void Run(bool signalFirst)
     {
         ExecutableNode sourceDef = SourceDefinition();
-        FlowEdge data = new(0, 1, EdgeFeed.AllInstances);
-        FlowEdge trigger = new(0, 1, EdgeFeed.Single, Role: EdgeRole.Trigger);
+        FlowEdge data = new(0, 1, EdgeFeed.AllInstances, OutputPort);
+        FlowEdge trigger = new(0, 1, EdgeFeed.Single, OutputPort, Role: EdgeRole.Trigger);
         NodeGraph graph = new([sourceDef, TargetDefinition()], signalFirst ? [trigger, data] : [data, trigger]);
 
         RuntimeExecutable source = new(sourceDef);
@@ -73,8 +73,8 @@ public sealed class NodeInputLedgerTests
         Model = Model,
         From =
         [
-            new Dependency(0, null),
-            new Dependency(0, null, Signal: true),
+            new Dependency(0, OutputPort),
+            new Dependency(0, OutputPort, Signal: true),
         ],
         Outputs = [],
         SystemPrompt = [],
@@ -82,4 +82,6 @@ public sealed class NodeInputLedgerTests
     };
 
     private static readonly ModelDefinition Model = new() { Name = new ModelRef("执行者") };
+
+    private static readonly PortName OutputPort = new("结论");
 }

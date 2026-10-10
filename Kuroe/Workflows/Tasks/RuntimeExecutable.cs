@@ -267,59 +267,163 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>已放行产出的位置集合：Single 给整节点，PerItem 给全部已发布实例。</summary>
-    public override IReadOnlyList<(int Node, int? Item)> ReleasedOutputs()
+    /// <summary>按输出端口取单段文本：命名端口取该节点交回的端口值，ContextOutput 给拼合文本。
+    /// 输入节点的产出是当前回答，PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
+    public override string? PortText(WorkTask task, PortName port)
     {
+        if (port == PortNames.ContextOutput)
+        {
+            return ContextOutput(task);
+        }
+
+        if (IsInputOutput)
+        {
+            if (port != (Executable.Outputs.Count == 1 ? Executable.Outputs[0] : null))
+            {
+                return null;
+            }
+
+            return InputAnswer is { Length: > 0 } answer ? answer : null;
+        }
+
+        if (port == PortNames.Split)
+        {
+            // 拆分是结构化产出，不产生可注入文本
+            return null;
+        }
+
+        if (Mode == NodeMode.PerItem)
+        {
+            string[] parts = [.. Items
+                .Where(item => _publishedItems.Contains(item))
+                .Select(item => PortValue(task, port, item))
+                .OfType<string>()
+                .Where(value => value.Length > 0)];
+
+            return parts.Length == 0 ? null : string.Join("\n\n", parts);
+        }
+
+        return PortValue(task, port, null);
+    }
+
+    /// <summary>按端口取该实例或整节点的一个返回值：命名端口取交回段，输入节点取回答。</summary>
+    private string? PortValue(WorkTask task, PortName port, int? item) =>
+        task.PortValuesFor(Index, item)?.GetValueOrDefault(port);
+
+    /// <summary>按输出端口取可注入的产出消息集：PerItem 逐实例，其余单条，上下文给装配帧。
+    /// item 指定时只取该实例的产出，供对齐边按条目消费，不受整节点放行状态约束。</summary>
+    public override IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item)
+    {
+        if (port == PortNames.ContextOutput)
+        {
+            // PerItem 来源的上下文端口逐实例展开各帧，与其它端口逐实例取产出一致
+            if (item is null && Mode == NodeMode.PerItem)
+            {
+                List<ContextMessage> frames = [];
+                foreach (int published in Items.Where(index => Complete(index)))
+                {
+                    frames.AddRange(ContextFrameMessages(task, published));
+                }
+
+                return frames;
+            }
+
+            return ContextFrameMessages(task, item);
+        }
+
+        if (port == PortNames.Split)
+        {
+            // 拆分支票是结构化产出，不注入文本上下文
+            return [];
+        }
+
+        if (item is { } index)
+        {
+            return SingleMessage(task, port, index);
+        }
+
         if (!Released)
         {
             return [];
         }
 
-        return Mode == NodeMode.PerItem
-            ? [.. Items.Select(item => (Index, (int?)item))]
-            : [(Index, null)];
+        if (Mode == NodeMode.PerItem)
+        {
+            List<ContextMessage> messages = [];
+            foreach (int published in Items.Where(published => Complete(published)))
+            {
+                messages.AddRange(SingleMessage(task, port, published));
+            }
+
+            return messages;
+        }
+
+        return SingleMessage(task, port, null);
     }
 
-    /// <summary>命名输出端口的产出文本：命名端口取该轮交回的命名段，ContextOutput 取整份上下文拼合文本，
-    /// 整份取最近成功收口的产出，PerItem 整份拼接全部已发布实例。输入节点的产出是当前回答。</summary>
-    public override string? OutputText(WorkTask task, PortName? port)
+    /// <summary>按端口取该实例或整节点的一条产出消息。输入节点给回答消息，出处指向用户输入。取值或出处缺失时不产生消息。</summary>
+    private IReadOnlyList<ContextMessage> SingleMessage(WorkTask task, PortName port, int? item)
     {
         if (IsInputOutput)
         {
-            return InputAnswer is { Length: > 0 } answer ? answer : null;
-        }
-
-        if (port == ExecutableNode.ContextOutputPort)
-        {
-            if (LatestSucceededRun(task, Index, null) is not { } frameRun)
+            if (port != (Executable.Outputs.Count == 1 ? Executable.Outputs[0] : null)
+                || InputAnswer is not { Length: > 0 } answer)
             {
-                return null;
+                return [];
             }
 
-            ContextFrame frame = new(frameRun.Id, Name, null, frameRun.Context.Seed, frameRun.Context.Instruction);
-            string content = string.Join("\n\n", frame.Messages.Select(message => message.Text));
-
-            return $"{content}\n\n指令：\n{frame.Instruction}";
+            return [new ContextMessage(MessageRole.User, $"节点「{Name}」的输入：\n{answer}", new InputSource(Name))];
         }
 
-        if (port is { } outputPort)
+        if (LatestSucceededRun(task, Index, item) is not { } run
+            || PortValue(task, port, item) is not { Length: > 0 } content)
         {
-            return task.PortValuesFor(Index)?.GetValueOrDefault(outputPort);
+            return [];
         }
 
-        return Mode == NodeMode.PerItem ? AggregateItems(task) : LatestSucceededRun(task, Index, null)?.Result;
+        string prefix = item is { } index
+            ? $"条目「{ItemTitle(task, index)}」在节点「{Name}」的端口「{port}」产出：\n"
+            : $"节点「{Name}」的端口「{port}」产出：\n";
+
+        return [new ContextMessage(MessageRole.User, $"{prefix}{content}", new RunSource(run.Id, Name))];
     }
 
-    /// <summary>全部已发布实例的最近成功产出，按实例序拼接。未发布任何实例时为空。</summary>
-    private string? AggregateItems(WorkTask task)
+    /// <summary>上下文输出端口的注入消息：来源 run 的装配帧逐条保留，指令单列。</summary>
+    private List<ContextMessage> ContextFrameMessages(WorkTask task, int? item)
     {
-        string[] parts = [.. Items
-            .Where(item => _publishedItems.Contains(item))
-            .Select(item => LatestSucceededRun(task, Index, item)?.Result)
-            .OfType<string>()
-            .Where(result => result.Length > 0)];
+        if (LatestSucceededRun(task, Index, item) is not { } frameRun)
+        {
+            return [];
+        }
 
-        return parts.Length == 0 ? null : string.Join("\n\n", parts);
+        ContextFrame frame = new(frameRun.Id, Name, item, frameRun.Context.Seed, frameRun.Context.Instruction);
+        List<ContextMessage> messages =
+        [
+            .. frame.Messages,
+            new(MessageRole.User, $"节点「{frame.Node}」的指令：\n{frame.Instruction}", new ContextFrameSource(frame.Run, frame.Node, frame.Item)),
+        ];
+
+        return messages;
+    }
+
+    /// <summary>条目的标题，取不到时退回序号。条目身份只在归属空间内有效。</summary>
+    private string ItemTitle(WorkTask task, int itemIndex) =>
+        task.Graph.ItemSpace(Index) is { } space && task.SplitFor(space) is { } split
+            ? split.Items.FirstOrDefault(item => item.Index == itemIndex)?.Title ?? $"条目 {itemIndex + 1}"
+            : $"条目 {itemIndex + 1}";
+
+    /// <summary>最近成功收口 run 的装配上下文拼合文本，指令单列。</summary>
+    private string? ContextOutput(WorkTask task)
+    {
+        if (LatestSucceededRun(task, Index, null) is not { } frameRun)
+        {
+            return null;
+        }
+
+        ContextFrame frame = new(frameRun.Id, Name, null, frameRun.Context.Seed, frameRun.Context.Instruction);
+        string content = string.Join("\n\n", frame.Messages.Select(message => message.Text));
+
+        return $"{content}\n\n指令：\n{frame.Instruction}";
     }
 
     /// <summary>本节点某实例最近一次成功收口且产出非空的 run。</summary>

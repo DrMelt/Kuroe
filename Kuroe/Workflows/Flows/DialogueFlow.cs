@@ -18,6 +18,12 @@ internal static class DialogueFlow
     /// <summary>回话节点名：面向运行时模型的一问一答。</summary>
     internal static NodeName ReplyNodeName { get; } = new("回话");
 
+    /// <summary>收话节点回答写入的输出端口名。</summary>
+    internal static PortName InputPort { get; } = new("回答");
+
+    /// <summary>回话节点产出写入的输出端口名。</summary>
+    internal static PortName ReplyPort { get; } = new("回复");
+
     /// <summary>回话节点可用的能力工具白名单，写上级路径即放行整棵子树。</summary>
     internal static IReadOnlyList<ToolPath> Tools { get; } =
     [
@@ -47,7 +53,8 @@ internal static class DialogueFlow
                         Output = NodeOutput.Input,
                         Question = "请输入",
                     },
-                    From = [new SourceRef(ReplyNodeName)],
+                    Outputs = [InputPort],
+                    From = [new SourceRef(PortRef.Named(ReplyNodeName, ReplyPort))],
                 },
                 new NodeSpec
                 {
@@ -59,7 +66,8 @@ internal static class DialogueFlow
                         Prompt = Prompt,
                     },
                     Model = RuntimeModel,
-                    From = [new SourceRef(InputNodeName)],
+                    Outputs = [ReplyPort],
+                    From = [new SourceRef(PortRef.Named(InputNodeName, InputPort))],
                 },
             ],
         });

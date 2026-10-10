@@ -49,13 +49,13 @@ internal sealed class NodeDto
     /// <summary>输入节点的提示文本。</summary>
     public string? Question { get; set; }
 
-    /// <summary>执行节点的命名输出端口表，空表即隐式单端口（整份产出）。</summary>
+    /// <summary>执行节点的命名输出端口表。</summary>
     public List<string>? Outputs { get; set; }
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public List<string>? SystemPrompt { get; set; }
 
-    /// <summary>上游接线条目：字符串条目是来源名（可含 @端口），对象条目写 Node、Or、Signal 键。
+    /// <summary>上游接线条目：字符串条目是引用文本（@端口 或 来源@端口），对象条目写 Node、Or、Signal 键。
     /// 引用规则由 FlowRules 校验。</summary>
     public List<JsonElement>? From { get; set; }
 

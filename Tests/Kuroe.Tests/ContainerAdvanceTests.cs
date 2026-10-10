@@ -62,9 +62,9 @@ public sealed class ContainerAdvanceTests
         TaskSnapshot done = harness.Settle(id);
         RunSnapshot check = Assert.Single(done.Executables[3].Runs);
 
-        // 容器来源把成员产出一并带进：PerItem 成员按实例
-        Assert.Contains(check.Context.Seed, message => message.Text.Contains("条目「甲」在节点「撰写」的产出"));
-        Assert.Contains(check.Context.Seed, message => message.Text.Contains("条目「乙」在节点「排版」的产出"));
+        // 容器来源把成员命名段按 Out 端口转进：每条绑定端口一条容器端口消息
+        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「交付」的端口「撰写结论」产出"));
+        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「交付」的端口「排版结论」产出"));
     }
 
     [Fact]
@@ -165,11 +165,11 @@ public sealed class ContainerAdvanceTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "交付", "Gate": "Review", "Nodes": [
-                  { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                  { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] }
+                { "Name": "交付", "Gate": "Review", "Out": { "撰写结论": "撰写@结论", "排版结论": "排版@结论" }, "Nodes": [
+                  { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Outputs": ["结论"], "Branch": "撰写", "From": ["制定计划@拆分"] },
+                  { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Outputs": ["结论"], "Branch": "排版", "From": ["制定计划@拆分"] }
                 ] },
-                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
                 }
               ]
@@ -192,11 +192,11 @@ public sealed class ContainerAdvanceTests
                   "Name": "整体",
                   "Nodes": [
                 { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "交付", "Nodes": [
-                  { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划"] },
-                  { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划"] }
+                { "Name": "交付", "Out": { "撰写结论": "撰写@结论", "排版结论": "排版@结论" }, "Nodes": [
+                  { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Outputs": ["结论"], "Branch": "撰写", "From": ["制定计划@拆分"] },
+                  { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Outputs": ["结论"], "Branch": "排版", "From": ["制定计划@拆分"] }
                 ] },
-                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
                 }
               ]
@@ -217,13 +217,13 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                { "Name": "交付", "Nodes": [
+                { "Name": "交付", "Out": { "撰写结论": "撰写@结论", "排版结论": "排版@结论" }, "Nodes": [
                   { "Name": "撰写组", "Gate": "Review", "Nodes": [
-                    { "Name": "撰写", "Model": "实施者" }
+                    { "Name": "撰写", "Model": "实施者", "Outputs": ["结论"] }
                   ] },
-                  { "Name": "排版", "Model": "实施者" }
+                  { "Name": "排版", "Model": "实施者", "Outputs": ["结论"] }
                 ] },
-                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
                 }
               ]
@@ -244,11 +244,11 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                { "Name": "交付", "Nodes": [
-                  { "Name": "撰写", "Model": "实施者", "Gate": "Review" },
-                  { "Name": "排版", "Model": "实施者" }
+                { "Name": "交付", "Out": { "撰写结论": "撰写@结论", "排版结论": "排版@结论" }, "Nodes": [
+                  { "Name": "撰写", "Model": "实施者", "Outputs": ["结论"], "Gate": "Review" },
+                  { "Name": "排版", "Model": "实施者", "Outputs": ["结论"] }
                 ] },
-                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
                 }
               ]
@@ -269,13 +269,13 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Nodes": [
-                { "Name": "交付", "Nodes": [
+                { "Name": "交付", "Out": { "撰写结论": "撰写@结论", "排版结论": "排版@结论" }, "Nodes": [
                   { "Name": "撰写组", "Nodes": [
-                    { "Name": "撰写", "Model": "实施者" }
+                    { "Name": "撰写", "Model": "实施者", "Outputs": ["结论"] }
                   ] },
-                  { "Name": "排版", "Model": "实施者" }
+                  { "Name": "排版", "Model": "实施者", "Outputs": ["结论"] }
                 ] },
-                { "Name": "汇总", "Model": "实施者", "From": ["交付"] }
+                { "Name": "汇总", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
                 }
               ]
