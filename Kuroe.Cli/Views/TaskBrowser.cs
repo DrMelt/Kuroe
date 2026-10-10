@@ -3,7 +3,7 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Workflows.TaskExecution.Tasks;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;

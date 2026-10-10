@@ -7,9 +7,9 @@ using Kuroe.Shared;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Workflows;
-using Kuroe.Workflows.Flows;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Workflows.TaskExecution;
+using Kuroe.Workflows.FlowAssembly;
+using Kuroe.Workflows.TaskExecution.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.TestSupport;

@@ -1,7 +1,7 @@
 using ApiHub.Shared.Models;
 using Kuroe.Executions.Tools;
 using Kuroe.Catalogs;
-using Kuroe.Workflows.Flows;
+using Kuroe.Workflows.FlowAssembly;
 
 namespace Kuroe.Cli.Views;
 

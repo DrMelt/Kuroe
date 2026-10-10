@@ -1,5 +1,5 @@
 using Kuroe.Shared.Workflows;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Workflows.TaskExecution.Tasks;
 
 namespace Kuroe.Cli.Views;
 

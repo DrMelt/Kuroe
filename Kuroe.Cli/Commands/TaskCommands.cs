@@ -6,7 +6,7 @@ using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Workflows.Tasks;
+using Kuroe.Workflows.TaskExecution.Tasks;
 
 namespace Kuroe.Cli.Commands;
 
