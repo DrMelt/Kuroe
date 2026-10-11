@@ -60,6 +60,9 @@ public sealed record NodeSpec
     /// <summary>引用节点组时的模型槽位绑定：槽位名到本流程模型选择名的映射，未绑定的槽位在展开时报错。</summary>
     public IReadOnlyDictionary<ModelRef, ModelRef>? Models { get; init; }
 
+    /// <summary>容器定义声明的模型槽位：成员用 <see cref="Model"/> 写槽位名，引用处用 <see cref="Models"/> 绑定到流程模型选择名，按声明序。只有节点库容器定义声明，装配层内联容器与引用节点为空。</summary>
+    public IReadOnlyList<ModelRef>? ModelSlots { get; init; }
+
     /// <summary>执行配置，非空即执行节点或输入节点，输入节点只用其中的 Question。</summary>
     public ExecutableSpec? Execution { get; init; }
 }

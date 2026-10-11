@@ -22,7 +22,7 @@ internal static class NodeLibraryRules
             {
                 if (node.Nodes is { Count: > 0 } members)
                 {
-                    CheckContainer(node, members, byName, errors);
+                    CheckContainer(node, members, byName, errors, checkSlots: true);
                 }
             }
             else
@@ -89,8 +89,10 @@ internal static class NodeLibraryRules
 
                 if (node.Model is not null || node.Models is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明模型与模型绑定，绑定由引用处提供。"));
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明模型选择与模型绑定，绑定由引用处提供。"));
                 }
+
+                ValidateModelSlots(node, errors);
 
                 if (node.Outputs.Count > 0)
                 {
@@ -112,6 +114,11 @@ internal static class NodeLibraryRules
                 if (node.Nodes is { Count: > 0 })
                 {
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点与输入节点不能声明子节点，子节点只属于容器。"));
+                }
+
+                if (node.ModelSlots is not null)
+                {
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点不声明模型槽位，槽位声明只属于容器。"));
                 }
 
                 if (node.Execution is null)
@@ -143,6 +150,26 @@ internal static class NodeLibraryRules
 
         return byName;
     }
+
+    /// <summary>模型槽位声明的形状：名字非空且不重复。</summary>
+    private static void ValidateModelSlots(Flow.NodeSpec node, List<Error> errors)
+    {
+        if (node.ModelSlots is not { } slots)
+        {
+            return;
+        }
+
+        foreach (Flow.ModelRef slot in slots.Where(slot => string.IsNullOrWhiteSpace(slot.Value)))
+        {
+            errors.Add(NodeScope.Library.Node(node.Name.Value, "模型槽位名不能为空。"));
+        }
+
+        foreach (Flow.ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
+        {
+            errors.Add(NodeScope.Library.Node(node.Name.Value, $"模型槽位 {duplicated} 重复。"));
+        }
+    }
+
     /// <summary>执行节点库叶子：不能再带结构与接线。</summary>
     private static void CheckLeaf(Flow.NodeSpec node, List<Error> errors)
     {
@@ -219,12 +246,14 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
+    /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。
+    /// checkSlots 只在节点库容器定义层为真，槽位声明与使用一致按定义整棵子树核对一次，内联子容器沿外层声明。</summary>
     private static void CheckContainer(
         Flow.NodeSpec container,
         IReadOnlyList<Flow.NodeSpec> members,
         Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        List<Error> errors)
+        List<Error> errors,
+        bool checkSlots)
     {
         if (container.MaxRuns is { } limit && limit < 1)
         {
@@ -249,6 +278,11 @@ internal static class NodeLibraryRules
         CheckLiteralNames(members, literalNames, container, errors);
 
         var ports = new HashSet<Flow.PortName>([.. container.Inputs.Select(port => port.Name)]);
+        if (checkSlots)
+        {
+            CheckModelSlots(container, members, container.ModelSlots ?? [], byName, errors);
+        }
+
         foreach (Flow.NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
@@ -256,8 +290,90 @@ internal static class NodeLibraryRules
             ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
             {
-                CheckContainer(member, member.Nodes, byName, errors);
+                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false);
             }
+        }
+    }
+
+    /// <summary>容器槽位声明与使用一致：成员引用的槽位必须已声明，声明的槽位必须被引用，
+    /// 引用子容器的绑定键覆盖被引用定义的声明。</summary>
+    private static void CheckModelSlots(
+        Flow.NodeSpec container,
+        IReadOnlyList<Flow.NodeSpec> members,
+        IReadOnlyList<Flow.ModelRef> declared,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        List<Error> errors)
+    {
+        var used = new HashSet<Flow.ModelRef>();
+        CollectSlotUsage(members, byName, used);
+
+        foreach (Flow.ModelRef slot in used.Where(slot => !declared.Contains(slot)))
+        {
+            errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员使用的模型槽位 {slot} 未在容器上声明。"));
+        }
+
+        foreach (Flow.ModelRef slot in declared.Where(slot => !used.Contains(slot)))
+        {
+            errors.Add(NodeScope.Library.Node(container.Name.Value, $"声明的模型槽位 {slot} 未被成员使用。"));
+        }
+
+        foreach (Flow.NodeSpec member in members)
+        {
+            if (member.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            {
+                CheckGroupBinding(member, referenced, errors);
+            }
+        }
+    }
+
+    /// <summary>收集子树引用的模型槽位：执行成员写自己的槽位，内联子容器递归，引用子容器取绑定值。
+    /// 被引用定义内部的槽位属于它自己的声明，不在此收集。</summary>
+    private static void CollectSlotUsage(
+        IReadOnlyList<Flow.NodeSpec> nodes,
+        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        HashSet<Flow.ModelRef> used)
+    {
+        foreach (Flow.NodeSpec node in nodes)
+        {
+            if (node.Nodes is { Count: > 0 })
+            {
+                CollectSlotUsage(node.Nodes, byName, used);
+                continue;
+            }
+
+            if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            {
+                foreach (Flow.ModelRef bound in node.Models?.Values ?? [])
+                {
+                    used.Add(bound);
+                }
+
+                continue;
+            }
+
+            if (node.Model is { } slot)
+            {
+                used.Add(slot);
+            }
+        }
+    }
+
+    /// <summary>引用子容器的模型绑定：键必须覆盖被引用定义声明的槽位，不能绑定声明以外的槽位。</summary>
+    private static void CheckGroupBinding(
+        Flow.NodeSpec member,
+        Flow.NodeSpec definition,
+        List<Error> errors)
+    {
+        IReadOnlyList<Flow.ModelRef> slots = definition.ModelSlots ?? [];
+        var bound = new HashSet<Flow.ModelRef>(member.Models?.Keys ?? []);
+        foreach (Flow.ModelRef slot in slots.Where(slot => !bound.Contains(slot)))
+        {
+            errors.Add(NodeScope.Library.Node(member.Name.Value, $"引用节点组未绑定模型槽位 {slot}。"));
+        }
+
+        foreach (Flow.ModelRef slot in bound.Where(slot => !slots.Contains(slot)))
+        {
+            errors.Add(NodeScope.Library.Node(member.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
         }
     }
 
@@ -483,9 +599,9 @@ internal static class NodeLibraryRules
     {
         if (member.Nodes is { Count: > 0 })
         {
-            if (member.Model is not null || member.Models is not null)
+            if (member.Model is not null || member.Models is not null || member.ModelSlots is not null)
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, "内联容器成员不声明模型与模型绑定。"));
+                errors.Add(NodeScope.Library.Node(member.Name.Value, "内联容器成员不声明模型、模型槽位与模型绑定。"));
             }
 
             return;
@@ -504,8 +620,6 @@ internal static class NodeLibraryRules
                 {
                     errors.Add(NodeScope.Library.Node(member.Name.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
                 }
-
-                CheckModelBindings(member, errors);
 
                 return;
             }
@@ -529,23 +643,6 @@ internal static class NodeLibraryRules
         if (member.Models is not null)
         {
             errors.Add(NodeScope.Library.Node(member.Name.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
-        }
-    }
-
-    /// <summary>引用节点组的模型绑定：键与值都不能为空。</summary>
-    private static void CheckModelBindings(Flow.NodeSpec member, List<Error> errors)
-    {
-        if (member.Models is null)
-        {
-            return;
-        }
-
-        foreach ((Flow.ModelRef slot, Flow.ModelRef bound) in member.Models)
-        {
-            if (string.IsNullOrWhiteSpace(slot.Value) || string.IsNullOrWhiteSpace(bound.Value))
-            {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, "模型绑定键与值不能为空。"));
-            }
         }
     }
 }

@@ -371,6 +371,7 @@ public sealed class FlowLoadTests
             {
               "Name": "交付",
               "Kind": "Container",
+              "Models": ["执行者"],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }],
               "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
@@ -390,6 +391,7 @@ public sealed class FlowLoadTests
             {
               "Name": "交付",
               "Kind": "Container",
+              "Models": ["执行者"],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }],
               "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
@@ -405,7 +407,7 @@ public sealed class FlowLoadTests
 
     private const string ReferenceContainerFrom = """
         {
-          "Nodes": [ { "Name": "组", "Kind": "Container", "Nodes": [ { "Name": "做", "Kind": "Executable", "Model": "执行者" } ] } ],
+          "Nodes": [ { "Name": "组", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "做", "Kind": "Executable", "Model": "执行者" } ] } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "组实例", "Use": "组", "Models": { "执行者": "执行者" }, "From": [{ "Node": "做@结论", "Signal": true }] }
@@ -480,6 +482,7 @@ public sealed class FlowLoadTests
             {
               "Name": "端口组",
               "Kind": "Container",
+              "Models": ["执行者"],
               "Inputs": [{ "Name": "计划", "Description": "待实施的条目拆分" }],
               "Outputs": [{ "Name": "结论", "Ref": "分析@结论", "Description": "透出的结论" }],
               "Nodes": [

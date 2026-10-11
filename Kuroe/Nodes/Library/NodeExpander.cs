@@ -186,22 +186,29 @@ internal static class NodeExpander
         return expanded;
     }
 
-    /// <summary>端口绑定只能指向容器定义声明的输入端口。</summary>
+    /// <summary>引用容器的绑定域：端口绑定只能指向定义声明的输入端口，模型绑定只能指向定义声明的槽位。</summary>
     private static void CheckBindings(
         Flow.NodeSpec node,
         Flow.NodeSpec definition,
         NodeScope scope,
         List<Error> errors)
     {
-        if (node.In is not { } bindings)
+        if (node.In is { } bindings)
         {
-            return;
+            var declared = new HashSet<Flow.PortName>([.. definition.Inputs.Select(port => port.Name)]);
+            foreach (Flow.PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
+            {
+                errors.Add(scope.Node(node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
+            }
         }
 
-        var declared = new HashSet<Flow.PortName>([.. definition.Inputs.Select(port => port.Name)]);
-        foreach (Flow.PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
+        if (node.Models is { } modelBindings)
         {
-            errors.Add(scope.Node(node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
+            var slots = new HashSet<Flow.ModelRef>(definition.ModelSlots ?? []);
+            foreach (Flow.ModelRef slot in modelBindings.Keys.Where(slot => !slots.Contains(slot)))
+            {
+                errors.Add(scope.Node(node.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
+            }
         }
     }
 

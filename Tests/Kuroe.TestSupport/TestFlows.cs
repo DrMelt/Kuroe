@@ -263,6 +263,7 @@ public static class TestFlows
             {
               "Name": "交付",
               "Kind": "Container",
+              "Models": ["执行者"],
               "Inputs": [{ "Name": "计划" }],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }, { "Name": "理由", "Ref": "实施@理由" }],
               "Nodes": [

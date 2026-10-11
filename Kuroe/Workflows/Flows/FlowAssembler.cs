@@ -267,7 +267,7 @@ static class FlowAssembler
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
             }
 
-            if (dto.Model is not null && dto.Models is not null)
+            if (dto.Model is not null && HasModels(dto.Models))
             {
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能同时声明模型与模型绑定。"));
             }
@@ -312,6 +312,13 @@ static class FlowAssembler
                 return useErrors;
             }
 
+            ErrorOr<Dictionary<ModelRef, ModelRef>?> resolvedModels = ToModelBindings(dto.Models, scope, dto.Name ?? string.Empty);
+            if (resolvedModels.IsError)
+            {
+                useErrors.AddRange(resolvedModels.ErrorsOrEmptyList);
+                return useErrors;
+            }
+
             ErrorOr<IReadOnlyList<SourceRef>> resolvedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
             if (resolvedFrom.IsError)
             {
@@ -329,7 +336,7 @@ static class FlowAssembler
                 MaxRuns = dto.MaxRuns,
                 In = resolvedIn.Value,
                 Model = ToModel(dto.Model),
-                Models = ToModelBindings(dto.Models),
+                Models = resolvedModels.Value,
             };
         }
 
@@ -362,9 +369,29 @@ static class FlowAssembler
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
             }
 
-            if (dto.Models is not null)
+            IReadOnlyList<ModelRef>? declaredSlots = null;
+            if (dto.Models is { } declaredModels)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不能声明模型绑定，模型绑定只用于引用节点组。"));
+                if (!scope.IsLibrary)
+                {
+                    containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "内联容器不声明模型槽位与模型绑定，槽位声明只属于节点库容器定义。"));
+                }
+                else if (declaredModels.ValueKind != JsonValueKind.Array)
+                {
+                    containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器定义的模型槽位写槽位名数组。"));
+                }
+                else
+                {
+                    ErrorOr<IReadOnlyList<ModelRef>> slots = ToModelSlots(declaredModels, scope, dto.Name ?? string.Empty);
+                    if (slots.IsError)
+                    {
+                        containerErrors.AddRange(slots.ErrorsOrEmptyList);
+                    }
+                    else
+                    {
+                        declaredSlots = slots.Value;
+                    }
+                }
             }
 
             if (dto.In is { Count: > 0 })
@@ -430,6 +457,7 @@ static class FlowAssembler
                 Inputs = inputs.Value,
                 ContainerOutputs = outputPorts.Value,
                 MaxRuns = dto.MaxRuns,
+                ModelSlots = declaredSlots,
                 Nodes = children,
             };
         }
@@ -451,9 +479,9 @@ static class FlowAssembler
                 "执行节点不写输入端口绑定，上下文输入用 From 条目的 Context 标记。"));
         }
 
-        if (dto.Models is not null)
+        if (HasModels(dto.Models))
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不能声明模型绑定，模型绑定只用于引用节点组。"));
+            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。"));
         }
 
         foreach (string toolPath in dto.Tools ?? [])
@@ -896,10 +924,82 @@ static class FlowAssembler
     private static ModelRef? ToModel(string? model) =>
         string.IsNullOrWhiteSpace(model) ? null : new ModelRef(model);
 
-    private static Dictionary<ModelRef, ModelRef>? ToModelBindings(Dictionary<string, string>? bindings) =>
-        bindings is { Count: > 0 }
-            ? bindings.ToDictionary(entry => new ModelRef(entry.Key), entry => new ModelRef(entry.Value))
-            : null;
+    /// <summary>是否写了 Models 键。JSON 缺键时 JsonElement 为 Undefined。</summary>
+    private static bool HasModels(JsonElement? models) =>
+        models is { ValueKind: not JsonValueKind.Undefined };
+
+    /// <summary>容器定义的模型槽位声明：字符串数组，名字不能为空且不重复。</summary>
+    private static ErrorOr<IReadOnlyList<ModelRef>> ToModelSlots(JsonElement models, NodeScope scope, string nodeName)
+    {
+        List<ModelRef> slots = [];
+        List<Error> errors = [];
+        foreach (JsonElement entry in models.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.GetString()))
+            {
+                errors.Add(scope.Node(nodeName, "模型槽位名不能为空。"));
+                continue;
+            }
+
+            slots.Add(new ModelRef(entry.GetString()!));
+        }
+
+        foreach (ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
+        {
+            errors.Add(scope.Node(nodeName, $"模型槽位 {duplicated} 重复。"));
+        }
+
+        return errors.Count > 0 ? errors : slots;
+    }
+
+    /// <summary>引用节点组的模型绑定：对象形状，键是槽位名，值是流程模型选择名。</summary>
+    private static ErrorOr<Dictionary<ModelRef, ModelRef>?> ToModelBindings(JsonElement? models, NodeScope scope, string nodeName)
+    {
+        if (!HasModels(models))
+        {
+            return (Dictionary<ModelRef, ModelRef>?)null;
+        }
+
+        if (models!.Value.ValueKind != JsonValueKind.Object)
+        {
+            return scope.Node(nodeName, "引用节点组的 Models 写槽位绑定对象，槽位声明只写容器定义。");
+        }
+
+        Dictionary<ModelRef, ModelRef> bindings = [];
+        List<Error> errors = [];
+        foreach (JsonProperty property in models.Value.EnumerateObject())
+        {
+            if (string.IsNullOrWhiteSpace(property.Name)
+                || property.Value.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(property.Value.GetString()))
+            {
+                errors.Add(scope.Node(nodeName, "模型绑定键与值都不能为空。"));
+                continue;
+            }
+
+            bindings[new ModelRef(property.Name)] = new ModelRef(property.Value.GetString()!);
+        }
+
+        return errors.Count > 0 ? errors : bindings;
+    }
+
+    /// <summary>把模型槽位转回文件形状：容器定义写声明数组，引用节点组写绑定对象。</summary>
+    private static JsonElement? ToModelsDto(NodeSpec node)
+    {
+        if (node.ModelSlots is { Count: > 0 } slots)
+        {
+            return JsonSerializer.SerializeToElement([.. slots.Select(slot => slot.Value)], FlowJson.Default.ListString);
+        }
+
+        if (node.Models is { Count: > 0 } bindings)
+        {
+            return JsonSerializer.SerializeToElement(
+                bindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value),
+                FlowJson.Default.DictionaryStringString);
+        }
+
+        return null;
+    }
 
     /// <summary>把上游接线条目装配成模型：字符串条目是来源名，对象条目允许写 Node、Or、Signal、Context 键。
     /// 字段类型不符记入错误，不抛异常。</summary>
@@ -1124,9 +1224,7 @@ static class FlowAssembler
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
                 : null,
             Model = node.Model?.Value,
-            Models = node.Models is { Count: > 0 } modelBindings
-                ? modelBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Value)
-                : null,
+            Models = ToModelsDto(node),
         };
 
         if (node.Nodes is { Count: > 0 })

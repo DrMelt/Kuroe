@@ -42,6 +42,7 @@ internal static class BuiltinNodes
         Name = new NodeName("交付"),
         Kind = NodeKind.Container,
         Inputs = [new ContainerInput(new PortName("计划"), "待实施的条目拆分，来自规划节点。")],
+        ModelSlots = [ExecutorSlot],
         Nodes =
         [
             new NodeSpec

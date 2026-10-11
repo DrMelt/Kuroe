@@ -116,7 +116,7 @@ public sealed class ContainerLimitTests
     private const string ReferenceContainerLimitFlow = """
         {
           "Nodes": [
-            { "Name": "干活组", "Kind": "Container", "MaxRuns": 3, "Inputs": [{ "Name": "入口" }], "Nodes": [
+            { "Name": "干活组", "Kind": "Container", "Models": ["执行者"], "MaxRuns": 3, "Inputs": [{ "Name": "入口" }], "Nodes": [
               { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["@入口"] }
             ] }
           ],
