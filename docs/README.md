@@ -25,3 +25,5 @@
 dotnet build Kuroe.slnx
 dotnet test Kuroe.slnx
 ```
+
+`Kuroe` 内部按域分层，依赖单向：`Shared` → `Storage` → `Configuration` → `Catalogs` → `Nodes` → `Workflows.Flows` → `Workflows.Execution` → `Executions` → `Tools` → `Kuroe`。节点域只依赖 `Shared`，装配域单向引用节点域。

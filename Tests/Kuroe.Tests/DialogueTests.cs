@@ -5,10 +5,10 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Tools;
-using Kuroe.Tools.KuroeTools;
-using Kuroe.Workflows.FlowAssembly;
-using Kuroe.Workflows.TaskExecution.Tasks;
+using Kuroe.Tools.Builtin;
+using Kuroe.Tools.Info;
+using Kuroe.Workflows.Flows;
+using Kuroe.Workflows.Execution.Tasks;
 using Microsoft.Extensions.AI;
 using Xunit;
 

@@ -1,11 +1,13 @@
 using ErrorOr;
 using Kuroe.Configuration;
+using Kuroe.Configuration.Files;
+using Kuroe.Nodes.Library;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
-using Kuroe.Workflows.FlowAssembly;
+using Kuroe.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -90,6 +92,27 @@ public sealed class NodeLibraryTests
         Assert.Contains("\"Models\"", text);
     }
 
+    /// <summary>文件定义自定义节点时，流程仍可直接引用内置节点；落盘只写文件来源的节点定义。</summary>
+    [Fact]
+    public void Builtin_node_stays_usable_and_unwritten_when_file_defines_its_own()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        File.WriteAllText(Path.Combine(harness.Root, "builtin.json"), BuiltinReferenceFlow);
+
+        harness.Flows.Import("builtin.json").ThrowIfError();
+
+        NodeSpec container = harness.Flows.Find(new FlowName("内置引用")).ThrowIfError().RootNode.Nodes![1];
+        Assert.NotNull(container.Nodes);
+        NodeSpec implement = container.Nodes[0];
+        Assert.NotNull(implement.Execution);
+        Assert.Equal(new NodeName("交付.实施"), implement.Name);
+        Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
+
+        var (Nodes, _) = FlowAssembler.Read(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError();
+        IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
+        Assert.Equal([new NodeName("准备")], savedNodes);
+    }
+
     /// <summary>库容器内成员的上游接线条目必须落在子树或声明端口内，环外成员不可见。</summary>
     [Fact]
     public void Member_from_outside_container_scope_is_rejected()
@@ -117,20 +140,81 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Library_executable_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
-            ["流程 节点库 的节点 干活库：MaxRuns 必须是正整数。"],
+            ["节点库定义 干活库：MaxRuns 必须是正整数。"],
             LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Execution = new ExecutableSpec { MaxRuns = 0 } }));
 
     /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
     public void Library_container_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
-            ["流程 节点库 的节点 干活组：MaxRuns 必须是正整数。"],
+            ["节点库定义 干活组：MaxRuns 必须是正整数。"],
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
                 MaxRuns = 0,
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
+
+    /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
+    [Fact]
+    public void Library_container_with_execution_fields_is_rejected() =>
+        Assert.Equal(
+            [
+                "节点库定义 干活组：库容器定义不是执行节点，不声明输出端口与系统指令。",
+                "节点库定义 干活组：库容器定义不声明 Validate，输出校验只属于执行节点。",
+            ],
+            LibraryErrors(new NodeSpec
+            {
+                Name = new NodeName("干活组"),
+                Outputs = [new PortName("结论")],
+                Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+            }));
+
+    /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
+    [Fact]
+    public void Library_executable_with_container_out_is_rejected() =>
+        Assert.Equal(
+            ["节点库定义 干活库：库执行定义不声明容器输出端口，命名输出端口用 Outputs。"],
+            LibraryErrors(new NodeSpec
+            {
+                Name = new NodeName("干活库"),
+                Execution = new ExecutableSpec(),
+                Out = new Dictionary<PortName, PortRef> { [new PortName("结论")] = PortRef.Named(new NodeName("干活"), new PortName("结论")) },
+            }));
+
+    /// <summary>引用成员不写 Gate，门控由被引用的库定义决定。</summary>
+    [Fact]
+    public void Reference_member_with_gate_is_rejected() =>
+        Assert.Equal(
+            ["节点库定义 干活：引用成员不声明 Gate，门控由被引用定义决定。"],
+            LibraryErrors(
+                new NodeSpec { Name = new NodeName("干活库"), Execution = new ExecutableSpec() },
+                new NodeSpec
+                {
+                    Name = new NodeName("干活组"),
+                    Nodes =
+                    [
+                        new NodeSpec
+                        {
+                            Name = new NodeName("干活"),
+                            Use = new NodeName("干活库"),
+                            Model = new ModelRef("执行者"),
+                            Gate = NodeGate.Review,
+                        },
+                    ],
+                }));
+
+    /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出，装配层容器的输入端口声明仍被拒。</summary>
+    [Fact]
+    public void Flow_named_like_library_scope_keeps_flow_errors()
+    {
+        ErrorOr<KuroeHarness> created = KuroeHarness.TryCreate(FlowNamedLikeLibraryScope);
+
+        Assert.Equal(
+            ["流程 节点库 的节点 整体：容器节点不能声明输入端口，端口声明属于节点库容器定义。"],
+            created.ErrorsOrEmptyList.Select(error => error.Description));
+    }
 
     /// <summary>导入的文件要能独立装配：流程引用的节点库定义不在同一文件里时不生效。</summary>
     [Fact]
@@ -143,8 +227,8 @@ public sealed class NodeLibraryTests
 
         Assert.Equal(
             [
-                "流程 复用 的节点 干活：引用的节点 执行 不在节点库。",
-                "导入的文件必须能独立装配：流程引用的节点库定义要写在同一文件里。",
+                "流程 复用 的节点 干活：引用的节点 外部库 不在节点库。",
+                "导入的文件必须能独立装配：流程引用的节点要用内置节点或写在同一文件里。",
             ],
             imported.ErrorsOrEmptyList.Select(error => error.Description));
     }
@@ -171,6 +255,18 @@ public sealed class NodeLibraryTests
         FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
 
         Assert.Equal(["覆盖流程 默认"], imported.Notes);
+    }
+
+    /// <summary>文件定义的节点与内置节点同名时覆盖内置定义。</summary>
+    [Fact]
+    public void File_node_overrides_builtin_definition()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(OverridingBuiltinFlow);
+
+        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        NodeSpec implement = flow.RootNode.Nodes![0];
+
+        Assert.Equal("文件覆写的指令", implement.Execution!.Prompt);
     }
 
     [Fact]
@@ -314,6 +410,24 @@ public sealed class NodeLibraryTests
         Assert.True(harness.IsError);
         Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains(expected));
     }
+
+    /// <summary>流程名取库作用域的固定文本，用于验证错误按流程作用域给出。</summary>
+    private const string FlowNamedLikeLibraryScope = """
+        {
+          "Flows": [
+            {
+              "Name": "节点库",
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Inputs": ["计划"],
+                  "Nodes": [ { "Name": "干活", "Model": "执行者" } ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
 
     private const string LibraryFlow = """
         {
@@ -677,10 +791,55 @@ public sealed class NodeLibraryTests
         { "Flows": [
           { "Name": "复用", "Models": [{ "Name": "执行者" }], "Nodes": [
             { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Use": "执行", "Model": "执行者" }
+              { "Name": "干活", "Use": "外部库", "Model": "执行者" }
             ] }
           ] }
         ] }
+        """;
+
+    /// <summary>文件顶层定义与内置「执行」同名的节点，覆盖内置定义。</summary>
+    private const string OverridingBuiltinFlow = """
+        {
+          "Nodes": [
+            { "Name": "执行", "Prompt": "文件覆写的指令" }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Nodes": [
+                { "Name": "整体", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者" } ] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>文件只定义自己的节点，流程同时引用内置「交付」容器。</summary>
+    private const string BuiltinReferenceFlow = """
+        {
+          "Nodes": [
+            { "Name": "准备", "Output": "Plan", "Prompt": "拆条目" }
+          ],
+          "Flows": [
+            {
+              "Name": "内置引用",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "执行者", "Model": "fake" }
+              ],
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Nodes": [
+                    { "Name": "定计划", "Use": "准备", "Model": "规划者" },
+                    { "Name": "交付", "Use": "交付", "In": { "计划": "定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
         """;
 
     /// <summary>一条新名字的流程，可独立装配。</summary>
@@ -1119,6 +1278,14 @@ public sealed class NodeLibraryTests
         """;
 
     /// <summary>校验节点库，取错误说明。</summary>
-    private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library) =>
-        [.. NodeLibraryRules.Validate(library).ErrorsOrEmptyList.Select(error => error.Description)];
+    private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library)
+    {
+        NodeLibrary nodeLibrary = new();
+        foreach (NodeSpec node in library)
+        {
+            nodeLibrary.Register(node);
+        }
+
+        return [.. NodeLibraryRules.Validate(nodeLibrary).ErrorsOrEmptyList.Select(error => error.Description)];
+    }
 }

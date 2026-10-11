@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Configuration;
+using Kuroe.Configuration.Model;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Shared.Configuration;
 

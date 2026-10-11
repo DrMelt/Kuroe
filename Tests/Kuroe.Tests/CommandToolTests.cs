@@ -5,7 +5,9 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Executions.Turns;
 using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Tools.CommandTools;
+using Kuroe.Tools.Command;
+using Kuroe.Tools.Command.Files;
+using Kuroe.Tools.Command.Model;
 using Microsoft.Extensions.AI;
 using Xunit;
 

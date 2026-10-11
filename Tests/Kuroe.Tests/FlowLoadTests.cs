@@ -1,9 +1,11 @@
 using System.Text.Json;
 using Kuroe.Configuration;
+using Kuroe.Configuration.Files;
+using Kuroe.Nodes.Library;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.TestSupport;
-using Kuroe.Workflows.FlowAssembly;
-using Kuroe.Workflows.FlowFiles;
+using Kuroe.Workflows.Flows;
+using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -74,12 +76,13 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            FlowFile first = FlowAssembler.Read(file).ThrowIfError();
-            FlowAssembler.Assemble(first).ThrowIfError();
-            FlowAssembler.Save(store, first).ThrowIfError();
+            var (nodes, flows) = FlowAssembler.Read(file).ThrowIfError();
+            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
+            FlowAssembler.Save(store, nodes, flows).ThrowIfError();
             string once = File.ReadAllText(file);
 
-            FlowAssembler.Save(store, FlowAssembler.Read(file).ThrowIfError()).ThrowIfError();
+            var (Nodes, Flows) = FlowAssembler.Read(file).ThrowIfError();
+            FlowAssembler.Save(store, Nodes, Flows).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -364,5 +367,5 @@ public sealed class FlowLoadTests
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowAssembler.Assemble(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowAssembler.Assemble(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!, new NodeLibrary()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

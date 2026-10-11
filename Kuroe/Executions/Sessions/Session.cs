@@ -5,6 +5,7 @@ using Kuroe.Executions.Tools;
 using Kuroe.Executions.Turns;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Configuration.Model;
 using Kuroe.Shared.Executions.Turns;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;

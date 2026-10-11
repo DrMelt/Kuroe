@@ -1,0 +1,156 @@
+using ErrorOr;
+using Kuroe.Configuration;
+using Kuroe.Configuration.Model;
+using Kuroe.Nodes.Builtin;
+using Kuroe.Nodes.Library;
+using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Workflows.Flows.Files;
+
+namespace Kuroe.Workflows.Flows;
+
+/// <summary>运行期的流程模板集合。装配与文件存取交给 FlowAssembler 与 FlowStore，
+/// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。</summary>
+public sealed class FlowService
+{
+    private readonly FlowStore _store;
+    private readonly SettingsProvider _settings;
+    private readonly NodeLibrary _builtins;
+    private readonly Lock _gate = new();
+    private NodeLibrary _library;
+    private List<NodeSpec> _fileNodes;
+    private List<FlowDefinition> _flowModels;
+    private List<FlowDefinition> _flows;
+
+    private FlowService(FlowStore store, SettingsProvider settings, NodeLibrary builtins, AssembledFlows assembled)
+    {
+        _store = store;
+        _settings = settings;
+        _builtins = builtins;
+        _library = assembled.Library;
+        _fileNodes = [.. assembled.FileNodes];
+        _flowModels = [.. assembled.FlowModels];
+        _flows = [.. assembled.Flows];
+    }
+
+    /// <summary>从流程文件装配模板集合。内置节点装进基线库，节点库或任一条流程不合法时返回全部错误，装配失败。</summary>
+    internal static ErrorOr<FlowService> Create(FlowStore store, SettingsProvider settings)
+    {
+        NodeLibrary builtins = new();
+        builtins.Register(BuiltinNodes.Nodes);
+
+        ErrorOr<AssembledFlows> loaded = FlowAssembler.Load(store, builtins);
+        if (loaded.IsError)
+        {
+            return loaded.ErrorsOrEmptyList;
+        }
+
+        return new FlowService(store, settings, builtins, loaded.Value);
+    }
+
+    /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
+    public FlowName DefaultName => _settings.Current.Runtime.DefaultFlow ?? DefaultFlows.Name;
+
+    /// <summary>全部流程，按文件顺序。</summary>
+    public IReadOnlyList<FlowDefinition> All()
+    {
+        lock (_gate)
+        {
+            return [.. _flows];
+        }
+    }
+
+    /// <summary>按名取展开后的流程，不存在时返回错误。</summary>
+    public ErrorOr<FlowDefinition> Find(FlowName name)
+    {
+        lock (_gate)
+        {
+            FlowDefinition? flow = _flows.Find(candidate => candidate.Name == name);
+
+            return flow is null ? [FlowErrors.FlowNotFound(name.Value)] : flow;
+        }
+    }
+
+    /// <summary>提交任务未指定流程时用的那条流程。</summary>
+    public ErrorOr<FlowDefinition> Default() => Find(DefaultName);
+
+    /// <summary>从文件导入流程：导入的文件要能独立装配；节点定义按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
+    public ErrorOr<FlowImport> Import(string source)
+    {
+        ErrorOr<string> resolved = _store.Resolve(source);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowAssembler.Read(resolved.Value);
+        if (read.IsError)
+        {
+            return read.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<AssembledFlows> checkedStandalone = FlowAssembler.Assemble(read.Value.Nodes, read.Value.Flows, _builtins);
+        if (checkedStandalone.IsError)
+        {
+            List<Error> errors = [.. checkedStandalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
+
+            return errors;
+        }
+
+        lock (_gate)
+        {
+            List<NodeSpec> fileNodes = MergeFileNodes(_fileNodes, read.Value.Nodes);
+            List<FlowDefinition> flowModels = MergeFlowModels(_flowModels, read.Value.Flows);
+
+            ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library);
+            if (assembled.IsError)
+            {
+                return assembled.ErrorsOrEmptyList;
+            }
+
+            List<string> notes =
+            [
+                .. read.Value.Flows.Select(flow => _flowModels.Any(existing => existing.Name == flow.Name)
+                    ? $"覆盖流程 {flow.Name}"
+                    : $"新增流程 {flow.Name}"),
+                .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
+            ];
+
+            ErrorOr<Success> saved = FlowAssembler.Save(_store, fileNodes, flowModels);
+            if (saved.IsError)
+            {
+                return saved.ErrorsOrEmptyList;
+            }
+
+            _library = assembled.Value.Library;
+            _fileNodes = fileNodes;
+            _flowModels = flowModels;
+            _flows = [.. assembled.Value.Flows];
+
+            return new FlowImport(resolved.Value, [.. read.Value.Flows.Select(flow => flow.Name)], notes);
+        }
+    }
+
+    /// <summary>新节点定义按名覆盖旧定义、其余保留，顺序是旧在前新在后。</summary>
+    private static List<NodeSpec> MergeFileNodes(IReadOnlyList<NodeSpec> current, IReadOnlyList<NodeSpec> incoming)
+    {
+        Dictionary<NodeName, NodeSpec> merged = current.ToDictionary(node => node.Name);
+        foreach (NodeSpec node in incoming)
+        {
+            merged[node.Name] = node;
+        }
+
+        return [.. merged.Values];
+    }
+
+    /// <summary>新流程按名覆盖旧流程、其余保留，顺序是旧在前新在后。</summary>
+    private static List<FlowDefinition> MergeFlowModels(IReadOnlyList<FlowDefinition> current, IReadOnlyList<FlowDefinition> incoming)
+    {
+        Dictionary<FlowName, FlowDefinition> merged = current.ToDictionary(flow => flow.Name);
+        foreach (FlowDefinition flow in incoming)
+        {
+            merged[flow.Name] = flow;
+        }
+
+        return [.. merged.Values];
+    }
+}

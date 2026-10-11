@@ -4,7 +4,7 @@ using Kuroe;
 using Kuroe.Cli;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
-using Kuroe.Configuration;
+using Kuroe.Configuration.Files;
 using Kuroe.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

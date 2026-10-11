@@ -2,6 +2,7 @@ using ApiHub.Catalogs;
 using ApiHub.Shared.Catalogs;
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Catalogs.Files;
 using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Catalogs;

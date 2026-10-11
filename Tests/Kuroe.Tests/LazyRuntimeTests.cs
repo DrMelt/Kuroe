@@ -2,7 +2,7 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
-using Kuroe.Workflows.TaskExecution.Tasks;
+using Kuroe.Workflows.Execution.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -36,6 +36,24 @@ public sealed class LazyRuntimeTests
         Assert.Equal(3, task.Runtime.MaterializedCount);
         Assert.Equal(NodeState.Pending, snapshot.ExecutableStates[2].State);
         Assert.Equal(3, snapshot.ExecutableStates.Count);
+    }
+
+    /// <summary>容器成员里尚未放行的成员不因状态查询被实例化：查询只读已实例化节点，未实例化成员视为没有产出。
+    /// 库容器内按条目实施的成员在跑时，容器自身与它的下游都还未触达。</summary>
+    [Fact]
+    public void Unreleased_container_member_stays_unmaterialized()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutFlow);
+        harness.Executor.DelayMs = 200;
+
+        TaskId id = harness.Submit("目标");
+        harness.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
+
+        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+
+        // 已实例化的是根容器、根容器成员「制定计划」与在跑的容器成员「交付.实施」
+        Assert.Equal(3, task.Runtime.MaterializedCount);
+        Assert.Equal(NodeState.Pending, harness.Snapshot(id).ExecutableStates[2].State);
     }
 
     [Fact]

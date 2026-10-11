@@ -48,8 +48,8 @@ public sealed class SettingsTests
         using KuroeHarness harness = KuroeHarness.Create();
         Assembly library = typeof(SettingsProvider).Assembly;
 
-        IEnumerable<string> section = Properties(library, "Kuroe.Configuration.RuntimeSettings");
-        IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.RuntimeSectionDto");
+        IEnumerable<string> section = Properties(library, "Kuroe.Configuration.Model.RuntimeSettings");
+        IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.Model.RuntimeSectionDto");
         IEnumerable<string> declared = harness.Settings.Sections().Single().Entries
             .Select(entry => entry.Name)
             .Order();
