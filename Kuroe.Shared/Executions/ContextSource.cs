@@ -22,7 +22,7 @@ public sealed record RunSource(RunId Run, NodeName NodeName) : ContextSource
     public override RunId? FromRun => Run;
 }
 
-/// <summary>规划执行节点交回的某个条目。</summary>
+/// <summary>声明 Items 端口的执行节点交回的某个条目。</summary>
 public sealed record ItemSource(RunId Plan, int Index, string Title) : ContextSource
 {
     /// <inheritdoc/>

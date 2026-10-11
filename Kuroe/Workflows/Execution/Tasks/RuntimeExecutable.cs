@@ -21,9 +21,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>绑定输入消费账本。</summary>
     public void Bind(NodeInput input) => Input = input;
 
-    /// <summary>执行节点的产出契约，决定收口方式与契约工具。</summary>
-    public NodeOutput Output => Executable.Execution.Output;
-
     /// <summary>执行节点的展开模式：整节点一次执行还是按实例逐步启动。</summary>
     public NodeMode Mode => Executable.Execution.Mode;
 
@@ -58,8 +55,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>有待批准的产出 run。</summary>
     public override bool Awaiting => _awaitingRuns.Count > 0;
 
-    /// <summary>产出契约是否为用户输入：不启动 run，回答即产出。</summary>
-    public bool IsInputOutput => Executable.Execution.Output == NodeOutput.Input;
+    /// <summary>节点是否为输入节点：不启动 run，回答即产出。</summary>
+    public bool IsInput => Executable.Kind == NodeKind.Input;
 
     /// <summary>输入节点停在等待用户回答。</summary>
     public bool AwaitingInput => _awaitingInput;
@@ -208,7 +205,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>输入节点停驻等待用户回答，重复停驻不改变状态。</summary>
     public void ParkInput()
     {
-        if (!IsInputOutput)
+        if (!IsInput)
         {
             return;
         }
@@ -227,7 +224,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>输入节点复位：清掉发表位与当前回答，回到可挂起状态。</summary>
     public void ResetInput()
     {
-        if (!IsInputOutput || _inputAnswer is null)
+        if (!IsInput || _inputAnswer is null)
         {
             return;
         }
@@ -267,29 +264,30 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>按输出端口取单段文本：命名端口取该节点交回的端口值，ContextOutput 给拼合文本。
+    /// <summary>按输出端口取单段文本：Context 端口给拼合文本，Items 端口不产生文本，Data 端口取该节点交回的端口值。
     /// 输入节点的产出是当前回答，PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
     public override string? PortText(WorkTask task, PortName port)
     {
-        if (port == PortNames.ContextOutput)
+        PortKind? kind = Executable.FindPort(port)?.Kind;
+        if (kind == PortKind.Context)
         {
             return ContextOutput(task);
         }
 
-        if (IsInputOutput)
+        if (kind == PortKind.Items)
         {
-            if (port != (Executable.Outputs.Count == 1 ? Executable.Outputs[0] : null))
+            // 拆分支票是结构化产出，不产生可注入文本
+            return null;
+        }
+
+        if (IsInput)
+        {
+            if (kind != PortKind.Data)
             {
                 return null;
             }
 
             return InputAnswer is { Length: > 0 } answer ? answer : null;
-        }
-
-        if (port == PortNames.Split)
-        {
-            // 拆分是结构化产出，不产生可注入文本
-            return null;
         }
 
         if (Mode == NodeMode.PerItem)
@@ -310,11 +308,12 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     private string? PortValue(WorkTask task, PortName port, int? item) =>
         task.PortValuesFor(Index, item)?.GetValueOrDefault(port);
 
-    /// <summary>按输出端口取可注入的产出消息集：PerItem 逐实例，其余单条，上下文给装配帧。
+    /// <summary>按输出端口取可注入的产出消息集：PerItem 逐实例，其余单条，Context 端口给装配帧，Items 端口不注入。
     /// item 指定时只取该实例的产出，供对齐边按条目消费，不受整节点放行状态约束。</summary>
     public override IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item)
     {
-        if (port == PortNames.ContextOutput)
+        PortKind? kind = Executable.FindPort(port)?.Kind;
+        if (kind == PortKind.Context)
         {
             // PerItem 来源的上下文端口逐实例展开各帧，与其它端口逐实例取产出一致
             if (item is null && Mode == NodeMode.PerItem)
@@ -331,7 +330,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             return ContextFrameMessages(task, item);
         }
 
-        if (port == PortNames.Split)
+        if (kind == PortKind.Items)
         {
             // 拆分支票是结构化产出，不注入文本上下文
             return [];
@@ -364,9 +363,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>按端口取该实例或整节点的一条产出消息。输入节点给回答消息，出处指向用户输入。取值或出处缺失时不产生消息。</summary>
     private IReadOnlyList<ContextMessage> SingleMessage(WorkTask task, PortName port, int? item)
     {
-        if (IsInputOutput)
+        if (IsInput)
         {
-            if (port != (Executable.Outputs.Count == 1 ? Executable.Outputs[0] : null)
+            if (Executable.Outputs.Find(port) is not { Kind: PortKind.Data }
                 || InputAnswer is not { Length: > 0 } answer)
             {
                 return [];
@@ -453,7 +452,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         {
             state = NodeState.Canceled;
         }
-        else if (IsInputOutput)
+        else if (IsInput)
         {
             if (AwaitingInput)
             {

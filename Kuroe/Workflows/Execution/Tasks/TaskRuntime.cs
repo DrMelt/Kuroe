@@ -73,7 +73,7 @@ internal sealed class TaskRuntime
     /// <summary>有入边的 Single 执行节点装配输入消费账本：来源齐备且发布新版本才启动。
     /// 输入节点不启动 run，无入边节点与 PerItem 执行节点不经账本。</summary>
     private bool ShouldBind(ExecutableNode executable) =>
-        executable.Execution.Output != NodeOutput.Input
+        executable.Kind != NodeKind.Input
         && executable.Execution.Mode != NodeMode.PerItem
         && Graph.Incoming(executable.Index).Count > 0;
 
@@ -160,7 +160,7 @@ internal sealed class TaskRuntime
     /// 无入边节点发表即终态，PerItem 执行节点按实例逐步启动。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
-        if (node.IsInputOutput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
+        if (node.IsInput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
         {
             return false;
         }
@@ -241,7 +241,7 @@ internal sealed class TaskRuntime
         }
 
         node.Invalidate(item);
-        if (node.Executable.HasOutputPorts)
+        if (node.Executable.HasDataPorts)
         {
             _task.ClearPortValues(node.Index, item);
         }
@@ -326,7 +326,7 @@ internal sealed class TaskRuntime
     {
         foreach (ExecutableNode executable in Graph.ExecutableNodes)
         {
-            if (_nodes[executable.Index] is not null || executable.Execution.Output == NodeOutput.Input)
+            if (_nodes[executable.Index] is not null || executable.Kind == NodeKind.Input)
             {
                 continue;
             }
@@ -458,15 +458,15 @@ internal sealed class TaskRuntime
         }
 
         ExecutableNode executable = node.Executable;
-        if (executable.Execution.Output == NodeOutput.Plan && _task.SplitFor(node.Index)?.Origin != run.Id)
+        if (executable.HasItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id)
         {
-            run.MarkUncollected("规划执行节点没有交回条目拆分，本步未收口。");
+            run.MarkUncollected("声明 Items 端口的执行节点没有交回条目拆分，本步未收口。");
             node.EnterBlocked([(node.Index, null)]);
             NoteLimitReached(node, null);
             return new SettlePlan([], []);
         }
 
-        if (executable.HasOutputPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index, item)))
+        if (executable.HasDataPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index, item)))
         {
             run.MarkUncollected("输出端口内容未交回，本步未收口。");
             node.EnterBlocked([(node.Index, item)]);
@@ -522,7 +522,8 @@ internal sealed class TaskRuntime
         }
 
         string[] parts = [.. executable.Outputs
-            .Select(port => portValues.GetValueOrDefault(port))
+            .Where(port => port.Kind == PortKind.Data)
+            .Select(port => portValues.GetValueOrDefault(port.Name))
             .Where(value => value is { Length: > 0 })
             .Cast<string>()];
 
@@ -531,7 +532,8 @@ internal sealed class TaskRuntime
 
     /// <summary>输出端口的声明是否都已交回内容。</summary>
     private static bool HasAllPortValues(ExecutableNode executable, IReadOnlyDictionary<PortName, string>? values) =>
-        values is { Count: > 0 } && executable.Outputs.All(port => values.ContainsKey(port));
+        values is { Count: > 0 }
+        && executable.Outputs.Where(port => port.Kind == PortKind.Data).All(port => values.ContainsKey(port.Name));
 
     private static bool Contains(string? text, string? needle) =>
         needle is { Length: > 0 } && text is not null && text.Contains(needle, StringComparison.Ordinal);
@@ -622,7 +624,7 @@ internal sealed class TaskRuntime
     public EvaluateResult Evaluate(RuntimeExecutable node)
     {
         ExecutableNode executable = node.Executable;
-        if (node.IsInputOutput)
+        if (node.IsInput)
         {
             // 输入节点每次被激活即复位已答内容并重新挂起等待回答，与来源反馈或启动评估相同
             node.ResetInput();

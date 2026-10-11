@@ -141,7 +141,7 @@ internal sealed class TaskInfoTool : ITool
 
             IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
             text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
-                + $"（{node.Executable.Execution.Output.Label()} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Kind.Label()} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
             foreach (RunSnapshot run in node.Runs)
             {
                 text.AppendLine($"    {RunLine(run, awaitingRuns)}");
@@ -162,7 +162,7 @@ internal sealed class TaskInfoTool : ITool
     {
         RunContext context = run.Context;
         var text = new StringBuilder();
-        text.AppendLine($"{run.Id} · {context.Output.Label()} · {context.NodeName} · {InfoLabels.Item(context.ItemIndex)}"
+        text.AppendLine($"{run.Id} · {context.NodeName} · {InfoLabels.Item(context.ItemIndex)}"
             + $" · 第 {context.ExecutionCount} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}"
             + $" · 模型 {context.Model.Value}");

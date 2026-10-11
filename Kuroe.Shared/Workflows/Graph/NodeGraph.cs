@@ -85,6 +85,10 @@ public sealed class NodeGraph
     public EdgeFeed? FeedBetween(int from, int to) =>
         Outgoing(from).FirstOrDefault(edge => edge.To == to)?.Feed;
 
+    /// <summary>来源节点某端口声明的种类，容器与未声明按 Data。供边规则按种类校验。</summary>
+    public PortKind PortKindOf(int nodeIndex, PortName port) =>
+        Nodes[nodeIndex] is ExecutableNode executable ? EdgeFeedRules.KindOf(executable, port) : PortKind.Data;
+
     /// <summary>按条目展开的依据拆分：入边里 Items 方式的来源，没有时为空。</summary>
     public int? ItemSource(int executableIndex) =>
         Incoming(executableIndex).FirstOrDefault(edge => edge.Feed == EdgeFeed.Items)?.From;
@@ -190,7 +194,7 @@ public sealed class NodeGraph
     {
         return [.. ExecutableNodes.Where(node =>
             Incoming(node.Index).Count == 0
-            || node.Execution.Output == NodeOutput.Input)];
+            || node.Kind == NodeKind.Input)];
     }
 
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>

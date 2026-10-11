@@ -5,7 +5,7 @@ using Kuroe.Workflows.Execution.Tasks;
 
 namespace Kuroe.Tools.Builtin;
 
-/// <summary>规划执行节点交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 run 在交。</summary>
+/// <summary>声明 Items 端口的执行节点交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 run 在交。</summary>
 public sealed class PlanTool : IScopedTool
 {
     private readonly PlanSubmitter _intake;

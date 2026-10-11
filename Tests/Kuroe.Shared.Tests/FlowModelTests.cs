@@ -11,14 +11,20 @@ namespace Kuroe.Shared.Tests;
 public sealed class FlowModelTests
 {
     [Fact]
-    public void Executable_defaults_to_text_single_auto()
+    public void Executable_defaults_to_single_auto()
     {
-        var node = new NodeSpec { Name = new NodeName("实施"), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() };
+        var node = new NodeSpec
+        {
+            Name = new NodeName("实施"),
+            Kind = NodeKind.Executable,
+            Model = new ModelRef("执行者"),
+            Execution = new ExecutableSpec(),
+        };
 
         ExecutableSpec executable = node.Execution;
-        Assert.Equal(NodeOutput.Text, executable.Output);
         Assert.Equal(NodeMode.Single, executable.Mode);
         Assert.Equal(NodeGate.Auto, node.Gate);
+        Assert.Null(executable.Question);
         Assert.Empty(node.From);
         Assert.Empty(executable.Tools);
     }
@@ -34,7 +40,8 @@ public sealed class FlowModelTests
                 Name = new NodeName("规划"),
                 Path = new NodePath([new NodeName("规划")]),
                 Gate = NodeGate.Auto,
-                Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
+                Kind = NodeKind.Executable,
+                Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
                 From = [],
                 Outputs = [],
@@ -47,9 +54,10 @@ public sealed class FlowModelTests
                 Name = new NodeName("实施"),
                 Path = new NodePath([new NodeName("实施")]),
                 Gate = NodeGate.Auto,
-                Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
+                Kind = NodeKind.Executable,
+                Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
-                From = [new Dependency(0, PortNames.Split)],
+                From = [new Dependency(0, new PortName("拆分"))],
                 Outputs = [],
                 SystemPrompt = [],
                 MaxRuns = 100,

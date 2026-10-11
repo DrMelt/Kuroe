@@ -34,16 +34,16 @@ public sealed class PortTool : IScopedTool
     public ITool ForTurn(TurnScope scope) => new PortTool(_intake, _registry, scope);
 
     /// <summary>绑定回合所属 run 声明的输出端口，没有声明时为空。</summary>
-    private IReadOnlyList<PortName>? PortsOf(TurnScope scope) =>
+    private IReadOnlyList<Port>? PortsOf(TurnScope scope) =>
         _registry.FindRun(scope.Run) is not { IsError: false } found
         || found.Value.Context.OutputPorts is not { Count: > 0 } ports
             ? null
             : ports;
 
-    /// <summary>声明绑定到该回合上的提交函数。有端口清单时把端口名写进描述，模型按声明的键值提交。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<PortName>? ports)
+    /// <summary>声明绑定到该回合上的提交函数。有端口清单时把端口名与说明写进描述，模型按声明的键值提交。</summary>
+    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports)
     {
-        string listed = ports is null ? string.Empty : $"本节点声明端口：{string.Join('、', ports.Select(port => port.Value))}。";
+        string listed = ports is null ? string.Empty : $"本节点声明端口：{string.Join('、', ports.Select(Describe))}。";
 
         return
         [
@@ -54,4 +54,8 @@ public sealed class PortTool : IScopedTool
                 ToolPath.ContractPortValues),
         ];
     }
+
+    /// <summary>说明里的端口条目：有说明时写 端口名：说明，未写说明时只写端口名。</summary>
+    private static string Describe(Port port) =>
+        port.Description is { Length: > 0 } description ? $"{port.Name}：{description}" : port.Name.Value;
 }

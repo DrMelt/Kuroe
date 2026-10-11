@@ -90,9 +90,11 @@ internal static class NodeExpander
                 return new Flow.NodeSpec
                 {
                     Name = instance,
+                    Kind = definition.Kind,
                     Gate = definition.Gate,
+                    Inputs = definition.Inputs,
                     Nodes = members,
-                    Out = ResolveOuts(definition.Out, childEnv, scope, errors),
+                    ContainerOutputs = ResolveContainerOutputs(definition.ContainerOutputs, childEnv, scope, errors),
                 };
             }
 
@@ -103,12 +105,13 @@ internal static class NodeExpander
 
             if (node.In is { Count: > 0 })
             {
-                errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，ContextInput 用 From 条目的 Context 标记。"));
+                errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，上下文输入用 From 条目的 Context 标记。"));
             }
 
             return new Flow.NodeSpec
             {
                 Name = instance,
+                Kind = definition.Kind,
                 Gate = definition.Gate,
                 Execution = definition.Execution! with
                 {
@@ -131,9 +134,11 @@ internal static class NodeExpander
             return new Flow.NodeSpec
             {
                 Name = own,
+                Kind = node.Kind,
                 Gate = node.Gate,
+                Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
-                Out = ResolveOuts(node.Out, env, scope, errors),
+                ContainerOutputs = ResolveContainerOutputs(node.ContainerOutputs, env, scope, errors),
                 Nodes = expanded,
             };
         }
@@ -141,6 +146,7 @@ internal static class NodeExpander
         return new Flow.NodeSpec
         {
             Name = own,
+            Kind = node.Kind,
             Gate = node.Gate,
             Execution = node.Execution! with
             {
@@ -192,7 +198,7 @@ internal static class NodeExpander
             return;
         }
 
-        var declared = new HashSet<Flow.PortName>([.. definition.Inputs]);
+        var declared = new HashSet<Flow.PortName>([.. definition.Inputs.Select(port => port.Name)]);
         foreach (Flow.PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
         {
             errors.Add(scope.Node(node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
@@ -286,9 +292,9 @@ internal static class NodeExpander
         return name;
     }
 
-    /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上。</summary>
-    private static Dictionary<Flow.PortName, Flow.PortRef>? ResolveOuts(
-        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? outs,
+    /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上，说明原样保留。</summary>
+    private static Dictionary<Flow.PortName, Flow.ContainerOutput>? ResolveContainerOutputs(
+        IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? outs,
         Env? env,
         NodeScope scope,
         List<Error> errors)
@@ -300,7 +306,7 @@ internal static class NodeExpander
 
         return outs.ToDictionary(
             entry => entry.Key,
-            entry => ResolveRef(entry.Value, env, scope, errors));
+            entry => new Flow.ContainerOutput(ResolveRef(entry.Value.Ref, env, scope, errors), entry.Value.Description));
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。

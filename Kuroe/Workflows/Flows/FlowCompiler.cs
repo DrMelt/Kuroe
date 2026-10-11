@@ -111,7 +111,8 @@ internal static class FlowCompiler
 
         int container = nodes.Count;
         Flow.NodePath containerPath = new([.. path, node.Name]);
-        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], [], node.Out);
+        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? bindings = ToBindings(node.ContainerOutputs);
+        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], [], bindings);
         nodes.Add(new ContainerNode
         {
             Index = container,
@@ -120,7 +121,7 @@ internal static class FlowCompiler
             Gate = node.Gate,
             Members = [],
             SubContainers = [],
-            PortBindings = node.Out,
+            PortBindings = bindings,
         });
         if (parent is { } childContainer)
         {
@@ -147,6 +148,7 @@ internal static class FlowCompiler
             Name = node.Name,
             Path = new Flow.NodePath([.. path, node.Name]),
             Gate = node.Gate,
+            Kind = node.EffectiveKind,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
             From = [.. node.From.Select(source => ResolveFrom(source, order))],
@@ -154,6 +156,11 @@ internal static class FlowCompiler
             SystemPrompt = node.SystemPrompt,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
         };
+
+    /// <summary>容器输出端口声明投影成图上的绑定表：说明只属于定义与展示，图上只留成员引用。</summary>
+    private static Dictionary<Flow.PortName, Flow.PortRef>? ToBindings(
+        IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? outputs) =>
+        outputs?.ToDictionary(entry => entry.Key, entry => entry.Value.Ref);
 
     /// <summary>把一条上游接线条目解析成图依赖：来源序号经查表落定，Or、Signal 与 Context 标记原样保留。
     /// 绑定端口引用在 From 里不成立，编译前应由校验层拦截，这里给防御性错误。</summary>

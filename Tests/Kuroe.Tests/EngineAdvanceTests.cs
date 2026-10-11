@@ -56,11 +56,12 @@ public sealed class EngineAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                    { "Name": "切入", "Model": "执行者", "Outputs": ["结论"] },
-                    { "Name": "慢工", "Model": "执行者" },
-                    { "Name": "衔接", "Model": "执行者", "Outputs": ["结论"], "From": ["切入@结论"] },
-                    { "Name": "收官", "Model": "执行者", "From": ["衔接@结论"] }
+                    { "Name": "切入", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                    { "Name": "慢工", "Kind": "Executable", "Model": "执行者" },
+                    { "Name": "衔接", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["切入@结论"] },
+                    { "Name": "收官", "Kind": "Executable", "Model": "执行者", "From": ["衔接@结论"] }
                   ]
                 }
               ]
@@ -72,10 +73,10 @@ public sealed class EngineAdvanceTests
     /// <summary>可选组来源重复：甲独占的单组与甲、乙组成的另一组跨组共享甲。</summary>
     private const string OrRepeatsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
           ] }
         ] } ] }
         """;

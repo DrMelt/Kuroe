@@ -14,10 +14,10 @@ public sealed class NodePathTests
     private const string ChainFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "制定计划", "Model": "实施者" },
-              { "Name": "文档组", "Nodes": [
-                { "Name": "撰写", "Model": "实施者" }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "制定计划", "Kind": "Executable", "Model": "实施者" },
+              { "Name": "文档组", "Kind": "Container", "Nodes": [
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者" }
               ] }
             ] }
           ] } ]
@@ -28,7 +28,7 @@ public sealed class NodePathTests
     private const string RootExecutableFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Nodes": [
-            { "Name": "直接执行", "Model": "实施者" }
+            { "Name": "直接执行", "Kind": "Executable", "Model": "实施者" }
           ] } ]
         }
         """;

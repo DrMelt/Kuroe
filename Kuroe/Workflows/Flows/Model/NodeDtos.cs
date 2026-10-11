@@ -11,6 +11,9 @@ internal sealed class NodeDto
     /// <summary>节点名：库定义名或装配实例名。</summary>
     public string? Name { get; set; }
 
+    /// <summary>节点类型：Container、Executable 或 Input。非引用节点必填，引用节点不写。</summary>
+    public NodeKind? Kind { get; set; }
+
     /// <summary>引用的节点库定义名。</summary>
     public string? Use { get; set; }
 
@@ -20,8 +23,9 @@ internal sealed class NodeDto
     /// <summary>输入节点的提示文本。</summary>
     public string? Question { get; set; }
 
-    /// <summary>执行节点的命名输出端口表。</summary>
-    public List<string>? Outputs { get; set; }
+    /// <summary>节点输出端口表：条目形状由节点类型决定。执行节点与输入节点写 Name 与 Kind，Kind 必填；
+    /// 容器写 Name 与 Ref，Ref 写 成员@端口。</summary>
+    public List<JsonElement>? Outputs { get; set; }
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public List<string>? SystemPrompt { get; set; }
@@ -36,11 +40,8 @@ internal sealed class NodeDto
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
     public int? MaxRuns { get; set; }
 
-    /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
-    public List<string>? Inputs { get; set; }
-
-    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名 或 成员名@端口。</summary>
-    public Dictionary<string, string>? Out { get; set; }
+    /// <summary>容器传入端口条目：写 Name 与可选 Description，成员用 @端口名 引用。</summary>
+    public List<JsonElement>? Inputs { get; set; }
 
     /// <summary>容器引用把端口绑定到当前作用域可达节点。</summary>
     public Dictionary<string, string>? In { get; set; }
@@ -54,8 +55,6 @@ internal sealed class NodeDto
     /// <summary>能力工具白名单，按工具路径前缀匹配，写上级路径即放行整棵子树。未写或空时不给出任何能力工具。</summary>
     public List<string>? Tools { get; set; }
 
-    public NodeOutput? Output { get; set; }
-
     /// <summary>执行节点模式的名字：Single、PerItem。</summary>
     public string? Mode { get; set; }
 
@@ -64,10 +63,27 @@ internal sealed class NodeDto
 
     public NodeGate? Gate { get; set; }
 
-    /// <summary>拆分源的固定配置，只能写在规划执行节点上。</summary>
+    /// <summary>拆分源的固定配置，只能写在声明 Items 端口的执行节点上。</summary>
     public SplitDto? Split { get; set; }
 
     public List<NodeDto>? Nodes { get; set; }
+}
+
+/// <summary>端口的对象形状：执行节点与输入节点写 Name 与 Kind，容器输出端口写 Name 与 Ref，容器传入端口写 Name，键名与读侧一致。</summary>
+internal sealed class PortEntryDto
+{
+    public string? Name { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PortKind? Kind { get; set; }
+
+    /// <summary>容器输出端口的转发目标，写 成员@端口。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Ref { get; set; }
+
+    /// <summary>端口承载内容的说明，未写时为空。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
 }
 
 /// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。

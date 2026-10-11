@@ -124,19 +124,19 @@ public sealed class ExecutionLimitTests
     private const string FailingNodeFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Model": "执行者", "MaxRuns": 2 }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2 }
             ] }
           ] } ]
         }
         """;
 
-    /// <summary>规划执行节点不交回拆分，未收口重复到上限后停在阻塞。</summary>
+    /// <summary>声明 Items 端口的执行节点不交回拆分，未收口重复到上限后停在阻塞。</summary>
     private const string PlanNodeFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Output": "Plan", "MaxRuns": 2 }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "Outputs": [{ "Name": "拆分", "Kind": "Items" }] }
             ] }
           ] } ]
         }
@@ -146,8 +146,8 @@ public sealed class ExecutionLimitTests
     private const string ValidationFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 2,
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2,
                 "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -158,11 +158,11 @@ public sealed class ExecutionLimitTests
     private const string OrLoopWithLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-              { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 1, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
-              { "Name": "审查", "Model": "执行者", "Outputs": ["结论"], "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "From": ["审查@结论"] }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 1, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
+              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["审查@结论"] }
             ] }
           ] } ]
         }
@@ -172,11 +172,11 @@ public sealed class ExecutionLimitTests
     private const string OrLoopWithoutLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-              { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 5, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
-              { "Name": "审查", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 5, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "MaxRuns": 5, "From": ["审查@结论"] }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
+              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5, "From": ["审查@结论"] }
             ] }
           ] } ]
         }
@@ -186,9 +186,9 @@ public sealed class ExecutionLimitTests
     private const string SplitFlowWithLimit = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Output": "Plan" },
-              { "Name": "实施", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划@拆分"] }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+              { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划@拆分"] }
             ] }
           ] } ]
         }
@@ -197,8 +197,8 @@ public sealed class ExecutionLimitTests
     private const string DefaultLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Model": "执行者" }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者" }
             ] }
           ] } ]
         }
@@ -207,8 +207,8 @@ public sealed class ExecutionLimitTests
     private const string SingleNodeLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "干活", "Model": "执行者", "MaxRuns": 2 }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2 }
             ] }
           ] } ]
         }
@@ -218,10 +218,10 @@ public sealed class ExecutionLimitTests
     private const string LibraryLimitFlow = """
         {
           "Nodes": [
-            { "Name": "干活库", "Tools": [], "MaxRuns": 3 }
+            { "Name": "干活库", "Kind": "Executable", "Tools": [], "MaxRuns": 3 }
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5 },
               { "Name": "继承干活", "Use": "干活库", "Model": "执行者" }
             ] }

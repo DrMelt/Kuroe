@@ -37,7 +37,7 @@ internal abstract class RuntimeNode(GraphNode node)
     public abstract string? PortText(WorkTask task, PortName port);
 
     /// <summary>按输出端口取可注入的产出消息集：命名端口按声明段取值，逐实例给全部实例的该端口产出，
-    /// ContextOutput 给装配上下文帧。item 指定时只取该实例的产出。
+    /// Context 种类端口给装配上下文帧。item 指定时只取该实例的产出。
     /// 容器按绑定转成一条容器端口消息。</summary>
     public abstract IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item);
 

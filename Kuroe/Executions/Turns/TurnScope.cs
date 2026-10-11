@@ -14,9 +14,6 @@ public sealed record TurnScope
     /// <summary>所属 run。</summary>
     public required RunId Run { get; init; }
 
-    /// <summary>产出的契约。</summary>
-    public required NodeOutput? Output { get; init; }
-
     /// <summary>所属执行节点名。</summary>
     public required NodeName NodeName { get; init; }
 

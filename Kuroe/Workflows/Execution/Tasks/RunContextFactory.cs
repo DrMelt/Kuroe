@@ -51,7 +51,6 @@ internal static class RunContextFactory
         return new RunContext
         {
             Task = task.Id,
-            Output = node.Output,
             NodeIndex = node.Index,
             NodeName = node.Name,
             Instruction = BuildInstruction(task, node, item, count),
@@ -61,7 +60,7 @@ internal static class RunContextFactory
             Tools = ToolsFor(node.Executable),
             Seed = seed,
             SystemPrompt = node.Executable.SystemPrompt.Count == 0 ? null : string.Join('\n', node.Executable.SystemPrompt),
-            OutputPorts = node.Executable.Outputs,
+            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Kind == PortKind.Data)],
         };
     }
 
@@ -156,10 +155,10 @@ internal static class RunContextFactory
         return string.Join('\n', lines);
     }
 
-    /// <summary>规划执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
+    /// <summary>声明 Items 端口的执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
     private static void AppendSplitGuide(WorkTask task, RuntimeExecutable node, List<string> lines)
     {
-        if (node.Output != NodeOutput.Plan)
+        if (!node.Executable.HasItemsPort)
         {
             return;
         }
@@ -204,16 +203,16 @@ internal static class RunContextFactory
         }
     }
 
-    /// <summary>本轮工具面：节点声明的能力工具加按产出契约附上的契约工具。</summary>
+    /// <summary>本轮工具面：节点声明的能力工具加按输出端口附上的契约工具。</summary>
     private static List<ToolPath> ToolsFor(ExecutableNode node)
     {
         List<ToolPath> names = [.. node.Execution.Tools];
-        if (node.Execution.Output == NodeOutput.Plan)
+        if (node.HasItemsPort)
         {
             names.Add(ToolPath.ContractPlan);
         }
 
-        if (node.HasOutputPorts)
+        if (node.HasDataPorts)
         {
             names.Add(ToolPath.ContractPortValues);
         }

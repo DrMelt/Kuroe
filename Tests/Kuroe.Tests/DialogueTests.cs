@@ -22,8 +22,8 @@ public sealed class DialogueTests
     {
         IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
 
-        Assert.Equal(NodeOutput.Input, nodes[0].Execution!.Output);
-        Assert.Equal(NodeOutput.Text, nodes[1].Execution!.Output);
+        Assert.Equal(NodeKind.Input, nodes[0].Kind);
+        Assert.Equal(NodeKind.Executable, nodes[1].Kind);
     }
 
     [Fact]
@@ -104,7 +104,6 @@ public sealed class DialogueTests
     {
         Task = new TaskId(1),
         Run = new RunId(1),
-        Output = NodeOutput.Text,
         NodeName = DialogueFlow.ReplyNodeName,
         ItemIndex = null,
         Journal = new TurnJournal(),

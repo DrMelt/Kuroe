@@ -50,7 +50,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
-                + $"（{node.Executable.Execution.Output.Label()} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Kind.Label()} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)
             {
@@ -89,7 +89,7 @@ internal sealed class TaskDetailView(Terminal terminal)
                     ? $" · {questionText}"
                     : string.Empty;
             string ports = task.Graph[node.Index] is ExecutableNode { Outputs.Count: > 0 } ported
-                ? $" · 端口：{string.Join('、', ported.Outputs.Select(port => port.Value))}"
+                ? $" · 端口：{string.Join('、', ported.Outputs.Select(port => port.Label()))}"
                 : string.Empty;
             string systemPrompt = task.Graph[node.Index] is ExecutableNode { SystemPrompt.Count: > 0 } systemPrompted
                 ? $" · 系统指令：{systemPrompted.SystemPrompt.Count} 块"

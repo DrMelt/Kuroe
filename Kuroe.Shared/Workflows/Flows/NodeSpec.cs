@@ -1,11 +1,18 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
-/// <summary>统一节点：定义、引用、执行节点与容器都落在同一表示上。
-/// 有 <see cref="Use"/> 是引用库定义，否则是节点本身。有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点。</summary>
+/// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
+/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Kind"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。</summary>
 public sealed record NodeSpec
 {
     /// <summary>节点名：库定义名或流程/容器内的实例名。</summary>
     public required NodeName Name { get; init; }
+
+    /// <summary>节点类型：容器、执行节点或输入节点。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
+    public required NodeKind? Kind { get; init; }
+
+    /// <summary>生效的节点类型：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
+    public NodeKind EffectiveKind => Kind
+        ?? throw new InvalidOperationException($"节点 {Name.Value} 没有节点类型，只有展开后的节点树可取生效类型。");
 
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
@@ -13,13 +20,13 @@ public sealed record NodeSpec
     /// <summary>节点产出后是否停在待批准：执行节点产出后，容器成员产出齐备后。</summary>
     public NodeGate Gate { get; init; } = NodeGate.Auto;
 
-    /// <summary>容器声明传入端口名，成员可用 @端口 引用。</summary>
-    public IReadOnlyList<PortName> Inputs { get; init; } = [];
+    /// <summary>容器声明传入端口，成员可用 @端口 引用。</summary>
+    public IReadOnlyList<ContainerInput> Inputs { get; init; } = [];
 
     /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名@端口 精确取成员命名段。
-    /// 只属于节点库容器定义，引用处不能修改；下游执行节点经 From 按端口消费。
-    /// 容器没有整份产出，一切对外内容都经声明的命名端口。</summary>
-    public IReadOnlyDictionary<PortName, PortRef>? Out { get; init; }
+    /// 属于容器定义与装配层内联容器，引用处不能修改；下游执行节点经 From 按端口消费。
+    /// 文件里与 <see cref="Outputs"/> 同写在一个 Outputs 数组，条目形状由节点类型决定。容器没有整份产出，一切对外内容都经声明的命名端口。</summary>
+    public IReadOnlyDictionary<PortName, ContainerOutput>? ContainerOutputs { get; init; }
 
     /// <summary>输入端口绑定：引用容器时是端口名到当前作用域可达节点引用的映射，值可以是 来源@端口 或 @更外层端口；
     /// 执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
@@ -31,8 +38,9 @@ public sealed record NodeSpec
     /// 执行节点定义与节点组成员上禁止声明，引用处注入。</summary>
     public IReadOnlyList<SourceRef> From { get; init; } = [];
 
-    /// <summary>执行节点的命名输出端口表，模型逐 run 交回端口值。端口只随定义，引用处不能修改。</summary>
-    public IReadOnlyList<PortName> Outputs { get; init; } = [];
+    /// <summary>执行节点的输出端口表：名字与种类。种类在编译期落定消费方式，引用处按名字消费。
+    /// 模型逐 run 交回 Data 端口值，引用处不能修改声明。</summary>
+    public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。仅执行节点声明。</summary>
     public IReadOnlyList<string> SystemPrompt { get; init; } = [];
@@ -52,6 +60,6 @@ public sealed record NodeSpec
     /// <summary>引用节点组时的模型槽位绑定：槽位名到本流程模型选择名的映射，未绑定的槽位在展开时报错。</summary>
     public IReadOnlyDictionary<ModelRef, ModelRef>? Models { get; init; }
 
-    /// <summary>执行配置，非空即执行节点。</summary>
+    /// <summary>执行配置，非空即执行节点或输入节点，输入节点只用其中的 Question。</summary>
     public ExecutableSpec? Execution { get; init; }
 }

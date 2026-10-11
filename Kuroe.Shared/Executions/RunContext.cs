@@ -10,9 +10,6 @@ public sealed record RunContext
     /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }
 
-    /// <summary>产出的契约，决定能交回什么。</summary>
-    public required NodeOutput Output { get; init; }
-
     /// <summary>所属执行节点在流程图里的序号。</summary>
     public required int NodeIndex { get; init; }
 
@@ -43,6 +40,6 @@ public sealed record RunContext
     /// <summary>恒定系统指令：由节点 SystemPrompt 槽位装配，置于请求最前。未声明时为空。</summary>
     public string? SystemPrompt { get; init; }
 
-    /// <summary>节点声明的命名输出端口，未声明时为空。交回契约据此给模型。</summary>
-    public IReadOnlyList<PortName> OutputPorts { get; init; } = [];
+    /// <summary>节点声明的 Data 输出端口，未声明时为空。交回契约据此给模型端口名与说明。</summary>
+    public IReadOnlyList<Port> OutputPorts { get; init; } = [];
 }

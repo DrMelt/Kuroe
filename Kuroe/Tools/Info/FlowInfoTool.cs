@@ -24,7 +24,7 @@ internal sealed class FlowInfoTool : ITool
                 "列出流程模板：流程名、执行节点路径与说明，标出默认流程。",
                 [], _ => List(), new ToolPath("info/ListFlows")),
             new ToolFunction(new ToolName("GetFlow"),
-                "查看指定流程的展开节点表：模型、产出契约、展开方式与放行规则。",
+                "查看指定流程的展开节点表：模型、节点类型、展开方式与放行规则。",
                 [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
                 arguments => Show(arguments), new ToolPath("info/GetFlow")),
         ];
@@ -74,11 +74,18 @@ internal sealed class FlowInfoTool : ITool
         {
             if (node.Execution is { } executable)
             {
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（执行节点）");
-                text.AppendLine($"    模型 {NodeModel(node)}"
-                    + $" · 契约 {executable.Output.Label()}"
-                    + $" · 展开 {InfoLabels.Of(executable.Mode)}"
-                    + $" · 放行 {InfoLabels.Of(node.Gate)}");
+                NodeKind kind = node.EffectiveKind;
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Label()}节点）");
+
+                List<string> attributes = [];
+                if (kind != NodeKind.Input)
+                {
+                    attributes.Add($"模型 {NodeModel(node)}");
+                }
+
+                attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
+                attributes.Add($"放行 {InfoLabels.Of(node.Gate)}");
+                text.AppendLine($"    {string.Join(" · ", attributes)}");
 
                 string requirement = Requirement(node, executable);
                 if (requirement.Length > 0)
@@ -88,10 +95,15 @@ internal sealed class FlowInfoTool : ITool
             }
             else if (node.Nodes is { Count: > 0 })
             {
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（容器）· 放行 {InfoLabels.Of(node.Gate)}");
-                if (node.Out is { Count: > 0 } outs)
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Label()}节点）· 放行 {InfoLabels.Of(node.Gate)}");
+                if (node.Inputs.Count > 0)
                 {
-                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => $"{entry.Key.Value} ← {entry.Value.Display}"))}");
+                    text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(DescribeInput))}");
+                }
+
+                if (node.ContainerOutputs is { Count: > 0 } outs)
+                {
+                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => DescribeOutput(entry.Key, entry.Value)))}");
                 }
             }
         }
@@ -128,7 +140,7 @@ internal sealed class FlowInfoTool : ITool
 
         if (node.Outputs.Count > 0)
         {
-            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Value))}");
+            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
         }
 
         if (node.SystemPrompt.Count > 0)
@@ -156,6 +168,16 @@ internal sealed class FlowInfoTool : ITool
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
     }
+
+    /// <summary>容器传入端口的展示：说明存在时写在名字后。</summary>
+    private static string DescribeInput(ContainerInput input) =>
+        input.Description is { Length: > 0 } description ? $"{input.Name.Value}：{description}" : input.Name.Value;
+
+    /// <summary>容器输出端口的展示：写转发目标，说明存在时写在末尾。</summary>
+    private static string DescribeOutput(PortName port, ContainerOutput output) =>
+        output.Description is { Length: > 0 } description
+            ? $"{port.Value} ← {output.Ref.Display}：{description}"
+            : $"{port.Value} ← {output.Ref.Display}";
 
     /// <summary>节点的上游接线条目展示：信号条目标「信号」，上下文条目标「上下文」，可选组条目带组名。</summary>
     private static string DescribeSource(SourceRef source)

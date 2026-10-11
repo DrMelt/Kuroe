@@ -69,7 +69,7 @@ public sealed class TaskService
         }
 
         // 输入节点不启动 run，不需要模型；其余根启动点要求模型可解析
-        if (root.Execution.Output != NodeOutput.Input)
+        if (root.Kind != NodeKind.Input)
         {
             ErrorOr<ModelName> model = _models.For(root);
             if (model.IsError)
@@ -186,7 +186,7 @@ public sealed class TaskService
         {
             runBaseline = task.Runs.Count;
             outputNode = task.Graph.ExecutableNodes
-                .Where(node => node.Execution.Output != NodeOutput.Input)
+                .Where(node => node.Kind != NodeKind.Input)
                 .Select(node => node.Index)
                 .FirstOrDefault();
         }

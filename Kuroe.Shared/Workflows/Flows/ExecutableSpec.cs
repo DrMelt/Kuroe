@@ -14,9 +14,6 @@ public sealed record ExecutableSpec
     /// <summary>输入节点的提示文本，控制台呈现给用户，未写时用通用提示。</summary>
     public string? Question { get; init; }
 
-    /// <summary>交回什么。</summary>
-    public NodeOutput Output { get; init; } = NodeOutput.Text;
-
     /// <summary>整节点一个执行还是按规划条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;
 

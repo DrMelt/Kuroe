@@ -28,7 +28,6 @@ public sealed class Run
         {
             Task = context.Task,
             Run = id,
-            Output = context.Output,
             NodeName = context.NodeName,
             ItemIndex = context.ItemIndex,
             Journal = Journal,

@@ -20,20 +20,24 @@ public enum EdgeFeed
 }
 
 /// <summary>边消费方式的推导规则：容器来源只给单份齐备，执行节点按来源与目标模式组合，
-/// 规划来源配拆分端口给条目展开。</summary>
+/// 声明为拆分的来源端口给条目展开。</summary>
 public static class EdgeFeedRules
 {
-    /// <summary>逐条对齐、等全部实例、取拆分、取单份产出。拆分端口只对规划来源到按条目目标有效。</summary>
+    /// <summary>逐条对齐、等全部实例、取拆分、取单份产出。拆分支票端口只对按条目目标有效。</summary>
     public static EdgeFeed Of(GraphNode source, NodeMode targetMode, PortName port) => source switch
     {
         ContainerNode => EdgeFeed.Single,
-        ExecutableNode executable => (executable.Execution.Mode == NodeMode.PerItem, targetMode, port == PortNames.Split) switch
+        ExecutableNode executable => (executable.Execution.Mode == NodeMode.PerItem, targetMode, KindOf(executable, port)) switch
         {
             (true, NodeMode.PerItem, _) => EdgeFeed.Aligned,
             (true, _, _) => EdgeFeed.AllInstances,
-            (false, NodeMode.PerItem, true) => EdgeFeed.Items,
+            (false, NodeMode.PerItem, PortKind.Items) => EdgeFeed.Items,
             _ => EdgeFeed.Single,
         },
         _ => throw new ArgumentException($"不支持的来源节点类型：{source.GetType().Name}"),
     };
+
+    /// <summary>来源端口声明的种类，未声明时按 Data。</summary>
+    public static PortKind KindOf(ExecutableNode source, PortName port) =>
+        source.FindPort(port)?.Kind ?? PortKind.Data;
 }

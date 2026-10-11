@@ -101,9 +101,9 @@ public sealed class ValidationAdvanceTests
         string argumentJson = argument is null ? "" : $", \"Argument\": \"{argument}\"";
         string flow = $$"""
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-              { "Name": "整体", "Nodes": [
-                { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-                { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "{{predicate}}"{{argumentJson}} } }
+              { "Name": "整体", "Kind": "Container", "Nodes": [
+                { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "{{predicate}}"{{argumentJson}} } }
               ] }
             ] } ] }
             """;
@@ -312,10 +312,11 @@ public sealed class ValidationAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-                    { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-                    { "Name": "交付", "Model": "执行者", "From": ["修订@结论"] }
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                    { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+                    { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["修订@结论"] }
                   ]
                 }
               ]
@@ -326,63 +327,63 @@ public sealed class ValidationAdvanceTests
 
     private const string BadPredicate = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "Sprout" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "Sprout" } }
           ] }
         ] } ] }
         """";
 
     private const string NumericPredicate = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "2" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "2" } }
           ] }
         ] } ] }
         """";
 
     private const string NonEmptyWithArgument = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "NonEmpty", "Argument": "多余" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "NonEmpty", "Argument": "多余" } }
           ] }
         ] } ] }
         """";
 
     private const string TextAssertMissingArgument = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains" } }
           ] }
         ] } ] }
         """";
 
     private const string BadPattern = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "Pattern", "Argument": "[" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "Pattern", "Argument": "[" } }
           ] }
         ] } ] }
         """";
 
     private const string ValidateOnPerItem = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Output": "Plan" },
-            { "Name": "实施", "Model": "执行者", "Outputs": ["结论"], "Mode": "PerItem", "From": ["计划@拆分"], "Validate": { "Predicate": "NonEmpty" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+            { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Mode": "PerItem", "From": ["计划@拆分"], "Validate": { "Predicate": "NonEmpty" } }
           ] }
         ] } ] }
         """";
 
     private const string OrMissingNode = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "From": [{ "Node": "不存在的节点@结论", "Or": "任选" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "不存在的节点@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """";
@@ -390,20 +391,20 @@ public sealed class ValidationAdvanceTests
     /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>
     private const string OrFromGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"], "From": ["乙@结论"] },
-            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "汇合", "Model": "执行者", "From": ["甲@结论", { "Node": "乙@结论", "Or": "任选" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["乙@结论"] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": ["甲@结论", { "Node": "乙@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
 
     private const string OrFreshGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "修订@结论", "Or": "任选" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "修订@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
@@ -411,10 +412,10 @@ public sealed class ValidationAdvanceTests
     /// <summary>组内与组间允许来源重复：甲独占的单组与甲、乙组成的另一组跨组共享甲。</summary>
     private const string OrRepeatsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
           ] }
         ] } ] }
         """;
@@ -422,10 +423,10 @@ public sealed class ValidationAdvanceTests
     /// <summary>开关按组名独立：甲、乙与乙、甲作为两个可选组可同时声明。</summary>
     private const string OrReorderedFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
-            { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ba" }, { "Node": "甲@结论", "Or": "ba" }] }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ba" }, { "Node": "甲@结论", "Or": "ba" }] }
           ] }
         ] } ] }
         """;
@@ -433,11 +434,11 @@ public sealed class ValidationAdvanceTests
     /// <summary>容器作可选组来源：成员阻塞时容器不可用，成员恢复齐备后按容器代数驱动启动。</summary>
     private const string ContainerOrGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-          { "Name": "整体", "Nodes": [
-            { "Name": "汇聚", "Out": { "结论": "甲@结论" }, "Nodes": [
-              { "Name": "甲", "Model": "执行者", "Outputs": ["结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "汇聚", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "甲@结论" }], "Nodes": [
+              { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] },
-            { "Name": "闸门", "Model": "执行者", "From": [{ "Node": "汇聚@结论", "Or": "任选" }] }
+            { "Name": "闸门", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "汇聚@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
@@ -446,11 +447,11 @@ public sealed class ValidationAdvanceTests
     private const string OrLoopFlow = """"
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "计划", "Model": "执行者", "Outputs": ["结论"] },
-              { "Name": "修订", "Model": "执行者", "Outputs": ["结论"], "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
-              { "Name": "审查", "Model": "执行者", "Outputs": ["结论"], "MaxRuns": 2, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Model": "执行者", "From": ["审查@结论"] }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
+              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["审查@结论"] }
             ] }
           ] } ]
         }

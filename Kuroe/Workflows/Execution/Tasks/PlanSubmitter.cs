@@ -14,12 +14,12 @@ namespace Kuroe.Workflows.Execution.Tasks;
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
 public sealed class PlanSubmitter(TaskRegistry registry)
 {
-    /// <summary>规划执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
+    /// <summary>声明 Items 端口的执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
     public ErrorOr<string> SubmitItems(TurnScope? scope, string itemsJson)
     {
-        if (Owner(scope) is not { } run || run.Context.Output != NodeOutput.Plan)
+        if (Owner(scope) is not { } run)
         {
-            return ToolErrors.Argument("只有进行中的规划 run 能提交条目拆分。");
+            return ToolErrors.Argument("只有进行中的 run 能提交条目拆分。");
         }
 
         ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
@@ -37,12 +37,18 @@ public sealed class PlanSubmitter(TaskRegistry registry)
 
         lock (task.Gate)
         {
+            ExecutableNode executable = task.Runtime.Executable(run.Context.NodeIndex).Executable;
+            if (!executable.HasItemsPort)
+            {
+                return ToolErrors.Argument("该执行节点没有声明 Items 端口，不能提交条目拆分。");
+            }
+
             if (task.SplitFor(run.Context.NodeIndex) is { } existing && existing.Origin == run.Id)
             {
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
-            SplitConfig? split = task.Runtime.Executable(run.Context.NodeIndex).Executable.Execution.Split;
+            SplitConfig? split = executable.Execution.Split;
             ErrorOr<IReadOnlyList<PlanItem>> merged = split is null
                 ? parsed
                 : SplitMerge.Apply(split, parsed.Value);

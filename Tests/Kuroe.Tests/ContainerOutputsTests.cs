@@ -10,12 +10,12 @@ using Xunit;
 namespace Kuroe.Tests;
 
 /// <summary>库容器输出端口：装配层下游按 容器@端口 消费容器内成员的命名段。</summary>
-public sealed class ContainerOutPortTests
+public sealed class ContainerOutputsTests
 {
     [Fact]
     public void Container_out_port_consumes_bound_member_named_segment()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutFlow);
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
 
         TaskId id = harness.Submit("目标");
         TaskSnapshot done = harness.Settle(id);
@@ -35,7 +35,7 @@ public sealed class ContainerOutPortTests
     [Fact]
     public void Container_out_port_without_submitted_values_blocks()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutFlow);
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
         harness.Executor.SubmitsPorts = false;
 
         TaskId id = harness.Submit("目标");

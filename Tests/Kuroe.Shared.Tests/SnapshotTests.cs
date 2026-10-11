@@ -70,7 +70,6 @@ public sealed class SnapshotTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Output = NodeOutput.Plan,
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
@@ -91,10 +90,11 @@ public sealed class SnapshotTests
         new NodeSpec
         {
             Name = new NodeName("整体"),
+            Kind = NodeKind.Container,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Model = Planner.Name, Execution = new ExecutableSpec { Output = NodeOutput.Plan } },
-                new NodeSpec { Name = new NodeName("实施"), Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("制定计划"), Kind = NodeKind.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("实施"), Kind = NodeKind.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
@@ -105,7 +105,8 @@ public sealed class SnapshotTests
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
             Gate = NodeGate.Auto,
-            Execution = new ExecutableSpec { Output = NodeOutput.Plan, Mode = NodeMode.Single },
+            Kind = NodeKind.Executable,
+            Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             From = [],
             Outputs = [],
@@ -118,9 +119,10 @@ public sealed class SnapshotTests
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
             Gate = NodeGate.Auto,
-            Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
+            Kind = NodeKind.Executable,
+            Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(0, PortNames.Split)],
+            From = [new Dependency(0, new PortName("拆分"))],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

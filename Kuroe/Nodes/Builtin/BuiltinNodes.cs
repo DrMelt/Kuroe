@@ -9,21 +9,26 @@ internal static class BuiltinNodes
     /// <summary>内置容器成员「实施」的模型槽位名，绑定由引用处的模型绑定提供。</summary>
     internal static ModelRef ExecutorSlot { get; } = new("执行者");
 
-    /// <summary>规划执行节点：把目标拆成条目。</summary>
+    /// <summary>规划节点的拆分支票端口名。</summary>
+    internal static PortName SplitPort { get; } = new("拆分");
+
+    /// <summary>执行节点：把目标拆成条目。</summary>
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
+        Kind = NodeKind.Executable,
+        Outputs = [new Port(SplitPort, PortKind.Items, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec
         {
-            Output = NodeOutput.Plan,
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
         },
     };
 
-    /// <summary>执行执行节点：按条目实施。</summary>
+    /// <summary>执行节点：按条目实施。</summary>
     private static readonly NodeSpec ExecuteNodeDefinition = new()
     {
         Name = new NodeName("执行"),
+        Kind = NodeKind.Executable,
         Execution = new ExecutableSpec
         {
             Tools = [new ToolPath("GetLocalTime")],
@@ -35,12 +40,14 @@ internal static class BuiltinNodes
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
-        Inputs = [new PortName("计划")],
+        Kind = NodeKind.Container,
+        Inputs = [new ContainerInput(new PortName("计划"), "待实施的条目拆分，来自规划节点。")],
         Nodes =
         [
             new NodeSpec
             {
                 Name = new NodeName("实施"),
+                Kind = null,
                 Use = new NodeName("执行"),
                 Model = ExecutorSlot,
                 From = [new SourceRef(PortRef.Bound(new PortName("计划")))],

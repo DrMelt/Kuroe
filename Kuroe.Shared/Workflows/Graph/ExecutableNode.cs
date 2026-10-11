@@ -2,10 +2,13 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Graph;
 
-/// <summary>一棵流程树展平后的一个执行节点及其解析结果。执行节点是唯一会派发执行的节点。</summary>
+/// <summary>一棵流程树展平后的一个执行节点及其解析结果。Kind 区分执行节点与输入节点，只有执行节点会派发执行。</summary>
 public sealed record ExecutableNode : GraphNode
 {
-    /// <summary>展开后的执行配置：执行契约与能力声明，编译期只把执行上限落定为生效值。</summary>
+    /// <summary>节点类型：执行节点或输入节点。输入节点不启动 run。</summary>
+    public required NodeKind Kind { get; init; }
+
+    /// <summary>展开后的执行配置：能力声明与执行方式，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Execution { get; init; }
 
     /// <summary>引用的模型选择解析结果：输入节点不启动 run，为空。</summary>
@@ -17,8 +20,8 @@ public sealed record ExecutableNode : GraphNode
     /// <see cref="Dependency.Context"/> 的来源产出置于目标上下文最前。</summary>
     public required IReadOnlyList<Dependency> From { get; init; }
 
-    /// <summary>命名输出端口表。声明后模型必须经契约工具交回全部端口值，下游由此消费。</summary>
-    public required IReadOnlyList<PortName> Outputs { get; init; }
+    /// <summary>执行节点的输出端口表：名字与种类，种类决定消费方式与校验。</summary>
+    public required IReadOnlyList<Port> Outputs { get; init; }
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public required IReadOnlyList<string> SystemPrompt { get; init; }
@@ -32,6 +35,12 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>拆分只有固定条目，模型不参与补充。</summary>
     public bool IsStaticSplit => Execution.IsStaticSplit;
 
-    /// <summary>是否有命名输出端口，未声明即无模型可交回的命名产出。</summary>
-    public bool HasOutputPorts => Outputs.Count > 0;
+    /// <summary>是否有 Data 端口，未声明即无模型可交回的命名产出。</summary>
+    public bool HasDataPorts => Outputs.Any(port => port.Kind == PortKind.Data);
+
+    /// <summary>是否声明 Items 端口，声明即由模型交回条目拆分。</summary>
+    public bool HasItemsPort => Outputs.Any(port => port.Kind == PortKind.Items);
+
+    /// <summary>按名字取端口声明，未声明时为空。</summary>
+    public Port? FindPort(PortName name) => Outputs.Find(name);
 }

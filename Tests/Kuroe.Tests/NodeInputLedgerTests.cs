@@ -47,7 +47,7 @@ public sealed class NodeInputLedgerTests
     }
 
     private static FlowDefinition DefaultFlow() =>
-        new(new FlowName("默认"), null, [], new NodeSpec { Name = new NodeName("整体") });
+        new(new FlowName("默认"), null, [], new NodeSpec { Name = new NodeName("整体"), Kind = NodeKind.Container });
 
     private static ExecutableNode SourceDefinition() => new()
     {
@@ -55,7 +55,8 @@ public sealed class NodeInputLedgerTests
         Name = new NodeName("来源"),
         Path = new NodePath([new NodeName("来源")]),
         Gate = NodeGate.Auto,
-        Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.PerItem },
+        Kind = NodeKind.Executable,
+        Execution = new ExecutableSpec { Mode = NodeMode.PerItem },
         Model = Model,
         From = [],
         Outputs = [],
@@ -69,7 +70,8 @@ public sealed class NodeInputLedgerTests
         Name = new NodeName("目标"),
         Path = new NodePath([new NodeName("目标")]),
         Gate = NodeGate.Auto,
-        Execution = new ExecutableSpec { Output = NodeOutput.Text, Mode = NodeMode.Single },
+        Kind = NodeKind.Executable,
+        Execution = new ExecutableSpec { Mode = NodeMode.Single },
         Model = Model,
         From =
         [

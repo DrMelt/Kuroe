@@ -14,6 +14,7 @@ namespace Kuroe.Workflows.Flows.Files;
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(FlowFileDto))]
 [JsonSerializable(typeof(FromEntryDto))]
+[JsonSerializable(typeof(PortEntryDto))]
 [JsonSerializable(typeof(string))]
 internal sealed partial class FlowJson : JsonSerializerContext
 {

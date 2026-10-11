@@ -100,7 +100,7 @@ internal sealed class FlowCommands(
             new Text("序号", Styles.Hint),
             new Text("执行节点", Styles.Hint),
             new Text("模型", Styles.Hint),
-            new Text("契约", Styles.Hint),
+            new Text("类型", Styles.Hint),
             new Text("展开", Styles.Hint),
             new Text("产出后", Styles.Hint),
             new Text("上游与要求", Styles.Hint));
@@ -114,7 +114,7 @@ internal sealed class FlowCommands(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + node.Name.Value),
                     new Text(node.Model?.Value ?? "—"),
-                    new Text(executable.Output.Label()),
+                    new Text(node.EffectiveKind.Label()),
                     new Text(ViewLabels.Of(executable.Mode)),
                     new Text(ViewLabels.Of(node.Gate)),
                     new Text(Requirement(node, executable), Styles.Hint));
@@ -197,7 +197,7 @@ internal sealed class FlowCommands(
 
         if (node.Outputs.Count > 0)
         {
-            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Value))}");
+            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
         }
 
         if (node.SystemPrompt.Count > 0)

@@ -402,9 +402,10 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -425,10 +426,11 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
-                { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
+                { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -449,10 +451,11 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
-                { "Name": "排版", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
+                { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -473,9 +476,10 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "规划者", "Output": "Plan", "Gate": "Review" },
-                { "Name": "撰写", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -495,10 +499,11 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
                   "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" }, { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" } ], "ExtrasMax": 0 } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -518,10 +523,11 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
                   "Split": { "Items": [ { "Title": "固定任务", "Instruction": "做固定", "Acceptance": "固定验收" } ], "ExtrasMax": 2, "Acceptance": "统一验收" } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -541,9 +547,10 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "执行者", "Output": "Plan", "Split": { "ExtrasMax": 1 } },
-                { "Name": "分配执行", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "Split": { "ExtrasMax": 1 } },
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -563,13 +570,14 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Model": "执行者", "Output": "Plan",
+                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
                   "Split": { "ExtrasMax": 0, "Items": [
                     { "Title": "甲", "Instruction": "做甲", "Branch": "撰写" },
                     { "Title": "乙", "Instruction": "做乙", "Branch": "排版" } ] } },
-                { "Name": "撰写", "Model": "执行者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
-                { "Name": "排版", "Model": "执行者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
+                { "Name": "撰写", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
+                { "Name": "排版", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -590,11 +598,12 @@ public sealed class FlowAdvanceTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定A计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "制定B计划", "Model": "规划者", "Output": "Plan" },
-                { "Name": "实施A", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划@拆分"] },
-                { "Name": "实施B", "Model": "实施者", "Mode": "PerItem", "From": ["制定B计划@拆分"] }
+                { "Name": "制定A计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定B计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "实施A", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划@拆分"] },
+                { "Name": "实施B", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "From": ["制定B计划@拆分"] }
                   ]
                 }
               ]

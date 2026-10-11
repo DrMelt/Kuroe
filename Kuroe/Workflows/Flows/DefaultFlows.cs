@@ -24,14 +24,16 @@ internal static class DefaultFlows
             new NodeSpec
             {
                 Name = new NodeName("整体"),
+                Kind = NodeKind.Container,
                 Nodes =
                 [
-                    new NodeSpec { Name = new NodeName("制定计划"), Use = new NodeName("规划"), Model = Planner.Name },
+                    new NodeSpec { Name = new NodeName("制定计划"), Kind = null, Use = new NodeName("规划"), Model = Planner.Name },
                     new NodeSpec
                     {
                         Name = new NodeName("交付"),
+                        Kind = null,
                         Use = new NodeName("交付"),
-                        In = new Dictionary<PortName, PortRef> { [new PortName("计划")] = PortRef.Named(new NodeName("制定计划"), PortNames.Split) },
+                        In = new Dictionary<PortName, PortRef> { [new PortName("计划")] = PortRef.Named(new NodeName("制定计划"), BuiltinNodes.SplitPort) },
                         Models = new Dictionary<ModelRef, ModelRef> { [Executor.Name] = Executor.Name },
                     },
                 ],

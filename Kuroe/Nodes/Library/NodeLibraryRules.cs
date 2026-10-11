@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Shared.Workflows.Flows;
 using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Nodes.Library;
@@ -16,9 +17,12 @@ internal static class NodeLibraryRules
 
         foreach (Flow.NodeSpec node in definitions)
         {
-            if (node.Nodes is { Count: > 0 })
+            if (node.Kind == Flow.NodeKind.Container)
             {
-                CheckContainer(node, node.Nodes, byName, errors);
+                if (node.Nodes is { Count: > 0 } members)
+                {
+                    CheckContainer(node, members, byName, errors);
+                }
             }
             else
             {
@@ -54,8 +58,13 @@ internal static class NodeLibraryRules
 
             byName[node.Name] = node;
 
-            if (node.Nodes is { Count: > 0 })
+            if (node.Kind == Flow.NodeKind.Container)
             {
+                if (node.Nodes is not { Count: > 0 })
+                {
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "容器节点必须声明子节点。"));
+                }
+
                 if (node.Execution is not null)
                 {
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "容器不能同时声明执行配置。"));
@@ -76,9 +85,14 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明模型与模型绑定，绑定由引用处提供。"));
                 }
 
-                if (node.Outputs.Count > 0 || node.SystemPrompt.Count > 0)
+                if (node.Outputs.Count > 0)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不是执行节点，不声明输出端口与系统指令。"));
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。"));
+                }
+
+                if (node.SystemPrompt.Count > 0)
+                {
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不是执行节点，不声明系统指令。"));
                 }
 
                 if (node.Validate is not null)
@@ -88,12 +102,17 @@ internal static class NodeLibraryRules
             }
             else
             {
-                if (node.Execution is null)
+                if (node.Nodes is { Count: > 0 })
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "节点必须声明执行配置或子节点。"));
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点与输入节点不能声明子节点，子节点只属于容器。"));
                 }
 
-                if (node.Execution?.Output == Flow.NodeOutput.Input)
+                if (node.Execution is null)
+                {
+                    errors.Add(NodeScope.Library.Node(node.Name.Value, "节点必须声明执行配置。"));
+                }
+
+                if (node.Kind == Flow.NodeKind.Input)
                 {
                     if (node.Model is not null)
                     {
@@ -135,9 +154,9 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点库定义不绑定输入端口，接线从引用处提供。"));
         }
 
-        if (node.Out is { Count: > 0 })
+        if (node.ContainerOutputs is { Count: > 0 })
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "库执行定义不声明容器输出端口，命名输出端口用 Outputs。"));
+            errors.Add(NodeScope.Library.Node(node.Name.Value, "库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Kind。"));
         }
 
         if (node.Execution?.MaxRuns is { } limit && limit < 1)
@@ -148,10 +167,10 @@ internal static class NodeLibraryRules
         ValidateInterface(node, errors);
     }
 
-    /// <summary>节点接口的库规则：输出端口声明在文本与 PerItem 执行节点上，输入成员最多一个回答端口。</summary>
+    /// <summary>节点接口的库规则：Items 端口至多一个，Context 端口至多一个，端口名在同一节点内唯一。</summary>
     private static void ValidateInterface(Flow.NodeSpec node, List<Error> errors)
     {
-        if (node.Execution is not { } executable || executable.Output == Flow.NodeOutput.Input)
+        if (node.Execution is not { } executable || node.Kind == Flow.NodeKind.Input)
         {
             if (node.Outputs.Count > 1 || node.SystemPrompt.Count > 0)
             {
@@ -166,18 +185,21 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(node.Name.Value, "Question 只属于输入节点。"));
         }
 
-        if (node.Outputs.Count > 0 && executable.Output != Flow.NodeOutput.Text)
+        int itemsPorts = node.Outputs.Count(port => port.Kind == Flow.PortKind.Items);
+        int contextPorts = node.Outputs.Count(port => port.Kind == Flow.PortKind.Context);
+
+        if (itemsPorts > 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "输出端口只能声明在文本执行节点上。"));
+            errors.Add(NodeScope.Library.Node(node.Name.Value, "拆分支票端口至多声明一个。"));
         }
 
-        foreach (Flow.PortName port in node.Outputs.Where(port => port == Flow.PortNames.Split || port == Flow.PortNames.ContextOutput || port == Flow.PortNames.ContextInput))
+        if (contextPorts > 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, $"输出端口名 {port.Value} 是保留名，不可作命名输出端口声明。"));
+            errors.Add(NodeScope.Library.Node(node.Name.Value, "装配上下文端口至多声明一个。"));
         }
 
         foreach (Flow.PortName port in node.Outputs
-            .GroupBy(port => port)
+            .GroupBy(port => port.Name)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key))
         {
@@ -205,13 +227,13 @@ internal static class NodeLibraryRules
         var subtreeNames = new HashSet<Flow.NodeName>();
         CollectSubtreeNames(members, byName, subtreeNames);
 
-        var subtreeOutputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>>();
+        var subtreeOutputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
         var subtreeInputs = new HashSet<Flow.NodeName>();
         CollectSubtreeInputs(members, byName, subtreeInputs);
 
-        if (container.Out is { } outs)
+        if (container.ContainerOutputs is { } outs)
         {
             CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, subtreeInputs, errors);
         }
@@ -219,7 +241,7 @@ internal static class NodeLibraryRules
         var literalNames = new HashSet<Flow.NodeName>();
         CheckLiteralNames(members, literalNames, container, errors);
 
-        var ports = new HashSet<Flow.PortName>([.. container.Inputs]);
+        var ports = new HashSet<Flow.PortName>([.. container.Inputs.Select(port => port.Name)]);
         foreach (Flow.NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
@@ -232,11 +254,11 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内全部执行节点的命名输出端口表，供容器输出端口的绑定目标校验。被引用执行节点取定义上的端口表。</summary>
+    /// <summary>收集子树内全部执行节点的输出端口表，供容器输出端口的绑定目标校验。被引用执行节点取定义上的端口表。</summary>
     private static void CollectSubtreeOutputs(
         IReadOnlyList<Flow.NodeSpec> nodes,
         Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> outputs)
+        Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>> outputs)
     {
         foreach (Flow.NodeSpec node in nodes)
         {
@@ -256,7 +278,7 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内全部输入节点名，上下文端口绑定不允许落在输入节点上。被引用执行节点取定义上的输出契约。</summary>
+    /// <summary>收集子树内全部输入节点名，上下文端口绑定不允许落在输入节点上。被引用执行节点取定义上的输出端口表。</summary>
     private static void CollectSubtreeInputs(
         IReadOnlyList<Flow.NodeSpec> nodes,
         Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
@@ -264,9 +286,9 @@ internal static class NodeLibraryRules
     {
         foreach (Flow.NodeSpec node in nodes)
         {
-            if (node.Execution?.Output == Flow.NodeOutput.Input
+            if (node.Kind == Flow.NodeKind.Input
                 || (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? definition)
-                    && definition.Execution?.Output == Flow.NodeOutput.Input))
+                    && definition.Kind == Flow.NodeKind.Input))
             {
                 inputs.Add(node.Name);
             }
@@ -278,24 +300,19 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>容器输出端口：端口名是保留名时拒绝；绑定目标必须落在子树内且是执行节点，
-    /// 声明端口必须是目标声明的命名端口，上下文端口不落在输入节点上。</summary>
+    /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
+    /// 上下文端口不落在输入节点上，拆分支票端口不透出。</summary>
     private static void CheckContainerOutputs(
         Flow.NodeSpec container,
-        IReadOnlyDictionary<Flow.PortName, Flow.PortRef> outs,
+        IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput> outs,
         HashSet<Flow.NodeName> subtreeNames,
-        Dictionary<Flow.NodeName, IReadOnlyList<Flow.PortName>> subtreeOutputs,
+        Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>> subtreeOutputs,
         HashSet<Flow.NodeName> subtreeInputs,
         List<Error> errors)
     {
-        foreach ((Flow.PortName port, Flow.PortRef target) in outs)
+        foreach ((Flow.PortName port, Flow.ContainerOutput output) in outs)
         {
-            if (port == Flow.PortNames.Split || port == Flow.PortNames.ContextOutput || port == Flow.PortNames.ContextInput)
-            {
-                errors.Add(NodeScope.Library.Node(container.Name.Value, $"容器输出端口名 {port.Value} 是保留名，不可作命名输出端口声明。"));
-                continue;
-            }
-
+            Flow.PortRef target = output.Ref;
             if (target.Source is not { } sourceName)
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
@@ -303,7 +320,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，声明端口透出命名段
+            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，Data 端口透出命名段
             if (!subtreeNames.Contains(sourceName))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
@@ -311,28 +328,31 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (!subtreeOutputs.TryGetValue(sourceName, out IReadOnlyList<Flow.PortName>? memberPorts))
+            if (!subtreeOutputs.TryGetValue(sourceName, out IReadOnlyList<Flow.Port>? memberPorts))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不是执行节点，无法取产出。"));
                 continue;
             }
 
-            if (target.Port == Flow.PortNames.ContextOutput)
-            {
-                if (subtreeInputs.Contains(sourceName))
-                {
-                    errors.Add(NodeScope.Library.Node(container.Name.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 是输入节点，不能作为上下文端口来源。"));
-                }
-
-                continue;
-            }
-
-            if (!memberPorts.Contains(target.Port))
+            if (memberPorts.Find(target.Port) is not { } memberPort)
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 无法取用，目标必须是执行节点且声明了端口 {target.Port.Value}。"));
+                continue;
+            }
+
+            if (memberPort.Kind == Flow.PortKind.Context && subtreeInputs.Contains(sourceName))
+            {
+                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 是输入节点，不能作为上下文端口来源。"));
+                continue;
+            }
+
+            if (memberPort.Kind == Flow.PortKind.Items)
+            {
+                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                    $"容器输出端口 {port.Value} 的绑定目标是拆分支票端口，容器不透出拆分支票。"));
             }
         }
     }
@@ -484,7 +504,7 @@ internal static class NodeLibraryRules
             }
         }
 
-        if (member.Execution?.Output == Flow.NodeOutput.Input)
+        if (member.Kind == Flow.NodeKind.Input)
         {
             if (member.Model is not null)
             {

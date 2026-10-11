@@ -323,15 +323,17 @@ public sealed class InputNodeTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
                     {
                       "Name": "收集",
-                      "Out": { "回答": "用户输入@回答" },
+                      "Kind": "Container",
+                      "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                       "Nodes": [
-                        { "Name": "用户输入", "Output": "Input", "Question": "请补充背景", "Outputs": ["回答"] }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Kind": "Data" }] }
                       ]
                     },
-                    { "Name": "实施", "Output": "Text", "Model": "执行者", "From": ["收集@回答"] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["收集@回答"] }
                   ]
                 }
               ]
@@ -349,12 +351,14 @@ public sealed class InputNodeTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
                     {
                       "Name": "审查容器",
+                      "Kind": "Container",
                       "Gate": "Review",
                       "Nodes": [
-                        { "Name": "用户输入", "Output": "Input", "Question": "请补充背景" }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景" }
                       ]
                     }
                   ]
@@ -375,9 +379,10 @@ public sealed class InputNodeTests
               "Nodes": [
                 {
                   "Name": "整体",
+                  "Kind": "Container",
                   "Nodes": [
-                    { "Name": "收话", "Output": "Input", "Outputs": ["回答"], "From": ["回话@回复"] },
-                    { "Name": "回话", "Output": "Text", "Model": "执行者", "Outputs": ["回复"], "From": ["收话@回答"] }
+                    { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["回话@回复"] },
+                    { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Kind": "Data" }], "From": ["收话@回答"] }
                   ]
                 }
               ]

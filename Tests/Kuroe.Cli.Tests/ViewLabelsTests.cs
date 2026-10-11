@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using Kuroe.Cli.Views;
+using Kuroe.Executions;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
@@ -28,6 +29,14 @@ public sealed class ViewLabelsTests
         Assert.Equal("按条目", ViewLabels.Of(NodeMode.PerItem));
         Assert.Equal("整节点", ViewLabels.Of(NodeMode.Single));
         Assert.Equal("自动放行", ViewLabels.Of(NodeGate.Auto));
+    }
+
+    [Fact]
+    public void Node_kind_labels_cover_the_kinds()
+    {
+        Assert.Equal("容器", NodeKindLabels.Label(NodeKind.Container));
+        Assert.Equal("执行", NodeKindLabels.Label(NodeKind.Executable));
+        Assert.Equal("输入", NodeKindLabels.Label(NodeKind.Input));
     }
 
     [Fact]
@@ -67,7 +76,6 @@ public sealed class ViewLabelsTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        Output = NodeOutput.Plan,
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",

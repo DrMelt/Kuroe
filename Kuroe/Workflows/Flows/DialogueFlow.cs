@@ -43,30 +43,31 @@ internal static class DialogueFlow
         new NodeSpec
         {
             Name = new NodeName("对话"),
+            Kind = NodeKind.Container,
             Nodes =
             [
                 new NodeSpec
                 {
                     Name = InputNodeName,
+                    Kind = NodeKind.Input,
                     Execution = new ExecutableSpec
                     {
-                        Output = NodeOutput.Input,
                         Question = "请输入",
                     },
-                    Outputs = [InputPort],
+                    Outputs = [new Port(InputPort, PortKind.Data)],
                     From = [new SourceRef(PortRef.Named(ReplyNodeName, ReplyPort))],
                 },
                 new NodeSpec
                 {
                     Name = ReplyNodeName,
+                    Kind = NodeKind.Executable,
                     Execution = new ExecutableSpec
                     {
-                        Output = NodeOutput.Text,
                         Tools = Tools,
                         Prompt = Prompt,
                     },
                     Model = RuntimeModel,
-                    Outputs = [ReplyPort],
+                    Outputs = [new Port(ReplyPort, PortKind.Data)],
                     From = [new SourceRef(PortRef.Named(InputNodeName, InputPort))],
                 },
             ],

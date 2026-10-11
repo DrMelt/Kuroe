@@ -14,10 +14,10 @@ public sealed class LazyRuntimeTests
     private const string ReviewQueueFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-            { "Name": "整体", "Nodes": [
-              { "Name": "制定计划", "Model": "执行者", "Output": "Plan" },
-              { "Name": "分配执行", "Model": "执行者", "Mode": "PerItem", "Outputs": ["结论"], "Gate": "Review", "From": ["制定计划@拆分"] },
-              { "Name": "收尾", "Model": "执行者", "From": ["分配执行@结论"] }
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+              { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Gate": "Review", "From": ["制定计划@拆分"] },
+              { "Name": "收尾", "Kind": "Executable", "Model": "执行者", "From": ["分配执行@结论"] }
             ] }
           ] } ]
         }
@@ -43,7 +43,7 @@ public sealed class LazyRuntimeTests
     [Fact]
     public void Unreleased_container_member_stays_unmaterialized()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutFlow);
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
         harness.Executor.DelayMs = 200;
 
         TaskId id = harness.Submit("目标");
@@ -95,10 +95,10 @@ public sealed class LazyRuntimeTests
     {
         const string flow = """
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-              { "Name": "整体", "Nodes": [
-                { "Name": "甲", "Model": "执行者", "Outputs": ["结论"] },
-                { "Name": "乙", "Model": "执行者", "Outputs": ["结论"] },
-                { "Name": "汇合", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "乙组" }, { "Node": "甲@结论", "Or": "乙组" }] }
+              { "Name": "整体", "Kind": "Container", "Nodes": [
+                { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "乙组" }, { "Node": "甲@结论", "Or": "乙组" }] }
               ] }
             ] } ] }
             """;

@@ -59,9 +59,9 @@ public sealed class PortNodeTests
     }
 
     [Fact]
-    public void ContextOutput_port_injects_upstream_frame_keeping_sources()
+    public void Context_port_injects_upstream_frame_keeping_sources()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContextOutputFlow);
+        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContextPortFlow);
 
         TaskId id = harness.Submit("目标");
         TaskSnapshot done = harness.Settle(id);
@@ -104,9 +104,9 @@ public sealed class PortNodeTests
         const string flow = """
             {
               "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
-                { "Name": "整体", "Nodes": [
-                  { "Name": "准备", "Output": "Text", "Model": "执行者", "Outputs": ["结论"] },
-                  { "Name": "实施", "Output": "Text", "Model": "执行者", "From": [ { "Node": "准备@结论", "Context": true } ] }
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                  { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "Node": "准备@结论", "Context": true } ] }
                 ] }
               ] } ]
             }
@@ -174,10 +174,10 @@ public sealed class PortNodeTests
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" } ], "Nodes": [
-                { "Name": "整体", "Nodes": [
-                  { "Name": "制定计划", "Output": "Plan", "Model": "规划者" },
-                  { "Name": "实施", "Mode": "PerItem", "Model": "执行者", "Outputs": ["结论"], "From": ["制定计划@拆分"] },
-                  { "Name": "汇总", "Model": "执行者", "From": ["实施@结论"] }
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["制定计划@拆分"] },
+                  { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": ["实施@结论"] }
                 ] }
               ] } ]
             }
@@ -230,10 +230,10 @@ public sealed class PortNodeTests
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" } ], "Nodes": [
-                { "Name": "整体", "Nodes": [
-                  { "Name": "制定计划", "Output": "Plan", "Model": "规划者" },
-                  { "Name": "实施", "Mode": "PerItem", "Model": "执行者", "Outputs": ["结论"], "From": ["制定计划@拆分"] },
-                  { "Name": "汇总", "Model": "执行者", "From": ["实施@结论"] }
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["制定计划@拆分"] },
+                  { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": ["实施@结论"] }
                 ] }
               ] } ]
             }
