@@ -174,7 +174,7 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>一个执行节点收到评估意图：静态拆分就地产出、放行待批准的节点、输入齐备启动实例。
+    /// <summary>一个执行节点收到评估意图：输入节点重新挂起等回答，其余按就绪条件启动实例。
     /// 启动的 run 异步派发由收口回调处理，通知的下游即时入队。</summary>
     private void Activate(int nodeIndex)
     {

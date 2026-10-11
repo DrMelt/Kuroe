@@ -57,21 +57,20 @@ public sealed class TaskService
     /// <summary>以内建对话流程提交常驻对话任务，供管理层一问一答。</summary>
     public ErrorOr<TaskSnapshot> SubmitDialogue() => SubmitFlow("对话", DialogueFlow.Build(), "对话");
 
-    /// <summary>按流程定义提交：编译图、校验根启动点模型、建任务并启动推进。</summary>
+    /// <summary>按流程定义提交：编译图、校验开始直连下游的模型、建任务并启动推进。</summary>
     private ErrorOr<TaskSnapshot> SubmitFlow(string goal, FlowDefinition flow, string? title)
     {
         NodeGraph graph = FlowCompiler.Compile(flow);
-        IReadOnlyList<ExecutableNode> candidates = graph.StartCandidates();
-        ExecutableNode? root = candidates.Count > 0 ? candidates[0] : null;
-        if (root is null)
-        {
-            return [TaskErrors.NoRoot()];
-        }
 
-        // 输入节点不启动 run，不需要模型；其余根启动点要求模型可解析
-        if (root.Kind != NodeKind.Input)
+        // 输入节点不启动 run，不需要模型；开始直连的执行节点要求模型可解析
+        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Index))
         {
-            ErrorOr<ModelName> model = _models.For(root);
+            if (graph[edge.To] is not ExecutableNode { Kind: not NodeKind.Input } target)
+            {
+                continue;
+            }
+
+            ErrorOr<ModelName> model = _models.For(target);
             if (model.IsError)
             {
                 return model.ErrorsOrEmptyList;

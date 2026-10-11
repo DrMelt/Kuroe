@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
+using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
 using Xunit;
@@ -11,16 +12,17 @@ namespace Kuroe.Tests;
 public sealed class ContextTests
 {
     [Fact]
-    public void First_step_gets_goal_as_instruction_and_no_upstream_seed()
+    public void First_step_gets_goal_from_start_port_and_no_other_upstream_seed()
     {
         using KuroeHarness harness = KuroeHarness.Create();
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
         RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
 
-        Assert.Contains("补齐 README", plan.Context.Instruction);
+        ContextMessage goal = Assert.Single(plan.Context.Seed);
+        Assert.Equal("补齐 README", goal.Text);
+        Assert.IsType<StartSource>(goal.Source);
         Assert.Equal(ModelName.Create("fake").Value, plan.Context.Model);
-        Assert.Empty(plan.Context.Seed);
     }
 
     [Fact]
@@ -42,4 +44,35 @@ public sealed class ContextTests
             + string.Concat(implement.Context.Seed.Select(message => message.Text));
         Assert.DoesNotContain("做乙", visible);
     }
+
+    [Fact]
+    public void Start_constant_port_feeds_downstream_instead_of_goal()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(StartConstantFlow);
+
+        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
+        RunSnapshot run = Assert.Single(done.Executables[0].Runs);
+
+        ContextMessage seed = Assert.Single(run.Context.Seed);
+        Assert.Equal("固定背景", seed.Text);
+        Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Source).Port);
+    }
+
+    /// <summary>开始除目标外声明一个带固定值的端口，下游取固定值端口。</summary>
+    private const string StartConstantFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }, { "Name": "背景", "Kind": "Data", "Value": "固定背景" }] },
+              "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["Start@背景"] }
+                ] }
+              ]
+            }
+          ]
+        }
+        """;
 }

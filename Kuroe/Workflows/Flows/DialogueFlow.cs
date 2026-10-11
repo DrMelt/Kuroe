@@ -1,13 +1,17 @@
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>内置对话流程：收话与回话互引构成环，输入节点是挂点，一轮回答驱动一轮迭代后回到挂起。管理层用它创建常驻对话任务。</summary>
+/// <summary>内置对话流程：收话与回话互引构成环，收话由 开始 触发，一轮回答驱动一轮迭代后回到挂起。管理层用它创建常驻对话任务。</summary>
 internal static class DialogueFlow
 {
     /// <summary>流程名。</summary>
     internal static FlowName Name { get; } = new("对话");
+
+    /// <summary>开始入口的输出端口名：任务的初始输入由此进入流程。</summary>
+    internal static PortName StartPort { get; } = new("目标");
 
     /// <summary>运行时模型选择名：执行时取宿主当前选中的模型。</summary>
     internal static ModelRef RuntimeModel { get; } = new("运行时");
@@ -40,6 +44,7 @@ internal static class DialogueFlow
         Name,
         "内置对话：回答用户的每轮输入",
         [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
+        [new Port(StartPort, PortKind.Data, "任务的初始输入，提交时给出。")],
         new NodeSpec
         {
             Name = new NodeName("对话"),
@@ -55,7 +60,11 @@ internal static class DialogueFlow
                         Question = "请输入",
                     },
                     Outputs = [new Port(InputPort, PortKind.Data)],
-                    From = [new SourceRef(PortRef.Named(ReplyNodeName, ReplyPort))],
+                    From =
+                    [
+                        new SourceRef(PortRef.Named(StartNode.ReservedName, StartPort)),
+                        new SourceRef(PortRef.Named(ReplyNodeName, ReplyPort)),
+                    ],
                 },
                 new NodeSpec
                 {

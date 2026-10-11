@@ -24,7 +24,7 @@ public sealed class ExecutionLimitTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, task.Runtime.Executable(1).ExecutionCount(null));
+        Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(null));
         Assert.Contains(blocked.Journal, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
         Assert.True(harness.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
@@ -41,7 +41,7 @@ public sealed class ExecutionLimitTests
         TaskSnapshot blocked = harness.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(1).ExecutionCount(null));
+        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
         Assert.True(harness.Tasks.Rework(id, null).IsError);
     }
 
@@ -57,7 +57,7 @@ public sealed class ExecutionLimitTests
         TaskSnapshot blocked = harness.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(1).ExecutionCount(null));
+        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
         Assert.True(harness.Tasks.Rework(id, null).IsError);
     }
 
@@ -66,10 +66,10 @@ public sealed class ExecutionLimitTests
     public void Or_loop_stops_restarting_at_limit()
     {
         using KuroeHarness harness = KuroeHarness.Create(OrLoopWithLimitFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
+        harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            3 => """{"结论": "审查通过"}""",
+            4 => """{"结论": "审查通过"}""",
             _ => null,
         };
 
@@ -77,8 +77,8 @@ public sealed class ExecutionLimitTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(node => node.Index == 2).Runs);
-        Assert.Single(done.Executables.Single(node => node.Index == 4).Runs);
+        Assert.Single(done.Executables.Single(node => node.Index == 3).Runs);
+        Assert.Single(done.Executables.Single(node => node.Index == 5).Runs);
     }
 
     /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证账本环受 MaxRuns 约束。</summary>
@@ -86,10 +86,10 @@ public sealed class ExecutionLimitTests
     public void Or_loop_iterates_to_max_runs()
     {
         using KuroeHarness harness = KuroeHarness.Create(OrLoopWithoutLimitFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex == 3 ? "审查通过" : "产出";
+        harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            3 => """{"结论": "审查通过"}""",
+            4 => """{"结论": "审查通过"}""",
             _ => null,
         };
 
@@ -97,9 +97,9 @@ public sealed class ExecutionLimitTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(5, done.Executables.Single(node => node.Index == 2).Runs.Count);
         Assert.Equal(5, done.Executables.Single(node => node.Index == 3).Runs.Count);
         Assert.Equal(5, done.Executables.Single(node => node.Index == 4).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Index == 5).Runs.Count);
     }
 
     /// <summary>PerItem 展开后各条目独立计数，一条到上限不影响另一条。</summary>
@@ -108,24 +108,24 @@ public sealed class ExecutionLimitTests
     {
         using KuroeHarness harness = KuroeHarness.Create(SplitFlowWithLimit);
         harness.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 2 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
+            run.Context.NodeIndex == 3 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot blocked = harness.Settle(id);
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(0));
-        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(1));
+        Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(0));
+        Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
         Assert.True(harness.Tasks.Rework(id, null).IsError, "条目路径到上限后不再重跑");
     }
 
     /// <summary>恒失败的单个节点，满 2 次后停在阻塞。</summary>
     private const string FailingNodeFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2 }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": ["Start@目标"] }
             ] }
           ] } ]
         }
@@ -134,9 +134,9 @@ public sealed class ExecutionLimitTests
     /// <summary>声明 Items 端口的执行节点不交回拆分，未收口重复到上限后停在阻塞。</summary>
     private const string PlanNodeFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "Outputs": [{ "Name": "拆分", "Kind": "Items" }] }
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] }
             ] }
           ] } ]
         }
@@ -145,9 +145,9 @@ public sealed class ExecutionLimitTests
     /// <summary>校验永远不通过的节点，重复到上限后停在阻塞。</summary>
     private const string ValidationFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2,
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2, "From": ["Start@目标"],
                 "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -157,9 +157,9 @@ public sealed class ExecutionLimitTests
     /// <summary>修订被计划与审查交替驱动，执行满 1 次即达上限，不再被审查新版本重启。</summary>
     private const string OrLoopWithLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 1, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
               { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
               { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["审查@结论"] }
@@ -171,9 +171,9 @@ public sealed class ExecutionLimitTests
     /// <summary>无环外终止的互驱动环：修订被计划与审查交替驱动，全部节点迭代到显式上限后任务收敛为完成。</summary>
     private const string OrLoopWithoutLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
               { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
               { "Name": "交付", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5, "From": ["审查@结论"] }
@@ -185,9 +185,9 @@ public sealed class ExecutionLimitTests
     /// <summary>PerItem 实施节点每条目限一次执行。</summary>
     private const string SplitFlowWithLimit = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
               { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划@拆分"] }
             ] }
           ] } ]
@@ -196,9 +196,9 @@ public sealed class ExecutionLimitTests
 
     private const string DefaultLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者" }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["Start@目标"] }
             ] }
           ] } ]
         }
@@ -206,9 +206,9 @@ public sealed class ExecutionLimitTests
 
     private const string SingleNodeLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2 }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": ["Start@目标"] }
             ] }
           ] } ]
         }
@@ -220,10 +220,10 @@ public sealed class ExecutionLimitTests
           "Nodes": [
             { "Name": "干活库", "Kind": "Executable", "Tools": [], "MaxRuns": 3 }
           ],
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5 },
-              { "Name": "继承干活", "Use": "干活库", "Model": "执行者" }
+              { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5, "From": ["Start@目标"] },
+              { "Name": "继承干活", "Use": "干活库", "Model": "执行者", "From": ["Start@目标"] }
             ] }
           ] } ]
         }

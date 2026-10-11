@@ -53,7 +53,7 @@ public sealed class PortNodeTests
 
         // 复盘不带端口引用在解析层拒绝；若按端口引用则出处带端口标签
         RunSnapshot review = harness.Executor.Started
-            .Single(run => run.Context.NodeIndex == 3 && run.Context.ItemIndex is null)
+            .Single(run => run.Context.NodeIndex == 4 && run.Context.ItemIndex is null)
             .Snapshot();
         Assert.Contains(review.Context.Seed, message => message.Text.Contains("端口「理由」产出"));
     }
@@ -103,9 +103,9 @@ public sealed class PortNodeTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+              "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                  { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
                   { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "Node": "准备@结论", "Context": true } ] }
                 ] }
               ] } ]
@@ -173,9 +173,9 @@ public sealed class PortNodeTests
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Nodes": [
+                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                   { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["制定计划@拆分"] },
                   { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": ["实施@结论"] }
                 ] }
@@ -189,10 +189,10 @@ public sealed class PortNodeTests
             ]
             """;
         harness.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 2 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
+            run.Context.NodeIndex == 3 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
         harness.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.NodeIndex != 2)
+            if (run.Context.NodeIndex != 3)
             {
                 return null;
             }
@@ -229,9 +229,9 @@ public sealed class PortNodeTests
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Nodes": [
+                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                   { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["制定计划@拆分"] },
                   { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": ["实施@结论"] }
                 ] }
@@ -247,7 +247,7 @@ public sealed class PortNodeTests
         // 甲的第一轮提交空端口表，端口与声明不一一对应，视为未交回
         harness.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.NodeIndex != 2)
+            if (run.Context.NodeIndex != 3)
             {
                 return null;
             }

@@ -48,15 +48,15 @@ public sealed class SnapshotTests
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
         Assert.Equal(2, TaskBuilder.Snap([
-            State(0, NodeState.Done),
-            State(1, NodeState.Done)]).FrontierNodes);
+            State(1, NodeState.Done),
+            State(2, NodeState.Done)]).FrontierNodes);
         Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, TaskBuilder.Snap([State(0, NodeState.Running)]).FrontierNodes);
+        Assert.Equal(0, TaskBuilder.Snap([State(1, NodeState.Running)]).FrontierNodes);
         Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
@@ -87,6 +87,7 @@ public sealed class SnapshotTests
     private static readonly Flow.ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
+        [new Port(new PortName("目标"), PortKind.Data)],
         new NodeSpec
         {
             Name = new NodeName("整体"),
@@ -99,9 +100,17 @@ public sealed class SnapshotTests
         });
 
     private static readonly NodeGraph Graph = new([
-        new ExecutableNode
+        new StartNode
         {
             Index = 0,
+            Name = StartNode.ReservedName,
+            Path = new NodePath([StartNode.ReservedName]),
+            Gate = NodeGate.Auto,
+            Outputs = [new Port(new PortName("目标"), PortKind.Data)],
+        },
+        new ExecutableNode
+        {
+            Index = 1,
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
             Gate = NodeGate.Auto,
@@ -115,14 +124,14 @@ public sealed class SnapshotTests
         },
         new ExecutableNode
         {
-            Index = 1,
+            Index = 2,
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
             Gate = NodeGate.Auto,
             Kind = NodeKind.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(0, new PortName("拆分"))],
+            From = [new Dependency(1, new PortName("拆分"))],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

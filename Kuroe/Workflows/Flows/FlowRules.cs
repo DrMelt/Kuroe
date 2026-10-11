@@ -39,6 +39,8 @@ static class FlowRules
         var containerNames = new HashSet<Flow.NodeName>();
         CollectContainers(flow.RootNode, containerNames);
 
+        CheckStart(flow, errors);
+
         var executableNames = new HashSet<Flow.NodeName>();
         CollectExecutables(flow.RootNode, executableNames);
 
@@ -51,6 +53,7 @@ static class FlowRules
         var names = new HashSet<Flow.NodeName>();
         var outputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>>();
         CollectOutputs(flow.RootNode, outputs);
+        outputs[StartNode.ReservedName] = flow.StartOutputs;
 
         var containerOutputs = new Dictionary<Flow.NodeName, IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>>();
         CollectContainerOutputs(flow.RootNode, containerOutputs);
@@ -67,6 +70,41 @@ static class FlowRules
         }
 
         return errors.Count > 0 ? errors : Result.Success;
+    }
+
+    /// <summary>开始入口的静态规则：至少一个 Data 端口，恰好一个不带 Value 的端口承接提交目标，其余端口必须带 Value。</summary>
+    private static void CheckStart(Flow.FlowDefinition flow, List<Error> errors)
+    {
+        if (flow.StartOutputs.Count == 0)
+        {
+            errors.Add(FlowErrors.Body(flow.Name.Value, "流程必须声明开始入口，至少一个 Data 输出端口。"));
+            return;
+        }
+
+        var names = new HashSet<Flow.PortName>();
+        foreach (Flow.Port port in flow.StartOutputs)
+        {
+            if (port.Kind != Flow.PortKind.Data)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的种类只能是 Data。"));
+            }
+
+            if (!names.Add(port.Name))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 重复。"));
+            }
+
+            if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
+            }
+        }
+
+        if (flow.StartOutputs.Count(port => port.Value is null) != 1)
+        {
+            errors.Add(FlowErrors.Body(flow.Name.Value,
+                "开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"));
+        }
     }
 
     /// <summary>收集全部容器名，From 引用允许指向容器。</summary>
@@ -252,6 +290,10 @@ static class FlowRules
         {
             errors.Add(scope.Node("(未命名)", "节点名不能为空。"));
         }
+        else if (node.Name == StartNode.ReservedName)
+        {
+            errors.Add(scope.Node(node.Name.Value, $"节点名 {StartNode.ReservedName} 是流程起点的保留名。"));
+        }
         else if (node.Name.Value.Contains('@'))
         {
             errors.Add(scope.Node(node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
@@ -311,7 +353,6 @@ static class FlowRules
             }
 
             CheckExpansion(node, scope, errors);
-            ValidateSplit(node, scope, errors);
             ValidateInput(node, scope, errors);
             ValidateInterface(node, scope, errors);
         }
@@ -380,30 +421,35 @@ static class FlowRules
             }
 
             Flow.NodeName source = reference.Source.Value;
-            if (containerNames.Contains(source))
+
+            // 开始是流程级来源，不受容器封装限制
+            if (source != StartNode.ReservedName)
             {
-                // 容器对外只经 Outputs 声明端口，没有整份产出
-                if (!containerOutputs.TryGetValue(source, out IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? containerPorts)
-                    || !containerPorts.ContainsKey(reference.Port))
+                if (containerNames.Contains(source))
                 {
-                    errors.Add(scope.Node(node.Name.Value,
-                        $"容器 {source} 没有输出端口 {reference.Port.Value}。"));
+                    // 容器对外只经 Outputs 声明端口，没有整份产出
+                    if (!containerOutputs.TryGetValue(source, out IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? containerPorts)
+                        || !containerPorts.ContainsKey(reference.Port))
+                    {
+                        errors.Add(scope.Node(node.Name.Value,
+                            $"容器 {source} 没有输出端口 {reference.Port.Value}。"));
+                    }
+
+                    continue;
                 }
 
-                continue;
-            }
+                if (!executableNames.Contains(source))
+                {
+                    errors.Add(scope.Node(node.Name.Value, $"From 引用的节点 {source} 不在流程里。"));
+                    continue;
+                }
 
-            if (!executableNames.Contains(source))
-            {
-                errors.Add(scope.Node(node.Name.Value, $"From 引用的节点 {source} 不在流程里。"));
-                continue;
-            }
-
-            if (!IsInScope(source, node.Name, parentOf))
-            {
-                errors.Add(scope.Node(node.Name.Value,
-                    $"不能从容器外直接引用容器内成员或端口 {source}，容器对外只暴露输出端口。"));
-                continue;
+                if (!IsInScope(source, node.Name, parentOf))
+                {
+                    errors.Add(scope.Node(node.Name.Value,
+                        $"不能从容器外直接引用容器内成员或端口 {source}，容器对外只暴露输出端口。"));
+                    continue;
+                }
             }
 
             if (!outputs.TryGetValue(source, out IReadOnlyList<Flow.Port>? declared)
@@ -571,66 +617,7 @@ static class FlowRules
         }
     }
 
-    /// <summary>拆分配置的静态规则：只能写在声明 Items 端口的节点上，条目与补充上限的取值边界。</summary>
-    private static void ValidateSplit(Flow.NodeSpec node, NodeScope scope, List<Error> errors)
-    {
-        Flow.ExecutableSpec? executable = node.Execution;
-        if (executable?.Split is not { } split)
-        {
-            return;
-        }
-
-        if (!node.Outputs.Any(port => port.Kind == Flow.PortKind.Items))
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split 只能写在声明 Items 端口的节点上。"));
-        }
-
-        if (split.Items is null && split.ExtrasMax is null)
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split 至少要声明 Items 或 ExtrasMax。"));
-        }
-
-        if (split.Items is null && split.ExtrasMax is 0)
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split.ExtrasMax 为 0 时要求声明至少一条 Items。"));
-        }
-
-        if (split.Items is not null && split.Items.Count is 0 or > 20)
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split.Items 要有 1 到 20 条。"));
-        }
-
-        if (split.Items is { } items
-            && items.Any(item => string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Instruction)))
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split.Items 每条的 Title 与 Instruction 不能为空。"));
-        }
-
-        if (split.ExtrasMax is < 0 or > 20)
-        {
-            errors.Add(scope.Node(node.Name.Value, "Split.ExtrasMax 必须是 0 到 20 的整数。"));
-        }
-
-        if (executable.IsStaticSplit)
-        {
-            if (executable.Prompt is not null)
-            {
-                errors.Add(scope.Node(node.Name.Value, "纯静态拆分节点不支持 Prompt。"));
-            }
-
-            if (node.From.Count > 0)
-            {
-                errors.Add(scope.Node(node.Name.Value, "纯静态拆分节点不支持 From。"));
-            }
-
-            if (node.Gate == Flow.NodeGate.Review)
-            {
-                errors.Add(scope.Node(node.Name.Value, "纯静态拆分节点不支持待批准门控。"));
-            }
-        }
-    }
-
-    /// <summary>Validate 与 From 条目标记的组合约束：输出校验与可选/信号条目都要求整节点执行，不与纯静态拆分享。</summary>
+    /// <summary>Validate 与 From 条目标记的组合约束：输出校验与可选/信号条目都要求整节点执行。</summary>
     private static void CheckExpansion(Flow.NodeSpec node, NodeScope scope, List<Error> errors)
     {
         Flow.ExecutableSpec execution = node.Execution!;
@@ -649,11 +636,6 @@ static class FlowRules
             if (execution.Mode == Flow.NodeMode.PerItem)
             {
                 errors.Add(scope.Node(node.Name.Value, "声明 Validate 的执行节点不能按条目展开，必须是整节点执行。"));
-            }
-
-            if (execution.IsStaticSplit)
-            {
-                errors.Add(scope.Node(node.Name.Value, "纯静态拆分节点不支持 Validate。"));
             }
         }
 
@@ -712,11 +694,12 @@ static class FlowRules
         }
     }
 
-    /// <summary>展平后的图规则：边组合、分支归属与拆分条目。执行直接按边推进。</summary>
+    /// <summary>展平后的图规则：见环合法性、从开始的可达性与逐条对齐的形态。执行直接按边推进。</summary>
     private static void CheckShape(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         CheckLoops(graph, scope, errors);
         CheckAlignment(graph, scope, errors);
+        CheckReachability(graph, scope, errors);
 
         foreach (FlowEdge edge in graph.Edges)
         {
@@ -772,38 +755,51 @@ static class FlowRules
                 errors.Add(scope.Node(executable.Name.Value, reason));
             }
         }
+    }
 
-        // 分支声明必须落在引用它的静态拆分条目里
-        foreach (ExecutableNode executable in graph.ExecutableNodes)
+    /// <summary>可达性规则：开始是唯一来源，每个执行节点都必须能从开始沿引用边到达，否则永远不会被触发。
+    /// 容器是成员的汇合点，成员与子容器全部可达时容器才可达，引用容器的下游随之可达。</summary>
+    private static void CheckReachability(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        var reached = new HashSet<int> { graph.Start.Index };
+        var queue = new Queue<int>();
+        queue.Enqueue(graph.Start.Index);
+        while (true)
         {
-            if (!executable.IsStaticSplit || executable.Execution.Split?.Items is not { } fixedItems)
+            // reached.Add 兼作去重判定：首次到达的节点才入队
+            while (queue.TryDequeue(out int current))
             {
-                continue;
-            }
-
-            foreach (Flow.SplitItem item in fixedItems)
-            {
-                if (item.Branch is not { } branch)
+                foreach (int next in graph.Outgoing(current).Select(edge => edge.To).Where(reached.Add))
                 {
-                    continue;
-                }
-
-                bool owned = graph.Outgoing(executable.Index).Any(edge =>
-                    edge.Feed == EdgeFeed.Items
-                    && graph[edge.To] is ExecutableNode target
-                    && target.Execution.Branch == branch);
-                if (!owned)
-                {
-                    errors.Add(scope.Node(executable.Name.Value,
-                        $"Split.Items 的分支“{branch}”没有对应的分支执行节点。"));
+                    queue.Enqueue(next);
                 }
             }
+
+            ContainerNode? closed = graph.Containers.FirstOrDefault(container =>
+                !reached.Contains(container.Index)
+                && container.Members.All(reached.Contains)
+                && container.SubContainers.All(reached.Contains));
+            if (closed is null)
+            {
+                break;
+            }
+
+            reached.Add(closed.Index);
+            queue.Enqueue(closed.Index);
         }
 
+        string entry = graph.Start.Outputs
+            .Where(port => port.Value is null)
+            .Select(port => $" {StartNode.ReservedName}@{port.Name}")
+            .FirstOrDefault() ?? " 开始入口";
+        foreach (ExecutableNode executable in graph.ExecutableNodes.Where(node => !reached.Contains(node.Index)))
+        {
+            errors.Add(scope.Node(executable.Name.Value, $"从开始不可达，不会被触发，请用 From 接到来源节点或{entry}。"));
+        }
     }
 
     /// <summary>引用环的启动不变量：环必须有环外来源或环内输入节点，否则环内节点永远等不到启动条件，任务无法推进。
-    /// 输入节点每轮从外部接收回答，本身构成周期性外源。整节点依赖构成的迭代环若可启动则合法。</summary>
+    /// 开始是流程级来源，输入节点每轮从外部接收回答，两者都构成周期性外源。整节点依赖构成的迭代环若可启动则合法。</summary>
     private static void CheckLoops(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (FlowEdge edge in graph.Edges)
@@ -827,7 +823,8 @@ static class FlowRules
 
             bool externalEntry = members.Any(member =>
                 graph.Incoming(member).Any(edge =>
-                    graph.ExecutablesIn(edge.From).Any(source => !members.Contains(source))));
+                    graph[edge.From] is StartNode
+                    || graph.ExecutablesIn(edge.From).Any(source => !members.Contains(source))));
             if (!externalEntry)
             {
                 ExecutableNode representative = (ExecutableNode)graph[members[0]];

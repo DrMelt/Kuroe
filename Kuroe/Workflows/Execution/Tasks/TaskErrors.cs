@@ -45,10 +45,6 @@ static class TaskErrors
     public static Error NotBlocked(TaskId task) =>
         Error.Validation("Task.Rework", $"{task} 没有被阻塞的节点或条目。");
 
-    /// <summary>流程里没有可启动的执行节点：引用依赖构成环且环内没有输入节点作启动点。</summary>
-    public static Error NoRoot() => Error.Validation(
-        "Task.NoRoot", "流程引用关系构成环且环内没有输入节点，找不到可启动的执行节点，请检查 From。");
-
     /// <summary>条目数组的形状不合法，原因要能直接回给模型改正。</summary>
     public static Error Items(string reason) => Error.Validation(
         "Task.Items", $"{reason}。要提交对象数组，每项含 Title、Instruction、Acceptance。");

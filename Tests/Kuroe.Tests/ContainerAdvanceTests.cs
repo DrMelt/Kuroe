@@ -113,7 +113,7 @@ public sealed class ContainerAdvanceTests
     public void Nested_container_rebroadcasts_after_failed_rework()
     {
         using KuroeHarness harness = KuroeHarness.Create(NestedContainerReworkFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ExecutionCount == 1;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -160,12 +160,13 @@ public sealed class ContainerAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "交付", "Kind": "Container", "Gate": "Review", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
                   { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Branch": "撰写", "From": ["制定计划@拆分"] },
                   { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Branch": "排版", "From": ["制定计划@拆分"] }
@@ -188,12 +189,13 @@ public sealed class ContainerAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
                   { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Branch": "撰写", "From": ["制定计划@拆分"] },
                   { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Branch": "排版", "From": ["制定计划@拆分"] }
@@ -215,6 +217,7 @@ public sealed class ContainerAdvanceTests
               "Models": [
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -222,9 +225,9 @@ public sealed class ContainerAdvanceTests
                   "Nodes": [
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
                   { "Name": "撰写组", "Kind": "Container", "Gate": "Review", "Nodes": [
-                    { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] }
+                    { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
                   ] },
-                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] }
+                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
                 ] },
                 { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
@@ -243,14 +246,15 @@ public sealed class ContainerAdvanceTests
               "Models": [
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Gate": "Review" },
-                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] }
+                  { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Gate": "Review", "From": ["Start@目标"] },
+                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
                 ] },
                 { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]
@@ -269,6 +273,7 @@ public sealed class ContainerAdvanceTests
               "Models": [
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -276,9 +281,9 @@ public sealed class ContainerAdvanceTests
                   "Nodes": [
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
                   { "Name": "撰写组", "Kind": "Container", "Nodes": [
-                    { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] }
+                    { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
                   ] },
-                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] }
+                  { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
                 ] },
                 { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": ["交付@撰写结论", "交付@排版结论"] }
                   ]

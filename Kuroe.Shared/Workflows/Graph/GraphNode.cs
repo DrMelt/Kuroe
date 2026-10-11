@@ -2,8 +2,8 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Graph;
 
-/// <summary>流程图上的节点实体：执行节点或容器。统一编号、路径与门控。
-/// 执行节点会启动 run 并交回产出，容器是成员的组织与汇合点。</summary>
+/// <summary>流程图上的节点实体：开始、执行节点或容器。统一编号、路径与门控。
+/// 开始是流程的唯一来源，执行节点会启动 run 并交回产出，容器是成员的组织与汇合点。</summary>
 public abstract record GraphNode
 {
     /// <summary>统一编号，先根序。</summary>

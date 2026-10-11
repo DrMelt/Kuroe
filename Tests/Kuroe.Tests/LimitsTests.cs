@@ -36,9 +36,9 @@ public sealed class LimitsTests
     public void Upstream_output_in_context_is_capped_with_an_ellipsis()
     {
         const string flow = """
-            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
                 { "Name": "接收", "Kind": "Executable", "Model": "执行者", "From": ["来源@结论"] }
               ] }
             ] } ] }
@@ -46,7 +46,7 @@ public sealed class LimitsTests
 
         using KuroeHarness harness = KuroeHarness.Create(flow);
         harness.Executor.Output = _ => new string('长', 3000);
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 1
+        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 2
             ? $$"""{"结论": "{{new string('长', 3000)}}"}"""
             : null;
 

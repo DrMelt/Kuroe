@@ -73,15 +73,15 @@ public sealed class ContainerLimitTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(1, task.Runtime.Executable(1).ExecutionCount(null));
+        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
         Assert.True(harness.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
 
     private const string InlineContainerLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "MaxRuns": 2, "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["计划@结论"] }
             ] }
           ] } ]
@@ -90,10 +90,10 @@ public sealed class ContainerLimitTests
 
     private const string ExplicitMemberLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "MaxRuns": 2, "Nodes": [
-              { "Name": "重点", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5 },
-              { "Name": "普通", "Kind": "Executable", "Model": "执行者" }
+              { "Name": "重点", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5, "From": ["Start@目标"] },
+              { "Name": "普通", "Kind": "Executable", "Model": "执行者", "From": ["Start@目标"] }
             ] }
           ] } ]
         }
@@ -101,9 +101,9 @@ public sealed class ContainerLimitTests
 
     private const string NestedContainerLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "MaxRuns": 2, "Nodes": [
-              { "Name": "外层干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "外层干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "内部", "Kind": "Container", "MaxRuns": 5, "Nodes": [
                 { "Name": "内层干活", "Kind": "Executable", "Model": "执行者", "From": ["外层干活@结论"] }
               ] }
@@ -116,14 +116,14 @@ public sealed class ContainerLimitTests
     private const string ReferenceContainerLimitFlow = """
         {
           "Nodes": [
-            { "Name": "干活组", "Kind": "Container", "MaxRuns": 3, "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者" }
+            { "Name": "干活组", "Kind": "Container", "MaxRuns": 3, "Inputs": [{ "Name": "入口" }], "Nodes": [
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["@入口"] }
             ] }
           ],
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "较重", "Use": "干活组", "MaxRuns": 5, "Models": { "执行者": "执行者" } },
-              { "Name": "较轻", "Use": "干活组", "Models": { "执行者": "执行者" } }
+              { "Name": "较重", "Use": "干活组", "MaxRuns": 5, "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } },
+              { "Name": "较轻", "Use": "干活组", "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ] } ]
         }
@@ -131,9 +131,9 @@ public sealed class ContainerLimitTests
 
     private const string SingleRunContainerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "MaxRuns": 1, "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者" }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["Start@目标"] }
             ] }
           ] } ]
         }

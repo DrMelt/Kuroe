@@ -1,5 +1,6 @@
 using Kuroe.Nodes.Builtin;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -9,6 +10,9 @@ internal static class DefaultFlows
 {
     /// <summary>内置流程的名字。</summary>
     internal static FlowName Name { get; } = new("默认");
+
+    /// <summary>开始入口的输出端口名，提交任务的目标由此进入流程。</summary>
+    internal static PortName StartPort { get; } = new("目标");
 
     /// <summary>规划者：交回条目拆分。</summary>
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
@@ -21,13 +25,21 @@ internal static class DefaultFlows
     [
         new FlowDefinition(Name, "内置流程：制定计划、分配执行",
             [Planner, Executor],
+            [new Port(StartPort, PortKind.Data, "任务目标，提交任务时给出。")],
             new NodeSpec
             {
                 Name = new NodeName("整体"),
                 Kind = NodeKind.Container,
                 Nodes =
                 [
-                    new NodeSpec { Name = new NodeName("制定计划"), Kind = null, Use = new NodeName("规划"), Model = Planner.Name },
+                    new NodeSpec
+                    {
+                        Name = new NodeName("制定计划"),
+                        Kind = null,
+                        Use = new NodeName("规划"),
+                        Model = Planner.Name,
+                        From = [new SourceRef(PortRef.Named(StartNode.ReservedName, StartPort))],
+                    },
                     new NodeSpec
                     {
                         Name = new NodeName("交付"),

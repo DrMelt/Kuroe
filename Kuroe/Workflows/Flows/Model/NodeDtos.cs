@@ -63,9 +63,6 @@ internal sealed class NodeDto
 
     public NodeGate? Gate { get; set; }
 
-    /// <summary>拆分源的固定配置，只能写在声明 Items 端口的执行节点上。</summary>
-    public SplitDto? Split { get; set; }
-
     public List<NodeDto>? Nodes { get; set; }
 }
 
@@ -84,6 +81,10 @@ internal sealed class PortEntryDto
     /// <summary>端口承载内容的说明，未写时为空。</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
+
+    /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交的任务目标。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Value { get; set; }
 }
 
 /// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。
@@ -100,30 +101,6 @@ internal sealed class FromEntryDto
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Context { get; set; }
-}
-
-/// <summary>拆分源的固定配置：静态条目、模型补充上限与统一验收文本。</summary>
-internal sealed class SplitDto
-{
-    public List<SplitItemDto>? Items { get; set; }
-
-    /// <summary>模型最多补充的条数，0 或未写表示不补充。</summary>
-    public int? ExtrasMax { get; set; }
-
-    /// <summary>统一验收文本，覆盖模型补充条目的验收标准。</summary>
-    public string? Acceptance { get; set; }
-}
-
-/// <summary>拆分里一条定死的条目。</summary>
-internal sealed class SplitItemDto
-{
-    public string? Title { get; set; }
-
-    public string? Instruction { get; set; }
-
-    public string? Acceptance { get; set; }
-
-    public string? Branch { get; set; }
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>

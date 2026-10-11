@@ -2,7 +2,7 @@ using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Shared.Workflows.Graph;
 
-/// <summary>流程编译出的执行视图：节点按先根序统一编号，执行节点与容器在一张表里，
+/// <summary>流程编译出的执行视图：节点按先根序统一编号，开始在最前，执行节点与容器在一张表里，
 /// 依赖以显式边表达，消费方式固化在边上。执行按“边齐备则激活”推进，节点序号只作定位与展示。
 /// 构造时按入出边建索引并登记容器归属。</summary>
 public sealed class NodeGraph
@@ -12,11 +12,13 @@ public sealed class NodeGraph
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
     private readonly Dictionary<int, int> _parentContainer;
 
-    /// <summary>构造执行视图，边两端必须落在节点范围内。按入出边建索引。</summary>
+    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
         Nodes = nodes;
         Edges = edges;
+        Start = nodes[0] as StartNode
+            ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
         ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
         Containers = [.. nodes.OfType<ContainerNode>()];
         _byName = nodes.ToDictionary(node => node.Name, node => node.Index);
@@ -46,8 +48,11 @@ public sealed class NodeGraph
         }
     }
 
-    /// <summary>全部节点：执行节点与容器，按先根序统一编号。</summary>
+    /// <summary>全部节点：开始、执行节点与容器，按先根序统一编号。</summary>
     public IReadOnlyList<GraphNode> Nodes { get; }
+
+    /// <summary>流程的唯一来源节点，序号 0。</summary>
+    public StartNode Start { get; }
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
@@ -87,7 +92,12 @@ public sealed class NodeGraph
 
     /// <summary>来源节点某端口声明的种类，容器与未声明按 Data。供边规则按种类校验。</summary>
     public PortKind PortKindOf(int nodeIndex, PortName port) =>
-        Nodes[nodeIndex] is ExecutableNode executable ? EdgeFeedRules.KindOf(executable, port) : PortKind.Data;
+        Nodes[nodeIndex] switch
+        {
+            ExecutableNode executable => EdgeFeedRules.KindOf(executable, port),
+            StartNode start => start.FindPort(port)?.Kind ?? PortKind.Data,
+            _ => PortKind.Data,
+        };
 
     /// <summary>按条目展开的依据拆分：入边里 Items 方式的来源，没有时为空。</summary>
     public int? ItemSource(int executableIndex) =>
@@ -189,19 +199,11 @@ public sealed class NodeGraph
         return loops;
     }
 
-    /// <summary>任务启动候选：无入边的执行节点与全部输入节点。输入节点总是起点，不依赖环形态。</summary>
-    public IReadOnlyList<ExecutableNode> StartCandidates()
-    {
-        return [.. ExecutableNodes.Where(node =>
-            Incoming(node.Index).Count == 0
-            || node.Kind == NodeKind.Input)];
-    }
-
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
     public IReadOnlyList<int> ExecutablesIn(int containerIndex) =>
         [.. SourcesIn(containerIndex).Distinct()];
 
-    /// <summary>来源节点展开出的执行节点集合：执行节点给自身，容器递归给全部成员。</summary>
+    /// <summary>来源节点展开出的执行节点集合：执行节点给自身，容器递归给全部成员，开始没有执行节点。</summary>
     private IEnumerable<int> SourcesIn(int nodeIndex) =>
         Nodes[nodeIndex] switch
         {

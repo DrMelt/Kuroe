@@ -5,6 +5,7 @@ using Kuroe.Nodes.Library;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Workflows.Flows.Files;
 using Kuroe.Workflows.Flows.Model;
 using ModelDefinition = Kuroe.Shared.Workflows.Flows.ModelDefinition;
@@ -103,7 +104,7 @@ static class FlowAssembler
                 continue;
             }
 
-            FlowDefinition concrete = new(flow.Name, flow.Description, flow.Models, expanded.Value);
+            FlowDefinition concrete = new(flow.Name, flow.Description, flow.Models, flow.StartOutputs, expanded.Value);
             ErrorOr<Success> checkedFlow = FlowRules.Validate(concrete);
             if (checkedFlow.IsError)
             {
@@ -204,6 +205,12 @@ static class FlowAssembler
             return FlowErrors.Body(dto.Name ?? string.Empty, "流程只能有一个根节点。");
         }
 
+        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(dto.Start?.Outputs, NodeScope.Flow(dto.Name!), StartNode.ReservedName.Value, allowValue: true);
+        if (startOutputs.IsError)
+        {
+            return startOutputs.ErrorsOrEmptyList;
+        }
+
         ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!));
         if (root.IsError)
         {
@@ -216,7 +223,7 @@ static class FlowAssembler
             return flowName.ErrorsOrEmptyList;
         }
 
-        return new FlowDefinition(flowName.Value, dto.Description, models, root.Value);
+        return new FlowDefinition(flowName.Value, dto.Description, models, startOutputs.Value, root.Value);
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
@@ -255,7 +262,6 @@ static class FlowAssembler
 
             if (dto.Prompt is not null || dto.Tools is { Count: > 0 }
                 || dto.Mode is not null || dto.Branch is not null
-                || dto.Split is not null
                 || dto.Nodes is { Count: > 0 })
             {
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
@@ -351,7 +357,7 @@ static class FlowAssembler
             }
 
             if (dto.Model is not null || dto.Branch is not null
-                || dto.Tools is { Count: > 0 } || dto.Split is not null)
+                || dto.Tools is { Count: > 0 })
             {
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
             }
@@ -478,7 +484,7 @@ static class FlowAssembler
             }
         }
 
-        ErrorOr<IReadOnlyList<Port>> outputs = ToPorts(dto.Outputs, scope, dto.Name ?? string.Empty);
+        ErrorOr<IReadOnlyList<Port>> outputs = ToPorts(dto.Outputs, scope, dto.Name ?? string.Empty, allowValue: false);
         if (outputs.IsError)
         {
             leafErrors.AddRange(outputs.ErrorsOrEmptyList);
@@ -511,7 +517,6 @@ static class FlowAssembler
                 Question = dto.Question,
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
-                Split = ToSplit(dto.Split),
                 Validate = declaredValidation,
                 MaxRuns = dto.MaxRuns,
             },
@@ -576,8 +581,9 @@ static class FlowAssembler
             $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
     }
 
-    /// <summary>解析输出端口表：条目写 Name 与 Kind，Kind 必填，说明可写 Description。</summary>
-    private static ErrorOr<IReadOnlyList<Port>> ToPorts(List<JsonElement>? entries, NodeScope scope, string nodeName)
+    /// <summary>解析输出端口表：条目写 Name 与 Kind，Kind 必填，说明可写 Description。
+    /// allowValue 为真时接受开始端口的固定值 Value。</summary>
+    private static ErrorOr<IReadOnlyList<Port>> ToPorts(List<JsonElement>? entries, NodeScope scope, string nodeName, bool allowValue)
     {
         if (entries is not { Count: > 0 })
         {
@@ -597,6 +603,7 @@ static class FlowAssembler
             string? declaredName = null;
             PortKind? declaredKind = null;
             string? declaredDescription = null;
+            string? declaredValue = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -644,8 +651,27 @@ static class FlowAssembler
                         invalid = true;
                         break;
 
+                    case "value" when allowValue:
+                        if (property.Value.ValueKind != JsonValueKind.String)
+                        {
+                            errors.Add(scope.Node(nodeName, "开始端口的 Value 键必须是文本。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            declaredValue = property.Value.GetString();
+                        }
+                        break;
+
+                    case "value":
+                        errors.Add(scope.Node(nodeName, "输出端口不认识键 Value，Value 只属于开始端口。"));
+                        invalid = true;
+                        break;
+
                     default:
-                        errors.Add(scope.Node(nodeName, $"输出端口不认识键 {property.Name}，条目写 Name、Kind 与 Description。"));
+                        errors.Add(scope.Node(nodeName, allowValue
+                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Kind、Description 与 Value。"
+                            : $"输出端口不认识键 {property.Name}，条目写 Name、Kind 与 Description。"));
                         invalid = true;
                         break;
                 }
@@ -669,7 +695,7 @@ static class FlowAssembler
                 continue;
             }
 
-            result.Add(new Port(parsedName.Value, declaredKind.Value, ToDescription(declaredDescription)));
+            result.Add(new Port(parsedName.Value, declaredKind.Value, ToDescription(declaredDescription), declaredValue));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -1011,16 +1037,6 @@ static class FlowAssembler
                 $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {predicate}。");
     }
 
-    /// <summary>把文件里的拆分配置装配成模型：缺失的必填字段留空交校验。</summary>
-    private static SplitConfig? ToSplit(SplitDto? split) => split is null ? null : new SplitConfig(
-        split.Items?.Select(item => new SplitItem(
-            item.Title ?? string.Empty,
-            item.Instruction ?? string.Empty,
-            item.Acceptance ?? string.Empty,
-            item.Branch is { Length: > 0 } branch ? new BranchName(branch) : null)).ToList(),
-        split.ExtrasMax,
-        split.Acceptance);
-
     /// <summary>把节点定义与流程转回文件形状，保留引用形态。</summary>
     private static FlowFileDto ToDto(IReadOnlyList<NodeSpec> fileNodes, IReadOnlyList<FlowDefinition> flows) => new()
     {
@@ -1037,6 +1053,7 @@ static class FlowAssembler
             Name = model.Name.Value,
             Model = model.Model?.Value,
         })],
+        Start = new StartDto { Outputs = ToPortDtos(flow.StartOutputs) },
         Nodes = [ToNodeDto(flow.RootNode)],
     };
 
@@ -1052,7 +1069,7 @@ static class FlowAssembler
         foreach (Port port in ports)
         {
             entries.Add(JsonSerializer.SerializeToElement(
-                new PortEntryDto { Name = port.Name.Value, Kind = port.Kind, Description = port.Description },
+                new PortEntryDto { Name = port.Name.Value, Kind = port.Kind, Description = port.Description, Value = port.Value },
                 FlowJson.Default.PortEntryDto));
         }
 
@@ -1126,18 +1143,6 @@ static class FlowAssembler
             dto.Branch = execution.Branch?.Value;
             dto.Validate = ToValidationDto(execution.Validate);
             dto.MaxRuns = execution.MaxRuns;
-            dto.Split = execution.Split is { } split ? new SplitDto
-            {
-                Items = split.Items?.Select(item => new SplitItemDto
-                {
-                    Title = item.Title,
-                    Instruction = item.Instruction,
-                    Acceptance = item.Acceptance,
-                    Branch = item.Branch?.Value,
-                }).ToList(),
-                ExtrasMax = split.ExtrasMax,
-                Acceptance = split.Acceptance,
-            } : null;
         }
 
         return dto;

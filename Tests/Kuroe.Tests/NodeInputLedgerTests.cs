@@ -24,14 +24,14 @@ public sealed class NodeInputLedgerTests
     private static void Run(bool signalFirst)
     {
         ExecutableNode sourceDef = SourceDefinition();
-        FlowEdge data = new(0, 1, EdgeFeed.AllInstances, OutputPort);
-        FlowEdge trigger = new(0, 1, EdgeFeed.Single, OutputPort, Role: EdgeRole.Trigger);
-        NodeGraph graph = new([sourceDef, TargetDefinition()], signalFirst ? [trigger, data] : [data, trigger]);
+        FlowEdge data = new(1, 2, EdgeFeed.AllInstances, OutputPort);
+        FlowEdge trigger = new(1, 2, EdgeFeed.Single, OutputPort, Role: EdgeRole.Trigger);
+        NodeGraph graph = new([StartDefinition(), sourceDef, TargetDefinition()], signalFirst ? [trigger, data] : [data, trigger]);
 
         RuntimeExecutable source = new(sourceDef);
         RuntimeExecutable target = new(TargetDefinition());
         WorkTask task = new(new TaskId(1), "目标", DefaultFlow(), graph, null);
-        NodeInput input = NodeInput.Build(task, target, index => index == 0 ? source : target);
+        NodeInput input = NodeInput.Build(task, target, index => index == 1 ? source : target);
 
         source.AdoptItems([0, 1]);
         source.Publish(0);
@@ -47,11 +47,21 @@ public sealed class NodeInputLedgerTests
     }
 
     private static FlowDefinition DefaultFlow() =>
-        new(new FlowName("默认"), null, [], new NodeSpec { Name = new NodeName("整体"), Kind = NodeKind.Container });
+        new(new FlowName("默认"), null, [], [new Port(OutputPort, PortKind.Data)],
+            new NodeSpec { Name = new NodeName("整体"), Kind = NodeKind.Container });
+
+    private static StartNode StartDefinition() => new()
+    {
+        Index = 0,
+        Name = StartNode.ReservedName,
+        Path = new NodePath([StartNode.ReservedName]),
+        Gate = NodeGate.Auto,
+        Outputs = [new Port(OutputPort, PortKind.Data)],
+    };
 
     private static ExecutableNode SourceDefinition() => new()
     {
-        Index = 0,
+        Index = 1,
         Name = new NodeName("来源"),
         Path = new NodePath([new NodeName("来源")]),
         Gate = NodeGate.Auto,
@@ -66,7 +76,7 @@ public sealed class NodeInputLedgerTests
 
     private static ExecutableNode TargetDefinition() => new()
     {
-        Index = 1,
+        Index = 2,
         Name = new NodeName("目标"),
         Path = new NodePath([new NodeName("目标")]),
         Gate = NodeGate.Auto,
@@ -75,8 +85,8 @@ public sealed class NodeInputLedgerTests
         Model = Model,
         From =
         [
-            new Dependency(0, OutputPort),
-            new Dependency(0, OutputPort, Signal: true),
+            new Dependency(1, OutputPort),
+            new Dependency(1, OutputPort, Signal: true),
         ],
         Outputs = [],
         SystemPrompt = [],

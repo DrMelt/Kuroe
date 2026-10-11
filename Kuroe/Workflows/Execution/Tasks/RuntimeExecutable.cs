@@ -15,7 +15,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
 
-    /// <summary>输入侧消费账本，有入边的整节点执行节点装配，其余节点为空走原有判定。</summary>
+    /// <summary>输入侧消费账本，整节点执行节点装配；按条目节点与输入节点为空，走各自判定。</summary>
     public NodeInput? Input { get; private set; }
 
     /// <summary>绑定输入消费账本。</summary>

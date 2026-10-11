@@ -34,9 +34,17 @@ public sealed class FlowModelTests
     {
         var graph = new NodeGraph(
         [
-            new ExecutableNode
+            new StartNode
             {
                 Index = 0,
+                Name = StartNode.ReservedName,
+                Path = new NodePath([StartNode.ReservedName]),
+                Gate = NodeGate.Auto,
+                Outputs = [new Port(new PortName("目标"), PortKind.Data)],
+            },
+            new ExecutableNode
+            {
+                Index = 1,
                 Name = new NodeName("规划"),
                 Path = new NodePath([new NodeName("规划")]),
                 Gate = NodeGate.Auto,
@@ -50,23 +58,24 @@ public sealed class FlowModelTests
             },
             new ExecutableNode
             {
-                Index = 1,
+                Index = 2,
                 Name = new NodeName("实施"),
                 Path = new NodePath([new NodeName("实施")]),
                 Gate = NodeGate.Auto,
                 Kind = NodeKind.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
-                From = [new Dependency(0, new PortName("拆分"))],
+                From = [new Dependency(1, new PortName("拆分"))],
                 Outputs = [],
                 SystemPrompt = [],
                 MaxRuns = 100,
             },
         ], []);
 
-        Assert.Equal(2, graph.Count);
-        Assert.Equal(0, graph.IndexOf(new NodeName("规划")));
-        Assert.Equal(1, graph.IndexOf(new NodeName("实施")));
+        Assert.Equal(3, graph.Count);
+        Assert.Equal(2, graph.TotalExecutables);
+        Assert.Equal(1, graph.IndexOf(new NodeName("规划")));
+        Assert.Equal(2, graph.IndexOf(new NodeName("实施")));
         Assert.Null(graph.IndexOf(new NodeName("检查")));
     }
 

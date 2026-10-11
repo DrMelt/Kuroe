@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Nodes.Library;
@@ -53,6 +54,12 @@ internal static class NodeLibraryRules
             if (node.Name.Value.Contains('@'))
             {
                 errors.Add(NodeScope.Library.Node(node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
+                continue;
+            }
+
+            if (node.Name == StartNode.ReservedName)
+            {
+                errors.Add(NodeScope.Library.Node(node.Name.Value, $"节点名 {StartNode.ReservedName} 是流程起点的保留名。"));
                 continue;
             }
 

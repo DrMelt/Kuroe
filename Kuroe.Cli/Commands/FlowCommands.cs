@@ -135,6 +135,7 @@ internal sealed class FlowCommands(
 
         terminal.NewLine();
         terminal.Write(grid);
+        terminal.Hint($"开始 {string.Join("、", found.Value.StartOutputs.Select(StartPort))}");
     }
 
     private void Add(string file)
@@ -172,6 +173,10 @@ internal sealed class FlowCommands(
         results.Apply(settings.SetText(DefaultFlowPath, flowName.Value.Value));
     }
 
+    /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
+    private static string StartPort(Port port) =>
+        port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
+
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
         List<string> parts = [];
@@ -203,24 +208,6 @@ internal sealed class FlowCommands(
         if (node.SystemPrompt.Count > 0)
         {
             parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
-        }
-
-        if (executable.Split is { } split)
-        {
-            if (split.Items is { Count: > 0 } items)
-            {
-                parts.Add($"固定 {items.Count} 条");
-            }
-
-            if (split.ExtrasMax is { } limit)
-            {
-                parts.Add($"补充至多 {limit} 条");
-            }
-
-            if (split.Acceptance is { Length: > 0 })
-            {
-                parts.Add("统一验收");
-            }
         }
 
         return parts.Count == 0 ? "—" : string.Join("；", parts);

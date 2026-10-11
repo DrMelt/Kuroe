@@ -24,8 +24,8 @@ public sealed class TriggerNodeTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "来源").Runs);
         RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
-        Assert.Contains("目标：目标", triggered.Context.Instruction);
-        Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」的产出"));
+        Assert.Empty(triggered.Context.Instruction);
+        Assert.Empty(triggered.Context.Seed);
     }
 
     /// <summary>来源每次回答发布新版本触发一次：两轮回答两次触发，触发目标始终收不到内容。</summary>
@@ -142,7 +142,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot parked = harness.Settle(id);
 
         Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.ExecutableStates, state => state.Index == 2).State);
+        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.ExecutableStates, state => state.Index == 3).State);
 
         harness.Tasks.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
@@ -158,7 +158,7 @@ public sealed class TriggerNodeTests
         using KuroeHarness harness = KuroeHarness.Create(TriggerValidateFlow);
         harness.Executor.Output = run =>
         {
-            if (run.Context.NodeIndex == 1)
+            if (run.Context.NodeIndex == 2)
             {
                 return "来源产出";
             }
@@ -167,8 +167,8 @@ public sealed class TriggerNodeTests
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            1 => """{"结论": "来源产出"}""",
-            2 => run.Context.ExecutionCount == 1
+            2 => """{"结论": "来源产出"}""",
+            3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "初稿不够好"}"""
                 : """{"结论": "修订通过"}""",
             _ => null,
@@ -178,7 +178,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot blocked = harness.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 2).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
 
         harness.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
@@ -208,9 +208,9 @@ public sealed class TriggerNodeTests
     /// <summary>来源先发布再触发下游，触发节点无数据输入。</summary>
     private const string TriggerOnceFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "来源@结论", "Signal": true }] }
             ] }
           ] } ]
@@ -220,9 +220,9 @@ public sealed class TriggerNodeTests
     /// <summary>对话环：输入节点是挂点，回答每次驱动触发节点按新版本启动一轮，触发目标不接收回答内容。</summary>
     private const string TriggerLoopFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["回话@回复"] },
+              { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标", "回话@回复"] },
               { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Kind": "Data" }], "From": [{ "Node": "收话@回答", "Signal": true }] }
             ] }
           ] } ]
@@ -232,10 +232,10 @@ public sealed class TriggerNodeTests
     /// <summary>数据与触发并行：触发源只发信号，目标只收数据源的产出。</summary>
     private const string MixedTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "数据", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
-              { "Name": "信号", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "信号", "Kind": "Data" }] },
+              { "Name": "数据", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
+              { "Name": "信号", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "信号", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "合并", "Kind": "Executable", "Model": "执行者", "From": ["数据@结论", { "Node": "信号@信号", "Signal": true }] }
             ] }
           ] } ]
@@ -245,9 +245,9 @@ public sealed class TriggerNodeTests
     /// <summary>自动容器成员齐备放行后整体作触发源。</summary>
     private const string ContainerTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "准备箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [ { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] } ] },
+              { "Name": "准备箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [ { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] } ] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "准备箱@结论", "Signal": true }] }
             ] }
           ] } ]
@@ -257,9 +257,9 @@ public sealed class TriggerNodeTests
     /// <summary>触发引用可带命名端口：来源声明输出端口，端口放行即触发。</summary>
     private const string NamedPortTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "信号", "Kind": "Data" }] },
+              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "信号", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "来源@信号", "Signal": true }] }
             ] }
           ] } ]
@@ -269,9 +269,9 @@ public sealed class TriggerNodeTests
     /// <summary>挂点触发环给出 MaxRuns 上限：三轮回答只启动两轮，第三问起不再有新 run。</summary>
     private const string TriggerLoopWithLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["回话@回复"] },
+              { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标", "回话@回复"] },
               { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Kind": "Data" }], "From": [{ "Node": "收话@回答", "Signal": true }], "MaxRuns": 2 }
             ] }
           ] } ]
@@ -282,9 +282,9 @@ public sealed class TriggerNodeTests
     private const string LibraryTriggerInjectionFlow = """
         {
           "Nodes": [ { "Name": "信号工", "Kind": "Executable" } ],
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "触发实例", "Use": "信号工", "Model": "执行者", "From": [{ "Node": "来源@结论", "Signal": true }] }
             ] }
           ] } ]
@@ -294,9 +294,9 @@ public sealed class TriggerNodeTests
     /// <summary>触发节点叠加 Review 门控，产出停在待批准。</summary>
     private const string TriggerReviewFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "来源@结论", "Signal": true }], "Gate": "Review" }
             ] }
           ] } ]
@@ -306,9 +306,9 @@ public sealed class TriggerNodeTests
     /// <summary>触发节点声明输出校验，run 首轮不通过停在阻塞，返工重跑通过后放行。</summary>
     private const string TriggerValidateFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": [{ "Node": "来源@结论", "Signal": true }], "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -318,9 +318,9 @@ public sealed class TriggerNodeTests
     /// <summary>Review 容器作触发源：成员齐备停等批准，批准放行后触发目标启动。</summary>
     private const string ReviewContainerTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "审查箱", "Kind": "Container", "Gate": "Review", "Outputs": [{ "Name": "结论", "Ref": "干工@结论" }], "Nodes": [ { "Name": "干工", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] } ] },
+              { "Name": "审查箱", "Kind": "Container", "Gate": "Review", "Outputs": [{ "Name": "结论", "Ref": "干工@结论" }], "Nodes": [ { "Name": "干工", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] } ] },
               { "Name": "触发", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "审查箱@结论", "Signal": true }] }
             ] }
           ] } ]

@@ -73,7 +73,7 @@ public sealed class FlowAdvanceTests
     public void Rework_with_unknown_item_keeps_task_blocked()
     {
         using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ItemIndex == 0;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot blocked = harness.Settle(id);
@@ -109,7 +109,7 @@ public sealed class FlowAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create();
         int failures = 0;
         harness.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 3 && Interlocked.Increment(ref failures) <= 2;
+            run.Context.NodeIndex == 4 && Interlocked.Increment(ref failures) <= 2;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -126,7 +126,7 @@ public sealed class FlowAdvanceTests
     public void Cancel_after_block_settles_the_task()
     {
         using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 4;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -238,79 +238,6 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Static_split_expands_without_plan_run()
-    {
-        using KuroeHarness harness = KuroeHarness.Create(StaticSplitFlow);
-
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        // 静态拆分不派规划 run，两条目各一个实施者
-        Assert.Empty(done.Executables[0].Runs);
-        Assert.Equal(2, done.Executables[1].Runs.Count);
-
-        RunSnapshot first = done.Executables[1].Runs[0];
-        Assert.Contains(first.Context.Seed, message => message.Text.Contains("本条目：甲\n要做：做甲\n验收标准：甲可见"));
-    }
-
-    [Fact]
-    public void Static_split_with_model_extras_merges_fixed_and_proposed()
-    {
-        using KuroeHarness harness = KuroeHarness.Create(ExtrasSplitFlow);
-
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        // 规划 run 跑一次交补充条目，固定条目加两条补充共三个实施者
-        Assert.Single(done.Executables[0].Runs);
-        Assert.Equal(3, done.Executables[1].Runs.Count);
-
-        // 规划指令给出固定条目参考与补充上限
-        RunSnapshot plan = done.Executables[0].Runs[0];
-        Assert.Contains("已按标准固定 1 条", plan.Context.Instruction);
-        Assert.Contains("补充至多 2 条", plan.Context.Instruction);
-        Assert.Contains("验收统一为", plan.Context.Instruction);
-
-        // 固定条目保留配置内容，补充条目接受模型文本并注入统一验收
-        RunSnapshot fixedRun = Assert.Single(done.Executables[1].Runs,
-            run => run.Context.Seed.Any(message => message.Text.Contains("本条目：固定任务")));
-        Assert.Contains(fixedRun.Context.Seed, message => message.Text.Contains("验收标准：固定验收"));
-
-        RunSnapshot extraRun = Assert.Single(done.Executables[1].Runs,
-            run => run.Context.Seed.Any(message => message.Text.Contains("本条目：甲")));
-        Assert.Contains(extraRun.Context.Seed, message => message.Text.Contains("验收标准：统一验收"));
-    }
-
-    [Fact]
-    public void Extras_over_limit_rejects_submission_and_blocks()
-    {
-        using KuroeHarness harness = KuroeHarness.Create(ConstrainedSplitFlow);
-
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
-
-        Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Contains(harness.Executor.Submissions, text => text.Contains("最多补充 1 条"));
-    }
-
-    [Fact]
-    public void Static_split_dispatches_items_to_their_branches()
-    {
-        using KuroeHarness harness = KuroeHarness.Create(StaticParallelSplitFlow);
-
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        // 静态拆分不派规划 run，条目按声明的分支落分支各一个实施者
-        Assert.Empty(done.Executables[0].Runs);
-        Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
-        Assert.Single(done.Executables[2].Runs, run => run.Context.ItemIndex == 1);
-    }
-
-    [Fact]
     public void Multiple_plan_sources_expand_and_settle_independently()
     {
         using KuroeHarness harness = KuroeHarness.Create(MultiPlanFunnelFlow);
@@ -399,12 +326,13 @@ public sealed class FlowAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
                   ]
                 }
@@ -423,12 +351,13 @@ public sealed class FlowAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
                 { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
@@ -448,12 +377,13 @@ public sealed class FlowAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
                 { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
@@ -473,111 +403,14 @@ public sealed class FlowAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
-
-    private const string StaticSplitFlow = """
-        {
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
-                  "Split": { "Items": [ { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" }, { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" } ], "ExtrasMax": 0 } },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
-
-    private const string ExtrasSplitFlow = """
-        {
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
-                  "Split": { "Items": [ { "Title": "固定任务", "Instruction": "做固定", "Acceptance": "固定验收" } ], "ExtrasMax": 2, "Acceptance": "统一验收" } },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
-
-    private const string ConstrainedSplitFlow = """
-        {
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "Split": { "ExtrasMax": 1 } },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": ["制定计划@拆分"] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
-
-    private const string StaticParallelSplitFlow = """
-        {
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }],
-                  "Split": { "ExtrasMax": 0, "Items": [
-                    { "Title": "甲", "Instruction": "做甲", "Branch": "撰写" },
-                    { "Title": "乙", "Instruction": "做乙", "Branch": "排版" } ] } },
-                { "Name": "撰写", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Branch": "撰写", "From": ["制定计划@拆分"] },
-                { "Name": "排版", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Branch": "排版", "From": ["制定计划@拆分"] }
                   ]
                 }
               ]
@@ -595,13 +428,14 @@ public sealed class FlowAdvanceTests
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "实施者", "Model": "fake" }
               ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定A计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
-                { "Name": "制定B计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                { "Name": "制定A计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
+                { "Name": "制定B计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
                 { "Name": "实施A", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "From": ["制定A计划@拆分"] },
                 { "Name": "实施B", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "From": ["制定B计划@拆分"] }
                   ]

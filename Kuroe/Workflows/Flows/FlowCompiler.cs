@@ -3,7 +3,7 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>把流程树编译成执行视图：节点按先根序统一编号，容器登记成员与子容器，
+/// <summary>把流程树编译成执行视图：开始登记为序号 0 的唯一来源，节点按先根序统一编号，容器登记成员与子容器，
 /// From 条目编译为带消费方式与角色的边：可选组条目按单份消费、信号条目固定单份只发触发信号。
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
@@ -18,7 +18,9 @@ internal static class FlowCompiler
         var containers = new Dictionary<int, ContainerBuilder>();
 
         // 先登记全部名字与序号，From 对后面的节点引用才可解析
-        RegisterNames(flow.RootNode, byName, 0);
+        nodes.Add(NewStart(flow.StartOutputs));
+        byName[StartNode.ReservedName] = 0;
+        RegisterNames(flow.RootNode, byName, nodes.Count);
         SecondPass(flow.RootNode, models, nodes, byName, containers, [], parent: null);
 
         // 用登记好的成员与子容器固化容器定义
@@ -61,6 +63,16 @@ internal static class FlowCompiler
 
         return new NodeGraph(nodes, edges);
     }
+
+    /// <summary>开始节点：序号 0，不属于任何容器，任务启动即已放行。</summary>
+    private static StartNode NewStart(IReadOnlyList<Flow.Port> outputs) => new()
+    {
+        Index = 0,
+        Name = StartNode.ReservedName,
+        Path = new Flow.NodePath([StartNode.ReservedName]),
+        Gate = Flow.NodeGate.Auto,
+        Outputs = outputs,
+    };
 
     /// <summary>容器定义的编译期登记，最终固化为 <see cref="ContainerNode"/>。</summary>
     private sealed record ContainerBuilder(

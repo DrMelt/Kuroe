@@ -20,15 +20,9 @@ public sealed record ExecutableSpec
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
     public BranchName? Branch { get; init; }
 
-    /// <summary>拆分源的固定配置：静态条目与模型补充约束。</summary>
-    public SplitConfig? Split { get; init; }
-
     /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
     public OutputValidation? Validate { get; init; }
 
     /// <summary>同一执行路径的最高执行次数，达到后不再启动新 run。未写时取默认值。</summary>
     public int? MaxRuns { get; init; }
-
-    /// <summary>拆分只有固定条目，模型不参与补充。</summary>
-    public bool IsStaticSplit => Split is { Items.Count: > 0, ExtrasMax: null or 0 };
 }

@@ -19,13 +19,14 @@ public enum EdgeFeed
     Aligned,
 }
 
-/// <summary>边消费方式的推导规则：容器来源只给单份齐备，执行节点按来源与目标模式组合，
+/// <summary>边消费方式的推导规则：开始与容器来源只给单份，执行节点按来源与目标模式组合，
 /// 声明为拆分的来源端口给条目展开。</summary>
 public static class EdgeFeedRules
 {
     /// <summary>逐条对齐、等全部实例、取拆分、取单份产出。拆分支票端口只对按条目目标有效。</summary>
     public static EdgeFeed Of(GraphNode source, NodeMode targetMode, PortName port) => source switch
     {
+        StartNode => EdgeFeed.Single,
         ContainerNode => EdgeFeed.Single,
         ExecutableNode executable => (executable.Execution.Mode == NodeMode.PerItem, targetMode, KindOf(executable, port)) switch
         {

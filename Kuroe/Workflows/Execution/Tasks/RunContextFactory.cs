@@ -126,7 +126,7 @@ internal static class RunContextFactory
         return new RunId(0);
     }
 
-    /// <summary>指令正文：节点要求、目标与第几轮。</summary>
+    /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，不在此拼接。</summary>
     private static string BuildInstruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
     {
         List<string> lines = [];
@@ -138,11 +138,7 @@ internal static class RunContextFactory
         if (item is { } entry)
         {
             string branch = entry.Branch is { } name ? $"（分支 {name}）" : string.Empty;
-            lines.Add($"目标：{task.Goal}\n本次只负责条目 {entry.Index + 1}：{entry.Title}{branch}");
-        }
-        else
-        {
-            lines.Add($"目标：{task.Goal}");
+            lines.Add($"本次只负责条目 {entry.Index + 1}：{entry.Title}{branch}");
         }
 
         AppendSplitGuide(task, node, lines);
@@ -155,37 +151,12 @@ internal static class RunContextFactory
         return string.Join('\n', lines);
     }
 
-    /// <summary>声明 Items 端口的执行节点的拆分说明：固定条目作参考、补充上限与统一验收、可选分支清单。</summary>
+    /// <summary>声明 Items 端口的执行节点的拆分说明：可选分支清单。</summary>
     private static void AppendSplitGuide(WorkTask task, RuntimeExecutable node, List<string> lines)
     {
         if (!node.Executable.HasItemsPort)
         {
             return;
-        }
-
-        if (node.Executable.Execution.Split is { } split)
-        {
-            if (split.Items is { Count: > 0 } items)
-            {
-                List<string> listed = [];
-                int number = 1;
-                foreach (SplitItem item in items)
-                {
-                    string acceptance = item.Acceptance.Length > 0 ? $"｜验收：{item.Acceptance}" : string.Empty;
-                    string branch = item.Branch is { } name ? $"｜分支：{name}" : string.Empty;
-                    listed.Add($"{number}. {item.Title}｜{item.Instruction}{acceptance}{branch}");
-                    number++;
-                }
-
-                lines.Add($"已按标准固定 {items.Count} 条：\n{string.Join('\n', listed)}");
-            }
-
-            if (split.ExtrasMax is { } limit)
-            {
-                lines.Add(split.Acceptance is { Length: > 0 } acceptance
-                    ? $"请补充至多 {limit} 条新条目，每条给出标题与做法，不要重述已列条目；验收统一为：{acceptance}"
-                    : $"请补充至多 {limit} 条新条目，每条给出标题、做法与验收标准，不要重述已列条目。");
-            }
         }
 
         List<string> branches = [];

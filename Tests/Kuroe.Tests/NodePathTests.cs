@@ -13,11 +13,11 @@ public sealed class NodePathTests
     /// <summary>多层容器流程：整体 → 制定计划，整体 → 文档组 → 撰写。</summary>
     private const string ChainFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Executable", "Model": "实施者" },
+              { "Name": "制定计划", "Kind": "Executable", "Model": "实施者", "From": ["Start@目标"] },
               { "Name": "文档组", "Kind": "Container", "Nodes": [
-                { "Name": "撰写", "Kind": "Executable", "Model": "实施者" }
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "From": ["Start@目标"] }
               ] }
             ] }
           ] } ]
@@ -27,8 +27,8 @@ public sealed class NodePathTests
     /// <summary>根节点直接是执行节点的流程。</summary>
     private const string RootExecutableFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Nodes": [
-            { "Name": "直接执行", "Kind": "Executable", "Model": "实施者" }
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+            { "Name": "直接执行", "Kind": "Executable", "Model": "实施者", "From": ["Start@目标"] }
           ] } ]
         }
         """;
@@ -41,12 +41,13 @@ public sealed class NodePathTests
         TaskId id = harness.Submit("补齐 README");
         NodeGraph graph = harness.Registry.Find(id).ThrowIfError().Graph;
 
-        Assert.Equal(["整体"], graph[0].Path.Levels.Select(level => level.Value));
-        Assert.Equal(["整体", "制定计划"], graph[1].Path.Levels.Select(level => level.Value));
-        Assert.Equal(["整体", "文档组"], graph[2].Path.Levels.Select(level => level.Value));
-        Assert.Equal(["整体", "文档组", "撰写"], graph[3].Path.Levels.Select(level => level.Value));
-        Assert.Equal("整体/文档组/撰写", graph[3].Path.Value);
-        Assert.Equal("整体/文档组/撰写", graph[3].Path.ToString());
+        Assert.Equal([StartNode.ReservedName.Value], graph[0].Path.Levels.Select(level => level.Value));
+        Assert.Equal(["整体"], graph[1].Path.Levels.Select(level => level.Value));
+        Assert.Equal(["整体", "制定计划"], graph[2].Path.Levels.Select(level => level.Value));
+        Assert.Equal(["整体", "文档组"], graph[3].Path.Levels.Select(level => level.Value));
+        Assert.Equal(["整体", "文档组", "撰写"], graph[4].Path.Levels.Select(level => level.Value));
+        Assert.Equal("整体/文档组/撰写", graph[4].Path.Value);
+        Assert.Equal("整体/文档组/撰写", graph[4].Path.ToString());
     }
 
     [Fact]
@@ -57,8 +58,9 @@ public sealed class NodePathTests
         TaskId id = harness.Submit("补齐 README");
         NodeGraph graph = harness.Registry.Find(id).ThrowIfError().Graph;
 
-        Assert.Equal(["直接执行"], graph[0].Path.Levels.Select(level => level.Value));
-        Assert.Equal("直接执行", graph[0].Path.Value);
+        Assert.Equal([StartNode.ReservedName.Value], graph[0].Path.Levels.Select(level => level.Value));
+        Assert.Equal(["直接执行"], graph[1].Path.Levels.Select(level => level.Value));
+        Assert.Equal("直接执行", graph[1].Path.Value);
     }
 
     [Fact]

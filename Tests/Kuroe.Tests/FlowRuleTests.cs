@@ -1,5 +1,6 @@
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Workflows.Flows;
 using Xunit;
 
@@ -81,79 +82,64 @@ public sealed class FlowRuleTests
                 Models("规划者"))));
 
     [Fact]
-    public void Split_without_items_port_is_rejected() =>
+    public void Start_without_output_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "Split 只能写在声明 Items 端口的节点上。")],
-            Errors(Flow(Container("整体", Exec("实施", "执行者", new ExecutableSpec { Split = StaticSplit() })), Models("执行者"))));
+            ["流程 默认：流程必须声明开始入口，至少一个 Data 输出端口。"],
+            Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
+                [], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
-    public void Empty_split_is_rejected() =>
+    public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "Split 至少要声明 Items 或 ExtrasMax。")],
-            Errors(Flow(
-                Container("整体", SplitSource("制定计划", new SplitConfig(null, null, null))),
-                Models("执行者"))));
+            ["流程 默认：开始端口 目标 的种类只能是 Data。"],
+            Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
+                [Items("目标")], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
-    public void Split_extras_over_cap_is_rejected() =>
-        Assert.Equal(
-            [NodeError("制定计划", "Split.ExtrasMax 必须是 0 到 20 的整数。")],
-            Errors(Flow(
-                Container("整体", SplitSource("制定计划", new SplitConfig(null, 21, null))),
-                Models("执行者"))));
+    public void Start_with_constant_port_is_accepted() =>
+        Assert.Empty(Errors(StartFlow([StartOutput, P("背景") with { Value = "固定背景" }])));
 
     [Fact]
-    public void Split_zero_without_items_is_rejected() =>
+    public void Start_without_a_goal_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "Split.ExtrasMax 为 0 时要求声明至少一条 Items。")],
-            Errors(Flow(
-                Container("整体", SplitSource("制定计划", new SplitConfig(null, 0, null))),
-                Models("执行者"))));
+            ["流程 默认：开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"],
+            Errors(StartFlow([P("目标") with { Value = "固定" }])));
 
     [Fact]
-    public void Static_split_with_prompt_is_rejected() =>
+    public void Start_with_two_goal_ports_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "纯静态拆分节点不支持 Prompt。")],
-            Errors(Flow(
-                Container("整体", SplitSource("制定计划", new ExecutableSpec { Prompt = "不需要", Split = StaticSplit() })),
-                Models("执行者"))));
+            ["流程 默认：开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"],
+            Errors(StartFlow([StartOutput, P("另一目标")])));
 
     [Fact]
-    public void Static_split_with_gate_is_rejected() =>
+    public void Start_with_blank_value_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "纯静态拆分节点不支持待批准门控。")],
-            Errors(Flow(
-                Container("整体", SplitSource("制定计划", StaticSplit()) with { Gate = NodeGate.Review }),
-                Models("执行者"))));
+            ["流程 默认：开始端口 背景 的 Value 不能为空。"],
+            Errors(StartFlow([StartOutput, P("背景") with { Value = " " }])));
 
     [Fact]
-    public void Static_split_with_from_is_rejected() =>
+    public void Start_with_duplicate_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "纯静态拆分节点不支持 From。")],
-            Errors(Flow(
-                Container("整体",
-                    Text("上游", "执行者") with { Outputs = [P("结论")] },
-                    SplitSource("制定计划", StaticSplit()) with { From = [Ref("上游", "结论")] }),
-                Models("执行者"))));
+            ["流程 默认：开始端口 背景 重复。"],
+            Errors(StartFlow([StartOutput, P("背景") with { Value = "甲" }, P("背景") with { Value = "乙" }])));
 
     [Fact]
-    public void Static_split_with_signal_entry_is_rejected() =>
+    public void Node_named_start_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "纯静态拆分节点不支持 From。")],
+            [NodeError("Start", "节点名 Start 是流程起点的保留名。")],
+            Errors(Flow(Container("整体", Text("Start", "执行者")), Models("执行者"))));
+
+    [Fact]
+    public void Node_unreachable_from_start_is_rejected() =>
+        Assert.Equal(
+            [
+                NodeError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+            ],
             Errors(Flow(
                 Container("整体",
-                    Text("来源", "执行者") with { Outputs = [P("结论")] },
-                    SplitSource("制定计划", StaticSplit()) with { From = [Signal("来源", "结论")] }),
-                Models("执行者"))));
-
-    [Fact]
-    public void Split_item_branch_without_executable_is_rejected() =>
-        Assert.Equal(
-            [NodeError("制定计划", "Split.Items 的分支“不存在”没有对应的分支执行节点。")],
-            Errors(Flow(
-                Container("整体",
-                    SplitSource("制定计划", new SplitConfig([new SplitItem("甲", "做甲", string.Empty, new BranchName("不存在"))], null, null)),
-                    Exec("撰写", "执行者", PerItem()) with { From = [Ref("制定计划", "拆分")] }),
+                    Exec("干活", "执行者", new ExecutableSpec()) with { From = [] },
+                    Exec("收尾", "执行者", new ExecutableSpec()) with { From = [] }),
                 Models("执行者"))));
 
     [Fact]
@@ -236,12 +222,6 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [NodeError("收集", "输入节点的输出端口只能是 Data 端口，回答写入该端口。")],
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [ContextPort("背景")] }))));
-
-    [Fact]
-    public void Input_with_split_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "Split 只能写在声明 Items 端口的节点上。")],
-            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Split = StaticSplit() } }))));
 
     [Fact]
     public void Question_on_text_executable_is_rejected() =>
@@ -428,7 +408,11 @@ public sealed class FlowRuleTests
     [Fact]
     public void Reference_cycle_without_source_is_rejected() =>
         Assert.Equal(
-            [NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。")],
+            [
+                NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                NodeError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+            ],
             Errors(Flow(
                 Container("整体",
                     Text("甲", "执行者") with { Outputs = [P("结论")], From = [Ref("乙", "结论")] },
@@ -454,6 +438,7 @@ public sealed class FlowRuleTests
             [
                 NodeError("撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
                 NodeError("撰写", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                NodeError("撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -466,7 +451,10 @@ public sealed class FlowRuleTests
     [Fact]
     public void Executable_referencing_its_own_container_with_sibling_is_rejected() =>
         Assert.Equal(
-            [NodeError("撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。")],
+            [
+                NodeError("撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
+                NodeError("撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+            ],
             Errors(Flow(
                 Container("整体",
                     Container("交付",
@@ -480,7 +468,11 @@ public sealed class FlowRuleTests
     [Fact]
     public void Container_cycle_across_scopes_is_rejected() =>
         Assert.Equal(
-            [NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。")],
+            [
+                NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                NodeError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+            ],
             Errors(Flow(
                 Container("整体",
                     Container("容器甲", Text("甲", "执行者") with { Outputs = [P("结论")], From = [Ref("容器乙", "结论")] }) with
@@ -493,33 +485,51 @@ public sealed class FlowRuleTests
                     }),
                 Models("执行者"))));
 
+    [Fact]
+    public void Loop_with_input_node_without_start_is_rejected() =>
+        Assert.Equal(
+            [
+                NodeError("收话", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("回话", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+            ],
+            Errors(Flow(
+                Container("整体",
+                    Input("收话") with { Outputs = [P("回答")], From = [Ref("回话", "回复")] },
+                    Text("回话", "执行者") with { Outputs = [P("回复")], From = [Ref("收话", "回答")] }),
+                Models("执行者"))));
+
     /// <summary>容器。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
         new() { Name = new NodeName(name), Kind = NodeKind.Container, Nodes = [.. members] };
 
-    /// <summary>执行节点。</summary>
+    /// <summary>执行节点，默认由开始入口触发。</summary>
     private static NodeSpec Text(string name, string model) =>
-        new() { Name = new NodeName(name), Kind = NodeKind.Executable, Model = new ModelRef(model), Execution = new ExecutableSpec() };
+        Exec(name, model, new ExecutableSpec());
 
-    /// <summary>执行节点，带完整执行配置。</summary>
+    /// <summary>执行节点，带完整执行配置，默认由开始入口触发。</summary>
     private static NodeSpec Exec(string name, string model, ExecutableSpec execution) =>
-        new() { Name = new NodeName(name), Kind = NodeKind.Executable, Model = new ModelRef(model), Execution = execution };
+        new()
+        {
+            Name = new NodeName(name),
+            Kind = NodeKind.Executable,
+            Model = new ModelRef(model),
+            Execution = execution,
+            From = [StartRef()],
+        };
 
     /// <summary>交回规划的拆分源，声明拆分支票端口。</summary>
     private static NodeSpec Plan(string name, string model) =>
         Exec(name, model, new ExecutableSpec()) with { Outputs = [Items("拆分")] };
 
-    /// <summary>输入节点。</summary>
+    /// <summary>输入节点，默认由开始入口触发。</summary>
     private static NodeSpec Input(string name) =>
-        new() { Name = new NodeName(name), Kind = NodeKind.Input, Execution = new ExecutableSpec() };
-
-    /// <summary>声明拆分支票端口并带执行配置的执行节点。</summary>
-    private static NodeSpec SplitSource(string name, ExecutableSpec execution) =>
-        Exec(name, "执行者", execution) with { Outputs = [Items("拆分")] };
-
-    /// <summary>声明拆分支票端口并带拆分配置的执行节点。</summary>
-    private static NodeSpec SplitSource(string name, SplitConfig split) =>
-        SplitSource(name, new ExecutableSpec { Split = split });
+        new()
+        {
+            Name = new NodeName(name),
+            Kind = NodeKind.Input,
+            Execution = new ExecutableSpec(),
+            From = [StartRef()],
+        };
 
     /// <summary>Data 端口声明。</summary>
     private static Port P(string name) => new(new PortName(name), PortKind.Data);
@@ -556,9 +566,15 @@ public sealed class FlowRuleTests
     private static SourceRef InGroup(string source, string port, string group) =>
         new(PortRef.Named(new NodeName(source), new PortName(port)), Or: group);
 
-    /// <summary>只有静态条目的拆分配置。</summary>
-    private static SplitConfig StaticSplit() =>
-        new([new SplitItem("甲", "做甲", string.Empty, null)], null, null);
+    /// <summary>开始入口的输出端口名。</summary>
+    private static PortName StartPort => new("目标");
+
+    /// <summary>开始入口的输出端口声明。</summary>
+    private static Port StartOutput => new(StartPort, PortKind.Data);
+
+    /// <summary>由开始入口触发的接线。</summary>
+    private static SourceRef StartRef() =>
+        new(PortRef.Named(StartNode.ReservedName, StartPort));
 
     /// <summary>流程的模型选择表，只声明名字。</summary>
     private static ModelDefinition[] Models(params string[] names) =>
@@ -566,7 +582,12 @@ public sealed class FlowRuleTests
 
     /// <summary>一条名为默认的流程。</summary>
     private static FlowDefinition Flow(NodeSpec root, params ModelDefinition[] models) =>
-        new(new FlowName("默认"), null, models, root);
+        new(new FlowName("默认"), null, models, [StartOutput], root);
+
+    /// <summary>一条默认流程，开始端口按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
+    private static FlowDefinition StartFlow(IReadOnlyList<Port> startOutputs) =>
+        new(new FlowName("默认"), null, Models("执行者"), startOutputs,
+            Container("整体", Exec("干活", "执行者", new ExecutableSpec())));
 
     /// <summary>流程内某个节点的错误说明。</summary>
     private static string NodeError(string node, string message) =>

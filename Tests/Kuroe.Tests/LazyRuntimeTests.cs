@@ -13,9 +13,9 @@ public sealed class LazyRuntimeTests
     /// <summary>计划完成后按条目停在待批准，下游收尾永不触达。</summary>
     private const string ReviewQueueFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+              { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
               { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Gate": "Review", "From": ["制定计划@拆分"] },
               { "Name": "收尾", "Kind": "Executable", "Model": "执行者", "From": ["分配执行@结论"] }
             ] }
@@ -33,7 +33,7 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.AwaitingApproval, snapshot.State);
-        Assert.Equal(3, task.Runtime.MaterializedCount);
+        Assert.Equal(4, task.Runtime.MaterializedCount);
         Assert.Equal(NodeState.Pending, snapshot.ExecutableStates[2].State);
         Assert.Equal(3, snapshot.ExecutableStates.Count);
     }
@@ -51,8 +51,8 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
 
-        // 已实例化的是根容器、根容器成员「制定计划」与在跑的容器成员「交付.实施」
-        Assert.Equal(3, task.Runtime.MaterializedCount);
+        // 已实例化的是开始、根容器、根容器成员「制定计划」与在跑的容器成员「交付.实施」
+        Assert.Equal(4, task.Runtime.MaterializedCount);
         Assert.Equal(NodeState.Pending, harness.Snapshot(id).ExecutableStates[2].State);
     }
 
@@ -85,7 +85,7 @@ public sealed class LazyRuntimeTests
         harness.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
-        RuntimeExecutable late = task.Runtime.Executable(2);
+        RuntimeExecutable late = task.Runtime.Executable(3);
         Assert.True(late.Canceled);
         Assert.Equal(NodeState.Canceled, harness.Snapshot(id).ExecutableStates[1].State);
     }
@@ -94,10 +94,10 @@ public sealed class LazyRuntimeTests
     public void Or_groups_rejoin_never_double_starts()
     {
         const string flow = """
-            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
-                { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
+                { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
                 { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "乙组" }, { "Node": "甲@结论", "Or": "乙组" }] }
               ] }
             ] } ] }

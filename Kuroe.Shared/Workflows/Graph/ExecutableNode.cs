@@ -32,9 +32,6 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxRuns = 100;
 
-    /// <summary>拆分只有固定条目，模型不参与补充。</summary>
-    public bool IsStaticSplit => Execution.IsStaticSplit;
-
     /// <summary>是否有 Data 端口，未声明即无模型可交回的命名产出。</summary>
     public bool HasDataPorts => Outputs.Any(port => port.Kind == PortKind.Data);
 

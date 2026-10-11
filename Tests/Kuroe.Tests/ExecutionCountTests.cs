@@ -15,7 +15,7 @@ public sealed class ExecutionCountTests
     {
         using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
         harness.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 2 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
+            run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -24,16 +24,16 @@ public sealed class ExecutionCountTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(0));
-        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(1));
-        Assert.Equal(2, task.Runtime.Executable(2).MaxExecutionCount);
+        Assert.Equal(2, task.Runtime.Executable(3).ExecutionCount(0));
+        Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
+        Assert.Equal(2, task.Runtime.Executable(3).MaxExecutionCount);
     }
 
     [Fact]
     public void Single_node_rework_increments_max()
     {
         using KuroeHarness harness = KuroeHarness.Create(SingleNodeFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 1 && run.Context.ExecutionCount == 1;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 2 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -42,24 +42,24 @@ public sealed class ExecutionCountTests
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, task.Runtime.Executable(1).ExecutionCount(null));
-        Assert.Equal(2, task.Runtime.Executable(1).MaxExecutionCount);
+        Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(null));
+        Assert.Equal(2, task.Runtime.Executable(2).MaxExecutionCount);
     }
 
     [Fact]
     public void Blocked_upstream_leaves_downstream_on_zero()
     {
         using KuroeHarness harness = KuroeHarness.Create(ChainFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 1;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 2;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot blocked = harness.Settle(id);
 
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(1, task.Runtime.Executable(1).ExecutionCount(null));
-        Assert.Equal(0, task.Runtime.Executable(2).ExecutionCount(null));
-        Assert.Equal(0, task.Runtime.Executable(2).MaxExecutionCount);
+        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
+        Assert.Equal(0, task.Runtime.Executable(3).ExecutionCount(null));
+        Assert.Equal(0, task.Runtime.Executable(3).MaxExecutionCount);
     }
 
     /// <summary>节点账与派发记录全等：派发即记账，节点账不会多于或少于 run 记录。</summary>
@@ -67,7 +67,7 @@ public sealed class ExecutionCountTests
     public void Executions_agree_with_run_records()
     {
         using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 2 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
         TaskId id = harness.Submit("补齐 README");
         harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -94,12 +94,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": [ "Start@目标" ] },
                     { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ "计划@拆分" ] }
                   ]
                 }
@@ -116,12 +117,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "干活", "Kind": "Executable", "Model": "执行者" }
+                    { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ "Start@目标" ] }
                   ]
                 }
               ]
@@ -137,12 +139,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": [ "Start@目标" ] },
                     { "Name": "下游", "Kind": "Executable", "Model": "执行者", "From": [ "上游@结论" ] }
                   ]
                 }

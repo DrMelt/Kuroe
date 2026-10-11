@@ -39,6 +39,13 @@ public sealed record InputSource(NodeName NodeName) : ContextSource
     public override string Label => $"节点「{NodeName}」的输入";
 }
 
+/// <summary>流程起点的初始输入。</summary>
+public sealed record StartSource(PortName Port) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => $"流程起点端口「{Port}」";
+}
+
 /// <summary>容器命名输出端口的产出，出处指向容器而不落到具体成员 run。</summary>
 public sealed record ContainerPortSource(NodeName Container, PortName Port) : ContextSource
 {

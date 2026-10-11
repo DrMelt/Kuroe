@@ -16,13 +16,13 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
-            2 => "修订产出已通过",
+            2 => "计划产出",
+            3 => "修订产出已通过",
             _ => "交付产出",
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            2 => """{"结论": "修订产出已通过"}""",
+            3 => """{"结论": "修订产出已通过"}""",
             _ => null,
         };
 
@@ -41,8 +41,8 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
-            2 => "修订产出不够好",
+            2 => "计划产出",
+            3 => "修订产出不够好",
             _ => "交付产出",
         };
 
@@ -50,7 +50,7 @@ public sealed class ValidationAdvanceTests
         TaskSnapshot blocked = harness.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 2).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
         Assert.Empty(blocked.Executables[2].Runs);
     }
 
@@ -60,13 +60,13 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
-            2 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
+            2 => "计划产出",
+            3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "交付产出",
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            2 => run.Context.ExecutionCount == 1
+            3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
                 : """{"结论": "修订产出已通过"}""",
             _ => null,
@@ -100,9 +100,9 @@ public sealed class ValidationAdvanceTests
     {
         string argumentJson = argument is null ? "" : $", \"Argument\": \"{argument}\"";
         string flow = $$"""
-            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
                 { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "{{predicate}}"{{argumentJson}} } }
               ] }
             ] } ] }
@@ -111,11 +111,11 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(flow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
+            2 => "计划产出",
             _ => output,
         };
         harness.Executor.PortValuesJsonFor = run =>
-            run.Context.NodeIndex == 2 ? $$"""{"结论": "{{output}}"}""" : null;
+            run.Context.NodeIndex == 3 ? $$"""{"结论": "{{output}}"}""" : null;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot snapshot = harness.Settle(id);
@@ -128,7 +128,7 @@ public sealed class ValidationAdvanceTests
         else
         {
             Assert.Equal(TaskState.Blocked, snapshot.State);
-            Assert.Equal(NodeState.Blocked, Assert.Single(snapshot.ExecutableStates, state => state.Index == 2).State);
+            Assert.Equal(NodeState.Blocked, Assert.Single(snapshot.ExecutableStates, state => state.Index == 3).State);
         }
     }
 
@@ -138,13 +138,13 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(OrFreshGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
-            2 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
+            2 => "计划产出",
+            3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "汇合产出",
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            2 => run.Context.ExecutionCount == 1
+            3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
                 : """{"结论": "修订产出已通过"}""",
             _ => null,
@@ -238,12 +238,12 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(ContainerOrGateFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            2 => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
+            3 => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
             _ => "闸门产出",
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            2 => run.Context.ExecutionCount == 1
+            3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "甲产出不达标"}"""
                 : """{"结论": "甲产出已通过"}""",
             _ => null,
@@ -253,15 +253,15 @@ public sealed class ValidationAdvanceTests
         TaskSnapshot blocked = harness.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 2).State);
-        Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Index == 3).Runs);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Index == 4).Runs);
 
         harness.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Index == 2).Runs.Count);
-        Assert.Single(done.Executables.Single(snapshot => snapshot.Index == 3).Runs);
+        Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Index == 3).Runs.Count);
+        Assert.Single(done.Executables.Single(snapshot => snapshot.Index == 4).Runs);
     }
 
     [Fact]
@@ -270,14 +270,14 @@ public sealed class ValidationAdvanceTests
         using KuroeHarness harness = KuroeHarness.Create(OrLoopFlow);
         harness.Executor.Output = run => run.Context.NodeIndex switch
         {
-            1 => "计划产出",
-            2 => "修订产出",
-            3 => run.Context.ExecutionCount == 1 ? "审查未达标准" : "审查通过",
+            2 => "计划产出",
+            3 => "修订产出",
+            4 => run.Context.ExecutionCount == 1 ? "审查未达标准" : "审查通过",
             _ => "交付产出",
         };
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
-            3 => run.Context.ExecutionCount == 1
+            4 => run.Context.ExecutionCount == 1
                 ? """{"结论": "审查未达标准"}"""
                 : """{"结论": "审查通过"}""",
             _ => null,
@@ -288,7 +288,7 @@ public sealed class ValidationAdvanceTests
         // 首次：计划驱动修订初稿，审查判定未达标准停驻
         TaskSnapshot blocked = harness.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 4).State);
         Assert.Empty(blocked.Executables[3].Runs);
 
         // 返工：审查通过并放行后，修订被审查的新版本再次驱动，交付随终稿放行
@@ -309,12 +309,13 @@ public sealed class ValidationAdvanceTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
                     { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
                     { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["修订@结论"] }
                   ]
@@ -326,63 +327,63 @@ public sealed class ValidationAdvanceTests
         """";
 
     private const string BadPredicate = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "Sprout" } }
           ] }
         ] } ] }
         """";
 
     private const string NumericPredicate = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "2" } }
           ] }
         ] } ] }
         """";
 
     private const string NonEmptyWithArgument = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "NonEmpty", "Argument": "多余" } }
           ] }
         ] } ] }
         """";
 
     private const string TextAssertMissingArgument = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains" } }
           ] }
         ] } ] }
         """";
 
     private const string BadPattern = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "Pattern", "Argument": "[" } }
           ] }
         ] } ] }
         """";
 
     private const string ValidateOnPerItem = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
             { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Mode": "PerItem", "From": ["计划@拆分"], "Validate": { "Predicate": "NonEmpty" } }
           ] }
         ] } ] }
         """";
 
     private const string OrMissingNode = """"
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "不存在的节点@结论", "Or": "任选" }] }
           ] }
         ] } ] }
@@ -390,19 +391,19 @@ public sealed class ValidationAdvanceTests
 
     /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>
     private const string OrFromGateFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
             { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["乙@结论"] },
-            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": ["甲@结论", { "Node": "乙@结论", "Or": "任选" }] }
           ] }
         ] } ] }
         """;
 
     private const string OrFreshGateFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["计划@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
             { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "修订@结论", "Or": "任选" }] }
           ] }
@@ -411,10 +412,10 @@ public sealed class ValidationAdvanceTests
 
     /// <summary>组内与组间允许来源重复：甲独占的单组与甲、乙组成的另一组跨组共享甲。</summary>
     private const string OrRepeatsFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
-            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "单独" }, { "Node": "甲@结论", "Or": "双组" }, { "Node": "乙@结论", "Or": "双组" }] }
           ] }
         ] } ] }
@@ -422,10 +423,10 @@ public sealed class ValidationAdvanceTests
 
     /// <summary>开关按组名独立：甲、乙与乙、甲作为两个可选组可同时声明。</summary>
     private const string OrReorderedFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
-            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
+            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
             { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ab" }, { "Node": "乙@结论", "Or": "ba" }, { "Node": "甲@结论", "Or": "ba" }] }
           ] }
         ] } ] }
@@ -433,10 +434,10 @@ public sealed class ValidationAdvanceTests
 
     /// <summary>容器作可选组来源：成员阻塞时容器不可用，成员恢复齐备后按容器代数驱动启动。</summary>
     private const string ContainerOrGateFlow = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
             { "Name": "汇聚", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "甲@结论" }], "Nodes": [
-              { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
+              { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": ["Start@目标"] }
             ] },
             { "Name": "闸门", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "汇聚@结论", "Or": "任选" }] }
           ] }
@@ -446,9 +447,9 @@ public sealed class ValidationAdvanceTests
     /// 审查以 MaxRuns 封顶，避免放行后修订互驱无限迭代。</summary>
     private const string OrLoopFlow = """"
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }] },
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
               { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
               { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
               { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["审查@结论"] }

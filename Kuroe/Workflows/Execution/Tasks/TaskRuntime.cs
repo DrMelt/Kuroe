@@ -10,6 +10,7 @@ using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 using ContainerNode = Kuroe.Shared.Workflows.Graph.ContainerNode;
+using StartNode = Kuroe.Shared.Workflows.Graph.StartNode;
 
 namespace Kuroe.Workflows.Execution.Tasks;
 
@@ -49,6 +50,7 @@ internal sealed class TaskRuntime
 
         RuntimeNode created = Graph.Nodes[index] switch
         {
+            StartNode start => new RuntimeStart(start, _task.Goal),
             ExecutableNode executable => new RuntimeExecutable(executable),
             ContainerNode container => new RuntimeContainer(container, node => _nodes[node]),
             _ => throw new InvalidOperationException($"不支持的节点类型：{Graph.Nodes[index].GetType().Name}"),
@@ -62,20 +64,14 @@ internal sealed class TaskRuntime
         // 先入表再绑账本，来源解析对互引的节点返回已入表对象，不会递归
         _nodes[index] = created;
 
-        if (created is RuntimeExecutable executableNode && ShouldBind(executableNode.Executable))
+        // 整节点执行节点装配输入消费账本：来源齐备且发布新版本才启动
+        if (created is RuntimeExecutable { Mode: NodeMode.Single, IsInput: false } executableNode)
         {
             executableNode.Bind(NodeInput.Build(_task, executableNode, Ensure));
         }
 
         return created;
     }
-
-    /// <summary>有入边的 Single 执行节点装配输入消费账本：来源齐备且发布新版本才启动。
-    /// 输入节点不启动 run，无入边节点与 PerItem 执行节点不经账本。</summary>
-    private bool ShouldBind(ExecutableNode executable) =>
-        executable.Kind != NodeKind.Input
-        && executable.Execution.Mode != NodeMode.PerItem
-        && Graph.Incoming(executable.Index).Count > 0;
 
     /// <summary>执行节点在快照里的一刻状态，未实例化的执行节点按默认待办报告。</summary>
     public ExecutableStateSnapshot SnapshotState(int index) =>
@@ -156,8 +152,8 @@ internal sealed class TaskRuntime
     private bool ItemSatisfied(RuntimeExecutable node, int? item) =>
         Graph.Incoming(node.Index).All(edge => FeedSatisfied(edge, item));
 
-    /// <summary>执行节点是否还有待启动的实例。账本节点随来源新版本整节点重启，
-    /// 无入边节点发表即终态，PerItem 执行节点按实例逐步启动。</summary>
+    /// <summary>执行节点是否还有待启动的实例：整节点账本齐备且来源有新版本，按条目节点还有满足入边的条目。
+    /// 输入节点由激活挂起，不在此判定。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
         if (node.IsInput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
@@ -165,19 +161,14 @@ internal sealed class TaskRuntime
             return false;
         }
 
-        if (node.Input is not null)
-        {
-            return (node.Input.Ready || node.RerunRequested) && !AtLimit(node, null);
-        }
-
-        return CanStartWhole(node);
+        return node.Input is { } input
+            ? (input.Ready || node.RerunRequested) && !AtLimit(node, null)
+            : StartableItems(node).Any();
     }
 
-    /// <summary>无账本执行节点的启动判定：PerItem 按实例，整节点未发表则启动。</summary>
-    private bool CanStartWhole(RuntimeExecutable node) =>
-        node.Mode == NodeMode.PerItem
-            ? ResolveItems(node).Any(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item))
-            : !node.Complete(null) && !AtLimit(node, null);
+    /// <summary>按条目执行节点的可启动条目：实例集里满足入边条件且尚未执行过的条目。</summary>
+    private IEnumerable<int> StartableItems(RuntimeExecutable node) =>
+        ResolveItems(node).Where(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item));
 
     /// <summary>该执行路径已达执行次数上限，达到后不再启动新 run。</summary>
     private static bool AtLimit(RuntimeExecutable node, int? item) =>
@@ -187,16 +178,16 @@ internal sealed class TaskRuntime
     public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
         List<RunStarter> starters = [];
-        if (node.Input is not null)
+        if (node.Input is { } input)
         {
-            if ((node.Input.Ready || node.RerunRequested) && !AtLimit(node, null))
+            if ((input.Ready || node.RerunRequested) && !AtLimit(node, null))
             {
                 starters.Add(new RunStarter(null));
             }
         }
         else
         {
-            starters.AddRange(StartWhole(node));
+            starters.AddRange(StartableItems(node).Select(item => new RunStarter(item)));
         }
 
         if (starters.Count > 0)
@@ -208,19 +199,6 @@ internal sealed class TaskRuntime
         }
 
         return starters;
-    }
-
-    /// <summary>无账本执行节点的可启动实例：PerItem 按条目，整节点未发表给一个整节点实例。</summary>
-    private IReadOnlyList<RunStarter> StartWhole(RuntimeExecutable node)
-    {
-        if (node.Mode == NodeMode.PerItem)
-        {
-            return [.. ResolveItems(node)
-                .Where(item => !node.Complete(item) && ItemSatisfied(node, item) && !AtLimit(node, item))
-                .Select(item => new RunStarter(item))];
-        }
-
-        return !node.Complete(null) && !AtLimit(node, null) ? [new RunStarter(null)] : [];
     }
 
     /// <summary>一个待启动的实例：条目序可为空（整节点）。</summary>
@@ -320,29 +298,14 @@ internal sealed class TaskRuntime
         _nodes.OfType<RuntimeExecutable>().Any(node => node.HasActive || CanStart(node))
         || HasUnmaterializedStartCandidates();
 
-    /// <summary>尚未实例化的执行节点里有没有已具备启动条件的：任一来源已放行或拆分支票已就绪。
+    /// <summary>尚未实例化的执行节点里有没有已具备启动条件的：任一来源已放行或拆分支票已就绪，输入节点同样由此被激活。
     /// 未实例化说明推进循环还没把它激活；来源在运行侧已实例化时才可能被放行，未实例化的来源不可能满足边。</summary>
-    private bool HasUnmaterializedStartCandidates()
-    {
-        foreach (ExecutableNode executable in Graph.ExecutableNodes)
-        {
-            if (_nodes[executable.Index] is not null || executable.Kind == NodeKind.Input)
-            {
-                continue;
-            }
-
-            foreach (FlowEdge edge in Graph.Incoming(executable.Index))
-            {
-                if (_nodes[edge.From] is RuntimeNode { Released: true }
-                    || (edge.Feed == EdgeFeed.Items && _task.SplitFor(edge.From) is not null))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
+    private bool HasUnmaterializedStartCandidates() =>
+        Graph.ExecutableNodes
+            .Where(executable => _nodes[executable.Index] is null)
+            .Any(executable => Graph.Incoming(executable.Index).Any(edge =>
+                _nodes[edge.From] is RuntimeNode { Released: true }
+                || (edge.Feed == EdgeFeed.Items && _task.SplitFor(edge.From) is not null)));
 
     /// <summary>正在等待批准的容器。</summary>
     public IReadOnlyList<int> AwaitingContainers =>
@@ -619,11 +582,10 @@ internal sealed class TaskRuntime
         return notified;
     }
 
-    /// <summary>一个执行节点被激活后的评估：静态拆分就地产出、放行待批准的节点、输入齐备启动实例。
+    /// <summary>一个执行节点被激活后的评估：输入节点重新挂起等回答，其余按就绪条件启动实例。
     /// 返回要通知的下游与要启动的实例。要求持有 Gate。</summary>
     public EvaluateResult Evaluate(RuntimeExecutable node)
     {
-        ExecutableNode executable = node.Executable;
         if (node.IsInput)
         {
             // 输入节点每次被激活即复位已答内容并重新挂起等待回答，与来源反馈或启动评估相同
@@ -631,15 +593,6 @@ internal sealed class TaskRuntime
             node.ParkInput();
 
             return new EvaluateResult([], []);
-        }
-
-        if (executable.IsStaticSplit && _task.SplitFor(node.Index) is null)
-        {
-            // 纯静态拆分不启动 run，激活即产出
-            _task.SetSplit(node.Index, new PlanOutput(new RunId(0), SplitMerge.Apply(executable.Execution.Split!, []).Value));
-            Publish(node, null);
-
-            return new EvaluateResult(Settled(node, false, Downstream(node)).Notify, []);
         }
 
         if (CanStart(node))
@@ -653,9 +606,9 @@ internal sealed class TaskRuntime
     /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
     public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
 
-    /// <summary>任务启动的第一批，返回前全部实例化：无入边的执行节点与全部输入节点。</summary>
+    /// <summary>任务启动的第一批：开始已放行，由它的直连下游起步。返回前全部实例化。</summary>
     public IReadOnlyList<int> Roots() =>
-        [.. Graph.StartCandidates().Select(node => Ensure(node.Index).Index)];
+        [.. Graph.Outgoing(Ensure(Graph.Start.Index).Index).Select(edge => Ensure(edge.To).Index)];
 
     /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
     public IReadOnlyList<int> BlockedNodes =>

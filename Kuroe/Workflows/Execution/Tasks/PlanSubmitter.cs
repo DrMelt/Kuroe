@@ -48,15 +48,6 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
 
-            SplitConfig? split = executable.Execution.Split;
-            ErrorOr<IReadOnlyList<PlanItem>> merged = split is null
-                ? parsed
-                : SplitMerge.Apply(split, parsed.Value);
-            if (merged.IsError)
-            {
-                return merged.ErrorsOrEmptyList;
-            }
-
             List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
@@ -68,7 +59,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
 
             if (branches.Count > 0)
             {
-                foreach (BranchName? branch in merged.Value.Select(item => item.Branch))
+                foreach (BranchName? branch in parsed.Value.Select(item => item.Branch))
                 {
                     if (branch is not { } name)
                     {
@@ -82,9 +73,9 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 }
             }
 
-            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, merged.Value));
+            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, parsed.Value));
 
-            return $"已记录 {merged.Value.Count} 个条目。";
+            return $"已记录 {parsed.Value.Count} 个条目。";
         }
     }
 

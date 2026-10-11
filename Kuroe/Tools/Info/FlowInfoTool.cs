@@ -69,6 +69,7 @@ internal sealed class FlowInfoTool : ITool
 
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
+        text.AppendLine($"开始 {string.Join("、", found.Value.StartOutputs.Select(StartPort))}");
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {
@@ -114,7 +115,11 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>展开节点上的模型引用，未绑定为空。</summary>
     private static string NodeModel(NodeSpec node) => node.Model is { } model ? model.Value : "未绑定";
 
-    /// <summary>节点要求：分支、工具、上游、可选启动组与拆分约束。</summary>
+    /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
+    private static string StartPort(Port port) =>
+        port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
+
+    /// <summary>节点要求：分支、工具、上游、提问、端口与系统指令。</summary>
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
         List<string> parts = [];
@@ -146,24 +151,6 @@ internal sealed class FlowInfoTool : ITool
         if (node.SystemPrompt.Count > 0)
         {
             parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
-        }
-
-        if (executable.Split is { } split)
-        {
-            if (split.Items is { Count: > 0 } items)
-            {
-                parts.Add($"固定 {items.Count} 条");
-            }
-
-            if (split.ExtrasMax is { } limit)
-            {
-                parts.Add($"补充至多 {limit} 条");
-            }
-
-            if (split.Acceptance is { Length: > 0 })
-            {
-                parts.Add("统一验收");
-            }
         }
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
