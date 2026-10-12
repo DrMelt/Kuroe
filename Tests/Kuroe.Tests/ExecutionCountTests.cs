@@ -94,14 +94,14 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": [ "Start@目标" ] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ "计划@拆分" ] }
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ] }
                   ]
                 }
               ]
@@ -117,13 +117,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ "Start@目标" ] }
+                    { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]
@@ -139,14 +139,14 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": [ "Start@目标" ] },
-                    { "Name": "下游", "Kind": "Executable", "Model": "执行者", "From": [ "上游@结论" ] }
+                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "下游", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "上游@结论" } ] }
                   ]
                 }
               ]

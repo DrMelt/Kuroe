@@ -18,13 +18,13 @@ public sealed class ContractReminderTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]

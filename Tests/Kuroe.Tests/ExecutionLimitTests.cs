@@ -63,9 +63,9 @@ public sealed class ExecutionLimitTests
 
     /// <summary>环迭代触发的新来源版本被上限拦截：上限低于自然停止点时，修订不再被审查新版本重启。</summary>
     [Fact]
-    public void Or_loop_stops_restarting_at_limit()
+    public void Loop_stops_restarting_at_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(OrLoopWithLimitFlow);
+        using KuroeHarness harness = KuroeHarness.Create(LoopWithLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
@@ -83,9 +83,9 @@ public sealed class ExecutionLimitTests
 
     /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证账本环受 MaxRuns 约束。</summary>
     [Fact]
-    public void Or_loop_iterates_to_max_runs()
+    public void Loop_iterates_to_max_runs()
     {
-        using KuroeHarness harness = KuroeHarness.Create(OrLoopWithoutLimitFlow);
+        using KuroeHarness harness = KuroeHarness.Create(LoopWithoutLimitFlow);
         harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
         harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
@@ -123,9 +123,9 @@ public sealed class ExecutionLimitTests
     /// <summary>恒失败的单个节点，满 2 次后停在阻塞。</summary>
     private const string FailingNodeFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": ["Start@目标"] }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }
@@ -134,9 +134,9 @@ public sealed class ExecutionLimitTests
     /// <summary>声明 Items 端口的执行节点不交回拆分，未收口重复到上限后停在阻塞。</summary>
     private const string PlanNodeFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] }
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }
@@ -145,9 +145,9 @@ public sealed class ExecutionLimitTests
     /// <summary>校验永远不通过的节点，重复到上限后停在阻塞。</summary>
     private const string ValidationFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 2, "From": ["Start@目标"],
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ],
                 "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -155,28 +155,28 @@ public sealed class ExecutionLimitTests
         """;
 
     /// <summary>修订被计划与审查交替驱动，执行满 1 次即达上限，不再被审查新版本重启。</summary>
-    private const string OrLoopWithLimitFlow = """
+    private const string LoopWithLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 1, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
-              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": ["审查@结论"] }
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "MaxRuns": 1, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
+              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }
         """;
 
     /// <summary>无环外终止的互驱动环：修订被计划与审查交替驱动，全部节点迭代到显式上限后任务收敛为完成。</summary>
-    private const string OrLoopWithoutLimitFlow = """
+    private const string LoopWithoutLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": [{ "Node": "计划@结论", "Or": "初始" }, { "Node": "审查@结论", "Or": "返工" }] },
-              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "MaxRuns": 5, "From": ["修订@结论"], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5, "From": ["审查@结论"] }
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "MaxRuns": 5, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
+              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "MaxRuns": 5, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "MaxRuns": 5, "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }
@@ -185,10 +185,10 @@ public sealed class ExecutionLimitTests
     /// <summary>PerItem 实施节点每条目限一次执行。</summary>
     private const string SplitFlowWithLimit = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
-              { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": ["计划@拆分"] }
+              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "MaxRuns": 1, "From": [ { "拆分": "计划@拆分" } ] }
             ] }
           ] } ]
         }
@@ -196,9 +196,9 @@ public sealed class ExecutionLimitTests
 
     private const string DefaultLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["Start@目标"] }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }
@@ -206,9 +206,9 @@ public sealed class ExecutionLimitTests
 
     private const string SingleNodeLimitFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": ["Start@目标"] }
+              { "Name": "干活", "Kind": "Executable", "Model": "执行者", "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }
@@ -220,10 +220,10 @@ public sealed class ExecutionLimitTests
           "Nodes": [
             { "Name": "干活库", "Kind": "Executable", "Tools": [], "MaxRuns": 3 }
           ],
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5, "From": ["Start@目标"] },
-              { "Name": "继承干活", "Use": "干活库", "Model": "执行者", "From": ["Start@目标"] }
+              { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5, "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "继承干活", "Use": "干活库", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }

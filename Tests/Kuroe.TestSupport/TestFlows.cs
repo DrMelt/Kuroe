@@ -13,14 +13,14 @@ public static class TestFlows
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" }
               ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Gate": "Review", "From": ["制定计划@拆分"] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Gate": "Review", "From": [ { "拆分": "制定计划@拆分" } ] }
                   ]
                 }
               ]
@@ -36,14 +36,14 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "用户输入", "Kind": "Input", "Question": "请补充需要的背景", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标"] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["用户输入@回答"] }
+                    { "Name": "用户输入", "Kind": "Input", "Question": "请补充需要的背景", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
                   ]
                 }
               ]
@@ -59,7 +59,7 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -70,7 +70,7 @@ public static class TestFlows
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                       "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标"] }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
                     },
                     {
@@ -79,10 +79,10 @@ public static class TestFlows
                       "Gate": "Review",
                       "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }],
                       "Nodes": [
-                        { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] }
+                        { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
                     },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["输入分支@回答", "审查分支@结论"] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审查分支@结论" } ] }
                   ]
                 }
               ]
@@ -97,14 +97,14 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "输入一", "Kind": "Input", "Question": "问题一", "From": ["Start@目标"] },
-                    { "Name": "输入二", "Kind": "Input", "Question": "问题二", "From": ["Start@目标"] }
+                    { "Name": "输入一", "Kind": "Input", "Question": "问题一", "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "输入二", "Kind": "Input", "Question": "问题二", "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]
@@ -120,15 +120,15 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-                    { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["准备@结论"] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["用户输入@回答"] }
+                    { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "结论": "准备@结论" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
                   ]
                 }
               ]
@@ -144,14 +144,14 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "收话", "Kind": "Input", "Question": "请说", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标", "回话@回复"] },
-                    { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Kind": "Data" }], "From": ["收话@回答"] }
+                    { "Name": "收话", "Kind": "Input", "Question": "请说", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
+                    { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Data" }], "From": [ { "回答": "收话@回答" } ] }
                   ]
                 }
               ]
@@ -166,15 +166,15 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "分析", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }, { "Name": "理由", "Kind": "Data" }], "Prompt": "给出结论与理由", "From": ["Start@目标"] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["分析@结论"] },
-                    { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": ["分析@理由"] }
+                    { "Name": "分析", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }, { "Name": "理由", "Type": "Data" }], "Prompt": "给出结论与理由", "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "分析@结论" } ] },
+                    { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": [ { "理由": "分析@理由" } ] }
                   ]
                 }
               ]
@@ -183,21 +183,21 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>执行节点用 From 条目的 Context 标记绑定上下文输入：来源产出置于上下文开头，同时普通数据条目照常注入。</summary>
+    /// <summary>执行节点用 Context 输入端口的声明绑定上下文输入：来源产出置于上下文开头，同时普通 Data 输入照常注入。</summary>
     public const string ContextInputFlow = """
         {
           "Flows": [
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["准备@结论", { "Node": "准备@结论", "Context": true }] }
+                    { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论" }, { "Name": "上下文", "Type": "Context" }], "From": [ { "结论": "准备@结论", "上下文": "准备@结论" } ] }
                   ]
                 }
               ]
@@ -206,7 +206,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>下游消费上游声明的 Context 种类端口：上游 run 的上下文按统一结构整体注入，角色与出处保留，指令单列。</summary>
+    /// <summary>下游消费上游声明的 Context 类型端口：上游 run 的上下文按统一结构整体注入，角色与出处保留，指令单列。</summary>
     public const string ContextPortFlow = """
         {
           "Flows": [
@@ -216,15 +216,15 @@ public static class TestFlows
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" }
               ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定", "Kind": "Executable", "Model": "规划者", "Prompt": "拆分目标", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "上下文", "Kind": "Context" }], "From": ["制定@拆分"] },
-                    { "Name": "汇报", "Kind": "Executable", "Model": "执行者", "From": ["实施@上下文"] }
+                    { "Name": "制定", "Kind": "Executable", "Model": "规划者", "Prompt": "拆分目标", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "拆分": "制定@拆分" } ] },
+                    { "Name": "汇报", "Kind": "Executable", "Model": "执行者", "From": [ { "上下文": "实施@上下文" } ] }
                   ]
                 }
               ]
@@ -240,13 +240,13 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "SystemPrompt": ["固定背景一", "固定背景二"], "From": ["Start@目标"] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "SystemPrompt": ["固定背景一", "固定背景二"], "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]
@@ -259,7 +259,7 @@ public static class TestFlows
     public const string ContainerOutputsFlow = """
         {
           "Nodes": [
-            { "Name": "允许工具", "Kind": "Executable", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }, { "Name": "理由", "Kind": "Data" }] },
+            { "Name": "允许工具", "Kind": "Executable", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Data" }, { "Name": "理由", "Type": "Data" }] },
             {
               "Name": "交付",
               "Kind": "Container",
@@ -271,7 +271,7 @@ public static class TestFlows
                   "Name": "实施",
                   "Use": "允许工具",
                   "Model": "执行者",
-                  "From": ["@计划"]
+                  "From": [ { "计划": "@计划" } ]
                 }
               ]
             }
@@ -280,20 +280,20 @@ public static class TestFlows
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
+                    { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
                     {
                       "Name": "交付",
                       "Use": "交付",
                       "In": { "计划": "制定计划@拆分" },
                       "Models": { "执行者": "执行者" }
                     },
-                    { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": ["交付@结论"] }
+                    { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "交付@结论" } ] }
                   ]
                 }
               ]

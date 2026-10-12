@@ -13,11 +13,11 @@ public sealed class LazyRuntimeTests
     /// <summary>计划完成后按条目停在待批准，下游收尾永不触达。</summary>
     private const string ReviewQueueFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Kind": "Items" }], "From": ["Start@目标"] },
-              { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "Gate": "Review", "From": ["制定计划@拆分"] },
-              { "Name": "收尾", "Kind": "Executable", "Model": "执行者", "From": ["分配执行@结论"] }
+              { "Name": "制定计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Data" }], "Gate": "Review", "From": [ { "拆分": "制定计划@拆分" } ] },
+              { "Name": "收尾", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "分配执行@结论" } ] }
             ] }
           ] } ]
         }
@@ -91,14 +91,14 @@ public sealed class LazyRuntimeTests
     }
 
     [Fact]
-    public void Or_groups_rejoin_never_double_starts()
+    public void Groups_rejoin_never_double_starts()
     {
         const string flow = """
-            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] }, "Nodes": [
+            { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-                { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Kind": "Data" }], "From": ["Start@目标"] },
-                { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [{ "Node": "甲@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "甲组" }, { "Node": "乙@结论", "Or": "乙组" }, { "Node": "甲@结论", "Or": "乙组" }] }
+                { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [ { "甲": "甲@结论", "乙": "乙@结论" }, { "甲": "甲@结论", "乙": "乙@结论" } ] }
               ] }
             ] } ] }
             """;

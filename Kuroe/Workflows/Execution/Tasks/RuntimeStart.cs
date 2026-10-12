@@ -33,5 +33,5 @@ internal sealed class RuntimeStart(StartNode node, string goal) : RuntimeNode(no
     }
 
     private string? Text(PortName port) =>
-        node.FindPort(port) is { Kind: PortKind.Data } declared ? declared.Value ?? _goal : null;
+        node.FindPort(port) is { Type: PortType.Data } declared ? declared.Value ?? _goal : null;
 }

@@ -111,7 +111,7 @@ internal sealed class FlowInfoTool : ITool
                 text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Label()}节点）· 放行 {InfoLabels.Of(node.Gate)}");
                 if (node.Inputs.Count > 0)
                 {
-                    text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(DescribeInput))}");
+                    text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
                 }
 
                 if (node.ContainerOutputs is { Count: > 0 } outs)
@@ -131,7 +131,7 @@ internal sealed class FlowInfoTool : ITool
     private static string StartPort(Port port) =>
         port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
 
-    /// <summary>节点要求：分支、工具、上游、提问、端口与系统指令。</summary>
+    /// <summary>节点要求：分支、工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
         List<string> parts = [];
@@ -145,9 +145,14 @@ internal sealed class FlowInfoTool : ITool
             parts.Add($"工具 {string.Join("、", executable.Tools)}");
         }
 
+        if (node.Inputs.Count > 0)
+        {
+            parts.Add($"输入 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+        }
+
         if (node.From.Count > 0)
         {
-            parts.Add($"取自 {string.Join("、", node.From.Select(DescribeSource))}");
+            parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
         if (executable.Question is { Length: > 0 })
@@ -168,31 +173,11 @@ internal sealed class FlowInfoTool : ITool
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
     }
 
-    /// <summary>容器传入端口的展示：说明存在时写在名字后。</summary>
-    private static string DescribeInput(ContainerInput input) =>
-        input.Description is { Length: > 0 } description ? $"{input.Name.Value}：{description}" : input.Name.Value;
-
     /// <summary>容器输出端口的展示：写转发目标，说明存在时写在末尾。</summary>
     private static string DescribeOutput(PortName port, ContainerOutput output) =>
         output.Description is { Length: > 0 } description
             ? $"{port.Value} ← {output.Ref.Display}：{description}"
             : $"{port.Value} ← {output.Ref.Display}";
-
-    /// <summary>节点的上游接线条目展示：信号条目标「信号」，上下文条目标「上下文」，可选组条目带组名。</summary>
-    private static string DescribeSource(SourceRef source)
-    {
-        if (source.Signal)
-        {
-            return $"信号 {source.Ref.Display}";
-        }
-
-        if (source.Context)
-        {
-            return $"上下文 {source.Ref.Display}";
-        }
-
-        return source.Or is { } group ? $"{source.Ref.Display}（组 {group}）" : source.Ref.Display;
-    }
 
     /// <summary>递归收集流程里的全部执行节点名。</summary>
     private static IEnumerable<NodeName> Flatten(NodeSpec node)

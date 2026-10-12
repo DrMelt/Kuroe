@@ -74,7 +74,7 @@ public sealed class FlowRuleTests
                 Models("规划者"))));
 
     [Fact]
-    public void Container_signal_entry_is_rejected_as_from() =>
+    public void Container_from_with_signal_input_is_rejected() =>
         Assert.Equal(
             [NodeError("容器", "容器节点不是执行节点，不支持 From。")],
             Errors(Flow(
@@ -91,7 +91,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：开始端口 目标 的种类只能是 Data。"],
+            ["流程 默认：开始端口 目标 的类型只能是 Data。"],
             Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
                 [Items("目标")], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
@@ -180,23 +180,23 @@ public sealed class FlowRuleTests
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [P("回答")], Execution = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) } }))));
 
     [Fact]
-    public void Input_with_signal_entry_is_rejected() =>
+    public void Input_with_signal_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明触发信号。")],
+            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Data 类型。")],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
-                    Input("收集") with { From = [Signal("准备", "结论")] }),
+                    Input("收集") with { Inputs = [In("结论", PortType.Signal)], From = [Signal("准备", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
-    public void Input_with_group_entry_is_rejected() =>
+    public void Input_with_context_input_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明可选启动组。")],
+            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Data 类型。")],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
-                    Input("收集") with { From = [InGroup("准备", "结论", "任选")] }),
+                    Input("收集") with { Inputs = [In("任选", PortType.Context)], From = [InGroup("准备", "结论", "任选")] }),
                 Models("执行者"))));
 
     [Fact]
@@ -218,7 +218,7 @@ public sealed class FlowRuleTests
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [P("结论"), P("理由")] }))));
 
     [Fact]
-    public void Input_with_context_port_is_rejected() =>
+    public void Input_with_context_output_port_is_rejected() =>
         Assert.Equal(
             [NodeError("收集", "输入节点的输出端口只能是 Data 端口，回答写入该端口。")],
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [ContextPort("背景")] }))));
@@ -284,66 +284,66 @@ public sealed class FlowRuleTests
                 Models("执行者"))));
 
     [Fact]
-    public void Context_entry_from_container_is_rejected() =>
+    public void Context_input_from_container_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("实施", "Context 条目来源 箱子 必须是非输入执行节点。"),
+                NodeError("实施", "Context 输入来源 箱子 必须是非输入执行节点。"),
                 NodeError("实施", "容器 箱子 没有输出端口 结论。"),
             ],
             Errors(Flow(
                 Container("整体",
                     Container("箱子", Text("干活", "执行者") with { Outputs = [P("结论")] }),
-                    Text("实施", "执行者") with { From = [Context("箱子", "结论")] }),
+                    Text("实施", "执行者") with { Inputs = [In("结论", PortType.Context)], From = [Context("箱子", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
-    public void Context_entry_from_bound_port_is_rejected() =>
+    public void Context_input_from_bound_port_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("实施", "Context 条目来源必须写节点名或 来源@端口，不能引用绑定端口。"),
+                NodeError("实施", "Context 输入必须写节点名或 来源@端口，不能引用绑定端口。"),
                 NodeError("实施", "From 引用的节点 @输入 不在流程里。"),
             ],
-            Errors(Flow(Container("整体", Text("实施", "执行者") with { From = [BoundContext("输入")] }), Models("执行者"))));
+            Errors(Flow(Container("整体", Text("实施", "执行者") with { Inputs = [In("输入", PortType.Context)], From = [BoundContext("输入")] }), Models("执行者"))));
 
     [Fact]
-    public void Context_entry_from_input_node_is_rejected() =>
+    public void Context_input_from_input_node_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "Context 条目来源 用户输入 不能是输入节点。")],
+            [NodeError("实施", "Context 输入来源 用户输入 不能是输入节点。")],
             Errors(Flow(
                 Container("整体",
                     Input("用户输入") with { Outputs = [P("回答")] },
-                    Text("实施", "执行者") with { From = [Context("用户输入", "回答")] }),
+                    Text("实施", "执行者") with { Inputs = [In("回答", PortType.Context)], From = [Context("用户输入", "回答")] }),
                 Models("执行者"))));
 
     [Fact]
-    public void Context_entry_from_per_item_node_is_rejected() =>
+    public void Context_input_from_per_item_node_is_rejected() =>
         Assert.Equal(
-            [NodeError("汇报", "Context 条目来源 实施 不能是按条目展开的节点。")],
+            [NodeError("汇报", "Context 输入来源 实施 不能是按条目展开的节点。")],
             Errors(Flow(
                 Container("整体",
                     Plan("制定", "执行者"),
                     Exec("实施", "执行者", PerItem()) with { Outputs = [P("结论")], From = [Ref("制定", "拆分")] },
-                    Text("汇报", "执行者") with { From = [Context("实施", "结论")] }),
+                    Text("汇报", "执行者") with { Inputs = [In("结论", PortType.Context)], From = [Context("实施", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
-    public void Duplicate_from_entry_is_rejected() =>
+    public void Duplicate_from_link_is_rejected() =>
         Assert.Equal(
-            [NodeError("接收", "From 引用的节点 来源@结论 出现多次。")],
+            [NodeError("接收", "From 组内的目标输入端口 结论 出现多次。")],
             Errors(Flow(
                 Container("整体",
                     Text("来源", "执行者") with { Outputs = [P("结论")] },
-                    Text("接收", "执行者") with { From = [Ref("来源", "结论"), Ref("来源", "结论")] }),
+                    Text("接收", "执行者") with { From = [Twice("结论", "来源", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
-    public void Per_item_with_signal_entry_is_rejected() =>
+    public void Per_item_with_signal_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "声明可选启动组、触发信号或上下文输入的执行节点不能按条目展开，必须是整节点执行。")],
+            [NodeError("实施", "声明 Context 或 Signal 输入端口的执行节点不能按条目展开，必须是整节点执行。")],
             Errors(Flow(
                 Container("整体",
                     Text("来源", "执行者") with { Outputs = [P("结论")] },
-                    Exec("实施", "执行者", PerItem()) with { From = [Signal("来源", "结论")] }),
+                    Exec("实施", "执行者", PerItem()) with { Inputs = [In("结论", PortType.Signal)], From = [Signal("来源", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
@@ -429,7 +429,7 @@ public sealed class FlowRuleTests
                     Plan("制定B计划", "规划者"),
                     Exec("实施A", "执行者", PerItem()) with { Outputs = [P("结论")], From = [Ref("制定A计划", "拆分")] },
                     Exec("实施B", "执行者", PerItem()) with { Outputs = [P("结论")], From = [Ref("制定B计划", "拆分")] },
-                    Exec("收尾", "执行者", PerItem()) with { From = [Ref("实施A", "结论"), Ref("实施B", "结论")] }),
+                    Exec("收尾", "执行者", PerItem()) with { From = [Group(("实施A", "结论"), ("实施B", "结论"))] }),
                 Models("规划者", "执行者"))));
 
     [Fact]
@@ -498,6 +498,55 @@ public sealed class FlowRuleTests
                     Text("回话", "执行者") with { Outputs = [P("回复")], From = [Ref("收话", "回答")] }),
                 Models("执行者"))));
 
+    /// <summary>按条目展开的实例空间只能有一个拆分来源：多个来源的条目无法归属同一个实例空间。</summary>
+    [Fact]
+    public void Two_split_sources_are_rejected() =>
+        Assert.Equal(
+            [NodeError("实施", "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。")],
+            Errors(Flow(
+                Container("整体",
+                    Plan("甲", "规划者"),
+                    Plan("乙", "规划者"),
+                    Exec("实施", "执行者", PerItem()) with { Inputs = [In("任务")], Outputs = [P("结论")], From = [One("任务", "甲", "拆分"), One("任务", "乙", "拆分")] }),
+                Models("执行者", "规划者"))));
+
+    /// <summary>每套绑定方案都必须覆盖全部输入端口：两套方案任一齐备即启动，规则接受这种写法。</summary>
+    [Fact]
+    public void Per_item_with_alternative_groups_is_accepted() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Plan("制定", "规划者"),
+                Exec("甲", "执行者", PerItem()) with { Inputs = [In("任务")], Outputs = [P("结论")], From = [One("任务", "制定", "拆分")] },
+                Exec("乙", "执行者", PerItem()) with { Inputs = [In("任务")], Outputs = [P("结论")], From = [One("任务", "制定", "拆分")] },
+                Exec("实施", "执行者", PerItem()) with
+                {
+                    Inputs = [In("任务"), In("结论")],
+                    Outputs = [P("结果")],
+                    From =
+                    [
+                        new([
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定"), new PortName("拆分"))),
+                            new FromLink(new PortName("结论"), PortRef.Named(new NodeName("甲"), new PortName("结论"))),
+                        ]),
+                        new([
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定"), new PortName("拆分"))),
+                            new FromLink(new PortName("结论"), PortRef.Named(new NodeName("乙"), new PortName("结论"))),
+                        ]),
+                    ],
+                }),
+            Models("执行者", "规划者"))));
+
+    /// <summary>输入端口名在同一节点内唯一，与输出端口同一份规则。</summary>
+    [Fact]
+    public void Duplicate_input_port_is_rejected() =>
+        Assert.Equal(
+            [NodeError("接收", "输入端口 结论 重复。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("来源", "执行者") with { Outputs = [P("结论")] },
+                    Text("接收", "执行者") with { Inputs = [In("结论"), In("结论")], From = [Ref("来源", "结论")] }),
+                Models("执行者"))));
+
     /// <summary>容器。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
         new() { Name = new NodeName(name), Kind = NodeKind.Container, Nodes = [.. members] };
@@ -532,13 +581,17 @@ public sealed class FlowRuleTests
         };
 
     /// <summary>Data 端口声明。</summary>
-    private static Port P(string name) => new(new PortName(name), PortKind.Data);
+    private static Port P(string name) => new(new PortName(name), PortType.Data);
 
     /// <summary>拆分支票端口声明。</summary>
-    private static Port Items(string name) => new(new PortName(name), PortKind.Items);
+    private static Port Items(string name) => new(new PortName(name), PortType.Items);
 
     /// <summary>装配上下文端口声明。</summary>
-    private static Port ContextPort(string name) => new(new PortName(name), PortKind.Context);
+    private static Port ContextPort(string name) => new(new PortName(name), PortType.Context);
+
+    /// <summary>输入端口声明，未写类型时按 Data。</summary>
+    private static InputPort In(string name, PortType type = PortType.Data) =>
+        new(new PortName(name), type);
 
     /// <summary>命名端口的引用名。</summary>
     private static PortName PN(string name) => new(name);
@@ -546,35 +599,47 @@ public sealed class FlowRuleTests
     /// <summary>按条目展开的执行配置。</summary>
     private static ExecutableSpec PerItem() => new() { Mode = NodeMode.PerItem };
 
-    /// <summary>命名端口的接线。</summary>
-    private static SourceRef Ref(string source, string port) =>
-        new(PortRef.Named(new NodeName(source), new PortName(port)));
+    /// <summary>单来源启动组，输入名取来源端口名。</summary>
+    private static FromGroup Ref(string source, string port) => One(port, source, port);
 
-    /// <summary>触发信号的接线。</summary>
-    private static SourceRef Signal(string source, string port) =>
-        new(PortRef.Named(new NodeName(source), new PortName(port)), Signal: true);
+    /// <summary>信号输入的启动组，目标输入端口须声明 Signal 类型。</summary>
+    private static FromGroup Signal(string source, string port) => One(port, source, port);
 
-    /// <summary>上下文输入的接线。</summary>
-    private static SourceRef Context(string source, string port) =>
-        new(PortRef.Named(new NodeName(source), new PortName(port)), Context: true);
+    /// <summary>上下文输入的启动组，目标输入端口须声明 Context 类型。</summary>
+    private static FromGroup Context(string source, string port) => One(port, source, port);
 
-    /// <summary>引用绑定端口的上下文接线。</summary>
-    private static SourceRef BoundContext(string port) =>
-        new(PortRef.Bound(new PortName(port)), Context: true);
+    /// <summary>引用绑定端口的上下文输入。</summary>
+    private static FromGroup BoundContext(string port) =>
+        new([new FromLink(new PortName(port), PortRef.Bound(new PortName(port)))]);
 
-    /// <summary>可选启动组的接线。</summary>
-    private static SourceRef InGroup(string source, string port, string group) =>
-        new(PortRef.Named(new NodeName(source), new PortName(port)), Or: group);
+    /// <summary>输入名取组名的单连接组。</summary>
+    private static FromGroup InGroup(string source, string port, string group) => One(group, source, port);
+
+    /// <summary>一条连接构成的启动组。</summary>
+    private static FromGroup One(string input, string source, string port) =>
+        new([new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port)))]);
+
+    /// <summary>同一输入名两条连接的启动组，用于组内重复判定。</summary>
+    private static FromGroup Twice(string input, string source, string port) =>
+        new([
+            new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port))),
+            new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port))),
+        ]);
+
+    /// <summary>一组启动条件，输入名取来源名。</summary>
+    private static FromGroup Group(params (string Source, string Port)[] links) =>
+        new([.. links.Select(link => new FromLink(
+            new PortName(link.Source),
+            PortRef.Named(new NodeName(link.Source), new PortName(link.Port))))]);
 
     /// <summary>开始入口的输出端口名。</summary>
     private static PortName StartPort => new("目标");
 
     /// <summary>开始入口的输出端口声明。</summary>
-    private static Port StartOutput => new(StartPort, PortKind.Data);
+    private static Port StartOutput => new(StartPort, PortType.Data);
 
-    /// <summary>由开始入口触发的接线。</summary>
-    private static SourceRef StartRef() =>
-        new(PortRef.Named(StartNode.ReservedName, StartPort));
+    /// <summary>由开始入口触发的启动组。</summary>
+    private static FromGroup StartRef() => One("目标", StartNode.ReservedName.Value, "目标");
 
     /// <summary>流程的模型选择表，只声明名字。</summary>
     private static ModelDefinition[] Models(params string[] names) =>

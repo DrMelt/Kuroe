@@ -8,9 +8,6 @@ namespace Kuroe.Nodes.Library;
 /// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
 internal static class NodeExpander
 {
-    /// <summary>执行次数上限的默认值：整条覆盖链都没有配置时生效。</summary>
-    private const int DefaultMaxRuns = ExecutableNode.DefaultMaxRuns;
-
     /// <summary>展开作用域的一层：容器实例的成员原名到实例名的映射，以及端口绑定与模型槽位绑定。
     /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口与模型绑定。</summary>
     private sealed class Env(
@@ -105,7 +102,7 @@ internal static class NodeExpander
 
             if (node.In is { Count: > 0 })
             {
-                errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，上下文输入用 From 条目的 Context 标记。"));
+                errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
             }
 
             return new Flow.NodeSpec
@@ -113,6 +110,7 @@ internal static class NodeExpander
                 Name = instance,
                 Kind = definition.Kind,
                 Gate = definition.Gate,
+                Inputs = definition.Inputs,
                 Execution = definition.Execution! with
                 {
                     Validate = node.Validate ?? definition.Execution.Validate,
@@ -148,6 +146,7 @@ internal static class NodeExpander
             Name = own,
             Kind = node.Kind,
             Gate = node.Gate,
+            Inputs = node.Inputs,
             Execution = node.Execution! with
             {
                 Validate = node.Execution.Validate,
@@ -162,7 +161,7 @@ internal static class NodeExpander
 
     /// <summary>执行节点的生效执行上限：自身显式、库定义、外层容器统一值依次取先，都没有时落到默认值。</summary>
     private static int ResolveMaxRuns(int? own, int? library, int? currentLimit) =>
-        own ?? library ?? currentLimit ?? DefaultMaxRuns;
+        own ?? library ?? currentLimit ?? ExecutableNode.DefaultMaxRuns;
 
     private static List<Flow.NodeSpec> ExpandMembers(
         NodeLibrary library,
@@ -247,13 +246,18 @@ internal static class NodeExpander
         }
     }
 
-    /// <summary>逐个解析上游接线条目：来源名沿实例映射链与端口绑定链解析，Or、Signal 与 Context 标记保留。</summary>
-    private static IReadOnlyList<Flow.SourceRef> ResolveAll(
-        IReadOnlyList<Flow.SourceRef> from,
+    /// <summary>逐个解析上游启动组：来源名沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
+    private static IReadOnlyList<Flow.FromGroup> ResolveAll(
+        IReadOnlyList<Flow.FromGroup> from,
         Env? env,
         NodeScope scope,
         List<Error> errors) =>
-        [.. from.Select(source => source with { Ref = ResolveRef(source.Ref, env, scope, errors) })];
+        [
+            .. from.Select(group => group with
+            {
+                Links = [.. group.Links.Select(link => link with { Ref = ResolveRef(link.Ref, env, scope, errors) })],
+            }),
+        ];
 
     /// <summary>解析一个端口引用：来源为空（@端口）沿绑定链找实际来源，普通来源名沿实例映射解析并保留选取。
     /// 绑定链找不到来源时保留原引用并报错，交既有校验判断。</summary>

@@ -65,10 +65,10 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }, { "Name": "背景", "Kind": "Data", "Value": "固定背景" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }, { "Name": "背景", "Type": "Data", "Value": "固定背景" }] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": ["Start@背景"] }
+                  { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "背景": "Start@背景" } ] }
                 ] }
               ]
             }

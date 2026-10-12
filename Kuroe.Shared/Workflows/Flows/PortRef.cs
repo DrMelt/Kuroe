@@ -1,7 +1,7 @@
 namespace Kuroe.Shared.Workflows.Flows;
 
 /// <summary>端口引用：来源名与端口名。来源为空表示库容器成员对传入端口的绑定引用（@端口），
-/// 端口名来自来源节点声明的输出端口表。种类不随引用走，由来源节点的端口表在编译期解析。</summary>
+/// 端口名来自来源节点声明的输出端口表。类型不随引用走，由来源节点的端口表在编译期解析。</summary>
 public readonly record struct PortRef(NodeName? Source, PortName Port)
 {
     /// <summary>绑定端口引用：容器成员经 @端口 取传入端口。</summary>

@@ -40,7 +40,7 @@ public sealed class FlowModelTests
                 Name = StartNode.ReservedName,
                 Path = new NodePath([StartNode.ReservedName]),
                 Gate = NodeGate.Auto,
-                Outputs = [new Port(new PortName("目标"), PortKind.Data)],
+                Outputs = [new Port(new PortName("目标"), PortType.Data)],
             },
             new ExecutableNode
             {
@@ -65,7 +65,7 @@ public sealed class FlowModelTests
                 Kind = NodeKind.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
-                From = [new Dependency(1, new PortName("拆分"))],
+                From = [new Dependency(1, new PortName("拆分"), new PortName("拆分"), PortType.Data, 0)],
                 Outputs = [],
                 SystemPrompt = [],
                 MaxRuns = 100,

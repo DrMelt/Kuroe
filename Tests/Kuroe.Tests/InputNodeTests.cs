@@ -320,7 +320,7 @@ public sealed class InputNodeTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -331,10 +331,10 @@ public sealed class InputNodeTests
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                       "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标"] }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
                     },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": ["收集@回答"] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "收集@回答" } ] }
                   ]
                 }
               ]
@@ -349,7 +349,7 @@ public sealed class InputNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -360,7 +360,7 @@ public sealed class InputNodeTests
                       "Kind": "Container",
                       "Gate": "Review",
                       "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "From": ["Start@目标"] }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "From": [ { "目标": "Start@目标" } ] }
                       ]
                     }
                   ]
@@ -378,14 +378,14 @@ public sealed class InputNodeTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Kind": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Kind": "Data" }], "From": ["Start@目标", "回话@回复"] },
-                    { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Kind": "Data" }], "From": ["收话@回答"] }
+                    { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Data" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
+                    { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Data" }], "From": [ { "回答": "收话@回答" } ] }
                   ]
                 }
               ]

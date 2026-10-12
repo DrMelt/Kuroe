@@ -51,7 +51,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
             List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } branch })
+                if (edge.Kind == EdgeKind.Split && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } branch })
                 {
                     branches.Add(branch);
                 }

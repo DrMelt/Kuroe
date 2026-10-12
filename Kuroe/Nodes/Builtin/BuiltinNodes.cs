@@ -12,12 +12,22 @@ internal static class BuiltinNodes
     /// <summary>规划节点的拆分支票端口名。</summary>
     internal static PortName SplitPort { get; } = new("拆分");
 
+    /// <summary>规划节点承接任务目标的输入端口名。</summary>
+    internal static PortName GoalPort { get; } = new("目标");
+
+    /// <summary>执行节点承接待实施条目的输入端口名。</summary>
+    internal static PortName TaskPort { get; } = new("任务");
+
+    /// <summary>交付容器的传入端口名。</summary>
+    internal static PortName PlanPort { get; } = new("计划");
+
     /// <summary>执行节点：把目标拆成条目。</summary>
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
         Kind = NodeKind.Executable,
-        Outputs = [new Port(SplitPort, PortKind.Items, "目标拆成的条目清单。")],
+        Inputs = [new InputPort(GoalPort, PortType.Data, "要拆分的任务目标。")],
+        Outputs = [new Port(SplitPort, PortType.Items, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec
         {
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
@@ -29,6 +39,7 @@ internal static class BuiltinNodes
     {
         Name = new NodeName("执行"),
         Kind = NodeKind.Executable,
+        Inputs = [new InputPort(TaskPort, PortType.Data, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {
             Tools = [new ToolPath("GetLocalTime")],
@@ -41,7 +52,7 @@ internal static class BuiltinNodes
     {
         Name = new NodeName("交付"),
         Kind = NodeKind.Container,
-        Inputs = [new ContainerInput(new PortName("计划"), "待实施的条目拆分，来自规划节点。")],
+        Inputs = [new InputPort(PlanPort, PortType.Data, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =
         [
@@ -51,7 +62,7 @@ internal static class BuiltinNodes
                 Kind = null,
                 Use = new NodeName("执行"),
                 Model = ExecutorSlot,
-                From = [new SourceRef(PortRef.Bound(new PortName("计划")))],
+                From = [new FromGroup([new FromLink(TaskPort, PortRef.Bound(PlanPort))])],
             },
         ],
     };

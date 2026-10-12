@@ -87,7 +87,7 @@ public sealed class SnapshotTests
     private static readonly Flow.ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
-        [new Port(new PortName("目标"), PortKind.Data)],
+        [new Port(new PortName("目标"), PortType.Data)],
         new NodeSpec
         {
             Name = new NodeName("整体"),
@@ -106,7 +106,7 @@ public sealed class SnapshotTests
             Name = StartNode.ReservedName,
             Path = new NodePath([StartNode.ReservedName]),
             Gate = NodeGate.Auto,
-            Outputs = [new Port(new PortName("目标"), PortKind.Data)],
+            Outputs = [new Port(new PortName("目标"), PortType.Data)],
         },
         new ExecutableNode
         {
@@ -131,7 +131,7 @@ public sealed class SnapshotTests
             Kind = NodeKind.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(1, new PortName("拆分"))],
+            From = [new Dependency(1, new PortName("拆分"), new PortName("拆分"), PortType.Data, 0)],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

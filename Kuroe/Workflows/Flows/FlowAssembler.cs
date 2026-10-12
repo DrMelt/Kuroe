@@ -274,7 +274,7 @@ static class FlowAssembler
 
             if (dto.Inputs is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于容器定义。"));
+                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于被引用的定义。"));
             }
 
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
@@ -319,7 +319,7 @@ static class FlowAssembler
                 return useErrors;
             }
 
-            ErrorOr<IReadOnlyList<SourceRef>> resolvedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+            ErrorOr<IReadOnlyList<FromGroup>> resolvedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
             if (resolvedFrom.IsError)
             {
                 return resolvedFrom.ErrorsOrEmptyList;
@@ -432,7 +432,7 @@ static class FlowAssembler
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点必须声明子节点。"));
             }
 
-            ErrorOr<IReadOnlyList<ContainerInput>> inputs = ToContainerInputs(dto.Inputs, scope, dto.Name ?? string.Empty);
+            ErrorOr<IReadOnlyList<InputPort>> inputs = ToInputs(dto.Inputs, scope, dto.Name ?? string.Empty);
             if (inputs.IsError)
             {
                 containerErrors.AddRange(inputs.ErrorsOrEmptyList);
@@ -468,15 +468,16 @@ static class FlowAssembler
             leafErrors.Add(scope.Node(dto.Name ?? string.Empty, $"{kind} 节点不能声明子节点，子节点只属于容器。"));
         }
 
-        if (dto.Inputs is { Count: > 0 })
-        {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不能声明输入端口，接线从引用处提供。"));
-        }
-
         if (dto.In is { Count: > 0 })
         {
             leafErrors.Add(scope.Node(dto.Name ?? string.Empty,
-                "执行节点不写输入端口绑定，上下文输入用 From 条目的 Context 标记。"));
+                "执行节点不写输入端口绑定，接线一律经 From。"));
+        }
+
+        ErrorOr<IReadOnlyList<InputPort>> leafInputs = ToInputs(dto.Inputs, scope, dto.Name ?? string.Empty);
+        if (leafInputs.IsError)
+        {
+            leafErrors.AddRange(leafInputs.ErrorsOrEmptyList);
         }
 
         if (HasModels(dto.Models))
@@ -523,7 +524,7 @@ static class FlowAssembler
             return leafErrors;
         }
 
-        ErrorOr<IReadOnlyList<SourceRef>> parsedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+        ErrorOr<IReadOnlyList<FromGroup>> parsedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
         if (parsedFrom.IsError)
         {
             return parsedFrom.ErrorsOrEmptyList;
@@ -534,6 +535,7 @@ static class FlowAssembler
             Name = new NodeName(dto.Name ?? string.Empty),
             Kind = kind,
             Gate = dto.Gate ?? NodeGate.Auto,
+            Inputs = leafInputs.Value,
             From = parsedFrom.Value,
             Model = ToModel(dto.Model),
             Outputs = outputs.Value,
@@ -609,7 +611,7 @@ static class FlowAssembler
             $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
     }
 
-    /// <summary>解析输出端口表：条目写 Name 与 Kind，Kind 必填，说明可写 Description。
+    /// <summary>解析输出端口表：条目写 Name 与 Type，Type 必填，说明可写 Description。
     /// allowValue 为真时接受开始端口的固定值 Value。</summary>
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(List<JsonElement>? entries, NodeScope scope, string nodeName, bool allowValue)
     {
@@ -624,12 +626,12 @@ static class FlowAssembler
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "输出端口条目必须是带 Name 与 Kind 的对象，说明写 Description。"));
+                errors.Add(scope.Node(nodeName, "输出端口条目必须是带 Name 与 Type 的对象，说明写 Description。"));
                 continue;
             }
 
             string? declaredName = null;
-            PortKind? declaredKind = null;
+            PortType? declaredType = null;
             string? declaredDescription = null;
             string? declaredValue = null;
             bool invalid = false;
@@ -649,16 +651,17 @@ static class FlowAssembler
                         }
                         break;
 
-                    case "kind":
+                    case "type":
                         if (property.Value.ValueKind != JsonValueKind.String
-                            || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortKind parsedKind))
+                            || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
+                            || parsedType is not (PortType.Data or PortType.Items or PortType.Context))
                         {
-                            errors.Add(scope.Node(nodeName, "输出端口的 Kind 应为 Data、Items 或 Context。"));
+                            errors.Add(scope.Node(nodeName, "输出端口的 Type 应为 Data、Items 或 Context。"));
                             invalid = true;
                         }
                         else
                         {
-                            declaredKind = parsedKind;
+                            declaredType = parsedType;
                         }
                         break;
 
@@ -675,7 +678,7 @@ static class FlowAssembler
                         break;
 
                     case "ref":
-                        errors.Add(scope.Node(nodeName, "执行节点的输出端口条目写 Name 与 Kind，不写 Ref。"));
+                        errors.Add(scope.Node(nodeName, "执行节点的输出端口条目写 Name 与 Type，不写 Ref。"));
                         invalid = true;
                         break;
 
@@ -698,8 +701,8 @@ static class FlowAssembler
 
                     default:
                         errors.Add(scope.Node(nodeName, allowValue
-                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Kind、Description 与 Value。"
-                            : $"输出端口不认识键 {property.Name}，条目写 Name、Kind 与 Description。"));
+                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Value。"
+                            : $"输出端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
                         invalid = true;
                         break;
                 }
@@ -717,40 +720,41 @@ static class FlowAssembler
                 continue;
             }
 
-            if (declaredKind is null)
+            if (declaredType is null)
             {
-                errors.Add(scope.Node(nodeName, "输出端口的 Kind 不能省略，必须是 Data、Items 或 Context。"));
+                errors.Add(scope.Node(nodeName, "输出端口的 Type 不能省略，必须是 Data、Items 或 Context。"));
                 continue;
             }
 
-            result.Add(new Port(parsedName.Value, declaredKind.Value, ToDescription(declaredDescription), declaredValue));
+            result.Add(new Port(parsedName.Value, declaredType.Value, ToDescription(declaredDescription), declaredValue));
         }
 
         return errors.Count > 0 ? errors : result;
     }
 
-    /// <summary>解析容器传入端口表：条目写 Name 与可选 Description，成员用 @端口名 引用。</summary>
-    private static ErrorOr<IReadOnlyList<ContainerInput>> ToContainerInputs(
+    /// <summary>解析输入端口表：条目写 Name 与可选 Type、Description，成员与执行节点都用它声明目标侧输入。</summary>
+    private static ErrorOr<IReadOnlyList<InputPort>> ToInputs(
         List<JsonElement>? entries,
         NodeScope scope,
         string nodeName)
     {
         if (entries is not { Count: > 0 })
         {
-            return Array.Empty<ContainerInput>();
+            return Array.Empty<InputPort>();
         }
 
-        List<ContainerInput> result = [];
+        List<InputPort> result = [];
         List<Error> errors = [];
         foreach (JsonElement entry in entries)
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "容器传入端口条目必须是带 Name 的对象，说明写 Description。"));
+                errors.Add(scope.Node(nodeName, "输入端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
                 continue;
             }
 
             string? declaredName = null;
+            PortType? declaredType = null;
             string? declaredDescription = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
@@ -760,7 +764,7 @@ static class FlowAssembler
                     case "name":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "容器传入端口的 Name 键必须是端口名。"));
+                            errors.Add(scope.Node(nodeName, "输入端口的 Name 键必须是端口名。"));
                             invalid = true;
                         }
                         else
@@ -769,10 +773,24 @@ static class FlowAssembler
                         }
                         break;
 
+                    case "type":
+                        if (property.Value.ValueKind != JsonValueKind.String
+                            || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
+                            || parsedType is not (PortType.Data or PortType.Context or PortType.Signal))
+                        {
+                            errors.Add(scope.Node(nodeName, "输入端口的 Type 应为 Data、Context 或 Signal。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            declaredType = parsedType;
+                        }
+                        break;
+
                     case "description":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "容器传入端口的 Description 键必须是说明文本。"));
+                            errors.Add(scope.Node(nodeName, "输入端口的 Description 键必须是说明文本。"));
                             invalid = true;
                         }
                         else
@@ -782,7 +800,7 @@ static class FlowAssembler
                         break;
 
                     default:
-                        errors.Add(scope.Node(nodeName, $"容器传入端口不认识键 {property.Name}，条目写 Name 与 Description。"));
+                        errors.Add(scope.Node(nodeName, $"输入端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
                         invalid = true;
                         break;
                 }
@@ -800,7 +818,7 @@ static class FlowAssembler
                 continue;
             }
 
-            result.Add(new ContainerInput(parsedName.Value, ToDescription(declaredDescription)));
+            result.Add(new InputPort(parsedName.Value, declaredType ?? PortType.Data, ToDescription(declaredDescription)));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -873,11 +891,6 @@ static class FlowAssembler
                         {
                             declaredDescription = property.Value.GetString();
                         }
-                        break;
-
-                    case "kind":
-                        errors.Add(scope.Node(nodeName, "容器输出端口条目写 Name 与 Ref，不写 Kind。"));
-                        invalid = true;
                         break;
 
                     default:
@@ -1001,120 +1014,58 @@ static class FlowAssembler
         return null;
     }
 
-    /// <summary>把上游接线条目装配成模型：字符串条目是来源名，对象条目允许写 Node、Or、Signal、Context 键。
-    /// 字段类型不符记入错误，不抛异常。</summary>
-    private static ErrorOr<IReadOnlyList<SourceRef>> ToFrom(List<JsonElement>? entries, NodeScope scope, string nodeName)
+    /// <summary>把上游启动组装配成模型：数组元素是一个组，组内是输入端口名到来源端口引用的映射。
+    /// 值必须是引用文本，字段类型不符记入错误，不抛异常。</summary>
+    private static ErrorOr<IReadOnlyList<FromGroup>> ToFrom(List<JsonElement>? entries, NodeScope scope, string nodeName)
     {
         if (entries is not { Count: > 0 })
         {
-            return Array.Empty<SourceRef>();
+            return Array.Empty<FromGroup>();
         }
 
-        List<SourceRef> result = [];
+        List<FromGroup> result = [];
         List<Error> errors = [];
         foreach (JsonElement entry in entries)
         {
-            if (entry.ValueKind == JsonValueKind.String)
-            {
-                ErrorOr<PortRef> parsedString = ParsePortRef(entry.GetString() ?? string.Empty);
-                if (parsedString.IsError)
-                {
-                    errors.AddRange(parsedString.ErrorsOrEmptyList);
-                }
-                else
-                {
-                    result.Add(new SourceRef(parsedString.Value));
-                }
-
-                continue;
-            }
-
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "From 条目必须是来源名或带 Node 键的对象。"));
+                errors.Add(scope.Node(nodeName, "From 的每个组必须是对象，键写输入端口名，值写来源端口引用。"));
                 continue;
             }
 
-            string? node = null;
-            string? or = null;
-            bool signal = false;
-            bool context = false;
+            List<FromLink> links = [];
             foreach (JsonProperty property in entry.EnumerateObject())
             {
-                switch (property.Name.ToLowerInvariant())
+                ErrorOr<PortName> input = PortName.Create(property.Name);
+                if (input.IsError)
                 {
-                    case "node":
-                        if (property.Value.ValueKind != JsonValueKind.String)
-                        {
-                            errors.Add(scope.Node(nodeName, "From 条目的 Node 键必须是来源名。"));
-                        }
-                        else
-                        {
-                            node = property.Value.GetString();
-                        }
-                        break;
-
-                    case "or":
-                        if (property.Value.ValueKind != JsonValueKind.String)
-                        {
-                            errors.Add(scope.Node(nodeName, "From 条目的 Or 键必须是组名。"));
-                        }
-                        else
-                        {
-                            or = property.Value.GetString();
-                        }
-                        break;
-
-                    case "signal":
-                        if (property.Value.ValueKind != JsonValueKind.True && property.Value.ValueKind != JsonValueKind.False)
-                        {
-                            errors.Add(scope.Node(nodeName, "From 条目的 Signal 键必须是布尔值。"));
-                        }
-                        else
-                        {
-                            signal = property.Value.GetBoolean();
-                        }
-                        break;
-
-                    case "context":
-                        if (property.Value.ValueKind != JsonValueKind.True && property.Value.ValueKind != JsonValueKind.False)
-                        {
-                            errors.Add(scope.Node(nodeName, "From 条目的 Context 键必须是布尔值。"));
-                        }
-                        else
-                        {
-                            context = property.Value.GetBoolean();
-                        }
-                        break;
+                    errors.AddRange(input.ErrorsOrEmptyList);
+                    continue;
                 }
+
+                if (property.Value.ValueKind != JsonValueKind.String)
+                {
+                    errors.Add(scope.Node(nodeName, $"From 连接 {property.Name} 的来源必须是引用文本，写 @端口 或 来源@端口。"));
+                    continue;
+                }
+
+                ErrorOr<PortRef> reference = ParsePortRef(property.Value.GetString() ?? string.Empty);
+                if (reference.IsError)
+                {
+                    errors.AddRange(reference.ErrorsOrEmptyList);
+                    continue;
+                }
+
+                links.Add(new FromLink(input.Value, reference.Value));
             }
 
-            if (string.IsNullOrWhiteSpace(node))
+            if (links.Count == 0)
             {
-                errors.Add(scope.Node(nodeName, "From 对象条目必须写 Node 键提供来源名。"));
+                errors.Add(scope.Node(nodeName, "From 的组至少要有一条连接。"));
                 continue;
             }
 
-            if (context && node.StartsWith('@'))
-            {
-                errors.Add(scope.Node(nodeName, "Context 条目来源必须写节点名或 来源@端口，不能引用绑定端口。"));
-                continue;
-            }
-
-            if ((or is not null ? 1 : 0) + (signal ? 1 : 0) + (context ? 1 : 0) > 1)
-            {
-                errors.Add(scope.Node(nodeName, "From 条目不能同时写 Or、Signal、Context。"));
-                continue;
-            }
-
-            ErrorOr<PortRef> parsedRef = ParsePortRef(node);
-            if (parsedRef.IsError)
-            {
-                errors.AddRange(parsedRef.ErrorsOrEmptyList);
-                continue;
-            }
-
-            result.Add(new SourceRef(parsedRef.Value, or, signal, context));
+            result.Add(new FromGroup(links));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -1157,7 +1108,7 @@ static class FlowAssembler
         Nodes = [ToNodeDto(flow.RootNode)],
     };
 
-    /// <summary>把输出端口表转回文件形状：条目写 Name 与 Kind，说明写 Description。</summary>
+    /// <summary>把输出端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
     private static List<JsonElement>? ToPortDtos(IReadOnlyList<Port> ports)
     {
         if (ports.Count == 0)
@@ -1169,21 +1120,26 @@ static class FlowAssembler
         foreach (Port port in ports)
         {
             entries.Add(JsonSerializer.SerializeToElement(
-                new PortEntryDto { Name = port.Name.Value, Kind = port.Kind, Description = port.Description, Value = port.Value },
+                new PortEntryDto { Name = port.Name.Value, Type = port.Type, Description = port.Description, Value = port.Value },
                 FlowJson.Default.PortEntryDto));
         }
 
         return entries;
     }
 
-    /// <summary>把容器传入端口表转回文件形状：条目写 Name，说明写 Description。</summary>
-    private static List<JsonElement>? ToContainerInputDtos(IReadOnlyList<ContainerInput> inputs)
+    /// <summary>把输入端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
+    private static List<JsonElement>? ToInputDtos(IReadOnlyList<InputPort> inputs)
     {
+        if (inputs.Count == 0)
+        {
+            return null;
+        }
+
         List<JsonElement> entries = [];
-        foreach (ContainerInput input in inputs)
+        foreach (InputPort input in inputs)
         {
             entries.Add(JsonSerializer.SerializeToElement(
-                new PortEntryDto { Name = input.Name.Value, Description = input.Description },
+                new PortEntryDto { Name = input.Name.Value, Type = input.Type, Description = input.Description },
                 FlowJson.Default.PortEntryDto));
         }
 
@@ -1215,7 +1171,7 @@ static class FlowAssembler
             From = node.From.Count == 0 ? null : [.. node.From.Select(ToFromDto)],
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
-            Inputs = node.Inputs.Count == 0 ? null : ToContainerInputDtos(node.Inputs),
+            Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
             Outputs = node.ContainerOutputs is { Count: > 0 } containerOutputs
                 ? ToContainerOutputDtos(containerOutputs)
                 : ToPortDtos(node.Outputs),
@@ -1246,22 +1202,11 @@ static class FlowAssembler
         return dto;
     }
 
-    /// <summary>把一条上游接线条目转回文件形状：无标记条目按来源名写字符串，带标记条目写对象。</summary>
-    private static JsonElement ToFromDto(SourceRef source)
-    {
-        if (source.Or is null && !source.Signal && !source.Context)
-        {
-            return JsonSerializer.SerializeToElement(source.Ref.Display, FlowJson.Default.String);
-        }
-
-        return JsonSerializer.SerializeToElement(new FromEntryDto
-        {
-            Node = source.Ref.Display,
-            Or = source.Or,
-            Signal = source.Signal ? true : null,
-            Context = source.Context ? true : null,
-        }, FlowJson.Default.FromEntryDto);
-    }
+    /// <summary>把一组上游连接转回文件形状：组内是输入名到来源端口引用的映射。</summary>
+    private static JsonElement ToFromDto(FromGroup group) =>
+        JsonSerializer.SerializeToElement(
+            group.Links.ToDictionary(link => link.Input.Value, link => link.Ref.Display),
+            FlowJson.Default.DictionaryStringString);
 
     /// <summary>把模型层的输出校验转回文件形状。</summary>
     private static ValidationDto? ToValidationDto(OutputValidation? validation) =>

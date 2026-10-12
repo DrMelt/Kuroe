@@ -48,7 +48,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument("端口产出已提交，无需重复提交。");
             }
 
-            HashSet<PortName> declared = [.. executable.Outputs.Where(port => port.Kind == PortKind.Data).Select(port => port.Name)];
+            HashSet<PortName> declared = [.. executable.Outputs.Where(port => port.Type == PortType.Data).Select(port => port.Name)];
             if (!declared.SetEquals(parsed.Value.Keys))
             {
                 return ToolErrors.Argument($"端口必须与声明一一对应，应提交 {string.Join('、', declared)}。");

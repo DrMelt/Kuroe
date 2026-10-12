@@ -30,8 +30,8 @@ internal sealed class NodeDto
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public List<string>? SystemPrompt { get; set; }
 
-    /// <summary>上游接线条目：字符串条目是引用文本（@端口 或 来源@端口），对象条目写 Node、Or、Signal 键。
-    /// 引用规则由 FlowRules 校验。</summary>
+    /// <summary>上游启动组：数组元素是一个组，组内是输入端口名到来源端口引用的映射，值写 @端口 或 来源@端口。
+    /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 FlowRules 校验。</summary>
     public List<JsonElement>? From { get; set; }
 
     /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
@@ -40,7 +40,8 @@ internal sealed class NodeDto
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
     public int? MaxRuns { get; set; }
 
-    /// <summary>容器传入端口条目：写 Name 与可选 Description，成员用 @端口名 引用。</summary>
+    /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Description。
+    /// 容器的输入端口由引用处 In 绑定，执行节点的由自身 From 绑定。</summary>
     public List<JsonElement>? Inputs { get; set; }
 
     /// <summary>容器引用把端口绑定到当前作用域可达节点。</summary>
@@ -66,13 +67,13 @@ internal sealed class NodeDto
     public List<NodeDto>? Nodes { get; set; }
 }
 
-/// <summary>端口的对象形状：执行节点与输入节点写 Name 与 Kind，容器输出端口写 Name 与 Ref，容器传入端口写 Name，键名与读侧一致。</summary>
+/// <summary>端口的对象形状：输出端口写 Name 与 Type，容器输出端口写 Name 与 Ref，输入端口写 Name 与可选 Type，键名与读侧一致。</summary>
 internal sealed class PortEntryDto
 {
     public string? Name { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public PortKind? Kind { get; set; }
+    public PortType? Type { get; set; }
 
     /// <summary>容器输出端口的转发目标，写 成员@端口。</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -85,22 +86,6 @@ internal sealed class PortEntryDto
     /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交的任务目标。</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Value { get; set; }
-}
-
-/// <summary>上游接线条目的对象形状：写侧把带标记的条目序列化成对象，键名与读侧一致。
-/// 未用的标记不写，回读时缺键即视为未提供。</summary>
-internal sealed class FromEntryDto
-{
-    public string? Node { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Or { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Signal { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Context { get; set; }
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>

@@ -4,7 +4,7 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：开始登记为序号 0 的唯一来源，节点按先根序统一编号，容器登记成员与子容器，
-/// From 条目编译为带消费方式与角色的边：可选组条目按单份消费、信号条目固定单份只发触发信号。
+/// From 启动组编译为带取值域与输入类型的边：输入类型非 Data 的按整份消费，其余按来源与目标模式推导。
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
@@ -43,21 +43,21 @@ internal static class FlowCompiler
         {
             foreach (Dependency dependency in executable.From)
             {
-                // 可选组、上下文与信号条目按单份消费，其余按来源与目标模式推导，端口与消费方式正交
-                EdgeFeed feed = dependency.Or is not null || dependency.Signal || dependency.Context
-                    ? EdgeFeed.Single
-                    : EdgeFeedRules.Of(nodes[dependency.From], executable.Execution.Mode, dependency.Port);
-                EdgeRole role;
-                if (dependency.Signal)
-                {
-                    role = EdgeRole.Trigger;
-                }
-                else
-                {
-                    role = dependency.Context ? EdgeRole.ContextInput : EdgeRole.Data;
-                }
+                // 上下文与信号输入按整份消费，其余按来源与目标模式推导，来源端口与取值域正交
+                (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = dependency.Type == Flow.PortType.Data
+                    ? FeedRules.Of(nodes[dependency.From], executable.Execution.Mode, dependency.Port)
+                    : (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat);
 
-                edges.Add(new FlowEdge(dependency.From, executable.Index, feed, dependency.Port, role, dependency.Or));
+                edges.Add(new FlowEdge(
+                    dependency.From,
+                    executable.Index,
+                    kind,
+                    scope,
+                    recurrence,
+                    dependency.Port,
+                    dependency.Input,
+                    dependency.Type,
+                    dependency.Group));
             }
         }
 
@@ -163,7 +163,7 @@ internal static class FlowCompiler
             Kind = node.EffectiveKind,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
-            From = [.. node.From.Select(source => ResolveFrom(source, order))],
+            From = ResolveFrom(node.From, node, order),
             Outputs = node.Outputs,
             SystemPrompt = node.SystemPrompt,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
@@ -174,16 +174,33 @@ internal static class FlowCompiler
         IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? outputs) =>
         outputs?.ToDictionary(entry => entry.Key, entry => entry.Value.Ref);
 
-    /// <summary>把一条上游接线条目解析成图依赖：来源序号经查表落定，Or、Signal 与 Context 标记原样保留。
+    /// <summary>把启动组编译成图依赖：来源序号经查表落定，类型取自目标输入端口的声明，组序号按组序给出。
     /// 绑定端口引用在 From 里不成立，编译前应由校验层拦截，这里给防御性错误。</summary>
-    private static Dependency ResolveFrom(Flow.SourceRef source, Dictionary<Flow.NodeName, int> order)
+    private static List<Dependency> ResolveFrom(
+        IReadOnlyList<Flow.FromGroup> groups,
+        Flow.NodeSpec node,
+        Dictionary<Flow.NodeName, int> order)
     {
-        if (source.Ref.Source is not { } name)
+        List<Dependency> dependencies = [];
+        int groupIndex = 0;
+        foreach (Flow.FromGroup group in groups)
         {
-            throw new InvalidOperationException(
-                $"From 条目 {source.Ref.Display} 是对绑定端口的引用，编译只接受已展开的流程树。");
+            foreach (Flow.FromLink link in group.Links)
+            {
+                if (link.Ref.Source is not { } name)
+                {
+                    throw new InvalidOperationException(
+                        $"From 连接 {link.Ref.Display} 是对绑定端口的引用，编译只接受已展开的流程树。");
+                }
+
+                Flow.InputPort? input = Flow.Ports.Find(node.Inputs, link.Input);
+                Flow.PortType type = input?.Type ?? Flow.PortType.Data;
+                dependencies.Add(new Dependency(order[name], link.Ref.Port, link.Input, type, groupIndex));
+            }
+
+            groupIndex++;
         }
 
-        return new Dependency(order[name], source.Ref.Port, source.Or, source.Signal, source.Context);
+        return dependencies;
     }
 }

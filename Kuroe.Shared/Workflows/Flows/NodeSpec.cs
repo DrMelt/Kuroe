@@ -20,8 +20,9 @@ public sealed record NodeSpec
     /// <summary>节点产出后是否停在待批准：执行节点产出后，容器成员产出齐备后。</summary>
     public NodeGate Gate { get; init; } = NodeGate.Auto;
 
-    /// <summary>容器声明传入端口，成员可用 @端口 引用。</summary>
-    public IReadOnlyList<ContainerInput> Inputs { get; init; } = [];
+    /// <summary>输入端口声明：执行节点与容器共用，容器由引用处绑定，执行节点由自身 From 绑定；
+    /// 成员用 @端口 引用容器传入端口。</summary>
+    public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
     /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名@端口 精确取成员命名段。
     /// 属于容器定义与装配层内联容器，引用处不能修改；下游执行节点经 From 按端口消费。
@@ -32,13 +33,11 @@ public sealed record NodeSpec
     /// 执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? In { get; init; }
 
-    /// <summary>上游接线条目：条目必写 来源@端口 引用来源的输出端口，或 @端口 引用容器传入端口。
-    /// <see cref="SourceRef.Or"/> 把条目归入可选启动组，<see cref="SourceRef.Signal"/> 让来源产出不进上下文只作触发信号，
-    /// <see cref="SourceRef.Context"/> 把来源产出置于目标上下文最前。
-    /// 执行节点定义与节点组成员上禁止声明，引用处注入。</summary>
-    public IReadOnlyList<SourceRef> From { get; init; } = [];
+    /// <summary>上游启动组：组是一套完整的输入绑定方案，组内是输入端口到来源端口的连接，组间任一齐备即启动。
+    /// 取用方式由输入端口的声明决定。库执行定义不写接线，由引用处注入；库容器成员与装配层节点自身声明。</summary>
+    public IReadOnlyList<FromGroup> From { get; init; } = [];
 
-    /// <summary>执行节点的输出端口表：名字与种类。种类在编译期落定消费方式，引用处按名字消费。
+    /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
     /// 模型逐 run 交回 Data 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 

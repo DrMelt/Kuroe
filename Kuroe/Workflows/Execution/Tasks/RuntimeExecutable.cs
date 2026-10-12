@@ -3,6 +3,7 @@ using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Shared.Workflows.Tasks;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
@@ -10,25 +11,24 @@ namespace Kuroe.Workflows.Execution.Tasks;
 
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode(executable)
+internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode(executable), IInputProgress
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
 
-    /// <summary>输入侧消费账本，整节点执行节点装配；按条目节点与输入节点为空，走各自判定。</summary>
-    public NodeInput? Input { get; private set; }
-
-    /// <summary>绑定输入消费账本。</summary>
-    public void Bind(NodeInput input) => Input = input;
-
     /// <summary>执行节点的展开模式：整节点一次执行还是按实例逐步启动。</summary>
     public NodeMode Mode => Executable.Execution.Mode;
 
-    /// <summary>PerItem 执行节点的实例条目集，Single 执行节点为空。实例集确定后不再变化。</summary>
-    public IReadOnlyList<int> Items { get; private set; } = [];
+    /// <summary>已确定的实例条目集，整节点与尚未展开时为空。实例集确定后不再变化。</summary>
+    public override IReadOnlyList<int> Items => _items;
+
+    private List<int> _items = [];
 
     /// <summary>实例集已确定。</summary>
     public bool Expanded { get; private set; }
+
+    /// <summary>输入侧消费账，版本驱动的判定按它比较来源版本。</summary>
+    private readonly ConsumptionLedger _consumed = new();
 
     /// <summary>在跑的实例数。推进时经 AddActive 与 ReleaseActive 改动。</summary>
     public int Active { get; private set; }
@@ -103,18 +103,30 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>是否仍有在跑的实例。</summary>
     public bool HasActive => Active > 0;
 
-    /// <summary>已确定的实例集，尚未展开时为空。</summary>
-    public IReadOnlyList<int>? ExpandedItems => Expanded ? [.. Items] : null;
-
-    /// <summary>固定实例集并标为已展开，PerItem 实例展开的落点。</summary>
+    /// <summary>固定实例集并标为已展开，实例展开的落点。</summary>
     public void AdoptItems(IReadOnlyList<int> items)
     {
-        Items = items;
+        _items = [.. items];
         Expanded = true;
     }
 
-    /// <summary>实例集已展开且承担该条目。</summary>
-    public bool HasItem(int index) => Expanded && Items.Contains(index);
+    /// <summary>该实例是否已有发表产出。</summary>
+    public override bool ProducedItem(int item) => _publishedItems.Contains(item);
+
+    /// <summary>启动即登记方案内全部取值来源的当前版本，防止同版本重复触发。</summary>
+    public void Consume(NodeInputPlan plan, IExecutionSources sources) => _consumed.Record(plan, sources);
+
+    IReadOnlyList<int>? IInputProgress.AdoptedItems => Expanded ? _items : null;
+
+    long IInputProgress.ConsumedRevision(int source) => _consumed.Revision(source);
+
+    bool IInputProgress.ConsumedOnce(int source) => _consumed.ConsumedOnce(source);
+
+    bool IInputProgress.Produced(int? item) => Complete(item);
+
+    int IInputProgress.Runs(int? item) => ExecutionCount(item);
+
+    bool IInputProgress.ForceRerun => RerunRequested;
 
     /// <summary>实例或整节点是否已有发表产出。</summary>
     public bool Complete(int? item) => item is { } index ? _publishedItems.Contains(index) : Published;
@@ -268,13 +280,13 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// 输入节点的产出是当前回答，PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
     public override string? PortText(WorkTask task, PortName port)
     {
-        PortKind? kind = Executable.FindPort(port)?.Kind;
-        if (kind == PortKind.Context)
+        PortType? type = Executable.FindPort(port)?.Type;
+        if (type == PortType.Context)
         {
             return ContextOutput(task);
         }
 
-        if (kind == PortKind.Items)
+        if (type == PortType.Items)
         {
             // 拆分支票是结构化产出，不产生可注入文本
             return null;
@@ -282,7 +294,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         if (IsInput)
         {
-            if (kind != PortKind.Data)
+            if (type != PortType.Data)
             {
                 return null;
             }
@@ -309,11 +321,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         task.PortValuesFor(Index, item)?.GetValueOrDefault(port);
 
     /// <summary>按输出端口取可注入的产出消息集：PerItem 逐实例，其余单条，Context 端口给装配帧，Items 端口不注入。
-    /// item 指定时只取该实例的产出，供对齐边按条目消费，不受整节点放行状态约束。</summary>
+    /// item 指定时只取该实例的产出，供同序号实例取值，不受整节点放行状态约束。</summary>
     public override IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item)
     {
-        PortKind? kind = Executable.FindPort(port)?.Kind;
-        if (kind == PortKind.Context)
+        PortType? type = Executable.FindPort(port)?.Type;
+        if (type == PortType.Context)
         {
             // PerItem 来源的上下文端口逐实例展开各帧，与其它端口逐实例取产出一致
             if (item is null && Mode == NodeMode.PerItem)
@@ -330,7 +342,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             return ContextFrameMessages(task, item);
         }
 
-        if (kind == PortKind.Items)
+        if (type == PortType.Items)
         {
             // 拆分支票是结构化产出，不注入文本上下文
             return [];
@@ -365,7 +377,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     {
         if (IsInput)
         {
-            if (Executable.Outputs.Find(port) is not { Kind: PortKind.Data }
+            if (Executable.Outputs.Find(port) is not { Type: PortType.Data }
                 || InputAnswer is not { Length: > 0 } answer)
             {
                 return [];

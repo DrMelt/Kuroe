@@ -193,9 +193,14 @@ internal sealed class FlowCommands(
             parts.Add($"工具 {string.Join("、", executable.Tools)}");
         }
 
+        if (node.Inputs.Count > 0)
+        {
+            parts.Add($"输入 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+        }
+
         if (node.From.Count > 0)
         {
-            parts.Add($"取自 {string.Join("、", node.From)}");
+            parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
         if (executable.Question is { Length: > 0 })

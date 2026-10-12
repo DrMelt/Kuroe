@@ -3,14 +3,15 @@ using Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Shared.Workflows.Graph;
 
 /// <summary>流程编译出的执行视图：节点按先根序统一编号，开始在最前，执行节点与容器在一张表里，
-/// 依赖以显式边表达，消费方式固化在边上。执行按“边齐备则激活”推进，节点序号只作定位与展示。
-/// 构造时按入出边建索引并登记容器归属。</summary>
+/// 依赖以显式边表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进，节点序号只作定位与展示。
+/// 构造时按入出边建索引、登记容器归属，并算出各节点的输入侧方案。</summary>
 public sealed class NodeGraph
 {
     private readonly Dictionary<NodeName, int> _byName;
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _incoming = [];
     private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
     private readonly Dictionary<int, int> _parentContainer;
+    private readonly NodeInputPlan?[] _plans;
 
     /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
@@ -46,6 +47,8 @@ public sealed class NodeGraph
             _incoming[edge.To] = [.. incoming, edge];
             _outgoing[edge.From] = [.. outgoing, edge];
         }
+
+        _plans = BuildPlans();
     }
 
     /// <summary>全部节点：开始、执行节点与容器，按先根序统一编号。</summary>
@@ -86,29 +89,112 @@ public sealed class NodeGraph
     /// <summary>来源的出边，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Outgoing(int source) => _outgoing.GetValueOrDefault(source) ?? [];
 
-    /// <summary>来源到目标边的消费方式，没有这条边时为空。</summary>
-    public EdgeFeed? FeedBetween(int from, int to) =>
-        Outgoing(from).FirstOrDefault(edge => edge.To == to)?.Feed;
-
-    /// <summary>来源节点某端口声明的种类，容器与未声明按 Data。供边规则按种类校验。</summary>
-    public PortKind PortKindOf(int nodeIndex, PortName port) =>
+    /// <summary>来源节点某端口声明的类型，容器与未声明按 Data。供边规则按类型校验。</summary>
+    public PortType TypeOf(int nodeIndex, PortName port) =>
         Nodes[nodeIndex] switch
         {
-            ExecutableNode executable => EdgeFeedRules.KindOf(executable, port),
-            StartNode start => start.FindPort(port)?.Kind ?? PortKind.Data,
-            _ => PortKind.Data,
+            ExecutableNode executable => FeedRules.TypeOf(executable, port),
+            StartNode start => start.FindPort(port)?.Type ?? PortType.Data,
+            _ => PortType.Data,
         };
 
-    /// <summary>按条目展开的依据拆分：入边里 Items 方式的来源，没有时为空。</summary>
-    public int? ItemSource(int executableIndex) =>
-        Incoming(executableIndex).FirstOrDefault(edge => edge.Feed == EdgeFeed.Items)?.From;
-
-    /// <summary>执行节点的条目空间：实例条目归属的拆分来源。没有 Items 边时沿 Aligned 边递推到源拆分。</summary>
+    /// <summary>执行节点的条目空间：实例条目归属的拆分来源。自身取方案的拆分来源，按条目对齐的沿对齐来源递推到源拆分。</summary>
     public int? ItemSpace(int executableIndex) =>
-        ItemSource(executableIndex) ?? Incoming(executableIndex)
-            .Where(edge => edge.Feed == EdgeFeed.Aligned)
-            .Select(edge => ItemSpace(edge.From))
-            .FirstOrDefault(space => space is not null);
+        PlanOf(executableIndex) switch
+        {
+            { SplitSource: { } split } => split,
+            { } plan => plan.AlignedSources.Select(ItemSpace).FirstOrDefault(space => space is not null),
+            _ => null,
+        };
+
+    /// <summary>节点的输入侧方案，开始节点与输入节点为空。</summary>
+    public NodeInputPlan? PlanOf(int index) => _plans[index];
+
+    /// <summary>启动条件只读方案，方案由入边与节点声明一次算出：取值边成组、空间边给实例空间来源、驱动按展开模式定。</summary>
+    private NodeInputPlan[] BuildPlans()
+    {
+        NodeInputPlan[] plans = new NodeInputPlan[Nodes.Count];
+        foreach (ExecutableNode executable in ExecutableNodes)
+        {
+            if (executable.Kind != NodeKind.Input)
+            {
+                plans[executable.Index] = PlanFor(executable);
+            }
+        }
+
+        foreach (ContainerNode container in Containers)
+        {
+            plans[container.Index] = PlanFor(container);
+        }
+
+        return plans;
+    }
+
+    /// <summary>执行节点的方案：入边按组聚合，空间边不进组，实例空间来源取自空间边或对齐来源。</summary>
+    private NodeInputPlan PlanFor(ExecutableNode executable)
+    {
+        IReadOnlyList<FlowEdge> incoming = Incoming(executable.Index);
+        bool byItem = executable.Execution.Mode == NodeMode.PerItem;
+        int? splitSource = SplitSource(incoming);
+        IReadOnlyList<int> alignedSources =
+        [
+            .. incoming
+                .Where(edge => edge.Kind == EdgeKind.Value && edge.Scope == FeedScope.Item)
+                .Select(edge => edge.From)
+                .Distinct(),
+        ];
+
+        SpaceKind space = SpaceKind.None;
+        if (splitSource is not null)
+        {
+            space = SpaceKind.Split;
+        }
+        else if (byItem && alignedSources.Count > 0)
+        {
+            space = SpaceKind.Aligned;
+        }
+
+        return new NodeInputPlan
+        {
+            Space = space,
+            SplitSource = splitSource,
+            AlignedSources = alignedSources,
+            Branch = executable.Execution.Branch,
+            Groups =
+            [
+                .. incoming
+                    .GroupBy(edge => edge.Group)
+                    .OrderBy(group => group.Key)
+                    .Select(group => new InputGroup([.. group.Select(BindingOf)])),
+            ],
+            Driver = byItem ? NodeDriver.Completion : NodeDriver.Version,
+            MaxRuns = executable.MaxRuns,
+        };
+    }
+
+    /// <summary>容器的方案：一组绑定覆盖全部直接成员与子容器，成员产出齐备且版本有变化即推进内容版本。</summary>
+    private static NodeInputPlan PlanFor(ContainerNode container) => new()
+    {
+        Space = SpaceKind.None,
+        Groups =
+        [
+            new InputGroup(
+            [
+                .. container.Members
+                    .Concat(container.SubContainers)
+                    .Select(member => new InputBinding(EdgeKind.Value, member, FeedScope.Whole, FeedRecurrence.Repeat, false)),
+            ]),
+        ],
+        Driver = NodeDriver.Version,
+        MaxRuns = int.MaxValue,
+    };
+
+    private static InputBinding BindingOf(FlowEdge edge) =>
+        new(edge.Kind, edge.From, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
+
+    /// <summary>入边里提供拆分空间的空间边来源，没有时为空。</summary>
+    private static int? SplitSource(IReadOnlyList<FlowEdge> incoming) =>
+        incoming.FirstOrDefault(edge => edge.Kind == EdgeKind.Split)?.From;
 
     /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环合法性校验。</summary>
     public IReadOnlyList<int[]> Loops()

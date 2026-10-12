@@ -5,26 +5,26 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Execution.Tasks;
 
 /// <summary>一个容器在任务内的运行时对象：容器定义与容器门控状态。容器不执行、不启动 run，
-/// 放行与门控由 TaskRuntime 随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
+/// 内容齐备与内容版本按输入侧方案随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeContainer(ContainerNode container, Func<int, RuntimeNode?> read) : RuntimeNode(container)
+internal sealed class RuntimeContainer(ContainerNode container, TaskRuntime runtime) : RuntimeNode(container), IInputProgress
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
 
-    private readonly Dictionary<int, long> _publishedSources = [];
+    private readonly ConsumptionLedger _consumed = new();
     private int _revision;
     private bool _awaiting;
     private bool _canceled;
+
+    /// <summary>输入侧方案：一组绑定覆盖全部直接成员与子容器。</summary>
+    private NodeInputPlan Plan => runtime.Graph.PlanOf(Index)!;
 
     /// <summary>内容版本：任一直接来源发布新版本且容器重新齐备即递增，是容器作来源时与执行节点一致的版本账。</summary>
     public override long Revision => _revision;
 
     /// <summary>内容齐备：取消或任一直接成员、子容器未放行时不齐备，不受自身批准等待影响。未实例化的成员没有产出。</summary>
-    public bool ContentReady =>
-        !_canceled
-        && Container.Members.All(member => read(member) is { Released: true })
-        && Container.SubContainers.All(sub => read(sub) is { Released: true });
+    public bool ContentReady => !_canceled && NodeReadiness.Available(Plan, null, runtime);
 
     /// <summary>产出已放行、可被下游消费：内容齐备且容器自身不等待批准。</summary>
     public override bool Released => ContentReady && !_awaiting;
@@ -35,25 +35,31 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>内容齐备的发布落点：来源版本账有变化时记新账并推进内容版本，返回是否产生新版本。</summary>
-    public bool PublishIfChanged(IReadOnlyDictionary<int, long> sources)
+    /// <summary>内容变化的发布落点：成员版本相对消费账有变化且内容齐备时记新账并推进内容版本，返回是否产生新版本。</summary>
+    public bool PublishIfChanged()
     {
-        bool changed = sources.Count != _publishedSources.Count
-            || sources.Any(pair => _publishedSources.GetValueOrDefault(pair.Key) != pair.Value);
-        if (!changed)
+        if (NodeReadiness.Ready(Plan, this, runtime).Count == 0)
         {
             return false;
         }
 
-        _publishedSources.Clear();
-        foreach ((int index, long revision) in sources)
-        {
-            _publishedSources[index] = revision;
-        }
-
+        _consumed.Record(Plan, runtime);
         _revision++;
+
         return true;
     }
+
+    IReadOnlyList<int>? IInputProgress.AdoptedItems => null;
+
+    long IInputProgress.ConsumedRevision(int source) => _consumed.Revision(source);
+
+    bool IInputProgress.ConsumedOnce(int source) => _consumed.ConsumedOnce(source);
+
+    bool IInputProgress.Produced(int? item) => false;
+
+    int IInputProgress.Runs(int? item) => 0;
+
+    bool IInputProgress.ForceRerun => false;
 
     /// <summary>容器门控：产出齐备后停在等待批准。</summary>
     public void Park() => _awaiting = true;
@@ -71,7 +77,7 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
             || !bindings.TryGetValue(port, out Flow.PortRef target)
             || target.Source is not { } memberName
             || task.Graph.IndexOf(memberName) is not { } memberIndex
-            || read(memberIndex) is not RuntimeExecutable member)
+            || runtime.Materialized(memberIndex) is not RuntimeExecutable member)
         {
             return null;
         }
@@ -93,7 +99,7 @@ internal sealed class RuntimeContainer(ContainerNode container, Func<int, Runtim
             && bindings.TryGetValue(port, out Flow.PortRef target)
             && target.Source is { } memberName
             && task.Graph.IndexOf(memberName) is { } memberIndex
-            && read(memberIndex) is RuntimeExecutable member)
+            && runtime.Materialized(memberIndex) is RuntimeExecutable member)
         {
             string? content = member.PortText(task, target.Port);
             if (content is { Length: > 0 })

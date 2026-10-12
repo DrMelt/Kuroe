@@ -11,7 +11,7 @@ using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 namespace Kuroe.Workflows.Execution.Tasks;
 
 /// <summary>为执行节点装配上下文。启动的执行只用这里给出的内容，装配规则集中在一处。
-/// 每条依赖边按它的消费方式取值：单份产出、拆分条目、全部实例或按条目对齐。</summary>
+/// 每条取值边按它的取值域取值：整份产出、来源全部实例、或与目标同序号的实例产出。</summary>
 internal static class RunContextFactory
 {
     /// <summary>单条种子文本的上限。</summary>
@@ -26,13 +26,13 @@ internal static class RunContextFactory
         foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
             inputs.Add(InputLine(task, edge));
-            if (edge.Role == EdgeRole.Trigger)
+            if (edge.Type == PortType.Signal)
             {
-                // 触发输入端口不取数，来源产出不进上下文，只作启动信号
+                // 信号输入不取数，来源产出不进上下文，只作启动信号
                 continue;
             }
 
-            List<ContextMessage> target = edge.Role == EdgeRole.ContextInput ? contextInput : seed;
+            List<ContextMessage> target = edge.Type == PortType.Context ? contextInput : seed;
             AppendUpstreamOutput(task, edge, itemIndex, target);
         }
 
@@ -62,14 +62,14 @@ internal static class RunContextFactory
             Tools = ToolsFor(node.Executable),
             Seed = seed,
             SystemPrompt = Combine(node.Executable.SystemPrompt, BuildBriefing(task, node, inputs)),
-            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Kind == PortKind.Data)],
+            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Type == PortType.Data)],
         };
     }
 
-    /// <summary>按一条依赖边的消费方式追加上游产出：对齐边按目标实例取来源实例的整份，其余按边上的端口取来源产出消息集。</summary>
+    /// <summary>按一条取值边追加上游产出：同序号实例的取值按目标实例取来源该实例的整份，其余按边上的端口取来源产出消息集。</summary>
     private static void AppendUpstreamOutput(WorkTask task, FlowEdge edge, int? itemIndex, List<ContextMessage> seed)
     {
-        if (edge.Feed == EdgeFeed.Aligned)
+        if (edge.Scope == FeedScope.Item)
         {
             if (itemIndex is { } index)
             {
@@ -114,18 +114,15 @@ internal static class RunContextFactory
     /// <summary>条目内容的出处 run：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
     private static RunId OriginOf(WorkTask task, RuntimeExecutable node)
     {
-        if (task.Graph.ItemSource(node.Index) is { } plan
-            && LatestSucceededRun(task, plan, null) is { } planRun)
+        if (task.Graph.PlanOf(node.Index)?.SplitSource is { } source
+            && LatestSucceededRun(task, source, null) is { } planRun)
         {
             return planRun.Id;
         }
 
-        if (task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split)
-        {
-            return split.Origin;
-        }
-
-        return new RunId(0);
+        return task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split
+            ? split.Origin
+            : new RunId(0);
     }
 
     /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
@@ -173,27 +170,28 @@ internal static class RunContextFactory
         return string.Join('\n', lines);
     }
 
-    /// <summary>一条入边的输入端口说明：来源、端口与取用方式，触发信号标明不进上下文。</summary>
+    /// <summary>一条入边的输入端口说明：来源、端口与取用方式，信号输入标明不进上下文。</summary>
     private static string InputLine(WorkTask task, FlowEdge edge)
     {
         string source = task.Graph[edge.From] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.From].Name}」";
         string port = $"端口「{edge.Port}」";
-        if (edge.Role == EdgeRole.Trigger)
+        if (edge.Type == PortType.Signal)
         {
-            return $"- {source}{port}：仅作启动信号，不进上下文。";
+            return $"- 输入「{edge.Input}」取自 {source}{port}：仅作启动信号，不进上下文。";
         }
 
-        string consumption = edge.Feed switch
-        {
-            EdgeFeed.Items => "该来源交回的条目拆分，本实例对应其中一个条目",
-            EdgeFeed.AllInstances => "该来源全部实例的产出",
-            EdgeFeed.Aligned => "该来源同序号实例的产出",
-            _ => "该来源最近一份产出",
-        };
+        string consumption = edge.Kind == EdgeKind.Split
+            ? "该来源交回的条目拆分，本实例对应其中一个条目"
+            : edge.Scope switch
+            {
+                FeedScope.AllInstances => "该来源全部实例的产出",
+                FeedScope.Item => "该来源同序号实例的产出",
+                _ => "该来源最近一份产出",
+            };
 
-        string placement = edge.Role == EdgeRole.ContextInput ? "，置于上下文最前" : string.Empty;
+        string placement = edge.Type == PortType.Context ? "，置于上下文最前" : string.Empty;
 
-        return $"- {source}{port}：{consumption}{placement}。";
+        return $"- 输入「{edge.Input}」取自 {source}{port}：{consumption}{placement}。";
     }
 
     /// <summary>本节点需要交回的产出：Data 端口与条目拆分端口各一条，未声明时为空。</summary>
@@ -203,13 +201,13 @@ internal static class RunContextFactory
         List<string> lines = [];
         if (executable.HasDataPorts)
         {
-            string ports = ContractText.List(executable.Outputs.Where(port => port.Kind == PortKind.Data));
+            string ports = ContractText.List(executable.Outputs.Where(port => port.Type == PortType.Data));
             lines.Add($"- 输出端口 {ports}。用 {ContractTools.Port.Name} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
         }
 
         if (executable.HasItemsPort)
         {
-            PortName port = executable.Outputs.First(item => item.Kind == PortKind.Items).Name;
+            PortName port = executable.Outputs.First(item => item.Type == PortType.Items).Name;
             List<string> branches = Branches(task, node);
             string guide = branches.Count == 0 ? string.Empty : $"可选分支：{string.Join('、', branches)}，条目须标明其一。";
             lines.Add($"- 条目拆分端口「{port}」。用 {ContractTools.Plan.Name} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
@@ -224,7 +222,7 @@ internal static class RunContextFactory
         List<string> branches = [];
         foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
-            if (edge.Feed == EdgeFeed.Items && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } name })
+            if (edge.Kind == EdgeKind.Split && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } name })
             {
                 branches.Add(name.Value);
             }

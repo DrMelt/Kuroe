@@ -14,13 +14,11 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>引用的模型选择解析结果：输入节点不启动 run，为空。</summary>
     public required ModelDefinition? Model { get; init; }
 
-    /// <summary>上游依赖：来源执行节点序号与输出端口。端口来自来源节点的输出端口表。
-    /// <see cref="Dependency.Or"/> 归入可选启动组，组内成员产出一并取用、任一组全齐备即启动；
-    /// <see cref="Dependency.Signal"/> 只作触发信号，来源产出不进目标上下文；
-    /// <see cref="Dependency.Context"/> 的来源产出置于目标上下文最前。</summary>
+    /// <summary>上游依赖：来源执行节点序号、来源输出端口与目标输入端口，类型取自目标输入端口的声明。
+    /// 依赖按启动组聚合，组是一套完整的输入绑定方案，组间任一齐备即启动，组内全部齐备。</summary>
     public required IReadOnlyList<Dependency> From { get; init; }
 
-    /// <summary>执行节点的输出端口表：名字与种类，种类决定消费方式与校验。</summary>
+    /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
@@ -33,10 +31,10 @@ public sealed record ExecutableNode : GraphNode
     public const int DefaultMaxRuns = 100;
 
     /// <summary>是否有 Data 端口，未声明即无模型可交回的命名产出。</summary>
-    public bool HasDataPorts => Outputs.Any(port => port.Kind == PortKind.Data);
+    public bool HasDataPorts => Outputs.Any(port => port.Type == PortType.Data);
 
     /// <summary>是否声明 Items 端口，声明即由模型交回条目拆分。</summary>
-    public bool HasItemsPort => Outputs.Any(port => port.Kind == PortKind.Items);
+    public bool HasItemsPort => Outputs.Any(port => port.Type == PortType.Items);
 
     /// <summary>按名字取端口声明，未声明时为空。</summary>
     public Port? FindPort(PortName name) => Outputs.Find(name);
