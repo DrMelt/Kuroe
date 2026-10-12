@@ -1,13 +1,15 @@
 using ErrorOr;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
 using Kuroe.Workflows.Execution;
+using Kuroe.Workflows.Execution.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>常驻对话任务的管理层宿主：无模型引导、一轮对话落到任务管线、多轮在同一任务上接续。</summary>
+/// <summary>常驻对话任务的管理层宿主：无模型引导、一轮对话落到任务管线、多轮在同一任务上接续、回合失败交回本轮 run 的判定。</summary>
 public sealed class DialogueHostTests
 {
     [Fact]
@@ -46,6 +48,42 @@ public sealed class DialogueHostTests
         Assert.False(second.IsError, ErrorText(second));
         Assert.Equal("回复1", first.Value.Text);
         Assert.Equal("回复2", second.Value.Text);
+    }
+
+    [Fact]
+    public async Task Uncollected_round_reports_the_failure()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        harness.Executor.SubmitsPorts = false;
+
+        ErrorOr<DialogueReply> reply = await harness.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+
+        Assert.True(reply.IsError);
+        string text = ErrorText(reply);
+        Assert.Contains("未收口", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Blocked", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Dialogue_round_emits_no_task_notice()
+    {
+        using KuroeHarness harness = KuroeHarness.Create();
+        harness.Executor.Output = _ => "回复你好";
+        List<ExecutionNotice> notices = [];
+        harness.Registry.Notified += notices.Add;
+
+        ErrorOr<DialogueReply> reply = await harness.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+
+        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.Empty(notices);
+    }
+
+    [Fact]
+    public void Settled_dialogue_error_names_the_state_in_its_display_form()
+    {
+        Error error = TaskErrors.DialogueSettled(new TaskId(1), TaskState.Blocked);
+
+        Assert.Equal("任务 #1 已阻塞，无法继续对话。", error.Description);
     }
 
     private static string ErrorText(ErrorOr<DialogueReply> result) =>

@@ -12,15 +12,15 @@ namespace Kuroe.Tests;
 public sealed class FlowAdvanceTests
 {
     [Fact]
-    public void Builtin_flow_without_model_assignments_loads_but_submit_fails()
+    public void Empty_flow_library_rejects_submit_without_flow()
     {
-        using KuroeHarness harness = KuroeHarness.Create(writeDefaultFlow: false);
+        using KuroeHarness harness = KuroeHarness.Create(flowsJson: "{}", defaultFlow: null);
 
         ErrorOr<TaskSnapshot> submitted = harness.Tasks.Submit("补齐 README", null, null);
 
         Assert.True(submitted.IsError);
         Assert.Contains(submitted.ErrorsOrEmptyList,
-            error => error.Description.Contains("未写 Model"));
+            error => error.Description.Contains("未设置默认流程"));
     }
 
     [Fact]
@@ -232,9 +232,9 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 规划者的上下文里给出可用的分支名，模型据此交回带 Branch 的条目
+        // 规划者的系统指令里给出可用的分支名，模型据此交回带 Branch 的条目
         RunSnapshot planner = done.Executables[0].Runs[0];
-        Assert.Contains("可选分支：撰写、排版", planner.Context.Instruction);
+        Assert.Contains("可选分支：撰写、排版", planner.Context.SystemPrompt, StringComparison.Ordinal);
     }
 
     [Fact]

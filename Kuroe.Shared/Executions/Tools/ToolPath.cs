@@ -9,6 +9,9 @@ public readonly record struct ToolPath(string Value)
     /// <summary>输出端口的契约路径：声明 Data 端口的执行节点按输出端口附上的工具。</summary>
     public static ToolPath ContractPortValues { get; } = new(ToolName.ContractPortValues.Value);
 
+    /// <summary>执行状态的契约路径：所有执行节点都附上的工具。</summary>
+    public static ToolPath ContractStatus { get; } = new(ToolName.ContractStatus.Value);
+
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
 

@@ -47,8 +47,8 @@ public sealed class FlowService
         return new FlowService(store, settings, builtins, loaded.Value);
     }
 
-    /// <summary>提交任务未指定流程时用的流程名，取自用户层；未设置时为内置流程。</summary>
-    public FlowName DefaultName => _settings.Current.Runtime.DefaultFlow ?? DefaultFlows.Name;
+    /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
+    public FlowName? DefaultName => _settings.Current.Runtime.DefaultFlow;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -70,8 +70,9 @@ public sealed class FlowService
         }
     }
 
-    /// <summary>提交任务未指定流程时用的那条流程。</summary>
-    public ErrorOr<FlowDefinition> Default() => Find(DefaultName);
+    /// <summary>提交任务未指定流程时用的那条流程，未设置默认流程时返回错误。</summary>
+    public ErrorOr<FlowDefinition> Default() =>
+        DefaultName is { } name ? Find(name) : [FlowErrors.DefaultUnset()];
 
     /// <summary>从文件导入流程：导入的文件要能独立装配；节点定义按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
     public ErrorOr<FlowImport> Import(string source)

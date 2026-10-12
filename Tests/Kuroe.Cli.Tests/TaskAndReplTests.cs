@@ -135,6 +135,18 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
+    public void Task_answer_reports_the_receipt()
+    {
+        using Ui ui = new(flowsJson: TestFlows.InputFlow);
+        ui.Tasks.Run(["/task", "new", "补齐 README"]);
+        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+
+        ui.Tasks.Run(["/task", "answer", "1", "需要", "补充多语言"]);
+
+        Assert.Contains("任务 #1 已收到回答，继续下一步。", ui.Output.Output);
+    }
+
+    [Fact]
     public void Repl_unknown_command_warns()
     {
         using Ui ui = new();

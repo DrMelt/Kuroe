@@ -56,7 +56,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
 
             task.SetPortValues(run.Context.NodeIndex, run.Context.ItemIndex, parsed.Value);
 
-            return $"已记录 {declared.Count} 个端口的产出。";
+            return $"已记录 {declared.Count} 个端口的产出。{ContractText.Outstanding(task, run)}";
         }
     }
 

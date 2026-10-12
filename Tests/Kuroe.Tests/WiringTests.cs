@@ -84,6 +84,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
         Assert.NotNull(provider.GetRequiredService<PlanSubmitter>());
         Assert.NotNull(provider.GetRequiredService<RunDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<IRunContract>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
         Assert.NotEmpty(provider.GetServices<ITool>());
     }

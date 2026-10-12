@@ -76,7 +76,10 @@ internal sealed class FlowCommands(
 
         terminal.NewLine();
         terminal.Write(grid);
-        terminal.Hint($"默认流程 {flows.DefaultName}，用 /flow default <流程> 改。");
+        if (flows.DefaultName is { } defaultName)
+        {
+            terminal.Hint($"默认流程 {defaultName}，用 /flow default <流程> 改。");
+        }
     }
 
     private void Show(string name)

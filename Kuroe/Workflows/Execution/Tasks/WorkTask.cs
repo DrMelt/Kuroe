@@ -19,6 +19,7 @@ public sealed class WorkTask
     private readonly List<Run> _runs = [];
     private readonly Dictionary<int, PlanOutput> _splits = [];
     private readonly Dictionary<(int Node, int? Item), IReadOnlyDictionary<PortName, string>> _portValues = [];
+    private readonly Dictionary<(int Node, int? Item), RunVerdict> _verdicts = [];
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
@@ -120,6 +121,29 @@ public sealed class WorkTask
         foreach ((int node, int? entry) in _portValues.Keys.Where(pair => pair.Node == executableIndex).ToList())
         {
             _portValues.Remove((node, entry));
+        }
+    }
+
+    /// <summary>某执行节点某实例声明过的本轮结论，未声明时为空。要求持有 <see cref="Gate"/>。</summary>
+    internal RunVerdict? VerdictFor(int executableIndex, int? item) =>
+        _verdicts.GetValueOrDefault((executableIndex, item));
+
+    /// <summary>记录某执行节点某实例声明的本轮结论，同一实例重复声明覆盖。要求持有 <see cref="Gate"/>。</summary>
+    internal void SetVerdict(int executableIndex, int? item, RunVerdict verdict) =>
+        _verdicts[(executableIndex, item)] = verdict;
+
+    /// <summary>移除某执行节点某实例的结论，item 为空时清空该节点全部实例，返工作废后结论随本轮重声明。要求持有 <see cref="Gate"/>。</summary>
+    internal void ClearVerdict(int executableIndex, int? item)
+    {
+        if (item is { } index)
+        {
+            _verdicts.Remove((executableIndex, index));
+            return;
+        }
+
+        foreach ((int node, int? entry) in _verdicts.Keys.Where(pair => pair.Node == executableIndex).ToList())
+        {
+            _verdicts.Remove((node, entry));
         }
     }
 

@@ -133,7 +133,10 @@ public sealed class PortNodeTests
         TaskSnapshot done = harness.Settle(id);
 
         RunSnapshot run = done.Executables.Single().Runs.Single();
-        Assert.Equal("固定背景一\n固定背景二", run.Context.SystemPrompt);
+
+        // 节点声明的恒定块在前，引擎生成的本轮接口说明在后
+        Assert.StartsWith("固定背景一\n固定背景二", run.Context.SystemPrompt);
+        Assert.Contains("SubmitStatus", run.Context.SystemPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -150,7 +153,7 @@ public sealed class PortNodeTests
         Assert.DoesNotContain("结论", tool.Functions.Single().Description);
         Run ported = harness.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(tool.ForTurn(ported.Scope).Functions);
-        Assert.Contains("本节点声明端口：结论、理由", declared.Description);
+        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Description, StringComparison.Ordinal);
     }
 
     [Fact]

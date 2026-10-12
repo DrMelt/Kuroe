@@ -21,6 +21,9 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
 
+    /// <summary>本轮状态的声明通道，所有执行节点都有这个工具。</summary>
+    public StatusSubmitter? StatusSubmitter { get; set; }
+
     /// <summary>声明 Items 端口的执行节点交回的条目拆分。</summary>
     public string ItemsJson { get; set; } = """
         [
@@ -40,6 +43,15 @@ public sealed class FakeExecutor : IRunExecutor
 
     /// <summary>输出端口节点是否交回命名段，关掉用于验证未收口。</summary>
     public bool SubmitsPorts { get; set; } = true;
+
+    /// <summary>是否声明本轮状态，关掉用于验证未声明时的表现。</summary>
+    public bool SubmitsVerdict { get; set; } = true;
+
+    /// <summary>声明的本轮状态文本，默认交付完毕。</summary>
+    public string VerdictStatus { get; set; } = "completed";
+
+    /// <summary>声明 blocked 时给出的原因。</summary>
+    public string VerdictReason { get; set; } = string.Empty;
 
     /// <summary>端口节点连续提交两次取值，第二次用于验证重复提交被拒。</summary>
     public bool DoubleSubmitPorts { get; set; }
@@ -113,6 +125,14 @@ public sealed class FakeExecutor : IRunExecutor
                 {
                     _submissions.Enqueue(ToolResult.Render(PortSubmitter.SubmitValues(run.Scope, json)));
                 }
+            }
+
+            if (run.Context.Tools.Contains(ToolPath.ContractStatus) && SubmitsVerdict)
+            {
+                _submissions.Enqueue(ToolResult.Render(StatusSubmitter!.SubmitVerdict(
+                    run.Scope,
+                    VerdictStatus,
+                    VerdictReason.Length > 0 ? VerdictReason : null)));
             }
 
             if (FailsWhen?.Invoke(run) == true)

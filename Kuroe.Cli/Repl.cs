@@ -66,7 +66,6 @@ internal sealed class Repl(
         using (terminal.Exclusive())
         {
             terminal.Line("对话 > ");
-            sink.Reset();
             try
             {
                 reply = await dialogue.ReplyAsync(input, sink, cancellation.Begin());

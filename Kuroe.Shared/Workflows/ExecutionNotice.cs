@@ -2,16 +2,10 @@ using ErrorOr;
 
 namespace Kuroe.Shared.Workflows;
 
-/// <summary>值得宿主单独提示一句的执行事件。</summary>
+/// <summary>值得宿主单独提示一句的执行事件。成功进展由发起方当场呈现，这里只承载问题。</summary>
 public enum NoticeLevel
 {
-    /// <summary>普通进展。</summary>
-    Info,
-
-    /// <summary>某个节点或任务走完。</summary>
-    Done,
-
-    /// <summary>取消一类的可恢复情况。</summary>
+    /// <summary>可恢复的问题：异常、停驻与取消。</summary>
     Warning,
 
     /// <summary>失败。</summary>

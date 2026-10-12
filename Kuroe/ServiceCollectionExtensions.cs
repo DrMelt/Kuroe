@@ -108,7 +108,10 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<CatalogService>(),
             sp.GetRequiredService<ToolCollection>()));
-        services.AddSingleton<IRunExecutor>(sp => new RunExecutor(sp.GetRequiredService<SessionFactory>()));
+        services.AddSingleton<IRunContract>(sp => new RunReminder(sp.GetRequiredService<TaskRegistry>()));
+        services.AddSingleton<IRunExecutor>(sp => new RunExecutor(
+            sp.GetRequiredService<SessionFactory>(),
+            sp.GetRequiredService<IRunContract>()));
 
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
@@ -128,6 +131,7 @@ public static class ServiceCollectionExtensions
         TaskRegistry taskRegistry = new();
         PlanSubmitter planSubmitter = new(taskRegistry);
         PortSubmitter portSubmitter = new(taskRegistry);
+        StatusSubmitter statusSubmitter = new(taskRegistry);
 
         List<ITool> tools =
         [
@@ -136,6 +140,7 @@ public static class ServiceCollectionExtensions
             new SourceTool(sourceDirectory),
             new PlanTool(planSubmitter),
             new PortTool(portSubmitter, taskRegistry),
+            new StatusTool(statusSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),
             new CatalogInfoTool(catalog, models),
             new FlowInfoTool(flows),
@@ -157,6 +162,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(taskRegistry);
         services.AddSingleton(planSubmitter);
         services.AddSingleton(portSubmitter);
+        services.AddSingleton(statusSubmitter);
         foreach (ITool tool in tools)
         {
             services.AddSingleton<ITool>(tool);

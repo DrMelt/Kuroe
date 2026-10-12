@@ -30,7 +30,7 @@ internal sealed record RuntimeSettings
     /// <summary>同时在跑的 run 数上限，超出的排队等待。改动即时生效。</summary>
     public int MaxConcurrentRuns { get; init; } = 4;
 
-    /// <summary>提交任务时未指定流程则用该流程，未设置时用内置流程。</summary>
+    /// <summary>提交任务时未指定流程则用该流程，未设置时没有默认流程。</summary>
     public FlowName? DefaultFlow { get; init; }
 
     /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端由 <see cref="Executions.Sessions.ClientProvider"/> 按模型重建。</summary>

@@ -41,7 +41,10 @@ internal sealed class FlowInfoTool : ITool
                 + $" · {flow.Description ?? string.Empty}");
         }
 
-        text.Append($"默认流程：{_flows.DefaultName}");
+        if (_flows.DefaultName is { } defaultName)
+        {
+            text.Append($"默认流程：{defaultName}");
+        }
 
         return text.ToString().TrimEnd();
     }

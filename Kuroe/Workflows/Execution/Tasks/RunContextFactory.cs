@@ -22,8 +22,10 @@ internal static class RunContextFactory
     {
         List<ContextMessage> seed = [];
         List<ContextMessage> contextInput = [];
+        List<string> inputs = [];
         foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
         {
+            inputs.Add(InputLine(task, edge));
             if (edge.Role == EdgeRole.Trigger)
             {
                 // 触发输入端口不取数，来源产出不进上下文，只作启动信号
@@ -53,13 +55,13 @@ internal static class RunContextFactory
             Task = task.Id,
             NodeIndex = node.Index,
             NodeName = node.Name,
-            Instruction = BuildInstruction(task, node, item, count),
+            Instruction = BuildInstruction(node, item, count),
             Model = model,
             ItemIndex = itemIndex,
             ExecutionCount = count,
             Tools = ToolsFor(node.Executable),
             Seed = seed,
-            SystemPrompt = node.Executable.SystemPrompt.Count == 0 ? null : string.Join('\n', node.Executable.SystemPrompt),
+            SystemPrompt = Combine(node.Executable.SystemPrompt, BuildBriefing(task, node, inputs)),
             OutputPorts = [.. node.Executable.Outputs.Where(port => port.Kind == PortKind.Data)],
         };
     }
@@ -126,8 +128,8 @@ internal static class RunContextFactory
         return new RunId(0);
     }
 
-    /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，不在此拼接。</summary>
-    private static string BuildInstruction(WorkTask task, RuntimeExecutable node, PlanItem? item, int count)
+    /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
+    private static string BuildInstruction(RuntimeExecutable node, PlanItem? item, int count)
     {
         List<string> lines = [];
         if (node.Executable.Execution.Prompt is { Length: > 0 } prompt)
@@ -141,8 +143,6 @@ internal static class RunContextFactory
             lines.Add($"本次只负责条目 {entry.Index + 1}：{entry.Title}{branch}");
         }
 
-        AppendSplitGuide(task, node, lines);
-
         if (count > 1)
         {
             lines.Add($"这是第 {count} 轮实施。");
@@ -151,14 +151,76 @@ internal static class RunContextFactory
         return string.Join('\n', lines);
     }
 
-    /// <summary>声明 Items 端口的执行节点的拆分说明：可选分支清单。</summary>
-    private static void AppendSplitGuide(WorkTask task, RuntimeExecutable node, List<string> lines)
+    /// <summary>本轮接口说明：本节点的输入端口与需要交回的产出，随系统指令发给模型。</summary>
+    private static string BuildBriefing(WorkTask task, RuntimeExecutable node, List<string> inputs)
     {
-        if (!node.Executable.HasItemsPort)
+        List<string> lines = ["本轮接口"];
+        if (inputs.Count > 0)
         {
-            return;
+            lines.Add("输入端口：");
+            lines.AddRange(inputs);
         }
 
+        List<string> outputs = OutputLines(task, node);
+        if (outputs.Count > 0)
+        {
+            lines.Add("需要交回：");
+            lines.AddRange(outputs);
+        }
+
+        lines.Add($"结束时用 {ToolName.ContractStatus} 提交本轮状态，status 取 completed 完成或 blocked 无法完成，blocked 时必须给出 reason。");
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>一条入边的输入端口说明：来源、端口与取用方式，触发信号标明不进上下文。</summary>
+    private static string InputLine(WorkTask task, FlowEdge edge)
+    {
+        string source = task.Graph[edge.From] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.From].Name}」";
+        string port = $"端口「{edge.Port}」";
+        if (edge.Role == EdgeRole.Trigger)
+        {
+            return $"- {source}{port}：仅作启动信号，不进上下文。";
+        }
+
+        string consumption = edge.Feed switch
+        {
+            EdgeFeed.Items => "该来源交回的条目拆分，本实例对应其中一个条目",
+            EdgeFeed.AllInstances => "该来源全部实例的产出",
+            EdgeFeed.Aligned => "该来源同序号实例的产出",
+            _ => "该来源最近一份产出",
+        };
+
+        string placement = edge.Role == EdgeRole.ContextInput ? "，置于上下文最前" : string.Empty;
+
+        return $"- {source}{port}：{consumption}{placement}。";
+    }
+
+    /// <summary>本节点需要交回的产出：Data 端口与条目拆分端口各一条，未声明时为空。</summary>
+    private static List<string> OutputLines(WorkTask task, RuntimeExecutable node)
+    {
+        ExecutableNode executable = node.Executable;
+        List<string> lines = [];
+        if (executable.HasDataPorts)
+        {
+            string ports = ContractText.List(executable.Outputs.Where(port => port.Kind == PortKind.Data));
+            lines.Add($"- 输出端口 {ports}。用 {ToolName.ContractPortValues} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
+        }
+
+        if (executable.HasItemsPort)
+        {
+            PortName port = executable.Outputs.First(item => item.Kind == PortKind.Items).Name;
+            List<string> branches = Branches(task, node);
+            string guide = branches.Count == 0 ? string.Empty : $"可选分支：{string.Join('、', branches)}，条目须标明其一。";
+            lines.Add($"- 条目拆分端口「{port}」。用 {ToolName.ContractPlan} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
+        }
+
+        return lines;
+    }
+
+    /// <summary>拆分出口所驱动的分支执行节点声明的分支名，供条目标明归属。</summary>
+    private static List<string> Branches(WorkTask task, RuntimeExecutable node)
+    {
         List<string> branches = [];
         foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
@@ -168,13 +230,14 @@ internal static class RunContextFactory
             }
         }
 
-        if (branches.Count > 0)
-        {
-            lines.Add($"可选分支：{string.Join('、', branches)}，条目须标明其一。");
-        }
+        return branches;
     }
 
-    /// <summary>本轮工具面：节点声明的能力工具加按输出端口附上的契约工具。</summary>
+    /// <summary>系统指令：节点声明的恒定块在前，本轮接口说明在后。</summary>
+    private static string Combine(IReadOnlyList<string> declared, string briefing) =>
+        declared.Count == 0 ? briefing : $"{string.Join('\n', declared)}\n\n{briefing}";
+
+    /// <summary>本轮工具面：节点声明的能力工具加按输出端口附上的契约工具，执行状态工具所有节点都有。</summary>
     private static List<ToolPath> ToolsFor(ExecutableNode node)
     {
         List<ToolPath> names = [.. node.Execution.Tools];
@@ -187,6 +250,8 @@ internal static class RunContextFactory
         {
             names.Add(ToolPath.ContractPortValues);
         }
+
+        names.Add(ToolPath.ContractStatus);
 
         return names;
     }

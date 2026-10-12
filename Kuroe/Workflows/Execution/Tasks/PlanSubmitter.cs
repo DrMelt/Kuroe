@@ -75,7 +75,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
 
             task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, parsed.Value));
 
-            return $"已记录 {parsed.Value.Count} 个条目。";
+            return $"已记录 {parsed.Value.Count} 个条目。{ContractText.Outstanding(task, run)}";
         }
     }
 

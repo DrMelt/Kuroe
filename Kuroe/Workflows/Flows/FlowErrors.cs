@@ -19,6 +19,10 @@ static class FlowErrors
     public static Error FlowNotFound(string name) =>
         Error.NotFound(ErrorCodes.FlowNotFound, $"没有名为 {name} 的流程。");
 
+    /// <summary>用户层未设置默认流程。</summary>
+    public static Error DefaultUnset() =>
+        Error.Validation(ErrorCodes.FlowNotFound, "未设置默认流程。");
+
     /// <summary>导入的文件不能独立装配。</summary>
     public static Error ImportStandalone() =>
         Error.Validation(ErrorCodes.FlowImport, "导入的文件必须能独立装配：流程引用的节点要用内置节点或写在同一文件里。");

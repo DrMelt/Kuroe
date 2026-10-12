@@ -13,6 +13,9 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     private readonly AnsiWriter errorWriter = new(error.Profile.Out.Writer, error.Profile.Capabilities);
     private bool _exclusive;
 
+    /// <summary>当前是否停在一行中间。行式输出前先闭合它。</summary>
+    private bool _lineOpen;
+
     /// <summary>能力探测交给 Spectre，非终端与不支持 ANSI 的环境自动降级为无样式文本。</summary>
     public static Terminal Create() => new(
         AnsiConsole.Console,
@@ -27,6 +30,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     {
         lock (_gate)
         {
+            CloseLine();
             output.Write(renderable);
         }
     }
@@ -60,6 +64,10 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         lock (_gate)
         {
             outputWriter.Write(text, Style.Plain);
+            if (text.Length > 0)
+            {
+                _lineOpen = !text.EndsWith('\n');
+            }
         }
     }
 
@@ -68,6 +76,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         lock (_gate)
         {
             outputWriter.WriteLine();
+            _lineOpen = false;
         }
     }
 
@@ -154,6 +163,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     {
         lock (_gate)
         {
+            CloseLine();
             outputWriter.WriteLine(text, style);
         }
     }
@@ -162,7 +172,18 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     {
         lock (_gate)
         {
+            CloseLine();
             errorWriter.WriteLine(text, style);
+        }
+    }
+
+    /// <summary>停在一行中间时先换行，行式输出总从新行开始。</summary>
+    private void CloseLine()
+    {
+        if (_lineOpen)
+        {
+            outputWriter.WriteLine();
+            _lineOpen = false;
         }
     }
 

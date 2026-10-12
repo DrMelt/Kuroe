@@ -2,6 +2,7 @@ using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Workflows.Execution.Tasks;
 
 namespace Kuroe.Tools.Info;
 
@@ -9,16 +10,7 @@ namespace Kuroe.Tools.Info;
 public static class InfoLabels
 {
     /// <summary>任务状态的展示名。</summary>
-    public static string Of(TaskState state) => state switch
-    {
-        TaskState.Running => "执行中",
-        TaskState.AwaitingInput => "待输入",
-        TaskState.AwaitingApproval => "待批准",
-        TaskState.Blocked => "已阻塞",
-        TaskState.Done => "已完成",
-        TaskState.Canceled => "已取消",
-        _ => state.ToString(),
-    };
+    public static string Of(TaskState state) => state.Label();
 
     /// <summary>执行节点状态的展示名。</summary>
     public static string Of(NodeState state) => state switch

@@ -37,9 +37,9 @@ static class TaskErrors
     public static Error NoDialogueTarget() =>
         Error.Validation("Task.Ask", "任务里没有可回话的执行节点。");
 
-    /// <summary>等待回复期间任务先行收口，对话无法再继续。</summary>
+    /// <summary>本轮判定出来前任务先行收口或阻塞，对话无法继续。</summary>
     public static Error DialogueSettled(TaskId task, TaskState state) =>
-        Error.Conflict("Task.Ask", $"{task} 已处于 {state}，对话提前结束。");
+        Error.Conflict("Task.Ask", $"{task} {state.Label()}，无法继续对话。");
 
     /// <summary>该任务没有被阻塞的条目。</summary>
     public static Error NotBlocked(TaskId task) =>

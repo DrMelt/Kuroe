@@ -29,7 +29,7 @@ internal sealed class RunHistory(RunContext context) : ISessionHistory
 
     public bool Stale => !_laidOut;
 
-    /// <summary>该 run 恒定系统指令：由节点 SystemPrompt 装配，置于请求最前。</summary>
+    /// <summary>该 run 的系统指令：节点声明块与本轮接口说明，置于请求最前。</summary>
     public string? SystemPrompt => context.SystemPrompt;
 
     public void LayOut(List<ChatMessage> messages)

@@ -83,8 +83,6 @@ public sealed class TaskService
             _driver.Start(task);
         }
 
-        _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{task.Id} 已提交，流程 {flow.Name}。"));
-
         return task.Snapshot();
     }
 
@@ -123,8 +121,6 @@ public sealed class TaskService
             return [TaskErrors.NotAwaiting(id)];
         }
 
-        _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{id} 已批准，继续下一步。"));
-
         return Result.Success;
     }
 
@@ -153,8 +149,6 @@ public sealed class TaskService
         {
             return result.ErrorsOrEmptyList;
         }
-
-        _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{id} 已收到回答，继续下一步。"));
 
         return Result.Success;
     }
@@ -265,12 +259,6 @@ public sealed class TaskService
         {
             while (true)
             {
-                TaskState state;
-                lock (task.Gate)
-                {
-                    state = task.State;
-                }
-
                 if (reply.Task.IsCompleted)
                 {
                     if (reply.Task.Result.IsError)
@@ -278,15 +266,31 @@ public sealed class TaskService
                         return await reply.Task;
                     }
 
-                    // 回复产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口
-                    if (state == TaskState.AwaitingInput)
+                    // 回复产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口；
+                    // 任务不再推进时不会再回到等待，本轮回复仍然成立
+                    TaskState after;
+                    lock (task.Gate)
+                    {
+                        after = task.State;
+                    }
+
+                    if (after != TaskState.Running)
                     {
                         return await reply.Task;
                     }
                 }
-                else if (state is TaskState.Blocked or TaskState.Canceled or TaskState.Done)
+                else
                 {
-                    return [TaskErrors.DialogueSettled(id, state)];
+                    TaskState state;
+                    lock (task.Gate)
+                    {
+                        state = task.State;
+                    }
+
+                    if (state is TaskState.Blocked or TaskState.Canceled or TaskState.Done)
+                    {
+                        return [TaskErrors.DialogueSettled(id, state)];
+                    }
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -360,8 +364,6 @@ public sealed class TaskService
             return [TaskErrors.NotBlocked(id)];
         }
 
-        _registry.Report(new ExecutionNotice(NoticeLevel.Info, $"{id} 已返工。"));
-
         return Result.Success;
     }
 
@@ -398,8 +400,6 @@ public sealed class TaskService
         {
             _driver.Cancel(task);
         }
-
-        _registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{id} 已取消。"));
 
         return Result.Success;
     }

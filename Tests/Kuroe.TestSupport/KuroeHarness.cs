@@ -29,6 +29,7 @@ public sealed class KuroeHarness : IDisposable
         Tasks = provider.GetRequiredService<TaskService>();
         executor.Submitter = provider.GetRequiredService<PlanSubmitter>();
         executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
+        executor.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -56,7 +57,7 @@ public sealed class KuroeHarness : IDisposable
     public IReadOnlyList<Kuroe.Tools.Command.Model.CommandToolDefinition> CommandTools =>
         _provider.GetRequiredService<IReadOnlyList<Kuroe.Tools.Command.Model.CommandToolDefinition>>();
 
-    /// <summary>测试默认流程：结构同内置「默认」流程，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
+    /// <summary>测试用默认流程文件，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
     private const string TestDefaultFlow = """
         {
           "Flows": [
@@ -84,15 +85,15 @@ public sealed class KuroeHarness : IDisposable
         }
         """;
 
-    /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入与内置流程同形的测试默认流程，
-    /// writeDefaultFlow 为 false 时不写文件，走真实内置流程。</summary>
-    public static ErrorOr<KuroeHarness> TryCreate(string? flowsJson = null, bool seedCatalog = true, bool writeDefaultFlow = true)
+    /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试默认流程，flowsJson 传空对象即空流程库，
+    /// defaultFlow 为 null 时不写入用户层默认流程。</summary>
+    public static ErrorOr<KuroeHarness> TryCreate(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认")
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
 
         KuroePaths paths = KuroePaths.At(root);
-        string? flowsText = flowsJson ?? (writeDefaultFlow ? TestDefaultFlow : null);
+        string? flowsText = flowsJson ?? TestDefaultFlow;
         if (flowsText is not null)
         {
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
@@ -121,11 +122,16 @@ public sealed class KuroeHarness : IDisposable
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
+        if (defaultFlow is not null)
+        {
+            provider.GetRequiredService<SettingsProvider>().SetText("Runtime:DefaultFlow", defaultFlow).ThrowIfError();
+        }
+
         return new KuroeHarness(root, provider, executor);
     }
 
-    public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, bool writeDefaultFlow = true) =>
-        TryCreate(flowsJson, seedCatalog, writeDefaultFlow).ThrowIfError();
+    public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
+        TryCreate(flowsJson, seedCatalog, defaultFlow).ThrowIfError();
 
     public TaskId Submit(string goal, Kuroe.Shared.Workflows.Flows.FlowName? flow = null) =>
         Tasks.Submit(goal, flow, null).ThrowIfError().Id;

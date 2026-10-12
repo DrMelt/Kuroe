@@ -26,7 +26,7 @@ static class FlowAssembler
         }
 
         return loaded.Value is null
-            ? Assemble([], DefaultFlows.Builtin, library)
+            ? Assemble([], [], library)
             : Assemble(loaded.Value, library);
     }
 

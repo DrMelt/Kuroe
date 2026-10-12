@@ -224,6 +224,8 @@ internal sealed class TaskRuntime
             _task.ClearPortValues(node.Index, item);
         }
 
+        _task.ClearVerdict(node.Index, item);
+
         RefreshContainers(node.Index);
     }
 
@@ -405,6 +407,32 @@ internal sealed class TaskRuntime
     /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>
     public sealed record SettlePlan(IReadOnlyList<int> Notify, IReadOnlyList<(int Node, int? Item)> Rerun);
 
+    /// <summary>本轮该交回但尚未交回的产出：缺哪些命名端口、是否缺条目拆分。</summary>
+    public sealed record RunShortfall(IReadOnlyList<PortName> Ports, bool Items)
+    {
+        /// <summary>没有缺项。</summary>
+        public bool None => Ports.Count == 0 && !Items;
+    }
+
+    /// <summary>本轮该交回但尚未交回的产出，按节点声明的端口与条目拆分判定。要求持有 Gate。</summary>
+    public RunShortfall Shortfall(Run run)
+    {
+        RuntimeExecutable node = Executable(run.Context.NodeIndex);
+        ExecutableNode executable = node.Executable;
+        IReadOnlyDictionary<PortName, string>? values = _task.PortValuesFor(node.Index, run.Context.ItemIndex);
+
+        IReadOnlyList<PortName> ports = executable.HasDataPorts
+            ? [.. executable.Outputs
+                .Where(port => port.Kind == PortKind.Data)
+                .Select(port => port.Name)
+                .Where(name => values?.ContainsKey(name) != true)]
+            : [];
+
+        bool items = executable.HasItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id;
+
+        return new RunShortfall(ports, items);
+    }
+
     /// <summary>run 收口：失败与未收口先停驻阻塞，通过后发布产出并处理门控，
     /// 产出出向下游的通知或重派计划。接收器先经 ReleaseActive 再进入。</summary>
     public SettlePlan Settle(Run run)
@@ -414,35 +442,37 @@ internal sealed class TaskRuntime
 
         if (run.State != RunState.Succeeded)
         {
-            _task.NotifyRunSettled(run);
-            node.EnterBlocked([(node.Index, item)]);
-            NoteLimitReached(node, item);
-            return new SettlePlan([], []);
+            return Block(node, run, (node.Index, item));
+        }
+
+        // 声明无法完成的当轮不产出，直接停驻并把原因留给返工
+        if (_task.VerdictFor(node.Index, item) is { Blocked: true } verdict)
+        {
+            run.MarkUncollected(verdict.Reason is { Length: > 0 } reason
+                ? $"模型报告无法完成：{reason}"
+                : "模型报告无法完成。");
+
+            return Block(node, run, (node.Index, item));
         }
 
         ExecutableNode executable = node.Executable;
-        if (executable.HasItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id)
+        RunShortfall shortfall = Shortfall(run);
+        if (shortfall.Items)
         {
             run.MarkUncollected("声明 Items 端口的执行节点没有交回条目拆分，本步未收口。");
-            node.EnterBlocked([(node.Index, null)]);
-            NoteLimitReached(node, null);
-            return new SettlePlan([], []);
+            return Block(node, run, (node.Index, null));
         }
 
-        if (executable.HasDataPorts && !HasAllPortValues(executable, _task.PortValuesFor(node.Index, item)))
+        if (shortfall.Ports.Count > 0)
         {
             run.MarkUncollected("输出端口内容未交回，本步未收口。");
-            node.EnterBlocked([(node.Index, item)]);
-            NoteLimitReached(node, item);
-            return new SettlePlan([], []);
+            return Block(node, run, (node.Index, item));
         }
 
         // 输出校验不通过即不发布，节点停驻等返工
         if (!PassesValidation(executable.Execution.Validate, executable, _task.PortValuesFor(node.Index, item)))
         {
-            node.EnterBlocked([(node.Index, item)]);
-            NoteLimitReached(node, item);
-            return new SettlePlan([], []);
+            return Block(node, run, (node.Index, item));
         }
 
         // 拆分已由回执写入 _splits，其余产出直接发布
@@ -450,6 +480,16 @@ internal sealed class TaskRuntime
         _task.NotifyRunSettled(run);
 
         return Settled(node, node.Park(run.Id), Downstream(node));
+    }
+
+    /// <summary>run 停驻阻塞：判定先交回等待方，再记为阻塞并核算执行上限。</summary>
+    private SettlePlan Block(RuntimeExecutable node, Run run, (int Node, int? Item) target)
+    {
+        _task.NotifyRunSettled(run);
+        node.EnterBlocked([target]);
+        NoteLimitReached(node, target.Item);
+
+        return new SettlePlan([], []);
     }
 
     /// <summary>输出校验判定：不改动任何状态，只给出端口产出是否合格。校验对象是各声明端口按声明序拼接的文本。</summary>
@@ -492,11 +532,6 @@ internal sealed class TaskRuntime
 
         return parts.Length == 0 ? null : string.Join("\n", parts);
     }
-
-    /// <summary>输出端口的声明是否都已交回内容。</summary>
-    private static bool HasAllPortValues(ExecutableNode executable, IReadOnlyDictionary<PortName, string>? values) =>
-        values is { Count: > 0 }
-        && executable.Outputs.Where(port => port.Kind == PortKind.Data).All(port => values.ContainsKey(port.Name));
 
     private static bool Contains(string? text, string? needle) =>
         needle is { Length: > 0 } && text is not null && text.Contains(needle, StringComparison.Ordinal);

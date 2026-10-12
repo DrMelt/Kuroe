@@ -66,7 +66,7 @@ public sealed class SettingsTests
 
         IReadOnlyList<SettingEntry> entries = harness.Settings.Sections().Single().Entries;
 
-        Assert.Equal("未设置", Value(entries, "DefaultFlow"));
+        Assert.Equal("未设置", Value(entries, "Temperature"));
         Assert.Equal("Warning", Value(entries, "LogLevel"));
         Assert.Equal("4", Value(entries, "MaxConcurrentRuns"));
     }

@@ -128,7 +128,6 @@ public sealed class CommandRouteTests
     {
         using Ui ui = new();
         ui.Flows.Run(["/flow", "list"]);
-        Assert.Contains("默认流程", ui.Output.Output);
         Assert.Contains("制定计划", ui.Output.Output);
 
         ui.Flows.Run(["/flow", "show", "默认"]);

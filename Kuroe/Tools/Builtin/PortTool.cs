@@ -40,10 +40,10 @@ public sealed class PortTool : IScopedTool
             ? null
             : ports;
 
-    /// <summary>声明绑定到该回合上的提交函数。有端口清单时把端口名与说明写进描述，模型按声明的键值提交。</summary>
+    /// <summary>声明绑定到该回合上的提交函数。有端口清单时把需要交回的端口写进描述，模型按声明的键值提交。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports)
     {
-        string listed = ports is null ? string.Empty : $"本节点声明端口：{string.Join('、', ports.Select(Describe))}。";
+        string listed = ports is null ? string.Empty : $"本节点需要交回的端口：{ContractText.List(ports)}。";
 
         return
         [
@@ -54,8 +54,4 @@ public sealed class PortTool : IScopedTool
                 ToolPath.ContractPortValues),
         ];
     }
-
-    /// <summary>说明里的端口条目：有说明时写 端口名：说明，未写说明时只写端口名。</summary>
-    private static string Describe(Port port) =>
-        port.Description is { Length: > 0 } description ? $"{port.Name}：{description}" : port.Name.Value;
 }

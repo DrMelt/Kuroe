@@ -74,13 +74,13 @@ internal sealed class TaskCommands(
                 break;
 
             case ("approve", 3) when Number(parts[2], "任务号") is { } task:
-                Act(tasks.Approve(new TaskId(task)));
+                results.Report(tasks.Approve(new TaskId(task)), $"{new TaskId(task)} 已批准，继续下一步。");
                 break;
 
             case ("approve", 5) when parts[3].Equals("run", StringComparison.OrdinalIgnoreCase)
                 && Number(parts[2], "任务号") is { } task
                 && Number(parts[4], "run号") is { } run:
-                Act(tasks.Approve(new TaskId(task), [new RunId(run)]));
+                results.Report(tasks.Approve(new TaskId(task), [new RunId(run)]), $"{new TaskId(task)} 已批准，继续下一步。");
                 break;
 
             case ("answer", >= 4) when Number(parts[2], "任务号") is { } task:
@@ -88,16 +88,16 @@ internal sealed class TaskCommands(
                 break;
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:
-                Act(tasks.Rework(new TaskId(task), null));
+                results.Report(tasks.Rework(new TaskId(task), null), $"{new TaskId(task)} 已返工。");
                 break;
 
             case ("stop", 3) when Number(parts[2], "任务号") is { } task:
-                Act(tasks.StopTask(new TaskId(task)));
+                results.Report(tasks.StopTask(new TaskId(task)), $"{new TaskId(task)} 已取消。");
                 break;
 
             case ("stop", 4) when parts[2].Equals("run", StringComparison.OrdinalIgnoreCase)
                 && Number(parts[3], "run号") is { } runId:
-                Act(tasks.StopRun(new RunId(runId)));
+                results.Report(tasks.StopRun(new RunId(runId)), $"{new RunId(runId)} 已取消。");
                 break;
 
             case ("clear", 2):
@@ -171,7 +171,7 @@ internal sealed class TaskCommands(
             input = string.Join(' ', inputParts);
         }
 
-        Act(tasks.Answer(new TaskId(number), nodeName, input));
+        results.Report(tasks.Answer(new TaskId(number), nodeName, input), $"{new TaskId(number)} 已收到回答，继续下一步。");
     }
 
     private void Show(int number)
@@ -204,14 +204,6 @@ internal sealed class TaskCommands(
         }
 
         runView.Print(owner.Value.Snapshot(), snapshot);
-    }
-
-    private void Act(ErrorOr<Success> result)
-    {
-        if (result.IsError)
-        {
-            results.Reject(result.ErrorsOrEmptyList);
-        }
     }
 
     /// <summary>标识只写数字，任务号与 run 号各自唯一。</summary>
