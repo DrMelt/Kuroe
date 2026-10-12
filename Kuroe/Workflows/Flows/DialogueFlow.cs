@@ -37,8 +37,8 @@ internal static class DialogueFlow
         new ToolPath("source"),
     ];
 
-    /// <summary>回话节点指令。</summary>
-    internal static string Prompt { get; } = "直接回应用户的输入。";
+    /// <summary>回话节点的恒定系统指令块。</summary>
+    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。"];
 
     /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。</summary>
     internal static FlowDefinition Build() => new(
@@ -80,10 +80,10 @@ internal static class DialogueFlow
                     Name = ReplyNodeName,
                     Kind = NodeKind.Executable,
                     Inputs = [new InputPort(InputPort, PortType.Text)],
+                    SystemPrompt = SystemPrompt,
                     Execution = new ExecutableSpec
                     {
                         Tools = Tools,
-                        Prompt = Prompt,
                     },
                     Model = RuntimeModel,
                     Outputs = [new Port(ReplyPort, PortType.Text)],

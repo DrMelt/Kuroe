@@ -41,7 +41,7 @@ public sealed record NodeSpec
     /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
-    /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。仅执行节点声明。</summary>
+    /// <summary>恒定系统指令块：作为系统指令置于请求最前。仅执行节点声明。</summary>
     public IReadOnlyList<string> SystemPrompt { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>

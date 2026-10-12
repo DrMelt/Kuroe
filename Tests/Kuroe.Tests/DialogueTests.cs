@@ -27,6 +27,15 @@ public sealed class DialogueTests
     }
 
     [Fact]
+    public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
+    {
+        NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];
+
+        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。"], reply.SystemPrompt);
+        Assert.Null(reply.Execution!.Prompt);
+    }
+
+    [Fact]
     public void Dialogue_flow_whitelists_dialogue_tools_by_path()
     {
         Assert.Equal(
