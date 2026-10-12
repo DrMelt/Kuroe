@@ -12,7 +12,9 @@ using Kuroe.Tools.Builtin;
 using Kuroe.Tools.Command;
 using Kuroe.Tools.Command.Files;
 using Kuroe.Tools.Command.Model;
+using Kuroe.Tools.Files;
 using Kuroe.Tools.Info;
+using Kuroe.Tools.Source;
 using Kuroe.Workflows.Execution;
 using Kuroe.Workflows.Execution.Engine;
 using Kuroe.Workflows.Execution.Tasks;
@@ -27,8 +29,11 @@ namespace Kuroe;
 public static class ServiceCollectionExtensions
 {
     /// <summary>装配配置、目录、流程、工具与任务推进，失败时返回启动期的全部错误。</summary>
+    /// <param name="services">服务集合。</param>
+    /// <param name="paths">工作目录及其下的配置路径。</param>
+    /// <param name="sourceDirectory">随程序导出的源码与文档目录，供 source 工具组查阅。</param>
     /// <returns>启动信息，其中的日志级别用于宿主注册日志输出。</returns>
-    public static ErrorOr<KuroeStartup> AddKuroe(this IServiceCollection services, KuroePaths paths)
+    public static ErrorOr<KuroeStartup> AddKuroe(this IServiceCollection services, KuroePaths paths, string sourceDirectory)
     {
         ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths);
         if (settings.IsError)
@@ -70,7 +75,8 @@ public static class ServiceCollectionExtensions
             catalog.Value,
             flows.Value,
             modelService,
-            paths.WorkingDirectory);
+            paths.WorkingDirectory,
+            sourceDirectory);
         if (registered.IsError)
         {
             return registered.ErrorsOrEmptyList;
@@ -116,7 +122,8 @@ public static class ServiceCollectionExtensions
         CatalogService catalog,
         FlowService flows,
         ModelService models,
-        string workingDirectory)
+        string workingDirectory,
+        string sourceDirectory)
     {
         TaskRegistry taskRegistry = new();
         PlanSubmitter planSubmitter = new(taskRegistry);
@@ -126,6 +133,7 @@ public static class ServiceCollectionExtensions
         [
             new TimeTool(),
             new FileTool(workingDirectory),
+            new SourceTool(sourceDirectory),
             new PlanTool(planSubmitter),
             new PortTool(portSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),

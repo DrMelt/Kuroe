@@ -34,6 +34,7 @@ internal static class DialogueFlow
         new ToolPath("GetLocalTime"),
         new ToolPath("info"),
         new ToolPath("files"),
+        new ToolPath("source"),
     ];
 
     /// <summary>回话节点指令。</summary>

@@ -103,7 +103,7 @@ public sealed class KuroeHarness : IDisposable
         services.AddLogging();
         var executor = new FakeExecutor();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, Path.Combine(root, "source"));
         if (startup.IsError)
         {
             return startup.ErrorsOrEmptyList;

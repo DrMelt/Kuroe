@@ -237,7 +237,7 @@ public sealed class InfoToolTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,
@@ -251,7 +251,7 @@ public sealed class InfoToolTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
         Assert.False(startup.IsError);
 
         return services.BuildServiceProvider();

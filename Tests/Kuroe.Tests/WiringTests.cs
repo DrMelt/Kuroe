@@ -65,7 +65,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重名", StringComparison.Ordinal));
@@ -94,7 +94,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
         Assert.False(startup.IsError);
 
         return services.BuildServiceProvider();

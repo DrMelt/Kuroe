@@ -5,7 +5,7 @@ using Kuroe.Configuration.Files;
 using Kuroe.Executions.Tools;
 using Kuroe.Shared;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Tools.Builtin;
+using Kuroe.Tools.Files;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -630,7 +630,7 @@ public sealed class FileToolTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root));
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
         Assert.False(startup.IsError);
 
         return services.BuildServiceProvider();

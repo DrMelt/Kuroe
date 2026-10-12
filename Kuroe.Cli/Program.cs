@@ -38,10 +38,13 @@ static async Task<int> RunAsync(string? workDirectory)
 
     KuroePaths paths = KuroePaths.At(directory.Value);
 
+    // 生成产物里随附仓库源码与文档，导出目录由宿主给出
+    string sourceDirectory = Path.Combine(AppContext.BaseDirectory, "source");
+
     var services = new ServiceCollection();
     services.AddSingleton(terminal);
     services.AddSingleton(errors);
-    ErrorOr<KuroeStartup> startup = services.AddKuroe(paths);
+    ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, sourceDirectory);
     if (startup.IsError)
     {
         errors.Report(startup.ErrorsOrEmptyList);

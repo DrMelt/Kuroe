@@ -23,4 +23,20 @@
     <InternalsVisibleTo Include="Kuroe.Cli.Tests" />
   </ItemGroup>
 
+  <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
+  <ItemGroup>
+    <None Include="..\Kuroe\**\*.cs" Exclude="..\Kuroe\**\bin\**;..\Kuroe\**\obj\**"
+          Link="source\Kuroe\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kuroe.Shared\**\*.cs" Exclude="..\Kuroe.Shared\**\bin\**;..\Kuroe.Shared\**\obj\**"
+          Link="source\Kuroe.Shared\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kuroe.Cli\**\*.cs" Exclude="..\Kuroe.Cli\**\bin\**;..\Kuroe.Cli\**\obj\**"
+          Link="source\Kuroe.Cli\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Tests\**\*.cs" Exclude="..\Tests\**\bin\**;..\Tests\**\obj\**;..\Tests\**\TestResults\**"
+          Link="source\Tests\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\docs\**\*.md"
+          Link="source\docs\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\README.md;..\LICENSE;..\Kuroe.slnx;..\Directory.Build.props;..\Directory.Packages.props;..\nuget.config;..\.editorconfig"
+          Link="source\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
