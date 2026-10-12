@@ -22,14 +22,14 @@ public sealed record RunSource(RunId Run, NodeName NodeName) : ContextSource
     public override RunId? FromRun => Run;
 }
 
-/// <summary>声明 Items 端口的执行节点交回的某个条目。</summary>
-public sealed record ItemSource(RunId Plan, int Index, string Title) : ContextSource
+/// <summary>声明 WorkItems 端口的执行节点交回的某个条目。</summary>
+public sealed record ItemSource(RunId Origin, int Index, string Title) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"{Plan} · 规划条目 {Index + 1}：{Title}";
+    public override string Label => $"{Origin} · 条目 {Index + 1}：{Title}";
 
     /// <inheritdoc/>
-    public override RunId? FromRun => Plan;
+    public override RunId? FromRun => Origin;
 }
 
 /// <summary>输入节点收到的一段用户回答。</summary>

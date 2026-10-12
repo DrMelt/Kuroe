@@ -5,19 +5,19 @@ using Kuroe.Workflows.Execution.Tasks;
 
 namespace Kuroe.Tools.Builtin;
 
-/// <summary>声明 Items 端口的执行节点交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 run 在交。</summary>
-public sealed class PlanTool : IScopedTool
+/// <summary>声明 WorkItems 端口的执行节点交回条目拆分的通道。载体按回合换一份，提交时才知道是哪个 run 在交。</summary>
+public sealed class SubmitWorkItemsTool : IScopedTool
 {
-    private readonly PlanSubmitter _intake;
+    private readonly WorkItemSubmitter _intake;
 
     /// <summary>容器装配用的载体，尚未绑定回合。</summary>
-    public PlanTool(PlanSubmitter intake)
+    public SubmitWorkItemsTool(WorkItemSubmitter intake)
     {
         _intake = intake;
         Functions = Declare(intake, null);
     }
 
-    private PlanTool(PlanSubmitter intake, TurnScope scope)
+    private SubmitWorkItemsTool(WorkItemSubmitter intake, TurnScope scope)
     {
         _intake = intake;
         Functions = Declare(intake, scope);
@@ -27,12 +27,12 @@ public sealed class PlanTool : IScopedTool
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>换一份绑定到该回合的载体。</summary>
-    public ITool ForTurn(TurnScope scope) => new PlanTool(_intake, scope);
+    public ITool ForTurn(TurnScope scope) => new SubmitWorkItemsTool(_intake, scope);
 
     /// <summary>把契约定义绑上提交该回合条目拆分的调用体。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(PlanSubmitter intake, TurnScope? scope) =>
+    private static IReadOnlyList<ToolFunction> Declare(WorkItemSubmitter intake, TurnScope? scope) =>
     [
-        ContractTools.Plan.Bind(arguments =>
+        ContractTools.WorkItems.Bind(arguments =>
             intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
     ];
 }

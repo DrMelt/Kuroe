@@ -117,7 +117,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前重名校验。
-    /// TaskRegistry 与 PlanSubmitter 在此建实例并注册，PlanTool 的提交链与其它消费者共享。</summary>
+    /// TaskRegistry 与 WorkItemSubmitter 在此建实例并注册，SubmitWorkItemsTool 的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         IReadOnlyList<CommandToolDefinition> definitions,
@@ -129,7 +129,7 @@ public static class ServiceCollectionExtensions
         string sourceDirectory)
     {
         TaskRegistry taskRegistry = new();
-        PlanSubmitter planSubmitter = new(taskRegistry);
+        WorkItemSubmitter workItemSubmitter = new(taskRegistry);
         PortSubmitter portSubmitter = new(taskRegistry);
         StatusSubmitter statusSubmitter = new(taskRegistry);
 
@@ -138,7 +138,7 @@ public static class ServiceCollectionExtensions
             new TimeTool(),
             new FileTool(workingDirectory),
             new SourceTool(sourceDirectory),
-            new PlanTool(planSubmitter),
+            new SubmitWorkItemsTool(workItemSubmitter),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),
@@ -160,7 +160,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton(taskRegistry);
-        services.AddSingleton(planSubmitter);
+        services.AddSingleton(workItemSubmitter);
         services.AddSingleton(portSubmitter);
         services.AddSingleton(statusSubmitter);
         foreach (ITool tool in tools)

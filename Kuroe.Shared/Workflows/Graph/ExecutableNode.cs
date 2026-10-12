@@ -30,11 +30,11 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxRuns = 100;
 
-    /// <summary>是否有 Data 端口，未声明即无模型可交回的命名产出。</summary>
-    public bool HasDataPorts => Outputs.Any(port => port.Type == PortType.Data);
+    /// <summary>是否有 Text 端口，未声明即无模型可交回的命名产出。</summary>
+    public bool HasTextPorts => Outputs.Any(port => port.Type == PortType.Text);
 
-    /// <summary>是否声明 Items 端口，声明即由模型交回条目拆分。</summary>
-    public bool HasItemsPort => Outputs.Any(port => port.Type == PortType.Items);
+    /// <summary>是否声明 WorkItems 端口，声明即由模型交回条目拆分。</summary>
+    public bool HasWorkItemsPort => Outputs.Any(port => port.Type == PortType.WorkItems);
 
     /// <summary>按名字取端口声明，未声明时为空。</summary>
     public Port? FindPort(PortName name) => Outputs.Find(name);

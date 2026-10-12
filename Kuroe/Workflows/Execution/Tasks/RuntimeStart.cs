@@ -19,7 +19,7 @@ internal sealed class RuntimeStart(StartNode node, string goal) : RuntimeNode(no
 
     public override bool Canceled => false;
 
-    /// <summary>按端口取初始输入：带固定值的端口给该值，其余 Data 端口给提交的目标，未声明端口无产出。</summary>
+    /// <summary>按端口取初始输入：带固定值的端口给该值，其余 Text 端口给提交的目标，未声明端口无产出。</summary>
     public override string? PortText(WorkTask task, PortName port) => Text(port);
 
     /// <summary>按端口取初始输入消息，出处指向流程起点。</summary>
@@ -33,5 +33,5 @@ internal sealed class RuntimeStart(StartNode node, string goal) : RuntimeNode(no
     }
 
     private string? Text(PortName port) =>
-        node.FindPort(port) is { Type: PortType.Data } declared ? declared.Value ?? _goal : null;
+        node.FindPort(port) is { Type: PortType.Text } declared ? declared.Value ?? _goal : null;
 }

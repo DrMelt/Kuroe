@@ -406,7 +406,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，Data 端口透出命名段
+            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，Text 端口透出命名段
             if (!subtreeNames.Contains(sourceName))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
@@ -435,7 +435,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (memberPort.Type == Flow.PortType.Items)
+            if (memberPort.Type == Flow.PortType.WorkItems)
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
                     $"容器输出端口 {port.Value} 的绑定目标是拆分支票端口，容器不透出拆分支票。"));

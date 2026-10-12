@@ -215,10 +215,10 @@ internal sealed class TaskInfoTool : ITool
     /// <summary>拆分的条目清单。</summary>
     private static void AppendSplits(StringBuilder text, TaskSnapshot task)
     {
-        foreach ((int executableIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
+        foreach ((int executableIndex, WorkItemList list) in task.Splits.OrderBy(entry => entry.Key))
         {
-            text.AppendLine($"拆分 {plan.Items.Count} 条，由 {plan.Origin} 在节点「{task.Graph[executableIndex].Name}」交回：");
-            foreach (PlanItem item in plan.Items)
+            text.AppendLine($"拆分 {list.Items.Count} 条，由 {list.Origin} 在节点「{task.Graph[executableIndex].Name}」交回：");
+            foreach (WorkItem item in list.Items)
             {
                 string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
                 text.AppendLine($"  {item.Index + 1}. {item.Title}{branch}");

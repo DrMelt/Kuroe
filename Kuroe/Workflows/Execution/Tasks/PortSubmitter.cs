@@ -38,9 +38,9 @@ public sealed class PortSubmitter(TaskRegistry registry)
         lock (task.Gate)
         {
             ExecutableNode executable = task.Runtime.Executable(run.Context.NodeIndex).Executable;
-            if (!executable.HasDataPorts)
+            if (!executable.HasTextPorts)
             {
-                return ToolErrors.Argument("该节点没有声明 Data 输出端口。");
+                return ToolErrors.Argument("该节点没有声明 Text 输出端口。");
             }
 
             if (task.PortValuesFor(run.Context.NodeIndex, run.Context.ItemIndex) is not null)
@@ -48,7 +48,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument("端口产出已提交，无需重复提交。");
             }
 
-            HashSet<PortName> declared = [.. executable.Outputs.Where(port => port.Type == PortType.Data).Select(port => port.Name)];
+            HashSet<PortName> declared = [.. executable.Outputs.Where(port => port.Type == PortType.Text).Select(port => port.Name)];
             if (!declared.SetEquals(parsed.Value.Keys))
             {
                 return ToolErrors.Argument($"端口必须与声明一一对应，应提交 {string.Join('、', declared)}。");

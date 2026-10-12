@@ -6,13 +6,13 @@ namespace Kuroe.Workflows.Execution.Tasks;
 /// <summary>执行节点与模型之间的契约定义：三个提交工具的名字、说明与参数。工具载体按它声明函数，引擎按它的路径放行。</summary>
 internal static class ContractTools
 {
-    /// <summary>交回条目拆分的工具定义，声明 Items 端口的执行节点放行。</summary>
-    internal static ToolDefinition Plan { get; } = new(
-        new ToolName("SubmitPlanItems"),
+    /// <summary>交回条目拆分的工具定义，声明 WorkItems 端口的执行节点放行。</summary>
+    internal static ToolDefinition WorkItems { get; } = new(
+        new ToolName("SubmitWorkItems"),
         "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
         [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)]);
 
-    /// <summary>交回命名端口内容的工具定义，声明 Data 端口的执行节点放行。</summary>
+    /// <summary>交回命名端口内容的工具定义，声明 Text 端口的执行节点放行。</summary>
     internal static ToolDefinition Port { get; } = new(
         new ToolName("SubmitPortValues"),
         "提交本执行节点命名输出端口的内容。valuesJson 是端口名到文本的 JSON 对象，端口必须与声明一一对应。",

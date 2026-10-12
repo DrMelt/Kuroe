@@ -11,20 +11,20 @@ namespace Kuroe.Tests;
 /// <summary>产出契约的补交提示：声明了输出端口或条目拆分而模型未交回时，点名缺项与对应的契约工具；产出齐备时不给提示。</summary>
 public sealed class ContractReminderTests
 {
-    /// <summary>只声明一个 Data 端口的执行节点，用于验证端口未交回的提示。</summary>
+    /// <summary>只声明一个 Text 端口的执行节点，用于验证端口未交回的提示。</summary>
     private const string PortFlow = """
         {
           "Flows": [
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] }
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]
@@ -61,7 +61,7 @@ public sealed class ContractReminderTests
         Assert.Equal(TaskState.Blocked, blocked.State);
         string reminder = Reminder(harness, Assert.Single(blocked.Executables[0].Runs).Id);
 
-        Assert.Contains("SubmitPlanItems", reminder, StringComparison.Ordinal);
+        Assert.Contains("SubmitWorkItems", reminder, StringComparison.Ordinal);
     }
 
     [Fact]

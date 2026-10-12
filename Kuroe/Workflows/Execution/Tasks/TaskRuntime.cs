@@ -169,7 +169,7 @@ internal sealed class TaskRuntime : IExecutionSources
         }
 
         node.Invalidate(item);
-        if (node.Executable.HasDataPorts)
+        if (node.Executable.HasTextPorts)
         {
             _task.ClearPortValues(node.Index, item);
         }
@@ -186,7 +186,7 @@ internal sealed class TaskRuntime : IExecutionSources
 
     /// <summary>顺着出边要通知的下游执行节点，去重保持顺序。</summary>
     public IReadOnlyList<int> Downstream(RuntimeNode node) =>
-        [.. Graph.Outgoing(node.Index).Select(edge => edge.To).Distinct()];
+        [.. Graph.Outgoing(node.Index).Select(edge => edge.Target).Distinct()];
 
     // ---- 容器推进 ----
 
@@ -355,14 +355,14 @@ internal sealed class TaskRuntime : IExecutionSources
         ExecutableNode executable = node.Executable;
         IReadOnlyDictionary<PortName, string>? values = _task.PortValuesFor(node.Index, run.Context.ItemIndex);
 
-        IReadOnlyList<PortName> ports = executable.HasDataPorts
+        IReadOnlyList<PortName> ports = executable.HasTextPorts
             ? [.. executable.Outputs
-                .Where(port => port.Type == PortType.Data)
+                .Where(port => port.Type == PortType.Text)
                 .Select(port => port.Name)
                 .Where(name => values?.ContainsKey(name) != true)]
             : [];
 
-        bool items = executable.HasItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id;
+        bool items = executable.HasWorkItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id;
 
         return new RunShortfall(ports, items);
     }
@@ -393,7 +393,7 @@ internal sealed class TaskRuntime : IExecutionSources
         RunShortfall shortfall = Shortfall(run);
         if (shortfall.Items)
         {
-            run.MarkUncollected("声明 Items 端口的执行节点没有交回条目拆分，本步未收口。");
+            run.MarkUncollected("声明 WorkItems 端口的执行节点没有交回条目拆分，本步未收口。");
             return Block(node, run, (node.Index, null));
         }
 
@@ -459,7 +459,7 @@ internal sealed class TaskRuntime : IExecutionSources
         }
 
         string[] parts = [.. executable.Outputs
-            .Where(port => port.Type == PortType.Data)
+            .Where(port => port.Type == PortType.Text)
             .Select(port => portValues.GetValueOrDefault(port.Name))
             .Where(value => value is { Length: > 0 })
             .Cast<string>()];
@@ -577,7 +577,7 @@ internal sealed class TaskRuntime : IExecutionSources
 
     /// <summary>任务启动的第一批：开始已放行，由它的直连下游起步。返回前全部实例化。</summary>
     public IReadOnlyList<int> Roots() =>
-        [.. Graph.Outgoing(Ensure(Graph.Start.Index).Index).Select(edge => Ensure(edge.To).Index)];
+        [.. Graph.Outgoing(Ensure(Graph.Start.Index).Index).Select(edge => Ensure(edge.Target).Index)];
 
     /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
     public IReadOnlyList<int> BlockedNodes =>

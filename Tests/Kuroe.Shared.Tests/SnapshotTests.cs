@@ -79,7 +79,7 @@ public sealed class SnapshotTests
     private static class TaskBuilder
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
-            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<int, PlanOutput>(),
+            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<int, WorkItemList>(),
             [.. Graph.ExecutableNodes.Select((executable, index) => new ExecutableSnapshot(index, executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
@@ -87,7 +87,7 @@ public sealed class SnapshotTests
     private static readonly Flow.ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
-        [new Port(new PortName("目标"), PortType.Data)],
+        [new Port(new PortName("目标"), PortType.Text)],
         new NodeSpec
         {
             Name = new NodeName("整体"),
@@ -106,7 +106,7 @@ public sealed class SnapshotTests
             Name = StartNode.ReservedName,
             Path = new NodePath([StartNode.ReservedName]),
             Gate = NodeGate.Auto,
-            Outputs = [new Port(new PortName("目标"), PortType.Data)],
+            Outputs = [new Port(new PortName("目标"), PortType.Text)],
         },
         new ExecutableNode
         {
@@ -131,7 +131,7 @@ public sealed class SnapshotTests
             Kind = NodeKind.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(1, new PortName("拆分"), new PortName("拆分"), PortType.Data, 0)],
+            From = [new Dependency(1, new PortName("拆分"), new PortName("拆分"), PortType.Text, 0)],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

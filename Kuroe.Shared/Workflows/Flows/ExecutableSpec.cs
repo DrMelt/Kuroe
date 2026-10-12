@@ -14,7 +14,7 @@ public sealed record ExecutableSpec
     /// <summary>输入节点的提示文本，控制台呈现给用户，未写时用通用提示。</summary>
     public string? Question { get; init; }
 
-    /// <summary>整节点一个执行还是按规划条目各派一个。</summary>
+    /// <summary>整节点一个执行还是按条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;
 
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>

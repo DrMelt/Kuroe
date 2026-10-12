@@ -276,7 +276,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>按输出端口取单段文本：Context 端口给拼合文本，Items 端口不产生文本，Data 端口取该节点交回的端口值。
+    /// <summary>按输出端口取单段文本：Context 端口给拼合文本，WorkItems 端口不产生文本，Text 端口取该节点交回的端口值。
     /// 输入节点的产出是当前回答，PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
     public override string? PortText(WorkTask task, PortName port)
     {
@@ -286,7 +286,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             return ContextOutput(task);
         }
 
-        if (type == PortType.Items)
+        if (type == PortType.WorkItems)
         {
             // 拆分支票是结构化产出，不产生可注入文本
             return null;
@@ -294,7 +294,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         if (IsInput)
         {
-            if (type != PortType.Data)
+            if (type != PortType.Text)
             {
                 return null;
             }
@@ -342,7 +342,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             return ContextFrameMessages(task, item);
         }
 
-        if (type == PortType.Items)
+        if (type == PortType.WorkItems)
         {
             // 拆分支票是结构化产出，不注入文本上下文
             return [];
@@ -377,7 +377,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     {
         if (IsInput)
         {
-            if (Executable.Outputs.Find(port) is not { Type: PortType.Data }
+            if (Executable.Outputs.Find(port) is not { Type: PortType.Text }
                 || InputAnswer is not { Length: > 0 } answer)
             {
                 return [];

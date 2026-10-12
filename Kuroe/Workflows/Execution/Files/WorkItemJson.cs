@@ -7,5 +7,5 @@ namespace Kuroe.Workflows.Execution.Files;
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     AllowTrailingCommas = true)]
-[JsonSerializable(typeof(List<PlanItemDto>))]
-internal sealed partial class PlanJson : JsonSerializerContext;
+[JsonSerializable(typeof(List<WorkItemDto>))]
+internal sealed partial class WorkItemJson : JsonSerializerContext;

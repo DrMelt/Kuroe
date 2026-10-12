@@ -84,16 +84,16 @@ public sealed class FlowRuleTests
     [Fact]
     public void Start_without_output_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：流程必须声明开始入口，至少一个 Data 输出端口。"],
+            ["流程 默认：流程必须声明开始入口，至少一个 Text 输出端口。"],
             Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
                 [], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
     public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：开始端口 目标 的类型只能是 Data。"],
+            ["流程 默认：开始端口 目标 的类型只能是 Text。"],
             Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
-                [Items("目标")], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
+                [WorkItems("目标")], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
     public void Start_with_constant_port_is_accepted() =>
@@ -182,7 +182,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Input_with_signal_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Data 类型。")],
+            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 类型。")],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
@@ -192,7 +192,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Input_with_context_input_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Data 类型。")],
+            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 类型。")],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
@@ -220,7 +220,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Input_with_context_output_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点的输出端口只能是 Data 端口，回答写入该端口。")],
+            [NodeError("收集", "输入节点的输出端口只能是 Text 端口，回答写入该端口。")],
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [ContextPort("背景")] }))));
 
     [Fact]
@@ -232,7 +232,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Data_and_items_ports_coexist_on_executable() =>
         Assert.Empty(Errors(Flow(
-            Container("整体", Text("分析", "执行者") with { Outputs = [P("结论"), Items("拆解")] }),
+            Container("整体", Text("分析", "执行者") with { Outputs = [P("结论"), WorkItems("拆解")] }),
             Models("执行者"))));
 
     [Fact]
@@ -240,7 +240,7 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [NodeError("制定", "拆分支票端口至多声明一个。")],
             Errors(Flow(
-                Container("整体", Plan("制定", "规划者") with { Outputs = [Items("甲"), Items("乙")] }),
+                Container("整体", Plan("制定", "规划者") with { Outputs = [WorkItems("甲"), WorkItems("乙")] }),
                 Models("规划者"))));
 
     [Fact]
@@ -336,6 +336,40 @@ public sealed class FlowRuleTests
                     Text("接收", "执行者") with { From = [Twice("结论", "来源", "结论")] }),
                 Models("执行者"))));
 
+    /// <summary>组间来源端口不重复：同一来源端口出现在多个组里即接线重复。</summary>
+    [Fact]
+    public void Source_port_repeated_across_groups_is_rejected() =>
+        Assert.Equal(
+            [NodeError("汇合", "From 的来源端口 甲@结论 出现在多个组里。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("甲", "执行者") with { Outputs = [P("结论")] },
+                    Text("乙", "执行者") with { Outputs = [P("结论")] },
+                    Text("汇合", "执行者") with
+                    {
+                        From = [Group(("甲", "结论")), Group(("甲", "结论"), ("乙", "结论"))],
+                    }),
+                Models("执行者"))));
+
+    /// <summary>来源端口只按组划分归属：同一组内给不同输入名复用同一来源端口仍是合法接线。</summary>
+    [Fact]
+    public void Source_port_reused_within_one_group_is_accepted() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Text("来源", "执行者") with { Outputs = [P("结论")] },
+                Text("接收", "执行者") with
+                {
+                    Inputs = [In("甲"), In("乙")],
+                    From =
+                    [
+                        new([
+                            new FromLink(new PortName("甲"), PortRef.Named(new NodeName("来源"), new PortName("结论"))),
+                            new FromLink(new PortName("乙"), PortRef.Named(new NodeName("来源"), new PortName("结论"))),
+                        ]),
+                    ],
+                }),
+            Models("执行者"))));
+
     [Fact]
     public void Per_item_with_signal_port_is_rejected() =>
         Assert.Equal(
@@ -373,7 +407,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Per_item_executable_without_source_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "按条目展开的执行节点必须从声明 Items 端口的执行节点或其它展开执行节点取输入。")],
+            [NodeError("实施", "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。")],
             Errors(Flow(
                 Container("整体",
                     Exec("实施", "执行者", PerItem()) with { Outputs = [P("结论")] },
@@ -397,7 +431,7 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [
                 NodeError("撰写", "拆分支票端口只能被按条目展开的执行节点消费。"),
-                NodeError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 Items 端口的执行节点取拆分。"),
+                NodeError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -568,7 +602,7 @@ public sealed class FlowRuleTests
 
     /// <summary>交回规划的拆分源，声明拆分支票端口。</summary>
     private static NodeSpec Plan(string name, string model) =>
-        Exec(name, model, new ExecutableSpec()) with { Outputs = [Items("拆分")] };
+        Exec(name, model, new ExecutableSpec()) with { Outputs = [WorkItems("拆分")] };
 
     /// <summary>输入节点，默认由开始入口触发。</summary>
     private static NodeSpec Input(string name) =>
@@ -580,17 +614,17 @@ public sealed class FlowRuleTests
             From = [StartRef()],
         };
 
-    /// <summary>Data 端口声明。</summary>
-    private static Port P(string name) => new(new PortName(name), PortType.Data);
+    /// <summary>Text 端口声明。</summary>
+    private static Port P(string name) => new(new PortName(name), PortType.Text);
 
     /// <summary>拆分支票端口声明。</summary>
-    private static Port Items(string name) => new(new PortName(name), PortType.Items);
+    private static Port WorkItems(string name) => new(new PortName(name), PortType.WorkItems);
 
     /// <summary>装配上下文端口声明。</summary>
     private static Port ContextPort(string name) => new(new PortName(name), PortType.Context);
 
-    /// <summary>输入端口声明，未写类型时按 Data。</summary>
-    private static InputPort In(string name, PortType type = PortType.Data) =>
+    /// <summary>输入端口声明，未写类型时按 Text。</summary>
+    private static InputPort In(string name, PortType type = PortType.Text) =>
         new(new PortName(name), type);
 
     /// <summary>命名端口的引用名。</summary>
@@ -636,7 +670,7 @@ public sealed class FlowRuleTests
     private static PortName StartPort => new("目标");
 
     /// <summary>开始入口的输出端口声明。</summary>
-    private static Port StartOutput => new(StartPort, PortType.Data);
+    private static Port StartOutput => new(StartPort, PortType.Text);
 
     /// <summary>由开始入口触发的启动组。</summary>
     private static FromGroup StartRef() => One("目标", StartNode.ReservedName.Value, "目标");

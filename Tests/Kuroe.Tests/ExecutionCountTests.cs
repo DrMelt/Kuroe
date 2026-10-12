@@ -94,13 +94,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
                     { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ] }
                   ]
                 }
@@ -117,7 +117,7 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -139,13 +139,13 @@ public sealed class ExecutionCountTests
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
                     { "Name": "下游", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "上游@结论" } ] }
                   ]
                 }

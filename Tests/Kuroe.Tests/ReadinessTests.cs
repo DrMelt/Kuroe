@@ -16,7 +16,7 @@ public sealed class ReadinessTests
     {
         ExecutableNode source = Definition(1, NodeMode.Single);
         ExecutableNode target = Definition(2, NodeMode.Single);
-        NodeGraph graph = new([StartDefinition(), source, target], [Value(1, 2, Data, new PortName("结论"))]);
+        NodeGraph graph = new([StartDefinition(), source, target], [Value(1, 2, Text, new PortName("结论"))]);
         NodeInputPlan plan = Plan(graph, 2);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -47,7 +47,7 @@ public sealed class ReadinessTests
     {
         ExecutableNode source = Definition(1, NodeMode.PerItem);
         ExecutableNode target = Definition(2, NodeMode.Single);
-        FlowEdge data = new(1, 2, EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once, OutputPort, new PortName("结论"), Data);
+        FlowEdge data = new(1, 2, EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once, OutputPort, new PortName("结论"), Text);
         FlowEdge trigger = new(1, 2, EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, new PortName("信号"), Signal);
         NodeGraph graph = new([StartDefinition(), source, target], signalFirst ? [trigger, data] : [data, trigger]);
         NodeInputPlan plan = Plan(graph, 2);
@@ -83,6 +83,31 @@ public sealed class ReadinessTests
         loop.Sources.Split(1, [0, 1]);
 
         Assert.Empty(NodeReadiness.Ready(loop.Input, loop.Node, loop.Sources));
+    }
+
+    /// <summary>两组同时齐备只启动一个实例：启动即登记方案内全部来源版本，另一组不再触发。</summary>
+    [Fact]
+    public void Two_ready_groups_start_once()
+    {
+        ExecutableNode first = Definition(1, NodeMode.Single);
+        ExecutableNode second = Definition(2, NodeMode.Single);
+        ExecutableNode target = Definition(3, NodeMode.Single);
+        NodeGraph graph = new(
+            [StartDefinition(), first, second, target],
+            [
+                Value(1, 3, Text, new PortName("甲"), group: 0),
+                Value(2, 3, Text, new PortName("乙"), group: 1),
+            ]);
+        NodeInputPlan plan = Plan(graph, 3);
+        FakeSources sources = new();
+        RuntimeExecutable node = new(target);
+
+        sources.Of(1).Publish();
+        sources.Of(2).Publish();
+        Assert.Single(NodeReadiness.Ready(plan, node, sources));
+
+        node.Consume(plan, sources);
+        Assert.Empty(NodeReadiness.Ready(plan, node, sources));
     }
 
     /// <summary>按条目展开的执行节点逐实例判定：已有产出的条目不再启动，其余条目照常启动。</summary>
@@ -128,7 +153,7 @@ public sealed class ReadinessTests
     [Fact]
     public void Aligned_source_not_covering_an_item_leaves_it_ready()
     {
-        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.Items)]);
+        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
         ExecutableNode aligned = Definition(2, NodeMode.PerItem);
         ExecutableNode target = Definition(3, NodeMode.PerItem);
         NodeGraph graph = new(
@@ -153,7 +178,7 @@ public sealed class ReadinessTests
     /// <summary>两个组的按条目执行节点：空间取自拆分来源，组一要求拆分与数据来源，组二要求另一个数据来源。</summary>
     private static Loop Grouped()
     {
-        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.Items)]);
+        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
         ExecutableNode first = Definition(2, NodeMode.Single);
         ExecutableNode second = Definition(3, NodeMode.Single);
         ExecutableNode target = Definition(4, NodeMode.PerItem);
@@ -161,8 +186,8 @@ public sealed class ReadinessTests
             [StartDefinition(), split, first, second, target],
             [
                 FlowEdge.Split(1, 4, new PortName("拆分"), new PortName("任务"), 0),
-                Value(2, 4, Data, new PortName("结论"), group: 0),
-                Value(3, 4, Data, new PortName("依据"), group: 1),
+                Value(2, 4, Text, new PortName("结论"), group: 0),
+                Value(3, 4, Text, new PortName("依据"), group: 1),
             ]);
 
         return new Loop(Plan(graph, 4), new RuntimeExecutable(target), new FakeSources());
@@ -177,7 +202,7 @@ public sealed class ReadinessTests
         new(from, to, EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, input, type, group);
 
     private static FlowEdge Aligned(int from, int to, PortName input) =>
-        new(from, to, EdgeKind.Value, FeedScope.Item, FeedRecurrence.Repeat, OutputPort, input, Data);
+        new(from, to, EdgeKind.Value, FeedScope.Item, FeedRecurrence.Repeat, OutputPort, input, Text);
 
     private static ExecutableNode Definition(int index, NodeMode mode, IReadOnlyList<Port>? outputs = null) => new()
     {
@@ -200,7 +225,7 @@ public sealed class ReadinessTests
         Name = StartNode.ReservedName,
         Path = new NodePath([StartNode.ReservedName]),
         Gate = NodeGate.Auto,
-        Outputs = [new Port(OutputPort, PortType.Data)],
+        Outputs = [new Port(OutputPort, PortType.Text)],
     };
 
     /// <summary>判定用的来源侧：按序号给出放行状态、版本、展开实例与产出，拆分另按序号登记。</summary>
@@ -263,7 +288,7 @@ public sealed class ReadinessTests
 
     private static readonly PortName OutputPort = new("结论");
 
-    private const PortType Data = PortType.Data;
+    private const PortType Text = PortType.Text;
 
     private const PortType Signal = PortType.Signal;
 }

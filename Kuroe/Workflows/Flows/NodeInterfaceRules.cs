@@ -16,15 +16,15 @@ internal static class NodeInterfaceRules
         }
 
         foreach (Flow.InputPort port in node.Inputs.Where(port =>
-            port.Type is not (Flow.PortType.Data or Flow.PortType.Context or Flow.PortType.Signal)))
+            port.Type is not (Flow.PortType.Text or Flow.PortType.Context or Flow.PortType.Signal)))
         {
-            fail($"输入端口 {port.Name.Value} 的类型只能是 Data、Context 或 Signal。");
+            fail($"输入端口 {port.Name.Value} 的类型只能是 Text、Context 或 Signal。");
         }
 
         foreach (Flow.Port port in node.Outputs.Where(port =>
-            port.Type is not (Flow.PortType.Data or Flow.PortType.Items or Flow.PortType.Context)))
+            port.Type is not (Flow.PortType.Text or Flow.PortType.WorkItems or Flow.PortType.Context)))
         {
-            fail($"输出端口 {port.Name.Value} 的类型只能是 Data、Items 或 Context。");
+            fail($"输出端口 {port.Name.Value} 的类型只能是 Text、WorkItems 或 Context。");
         }
 
         foreach (Flow.PortName port in Duplicates([.. node.Outputs.Select(port => port.Name)]))
@@ -42,7 +42,7 @@ internal static class NodeInterfaceRules
             fail("Question 只属于输入节点。");
         }
 
-        if (node.Outputs.Count(port => port.Type == Flow.PortType.Items) > 1)
+        if (node.Outputs.Count(port => port.Type == Flow.PortType.WorkItems) > 1)
         {
             fail("拆分支票端口至多声明一个。");
         }

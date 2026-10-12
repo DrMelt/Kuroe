@@ -26,8 +26,8 @@ internal static class BuiltinNodes
     {
         Name = new NodeName("规划"),
         Kind = NodeKind.Executable,
-        Inputs = [new InputPort(GoalPort, PortType.Data, "要拆分的任务目标。")],
-        Outputs = [new Port(SplitPort, PortType.Items, "目标拆成的条目清单。")],
+        Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
+        Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec
         {
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
@@ -39,7 +39,7 @@ internal static class BuiltinNodes
     {
         Name = new NodeName("执行"),
         Kind = NodeKind.Executable,
-        Inputs = [new InputPort(TaskPort, PortType.Data, "待实施的条目，来自拆分来源。")],
+        Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {
             Tools = [new ToolPath("GetLocalTime")],
@@ -52,7 +52,7 @@ internal static class BuiltinNodes
     {
         Name = new NodeName("交付"),
         Kind = NodeKind.Container,
-        Inputs = [new InputPort(PlanPort, PortType.Data, "待实施的条目拆分，来自规划节点。")],
+        Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =
         [

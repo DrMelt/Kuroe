@@ -22,11 +22,11 @@ internal sealed class TaskDetailView(Terminal terminal)
         if (task.Splits.Count > 0)
         {
             _terminal.NewLine();
-            foreach ((int executableIndex, PlanOutput plan) in task.Splits.OrderBy(entry => entry.Key))
+            foreach ((int executableIndex, WorkItemList plan) in task.Splits.OrderBy(entry => entry.Key))
             {
                 string nodeName = task.Graph[executableIndex].Name.Value;
                 _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
-                foreach (PlanItem item in plan.Items)
+                foreach (WorkItem item in plan.Items)
                 {
                     string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
                     _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}");

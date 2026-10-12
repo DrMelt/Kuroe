@@ -31,7 +31,7 @@ internal sealed class RunReminder(TaskRegistry registry) : IRunContract
             List<string> missing = [];
             if (shortfall.Items)
             {
-                missing.Add($"条目拆分，请调用 {ContractTools.Plan.Name} 提交");
+                missing.Add($"条目拆分，请调用 {ContractTools.WorkItems.Name} 提交");
             }
 
             if (shortfall.Ports.Count > 0)

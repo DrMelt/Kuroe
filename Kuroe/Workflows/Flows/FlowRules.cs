@@ -72,21 +72,21 @@ static class FlowRules
         return errors.Count > 0 ? errors : Result.Success;
     }
 
-    /// <summary>开始入口的静态规则：至少一个 Data 端口，恰好一个不带 Value 的端口承接提交目标，其余端口必须带 Value。</summary>
+    /// <summary>开始入口的静态规则：至少一个 Text 端口，恰好一个不带 Value 的端口承接提交目标，其余端口必须带 Value。</summary>
     private static void CheckStart(Flow.FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
         {
-            errors.Add(FlowErrors.Body(flow.Name.Value, "流程必须声明开始入口，至少一个 Data 输出端口。"));
+            errors.Add(FlowErrors.Body(flow.Name.Value, "流程必须声明开始入口，至少一个 Text 输出端口。"));
             return;
         }
 
         var names = new HashSet<Flow.PortName>();
         foreach (Flow.Port port in flow.StartOutputs)
         {
-            if (port.Type != Flow.PortType.Data)
+            if (port.Type != Flow.PortType.Text)
             {
-                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的类型只能是 Data。"));
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的类型只能是 Text。"));
             }
 
             if (!names.Add(port.Name))
@@ -407,7 +407,7 @@ static class FlowRules
         foreach (Flow.FromLink link in node.From.SelectMany(group => group.Links))
         {
             Flow.PortRef reference = link.Ref;
-            Flow.PortType type = node.Inputs.Find(link.Input)?.Type ?? Flow.PortType.Data;
+            Flow.PortType type = node.Inputs.Find(link.Input)?.Type ?? Flow.PortType.Text;
 
             if (type == Flow.PortType.Context)
             {
@@ -525,7 +525,7 @@ static class FlowRules
                 continue;
             }
 
-            if (memberPort.Type == Flow.PortType.Items)
+            if (memberPort.Type == Flow.PortType.WorkItems)
             {
                 errors.Add(scope.Node(container.Name.Value,
                     $"容器输出端口 {port.Value} 的绑定目标是拆分支票端口，容器不透出拆分支票。"));
@@ -591,11 +591,11 @@ static class FlowRules
         Reject(executable.Tools.Count > 0, "输入节点不启动 run，不能声明 Tools。");
         Reject(executable.Prompt is { Length: > 0 }, "输入节点不启动 run，不能声明 Prompt。");
         Reject(executable.Validate is not null, "输入节点不启动 run，不能声明 Validate。");
-        Reject(node.Inputs.Any(port => port.Type != Flow.PortType.Data), "输入节点只等待外部回答，输入端口只能是 Data 类型。");
+        Reject(node.Inputs.Any(port => port.Type != Flow.PortType.Text), "输入节点只等待外部回答，输入端口只能是 Text 类型。");
         Reject(executable.Mode != Flow.NodeMode.Single, "输入节点只能整节点等待用户输入。");
         Reject(executable.Branch is not null, "输入节点不启动 run，不能声明 Branch。");
         Reject(node.Gate == Flow.NodeGate.Review, "输入节点回答即放行，不能声明 Review 门控。");
-        Reject(node.Outputs.Any(port => port.Type != Flow.PortType.Data), "输入节点的输出端口只能是 Data 端口，回答写入该端口。");
+        Reject(node.Outputs.Any(port => port.Type != Flow.PortType.Text), "输入节点的输出端口只能是 Text 端口，回答写入该端口。");
         Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
         Reject(node.SystemPrompt.Count > 0, "输入节点不启动 run，不能声明系统指令。");
     }
@@ -604,7 +604,7 @@ static class FlowRules
     private static void ValidateInterface(Flow.NodeSpec node, NodeScope scope, List<Error> errors) =>
         NodeInterfaceRules.Check(node, message => errors.Add(scope.Node(node.Name.Value, message)));
 
-    /// <summary>Validate 与非 Data 输入端口的组合约束：两者都要求整节点执行。</summary>
+    /// <summary>Validate 与非 Text 输入端口的组合约束：两者都要求整节点执行。</summary>
     private static void CheckExpansion(Flow.NodeSpec node, NodeScope scope, List<Error> errors)
     {
         Flow.ExecutableSpec execution = node.Execution!;
@@ -615,9 +615,9 @@ static class FlowRules
 
         if (execution.Validate is not null)
         {
-            if (!node.Outputs.Any(port => port.Type == Flow.PortType.Data))
+            if (!node.Outputs.Any(port => port.Type == Flow.PortType.Text))
             {
-                errors.Add(scope.Node(node.Name.Value, "声明 Validate 的节点必须声明 Data 输出端口，校验对象是端口产出。"));
+                errors.Add(scope.Node(node.Name.Value, "声明 Validate 的节点必须声明 Text 输出端口，校验对象是端口产出。"));
             }
 
             if (execution.Mode == Flow.NodeMode.PerItem)
@@ -626,7 +626,7 @@ static class FlowRules
             }
         }
 
-        if (execution.Mode == Flow.NodeMode.PerItem && node.Inputs.Any(port => port.Type != Flow.PortType.Data))
+        if (execution.Mode == Flow.NodeMode.PerItem && node.Inputs.Any(port => port.Type != Flow.PortType.Text))
         {
             errors.Add(scope.Node(node.Name.Value, "声明 Context 或 Signal 输入端口的执行节点不能按条目展开，必须是整节点执行。"));
         }
@@ -681,36 +681,37 @@ static class FlowRules
         }
     }
 
-    /// <summary>展平后的图规则：见环合法性、从开始的可达性与逐条对齐的形态。执行直接按边推进。</summary>
+    /// <summary>展平后的图规则：见环合法性、从开始的可达性、逐条对齐的形态与组间来源端口不重复。执行直接按边推进。</summary>
     private static void CheckShape(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         CheckLoops(graph, scope, errors);
         CheckAlignment(graph, scope, errors);
         CheckReachability(graph, scope, errors);
+        CheckGroupSources(graph, scope, errors);
 
         foreach (FlowEdge edge in graph.Edges)
         {
-            GraphNode source = graph[edge.From];
-            if (graph[edge.To] is not ExecutableNode target)
+            GraphNode source = graph[edge.Source];
+            if (graph[edge.Target] is not ExecutableNode target)
             {
                 continue;
             }
 
             if (target.Execution.Mode == Flow.NodeMode.Single
                 && source is ExecutableNode { Execution.Mode: Flow.NodeMode.PerItem }
-                && target.HasItemsPort)
+                && target.HasWorkItemsPort)
             {
-                errors.Add(scope.Node(target.Name.Value, "声明 Items 端口的执行节点不能从按条目展开的执行节点取输入。"));
+                errors.Add(scope.Node(target.Name.Value, "声明 WorkItems 端口的执行节点不能从按条目展开的执行节点取输入。"));
             }
 
-            if (graph.TypeOf(edge.From, edge.Port) == Flow.PortType.Items && edge.Kind != EdgeKind.Split)
+            if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems && edge.Kind != EdgeKind.Split)
             {
                 errors.Add(scope.Node(target.Name.Value, "拆分支票端口只能被按条目展开的执行节点消费。"));
             }
 
             if (edge.Scope == FeedScope.Item
-                && graph.ItemSpace(edge.From) is { } fromSpace
-                && graph.ItemSpace(edge.To) is { } toSpace
+                && graph.ItemSpace(edge.Source) is { } fromSpace
+                && graph.ItemSpace(edge.Target) is { } toSpace
                 && fromSpace != toSpace)
             {
                 errors.Add(scope.Node(target.Name.Value, "逐条对齐的两端必须来自同一个拆分。"));
@@ -719,11 +720,11 @@ static class FlowRules
             if (target.Execution.Branch is { } branch
                 && (target.Execution.Mode != Flow.NodeMode.PerItem || graph.PlanOf(target.Index)?.SplitSource is null))
             {
-                errors.Add(scope.Node(target.Name.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从声明 Items 端口的执行节点取拆分。"));
+                errors.Add(scope.Node(target.Name.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"));
             }
         }
 
-        // 按条目展开必须能确定实例集：从声明 Items 端口的执行节点取拆分，或从其它展开执行节点取对齐
+        // 按条目展开必须能确定实例集：从声明 WorkItems 端口的执行节点取拆分，或从其它展开执行节点取对齐
         foreach (ExecutableNode executable in graph.ExecutableNodes)
         {
             if (executable.Execution.Mode != Flow.NodeMode.PerItem)
@@ -733,7 +734,7 @@ static class FlowRules
 
             int splitSources = graph.Incoming(executable.Index)
                 .Where(edge => edge.Kind == EdgeKind.Split)
-                .Select(edge => edge.From)
+                .Select(edge => edge.Source)
                 .Distinct()
                 .Count();
             if (splitSources > 1)
@@ -746,11 +747,30 @@ static class FlowRules
             if (!expandable)
             {
                 // 容器来源只供整份上下文，不提供实例集，单独出现时节点永远无法展开
-                string reason = graph.Incoming(executable.Index).Any(edge => graph[edge.From] is ContainerNode)
-                    ? "按条目展开的执行节点不能从容器取实例集，请引用声明 Items 端口的执行节点或其它展开执行节点。"
-                    : "按条目展开的执行节点必须从声明 Items 端口的执行节点或其它展开执行节点取输入。";
+                string reason = graph.Incoming(executable.Index).Any(edge => graph[edge.Source] is ContainerNode)
+                    ? "按条目展开的执行节点不能从容器取实例集，请引用声明 WorkItems 端口的执行节点或其它展开执行节点。"
+                    : "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。";
                 errors.Add(scope.Node(executable.Name.Value, reason));
             }
+        }
+    }
+
+    /// <summary>组间来源端口不重复：同一来源端口作为启动条件只能落在一个组里，跨组出现即多组同时齐备。
+    /// 为按条目目标提供实例空间的连接不驱动启动，每个组都要写它，不受此限。</summary>
+    private static void CheckGroupSources(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        foreach (IGrouping<(int Target, int Source, Flow.PortName SourcePort), FlowEdge> group in graph.Edges
+            .Where(edge => edge.Kind != EdgeKind.Split)
+            .GroupBy(edge => (edge.Target, edge.Source, edge.SourcePort)))
+        {
+            if (group.Select(edge => edge.Group).Distinct().Count() < 2
+                || graph[group.Key.Target] is not ExecutableNode target)
+            {
+                continue;
+            }
+
+            string reference = new Flow.PortRef(graph[group.Key.Source].Name, group.Key.SourcePort).Display;
+            errors.Add(scope.Node(target.Name.Value, $"From 的来源端口 {reference} 出现在多个组里。"));
         }
     }
 
@@ -766,7 +786,7 @@ static class FlowRules
             // reached.Add 兼作去重判定：首次到达的节点才入队
             while (queue.TryDequeue(out int current))
             {
-                foreach (int next in graph.Outgoing(current).Select(edge => edge.To).Where(reached.Add))
+                foreach (int next in graph.Outgoing(current).Select(edge => edge.Target).Where(reached.Add))
                 {
                     queue.Enqueue(next);
                 }
@@ -802,10 +822,10 @@ static class FlowRules
         foreach (FlowEdge edge in graph.Edges)
         {
             // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动条件永不满足的环
-            if (graph[edge.From] is ContainerNode container
-                && graph.ExecutablesIn(container.Index).Contains(edge.To))
+            if (graph[edge.Source] is ContainerNode container
+                && graph.ExecutablesIn(container.Index).Contains(edge.Target))
             {
-                errors.Add(scope.Node(graph[edge.To].Name.Value,
+                errors.Add(scope.Node(graph[edge.Target].Name.Value,
                     "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"));
             }
         }
@@ -820,8 +840,8 @@ static class FlowRules
 
             bool externalEntry = members.Any(member =>
                 graph.Incoming(member).Any(edge =>
-                    graph[edge.From] is StartNode
-                    || graph.ExecutablesIn(edge.From).Any(source => !members.Contains(source))));
+                    graph[edge.Source] is StartNode
+                    || graph.ExecutablesIn(edge.Source).Any(source => !members.Contains(source))));
             if (!externalEntry)
             {
                 ExecutableNode representative = (ExecutableNode)graph[members[0]];
@@ -845,10 +865,10 @@ static class FlowRules
 
         foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Kind == EdgeKind.Split || edge.Scope == FeedScope.Item))
         {
-            foreach (int source in graph.ExecutablesIn(edge.From))
+            foreach (int source in graph.ExecutablesIn(edge.Source))
             {
-                indegree[edge.To]++;
-                outgoing[source].Add(edge.To);
+                indegree[edge.Target]++;
+                outgoing[source].Add(edge.Target);
             }
         }
 

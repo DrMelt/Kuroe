@@ -65,7 +65,7 @@ public sealed class TaskService
         // 输入节点不启动 run，不需要模型；开始直连的执行节点要求模型可解析
         foreach (FlowEdge edge in graph.Outgoing(graph.Start.Index))
         {
-            if (graph[edge.To] is not ExecutableNode { Kind: not NodeKind.Input } target)
+            if (graph[edge.Target] is not ExecutableNode { Kind: not NodeKind.Input } target)
             {
                 continue;
             }

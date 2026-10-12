@@ -38,7 +38,7 @@ public sealed record NodeSpec
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 模型逐 run 交回 Data 端口值，引用处不能修改声明。</summary>
+    /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。仅执行节点声明。</summary>

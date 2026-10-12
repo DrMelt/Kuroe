@@ -13,7 +13,7 @@ public sealed class NodePathTests
     /// <summary>多层容器流程：整体 → 制定计划，整体 → 文档组 → 撰写。</summary>
     private const string ChainFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "制定计划", "Kind": "Executable", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] },
               { "Name": "文档组", "Kind": "Container", "Nodes": [
@@ -27,7 +27,7 @@ public sealed class NodePathTests
     /// <summary>根节点直接是执行节点的流程。</summary>
     private const string RootExecutableFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "直接执行", "Kind": "Executable", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
           ] } ]
         }

@@ -17,7 +17,7 @@ public sealed class WorkTask
     private const int TitleLimit = 40;
 
     private readonly List<Run> _runs = [];
-    private readonly Dictionary<int, PlanOutput> _splits = [];
+    private readonly Dictionary<int, WorkItemList> _splits = [];
     private readonly Dictionary<(int Node, int? Item), IReadOnlyDictionary<PortName, string>> _portValues = [];
     private readonly Dictionary<(int Node, int? Item), RunVerdict> _verdicts = [];
     private string _title;
@@ -93,13 +93,13 @@ public sealed class WorkTask
     }
 
     /// <summary>各执行节点交回的条目拆分，键是产出执行节点序号，尚未交回时为空。仅在持有 <see cref="Gate"/> 时读写。</summary>
-    public IReadOnlyDictionary<int, PlanOutput> Splits => _splits;
+    public IReadOnlyDictionary<int, WorkItemList> Splits => _splits;
 
     /// <summary>某执行节点的条目拆分，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal PlanOutput? SplitFor(int executableIndex) => _splits.GetValueOrDefault(executableIndex);
+    internal WorkItemList? SplitFor(int executableIndex) => _splits.GetValueOrDefault(executableIndex);
 
     /// <summary>记录某执行节点的条目拆分。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetSplit(int executableIndex, PlanOutput output) => _splits[executableIndex] = output;
+    internal void SetSplit(int executableIndex, WorkItemList output) => _splits[executableIndex] = output;
 
     /// <summary>某执行节点某实例交回的命名输出端口值，整节点实例不写实例序，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
     internal IReadOnlyDictionary<PortName, string>? PortValuesFor(int executableIndex, int? item) =>
@@ -242,7 +242,7 @@ public sealed class WorkTask
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Index))];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
-                _runs.Count(run => run.IsLive), new Dictionary<int, PlanOutput>(_splits), executables, executableStates,
+                _runs.Count(run => run.IsLive), new Dictionary<int, WorkItemList>(_splits), executables, executableStates,
                 Runtime.ContainerSnapshots(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }

@@ -39,7 +39,7 @@ internal static class RunContextFactory
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于种子最前
         seed.InsertRange(0, contextInput);
 
-        PlanItem? item = ItemOf(task, node, itemIndex);
+        WorkItem? item = ItemOf(task, node, itemIndex);
         if (item is not null)
         {
             string branch = item.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
@@ -62,7 +62,7 @@ internal static class RunContextFactory
             Tools = ToolsFor(node.Executable),
             Seed = seed,
             SystemPrompt = Combine(node.Executable.SystemPrompt, BuildBriefing(task, node, inputs)),
-            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Type == PortType.Data)],
+            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Type == PortType.Text)],
         };
     }
 
@@ -73,13 +73,13 @@ internal static class RunContextFactory
         {
             if (itemIndex is { } index)
             {
-                AppendPortMessages(task, edge.From, edge.Port, index, seed);
+                AppendPortMessages(task, edge.Source, edge.SourcePort, index, seed);
             }
 
             return;
         }
 
-        AppendPortMessages(task, edge.From, edge.Port, null, seed);
+        AppendPortMessages(task, edge.Source, edge.SourcePort, null, seed);
     }
 
     /// <summary>取来源节点某端口的注入消息集并入种子：整份直接取放行产出，命名端口与上下文端口返回节点已构造的消息。</summary>
@@ -99,7 +99,7 @@ internal static class RunContextFactory
             && run.Result is { Length: > 0 });
 
     /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
-    private static PlanItem? ItemOf(WorkTask task, RuntimeExecutable node, int? itemIndex)
+    private static WorkItem? ItemOf(WorkTask task, RuntimeExecutable node, int? itemIndex)
     {
         if (itemIndex is not { } index || node.Mode != NodeMode.PerItem)
         {
@@ -126,7 +126,7 @@ internal static class RunContextFactory
     }
 
     /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
-    private static string BuildInstruction(RuntimeExecutable node, PlanItem? item, int count)
+    private static string BuildInstruction(RuntimeExecutable node, WorkItem? item, int count)
     {
         List<string> lines = [];
         if (node.Executable.Execution.Prompt is { Length: > 0 } prompt)
@@ -173,11 +173,11 @@ internal static class RunContextFactory
     /// <summary>一条入边的输入端口说明：来源、端口与取用方式，信号输入标明不进上下文。</summary>
     private static string InputLine(WorkTask task, FlowEdge edge)
     {
-        string source = task.Graph[edge.From] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.From].Name}」";
-        string port = $"端口「{edge.Port}」";
+        string source = task.Graph[edge.Source] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.Source].Name}」";
+        string port = $"端口「{edge.SourcePort}」";
         if (edge.Type == PortType.Signal)
         {
-            return $"- 输入「{edge.Input}」取自 {source}{port}：仅作启动信号，不进上下文。";
+            return $"- 输入「{edge.TargetInput}」取自 {source}{port}：仅作启动信号，不进上下文。";
         }
 
         string consumption = edge.Kind == EdgeKind.Split
@@ -191,26 +191,26 @@ internal static class RunContextFactory
 
         string placement = edge.Type == PortType.Context ? "，置于上下文最前" : string.Empty;
 
-        return $"- 输入「{edge.Input}」取自 {source}{port}：{consumption}{placement}。";
+        return $"- 输入「{edge.TargetInput}」取自 {source}{port}：{consumption}{placement}。";
     }
 
-    /// <summary>本节点需要交回的产出：Data 端口与条目拆分端口各一条，未声明时为空。</summary>
+    /// <summary>本节点需要交回的产出：Text 端口与条目拆分端口各一条，未声明时为空。</summary>
     private static List<string> OutputLines(WorkTask task, RuntimeExecutable node)
     {
         ExecutableNode executable = node.Executable;
         List<string> lines = [];
-        if (executable.HasDataPorts)
+        if (executable.HasTextPorts)
         {
-            string ports = ContractText.List(executable.Outputs.Where(port => port.Type == PortType.Data));
+            string ports = ContractText.List(executable.Outputs.Where(port => port.Type == PortType.Text));
             lines.Add($"- 输出端口 {ports}。用 {ContractTools.Port.Name} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
         }
 
-        if (executable.HasItemsPort)
+        if (executable.HasWorkItemsPort)
         {
-            PortName port = executable.Outputs.First(item => item.Type == PortType.Items).Name;
+            PortName port = executable.Outputs.First(item => item.Type == PortType.WorkItems).Name;
             List<string> branches = Branches(task, node);
             string guide = branches.Count == 0 ? string.Empty : $"可选分支：{string.Join('、', branches)}，条目须标明其一。";
-            lines.Add($"- 条目拆分端口「{port}」。用 {ContractTools.Plan.Name} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
+            lines.Add($"- 条目拆分端口「{port}」。用 {ContractTools.WorkItems.Name} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
         }
 
         return lines;
@@ -222,7 +222,7 @@ internal static class RunContextFactory
         List<string> branches = [];
         foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
-            if (edge.Kind == EdgeKind.Split && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } name })
+            if (edge.Kind == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } name })
             {
                 branches.Add(name.Value);
             }
@@ -239,12 +239,12 @@ internal static class RunContextFactory
     private static List<ToolPath> ToolsFor(ExecutableNode node)
     {
         List<ToolPath> names = [.. node.Execution.Tools];
-        if (node.HasItemsPort)
+        if (node.HasWorkItemsPort)
         {
-            names.Add(ContractTools.Plan.Path);
+            names.Add(ContractTools.WorkItems.Path);
         }
 
-        if (node.HasDataPorts)
+        if (node.HasTextPorts)
         {
             names.Add(ContractTools.Port.Path);
         }

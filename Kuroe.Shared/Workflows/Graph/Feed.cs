@@ -51,14 +51,14 @@ public static class FeedRules
             {
                 (true, NodeMode.PerItem, _) => (EdgeKind.Value, FeedScope.Item, FeedRecurrence.Repeat),
                 (true, _, _) => (EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once),
-                (false, NodeMode.PerItem, PortType.Items) => (EdgeKind.Split, FeedScope.Whole, FeedRecurrence.Repeat),
+                (false, NodeMode.PerItem, PortType.WorkItems) => (EdgeKind.Split, FeedScope.Whole, FeedRecurrence.Repeat),
                 _ => (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat),
             },
             // 图上的来源只有开始、容器与执行节点三类，此分支不可达
             _ => throw new ArgumentException($"不支持的来源节点类型：{source.GetType().Name}"),
         };
 
-    /// <summary>来源端口声明的类型，未声明时按 Data。</summary>
+    /// <summary>来源端口声明的类型，未声明时按 Text。</summary>
     public static PortType TypeOf(ExecutableNode source, PortName port) =>
-        source.FindPort(port)?.Type ?? PortType.Data;
+        source.FindPort(port)?.Type ?? PortType.Text;
 }

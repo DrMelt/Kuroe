@@ -14,7 +14,7 @@ public sealed record TaskSnapshot(
     NodeGraph Graph,
     TaskState State,
     int LiveRuns,
-    IReadOnlyDictionary<int, PlanOutput> Splits,
+    IReadOnlyDictionary<int, WorkItemList> Splits,
     IReadOnlyList<ExecutableSnapshot> Executables,
     IReadOnlyList<ExecutableStateSnapshot> ExecutableStates,
     IReadOnlyList<ContainerSnapshot> Containers,

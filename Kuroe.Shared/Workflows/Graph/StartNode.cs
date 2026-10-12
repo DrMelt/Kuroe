@@ -9,7 +9,7 @@ public sealed record StartNode : GraphNode
     /// <summary>保留名，流程内的节点名与节点库定义名不得与之相同。</summary>
     public static NodeName ReservedName { get; } = new("Start");
 
-    /// <summary>输出端口表：至少一个 Data 端口，不带值的端口恰好一个，输出提交任务的初始输入，其余端口带固定值。</summary>
+    /// <summary>输出端口表：至少一个 Text 端口，不带值的端口恰好一个，输出提交任务的初始输入，其余端口带固定值。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
 
     /// <summary>按名字取端口声明，未声明时为空。</summary>

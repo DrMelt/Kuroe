@@ -40,12 +40,12 @@ public sealed class NodeGraph
 
         foreach (FlowEdge edge in edges)
         {
-            _ = this[edge.From];
-            _ = this[edge.To];
-            IReadOnlyList<FlowEdge> incoming = _incoming.GetValueOrDefault(edge.To) ?? [];
-            IReadOnlyList<FlowEdge> outgoing = _outgoing.GetValueOrDefault(edge.From) ?? [];
-            _incoming[edge.To] = [.. incoming, edge];
-            _outgoing[edge.From] = [.. outgoing, edge];
+            _ = this[edge.Source];
+            _ = this[edge.Target];
+            IReadOnlyList<FlowEdge> incoming = _incoming.GetValueOrDefault(edge.Target) ?? [];
+            IReadOnlyList<FlowEdge> outgoing = _outgoing.GetValueOrDefault(edge.Source) ?? [];
+            _incoming[edge.Target] = [.. incoming, edge];
+            _outgoing[edge.Source] = [.. outgoing, edge];
         }
 
         _plans = BuildPlans();
@@ -89,13 +89,13 @@ public sealed class NodeGraph
     /// <summary>来源的出边，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Outgoing(int source) => _outgoing.GetValueOrDefault(source) ?? [];
 
-    /// <summary>来源节点某端口声明的类型，容器与未声明按 Data。供边规则按类型校验。</summary>
+    /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。供边规则按类型校验。</summary>
     public PortType TypeOf(int nodeIndex, PortName port) =>
         Nodes[nodeIndex] switch
         {
             ExecutableNode executable => FeedRules.TypeOf(executable, port),
-            StartNode start => start.FindPort(port)?.Type ?? PortType.Data,
-            _ => PortType.Data,
+            StartNode start => start.FindPort(port)?.Type ?? PortType.Text,
+            _ => PortType.Text,
         };
 
     /// <summary>执行节点的条目空间：实例条目归属的拆分来源。自身取方案的拆分来源，按条目对齐的沿对齐来源递推到源拆分。</summary>
@@ -140,7 +140,7 @@ public sealed class NodeGraph
         [
             .. incoming
                 .Where(edge => edge.Kind == EdgeKind.Value && edge.Scope == FeedScope.Item)
-                .Select(edge => edge.From)
+                .Select(edge => edge.Source)
                 .Distinct(),
         ];
 
@@ -190,11 +190,11 @@ public sealed class NodeGraph
     };
 
     private static InputBinding BindingOf(FlowEdge edge) =>
-        new(edge.Kind, edge.From, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
+        new(edge.Kind, edge.Source, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
 
     /// <summary>入边里提供拆分空间的空间边来源，没有时为空。</summary>
     private static int? SplitSource(IReadOnlyList<FlowEdge> incoming) =>
-        incoming.FirstOrDefault(edge => edge.Kind == EdgeKind.Split)?.From;
+        incoming.FirstOrDefault(edge => edge.Kind == EdgeKind.Split)?.Source;
 
     /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环合法性校验。</summary>
     public IReadOnlyList<int[]> Loops()
@@ -214,9 +214,9 @@ public sealed class NodeGraph
 
         foreach (FlowEdge edge in Edges)
         {
-            foreach (int source in SourcesIn(edge.From))
+            foreach (int source in SourcesIn(edge.Source))
             {
-                adjacent[rank[source]].Add(rank[edge.To]);
+                adjacent[rank[source]].Add(rank[edge.Target]);
             }
         }
 

@@ -654,9 +654,9 @@ static class FlowAssembler
                     case "type":
                         if (property.Value.ValueKind != JsonValueKind.String
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
-                            || parsedType is not (PortType.Data or PortType.Items or PortType.Context))
+                            || parsedType is not (PortType.Text or PortType.WorkItems or PortType.Context))
                         {
-                            errors.Add(scope.Node(nodeName, "输出端口的 Type 应为 Data、Items 或 Context。"));
+                            errors.Add(scope.Node(nodeName, "输出端口的 Type 应为 Text、WorkItems 或 Context。"));
                             invalid = true;
                         }
                         else
@@ -722,7 +722,7 @@ static class FlowAssembler
 
             if (declaredType is null)
             {
-                errors.Add(scope.Node(nodeName, "输出端口的 Type 不能省略，必须是 Data、Items 或 Context。"));
+                errors.Add(scope.Node(nodeName, "输出端口的 Type 不能省略，必须是 Text、WorkItems 或 Context。"));
                 continue;
             }
 
@@ -776,9 +776,9 @@ static class FlowAssembler
                     case "type":
                         if (property.Value.ValueKind != JsonValueKind.String
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
-                            || parsedType is not (PortType.Data or PortType.Context or PortType.Signal))
+                            || parsedType is not (PortType.Text or PortType.Context or PortType.Signal))
                         {
-                            errors.Add(scope.Node(nodeName, "输入端口的 Type 应为 Data、Context 或 Signal。"));
+                            errors.Add(scope.Node(nodeName, "输入端口的 Type 应为 Text、Context 或 Signal。"));
                             invalid = true;
                         }
                         else
@@ -818,7 +818,7 @@ static class FlowAssembler
                 continue;
             }
 
-            result.Add(new InputPort(parsedName.Value, declaredType ?? PortType.Data, ToDescription(declaredDescription)));
+            result.Add(new InputPort(parsedName.Value, declaredType ?? PortType.Text, ToDescription(declaredDescription)));
         }
 
         return errors.Count > 0 ? errors : result;

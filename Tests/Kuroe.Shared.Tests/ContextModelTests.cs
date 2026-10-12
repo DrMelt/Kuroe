@@ -38,12 +38,12 @@ public sealed class ContextModelTests
     }
 
     [Fact]
-    public void ItemSource_points_back_to_plan()
+    public void ItemSource_points_back_to_origin()
     {
         RunId plan = new(1);
         ItemSource source = new(plan, 0, "甲");
 
-        Assert.Equal("run #1 · 规划条目 1：甲", source.Label);
+        Assert.Equal("run #1 · 条目 1：甲", source.Label);
         Assert.Equal(plan, source.FromRun);
     }
 

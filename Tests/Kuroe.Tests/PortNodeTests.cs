@@ -103,9 +103,9 @@ public sealed class PortNodeTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
+              "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "目标": "Start@目标" } ] },
+                  { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
                   { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Context" }], "From": [ { "结论": "准备@结论" } ] }
                 ] }
               ] } ]
@@ -176,10 +176,10 @@ public sealed class PortNodeTests
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
+                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
-                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "拆分": "制定计划@拆分" } ] },
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "拆分": "制定计划@拆分" } ] },
                   { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
                 ] }
               ] } ]
@@ -232,10 +232,10 @@ public sealed class PortNodeTests
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] }, "Nodes": [
+                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
-                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Data" }], "From": [ { "拆分": "制定计划@拆分" } ] },
+                  { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                  { "Name": "实施", "Kind": "Executable", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "拆分": "制定计划@拆分" } ] },
                   { "Name": "汇总", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
                 ] }
               ] } ]

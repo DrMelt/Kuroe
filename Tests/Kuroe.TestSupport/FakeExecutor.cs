@@ -16,7 +16,7 @@ public sealed class FakeExecutor : IRunExecutor
     private int _live;
     private int _peak;
 
-    public PlanSubmitter? Submitter { get; set; }
+    public WorkItemSubmitter? Submitter { get; set; }
 
     /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
@@ -24,7 +24,7 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>本轮状态的声明通道，所有执行节点都有这个工具。</summary>
     public StatusSubmitter? StatusSubmitter { get; set; }
 
-    /// <summary>声明 Items 端口的执行节点交回的条目拆分。</summary>
+    /// <summary>声明 WorkItems 端口的执行节点交回的条目拆分。</summary>
     public string ItemsJson { get; set; } = """
         [
           { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
@@ -38,7 +38,7 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>按 run 生成端口值 JSON，设置后优先于 <see cref="PortValuesJson"/> 与默认逐端口名生成；返回 null 时回退。用于按执行轮次区分端口内容的装配。</summary>
     public Func<Run, string?>? PortValuesJsonFor { get; set; }
 
-    /// <summary>声明 Items 端口的执行节点是否交回条目，关掉用于验证未收口。</summary>
+    /// <summary>声明 WorkItems 端口的执行节点是否交回条目，关掉用于验证未收口。</summary>
     public bool SubmitsPlan { get; set; } = true;
 
     /// <summary>输出端口节点是否交回命名段，关掉用于验证未收口。</summary>
@@ -111,7 +111,7 @@ public sealed class FakeExecutor : IRunExecutor
         {
             await Task.Delay(DelayFor?.Invoke(run) ?? DelayMs, cancellationToken);
 
-            if (run.Context.Tools.Contains(ContractTools.Plan.Path) && SubmitsPlan)
+            if (run.Context.Tools.Contains(ContractTools.WorkItems.Path) && SubmitsPlan)
             {
                 _submissions.Enqueue(ToolResult.Render(Submitter!.SubmitItems(run.Scope, ItemsJson)));
             }

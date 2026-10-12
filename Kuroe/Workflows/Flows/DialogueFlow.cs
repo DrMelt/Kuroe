@@ -45,7 +45,7 @@ internal static class DialogueFlow
         Name,
         "内置对话：回答用户的每轮输入",
         [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
-        [new Port(StartPort, PortType.Data, "任务的初始输入，提交时给出。")],
+        [new Port(StartPort, PortType.Text, "任务的初始输入，提交时给出。")],
         new NodeSpec
         {
             Name = new NodeName("对话"),
@@ -58,14 +58,14 @@ internal static class DialogueFlow
                     Kind = NodeKind.Input,
                     Inputs =
                     [
-                        new InputPort(StartPort, PortType.Data),
-                        new InputPort(ReplyPort, PortType.Data),
+                        new InputPort(StartPort, PortType.Text),
+                        new InputPort(ReplyPort, PortType.Text),
                     ],
                     Execution = new ExecutableSpec
                     {
                         Question = "请输入",
                     },
-                    Outputs = [new Port(InputPort, PortType.Data)],
+                    Outputs = [new Port(InputPort, PortType.Text)],
                     From =
                     [
                         new FromGroup(
@@ -79,14 +79,14 @@ internal static class DialogueFlow
                 {
                     Name = ReplyNodeName,
                     Kind = NodeKind.Executable,
-                    Inputs = [new InputPort(InputPort, PortType.Data)],
+                    Inputs = [new InputPort(InputPort, PortType.Text)],
                     Execution = new ExecutableSpec
                     {
                         Tools = Tools,
                         Prompt = Prompt,
                     },
                     Model = RuntimeModel,
-                    Outputs = [new Port(ReplyPort, PortType.Data)],
+                    Outputs = [new Port(ReplyPort, PortType.Text)],
                     From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeName, InputPort))])],
                 },
             ],

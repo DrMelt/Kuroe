@@ -4,7 +4,7 @@ using Flow = Kuroe.Shared.Workflows.Flows;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>把流程树编译成执行视图：开始登记为序号 0 的唯一来源，节点按先根序统一编号，容器登记成员与子容器，
-/// From 启动组编译为带取值域与输入类型的边：输入类型非 Data 的按整份消费，其余按来源与目标模式推导。
+/// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
@@ -44,18 +44,18 @@ internal static class FlowCompiler
             foreach (Dependency dependency in executable.From)
             {
                 // 上下文与信号输入按整份消费，其余按来源与目标模式推导，来源端口与取值域正交
-                (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = dependency.Type == Flow.PortType.Data
-                    ? FeedRules.Of(nodes[dependency.From], executable.Execution.Mode, dependency.Port)
+                (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = dependency.Type == Flow.PortType.Text
+                    ? FeedRules.Of(nodes[dependency.Source], executable.Execution.Mode, dependency.SourcePort)
                     : (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat);
 
                 edges.Add(new FlowEdge(
-                    dependency.From,
+                    dependency.Source,
                     executable.Index,
                     kind,
                     scope,
                     recurrence,
-                    dependency.Port,
-                    dependency.Input,
+                    dependency.SourcePort,
+                    dependency.TargetInput,
                     dependency.Type,
                     dependency.Group));
             }
@@ -194,7 +194,7 @@ internal static class FlowCompiler
                 }
 
                 Flow.InputPort? input = Flow.Ports.Find(node.Inputs, link.Input);
-                Flow.PortType type = input?.Type ?? Flow.PortType.Data;
+                Flow.PortType type = input?.Type ?? Flow.PortType.Text;
                 dependencies.Add(new Dependency(order[name], link.Ref.Port, link.Input, type, groupIndex));
             }
 

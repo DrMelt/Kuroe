@@ -12,9 +12,9 @@ namespace Kuroe.Workflows.Execution.Tasks;
 
 /// <summary>模型侧交回结构化产出的入口：规划交条目拆分。
 /// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
-public sealed class PlanSubmitter(TaskRegistry registry)
+public sealed class WorkItemSubmitter(TaskRegistry registry)
 {
-    /// <summary>声明 Items 端口的执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
+    /// <summary>声明 WorkItems 端口的执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
     public ErrorOr<string> SubmitItems(TurnScope? scope, string itemsJson)
     {
         if (Owner(scope) is not { } run)
@@ -29,7 +29,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
         }
 
         WorkTask task = found.Value;
-        ErrorOr<IReadOnlyList<PlanItem>> parsed = PlanItems.Parse(itemsJson);
+        ErrorOr<IReadOnlyList<WorkItem>> parsed = WorkItemParser.Parse(itemsJson);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -38,9 +38,9 @@ public sealed class PlanSubmitter(TaskRegistry registry)
         lock (task.Gate)
         {
             ExecutableNode executable = task.Runtime.Executable(run.Context.NodeIndex).Executable;
-            if (!executable.HasItemsPort)
+            if (!executable.HasWorkItemsPort)
             {
-                return ToolErrors.Argument("该执行节点没有声明 Items 端口，不能提交条目拆分。");
+                return ToolErrors.Argument("该执行节点没有声明 WorkItems 端口，不能提交条目拆分。");
             }
 
             if (task.SplitFor(run.Context.NodeIndex) is { } existing && existing.Origin == run.Id)
@@ -51,7 +51,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
             List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                if (edge.Kind == EdgeKind.Split && task.Graph[edge.To] is ExecutableNode { Execution.Branch: { } branch })
+                if (edge.Kind == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } branch })
                 {
                     branches.Add(branch);
                 }
@@ -73,7 +73,7 @@ public sealed class PlanSubmitter(TaskRegistry registry)
                 }
             }
 
-            task.SetSplit(run.Context.NodeIndex, new PlanOutput(run.Id, parsed.Value));
+            task.SetSplit(run.Context.NodeIndex, new WorkItemList(run.Id, parsed.Value));
 
             return $"已记录 {parsed.Value.Count} 个条目。{ContractText.Outstanding(task, run)}";
         }

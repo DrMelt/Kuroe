@@ -27,7 +27,7 @@ public sealed class KuroeHarness : IDisposable
         Executor = executor;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
-        executor.Submitter = provider.GetRequiredService<PlanSubmitter>();
+        executor.Submitter = provider.GetRequiredService<WorkItemSubmitter>();
         executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
         executor.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
     }
@@ -48,7 +48,7 @@ public sealed class KuroeHarness : IDisposable
 
     public FlowService Flows => _provider.GetRequiredService<FlowService>();
 
-    public PlanSubmitter Submitter => _provider.GetRequiredService<PlanSubmitter>();
+    public WorkItemSubmitter Submitter => _provider.GetRequiredService<WorkItemSubmitter>();
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 
@@ -67,13 +67,13 @@ public sealed class KuroeHarness : IDisposable
                 { "Name": "规划者", "Model": "fake" },
                 { "Name": "执行者", "Model": "fake" }
               ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Data" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Prompt": "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。", "Outputs": [{ "Name": "拆分", "Type": "Items" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Prompt": "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
                     { "Name": "交付", "Kind": "Container", "Nodes": [
                       { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
                     ] }

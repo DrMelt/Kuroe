@@ -40,6 +40,6 @@ public sealed record RunContext
     /// <summary>系统指令：节点声明的恒定块在前，引擎生成的本轮接口说明在后。请求最前，不随上下文帧透传。</summary>
     public string? SystemPrompt { get; init; }
 
-    /// <summary>节点声明的 Data 输出端口，未声明时为空。交回契约据此给模型端口名与说明。</summary>
+    /// <summary>节点声明的 Text 输出端口，未声明时为空。交回契约据此给模型端口名与说明。</summary>
     public IReadOnlyList<Port> OutputPorts { get; init; } = [];
 }
