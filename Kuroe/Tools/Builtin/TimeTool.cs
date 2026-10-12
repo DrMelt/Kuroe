@@ -5,13 +5,17 @@ namespace Kuroe.Tools.Builtin;
 /// <summary>系统时间工具。</summary>
 sealed class TimeTool : ITool
 {
+    /// <summary>获取当前系统时区与当地时间的函数定义。</summary>
+    private static readonly ToolDefinition GetLocalTime =
+        new(new ToolName("GetLocalTime"), "获取当前系统时区与准确当地时间", []);
+
     public IReadOnlyList<ToolFunction> Functions { get; } =
     [
-        new ToolFunction(new ToolName("GetLocalTime"), "获取当前系统时区与准确当地时间", [],
-            _ =>
-            {
-                DateTimeOffset now = DateTimeOffset.Now;
-                return $"当前系统时间是：{now:yyyy-MM-dd HH:mm:ss}，时区 UTC{now:zzz}";
-            }),
+        GetLocalTime.Bind(_ =>
+        {
+            DateTimeOffset now = DateTimeOffset.Now;
+
+            return $"当前系统时间是：{now:yyyy-MM-dd HH:mm:ss}，时区 UTC{now:zzz}";
+        }),
     ];
 }

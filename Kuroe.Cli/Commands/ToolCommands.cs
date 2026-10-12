@@ -52,11 +52,11 @@ internal sealed class ToolCommands(
         foreach (CommandToolDefinition tool in commandTools)
         {
             grid.AddRow(
-                new Text(tool.FullPath.Value, Styles.Hint),
-                new Text(tool.Name.Value, Styles.Key),
-                new Text(tool.Description),
+                new Text(tool.Definition.Path.Value, Styles.Hint),
+                new Text(tool.Definition.Name.Value, Styles.Key),
+                new Text(tool.Definition.Description),
                 new Text(CommandToolPresentation.Template(tool.Template), Styles.Hint),
-                new Text(CommandToolPresentation.Parameters(tool.Parameters), Styles.Hint));
+                new Text(CommandToolPresentation.Parameters(tool.Definition.Parameters), Styles.Hint));
         }
 
         terminal.NewLine();

@@ -6,17 +6,15 @@ namespace Kuroe.Tools.Command.Model;
 /// 该参数缺省时整个参数项从命令中去掉，null 表示普通参数项。</summary>
 public sealed record CommandToolTemplateItem(string Text, string? OmitWhenMissing);
 
-/// <summary>命令工具的配置定义：一段命令模板与参数声明。模板的每一项是一个参数项，里面的 {参数名} 是占位符，运行时由模型实参填充。</summary>
+/// <summary>命令工具的配置定义：函数定义、命令模板与执行参数。模板的每一项是一个参数项，里面的 {参数名} 是占位符，运行时由模型实参填充。</summary>
+/// <param name="Definition">函数定义：名字、说明、参数与所属分组。</param>
+/// <param name="Template">命令行模板，数组每一项是一个参数项。</param>
+/// <param name="Directory">命令执行目录，相对工作目录；未给时用工作目录根。</param>
+/// <param name="TimeoutSeconds">命令超时秒数。</param>
+/// <param name="OutputLimit">交回文本上限。</param>
 public sealed record CommandToolDefinition(
-    ToolName Name,
-    string Description,
+    ToolDefinition Definition,
     IReadOnlyList<CommandToolTemplateItem> Template,
-    IReadOnlyList<ToolParameter> Parameters,
     string? Directory,
     int TimeoutSeconds,
-    int OutputLimit,
-    ToolPath? Path = null)
-{
-    /// <summary>完整工具路径：分组加函数名，未给分组时即函数名。白名单按它匹配。</summary>
-    public ToolPath FullPath => Path is { } path ? new ToolPath($"{path.Value}/{Name.Value}") : new ToolPath(Name.Value);
-}
+    int OutputLimit);

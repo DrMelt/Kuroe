@@ -40,24 +40,12 @@ public sealed class StatusTool : IScopedTool
             ? null
             : ports;
 
-    /// <summary>声明绑定到该回合上的提交函数，描述里给出状态取值与仍需交回的端口。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(StatusSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports)
-    {
-        string listed = ports is null ? string.Empty : $"本节点需要交回的端口：{ContractText.List(ports)}。";
-
-        return
-        [
-            new ToolFunction(ToolName.ContractStatus,
-                $"声明本执行节点这一轮的状态。status 取 completed 交付完毕或 blocked 无法完成，blocked 时必须给出 reason。{listed}",
-                [
-                    new ToolParameter(new ToolName("status"), "completed 或 blocked", Required: true),
-                    new ToolParameter(new ToolName("reason"), "无法完成的原因，status 为 blocked 时必填"),
-                ],
-                arguments => intake.SubmitVerdict(
-                    scope,
-                    arguments.Text(new ToolName("status")),
-                    arguments.Text(new ToolName("reason"))),
-                ToolPath.ContractStatus),
-        ];
-    }
+    /// <summary>把契约定义绑上声明该回合状态的调用体，有端口清单时写进说明。</summary>
+    private static IReadOnlyList<ToolFunction> Declare(StatusSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports) =>
+    [
+        ContractTools.WithPorts(ContractTools.Status, ports).Bind(arguments => intake.SubmitVerdict(
+            scope,
+            arguments.Text(new ToolName("status")),
+            arguments.Text(new ToolName("reason")))),
+    ];
 }

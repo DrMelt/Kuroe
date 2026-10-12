@@ -11,18 +11,20 @@ internal sealed class SettingsInfoTool : ITool
 {
     private readonly SettingsProvider _settings;
 
+    /// <summary>查看生效配置的函数定义。</summary>
+    private static readonly ToolDefinition GetConfig = new(
+        new ToolName("GetConfig"),
+        "查看生效配置：各节设置项的生效值与来源标记。",
+        [],
+        InfoTools.Group);
+
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     public SettingsInfoTool(SettingsProvider settings)
     {
         _settings = settings;
-        Functions =
-        [
-            new ToolFunction(new ToolName("GetConfig"),
-                "查看生效配置：各节设置项的生效值与来源标记。",
-                [], _ => Describe(), new ToolPath("info/GetConfig")),
-        ];
+        Functions = [GetConfig.Bind(_ => Describe())];
     }
 
     /// <summary>配置各节的文本概况。</summary>

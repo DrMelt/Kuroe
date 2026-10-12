@@ -50,47 +50,49 @@ public sealed class CommandToolTests
         Assert.False(loaded.IsError);
 
         CommandToolDefinition diff = loaded.Value[0];
-        Assert.Equal("RunDiff", diff.Name.Value);
+        Assert.Equal("RunDiff", diff.Definition.Name.Value);
         Assert.Equal(["git", "diff", "{path}"], diff.Template.Select(item => item.Text));
         Assert.Null(diff.Template[2].OmitWhenMissing);
-        Assert.Single(diff.Parameters);
-        Assert.True(diff.Parameters[0].Required);
+        Assert.Single(diff.Definition.Parameters);
+        Assert.True(diff.Definition.Parameters[0].Required);
 
         CommandToolDefinition log = loaded.Value[1];
-        Assert.True(log.Parameters[0].List);
-        Assert.False(log.Parameters[0].Required);
+        Assert.True(log.Definition.Parameters[0].List);
+        Assert.False(log.Definition.Parameters[0].Required);
     }
 
     [Fact]
     public void Presentation_renders_template_and_parameters()
     {
         CommandToolDefinition tool = new(
-            new ToolName("RunDiff"),
-            "说明",
+            new ToolDefinition(
+                new ToolName("RunDiff"),
+                "说明",
+                [new ToolParameter(new ToolName("path"), "路径", Required: true)]),
             [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
-            [new ToolParameter(new ToolName("path"), "路径", Required: true)],
             null,
             5,
             200);
 
         Assert.Equal("git diff {path}", CommandToolPresentation.Template(tool.Template));
-        Assert.Equal("path*", CommandToolPresentation.Parameters(tool.Parameters));
+        Assert.Equal("path*", CommandToolPresentation.Parameters(tool.Definition.Parameters));
     }
 
     [Fact]
     public void Presentation_marks_omitted_items_and_list_parameters()
     {
         CommandToolDefinition tool = new(
-            new ToolName("RunDeploy"),
-            "说明",
+            new ToolDefinition(
+                new ToolName("RunDeploy"),
+                "说明",
+                [new ToolParameter(new ToolName("env"), "环境"), new ToolParameter(new ToolName("files"), "文件", List: true, Required: true)]),
             [new CommandToolTemplateItem("--env={env}", "env"), new CommandToolTemplateItem("--noop", null)],
-            [new ToolParameter(new ToolName("env"), "环境"), new ToolParameter(new ToolName("files"), "文件", List: true, Required: true)],
             null,
             5,
             200);
 
         Assert.Equal("--env={env}? --noop", CommandToolPresentation.Template(tool.Template));
-        Assert.Equal("env、files[]*", CommandToolPresentation.Parameters(tool.Parameters));
+        Assert.Equal("env、files[]*", CommandToolPresentation.Parameters(tool.Definition.Parameters));
     }
 
     [Fact]
@@ -99,7 +101,7 @@ public sealed class CommandToolTests
         string file = Write("""
             {
               "Tools": [
-                { "Name": "RunDiff", "Path": "git", "Template": ["git", "diff", "{path}"], "Parameters": [ { "Name": "path", "Required": true } ] }
+                { "Name": "RunDiff", "Group": "git", "Template": ["git", "diff", "{path}"], "Parameters": [ { "Name": "path", "Required": true } ] }
               ]
             }
             """);
@@ -108,17 +110,17 @@ public sealed class CommandToolTests
         Assert.False(loaded.IsError);
 
         CommandToolDefinition tool = loaded.Value[0];
-        Assert.Equal(new ToolPath("git/RunDiff"), tool.FullPath);
-        Assert.Equal(new ToolPath("git/RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Path);
+        Assert.Equal(new ToolPath("git/RunDiff"), tool.Definition.Path);
+        Assert.Equal(new ToolPath("git/RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Definition.Path);
     }
 
     [Fact]
     public void Load_defaults_path_to_function_name()
     {
-        CommandToolDefinition tool = new(new ToolName("RunDiff"), "说明", Items(["x"]), [], null, 5, 200);
+        CommandToolDefinition tool = new(new ToolDefinition(new ToolName("RunDiff"), "说明", []), Items(["x"]), null, 5, 200);
 
-        Assert.Equal(new ToolPath("RunDiff"), tool.FullPath);
-        Assert.Equal(new ToolPath("RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Path);
+        Assert.Equal(new ToolPath("RunDiff"), tool.Definition.Path);
+        Assert.Equal(new ToolPath("RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Definition.Path);
     }
 
     [Theory]
@@ -145,11 +147,11 @@ public sealed class CommandToolTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ "x", { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ 3 ] } ] }""", "必须是字符串或")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "/git", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "git/", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "git//x", "Template": ["x"] } ] }""", "不能为空或含空白与花括号")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "gi t", "Template": ["x"] } ] }""", "含空白与花括号")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Path": "a{b}", "Template": ["x"] } ] }""", "含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "/git", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git/", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git//x", "Template": ["x"] } ] }""", "不能为空或含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "gi t", "Template": ["x"] } ] }""", "含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "a{b}", "Template": ["x"] } ] }""", "含空白与花括号")]
     public void Load_rejects_invalid_definitions(string json, string expected)
     {
         ErrorOr<IReadOnlyList<CommandToolDefinition>> loaded = CommandToolStore.Load(Write(json), Path.GetTempPath());
@@ -227,7 +229,7 @@ public sealed class CommandToolTests
 
         // 数组项含空格且无占位符时整体是一个参数项，不做拆分
         string result = Invoke(new CommandTool(
-            new CommandToolDefinition(new ToolName("Run"), "说明", Items(["cmd", "/c", "echo", "开始 结束"]), [], null, 5, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
             Path.GetTempPath()), []);
 
         Assert.Contains("开始 结束", result);
@@ -289,7 +291,7 @@ public sealed class CommandToolTests
         }
 
         CommandTool tool = new(
-            new CommandToolDefinition(new ToolName("Run"), "说明", Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), [], null, 1, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
             Path.GetTempPath());
 
         Assert.Contains("未结束，已终止", Invoke(tool, []));
@@ -478,11 +480,11 @@ public sealed class CommandToolTests
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
     private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolName("Run"), "说明", Items(template), parameters, null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", parameters), Items(template), null, 5, 200),
             Path.GetTempPath());
 
     private static CommandTool ConfiguredTool(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolName("Run"), "说明", template, parameters, null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", parameters), template, null, 5, 200),
             Path.GetTempPath());
 
     private static IReadOnlyList<CommandToolTemplateItem> Items(IEnumerable<string> texts) =>

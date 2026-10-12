@@ -40,18 +40,10 @@ public sealed class PortTool : IScopedTool
             ? null
             : ports;
 
-    /// <summary>声明绑定到该回合上的提交函数。有端口清单时把需要交回的端口写进描述，模型按声明的键值提交。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports)
-    {
-        string listed = ports is null ? string.Empty : $"本节点需要交回的端口：{ContractText.List(ports)}。";
-
-        return
-        [
-            new ToolFunction(ToolName.ContractPortValues,
-                $"提交本执行节点命名输出端口的内容。{listed} valuesJson 是端口名到文本的 JSON 对象，端口必须与声明一一对应。",
-                [new ToolParameter(new ToolName("valuesJson"), "端口名到文本的 JSON 对象，端口必须与声明一一对应", Required: true)],
-                arguments => intake.SubmitValues(scope, arguments.Text(new ToolName("valuesJson")) ?? string.Empty),
-                ToolPath.ContractPortValues),
-        ];
-    }
+    /// <summary>把契约定义绑上提交该回合端口内容的调用体，有端口清单时写进说明。</summary>
+    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports) =>
+    [
+        ContractTools.WithPorts(ContractTools.Port, ports).Bind(arguments =>
+            intake.SubmitValues(scope, arguments.Text(new ToolName("valuesJson")) ?? string.Empty)),
+    ];
 }

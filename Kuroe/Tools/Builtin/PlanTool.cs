@@ -29,13 +29,10 @@ public sealed class PlanTool : IScopedTool
     /// <summary>换一份绑定到该回合的载体。</summary>
     public ITool ForTurn(TurnScope scope) => new PlanTool(_intake, scope);
 
-    /// <summary>声明绑定到该回合上的提交函数。</summary>
+    /// <summary>把契约定义绑上提交该回合条目拆分的调用体。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PlanSubmitter intake, TurnScope? scope) =>
     [
-        new ToolFunction(ToolName.ContractPlan,
-            "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
-            [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)],
-            arguments => intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty),
-            ToolPath.ContractPlan),
+        ContractTools.Plan.Bind(arguments =>
+            intake.SubmitItems(scope, arguments.Text(new ToolName("itemsJson")) ?? string.Empty)),
     ];
 }

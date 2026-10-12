@@ -111,7 +111,7 @@ public sealed class FakeExecutor : IRunExecutor
         {
             await Task.Delay(DelayFor?.Invoke(run) ?? DelayMs, cancellationToken);
 
-            if (run.Context.Tools.Contains(ToolPath.ContractPlan) && SubmitsPlan)
+            if (run.Context.Tools.Contains(ContractTools.Plan.Path) && SubmitsPlan)
             {
                 _submissions.Enqueue(ToolResult.Render(Submitter!.SubmitItems(run.Scope, ItemsJson)));
             }
@@ -127,7 +127,7 @@ public sealed class FakeExecutor : IRunExecutor
                 }
             }
 
-            if (run.Context.Tools.Contains(ToolPath.ContractStatus) && SubmitsVerdict)
+            if (run.Context.Tools.Contains(ContractTools.Status.Path) && SubmitsVerdict)
             {
                 _submissions.Enqueue(ToolResult.Render(StatusSubmitter!.SubmitVerdict(
                     run.Scope,

@@ -150,10 +150,10 @@ public sealed class PortNodeTests
         PortTool tool = new(harness.Executor.PortSubmitter!, harness.Registry);
 
         // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
-        Assert.DoesNotContain("结论", tool.Functions.Single().Description);
+        Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);
         Run ported = harness.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(tool.ForTurn(ported.Scope).Functions);
-        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Description, StringComparison.Ordinal);
+        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
 
     [Fact]

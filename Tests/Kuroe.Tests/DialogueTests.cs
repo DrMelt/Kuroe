@@ -115,7 +115,7 @@ public sealed class DialogueTests
     {
         public IReadOnlyList<ToolFunction> Functions { get; } =
         [
-            new ToolFunction(new ToolName("RunDiff"), "样例工具", [], _ => string.Empty),
+            new ToolDefinition(new ToolName("RunDiff"), "样例工具", []).Bind(_ => string.Empty),
         ];
     }
 

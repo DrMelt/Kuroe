@@ -168,7 +168,7 @@ internal static class RunContextFactory
             lines.AddRange(outputs);
         }
 
-        lines.Add($"结束时用 {ToolName.ContractStatus} 提交本轮状态，status 取 completed 完成或 blocked 无法完成，blocked 时必须给出 reason。");
+        lines.Add($"结束时用 {ContractTools.Status.Name} 提交本轮状态，status 取 completed 完成或 blocked 无法完成，blocked 时必须给出 reason。");
 
         return string.Join('\n', lines);
     }
@@ -204,7 +204,7 @@ internal static class RunContextFactory
         if (executable.HasDataPorts)
         {
             string ports = ContractText.List(executable.Outputs.Where(port => port.Kind == PortKind.Data));
-            lines.Add($"- 输出端口 {ports}。用 {ToolName.ContractPortValues} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
+            lines.Add($"- 输出端口 {ports}。用 {ContractTools.Port.Name} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
         }
 
         if (executable.HasItemsPort)
@@ -212,7 +212,7 @@ internal static class RunContextFactory
             PortName port = executable.Outputs.First(item => item.Kind == PortKind.Items).Name;
             List<string> branches = Branches(task, node);
             string guide = branches.Count == 0 ? string.Empty : $"可选分支：{string.Join('、', branches)}，条目须标明其一。";
-            lines.Add($"- 条目拆分端口「{port}」。用 {ToolName.ContractPlan} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
+            lines.Add($"- 条目拆分端口「{port}」。用 {ContractTools.Plan.Name} 提交对象数组，每项含 Title、Instruction、Acceptance。{guide}");
         }
 
         return lines;
@@ -243,15 +243,15 @@ internal static class RunContextFactory
         List<ToolPath> names = [.. node.Execution.Tools];
         if (node.HasItemsPort)
         {
-            names.Add(ToolPath.ContractPlan);
+            names.Add(ContractTools.Plan.Path);
         }
 
         if (node.HasDataPorts)
         {
-            names.Add(ToolPath.ContractPortValues);
+            names.Add(ContractTools.Port.Path);
         }
 
-        names.Add(ToolPath.ContractStatus);
+        names.Add(ContractTools.Status.Path);
 
         return names;
     }

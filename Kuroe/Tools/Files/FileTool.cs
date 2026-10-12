@@ -20,56 +20,74 @@ internal sealed class FileTool(string baseDirectory) : ITool
     /// <summary>目录列表的条目上限，超出截断并提示。</summary>
     private const int MaxEntries = 200;
 
+    /// <summary>文件访问工具的分组。</summary>
+    private static readonly ToolPath Group = new("files");
+
+    /// <summary>读取单个文件指定行号范围。</summary>
+    private static readonly ToolDefinition ReadFile = new(
+        new ToolName("ReadFile"),
+        "读取工作目录内文本文件指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
+        [
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
+            new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
+        ],
+        Group);
+
+    /// <summary>列出目录的直接子项。</summary>
+    private static readonly ToolDefinition ListDirectory = new(
+        new ToolName("ListDirectory"),
+        "列出工作目录内一个目录的直接子项。path 缺省时列出工作目录根的条目。",
+        [new ToolParameter(new ToolName("path"), "相对工作目录的目录路径，缺省为工作目录根")],
+        Group);
+
+    /// <summary>一次读取多个文件。</summary>
+    private static readonly ToolDefinition ReadFiles = new(
+        new ToolName("ReadFiles"),
+        "一次读取工作目录内的多个文本文件。paths 是相对工作目录的文件路径列表，结果按列表顺序分段交回。",
+        [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true)],
+        Group);
+
+    /// <summary>覆盖写入文件。</summary>
+    private static readonly ToolDefinition WriteFile = new(
+        new ToolName("WriteFile"),
+        "把文本覆盖写入工作目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
+        [
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
+            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
+        ],
+        Group);
+
+    /// <summary>按行号范围替换文件内容。</summary>
+    private static readonly ToolDefinition PatchFile = new(
+        new ToolName("PatchFile"),
+        "按行号范围替换工作目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
+        [
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("from"), "起始行号，数字，第 1 行起", Required: true),
+            new ToolParameter(new ToolName("to"), "结束行号，数字", Required: true),
+            new ToolParameter(new ToolName("original"), "该范围现在的原文，逐行与文件比对", Required: true),
+            new ToolParameter(new ToolName("replacement"), "替换后的新内容，为空时删除该范围", Required: true),
+            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
+        ],
+        Group);
+
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; } = Declare(new FileScope(baseDirectory, "工作目录"));
 
-    /// <summary>声明文件访问函数。</summary>
+    /// <summary>把各定义绑上工作目录的调用体。</summary>
     private static IReadOnlyList<ToolFunction> Declare(FileScope scope) =>
     [
-        new ToolFunction(new ToolName("ReadFile"),
-            "读取工作目录内文本文件指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
-            [
-                new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
-                new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
-                new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
-            ],
-            arguments => ReadFile(scope, arguments),
-            new ToolPath("files/ReadFile")),
-        new ToolFunction(new ToolName("ListDirectory"),
-            "列出工作目录内一个目录的直接子项。path 缺省时列出工作目录根的条目。",
-            [new ToolParameter(new ToolName("path"), "相对工作目录的目录路径，缺省为工作目录根")],
-            arguments => ListDirectory(scope, arguments),
-            new ToolPath("files/ListDirectory")),
-        new ToolFunction(new ToolName("ReadFiles"),
-            "一次读取工作目录内的多个文本文件。paths 是相对工作目录的文件路径列表，结果按列表顺序分段交回。",
-            [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true)],
-            arguments => ReadFiles(scope, arguments),
-            new ToolPath("files/ReadFiles")),
-        new ToolFunction(new ToolName("WriteFile"),
-            "把文本覆盖写入工作目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
-            [
-                new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
-                new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
-                new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-            ],
-            arguments => WriteFile(scope, arguments),
-            new ToolPath("files/WriteFile")),
-        new ToolFunction(new ToolName("PatchFile"),
-            "按行号范围替换工作目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
-            [
-                new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
-                new ToolParameter(new ToolName("from"), "起始行号，数字，第 1 行起", Required: true),
-                new ToolParameter(new ToolName("to"), "结束行号，数字", Required: true),
-                new ToolParameter(new ToolName("original"), "该范围现在的原文，逐行与文件比对", Required: true),
-                new ToolParameter(new ToolName("replacement"), "替换后的新内容，为空时删除该范围", Required: true),
-                new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-            ],
-            arguments => PatchFile(scope, arguments),
-            new ToolPath("files/PatchFile")),
+        ReadFile.Bind(arguments => Read(scope, arguments)),
+        ListDirectory.Bind(arguments => List(scope, arguments)),
+        ReadFiles.Bind(arguments => ReadMany(scope, arguments)),
+        WriteFile.Bind(arguments => Write(scope, arguments)),
+        PatchFile.Bind(arguments => Patch(scope, arguments)),
     ];
 
     /// <summary>读取指定文本文件指定行号范围的内容，按行截取并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
-    private static ErrorOr<string> ReadFile(FileScope scope, ToolArguments arguments)
+    private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
         string? path = arguments.Text(new ToolName("path"));
         if (string.IsNullOrWhiteSpace(path))
@@ -87,7 +105,7 @@ internal sealed class FileTool(string baseDirectory) : ITool
     }
 
     /// <summary>一次读取多个文件，结果按传入顺序分段交回；整体超长截断。单个条目的错误不阻断其它条目。</summary>
-    private static ErrorOr<string> ReadFiles(FileScope scope, ToolArguments arguments)
+    private static ErrorOr<string> ReadMany(FileScope scope, ToolArguments arguments)
     {
         IReadOnlyList<string>? paths = arguments.List(new ToolName("paths"));
         if (paths is null || paths.Count == 0)
@@ -118,7 +136,7 @@ internal sealed class FileTool(string baseDirectory) : ITool
     }
 
     /// <summary>把文本覆盖写入工作目录内的文件，父目录缺失时自动创建，已有文件直接覆盖；错误与拒绝以 ErrorOr 表达。编码按 encoding 参数，缺省 UTF-8 无 BOM。</summary>
-    private static ErrorOr<string> WriteFile(FileScope scope, ToolArguments arguments)
+    private static ErrorOr<string> Write(FileScope scope, ToolArguments arguments)
     {
         string? path = arguments.Text(new ToolName("path"));
         if (string.IsNullOrWhiteSpace(path))
@@ -173,7 +191,7 @@ internal sealed class FileTool(string baseDirectory) : ITool
     }
 
     /// <summary>按行号范围替换文件内容，替换区间的原文须与 original 逐行一致；错误与拒绝以 ErrorOr 表达。行号从 1 起，replacement 行数可增减，为空时删除该范围，写回统一换行符并按 encoding 参数编码。</summary>
-    private static ErrorOr<string> PatchFile(FileScope scope, ToolArguments arguments)
+    private static ErrorOr<string> Patch(FileScope scope, ToolArguments arguments)
     {
         string? path = arguments.Text(new ToolName("path"));
         if (string.IsNullOrWhiteSpace(path))
@@ -290,7 +308,7 @@ internal sealed class FileTool(string baseDirectory) : ITool
         : [.. text.Split('\n').Select(line => line.TrimEnd('\r'))];
 
     /// <summary>列出目录的直接子项，按名字排序并标注目录；错误与拒绝以 ErrorOr 表达。</summary>
-    private static ErrorOr<string> ListDirectory(FileScope scope, ToolArguments arguments)
+    private static ErrorOr<string> List(FileScope scope, ToolArguments arguments)
     {
         string? path = arguments.Text(new ToolName("path"));
         path ??= string.Empty;

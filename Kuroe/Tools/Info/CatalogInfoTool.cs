@@ -12,6 +12,13 @@ internal sealed class CatalogInfoTool : ITool
     private readonly CatalogService _catalog;
     private readonly ModelService _models;
 
+    /// <summary>查看模型目录的函数定义。</summary>
+    private static readonly ToolDefinition GetCatalog = new(
+        new ToolName("GetCatalog"),
+        "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型与当前选中模型。",
+        [],
+        InfoTools.Group);
+
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
@@ -19,12 +26,7 @@ internal sealed class CatalogInfoTool : ITool
     {
         _catalog = catalog;
         _models = models;
-        Functions =
-        [
-            new ToolFunction(new ToolName("GetCatalog"),
-                "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型与当前选中模型。",
-                [], _ => Describe(), new ToolPath("info/GetCatalog")),
-        ];
+        Functions = [GetCatalog.Bind(_ => Describe())];
     }
 
     /// <summary>目录的文本概况。</summary>

@@ -16,7 +16,7 @@ internal sealed class CommandToolDto
     public string? Name { get; set; }
 
     /// <summary>工具路径的分组部分，完整路径由分组加函数名构成；省略时完整路径即函数名。</summary>
-    public string? Path { get; set; }
+    public string? Group { get; set; }
 
     /// <summary>给模型的说明。</summary>
     public string? Description { get; set; }

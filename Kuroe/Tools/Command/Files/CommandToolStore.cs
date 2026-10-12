@@ -67,9 +67,9 @@ internal static class CommandToolStore
             }
 
             CommandToolDefinition definition = converted.Value;
-            if (!names.Add(definition.Name.Value))
+            if (!names.Add(definition.Definition.Name.Value))
             {
-                errors.Add(CommandToolErrors.Invalid(definition.Name.Value, "名字重复。"));
+                errors.Add(CommandToolErrors.Invalid(definition.Definition.Name.Value, "名字重复。"));
                 continue;
             }
 
@@ -105,7 +105,7 @@ internal static class CommandToolStore
             errors.AddRange(template.ErrorsOrEmptyList);
         }
 
-        CheckPath(dto.Name ?? "(未命名)", dto.Path, errors);
+        CheckPath(dto.Name ?? "(未命名)", dto.Group, errors);
 
         if (dto.OutputLimit is { } outputLimit && outputLimit < 1)
         {
@@ -148,14 +148,15 @@ internal static class CommandToolStore
         List<ToolParameter> list = [.. parameters.Value];
 
         return new CommandToolDefinition(
-            name,
-            dto.Description ?? $"执行命令 {dto.Name}",
+            new ToolDefinition(
+                name,
+                dto.Description ?? $"执行命令 {dto.Name}",
+                list,
+                dto.Group is { Length: > 0 } group ? new ToolPath(group) : null),
             template.Value,
-            list,
             dto.Directory,
             dto.TimeoutSeconds ?? CommandToolRunner.DefaultTimeoutSeconds,
-            dto.OutputLimit ?? CommandToolRunner.DefaultOutputLimit,
-            dto.Path is { Length: > 0 } path ? new ToolPath(path) : null);
+            dto.OutputLimit ?? CommandToolRunner.DefaultOutputLimit);
     }
 
     /// <summary>校验工具路径分组：未写或空合法，格式非法时给出配置错误。</summary>
@@ -288,6 +289,8 @@ internal static class CommandToolStore
     /// <summary>模板与参数声明的对应关系：占位符必须有声明，声明必须出现在模板里，列表参数只能独立成参数项。</summary>
     private static void CheckTemplate(CommandToolDefinition definition, List<Error> errors)
     {
+        IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
+        string tool = definition.Definition.Name.Value;
         List<string> placeholders = [.. CommandToolRunner.PlaceholdersOf(definition.Template)];
 
         foreach (CommandToolTemplateItem item in definition.Template)
@@ -297,32 +300,32 @@ internal static class CommandToolStore
                 continue;
             }
 
-            ToolParameter? linked = definition.Parameters.FirstOrDefault(parameter => parameter.Name.Value == linkedName);
+            ToolParameter? linked = parameters.FirstOrDefault(parameter => parameter.Name.Value == linkedName);
             if (linked is null)
             {
-                errors.Add(CommandToolErrors.Invalid(definition.Name.Value, $"模板参数项关联的参数 {linkedName} 没有对应声明。"));
+                errors.Add(CommandToolErrors.Invalid(tool, $"模板参数项关联的参数 {linkedName} 没有对应声明。"));
             }
             else if (!item.Text.Contains($"{{{linkedName}}}"))
             {
-                errors.Add(CommandToolErrors.Invalid(definition.Name.Value, $"模板参数项的 Text 里必须出现 {{{linkedName}}} 占位符。"));
+                errors.Add(CommandToolErrors.Invalid(tool, $"模板参数项的 Text 里必须出现 {{{linkedName}}} 占位符。"));
             }
         }
 
         errors.AddRange(placeholders
-            .Where(placeholder => definition.Parameters.All(parameter => parameter.Name.Value != placeholder))
-            .Select(placeholder => CommandToolErrors.Invalid(definition.Name.Value, $"模板占位符 {{{placeholder}}} 没有对应的参数声明。")));
+            .Where(placeholder => parameters.All(parameter => parameter.Name.Value != placeholder))
+            .Select(placeholder => CommandToolErrors.Invalid(tool, $"模板占位符 {{{placeholder}}} 没有对应的参数声明。")));
 
-        errors.AddRange(definition.Parameters
+        errors.AddRange(parameters
             .Where(parameter => !placeholders.Contains(parameter.Name.Value))
-            .Select(parameter => CommandToolErrors.Invalid(definition.Name.Value, $"参数 {parameter.Name.Value} 已声明但没有出现在模板里。")));
+            .Select(parameter => CommandToolErrors.Invalid(tool, $"参数 {parameter.Name.Value} 已声明但没有出现在模板里。")));
 
         // 列表参数混在别的文字里时在 ExpandToken 会拒绝整项，装载期先给出配置错误
-        List<ToolParameter> listParameters = [.. definition.Parameters.Where(parameter => parameter.List)];
+        List<ToolParameter> listParameters = [.. parameters.Where(parameter => parameter.List)];
         errors.AddRange(
             from parameter in listParameters
             from item in definition.Template
             where item.Text != $"{{{parameter.Name.Value}}}"
                 && CommandToolRunner.PlaceholdersOf([item]).Contains(parameter.Name.Value)
-            select CommandToolErrors.Invalid(definition.Name.Value, $"列表参数 {parameter.Name.Value} 只能写成独立的 {{{parameter.Name.Value}}} 参数项。"));
+            select CommandToolErrors.Invalid(tool, $"列表参数 {parameter.Name.Value} 只能写成独立的 {{{parameter.Name.Value}}} 参数项。"));
     }
 }

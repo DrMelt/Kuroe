@@ -637,7 +637,7 @@ public sealed class FileToolTests : IDisposable
     }
 
     private static string Call(FileTool tool, string name, params (string Key, object? Value)[] args) =>
-        ToolResult.Render(tool.Functions.Single(function => function.Name.Value == name)
+        ToolResult.Render(tool.Functions.Single(function => function.Definition.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()

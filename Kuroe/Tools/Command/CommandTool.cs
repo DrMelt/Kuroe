@@ -9,11 +9,6 @@ public sealed class CommandTool(CommandToolDefinition definition, string baseDir
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; } =
     [
-        new ToolFunction(
-            definition.Name,
-            definition.Description,
-            definition.Parameters,
-            arguments => CommandToolRunner.Execute(definition, baseDirectory, arguments),
-            definition.FullPath),
+        definition.Definition.Bind(arguments => CommandToolRunner.Execute(definition, baseDirectory, arguments)),
     ];
 }

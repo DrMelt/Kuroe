@@ -25,22 +25,35 @@ internal sealed class TaskInfoTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
+    /// <summary>列出全部任务的函数定义。</summary>
+    private static readonly ToolDefinition ListTasks = new(
+        new ToolName("ListTasks"),
+        "列出全部任务：编号、标题、状态、节点进度与 run 数。",
+        [],
+        InfoTools.Group);
+
+    /// <summary>查看任务详情的函数定义。</summary>
+    private static readonly ToolDefinition GetTask = new(
+        new ToolName("GetTask"),
+        "查看指定任务的详情：目标、流程、执行节点状态、run 列表与拆分条目。",
+        [new ToolParameter(new ToolName("taskId"), "要查看的任务号", Required: true)],
+        InfoTools.Group);
+
+    /// <summary>查看 run 详情的函数定义。</summary>
+    private static readonly ToolDefinition GetRun = new(
+        new ToolName("GetRun"),
+        "查看指定 run 的详情：上下文来源、执行过程与结论。",
+        [new ToolParameter(new ToolName("runId"), "要查看的 run 号", Required: true)],
+        InfoTools.Group);
+
     public TaskInfoTool(TaskRegistry registry)
     {
         _registry = registry;
         Functions =
         [
-            new ToolFunction(new ToolName("ListTasks"),
-                "列出全部任务：编号、标题、状态、节点进度与 run 数。",
-                [], _ => List(), new ToolPath("info/ListTasks")),
-            new ToolFunction(new ToolName("GetTask"),
-                "查看指定任务的详情：目标、流程、执行节点状态、run 列表与拆分条目。",
-                [new ToolParameter(new ToolName("taskId"), "要查看的任务号", Required: true)],
-                arguments => ShowTask(arguments), new ToolPath("info/GetTask")),
-            new ToolFunction(new ToolName("GetRun"),
-                "查看指定 run 的详情：上下文来源、执行过程与结论。",
-                [new ToolParameter(new ToolName("runId"), "要查看的 run 号", Required: true)],
-                arguments => ShowRun(arguments), new ToolPath("info/GetRun")),
+            ListTasks.Bind(_ => List()),
+            GetTask.Bind(arguments => ShowTask(arguments)),
+            GetRun.Bind(arguments => ShowRun(arguments)),
         ];
     }
 

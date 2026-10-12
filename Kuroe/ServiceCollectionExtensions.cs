@@ -151,7 +151,7 @@ public static class ServiceCollectionExtensions
 
         IReadOnlyList<ToolName> duplicates = [.. tools
             .SelectMany(tool => tool.Functions)
-            .GroupBy(function => function.Name)
+            .GroupBy(function => function.Definition.Name)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)];
         if (duplicates.Count > 0)

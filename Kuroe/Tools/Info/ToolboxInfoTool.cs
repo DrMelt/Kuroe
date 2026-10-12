@@ -12,18 +12,20 @@ internal sealed class ToolboxInfoTool : ITool
 {
     private readonly IReadOnlyList<CommandToolDefinition> _commandTools;
 
+    /// <summary>列出工具面的函数定义。</summary>
+    private static readonly ToolDefinition ListTools = new(
+        new ToolName("ListTools"),
+        "列出内置对话可用的函数与配置的命令工具及其路径。",
+        [],
+        InfoTools.Group);
+
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     public ToolboxInfoTool(IReadOnlyList<CommandToolDefinition> commandTools)
     {
         _commandTools = commandTools;
-        Functions =
-        [
-            new ToolFunction(new ToolName("ListTools"),
-                "列出内置对话可用的函数与配置的命令工具及其路径。",
-                [], _ => Describe(), new ToolPath("info/ListTools")),
-        ];
+        Functions = [ListTools.Bind(_ => Describe())];
     }
 
     /// <summary>工具面的文本概况。</summary>
@@ -43,9 +45,9 @@ internal sealed class ToolboxInfoTool : ITool
         text.AppendLine("命令工具：");
         foreach (CommandToolDefinition tool in _commandTools)
         {
-            text.AppendLine($"  {tool.FullPath.Value} · {tool.Description}"
+            text.AppendLine($"  {tool.Definition.Path.Value} · {tool.Definition.Description}"
                 + $" · 模板 {CommandToolPresentation.Template(tool.Template)}"
-                + $" · 参数 {CommandToolPresentation.Parameters(tool.Parameters)}");
+                + $" · 参数 {CommandToolPresentation.Parameters(tool.Definition.Parameters)}");
         }
 
         return text.ToString().TrimEnd();

@@ -1,5 +1,4 @@
 using Kuroe.Executions.Runs;
-using Kuroe.Shared.Executions.Tools;
 
 namespace Kuroe.Workflows.Execution.Tasks;
 
@@ -32,13 +31,13 @@ internal sealed class RunReminder(TaskRegistry registry) : IRunContract
             List<string> missing = [];
             if (shortfall.Items)
             {
-                missing.Add($"条目拆分，请调用 {ToolName.ContractPlan} 提交");
+                missing.Add($"条目拆分，请调用 {ContractTools.Plan.Name} 提交");
             }
 
             if (shortfall.Ports.Count > 0)
             {
                 string ports = string.Join('、', shortfall.Ports.Select(name => $"「{name}」"));
-                missing.Add($"输出端口{ports}，请调用 {ToolName.ContractPortValues} 提交");
+                missing.Add($"输出端口{ports}，请调用 {ContractTools.Port.Name} 提交");
             }
 
             return $"本轮还缺交回：{string.Join('；', missing)}。";

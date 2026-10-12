@@ -1,5 +1,4 @@
 using Kuroe.Executions.Runs;
-using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 
 namespace Kuroe.Workflows.Execution.Tasks;
@@ -42,7 +41,7 @@ static class ContractText
     private static string StatusLine(WorkTask task, Run run) =>
         task.VerdictFor(run.Context.NodeIndex, run.Context.ItemIndex) switch
         {
-            null => $"本轮状态未提交，结束时用 {ToolName.ContractStatus} 声明 completed 或 blocked。",
+            null => $"本轮状态未提交，结束时用 {ContractTools.Status.Name} 声明 completed 或 blocked。",
             { Blocked: true, Reason: { Length: > 0 } reason } => $"本轮状态：blocked，{reason}。",
             { Blocked: true } => "本轮状态：blocked。",
             _ => "本轮状态：completed。",

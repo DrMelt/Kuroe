@@ -61,7 +61,7 @@ internal static partial class CommandToolRunner
     {
         if (item.OmitWhenMissing is { } linkedName)
         {
-            ToolParameter? linked = definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
+            ToolParameter? linked = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
             if (linked is not null)
             {
                 bool missing = linked.List
@@ -93,7 +93,7 @@ internal static partial class CommandToolRunner
         if (matches.Count == 1 && token.StartsWith('{') && token.EndsWith('}'))
         {
             string name = matches[0].Groups[1].Value;
-            ToolParameter? parameter = definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
+            ToolParameter? parameter = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
                 return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");
@@ -128,7 +128,7 @@ internal static partial class CommandToolRunner
         foreach (Match match in matches)
         {
             string name = match.Groups[1].Value;
-            ToolParameter? parameter = definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
+            ToolParameter? parameter = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
                 return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");

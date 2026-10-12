@@ -3,15 +3,6 @@ namespace Kuroe.Shared.Executions.Tools;
 /// <summary>工具路径：函数在层级里的位置，按 / 分段，白名单按路径前缀放行，写上级路径即包含整棵子树。</summary>
 public readonly record struct ToolPath(string Value)
 {
-    /// <summary>规划的契约路径：声明 Items 端口的执行节点按输出端口附上的工具。</summary>
-    public static ToolPath ContractPlan { get; } = new(ToolName.ContractPlan.Value);
-
-    /// <summary>输出端口的契约路径：声明 Data 端口的执行节点按输出端口附上的工具。</summary>
-    public static ToolPath ContractPortValues { get; } = new(ToolName.ContractPortValues.Value);
-
-    /// <summary>执行状态的契约路径：所有执行节点都附上的工具。</summary>
-    public static ToolPath ContractStatus { get; } = new(ToolName.ContractStatus.Value);
-
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
 
@@ -21,6 +12,10 @@ public readonly record struct ToolPath(string Value)
         && Value.Length >= ancestor.Value.Length
         && Value.StartsWith(ancestor.Value, StringComparison.Ordinal)
         && (Value.Length == ancestor.Value.Length || Value[ancestor.Value.Length] == '/');
+
+    /// <summary>按函数名与可选分组拼出完整路径：有分组时是 分组/函数名，空分组与未给分组同等。</summary>
+    public static ToolPath Of(ToolName name, ToolPath? group = null) =>
+        group is { Value.Length: > 0 } parent ? new ToolPath($"{parent.Value}/{name.Value}") : new ToolPath(name.Value);
 
     /// <summary>路径格式的非法原因：首尾不能是 /，段非空且不含空白与花括号。未写或空时返回 null。</summary>
     public static string? InvalidReason(string value)

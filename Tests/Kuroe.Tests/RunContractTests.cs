@@ -67,10 +67,10 @@ public sealed class RunContractTests
         StatusTool tool = new(harness.Executor.StatusSubmitter!, harness.Registry);
 
         // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
-        Assert.DoesNotContain("结论", tool.Functions.Single().Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description, StringComparison.Ordinal);
         ToolFunction declared = Assert.Single(tool.ForTurn(Ported(harness).Scope).Functions);
-        Assert.Contains("completed", declared.Description, StringComparison.Ordinal);
-        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Description, StringComparison.Ordinal);
+        Assert.Contains("completed", declared.Definition.Description, StringComparison.Ordinal);
+        Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -15,18 +15,27 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
+    /// <summary>列出流程模板的函数定义。</summary>
+    private static readonly ToolDefinition ListFlows = new(
+        new ToolName("ListFlows"),
+        "列出流程模板：流程名、执行节点路径与说明，标出默认流程。",
+        [],
+        InfoTools.Group);
+
+    /// <summary>查看指定流程的函数定义。</summary>
+    private static readonly ToolDefinition GetFlow = new(
+        new ToolName("GetFlow"),
+        "查看指定流程的展开节点表：模型、节点类型、展开方式与放行规则。",
+        [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
+        InfoTools.Group);
+
     public FlowInfoTool(FlowService flows)
     {
         _flows = flows;
         Functions =
         [
-            new ToolFunction(new ToolName("ListFlows"),
-                "列出流程模板：流程名、执行节点路径与说明，标出默认流程。",
-                [], _ => List(), new ToolPath("info/ListFlows")),
-            new ToolFunction(new ToolName("GetFlow"),
-                "查看指定流程的展开节点表：模型、节点类型、展开方式与放行规则。",
-                [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
-                arguments => Show(arguments), new ToolPath("info/GetFlow")),
+            ListFlows.Bind(_ => List()),
+            GetFlow.Bind(arguments => Show(arguments)),
         ];
     }
 

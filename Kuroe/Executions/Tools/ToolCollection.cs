@@ -21,7 +21,7 @@ public sealed class ToolCollection
     public ToolCollection(IEnumerable<ITool> carriers)
     {
         _carriers = [.. carriers];
-        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Name)];
+        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Definition.Name)];
     }
 
     /// <summary>工具名，供宿主展示可用性。</summary>
@@ -37,7 +37,7 @@ public sealed class ToolCollection
             ITool bound = carrier is IScopedTool scoped ? scoped.ForTurn(scope) : carrier;
             IEnumerable<ToolFunction> allowed = tools is null
                 ? bound.Functions
-                : bound.Functions.Where(function => tools.Any(entry => function.Path.IsUnder(entry)));
+                : bound.Functions.Where(function => tools.Any(entry => function.Definition.Path.IsUnder(entry)));
             result.AddRange(allowed.Select(function => new DeclaredFunction(function, sink)));
         }
 
@@ -47,7 +47,7 @@ public sealed class ToolCollection
     /// <summary>按声明执行的函数，调用参数与结果写进过程记录。</summary>
     private sealed class DeclaredFunction(ToolFunction declaration, ITurnSink sink) : AIFunction
     {
-        private readonly JsonElement _schema = SchemaOf(declaration.Parameters);
+        private readonly JsonElement _schema = SchemaOf(declaration.Definition.Parameters);
 
         /// <summary>调用参数的呈现方式：非 ASCII 字符不转义。</summary>
         private static readonly JsonWriterOptions Rendering = new()
@@ -55,9 +55,9 @@ public sealed class ToolCollection
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
-        public override string Name => declaration.Name.Value;
+        public override string Name => declaration.Definition.Name.Value;
 
-        public override string Description => declaration.Description;
+        public override string Description => declaration.Definition.Description;
 
         public override JsonElement JsonSchema => _schema;
 
@@ -72,12 +72,12 @@ public sealed class ToolCollection
             }
             catch (Exception ex)
             {
-                sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
 
             string result = ToolResult.Render(outcome);
-            sink.OnToolCall(new ToolCallRecord(declaration.Name, parameters, result, outcome.IsError));
+            sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name, parameters, result, outcome.IsError));
 
             return new ValueTask<object?>(result);
         }

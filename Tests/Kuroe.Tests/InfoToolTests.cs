@@ -190,14 +190,15 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("没有配置命令工具", noTools);
 
         CommandToolDefinition diff = new(
-            new ToolName("RunDiff"),
-            "查看指定文件相对 HEAD 的改动。",
+            new ToolDefinition(
+                new ToolName("RunDiff"),
+                "查看指定文件相对 HEAD 的改动。",
+                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)],
+                new ToolPath("git")),
             [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
-            [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)],
             null,
             120,
-            8000,
-            new ToolPath("git"));
+            8000);
 
         ToolboxInfoTool tool = new([diff]);
         string output = Call(tool, "ListTools");
@@ -258,7 +259,7 @@ public sealed class InfoToolTests : IDisposable
     }
 
     private static string Call(ITool tool, string name, params (string Key, object? Value)[] args) =>
-        ToolResult.Render(tool.Functions.Single(function => function.Name.Value == name)
+        ToolResult.Render(tool.Functions.Single(function => function.Definition.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()
