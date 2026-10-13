@@ -1,11 +1,10 @@
 using ErrorOr;
-using Kuroe.Executions.Turns;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
+using Kuroe.Flows.Execution.Turns;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Executions.Turns;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.Execution.Turns;
+using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.TestSupport;
 using Xunit;
 
@@ -35,9 +34,9 @@ public sealed class DriverApiTests
 
         TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
         RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
-        TurnScope scope = harness.Registry.FindRun(implement.Id).ThrowIfError().Scope;
+        RunId implementRun = implement.Id;
 
-        Assert.Contains("被拒绝", ToolResult.Render(harness.Submitter.SubmitItems(scope, """[{"Title":"甲"}]""")));
+        Assert.Contains("被拒绝", ToolResult.Render(harness.Submitter.SubmitItems(implementRun, """[{"Title":"甲"}]""")));
     }
 
     [Fact]

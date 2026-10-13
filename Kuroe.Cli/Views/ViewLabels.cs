@@ -1,7 +1,7 @@
-using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Tools.Info;
+using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Workflows.Tools.Info;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;

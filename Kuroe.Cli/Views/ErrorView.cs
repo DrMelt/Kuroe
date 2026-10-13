@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
+using Kuroe.Flows.Shared;
 using Kuroe.Shared;
 
 namespace Kuroe.Cli.Views;
@@ -47,24 +48,24 @@ internal sealed class ErrorView(Terminal terminal)
                     terminal.Hint("清除设置用 /unset <路径>。");
                     break;
 
-                case ErrorCodes.TaskNotFound:
+                case FlowErrorCodes.TaskNotFound:
                     terminal.Hint("用 /task list 查看任务号。");
                     break;
 
-                case ErrorCodes.RunNotFound:
+                case FlowErrorCodes.RunNotFound:
                     terminal.Hint("run 号全局递增，用 /task list 或 /task show <任务号> 查看。");
                     break;
 
-                case ErrorCodes.FlowNotFound:
+                case FlowErrorCodes.FlowNotFound:
                     terminal.Hint("用 /flow list 查看流程名。");
                     break;
 
-                case ErrorCodes.FlowInvalidPath:
+                case FlowErrorCodes.FlowInvalidPath:
                     terminal.Hint("/flow add 的文件参数相对工作目录解析，路径非法时换一个写法。");
                     break;
 
-                case ErrorCodes.FlowNode or ErrorCodes.FlowBody or ErrorCodes.FlowName
-                    or ErrorCodes.FlowFormat:
+                case FlowErrorCodes.FlowNode or FlowErrorCodes.FlowBody or FlowErrorCodes.FlowName
+                    or FlowErrorCodes.FlowFormat:
                     terminal.Hint("流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。");
                     break;
 

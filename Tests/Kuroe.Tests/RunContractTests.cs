@@ -1,11 +1,11 @@
-using Kuroe.Executions.Runs;
-using Kuroe.Shared.Executions;
+using Kuroe.Flows.Execution.Runs;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.TestSupport;
-using Kuroe.Tools.Builtin;
-using Kuroe.Workflows.Execution.Tasks;
+using Kuroe.Workflows.Tools.Builtin;
+using Kuroe.Flows.Execution.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -39,7 +39,7 @@ public sealed class RunContractTests
         TaskId id = harness.Submit("目标");
         harness.Settle(id);
 
-        Run run = Assert.Single(harness.Executor.Started);
+        IRun run = Assert.Single(harness.Executor.Started);
         Assert.StartsWith("固定背景一\n固定背景二", run.Context.SystemPrompt, StringComparison.Ordinal);
     }
 
@@ -51,7 +51,7 @@ public sealed class RunContractTests
         TaskId id = harness.Submit("目标");
         harness.Settle(id);
 
-        Run follow = harness.Executor.Started.Single(run => run.Context.NodeName.Value == "实施");
+        IRun follow = harness.Executor.Started.Single(run => run.Context.NodeName.Value == "实施");
 
         Assert.Contains("节点「分析」端口「结论」", follow.Context.SystemPrompt ?? string.Empty, StringComparison.Ordinal);
     }
@@ -101,7 +101,7 @@ public sealed class RunContractTests
 
         Assert.Equal(TaskState.Blocked, blocked.State);
 
-        Run run = Ported(harness);
+        IRun run = Ported(harness);
         Assert.Contains("模型报告无法完成：缺少输入资料", string.Join('；', run.Snapshot().Failures), StringComparison.Ordinal);
         Assert.Null(new RunReminder(harness.Registry).Reminder(run));
     }
@@ -148,6 +148,6 @@ public sealed class RunContractTests
     }
 
     /// <summary>声明了输出端口的那个 run，端口相关的系统指令与工具描述都在它身上。</summary>
-    private static Run Ported(KuroeHarness harness) =>
+    private static IRun Ported(KuroeHarness harness) =>
         harness.Executor.Started.First(run => run.Context.OutputPorts.Count > 0);
 }

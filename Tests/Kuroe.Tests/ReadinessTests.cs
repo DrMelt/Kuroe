@@ -1,10 +1,11 @@
 using ModelName = ApiHub.Shared.Models.ModelName;
-using Kuroe.Executions.Runs;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
-using Kuroe.Workflows.Execution.Tasks;
-using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
+using Kuroe.Flows.Execution.Runs;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.RuntimeGraph;
+using Kuroe.Flows.RuntimeNodes;
+using Kuroe.Flows.StaticGraph;
+using ExecutableNode = Kuroe.Flows.Shared.StaticGraph.ExecutableNode;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -133,7 +134,6 @@ public sealed class ReadinessTests
         NodeIndex = node.Index,
         NodeName = node.Name,
         Instruction = "产出",
-        Model = ModelName.Create("执行者").Value,
         ItemIndex = item,
     });
 

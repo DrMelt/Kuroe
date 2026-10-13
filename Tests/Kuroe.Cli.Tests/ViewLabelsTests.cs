@@ -1,10 +1,9 @@
-using ApiHub.Shared.Models;
 using Kuroe.Cli.Views;
 using Kuroe.Executions;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -79,6 +78,5 @@ public sealed class ViewLabelsTests
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
-        Model = ModelName.Create("fake").Value,
     };
 }

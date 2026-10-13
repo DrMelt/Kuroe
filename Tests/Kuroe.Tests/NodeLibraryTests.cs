@@ -2,13 +2,13 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Nodes.Library;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.StaticGraph.Library;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.TestSupport;
-using Kuroe.Workflows.Flows;
+using Kuroe.Flows.StaticGraph;
+using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -119,7 +119,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowAssembler.Read(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError();
+        var (Nodes, _) = FlowAssembler.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }

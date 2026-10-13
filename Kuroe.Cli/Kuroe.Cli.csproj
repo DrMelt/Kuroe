@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kuroe\Kuroe.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows.Shared\Kuroe.Flows.Shared.csproj" />
     <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
   </ItemGroup>
 
@@ -29,6 +30,12 @@
           Link="source\Kuroe\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Kuroe.Shared\**\*.cs" Exclude="..\Kuroe.Shared\**\bin\**;..\Kuroe.Shared\**\obj\**"
           Link="source\Kuroe.Shared\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kuroe.Flows.Shared\**\*.cs" Exclude="..\Kuroe.Flows.Shared\**\bin\**;..\Kuroe.Flows.Shared\**\obj\**"
+          Link="source\Kuroe.Flows.Shared\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kuroe.Flows.Json\**\*.cs" Exclude="..\Kuroe.Flows.Json\**\bin\**;..\Kuroe.Flows.Json\**\obj\**"
+          Link="source\Kuroe.Flows.Json\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Kuroe.Flows\**\*.cs" Exclude="..\Kuroe.Flows\**\bin\**;..\Kuroe.Flows\**\obj\**"
+          Link="source\Kuroe.Flows\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Kuroe.Cli\**\*.cs" Exclude="..\Kuroe.Cli\**\bin\**;..\Kuroe.Cli\**\obj\**"
           Link="source\Kuroe.Cli\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Tests\**\*.cs" Exclude="..\Tests\**\bin\**;..\Tests\**\obj\**;..\Tests\**\TestResults\**"

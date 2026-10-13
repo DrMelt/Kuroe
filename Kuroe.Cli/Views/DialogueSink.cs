@@ -1,5 +1,5 @@
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Turns;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Turns;
 
 namespace Kuroe.Cli.Views;
 
@@ -12,7 +12,7 @@ internal sealed class DialogueSink(Terminal terminal) : ITurnSink
     {
         terminal.ToolCall("工具 > ");
         terminal.ToolCall(record.Arguments.Length == 0
-            ? record.Name.Value
+            ? record.Name
             : $"{record.Name} {record.Arguments}");
 
         if (record.Failed)

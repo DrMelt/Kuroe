@@ -4,7 +4,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using Kuroe.Configuration.Files;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Configuration.Model;
 

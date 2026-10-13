@@ -1,7 +1,6 @@
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
-using Kuroe.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -146,7 +145,7 @@ public sealed class FlowRuleTests
     public void Input_with_tools_is_rejected() =>
         Assert.Equal(
             [NodeError("收集", "输入节点不启动 run，不能声明 Tools。")],
-            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Tools = [new ToolPath("GetLocalTime")] } }))));
+            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Tools = [new CapabilityPath("GetLocalTime")] } }))));
 
     [Fact]
     public void Input_with_prompt_is_rejected() =>

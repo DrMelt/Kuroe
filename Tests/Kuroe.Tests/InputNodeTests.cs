@@ -1,9 +1,8 @@
 using ErrorOr;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Graph;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.TestSupport;
 using Xunit;
 

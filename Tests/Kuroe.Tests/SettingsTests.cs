@@ -1,7 +1,7 @@
 using System.Reflection;
 using Kuroe.Configuration;
 using Kuroe.Shared.Configuration;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.TestSupport;
 using Xunit;
 

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Executions.Sessions;
+using Kuroe.Flows.Shared.Execution.Runs;
 
 namespace Kuroe.Executions.Runs;
 
@@ -9,7 +10,7 @@ sealed class RunExecutor(SessionFactory sessions, IRunContract contract) : IRunE
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
 
-    public Task<ErrorOr<string>> ExecuteAsync(Run run, CancellationToken cancellationToken)
+    public Task<ErrorOr<string>> ExecuteAsync(IRun run, CancellationToken cancellationToken)
     {
         Session session = sessions.ForRun(run.Context);
 

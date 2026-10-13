@@ -1,18 +1,18 @@
 using ErrorOr;
-using Kuroe.Configuration;
-using Kuroe.Nodes.Builtin;
-using Kuroe.Nodes.Library;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.StaticGraph;
+using Kuroe.Flows.StaticGraph.Library;
 using Kuroe.Workflows.Flows.Files;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>运行期的流程模板集合。装配与文件存取交给 FlowAssembler 与 FlowStore，
-/// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。</summary>
-public sealed class FlowService
+/// <summary>运行期的流程模板集合。装配交给 FlowAssembler，文件的读取与落盘交给 FlowStore，
+/// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。默认流程名由宿主给出。</summary>
+public sealed class FlowService : IFlowCatalog
 {
     private readonly FlowStore _store;
-    private readonly SettingsProvider _settings;
+    private readonly Func<FlowName?> _defaultName;
     private readonly NodeLibrary _builtins;
     private readonly Lock _gate = new();
     private NodeLibrary _library;
@@ -20,10 +20,10 @@ public sealed class FlowService
     private List<FlowDefinition> _flowModels;
     private List<FlowDefinition> _flows;
 
-    private FlowService(FlowStore store, SettingsProvider settings, NodeLibrary builtins, AssembledFlows assembled)
+    private FlowService(FlowStore store, Func<FlowName?> defaultName, NodeLibrary builtins, AssembledFlows assembled)
     {
         _store = store;
-        _settings = settings;
+        _defaultName = defaultName;
         _builtins = builtins;
         _library = assembled.Library;
         _fileNodes = [.. assembled.FileNodes];
@@ -32,22 +32,28 @@ public sealed class FlowService
     }
 
     /// <summary>从流程文件装配模板集合。内置节点装进基线库，节点库或任一条流程不合法时返回全部错误，装配失败。</summary>
-    internal static ErrorOr<FlowService> Create(FlowStore store, SettingsProvider settings)
+    internal static ErrorOr<FlowService> Create(FlowStore store, IReadOnlyList<NodeSpec> builtinNodes, Func<FlowName?> defaultName)
     {
         NodeLibrary builtins = new();
-        builtins.Register(BuiltinNodes.Nodes);
+        builtins.Register(builtinNodes);
 
-        ErrorOr<AssembledFlows> loaded = FlowAssembler.Load(store, builtins);
+        ErrorOr<FlowFileDto?> loaded = store.LoadDto();
         if (loaded.IsError)
         {
             return loaded.ErrorsOrEmptyList;
         }
 
-        return new FlowService(store, settings, builtins, loaded.Value);
+        ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(loaded.Value ?? new FlowFileDto(), builtins);
+        if (assembled.IsError)
+        {
+            return assembled.ErrorsOrEmptyList;
+        }
+
+        return new FlowService(store, defaultName, builtins, assembled.Value);
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
-    public FlowName? DefaultName => _settings.Current.Runtime.DefaultFlow;
+    public FlowName? DefaultName => _defaultName();
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -82,7 +88,13 @@ public sealed class FlowService
             return resolved.ErrorsOrEmptyList;
         }
 
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowAssembler.Read(resolved.Value);
+        ErrorOr<FlowFileDto> file = FlowStore.ReadDto(resolved.Value);
+        if (file.IsError)
+        {
+            return file.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowAssembler.ToContent(file.Value);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
@@ -115,7 +127,7 @@ public sealed class FlowService
                 .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = FlowAssembler.Save(_store, fileNodes, flowModels);
+            ErrorOr<Success> saved = _store.Save(FlowAssembler.ToDto(fileNodes, flowModels));
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;

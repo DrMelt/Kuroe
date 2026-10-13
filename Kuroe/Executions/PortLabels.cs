@@ -1,4 +1,4 @@
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Executions;
 

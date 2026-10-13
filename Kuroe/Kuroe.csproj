@@ -21,6 +21,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows.Shared\Kuroe.Flows.Shared.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows.Json\Kuroe.Flows.Json.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows\Kuroe.Flows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

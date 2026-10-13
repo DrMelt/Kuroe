@@ -1,11 +1,10 @@
-using Kuroe.Executions.Runs;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
+using Kuroe.Flows.Execution.Runs;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.TestSupport;
-using Kuroe.Tools.Builtin;
+using Kuroe.Workflows.Tools.Builtin;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -151,7 +150,7 @@ public sealed class PortNodeTests
 
         // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
         Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);
-        Run ported = harness.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
+        IRun ported = harness.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(tool.ForTurn(ported.Scope).Functions);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }

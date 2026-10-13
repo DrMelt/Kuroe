@@ -1,5 +1,5 @@
-using Kuroe.Tools.Command;
-using Kuroe.Tools.Command.Model;
+using Kuroe.Workflows.Tools.Command;
+using Kuroe.Workflows.Tools.Command.Model;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;

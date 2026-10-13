@@ -1,4 +1,4 @@
-using Kuroe.Shared.Executions.Turns;
+using Kuroe.Flows.Shared.Execution.Turns;
 
 namespace Kuroe.Cli.Views;
 
@@ -42,7 +42,7 @@ internal static class JournalView
 
                 case ToolCallEntry call:
                     string callLine = call.Call.Arguments.Length == 0
-                        ? call.Call.Name.Value
+                        ? call.Call.Name
                         : $"{call.Call.Name} {call.Call.Arguments}";
 
                     terminal.ToolCall($"[{at}] 工具 > ");

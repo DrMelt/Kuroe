@@ -1,5 +1,5 @@
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;

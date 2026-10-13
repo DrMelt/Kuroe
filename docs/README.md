@@ -28,4 +28,8 @@ dotnet build Kuroe.slnx
 dotnet test Kuroe.slnx
 ```
 
-`Kuroe` 内部按域分层，依赖单向：`Shared` → `Storage` → `Configuration` → `Catalogs` → `Nodes` → `Workflows.Flows` → `Workflows.Execution` → `Executions` → `Tools` → `Kuroe`。节点域只依赖 `Shared`，装配域单向引用节点域。
+生产项目依赖单向：`Kuroe.Shared` 与 `Kuroe.Flows.Shared` 是基础层，`Kuroe.Flows.Json` 依赖 `Kuroe.Flows.Shared`，`Kuroe.Flows` 依赖这两个库，`Kuroe` 依赖上述全部，`Kuroe.Cli` 依赖 `Kuroe`。
+
+引擎不反向依赖宿主：`Kuroe.Flows` 与 `Kuroe.Flows.Shared` 只依赖 .NET 与 ErrorOr，宿主经 `IRunExecutor`、`IRunContract`、`IRunPolicy`、`IExecutionTargetResolver`、`IFlowCatalog` 接入；错误码分侧放在 `Kuroe.Flows.Shared.FlowErrorCodes` 与 `Kuroe.Shared.ErrorCodes`。
+
+`Kuroe` 内部按域分层，依赖单向：`Storage` → `Configuration` → `Catalogs` → `Executions` → `Workflows`，装配入口 `Kuroe` 依赖全部。

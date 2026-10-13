@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Shared;
+using Kuroe.Flows.Shared;
 
 namespace Kuroe.Workflows.Flows.Files;
 
@@ -13,9 +13,9 @@ static class FlowFileErrors
         Error.Failure("Flow.Write", $"写入 {path} 失败：{message}");
 
     /// <summary>文件不是合法的 JSON 形状。</summary>
-    public static Error Format(string message) => Error.Validation(ErrorCodes.FlowFormat, message);
+    public static Error Format(string message) => Error.Validation(FlowErrorCodes.FlowFormat, message);
 
     /// <summary>导入的文件参数不是合法路径。</summary>
     public static Error InvalidPath(string path, string message) =>
-        Error.Validation(ErrorCodes.FlowInvalidPath, $"文件参数不是合法路径：{path}（{message}）");
+        Error.Validation(FlowErrorCodes.FlowInvalidPath, $"文件参数不是合法路径：{path}（{message}）");
 }

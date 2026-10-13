@@ -1,17 +1,10 @@
 namespace Kuroe.Shared.Executions.Tools;
 
-/// <summary>工具路径：函数在层级里的位置，按 / 分段，白名单按路径前缀放行，写上级路径即包含整棵子树。</summary>
+/// <summary>工具路径：函数在层级里的位置，按 / 分段。</summary>
 public readonly record struct ToolPath(string Value)
 {
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
-
-    /// <summary>本路径是否在给定路径之下或相等。空路径不匹配任何工具。</summary>
-    public bool IsUnder(ToolPath ancestor) =>
-        ancestor.Value.Length > 0
-        && Value.Length >= ancestor.Value.Length
-        && Value.StartsWith(ancestor.Value, StringComparison.Ordinal)
-        && (Value.Length == ancestor.Value.Length || Value[ancestor.Value.Length] == '/');
 
     /// <summary>按函数名与可选分组拼出完整路径：有分组时是 分组/函数名，空分组与未给分组同等。</summary>
     public static ToolPath Of(ToolName name, ToolPath? group = null) =>

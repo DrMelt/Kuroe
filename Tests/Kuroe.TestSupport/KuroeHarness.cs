@@ -1,16 +1,15 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Executions.Runs;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Workflows.Execution;
+using Kuroe.Flows.Execution.Tasks;
 using Kuroe.Workflows.Flows;
-using Kuroe.Workflows.Execution.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.TestSupport;
@@ -54,8 +53,8 @@ public sealed class KuroeHarness : IDisposable
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
 
-    public IReadOnlyList<Kuroe.Tools.Command.Model.CommandToolDefinition> CommandTools =>
-        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tools.Command.Model.CommandToolDefinition>>();
+    public IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition> CommandTools =>
+        _provider.GetRequiredService<IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition>>();
 
     /// <summary>测试用默认流程文件，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
     private const string TestDefaultFlow = """
@@ -133,7 +132,7 @@ public sealed class KuroeHarness : IDisposable
     public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
         TryCreate(flowsJson, seedCatalog, defaultFlow).ThrowIfError();
 
-    public TaskId Submit(string goal, Kuroe.Shared.Workflows.Flows.FlowName? flow = null) =>
+    public TaskId Submit(string goal, Kuroe.Flows.Shared.StaticGraph.FlowName? flow = null) =>
         Tasks.Submit(goal, flow, null).ThrowIfError().Id;
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();

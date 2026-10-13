@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
-using Kuroe.Shared.Executions;
+using Kuroe.Executions;
+using Kuroe.Flows.Shared.Execution;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Executions.Sessions;
@@ -25,7 +26,7 @@ internal sealed class RunHistory(RunContext context) : ISessionHistory
 {
     private bool _laidOut;
 
-    public ModelName? Model => context.Model;
+    public ModelName? Model => (context.Declaration as KuroeNodeDeclaration)?.Model;
 
     public bool Stale => !_laidOut;
 

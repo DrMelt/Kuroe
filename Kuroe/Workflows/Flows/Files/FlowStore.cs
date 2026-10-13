@@ -1,7 +1,8 @@
 using System.Text.Json;
 using ErrorOr;
+using Kuroe.Flows.Json;
+using Kuroe.Flows.Json.Model;
 using Kuroe.Storage;
-using Kuroe.Workflows.Flows.Model;
 
 namespace Kuroe.Workflows.Flows.Files;
 

@@ -1,8 +1,8 @@
 using ApiHub.Shared.Models;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Tasks;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.TestSupport;
 using Xunit;
 
@@ -22,7 +22,7 @@ public sealed class ContextTests
         ContextMessage goal = Assert.Single(plan.Context.Seed);
         Assert.Equal("补齐 README", goal.Text);
         Assert.IsType<StartSource>(goal.Source);
-        Assert.Equal(ModelName.Create("fake").Value, plan.Context.Model);
+        Assert.Equal(ModelName.Create("fake").Value, (plan.Context.Declaration as Kuroe.Executions.KuroeNodeDeclaration)!.Model);
     }
 
     [Fact]

@@ -2,11 +2,11 @@ using System.Text;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Executions.Tools;
-using Kuroe.Executions.Turns;
+using Kuroe.Flows.Execution.Turns;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Model;
-using Kuroe.Shared.Executions.Turns;
+using Kuroe.Flows.Shared.Execution.Turns;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -59,7 +59,7 @@ public sealed class Session
 
         if (_history.Model is not { } model)
         {
-            return [RunErrors.ModelNotSelected()];
+            return [ModelErrors.ModelNotSelected()];
         }
 
         ErrorOr<ModelConnection> resolved = _catalog.Connect(model);
@@ -127,7 +127,7 @@ public sealed class Session
         _session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) ? history.Count : 0;
 
     /// <summary>本轮消息由框架写回历史。工具调用缺少结果或没有任何产出时整轮退回，本轮新增全部撤销。</summary>
-    private void CompleteTurn(List<AgentResponseUpdate> updates, TurnJournal journal, int historyStart)
+    private void CompleteTurn(List<AgentResponseUpdate> updates, ITurnJournal journal, int historyStart)
     {
         if (updates.Count == 0)
         {
@@ -143,7 +143,7 @@ public sealed class Session
     }
 
     /// <summary>撤掉本轮期间写入历史的消息，该轮输出保留在记录里。</summary>
-    private void DiscardTurn(TurnJournal journal, int historyStart)
+    private void DiscardTurn(ITurnJournal journal, int historyStart)
     {
         if (_session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
         {

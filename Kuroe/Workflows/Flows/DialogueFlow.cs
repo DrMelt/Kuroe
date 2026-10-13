@@ -1,6 +1,4 @@
-using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
+using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -28,13 +26,13 @@ internal static class DialogueFlow
     /// <summary>回复端口名：回话节点的输出端口，也是收话节点取用它的输入端口。</summary>
     internal static PortName ReplyPort { get; } = new("完成");
 
-    /// <summary>回话节点可用的能力工具白名单，写上级路径即放行整棵子树。</summary>
-    internal static IReadOnlyList<ToolPath> Tools { get; } =
+    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。</summary>
+    internal static IReadOnlyList<CapabilityPath> Tools { get; } =
     [
-        new ToolPath("GetLocalTime"),
-        new ToolPath("info"),
-        new ToolPath("files"),
-        new ToolPath("source"),
+        new CapabilityPath("GetLocalTime"),
+        new CapabilityPath("info"),
+        new CapabilityPath("files"),
+        new CapabilityPath("source"),
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>

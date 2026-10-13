@@ -1,14 +1,14 @@
 using Kuroe.Executions.Tools;
-using Kuroe.Executions.Turns;
-using Kuroe.Shared.Executions;
+using Kuroe.Flows.Execution.Turns;
+using Kuroe.Flows.Shared.Execution;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Executions.Turns;
-using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Tools.Builtin;
-using Kuroe.Tools.Info;
+using Kuroe.Flows.Shared.Execution.Turns;
+using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Workflows.Tools.Builtin;
+using Kuroe.Workflows.Tools.Info;
 using Kuroe.Workflows.Flows;
-using Kuroe.Workflows.Execution.Tasks;
+using Kuroe.Flows.Execution.Tasks;
 using Microsoft.Extensions.AI;
 using Xunit;
 
@@ -49,10 +49,10 @@ public sealed class DialogueTests
     {
         Assert.Equal(
             [
-                new ToolPath("GetLocalTime"),
-                new ToolPath("info"),
-                new ToolPath("files"),
-                new ToolPath("source"),
+                new CapabilityPath("GetLocalTime"),
+                new CapabilityPath("info"),
+                new CapabilityPath("files"),
+                new CapabilityPath("source"),
             ],
             DialogueFlow.Tools);
     }
@@ -86,7 +86,7 @@ public sealed class DialogueTests
         ]);
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info")]);
 
         Assert.Equal(
             ["ListTasks", "GetTask", "GetRun"],
@@ -103,7 +103,7 @@ public sealed class DialogueTests
         ]);
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info/GetTask")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info/GetTask")]);
 
         Assert.Equal(["GetTask"], built.Select(tool => tool.Name));
     }
@@ -114,7 +114,7 @@ public sealed class DialogueTests
         ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())]);
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("infoX")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("infoX")]);
 
         Assert.Empty(built);
     }

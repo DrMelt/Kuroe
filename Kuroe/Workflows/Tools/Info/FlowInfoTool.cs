@@ -1,0 +1,218 @@
+using System.Text;
+using ErrorOr;
+using Kuroe.Executions;
+using Kuroe.Shared.Executions.Tools;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Workflows.Flows;
+
+namespace Kuroe.Workflows.Tools.Info;
+
+/// <summary>流程模板的信息查询工具。只读，不产生状态改动。</summary>
+internal sealed class FlowInfoTool : ITool
+{
+    private readonly FlowService _flows;
+
+    /// <summary>本载体的函数声明。</summary>
+    public IReadOnlyList<ToolFunction> Functions { get; }
+
+    /// <summary>列出流程模板的函数定义。</summary>
+    private static readonly ToolDefinition ListFlows = new(
+        new ToolName("ListFlows"),
+        "列出流程模板：流程名、执行节点路径与说明，标出默认流程。",
+        [],
+        InfoTools.Group);
+
+    /// <summary>查看指定流程的函数定义。</summary>
+    private static readonly ToolDefinition GetFlow = new(
+        new ToolName("GetFlow"),
+        "查看指定流程的展开节点表：模型、节点类型、展开方式与放行规则。",
+        [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
+        InfoTools.Group);
+
+    public FlowInfoTool(FlowService flows)
+    {
+        _flows = flows;
+        Functions =
+        [
+            ListFlows.Bind(_ => List()),
+            GetFlow.Bind(arguments => Show(arguments)),
+        ];
+    }
+
+    /// <summary>流程列表。</summary>
+    private ErrorOr<string> List()
+    {
+        var text = new StringBuilder();
+        foreach (FlowDefinition flow in _flows.All())
+        {
+            string standard = flow.Name == _flows.DefaultName ? "默认 " : string.Empty;
+            text.AppendLine($"{standard}{flow.Name} · {string.Join(" → ", Flatten(flow.RootNode))}"
+                + $" · {flow.Description ?? string.Empty}");
+        }
+
+        if (_flows.DefaultName is { } defaultName)
+        {
+            text.Append($"默认流程：{defaultName}");
+        }
+
+        return text.ToString().TrimEnd();
+    }
+
+    /// <summary>按流程名查看展开节点表，流程不存在时返回拒绝错误。</summary>
+    private ErrorOr<string> Show(ToolArguments arguments)
+    {
+        string? name = arguments.Text(new ToolName("flowName"));
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return ToolErrors.Argument("缺少流程名。");
+        }
+
+        ErrorOr<FlowName> flowName = FlowName.Create(name);
+        if (flowName.IsError)
+        {
+            return flowName.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<FlowDefinition> found = _flows.Find(flowName.Value);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        var text = new StringBuilder();
+        text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
+        text.AppendLine($"开始 {string.Join("、", found.Value.StartOutputs.Select(StartPort))}");
+
+        foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
+        {
+            if (node.Execution is { } executable)
+            {
+                NodeKind kind = node.EffectiveKind;
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Label()}节点）");
+
+                List<string> attributes = [];
+                if (kind != NodeKind.Input)
+                {
+                    attributes.Add($"模型 {NodeModel(node)}");
+                }
+
+                attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
+                attributes.Add($"放行 {InfoLabels.Of(node.Gate)}");
+                text.AppendLine($"    {string.Join(" · ", attributes)}");
+
+                string requirement = Requirement(node, executable);
+                if (requirement.Length > 0)
+                {
+                    text.AppendLine($"    {requirement}");
+                }
+            }
+            else if (node.Nodes is { Count: > 0 })
+            {
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Label()}节点）· 放行 {InfoLabels.Of(node.Gate)}");
+                if (node.Inputs.Count > 0)
+                {
+                    text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+                }
+
+                if (node.ContainerOutputs is { Count: > 0 } outs)
+                {
+                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => DescribeOutput(entry.Key, entry.Value)))}");
+                }
+            }
+        }
+
+        return text.ToString().TrimEnd();
+    }
+
+    /// <summary>展开节点上的模型引用，未绑定为空。</summary>
+    private static string NodeModel(NodeSpec node) => node.Model is { } model ? model.Value : "未绑定";
+
+    /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
+    private static string StartPort(Port port) =>
+        port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
+
+    /// <summary>节点要求：分支、工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
+    private static string Requirement(NodeSpec node, ExecutableSpec executable)
+    {
+        List<string> parts = [];
+        if (executable.Branch is { } branch)
+        {
+            parts.Add($"分支 {branch}");
+        }
+
+        if (executable.Tools.Count > 0)
+        {
+            parts.Add($"工具 {string.Join("、", executable.Tools)}");
+        }
+
+        if (node.Inputs.Count > 0)
+        {
+            parts.Add($"输入 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+        }
+
+        if (node.From.Count > 0)
+        {
+            parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
+        }
+
+        if (executable.Question is { Length: > 0 })
+        {
+            parts.Add($"提问 {executable.Question}");
+        }
+
+        if (node.Outputs.Count > 0)
+        {
+            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
+        }
+
+        if (node.SystemPrompt.Count > 0)
+        {
+            parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
+        }
+
+        return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
+    }
+
+    /// <summary>容器输出端口的展示：写转发目标，说明存在时写在末尾。</summary>
+    private static string DescribeOutput(PortName port, ContainerOutput output) =>
+        output.Description is { Length: > 0 } description
+            ? $"{port.Value} ← {output.Ref.Display}：{description}"
+            : $"{port.Value} ← {output.Ref.Display}";
+
+    /// <summary>递归收集流程里的全部执行节点名。</summary>
+    private static IEnumerable<NodeName> Flatten(NodeSpec node)
+    {
+        if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (NodeSpec child in children)
+            {
+                foreach (NodeName descendant in Flatten(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+        else
+        {
+            yield return node.Name;
+        }
+    }
+
+    /// <summary>先根序遍历节点树，附带层级深度供缩进。</summary>
+    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(NodeSpec node, int depth = 0)
+    {
+        yield return (node, depth);
+        if (node.Nodes is { Count: > 0 } children)
+        {
+            foreach (NodeSpec child in children)
+            {
+                foreach ((NodeSpec descendant, int childDepth) in Walk(child, depth + 1))
+                {
+                    yield return (descendant, childDepth);
+                }
+            }
+        }
+    }
+
+    private static string Indent(int depth) => new(' ', depth * 2);
+}

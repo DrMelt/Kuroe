@@ -1,5 +1,5 @@
 using Kuroe.Cli.Views;
-using Kuroe.Shared.Executions;
+using Kuroe.Flows.Shared.Execution;
 using Kuroe.Shared.Executions.Tools;
 using Spectre.Console.Testing;
 using Xunit;
@@ -15,7 +15,7 @@ public sealed class DialogueSinkTests
         Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
         DialogueSink sink = new(terminal);
 
-        sink.OnToolCall(new ToolCallRecord(new ToolName("WriteFile"), """{"path":"a.txt"}""", "已写入 5 字符。", false));
+        sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "已写入 5 字符。", false));
 
         Assert.Contains($"工具 > {Environment.NewLine}WriteFile {{\"path\":\"a.txt\"}}", output.Output);
         Assert.Contains($"结果 > {Environment.NewLine}已写入 5 字符。", output.Output);
@@ -28,7 +28,7 @@ public sealed class DialogueSinkTests
         Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
         DialogueSink sink = new(terminal);
 
-        sink.OnToolCall(new ToolCallRecord(new ToolName("WriteFile"), """{"path":"a.txt"}""", "被拒绝：缺少参数。", true));
+        sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "被拒绝：缺少参数。", true));
 
         Assert.Contains($"失败 > {Environment.NewLine}被拒绝：缺少参数。", output.Output);
         Assert.DoesNotContain("结果 >", output.Output);
@@ -41,7 +41,7 @@ public sealed class DialogueSinkTests
         DialogueSink sink = new(terminal);
 
         sink.OnText("我来查看一下。");
-        sink.OnToolCall(new ToolCallRecord(new ToolName("ListTools"), "{}", "内置对话可用函数与分组", false));
+        sink.OnToolCall(new ToolCallRecord("ListTools", "{}", "内置对话可用函数与分组", false));
 
         Assert.Contains($"我来查看一下。{Environment.NewLine}工具 > {Environment.NewLine}ListTools {{}}", output.Output);
     }

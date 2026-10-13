@@ -1,10 +1,11 @@
 using System.Text.Json;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Nodes.Library;
-using Kuroe.Shared.Workflows.Flows;
+using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.TestSupport;
-using Kuroe.Workflows.Flows;
+using Kuroe.Flows.StaticGraph;
+using Kuroe.Flows.Json;
+using Kuroe.Flows.StaticGraph.Library;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
@@ -102,13 +103,13 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowAssembler.Read(file).ThrowIfError();
+            var (nodes, flows) = FlowAssembler.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
-            FlowAssembler.Save(store, nodes, flows).ThrowIfError();
+            store.Save(FlowAssembler.ToDto(nodes, flows)).ThrowIfError();
             string once = File.ReadAllText(file);
 
-            var (Nodes, Flows) = FlowAssembler.Read(file).ThrowIfError();
-            FlowAssembler.Save(store, Nodes, Flows).ThrowIfError();
+            var (Nodes, Flows) = FlowAssembler.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
+            store.Save(FlowAssembler.ToDto(Nodes, Flows)).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }

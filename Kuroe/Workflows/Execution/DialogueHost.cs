@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Catalogs;
-using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Turns;
+using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flows.Shared.Execution.Turns;
+using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Shared.Workflows;
-using Kuroe.Shared.Workflows.Tasks;
-using Kuroe.Workflows.Execution.Tasks;
+using Kuroe.Flows.Execution.Tasks;
 
 namespace Kuroe.Workflows.Execution;
 
@@ -30,7 +30,9 @@ public sealed class DialogueHost(TaskService tasks, ModelService models, TaskReg
 
         TaskId id = EnsureDialogue();
 
-        return await tasks.AskAsync(id, null, input, observer, cancellationToken);
+        ErrorOr<string> reply = await tasks.AskAsync(id, null, input, observer, cancellationToken);
+
+        return reply.IsError ? reply.ErrorsOrEmptyList : new DialogueReply(reply.Value);
     }
 
     /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>
@@ -60,7 +62,7 @@ public sealed class DialogueHost(TaskService tasks, ModelService models, TaskReg
             }
         }
 
-        ErrorOr<TaskSnapshot> created = tasks.SubmitDialogue();
+        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow("对话", Kuroe.Workflows.Flows.DialogueFlow.Build(), "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

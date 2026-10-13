@@ -2,10 +2,11 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Executions.Turns;
-using Kuroe.Shared.Executions;
+using Kuroe.Flows.Execution.Turns;
+using Kuroe.Flows.Shared.Execution;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Shared.Executions.Turns;
+using Kuroe.Flows.Shared.Execution.Turns;
+using Kuroe.Flows.Shared.StaticGraph;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Executions.Tools;
@@ -29,7 +30,7 @@ public sealed class ToolCollection
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
     /// 工具面从回合的归属取用：null 表示全部，路径名单表示只给这些函数及其子树。</summary>
-    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<ToolPath>? tools)
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<CapabilityPath>? tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
@@ -37,7 +38,7 @@ public sealed class ToolCollection
             ITool bound = carrier is IScopedTool scoped ? scoped.ForTurn(scope) : carrier;
             IEnumerable<ToolFunction> allowed = tools is null
                 ? bound.Functions
-                : bound.Functions.Where(function => tools.Any(entry => function.Definition.Path.IsUnder(entry)));
+                : bound.Functions.Where(function => tools.Any(entry => entry.Allows(function.Definition.Path.Value)));
             result.AddRange(allowed.Select(function => new DeclaredFunction(function, sink)));
         }
 
@@ -72,12 +73,12 @@ public sealed class ToolCollection
             }
             catch (Exception ex)
             {
-                sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
 
             string result = ToolResult.Render(outcome);
-            sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name, parameters, result, outcome.IsError));
+            sink.OnToolCall(new ToolCallRecord(declaration.Definition.Name.Value, parameters, result, outcome.IsError));
 
             return new ValueTask<object?>(result);
         }
