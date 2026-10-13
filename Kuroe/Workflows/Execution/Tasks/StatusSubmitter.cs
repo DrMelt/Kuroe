@@ -33,7 +33,7 @@ public sealed class StatusSubmitter(TaskRegistry registry)
         WorkTask task = found.Value;
         lock (task.Gate)
         {
-            task.SetVerdict(run.Context.NodeIndex, run.Context.ItemIndex, parsed.Value);
+            task.Runtime.Instance(run).CollectVerdict(run.Id, parsed.Value);
 
             string recorded = parsed.Value.Blocked ? "blocked" : "completed";
 

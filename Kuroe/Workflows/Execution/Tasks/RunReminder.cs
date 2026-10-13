@@ -17,12 +17,12 @@ internal sealed class RunReminder(TaskRegistry registry) : IRunContract
         lock (task.Gate)
         {
             // 已声明无法完成，缺项是它主动留下的，不再追问
-            if (task.VerdictFor(run.Context.NodeIndex, run.Context.ItemIndex) is { Blocked: true })
+            if (task.Runtime.Instance(run).Verdict(run.Id) is { Blocked: true })
             {
                 return null;
             }
 
-            TaskRuntime.RunShortfall shortfall = task.Runtime.Shortfall(run);
+            TaskRuntime.RunShortfall shortfall = task.Runtime.Shortfall(task.Runtime.Instance(run), run);
             if (shortfall.None)
             {
                 return null;

@@ -83,21 +83,22 @@ sealed class FlowEngine(
         return result.IsError ? result.ErrorsOrEmptyList : Result.Success;
     }
 
-    /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
+    /// <summary>要求持有任务 Gate：对被阻塞的执行单元再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     public int Rework(WorkTask task, int? itemIndex)
     {
-        IReadOnlyList<(int Blocked, int Node, int? Item)> targets;
+        IReadOnlyList<TaskRuntime.ReworkTarget> targets;
         lock (task.Gate)
         {
             targets = task.Runtime.PlanRework(itemIndex);
-            foreach (IGrouping<int, (int Blocked, int Node, int? Item)> group in targets.GroupBy(pair => pair.Blocked))
+            foreach (IGrouping<(int Blocked, int? BlockedItem), TaskRuntime.ReworkTarget> group
+                in targets.GroupBy(target => (target.Blocked, target.BlockedItem)))
             {
-                task.Runtime.Unblock(group.Key, [.. group.Select(pair => (pair.Node, pair.Item))]);
+                task.Runtime.Unblock(group.Key.Blocked, group.Key.BlockedItem, [.. group.Select(target => (target.Node, target.Item))]);
             }
 
-            foreach ((int _, int node, int? item) in targets)
+            foreach (TaskRuntime.ReworkTarget target in targets)
             {
-                task.Runtime.Invalidate(node, item);
+                task.Runtime.Invalidate(target.Node, target.Item);
             }
 
             if (targets.Count > 0)

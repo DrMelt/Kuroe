@@ -65,7 +65,7 @@ public sealed class SnapshotTests
             started, finished, null, [], [], 0);
 
     private static ExecutableStateSnapshot State(int index, NodeState state) =>
-        new(index, state, [], 0, [], null);
+        new(index, state, [], 0, [], [], null);
 
     private static RunContext Context() => new()
     {
@@ -117,7 +117,6 @@ public sealed class SnapshotTests
             Kind = NodeKind.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,
@@ -131,7 +130,6 @@ public sealed class SnapshotTests
             Kind = NodeKind.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
-            From = [new Dependency(1, new PortName("拆分"), new PortName("拆分"), PortType.Text, 0)],
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,

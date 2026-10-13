@@ -14,10 +14,6 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>引用的模型选择解析结果：输入节点不启动 run，为空。</summary>
     public required ModelDefinition? Model { get; init; }
 
-    /// <summary>上游依赖：来源执行节点序号、来源输出端口与目标输入端口，类型取自目标输入端口的声明。
-    /// 依赖按启动组聚合，组是一套完整的输入绑定方案，组间任一齐备即启动，组内全部齐备。</summary>
-    public required IReadOnlyList<Dependency> From { get; init; }
-
     /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
 

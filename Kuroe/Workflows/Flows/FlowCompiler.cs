@@ -16,12 +16,13 @@ internal static class FlowCompiler
         var nodes = new List<GraphNode>();
         var byName = new Dictionary<Flow.NodeName, int>();
         var containers = new Dictionary<int, ContainerBuilder>();
+        var dependencies = new Dictionary<int, List<Dependency>>();
 
         // 先登记全部名字与序号，From 对后面的节点引用才可解析
         nodes.Add(NewStart(flow.StartOutputs));
         byName[StartNode.ReservedName] = 0;
         RegisterNames(flow.RootNode, byName, nodes.Count);
-        SecondPass(flow.RootNode, models, nodes, byName, containers, [], parent: null);
+        SecondPass(flow.RootNode, models, nodes, byName, containers, dependencies, [], parent: null);
 
         // 用登记好的成员与子容器固化容器定义
         foreach (ContainerBuilder builder in containers.Values)
@@ -41,7 +42,7 @@ internal static class FlowCompiler
         List<FlowEdge> edges = [];
         foreach (ExecutableNode executable in nodes.OfType<ExecutableNode>())
         {
-            foreach (Dependency dependency in executable.From)
+            foreach (Dependency dependency in dependencies[executable.Index])
             {
                 // 上下文与信号输入按整份消费，其余按来源与目标模式推导，来源端口与取值域正交
                 (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = dependency.Type == Flow.PortType.Text
@@ -84,6 +85,14 @@ internal static class FlowCompiler
         List<int> SubContainers,
         IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? PortBindings);
 
+    /// <summary>编译期暂存的一条依赖：来源序号、来源端口、目标输入端口、类型与组序号，编译成边后不再保留。</summary>
+    private readonly record struct Dependency(
+        int Source,
+        Flow.PortName SourcePort,
+        Flow.PortName TargetInput,
+        Flow.PortType Type,
+        int Group);
+
     /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
     private static int RegisterNames(Flow.NodeSpec node, Dictionary<Flow.NodeName, int> order, int next)
     {
@@ -106,13 +115,15 @@ internal static class FlowCompiler
         List<GraphNode> nodes,
         Dictionary<Flow.NodeName, int> byName,
         Dictionary<int, ContainerBuilder> containers,
+        Dictionary<int, List<Dependency>> dependencies,
         List<Flow.NodeName> path,
         int? parent)
     {
         if (node.Execution is { } execution)
         {
             int index = nodes.Count;
-            nodes.Add(NewExecutable(node, execution, index, path, models, byName));
+            nodes.Add(NewExecutable(node, execution, index, path, models));
+            dependencies[index] = ResolveFrom(node.From, node, byName);
             if (parent is { } memberContainer)
             {
                 containers[memberContainer].Members.Add(index);
@@ -143,7 +154,7 @@ internal static class FlowCompiler
         path.Add(node.Name);
         foreach (Flow.NodeSpec child in node.Nodes!)
         {
-            SecondPass(child, models, nodes, byName, containers, path, container);
+            SecondPass(child, models, nodes, byName, containers, dependencies, path, container);
         }
         path.RemoveAt(path.Count - 1);
     }
@@ -153,8 +164,7 @@ internal static class FlowCompiler
         Flow.ExecutableSpec execution,
         int index,
         List<Flow.NodeName> path,
-        Dictionary<Flow.ModelRef, Flow.ModelDefinition> models,
-        Dictionary<Flow.NodeName, int> order) => new()
+        Dictionary<Flow.ModelRef, Flow.ModelDefinition> models) => new()
         {
             Index = index,
             Name = node.Name,
@@ -163,7 +173,6 @@ internal static class FlowCompiler
             Kind = node.EffectiveKind,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
-            From = ResolveFrom(node.From, node, order),
             Outputs = node.Outputs,
             SystemPrompt = node.SystemPrompt,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
@@ -174,7 +183,7 @@ internal static class FlowCompiler
         IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? outputs) =>
         outputs?.ToDictionary(entry => entry.Key, entry => entry.Value.Ref);
 
-    /// <summary>把启动组编译成图依赖：来源序号经查表落定，类型取自目标输入端口的声明，组序号按组序给出。
+    /// <summary>把启动组编译成编译期依赖：来源序号经查表落定，类型取自目标输入端口的声明，组序号按组序给出。
     /// 绑定端口引用在 From 里不成立，编译前应由校验层拦截，这里给防御性错误。</summary>
     private static List<Dependency> ResolveFrom(
         IReadOnlyList<Flow.FromGroup> groups,

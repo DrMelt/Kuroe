@@ -1,10 +1,8 @@
 using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Executions.Turns;
-using Kuroe.Shared.Executions;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
-using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Workflows.Execution.Model;
 using ExecutableNode = Kuroe.Shared.Workflows.Graph.ExecutableNode;
 
@@ -43,7 +41,8 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument("该节点没有声明 Text 输出端口。");
             }
 
-            if (task.PortValuesFor(run.Context.NodeIndex, run.Context.ItemIndex) is not null)
+            RuntimeInstance instance = task.Runtime.Instance(run);
+            if (instance.Ports(run.Id) is not null)
             {
                 return ToolErrors.Argument("端口产出已提交，无需重复提交。");
             }
@@ -54,7 +53,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
                 return ToolErrors.Argument($"端口必须与声明一一对应，应提交 {string.Join('、', declared)}。");
             }
 
-            task.SetPortValues(run.Context.NodeIndex, run.Context.ItemIndex, parsed.Value);
+            instance.CollectPorts(run.Id, parsed.Value);
 
             return $"已记录 {declared.Count} 个端口的产出。{ContractText.Outstanding(task, run)}";
         }

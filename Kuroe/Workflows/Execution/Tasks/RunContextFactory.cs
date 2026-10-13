@@ -1,7 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Executions.Runs;
 using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
@@ -17,8 +15,8 @@ internal static class RunContextFactory
     /// <summary>单条种子文本的上限。</summary>
     private const int TextLimit = 2000;
 
-    /// <summary>为执行节点的实例装配这一轮的上下文。itemIndex 为空表示整节点实例。</summary>
-    internal static RunContext Create(WorkTask task, RuntimeExecutable node, int? itemIndex, ModelName model)
+    /// <summary>为执行节点的一个执行单元装配这一轮的上下文。</summary>
+    internal static RunContext Create(WorkTask task, RuntimeExecutable node, RuntimeInstance instance, ModelName model)
     {
         List<ContextMessage> seed = [];
         List<ContextMessage> contextInput = [];
@@ -33,13 +31,13 @@ internal static class RunContextFactory
             }
 
             List<ContextMessage> target = edge.Type == PortType.Context ? contextInput : seed;
-            AppendUpstreamOutput(task, edge, itemIndex, target);
+            AppendUpstreamOutput(task, edge, instance.ItemIndex, target);
         }
 
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于种子最前
         seed.InsertRange(0, contextInput);
 
-        WorkItem? item = ItemOf(task, node, itemIndex);
+        WorkItem? item = instance.Item;
         if (item is not null)
         {
             string branch = item.Branch is { } name ? $"\n实施分支：{name}" : string.Empty;
@@ -48,7 +46,7 @@ internal static class RunContextFactory
                 new ItemSource(OriginOf(task, node), item.Index, item.Title)));
         }
 
-        int count = node.ExecutionCount(itemIndex) + 1;
+        int count = instance.Runs + 1;
 
         return new RunContext
         {
@@ -57,7 +55,7 @@ internal static class RunContextFactory
             NodeName = node.Name,
             Instruction = BuildInstruction(node, item, count),
             Model = model,
-            ItemIndex = itemIndex,
+            ItemIndex = instance.ItemIndex,
             ExecutionCount = count,
             Tools = ToolsFor(node.Executable),
             Seed = seed,
@@ -90,40 +88,12 @@ internal static class RunContextFactory
             seed.Add(new ContextMessage(message.Role, Truncate(message.Text), message.Source));
         }
     }
-    /// <summary>来源节点上某实例最近一次成功收口且产出非空的 run。</summary>
-    private static Run? LatestSucceededRun(WorkTask task, int node, int? item) =>
-        task.Runs.LastOrDefault(run =>
-            run.Context.NodeIndex == node
-            && run.Context.ItemIndex == item
-            && run.State == RunState.Succeeded
-            && run.Result is { Length: > 0 });
-
-    /// <summary>按条目展开时本实例的条目内容，整节点实例为空。条目身份只在归属空间内有效。</summary>
-    private static WorkItem? ItemOf(WorkTask task, RuntimeExecutable node, int? itemIndex)
-    {
-        if (itemIndex is not { } index || node.Mode != NodeMode.PerItem)
-        {
-            return null;
-        }
-
-        return task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split
-            ? split.Items.FirstOrDefault(item => item.Index == index)
-            : null;
-    }
-
-    /// <summary>条目内容的出处 run：优先用拆分来源的规划 run，找不到按条目归属空间取拆分的交回者。</summary>
-    private static RunId OriginOf(WorkTask task, RuntimeExecutable node)
-    {
-        if (task.Graph.PlanOf(node.Index)?.SplitSource is { } source
-            && LatestSucceededRun(task, source, null) is { } planRun)
-        {
-            return planRun.Id;
-        }
-
-        return task.Graph.ItemSpace(node.Index) is { } space && task.SplitFor(space) is { } split
+    /// <summary>条目内容的出处 run：提供实例空间的拆分由哪个 run 交回。拆分尚未交回时给出空标识。</summary>
+    private static RunId OriginOf(WorkTask task, RuntimeExecutable node) =>
+        task.Graph.ItemSpace(node.Index) is { } space
+        && task.Runtime.Materialized(space) is RuntimeExecutable { Split: { } split }
             ? split.Origin
             : new RunId(0);
-    }
 
     /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
     private static string BuildInstruction(RuntimeExecutable node, WorkItem? item, int count)

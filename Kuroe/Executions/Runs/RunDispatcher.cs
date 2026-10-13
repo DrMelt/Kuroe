@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Shared.Executions;
-using Kuroe.Shared.Executions.Runs;
 
 namespace Kuroe.Executions.Runs;
 
@@ -15,34 +14,11 @@ public sealed class RunDispatcher(IRunExecutor executor, SettingsProvider settin
     private readonly Dictionary<RunId, Action<Run>> _settled = [];
     private bool _stopping;
 
-    /// <summary>入队一个 run 并等待收口，返回完整回复或错误。编排层用，行为与 <see cref="Dispatch"/> 一致。</summary>
-    public Task<ErrorOr<string>> DispatchAsync(Run run, CancellationToken cancellationToken = default)
+    /// <summary>入队一个 run 并等它收口。推进循环用，结果由任务侧按收口处理。</summary>
+    public Task DispatchAsync(Run run, CancellationToken cancellationToken = default)
     {
-        var completion = new TaskCompletionSource<ErrorOr<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatch(run, settled =>
-        {
-            if (settled.State == RunState.Succeeded && settled.Result is { Length: > 0 })
-            {
-                completion.TrySetResult(settled.Result);
-                return;
-            }
-
-            string description;
-            if (settled.State == RunState.Canceled)
-            {
-                description = "已取消。";
-            }
-            else if (settled.Snapshot().Failures is { Count: > 0 } failures)
-            {
-                description = string.Join("；", failures);
-            }
-            else
-            {
-                description = "请求未正常结束。";
-            }
-
-            completion.TrySetResult(Error.Failure("Run.Dispatch", description));
-        });
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatch(run, _ => completion.TrySetResult());
 
         return completion.Task.WaitAsync(cancellationToken);
     }

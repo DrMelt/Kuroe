@@ -40,7 +40,7 @@ public sealed class DialogueTests
     {
         NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];
 
-        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。"], reply.SystemPrompt);
+        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], reply.SystemPrompt);
         Assert.Null(reply.Execution!.Prompt);
     }
 

@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Executions.Runs;
 using Kuroe.Executions.Turns;
 using Kuroe.Shared.Executions;
@@ -17,9 +16,6 @@ public sealed class WorkTask
     private const int TitleLimit = 40;
 
     private readonly List<Run> _runs = [];
-    private readonly Dictionary<int, WorkItemList> _splits = [];
-    private readonly Dictionary<(int Node, int? Item), IReadOnlyDictionary<PortName, string>> _portValues = [];
-    private readonly Dictionary<(int Node, int? Item), RunVerdict> _verdicts = [];
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
@@ -89,61 +85,6 @@ public sealed class WorkTask
                     _title = Shorten(value);
                 }
             }
-        }
-    }
-
-    /// <summary>各执行节点交回的条目拆分，键是产出执行节点序号，尚未交回时为空。仅在持有 <see cref="Gate"/> 时读写。</summary>
-    public IReadOnlyDictionary<int, WorkItemList> Splits => _splits;
-
-    /// <summary>某执行节点的条目拆分，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal WorkItemList? SplitFor(int executableIndex) => _splits.GetValueOrDefault(executableIndex);
-
-    /// <summary>记录某执行节点的条目拆分。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetSplit(int executableIndex, WorkItemList output) => _splits[executableIndex] = output;
-
-    /// <summary>某执行节点某实例交回的命名输出端口值，整节点实例不写实例序，尚未交回时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal IReadOnlyDictionary<PortName, string>? PortValuesFor(int executableIndex, int? item) =>
-        _portValues.GetValueOrDefault((executableIndex, item));
-
-    /// <summary>记录某执行节点某实例的输出端口值。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetPortValues(int executableIndex, int? item, IReadOnlyDictionary<PortName, string> values) =>
-        _portValues[(executableIndex, item)] = values;
-
-    /// <summary>移除某执行节点某实例的端口值，item 为空时清空该节点全部实例，返工作废后端口随产出重交。要求持有 <see cref="Gate"/>。</summary>
-    internal void ClearPortValues(int executableIndex, int? item)
-    {
-        if (item is { } index)
-        {
-            _portValues.Remove((executableIndex, index));
-            return;
-        }
-
-        foreach ((int node, int? entry) in _portValues.Keys.Where(pair => pair.Node == executableIndex).ToList())
-        {
-            _portValues.Remove((node, entry));
-        }
-    }
-
-    /// <summary>某执行节点某实例声明过的本轮结论，未声明时为空。要求持有 <see cref="Gate"/>。</summary>
-    internal RunVerdict? VerdictFor(int executableIndex, int? item) =>
-        _verdicts.GetValueOrDefault((executableIndex, item));
-
-    /// <summary>记录某执行节点某实例声明的本轮结论，同一实例重复声明覆盖。要求持有 <see cref="Gate"/>。</summary>
-    internal void SetVerdict(int executableIndex, int? item, RunVerdict verdict) =>
-        _verdicts[(executableIndex, item)] = verdict;
-
-    /// <summary>移除某执行节点某实例的结论，item 为空时清空该节点全部实例，返工作废后结论随本轮重声明。要求持有 <see cref="Gate"/>。</summary>
-    internal void ClearVerdict(int executableIndex, int? item)
-    {
-        if (item is { } index)
-        {
-            _verdicts.Remove((executableIndex, index));
-            return;
-        }
-
-        foreach ((int node, int? entry) in _verdicts.Keys.Where(pair => pair.Node == executableIndex).ToList())
-        {
-            _verdicts.Remove((node, entry));
         }
     }
 
@@ -242,7 +183,7 @@ public sealed class WorkTask
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Index))];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
-                _runs.Count(run => run.IsLive), new Dictionary<int, WorkItemList>(_splits), executables, executableStates,
+                _runs.Count(run => run.IsLive), Runtime.Splits(), executables, executableStates,
                 Runtime.ContainerSnapshots(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }

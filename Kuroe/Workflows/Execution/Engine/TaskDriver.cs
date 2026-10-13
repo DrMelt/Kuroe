@@ -60,7 +60,7 @@ internal sealed class TaskDriver(
     }
 
     /// <summary>返工语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
-    public void Rework(IReadOnlyList<(int Blocked, int Node, int? Item)> targets)
+    public void Rework(IReadOnlyList<TaskRuntime.ReworkTarget> targets)
     {
         Enqueue(targets.Select(target => target.Node));
     }
@@ -239,13 +239,13 @@ internal sealed class TaskDriver(
                 if (model.IsError)
                 {
                     node.ReleaseActive();
-                    node.EnterBlocked([(node.Index, null)]);
+                    node.EnterBlocked(starter.Instance.ItemIndex, [(node.Index, starter.Instance.ItemIndex)]);
                     task.Journal.Append(new ErrorEntry(model.FirstError.Description));
                     registry.Report(ExecutionNotice.From(model.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Name}"));
                     return;
                 }
 
-                run = registry.NewRun(RunContextFactory.Create(task, node, starter.Item, model.Value));
+                run = registry.NewRun(RunContextFactory.Create(task, node, starter.Instance, model.Value));
                 task.Attach(run);
             }
 
@@ -276,7 +276,7 @@ internal sealed class TaskDriver(
             lock (task.Gate)
             {
                 node.ReleaseActive();
-                plan = task.Runtime.Settle(run);
+                plan = task.Runtime.Settle(starter.Instance, run);
                 // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
                 // 否则该节点停在可启动状态而无人再激活，任务会一直等待
                 selfActivate = task.Runtime.CanStart(node);
@@ -290,11 +290,6 @@ internal sealed class TaskDriver(
             foreach (int next in plan.Notify)
             {
                 Enqueue([next]);
-            }
-
-            foreach ((int nodeIndex, int? _) in plan.Rerun)
-            {
-                Enqueue([nodeIndex]);
             }
         }
         finally

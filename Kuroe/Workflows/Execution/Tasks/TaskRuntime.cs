@@ -46,6 +46,9 @@ internal sealed class TaskRuntime : IExecutionSources
     /// <summary>按序号取运行时执行节点对象，序号必须是执行节点。</summary>
     public RuntimeExecutable Executable(int index) => (RuntimeExecutable)Ensure(index);
 
+    /// <summary>run 所属的执行单元。要求持有 Gate。</summary>
+    public RuntimeInstance Instance(Run run) => Executable(run.Context.NodeIndex).Instance(run.Context.ItemIndex);
+
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
     public RuntimeNode? Materialized(int index) => _nodes[index];
 
@@ -77,14 +80,37 @@ internal sealed class TaskRuntime : IExecutionSources
 
     ISourceState IExecutionSources.Source(int nodeIndex) => _nodes[nodeIndex] ?? IdleSource;
 
-    bool IExecutionSources.HasSplit(int nodeIndex) => _task.SplitFor(nodeIndex) is not null;
+    bool IExecutionSources.HasSplit(int nodeIndex) => SplitOf(nodeIndex) is not null;
 
     IReadOnlyList<int>? IExecutionSources.SplitItems(int nodeIndex, BranchName? branch) =>
-        _task.SplitFor(nodeIndex) is { } split
+        SplitOf(nodeIndex) is { } split
             ? [.. split.Items
                 .Where(item => branch is null || item.Branch == branch)
                 .Select(item => item.Index)]
             : null;
+
+    /// <summary>某执行节点交回的条目拆分，未实例化或尚未交回时为空。判定按它读数，不创建节点。</summary>
+    private WorkItemList? SplitOf(int nodeIndex) =>
+        Materialized(nodeIndex) is RuntimeExecutable { Split: { } split } ? split : null;
+
+    /// <summary>执行节点的实例空间拆分，实例就是它的条目；空间来源未交回时为空。</summary>
+    private WorkItemList? SpaceSplit(int executableIndex) =>
+        Graph.ItemSpace(executableIndex) is { } space ? SplitOf(space) : null;
+
+    /// <summary>各执行节点交回的条目拆分，键是经它交回拆分的执行节点序号。要求持有 Gate。</summary>
+    public IReadOnlyDictionary<int, WorkItemList> Splits()
+    {
+        Dictionary<int, WorkItemList> splits = [];
+        foreach (RuntimeExecutable node in _nodes.OfType<RuntimeExecutable>())
+        {
+            if (node.Split is { } split)
+            {
+                splits[node.Index] = split;
+            }
+        }
+
+        return splits;
+    }
 
     IReadOnlyList<int>? IExecutionSources.Items(int nodeIndex) =>
         _nodes[nodeIndex] is RuntimeExecutable { Expanded: true } node ? node.Items : null;
@@ -93,7 +119,7 @@ internal sealed class TaskRuntime : IExecutionSources
     public ExecutableStateSnapshot SnapshotState(int index) =>
         _nodes[index] is RuntimeExecutable node
             ? node.StateSnapshot()
-            : new ExecutableStateSnapshot(index, NodeState.Pending, [], 0, [], null);
+            : new ExecutableStateSnapshot(index, NodeState.Pending, [], 0, [], [], null);
 
     // ---- 就绪判定 ----
 
@@ -101,7 +127,7 @@ internal sealed class TaskRuntime : IExecutionSources
     /// 输入节点由激活挂起等回答，不在此判定。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
-        if (node.IsInput || node.HasActive || node.Awaiting || node.Blocked || node.Canceled)
+        if (node.IsInput || node.HasActive || node.Awaiting || node.Canceled)
         {
             return false;
         }
@@ -109,15 +135,17 @@ internal sealed class TaskRuntime : IExecutionSources
         return Ready(node).Count > 0;
     }
 
-    /// <summary>节点可启动的实例：单元实例或空间内的条目，按齐备、驱动与执行上限一次求出。</summary>
+    /// <summary>节点可启动的实例：单元实例或空间内的条目，按齐备、驱动与执行上限一次求出，停在阻塞的实例不在其中。</summary>
     private IReadOnlyList<int?> Ready(RuntimeExecutable node)
     {
         AdoptItems(node);
 
-        return Graph.PlanOf(node.Index) is { } plan ? NodeReadiness.Ready(plan, node, this) : [];
+        return Graph.PlanOf(node.Index) is { } plan
+            ? [.. NodeReadiness.Ready(plan, node, this).Where(item => !node.IsBlocked(item))]
+            : [];
     }
 
-    /// <summary>按方案求出实例集并固定：拆分或对齐来源就绪后实例集不再变化。</summary>
+    /// <summary>按方案求出实例集并固定：拆分或对齐来源就绪后实例集不再变化，条目内容随实例落地。</summary>
     private void AdoptItems(RuntimeExecutable node)
     {
         if (node.Expanded || Graph.PlanOf(node.Index) is not { } plan)
@@ -128,7 +156,7 @@ internal sealed class TaskRuntime : IExecutionSources
         IReadOnlyList<int> items = NodeReadiness.Instances(plan, node, this);
         if (items.Count > 0)
         {
-            node.AdoptItems(items);
+            node.AdoptItems(items, SpaceSplit(node.Index));
         }
     }
 
@@ -142,7 +170,7 @@ internal sealed class TaskRuntime : IExecutionSources
     /// <summary>把执行节点可启动的实例取出来启动。调用者应先用 <see cref="CanStart"/> 判定。</summary>
     public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
-        List<RunStarter> starters = [.. Ready(node).Select(item => new RunStarter(item))];
+        List<RunStarter> starters = [.. Ready(node).Select(item => new RunStarter(node.Instance(item)))];
         if (starters.Count > 0 && Graph.PlanOf(node.Index) is { } plan)
         {
             node.AddActive(starters.Count);
@@ -154,8 +182,8 @@ internal sealed class TaskRuntime : IExecutionSources
         return starters;
     }
 
-    /// <summary>一个待启动的实例：条目序可为空（整节点）。</summary>
-    public readonly record struct RunStarter(int? Item);
+    /// <summary>一个待启动的执行单元：整节点执行单元与条目执行单元共用。</summary>
+    public readonly record struct RunStarter(RuntimeInstance Instance);
 
     // ---- 发布与作废 ----
 
@@ -169,13 +197,6 @@ internal sealed class TaskRuntime : IExecutionSources
         }
 
         node.Invalidate(item);
-        if (node.Executable.HasTextPorts)
-        {
-            _task.ClearPortValues(node.Index, item);
-        }
-
-        _task.ClearVerdict(node.Index, item);
-
         RefreshContainers(node.Index);
     }
 
@@ -229,8 +250,8 @@ internal sealed class TaskRuntime : IExecutionSources
     /// <summary>是否有执行节点或容器停在等待批准。未实例化的节点不可能在等待。</summary>
     public bool HasAwaiting => _nodes.Any(node => node is { Awaiting: true });
 
-    /// <summary>是否有执行节点停在等待返工。</summary>
-    public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.Blocked);
+    /// <summary>是否有执行单元停在等待返工。</summary>
+    public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasBlocked);
 
     /// <summary>还有在跑的 run、可启动的实例或尚未实例化但已具启动条件的节点，任务就没走完。</summary>
     public bool HasWork =>
@@ -338,8 +359,8 @@ internal sealed class TaskRuntime : IExecutionSources
 
     // ---- run 收口 ----
 
-    /// <summary>run 收口的决策结果：要通知的执行节点，或自动返工重派的实例。</summary>
-    public sealed record SettlePlan(IReadOnlyList<int> Notify, IReadOnlyList<(int Node, int? Item)> Rerun);
+    /// <summary>run 收口的决策结果：要通知的执行节点。</summary>
+    public sealed record SettlePlan(IReadOnlyList<int> Notify);
 
     /// <summary>本轮该交回但尚未交回的产出：缺哪些命名端口、是否缺条目拆分。</summary>
     public sealed record RunShortfall(IReadOnlyList<PortName> Ports, bool Items)
@@ -349,11 +370,11 @@ internal sealed class TaskRuntime : IExecutionSources
     }
 
     /// <summary>本轮该交回但尚未交回的产出，按节点声明的端口与条目拆分判定。要求持有 Gate。</summary>
-    public RunShortfall Shortfall(Run run)
+    public RunShortfall Shortfall(RuntimeInstance instance, Run run)
     {
         RuntimeExecutable node = Executable(run.Context.NodeIndex);
         ExecutableNode executable = node.Executable;
-        IReadOnlyDictionary<PortName, string>? values = _task.PortValuesFor(node.Index, run.Context.ItemIndex);
+        IReadOnlyDictionary<PortName, string>? values = instance.Ports(run.Id);
 
         IReadOnlyList<PortName> ports = executable.HasTextPorts
             ? [.. executable.Outputs
@@ -362,68 +383,68 @@ internal sealed class TaskRuntime : IExecutionSources
                 .Where(name => values?.ContainsKey(name) != true)]
             : [];
 
-        bool items = executable.HasWorkItemsPort && _task.SplitFor(node.Index)?.Origin != run.Id;
+        bool items = executable.HasWorkItemsPort && node.Split?.Origin != run.Id;
 
         return new RunShortfall(ports, items);
     }
 
     /// <summary>run 收口：失败与未收口先停驻阻塞，通过后发布产出并处理门控，
     /// 产出出向下游的通知或重派计划。接收器先经 ReleaseActive 再进入。</summary>
-    public SettlePlan Settle(Run run)
+    public SettlePlan Settle(RuntimeInstance instance, Run run)
     {
         RuntimeExecutable node = Executable(run.Context.NodeIndex);
-        int? item = run.Context.ItemIndex;
+        int? item = instance.ItemIndex;
 
         if (run.State != RunState.Succeeded)
         {
-            return Block(node, run, (node.Index, item));
+            return Block(node, instance, run, (node.Index, item));
         }
 
         // 声明无法完成的当轮不产出，直接停驻并把原因留给返工
-        if (_task.VerdictFor(node.Index, item) is { Blocked: true } verdict)
+        if (instance.Verdict(run.Id) is { Blocked: true } verdict)
         {
             run.MarkUncollected(verdict.Reason is { Length: > 0 } reason
                 ? $"模型报告无法完成：{reason}"
                 : "模型报告无法完成。");
 
-            return Block(node, run, (node.Index, item));
+            return Block(node, instance, run, (node.Index, item));
         }
 
         ExecutableNode executable = node.Executable;
-        RunShortfall shortfall = Shortfall(run);
+        RunShortfall shortfall = Shortfall(instance, run);
         if (shortfall.Items)
         {
             run.MarkUncollected("声明 WorkItems 端口的执行节点没有交回条目拆分，本步未收口。");
-            return Block(node, run, (node.Index, null));
+            return Block(node, instance, run, (node.Index, null));
         }
 
         if (shortfall.Ports.Count > 0)
         {
             run.MarkUncollected("输出端口内容未交回，本步未收口。");
-            return Block(node, run, (node.Index, item));
+            return Block(node, instance, run, (node.Index, item));
         }
 
         // 输出校验不通过即不发布，节点停驻等返工
-        if (!PassesValidation(executable.Execution.Validate, executable, _task.PortValuesFor(node.Index, item)))
+        if (!PassesValidation(executable.Execution.Validate, executable, instance.Ports(run.Id)))
         {
-            return Block(node, run, (node.Index, item));
+            return Block(node, instance, run, (node.Index, item));
         }
 
-        // 拆分已由回执写入 _splits，其余产出直接发布
-        node.Publish(item);
+        // 拆分已由回执写入实例空间来源节点，其余产出直接发布
+        node.Publish(run);
         _task.NotifyRunSettled(run);
 
         return Settled(node, node.Park(run.Id), Downstream(node));
     }
 
-    /// <summary>run 停驻阻塞：判定先交回等待方，再记为阻塞并核算执行上限。</summary>
-    private SettlePlan Block(RuntimeExecutable node, Run run, (int Node, int? Item) target)
+    /// <summary>run 停驻阻塞：判定先交回等待方，再把这个执行单元记为阻塞并核算执行上限。</summary>
+    private SettlePlan Block(RuntimeExecutable node, RuntimeInstance instance, Run run, (int Node, int? Item) target)
     {
         _task.NotifyRunSettled(run);
-        node.EnterBlocked([target]);
+        instance.EnterBlocked([target]);
         NoteLimitReached(node, target.Item);
 
-        return new SettlePlan([], []);
+        return new SettlePlan([]);
     }
 
     /// <summary>输出校验判定：不改动任何状态，只给出端口产出是否合格。校验对象是各声明端口按声明序拼接的文本。</summary>
@@ -504,7 +525,7 @@ internal sealed class TaskRuntime : IExecutionSources
     {
         IReadOnlyList<int> containers = RefreshContainers(node.Index);
 
-        return parked ? new SettlePlan(containers, []) : new SettlePlan([.. downstream, .. containers], []);
+        return parked ? new SettlePlan(containers) : new SettlePlan([.. downstream, .. containers]);
     }
 
     // ---- 宿主入口 ----
@@ -579,10 +600,6 @@ internal sealed class TaskRuntime : IExecutionSources
     public IReadOnlyList<int> Roots() =>
         [.. Graph.Outgoing(Ensure(Graph.Start.Index).Index).Select(edge => Ensure(edge.Target).Index)];
 
-    /// <summary>被阻塞的执行节点，等待返工或放行。</summary>
-    public IReadOnlyList<int> BlockedNodes =>
-        [.. _nodes.OfType<RuntimeExecutable>().Where(node => node.Blocked).Select(node => node.Index)];
-
     // ---- 容器快照 ----
 
     /// <summary>各容器在快照里的一刻状态：成员产出放行情况与门控停留。快照不实例化节点。</summary>
@@ -649,34 +666,40 @@ internal sealed class TaskRuntime : IExecutionSources
     private bool MemberAwaitingInput(int executableIndex) =>
         _nodes[executableIndex] is RuntimeExecutable node && node.AwaitingInput;
 
-    /// <summary>计算返工会作废并重跑的目标：各阻塞节点记录的目标按条目过滤，配对其阻塞节点。不改变状态。要求持有 Gate。</summary>
-    public IReadOnlyList<(int Blocked, int Node, int? Item)> PlanRework(int? itemIndex)
+    /// <summary>一个返工目标：停在阻塞的执行单元，与它记下要重跑的节点与条目。</summary>
+    public readonly record struct ReworkTarget(int Blocked, int? BlockedItem, int Node, int? Item);
+
+    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行单元记录的目标按条目过滤，配对其所在节点与条目。不改变状态。要求持有 Gate。</summary>
+    public IReadOnlyList<ReworkTarget> PlanRework(int? itemIndex)
     {
-        List<(int Blocked, int Node, int? Item)> targets = [];
-        foreach (int blocked in BlockedNodes)
+        List<ReworkTarget> targets = [];
+        foreach (RuntimeExecutable node in _nodes.OfType<RuntimeExecutable>())
         {
-            foreach ((int node, int? item) in Executable(blocked).ReworkTargets)
+            foreach (RuntimeInstance instance in node.BlockedInstances)
             {
-                if (itemIndex is { } requested && item != requested)
+                foreach ((int target, int? item) in instance.ReworkTargets)
                 {
-                    continue;
-                }
+                    if (itemIndex is { } requested && item != requested)
+                    {
+                        continue;
+                    }
 
-                if (AtLimit(Executable(node), item))
-                {
-                    continue;
-                }
+                    if (AtLimit(Executable(target), item))
+                    {
+                        continue;
+                    }
 
-                targets.Add((blocked, node, item));
+                    targets.Add(new ReworkTarget(node.Index, instance.ItemIndex, target, item));
+                }
             }
         }
 
         return targets;
     }
 
-    /// <summary>解除执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
-    public void Unblock(int node, IReadOnlyList<(int Node, int? Item)> handled) =>
-        Executable(node).FinishRework(handled);
+    /// <summary>解除一个执行单元的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
+    public void Unblock(int node, int? item, IReadOnlyList<(int Node, int? Item)> handled) =>
+        Executable(node).FinishRework(item, handled);
 
     /// <summary>未实例化节点的来源状态：没有产出、版本为零。</summary>
     private sealed class UnmaterializedSource : ISourceState

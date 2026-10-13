@@ -1,4 +1,5 @@
 using Kuroe.Shared.Executions;
+using Kuroe.Shared.Executions.Runs;
 using Kuroe.Shared.Workflows;
 using Kuroe.Shared.Workflows.Tasks;
 using Kuroe.TestSupport;
@@ -7,9 +8,34 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>执行次数账在节点上，按整节点与条目分开累计，峰值取其中最大值，以启动的 run 记录为核算真相。</summary>
+/// <summary>执行次数账按执行单元累计，以启动的 run 记录为核算真相。</summary>
 public sealed class ExecutionCountTests
 {
+    /// <summary>返工只指定一个条目时，被返工的条目照常重跑，其余停在阻塞的条目不被带上。</summary>
+    [Fact]
+    public void Rework_of_one_item_leaves_blocked_siblings_waiting()
+    {
+        using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
+        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ExecutionCount == 1;
+
+        TaskId id = harness.Submit("补齐 README");
+        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+
+        harness.Tasks.Rework(id, 0).ThrowIfError();
+        TaskSnapshot still = harness.Wait(id, snapshot =>
+            snapshot.State == TaskState.Blocked
+            && snapshot.Executables.Single(node => node.Index == 3)
+                .Runs.Any(run => run.Context.ItemIndex == 0 && run.State == RunState.Succeeded));
+
+        ExecutableStateSnapshot node = Assert.Single(still.ExecutableStates, state => state.Index == 3);
+        Assert.Equal(NodeState.Blocked, node.State);
+        Assert.Equal([1], node.BlockedItems);
+        Assert.Equal(1, node.CompletedItems);
+        Assert.Equal(2, task.Runtime.Executable(3).ExecutionCount(0));
+        Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
+    }
+
     [Fact]
     public void PerItem_partial_rework_counts_item_runs_independently()
     {
@@ -26,7 +52,6 @@ public sealed class ExecutionCountTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, task.Runtime.Executable(3).ExecutionCount(0));
         Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
-        Assert.Equal(2, task.Runtime.Executable(3).MaxExecutionCount);
     }
 
     [Fact]
@@ -43,7 +68,6 @@ public sealed class ExecutionCountTests
         WorkTask task = harness.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(null));
-        Assert.Equal(2, task.Runtime.Executable(2).MaxExecutionCount);
     }
 
     [Fact]
@@ -59,7 +83,6 @@ public sealed class ExecutionCountTests
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
         Assert.Equal(0, task.Runtime.Executable(3).ExecutionCount(null));
-        Assert.Equal(0, task.Runtime.Executable(3).MaxExecutionCount);
     }
 
     /// <summary>节点账与派发记录全等：派发即记账，节点账不会多于或少于 run 记录。</summary>
@@ -81,9 +104,6 @@ public sealed class ExecutionCountTests
             {
                 Assert.Equal(item.Count(), task.Runtime.Executable(node.Key).ExecutionCount(item.Key));
             }
-
-            Assert.Equal(node.GroupBy(run => run.Context.ItemIndex).Max(group => group.Count()),
-                task.Runtime.Executable(node.Key).MaxExecutionCount);
         }
     }
 

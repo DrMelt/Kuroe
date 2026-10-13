@@ -1,3 +1,6 @@
+using ModelName = ApiHub.Shared.Models.ModelName;
+using Kuroe.Executions.Runs;
+using Kuroe.Shared.Executions;
 using Kuroe.Shared.Workflows.Flows;
 using Kuroe.Shared.Workflows.Graph;
 using Kuroe.Workflows.Execution.Tasks;
@@ -117,10 +120,22 @@ public sealed class ReadinessTests
         Loop loop = Grouped();
         loop.Sources.Split(1, [0, 1]);
         loop.Sources.Of(3).Publish();
-        loop.Node.Publish(0);
+        loop.Node.AdoptItems([0, 1], null);
+        loop.Node.Publish(Publishing(loop.Node, 0));
 
         Assert.Equal([1], NodeReadiness.Ready(loop.Input, loop.Node, loop.Sources));
     }
+
+    /// <summary>造一次交回某条目的执行，把该条目标记为已产出。</summary>
+    private static Run Publishing(RuntimeExecutable node, int item) => new(new RunId(1), new RunContext
+    {
+        Task = new TaskId(1),
+        NodeIndex = node.Index,
+        NodeName = node.Name,
+        Instruction = "产出",
+        Model = ModelName.Create("执行者").Value,
+        ItemIndex = item,
+    });
 
     /// <summary>拆分来源尚未交回时没有实例，任何组齐备都不启动。</summary>
     [Fact]
@@ -213,7 +228,6 @@ public sealed class ReadinessTests
         Kind = NodeKind.Executable,
         Execution = new ExecutableSpec { Mode = mode },
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
-        From = [],
         Outputs = outputs ?? [],
         SystemPrompt = [],
         MaxRuns = 100,

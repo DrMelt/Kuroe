@@ -83,6 +83,9 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
+            string blocked = node.BlockedItems.Count == 0
+                ? string.Empty
+                : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
             string question = node.State == NodeState.AwaitingInput
                 && task.Graph[node.Index] is ExecutableNode input
                 && input.Execution.Question is { Length: > 0 } questionText
@@ -98,7 +101,7 @@ internal sealed class TaskDetailView(Terminal terminal)
                 && node.InputAnswer is { Length: > 0 } answerText
                     ? $" · 回答：{answerText}"
                     : string.Empty;
-            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{question}{ports}{systemPrompt}{answered}");
+            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}{answered}");
         }
     }
 

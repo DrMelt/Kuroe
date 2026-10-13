@@ -41,9 +41,9 @@ static class TaskErrors
     public static Error DialogueSettled(TaskId task, TaskState state) =>
         Error.Conflict("Task.Ask", $"{task} {state.Label()}，无法继续对话。");
 
-    /// <summary>该任务没有被阻塞的条目。</summary>
+    /// <summary>该任务没有被阻塞的执行单元。</summary>
     public static Error NotBlocked(TaskId task) =>
-        Error.Validation("Task.Rework", $"{task} 没有被阻塞的节点或条目。");
+        Error.Validation("Task.Rework", $"{task} 没有被阻塞的执行单元。");
 
     /// <summary>条目数组的形状不合法，原因要能直接回给模型改正。</summary>
     public static Error Items(string reason) => Error.Validation(

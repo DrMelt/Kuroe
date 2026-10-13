@@ -184,6 +184,11 @@ public sealed class TaskService
                 .FirstOrDefault();
         }
 
+        if (outputNode is not { } target)
+        {
+            return [TaskErrors.NoDialogueTarget()];
+        }
+
         // 任务刚提交时推进可能尚未把挂点评估出来，回答前等任务停在待输入
         ErrorOr<Success> waited = await WaitForAwaitingInputAsync(task, cancellationToken);
         if (waited.IsError)
@@ -191,18 +196,12 @@ public sealed class TaskService
             return waited.ErrorsOrEmptyList;
         }
 
-        ErrorOr<Success> answered = Answer(id, nodeName, input);
-        if (answered.IsError)
-        {
-            return answered.ErrorsOrEmptyList;
-        }
-
-        if (outputNode is not { } target)
-        {
-            return [TaskErrors.NoDialogueTarget()];
-        }
-
         var reply = new TaskCompletionSource<ErrorOr<DialogueReply>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // 本轮产出的 run，由挂载通知写下；未挂上时任务状态只用来判定不会再有本轮结果
+        Run? round = null;
+
+        // 订阅先于回答挂上：本轮 run 可能紧接回答就收口，晚挂会漏掉通知
         Action unsubscribeAttached = task.SubscribeRunAttached(run =>
         {
             if (run.Context.NodeIndex != target)
@@ -216,6 +215,8 @@ public sealed class TaskService
                 {
                     return;
                 }
+
+                round = run;
             }
 
             if (observer is { } sink)
@@ -257,6 +258,12 @@ public sealed class TaskService
 
         try
         {
+            ErrorOr<Success> answered = Answer(id, nodeName, input);
+            if (answered.IsError)
+            {
+                return answered.ErrorsOrEmptyList;
+            }
+
             while (true)
             {
                 if (reply.Task.IsCompleted)
@@ -282,12 +289,15 @@ public sealed class TaskService
                 else
                 {
                     TaskState state;
+                    bool started;
                     lock (task.Gate)
                     {
                         state = task.State;
+                        started = round is not null;
                     }
 
-                    if (state is TaskState.Blocked or TaskState.Canceled or TaskState.Done)
+                    // 本轮 run 已挂上时结果由它的收口给出，未挂上才按任务状态判定收口
+                    if (!started && state is (TaskState.Blocked or TaskState.Canceled or TaskState.Done))
                     {
                         return [TaskErrors.DialogueSettled(id, state)];
                     }

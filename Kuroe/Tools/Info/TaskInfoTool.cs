@@ -140,7 +140,10 @@ internal sealed class TaskInfoTool : ITool
             foreach (ExecutableStateSnapshot node in task.ExecutableStates)
             {
                 string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
-                text.AppendLine($"  {task.Graph[node.Index].Name} · {InfoLabels.Of(node.State)}{items}");
+                string blocked = node.BlockedItems.Count == 0
+                    ? string.Empty
+                    : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => InfoLabels.Item(item)))}";
+                text.AppendLine($"  {task.Graph[node.Index].Name} · {InfoLabels.Of(node.State)}{items}{blocked}");
             }
         }
 

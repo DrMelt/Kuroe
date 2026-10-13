@@ -37,13 +37,13 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
 
         lock (task.Gate)
         {
-            ExecutableNode executable = task.Runtime.Executable(run.Context.NodeIndex).Executable;
-            if (!executable.HasWorkItemsPort)
+            RuntimeExecutable node = task.Runtime.Executable(run.Context.NodeIndex);
+            if (!node.Executable.HasWorkItemsPort)
             {
                 return ToolErrors.Argument("该执行节点没有声明 WorkItems 端口，不能提交条目拆分。");
             }
 
-            if (task.SplitFor(run.Context.NodeIndex) is { } existing && existing.Origin == run.Id)
+            if (node.Split is { } existing && existing.Origin == run.Id)
             {
                 return "本轮已提交过条目拆分，无需重复提交。";
             }
@@ -73,7 +73,7 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
                 }
             }
 
-            task.SetSplit(run.Context.NodeIndex, new WorkItemList(run.Id, parsed.Value));
+            node.SubmitSplit(new WorkItemList(run.Id, parsed.Value));
 
             return $"已记录 {parsed.Value.Count} 个条目。{ContractText.Outstanding(task, run)}";
         }

@@ -16,7 +16,7 @@ static class ContractText
     /// <summary>本轮还需交回的产出，未缺时说明已齐备。</summary>
     public static string Needs(WorkTask task, Run run)
     {
-        TaskRuntime.RunShortfall shortfall = task.Runtime.Shortfall(run);
+        TaskRuntime.RunShortfall shortfall = task.Runtime.Shortfall(task.Runtime.Instance(run), run);
 
         List<string> missing = [];
         if (shortfall.Items)
@@ -39,7 +39,7 @@ static class ContractText
 
     /// <summary>本轮状态的写法：未提交时给出提交提示，已提交时给出结论。</summary>
     private static string StatusLine(WorkTask task, Run run) =>
-        task.VerdictFor(run.Context.NodeIndex, run.Context.ItemIndex) switch
+        task.Runtime.Instance(run).Verdict(run.Id) switch
         {
             null => $"本轮状态未提交，结束时用 {ContractTools.Status.Name} 声明 completed 或 blocked。",
             { Blocked: true, Reason: { Length: > 0 } reason } => $"本轮状态：blocked，{reason}。",

@@ -38,7 +38,7 @@ internal static class DialogueFlow
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
-    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。内容正常输出即可，不需要输出内容到端口。"];
+    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"];
 
     /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。</summary>
     internal static FlowDefinition Build() => new(

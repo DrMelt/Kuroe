@@ -15,7 +15,7 @@ public interface IFlowRunner
     /// <summary>要求持有任务 Gate：回答等待输入的节点并放行下游。</summary>
     ErrorOr<Success> Answer(WorkTask task, string? nodeName, string input);
 
-    /// <summary>要求持有任务 Gate：对被阻塞的节点再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
+    /// <summary>要求持有任务 Gate：对被阻塞的执行单元再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     int Rework(WorkTask task, int? itemIndex);
 
     /// <summary>要求持有任务 Gate：取消任务并终止流程运行。</summary>
