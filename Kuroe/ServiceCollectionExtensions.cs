@@ -165,7 +165,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(statusSubmitter);
         foreach (ITool tool in tools)
         {
-            services.AddSingleton<ITool>(tool);
+            services.AddSingleton(tool);
         }
 
         return Result.Success;

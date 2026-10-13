@@ -14,10 +14,10 @@ internal static class NodeLibraryRules
     public static ErrorOr<Success> Validate(NodeLibrary library)
     {
         List<Error> errors = [];
-        IReadOnlyList<Flow.NodeSpec> definitions = library.All();
+        IReadOnlyList<NodeSpec> definitions = library.All();
         var byName = ValidateDefinitions(definitions, errors);
 
-        foreach (Flow.NodeSpec node in definitions)
+        foreach (NodeSpec node in definitions)
         {
             if (node.Kind == Flow.NodeKind.Container)
             {
@@ -35,10 +35,10 @@ internal static class NodeLibraryRules
         return errors.Count > 0 ? errors : Result.Success;
     }
 
-    private static Dictionary<Flow.NodeName, Flow.NodeSpec> ValidateDefinitions(IReadOnlyList<Flow.NodeSpec> definitions, List<Error> errors)
+    private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(IReadOnlyList<NodeSpec> definitions, List<Error> errors)
     {
-        var byName = new Dictionary<Flow.NodeName, Flow.NodeSpec>();
-        foreach (Flow.NodeSpec node in definitions)
+        var byName = new Dictionary<NodeName, NodeSpec>();
+        foreach (NodeSpec node in definitions)
         {
             if (node.Use is not null)
             {
@@ -153,26 +153,26 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>模型槽位声明的形状：名字非空且不重复。</summary>
-    private static void ValidateModelSlots(Flow.NodeSpec node, List<Error> errors)
+    private static void ValidateModelSlots(NodeSpec node, List<Error> errors)
     {
         if (node.ModelSlots is not { } slots)
         {
             return;
         }
 
-        foreach (Flow.ModelRef slot in slots.Where(slot => string.IsNullOrWhiteSpace(slot.Value)))
+        foreach (ModelRef slot in slots.Where(slot => string.IsNullOrWhiteSpace(slot.Value)))
         {
             errors.Add(NodeScope.Library.Node(node.Name.Value, "模型槽位名不能为空。"));
         }
 
-        foreach (Flow.ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
+        foreach (ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
         {
             errors.Add(NodeScope.Library.Node(node.Name.Value, $"模型槽位 {duplicated} 重复。"));
         }
     }
 
     /// <summary>执行节点库叶子：不能再带结构与接线，输入端口与输出端口在此声明。</summary>
-    private static void CheckLeaf(Flow.NodeSpec node, List<Error> errors)
+    private static void CheckLeaf(NodeSpec node, List<Error> errors)
     {
         if (node.From.Count > 0)
         {
@@ -198,7 +198,7 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>节点接口的库规则：端口名与端口类型与流程校验共用一份，非执行节点的输出与指令另有库层限制。</summary>
-    private static void ValidateInterface(Flow.NodeSpec node, List<Error> errors)
+    private static void ValidateInterface(NodeSpec node, List<Error> errors)
     {
         NodeInterfaceRules.Check(node, message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
 
@@ -212,9 +212,9 @@ internal static class NodeLibraryRules
     /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。
     /// checkSlots 只在节点库容器定义层为真，槽位声明与使用一致按定义整棵子树核对一次，内联子容器沿外层声明。</summary>
     private static void CheckContainer(
-        Flow.NodeSpec container,
-        IReadOnlyList<Flow.NodeSpec> members,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        NodeSpec container,
+        IReadOnlyList<NodeSpec> members,
+        Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors,
         bool checkSlots)
     {
@@ -223,13 +223,13 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(container.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
-        var subtreeNames = new HashSet<Flow.NodeName>();
+        var subtreeNames = new HashSet<NodeName>();
         CollectSubtreeNames(members, byName, subtreeNames);
 
-        var subtreeOutputs = new Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>>();
+        var subtreeOutputs = new Dictionary<NodeName, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
-        var subtreeInputs = new HashSet<Flow.NodeName>();
+        var subtreeInputs = new HashSet<NodeName>();
         CollectSubtreeInputs(members, byName, subtreeInputs);
 
         if (container.ContainerOutputs is { } outs)
@@ -237,16 +237,16 @@ internal static class NodeLibraryRules
             CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, subtreeInputs, errors);
         }
 
-        var literalNames = new HashSet<Flow.NodeName>();
+        var literalNames = new HashSet<NodeName>();
         CheckLiteralNames(members, literalNames, container, errors);
 
-        var ports = new HashSet<Flow.PortName>([.. container.Inputs.Select(port => port.Name)]);
+        var ports = new HashSet<PortName>([.. container.Inputs.Select(port => port.Name)]);
         if (checkSlots)
         {
             CheckModelSlots(container, members, container.ModelSlots ?? [], byName, errors);
         }
 
-        foreach (Flow.NodeSpec member in members)
+        foreach (NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
             CheckMemberModel(member, byName, errors);
@@ -261,28 +261,28 @@ internal static class NodeLibraryRules
     /// <summary>容器槽位声明与使用一致：成员引用的槽位必须已声明，声明的槽位必须被引用，
     /// 引用子容器的绑定键覆盖被引用定义的声明。</summary>
     private static void CheckModelSlots(
-        Flow.NodeSpec container,
-        IReadOnlyList<Flow.NodeSpec> members,
-        IReadOnlyList<Flow.ModelRef> declared,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        NodeSpec container,
+        IReadOnlyList<NodeSpec> members,
+        IReadOnlyList<ModelRef> declared,
+        Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors)
     {
-        var used = new HashSet<Flow.ModelRef>();
+        var used = new HashSet<ModelRef>();
         CollectSlotUsage(members, byName, used);
 
-        foreach (Flow.ModelRef slot in used.Where(slot => !declared.Contains(slot)))
+        foreach (ModelRef slot in used.Where(slot => !declared.Contains(slot)))
         {
             errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员使用的模型槽位 {slot} 未在容器上声明。"));
         }
 
-        foreach (Flow.ModelRef slot in declared.Where(slot => !used.Contains(slot)))
+        foreach (ModelRef slot in declared.Where(slot => !used.Contains(slot)))
         {
             errors.Add(NodeScope.Library.Node(container.Name.Value, $"声明的模型槽位 {slot} 未被成员使用。"));
         }
 
-        foreach (Flow.NodeSpec member in members)
+        foreach (NodeSpec member in members)
         {
-            if (member.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            if (member.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
             {
                 CheckGroupBinding(member, referenced, errors);
             }
@@ -292,11 +292,11 @@ internal static class NodeLibraryRules
     /// <summary>收集子树引用的模型槽位：执行成员写自己的槽位，内联子容器递归，引用子容器取绑定值。
     /// 被引用定义内部的槽位属于它自己的声明，不在此收集。</summary>
     private static void CollectSlotUsage(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        HashSet<Flow.ModelRef> used)
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeSpec> byName,
+        HashSet<ModelRef> used)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
             if (node.Nodes is { Count: > 0 })
             {
@@ -304,9 +304,9 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
             {
-                foreach (Flow.ModelRef bound in node.Models?.Values ?? [])
+                foreach (ModelRef bound in node.Models?.Values ?? [])
                 {
                     used.Add(bound);
                 }
@@ -323,18 +323,18 @@ internal static class NodeLibraryRules
 
     /// <summary>引用子容器的模型绑定：键必须覆盖被引用定义声明的槽位，不能绑定声明以外的槽位。</summary>
     private static void CheckGroupBinding(
-        Flow.NodeSpec member,
-        Flow.NodeSpec definition,
+        NodeSpec member,
+        NodeSpec definition,
         List<Error> errors)
     {
-        IReadOnlyList<Flow.ModelRef> slots = definition.ModelSlots ?? [];
-        var bound = new HashSet<Flow.ModelRef>(member.Models?.Keys ?? []);
-        foreach (Flow.ModelRef slot in slots.Where(slot => !bound.Contains(slot)))
+        IReadOnlyList<ModelRef> slots = definition.ModelSlots ?? [];
+        var bound = new HashSet<ModelRef>(member.Models?.Keys ?? []);
+        foreach (ModelRef slot in slots.Where(slot => !bound.Contains(slot)))
         {
             errors.Add(NodeScope.Library.Node(member.Name.Value, $"引用节点组未绑定模型槽位 {slot}。"));
         }
 
-        foreach (Flow.ModelRef slot in bound.Where(slot => !slots.Contains(slot)))
+        foreach (ModelRef slot in bound.Where(slot => !slots.Contains(slot)))
         {
             errors.Add(NodeScope.Library.Node(member.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
         }
@@ -342,17 +342,17 @@ internal static class NodeLibraryRules
 
     /// <summary>收集子树内全部执行节点的输出端口表，供容器输出端口的绑定目标校验。被引用执行节点取定义上的端口表。</summary>
     private static void CollectSubtreeOutputs(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>> outputs)
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeSpec> byName,
+        Dictionary<NodeName, IReadOnlyList<Port>> outputs)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
             if (node.Execution is not null)
             {
                 outputs[node.Name] = node.Outputs;
             }
-            else if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? definition) && definition.Execution is not null)
+            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) && definition.Execution is not null)
             {
                 outputs[node.Name] = definition.Outputs;
             }
@@ -366,14 +366,14 @@ internal static class NodeLibraryRules
 
     /// <summary>收集子树内全部输入节点名，上下文端口绑定不允许落在输入节点上。被引用执行节点取定义上的输出端口表。</summary>
     private static void CollectSubtreeInputs(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        HashSet<Flow.NodeName> inputs)
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeSpec> byName,
+        HashSet<NodeName> inputs)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
             if (node.Kind == Flow.NodeKind.Input
-                || (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? definition)
+                || (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition)
                     && definition.Kind == Flow.NodeKind.Input))
             {
                 inputs.Add(node.Name);
@@ -389,16 +389,16 @@ internal static class NodeLibraryRules
     /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
     /// 上下文端口不落在输入节点上，拆分支票端口不透出。</summary>
     private static void CheckContainerOutputs(
-        Flow.NodeSpec container,
-        IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput> outs,
-        HashSet<Flow.NodeName> subtreeNames,
-        Dictionary<Flow.NodeName, IReadOnlyList<Flow.Port>> subtreeOutputs,
-        HashSet<Flow.NodeName> subtreeInputs,
+        NodeSpec container,
+        IReadOnlyDictionary<PortName, ContainerOutput> outs,
+        HashSet<NodeName> subtreeNames,
+        Dictionary<NodeName, IReadOnlyList<Port>> subtreeOutputs,
+        HashSet<NodeName> subtreeInputs,
         List<Error> errors)
     {
-        foreach ((Flow.PortName port, Flow.ContainerOutput output) in outs)
+        foreach ((PortName port, ContainerOutput output) in outs)
         {
-            Flow.PortRef target = output.Ref;
+            PortRef target = output.Ref;
             if (target.Source is not { } sourceName)
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
@@ -414,7 +414,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (!subtreeOutputs.TryGetValue(sourceName, out IReadOnlyList<Flow.Port>? memberPorts))
+            if (!subtreeOutputs.TryGetValue(sourceName, out IReadOnlyList<Port>? memberPorts))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不是执行节点，无法取产出。"));
@@ -445,16 +445,16 @@ internal static class NodeLibraryRules
 
     /// <summary>字面子树全部成员名唯一。实例化时成员名映射进同一个作用域，重名会折叠歧义。</summary>
     private static void CheckLiteralNames(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        HashSet<Flow.NodeName> seen,
-        Flow.NodeSpec container,
+        IReadOnlyList<NodeSpec> nodes,
+        HashSet<NodeName> seen,
+        NodeSpec container,
         List<Error> errors)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
-            Flow.NodeName name = node.Name.Value.Length > 0
+            NodeName name = node.Name.Value.Length > 0
                 ? node.Name
-                : new Flow.NodeName(node.Use?.Value ?? string.Empty);
+                : new NodeName(node.Use?.Value ?? string.Empty);
             if (name.Value.Contains('@'))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员名 {name} 不能含 @，@ 是端口引用的分隔符。"));
@@ -473,11 +473,11 @@ internal static class NodeLibraryRules
 
     /// <summary>收集容器整棵子树（含被引用容器定义）的全部成员名。</summary>
     private static void CollectSubtreeNames(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
-        HashSet<Flow.NodeName> names)
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeSpec> byName,
+        HashSet<NodeName> names)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
             if (node.Name.Value.Length > 0)
             {
@@ -488,7 +488,7 @@ internal static class NodeLibraryRules
             {
                 CollectSubtreeNames(node.Nodes, byName, names);
             }
-            else if (node.Use is { } use && byName.TryGetValue(use, out Flow.NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
+            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
             {
                 CollectSubtreeNames(referenced.Nodes, byName, names);
             }
@@ -496,10 +496,10 @@ internal static class NodeLibraryRules
     }
     /// <summary>校验容器的一个成员：结构不混用、引用存在、From 引用自包含。</summary>
     private static void CheckMember(
-        Flow.NodeSpec member,
-        HashSet<Flow.PortName> ports,
-        HashSet<Flow.NodeName> subtreeNames,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        NodeSpec member,
+        HashSet<PortName> ports,
+        HashSet<NodeName> subtreeNames,
+        Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors)
     {
         if (member.Use is { } use)
@@ -538,7 +538,7 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(member.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
-        foreach (Flow.PortRef reference in member.From.SelectMany(group => group.Links).Select(link => link.Ref))
+        foreach (PortRef reference in member.From.SelectMany(group => group.Links).Select(link => link.Ref))
         {
             bool inScope = reference.Source is { } source
                 ? subtreeNames.Contains(source)
@@ -556,8 +556,8 @@ internal static class NodeLibraryRules
     /// <summary>节点组内成员的模型来源：执行成员写模型槽位名，组内节点的模型从引用处绑定输入，不设全局模型引用。
     /// 引用不存在的定义只由 CheckMember 报错，这里不叠加槽位消息。</summary>
     private static void CheckMemberModel(
-        Flow.NodeSpec member,
-        Dictionary<Flow.NodeName, Flow.NodeSpec> byName,
+        NodeSpec member,
+        Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors)
     {
         if (member.Nodes is { Count: > 0 })
@@ -572,7 +572,7 @@ internal static class NodeLibraryRules
 
         if (member.Use is { } use)
         {
-            if (!byName.TryGetValue(use, out Flow.NodeSpec? referenced))
+            if (!byName.TryGetValue(use, out NodeSpec? referenced))
             {
                 return;
             }

@@ -180,19 +180,17 @@ public sealed class FlowRuleTests
             Errors(Flow(Container("整体", Input("收集") with { Outputs = [P("回答")], Execution = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) } }))));
 
     [Fact]
-    public void Input_with_signal_port_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 类型。")],
-            Errors(Flow(
-                Container("整体",
-                    Text("准备", "执行者") with { Outputs = [P("结论")] },
-                    Input("收集") with { Inputs = [In("结论", PortType.Signal)], From = [Signal("准备", "结论")] }),
-                Models("执行者"))));
+    public void Input_with_signal_port_is_accepted() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Text("准备", "执行者") with { Outputs = [P("结论")] },
+                Input("收集") with { Inputs = [In("结论", PortType.Signal)], From = [Signal("准备", "结论")] }),
+            Models("执行者"))));
 
     [Fact]
     public void Input_with_context_input_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 类型。")],
+            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 或 Signal 类型。")],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },

@@ -27,6 +27,15 @@ public sealed class DialogueTests
     }
 
     [Fact]
+    public void Dialogue_flow_marks_reply_back_edge_as_signal()
+    {
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
+
+        Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
+        Assert.Equal(PortType.Text, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
+    }
+
+    [Fact]
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
         NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];

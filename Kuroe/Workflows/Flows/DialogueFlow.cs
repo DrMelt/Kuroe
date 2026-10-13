@@ -25,8 +25,8 @@ internal static class DialogueFlow
     /// <summary>收话节点回答写入的输出端口名。</summary>
     internal static PortName InputPort { get; } = new("回答");
 
-    /// <summary>回话节点产出写入的输出端口名。</summary>
-    internal static PortName ReplyPort { get; } = new("回复");
+    /// <summary>回复端口名：回话节点的输出端口，也是收话节点取用它的输入端口。</summary>
+    internal static PortName ReplyPort { get; } = new("完成");
 
     /// <summary>回话节点可用的能力工具白名单，写上级路径即放行整棵子树。</summary>
     internal static IReadOnlyList<ToolPath> Tools { get; } =
@@ -38,7 +38,7 @@ internal static class DialogueFlow
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
-    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。"];
+    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。内容正常输出即可，不需要输出内容到端口。"];
 
     /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。</summary>
     internal static FlowDefinition Build() => new(
@@ -59,7 +59,8 @@ internal static class DialogueFlow
                     Inputs =
                     [
                         new InputPort(StartPort, PortType.Text),
-                        new InputPort(ReplyPort, PortType.Text),
+                        // 回复输入只作回边的触发，不消费回话产出，回复内容由 run 结果交给调用方
+                        new InputPort(ReplyPort, PortType.Signal),
                     ],
                     Execution = new ExecutableSpec
                     {
