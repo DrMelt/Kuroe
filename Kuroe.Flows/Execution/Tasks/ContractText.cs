@@ -1,20 +1,12 @@
 using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution.Tasks;
-using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.RuntimeGraph;
 
 namespace Kuroe.Flows.Execution.Tasks;
 
-/// <summary>契约工具的模型可见文本：端口声明的写法与运行中的待办提示，各契约入口共用一份措辞。要求调用方持有任务 Gate。</summary>
+/// <summary>契约工具回执的模型可见文本：运行中的待办与本轮状态，各契约入口共用一份措辞。要求调用方持有任务 Gate。</summary>
 static class ContractText
 {
-    /// <summary>端口声明的清单，按声明序，有说明写 端口名：说明。</summary>
-    public static string List(IEnumerable<Port> ports) => string.Join('、', ports.Select(Describe));
-
-    /// <summary>单个端口的写法：有说明写 端口名：说明，未写说明只写端口名。</summary>
-    public static string Describe(Port port) =>
-        port.Description is { Length: > 0 } description ? $"{port.Name}：{description}" : port.Name.Value;
-
     /// <summary>本轮还需交回的产出，未缺时说明已齐备。</summary>
     public static string Needs(WorkTask task, Run run)
     {

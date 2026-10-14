@@ -2,7 +2,7 @@
 
 基于 .NET 10 + Microsoft Agent Framework 与 Microsoft.Extensions.AI 的助手骨架：终端 REPL、流式输出、自动工具调用，多个任务并发执行。
 
-模型接入与流程编排分别在上层调用与图执行器上实现，会话与工具调用由框架承担。流程引擎独立成库：`Kuroe.Flows.Shared` 是契约与模型，`Kuroe.Flows.Json` 是流程文件形状，`Kuroe.Flows` 是引擎实现，宿主经 `IRunExecutor`、`IRunContract`、`IRunPolicy`、`IExecutionTargetResolver`、`IFlowCatalog` 接入。
+模型接入与流程编排分别在上层调用与图执行器上实现，会话与工具调用由框架承担。流程引擎独立成库：`Kuroe.Flows.Shared` 是契约与模型，`Kuroe.Flows.Json` 是流程文件形状，`Kuroe.Flows` 是引擎实现，宿主经 `IRunExecutor`、`IRunContract`、`IRunPolicy`、`IExecutionTargetResolver`、`IFlowCatalog` 接入。执行节点的模型执行独立成库 `Kuroe.Flows.Node.Llm`，宿主经 `IModelAccess`、`IModelSettings` 提供模型接入与请求参数。
 
 流程由节点组织：节点定义来自程序内置节点与 `flows.json` 顶层 `Nodes`，同名以文件定义覆盖；流程按名装配并从装配层输入模型，执行节点声明输入与输出端口、工具白名单，容器组合执行节点、声明模型槽位并限定作用域。
 

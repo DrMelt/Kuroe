@@ -3,6 +3,7 @@
   <Project Path="Kuroe.Flows.Shared/Kuroe.Flows.Shared.csproj" />
   <Project Path="Kuroe.Flows.Json/Kuroe.Flows.Json.csproj" />
   <Project Path="Kuroe.Flows/Kuroe.Flows.csproj" />
+  <Project Path="Kuroe.Flows.Node.Llm/Kuroe.Flows.Node.Llm.csproj" />
   <Project Path="Kuroe/Kuroe.csproj" />
   <Project Path="Kuroe.Cli/Kuroe.Cli.csproj" />
   <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
@@ -10,6 +11,7 @@
   <Project Path="Tests/Kuroe.Flows.Shared.Tests/Kuroe.Flows.Shared.Tests.csproj" />
   <Project Path="Tests/Kuroe.Flows.Tests/Kuroe.Flows.Tests.csproj" />
   <Project Path="Tests/Kuroe.Flows.Json.Tests/Kuroe.Flows.Json.Tests.csproj" />
+  <Project Path="Tests/Kuroe.Flows.Node.Llm.Tests/Kuroe.Flows.Node.Llm.Tests.csproj" />
   <Project Path="Tests/Kuroe.Cli.Tests/Kuroe.Cli.Tests.csproj" />
 </Solution>
 

@@ -1,38 +1,34 @@
 using System.Text;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Executions.Tools;
-using Kuroe.Flows.Execution.Turns;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
-using Kuroe.Configuration.Model;
+using Kuroe.Flows.Node.Llm.Tools;
 using Kuroe.Flows.Shared.Execution.Turns;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
-namespace Kuroe.Executions.Sessions;
+namespace Kuroe.Flows.Node.Llm.Sessions;
 
 /// <summary>一段连续的模型对话。历史由框架会话承载，来源由 <see cref="ISessionHistory"/> 决定。
 /// 会话负责创建框架会话、逐轮请求并把本轮消息留在历史里。</summary>
 public sealed class Session
 {
     private readonly ClientProvider _clients;
-    private readonly SettingsProvider _settings;
-    private readonly CatalogService _catalog;
+    private readonly IModelSettings _settings;
+    private readonly IModelAccess _access;
     private readonly ToolCollection _tools;
     private readonly ISessionHistory _history;
     private ChatClientAgentSession? _session;
 
     internal Session(
         ClientProvider clients,
-        SettingsProvider settings,
-        CatalogService catalog,
+        IModelSettings settings,
+        IModelAccess access,
         ToolCollection tools,
         ISessionHistory history)
     {
         _clients = clients;
         _settings = settings;
-        _catalog = catalog;
+        _access = access;
         _tools = tools;
         _history = history;
     }
@@ -62,7 +58,7 @@ public sealed class Session
             return [ModelErrors.ModelNotSelected()];
         }
 
-        ErrorOr<ModelConnection> resolved = _catalog.Connect(model);
+        ErrorOr<ModelConnection> resolved = _access.Connect(model);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;
@@ -182,13 +178,11 @@ public sealed class Session
     /// <summary>请求选项逐轮取自当前设置，工具按本轮归属与工具面构造。</summary>
     private ChatClientAgentRunOptions Options(TurnScope scope)
     {
-        RuntimeSettings current = _settings.Current.Runtime;
-
         return new ChatClientAgentRunOptions(new ChatOptions
         {
             Tools = [.. _tools.Build(scope, scope.Sink, scope.Tools)],
-            Temperature = current.Temperature,
-            MaxOutputTokens = current.MaxOutputTokens,
+            Temperature = _settings.Temperature,
+            MaxOutputTokens = _settings.MaxOutputTokens,
             Instructions = _history.SystemPrompt,
         });
     }

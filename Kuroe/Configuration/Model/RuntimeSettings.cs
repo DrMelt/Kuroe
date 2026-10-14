@@ -33,7 +33,7 @@ internal sealed record RuntimeSettings
     /// <summary>提交任务时未指定流程则用该流程，未设置时没有默认流程。</summary>
     public FlowName? DefaultFlow { get; init; }
 
-    /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端由 <see cref="Executions.Sessions.ClientProvider"/> 按模型重建。</summary>
+    /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端按模型接入信息重建。</summary>
     public bool InvalidatesHistory(RuntimeSettings other) => Model != other.Model;
 
     /// <summary>日志级别在启动时写入日志管道，改动重启后生效。</summary>

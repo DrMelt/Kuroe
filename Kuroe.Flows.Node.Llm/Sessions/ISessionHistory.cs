@@ -1,9 +1,8 @@
 using ApiHub.Shared.Models;
-using Kuroe.Executions;
 using Kuroe.Flows.Shared.Execution;
 using Microsoft.Extensions.AI;
 
-namespace Kuroe.Executions.Sessions;
+namespace Kuroe.Flows.Node.Llm.Sessions;
 
 /// <summary>会话历史的来源：决定用哪个模型、历史何时重铺。</summary>
 internal interface ISessionHistory

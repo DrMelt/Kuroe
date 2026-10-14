@@ -170,7 +170,7 @@ internal static class RunContextFactory
         List<string> lines = [];
         if (executable.HasTextPorts)
         {
-            string ports = ContractText.List(executable.Outputs.Where(port => port.Type == PortType.Text));
+            string ports = Ports.List(executable.Outputs.Where(port => port.Type == PortType.Text));
             lines.Add($"- 输出端口 {ports}。用 {ContractTools.Port} 提交端口名到文本的 JSON 对象，端口必须与声明一一对应。");
         }
 

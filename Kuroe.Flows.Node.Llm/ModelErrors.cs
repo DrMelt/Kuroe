@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Executions;
+namespace Kuroe.Flows.Node.Llm;
 
 /// <summary>模型侧的错误构造。</summary>
 static class ModelErrors

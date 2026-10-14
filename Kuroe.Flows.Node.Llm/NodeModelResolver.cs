@@ -1,17 +1,14 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Catalogs;
-using Kuroe.Configuration;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Tasks;
-using Kuroe.Flows.Execution.Tasks;
 using ExecutableNode = Kuroe.Flows.Shared.StaticGraph.ExecutableNode;
 
-namespace Kuroe.Executions;
+namespace Kuroe.Flows.Node.Llm;
 
 /// <summary>执行节点到可用模型的解析：取引用的模型选择声明的模型名，运行时模型取宿主当前选中的模型，
 /// 未写或目录里没有时报错。输入节点不启动 run，不进入解析路径。</summary>
-sealed class NodeModelResolver(CatalogService catalog, SettingsProvider settings) : IExecutionTargetResolver
+sealed class NodeModelResolver(IModelAccess access, IModelSettings settings) : IExecutionTargetResolver
 {
     public ErrorOr<INodeDeclaration> For(ExecutableNode executable)
     {
@@ -22,7 +19,7 @@ sealed class NodeModelResolver(CatalogService catalog, SettingsProvider settings
 
         if (definition.Runtime)
         {
-            return settings.Current.Runtime.Model is { } selected
+            return settings.Model is { } selected
                 ? new KuroeNodeDeclaration(selected)
                 : [ModelErrors.ModelNotSelected()];
         }
@@ -38,7 +35,7 @@ sealed class NodeModelResolver(CatalogService catalog, SettingsProvider settings
             return parsed.ErrorsOrEmptyList;
         }
 
-        ErrorOr<Success> reachable = catalog.Check(parsed.Value);
+        ErrorOr<Success> reachable = access.Check(parsed.Value);
 
         return reachable.IsError ? reachable.ErrorsOrEmptyList : new KuroeNodeDeclaration(parsed.Value);
     }

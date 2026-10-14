@@ -1,12 +1,12 @@
 using ApiHub.ChatClient;
 using ApiHub.Shared.Models;
+using Kuroe.Flows.Node.Llm.Sessions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Reflection;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Node.Llm.Tests;
 
 /// <summary>Agent Framework 与 ApiHub 客户端的装配契约：接入信息可包装为 ChatClientAgent，工具在每轮选项里传入。</summary>
 public sealed class FrameworkWiringTests
@@ -44,19 +44,15 @@ public sealed class FrameworkWiringTests
     [Fact]
     public void GetAgent_creates_for_missing_cache_and_reuses_cached()
     {
-        Type providerType = typeof(ServiceCollectionExtensions).Assembly
-            .GetType("Kuroe.Executions.Sessions.ClientProvider", throwOnError: true)!;
-        object provider = Activator.CreateInstance(providerType, [NullLoggerFactory.Instance])!;
-        MethodInfo getAgent = providerType.GetMethod("GetAgent", BindingFlags.Instance | BindingFlags.Public)!;
+        using ClientProvider provider = new(NullLoggerFactory.Instance);
+        ModelName model = ModelName.Create("fake").Value;
 
         ModelConnection connection = Connection();
 
-        ChatClientAgent first = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, [ModelName.Create("fake").Value, connection]));
-        ChatClientAgent second = Assert.IsType<ChatClientAgent>(getAgent.Invoke(provider, [ModelName.Create("fake").Value, connection]));
+        ChatClientAgent first = provider.GetAgent(model, connection);
+        ChatClientAgent second = provider.GetAgent(model, connection);
 
         Assert.Same(first, second);
-
-        ((IDisposable)provider).Dispose();
     }
 
     private static ModelConnection Connection() => ModelConnection.Create(

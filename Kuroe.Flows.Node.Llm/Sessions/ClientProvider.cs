@@ -4,7 +4,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
-namespace Kuroe.Executions.Sessions;
+namespace Kuroe.Flows.Node.Llm.Sessions;
 
 /// <summary>按模型名缓存会话客户端，接入信息变化时重建。多个模型并发时各自持有客户端，
 /// 不会重建别人正在用的那一个。客户端不负责底层客户端的释放，这里保留原客户端在重建或退出时释放。

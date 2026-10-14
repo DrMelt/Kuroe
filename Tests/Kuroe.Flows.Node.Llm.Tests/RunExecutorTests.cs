@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Executions.Runs;
+using Kuroe.Flows.Node.Llm.Runs;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Node.Llm.Tests;
 
 /// <summary>RunExecutor 的补发循环：产出契约缺项时在同一会话里补发，补满上限即止，失败不再补发。</summary>
 public sealed class RunExecutorTests

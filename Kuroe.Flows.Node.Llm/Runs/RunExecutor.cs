@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Executions.Sessions;
+using Kuroe.Flows.Node.Llm.Sessions;
 using Kuroe.Flows.Shared.Execution.Runs;
 
-namespace Kuroe.Executions.Runs;
+namespace Kuroe.Flows.Node.Llm.Runs;
 
 /// <summary>按上下文装配会话并发起请求。产出契约未满足时在同一会话里补发要求再请求，模型因此能看到自己上一轮的回复。</summary>
 sealed class RunExecutor(SessionFactory sessions, IRunContract contract) : IRunExecutor

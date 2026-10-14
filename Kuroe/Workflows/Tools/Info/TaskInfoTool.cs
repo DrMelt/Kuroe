@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Executions;
+using Kuroe.Flows.Node.Llm;
 using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
@@ -181,7 +181,7 @@ internal sealed class TaskInfoTool : ITool
         text.AppendLine($"{run.Id} · {context.NodeName} · {InfoLabels.Item(context.ItemIndex)}"
             + $" · 第 {context.ExecutionCount} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}"
-            + $" · 模型 {(context.Declaration as Kuroe.Executions.KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
+            + $" · 模型 {(context.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
         text.AppendLine($"状态 {InfoLabels.State(run)}"
             + $" · {InfoLabels.Clock(run.StartedAt)} → {InfoLabels.Clock(run.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(run.Elapsed)}");

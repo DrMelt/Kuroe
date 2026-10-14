@@ -3,7 +3,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Node.Llm.Tests;
 
 /// <summary>会话由框架承载后依赖的历史契约：每轮只交本轮的输入，历史由会话合并；
 /// 重铺按 SetInMemoryChatHistory 整体替换。</summary>

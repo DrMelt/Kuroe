@@ -1,6 +1,6 @@
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Executions;
+namespace Kuroe.Workflows.Tools.Info;
 
 /// <summary>节点类型的展示名。</summary>
 public static class NodeKindLabels

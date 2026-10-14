@@ -1,9 +1,8 @@
 using Kuroe.Flows.Shared.Execution.Tasks;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.Execution.Tasks;
 
-namespace Kuroe.Executions.Tools;
+namespace Kuroe.Flows.Node.Llm.Tools;
 
 /// <summary>契约工具的定义：名字、说明与参数。引擎按名字放行，说明末尾附上本轮需交回的端口清单。</summary>
 static class ContractToolDefinitions
@@ -33,5 +32,5 @@ static class ContractToolDefinitions
     private static ToolDefinition WithPorts(ToolDefinition definition, IReadOnlyList<Port>? ports) =>
         ports is null
             ? definition
-            : definition with { Description = $"{definition.Description}本节点需要交回的端口：{ContractText.List(ports)}。" };
+            : definition with { Description = $"{definition.Description}本节点需要交回的端口：{Ports.List(ports)}。" };
 }

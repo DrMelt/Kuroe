@@ -3,11 +3,11 @@ using Kuroe.Catalogs;
 using Kuroe.Catalogs.Files;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Executions;
-using Kuroe.Executions.Runs;
+using Kuroe.Flows.Node.Llm;
+using Kuroe.Flows.Node.Llm.Runs;
+using Kuroe.Flows.Node.Llm.Sessions;
+using Kuroe.Flows.Node.Llm.Tools;
 using Kuroe.Flows.Execution.Runs;
-using Kuroe.Executions.Sessions;
-using Kuroe.Executions.Tools;
 using Kuroe.Shared;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.Execution.Tasks;
@@ -70,6 +70,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
+        services.AddSingleton<IModelSettings>(settings.Value);
+        services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton(configuredTools.Value);
@@ -97,8 +99,8 @@ public static class ServiceCollectionExtensions
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
-            sp.GetRequiredService<CatalogService>(),
-            sp.GetRequiredService<SettingsProvider>()));
+            sp.GetRequiredService<IModelAccess>(),
+            sp.GetRequiredService<IModelSettings>()));
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<RunDispatcher>(),
@@ -115,8 +117,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ClientProvider>(),
-            sp.GetRequiredService<SettingsProvider>(),
-            sp.GetRequiredService<CatalogService>(),
+            sp.GetRequiredService<IModelSettings>(),
+            sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
         services.AddSingleton<IRunContract>(sp => new RunReminder(sp.GetRequiredService<TaskRegistry>()));
         services.AddSingleton<IRunExecutor>(sp => new RunExecutor(

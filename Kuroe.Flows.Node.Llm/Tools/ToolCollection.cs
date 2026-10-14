@@ -2,14 +2,13 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flows.Execution.Turns;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.Execution.Turns;
 using Kuroe.Flows.Shared.StaticGraph;
 using Microsoft.Extensions.AI;
 
-namespace Kuroe.Executions.Tools;
+namespace Kuroe.Flows.Node.Llm.Tools;
 
 /// <summary>工具载体声明的函数构成的模型可调用集合，外加记录调用的包装。
 /// 每轮请求按回合归属重新取载体，使调用记录落到该回合的记录上。

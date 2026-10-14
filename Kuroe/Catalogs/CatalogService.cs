@@ -3,12 +3,13 @@ using ApiHub.Shared.Catalogs;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs.Files;
+using Kuroe.Flows.Node.Llm;
 using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Catalogs;
 
 /// <summary>运行期的提供商与模型目录。改动在锁内基于副本进行，落盘成功后才换快照。</summary>
-public sealed class CatalogService
+public sealed class CatalogService : IModelAccess
 {
     /// <summary>导出时替代凭据原文的占位文本，导入后需要替换为真实凭据。</summary>
     internal const string PlaceholderApiKey = "***";
@@ -76,6 +77,10 @@ public sealed class CatalogService
 
         return connection.IsError ? connection.ErrorsOrEmptyList : Result.Success;
     }
+
+    ErrorOr<ModelConnection> IModelAccess.Connect(ModelName model) => Connect(model);
+
+    ErrorOr<Success> IModelAccess.Check(ModelName model) => Check(model);
 
     /// <summary>新增提供商，失败时一次给出全部非法项。</summary>
     public ErrorOr<Success> AddProvider(string name, string baseAddress, string apiKey)
