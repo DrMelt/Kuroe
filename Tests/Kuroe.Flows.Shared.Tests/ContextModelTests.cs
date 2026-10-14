@@ -2,7 +2,7 @@ using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.StaticGraph;
 using Xunit;
 
-namespace Kuroe.Flows.Tests;
+namespace Kuroe.Flows.Shared.Tests;
 
 /// <summary>上下文模型：run 的叫法、条目序号与出处的可读文本。</summary>
 public sealed class ContextModelTests
@@ -44,6 +44,33 @@ public sealed class ContextModelTests
 
         Assert.Equal("run #1 · 条目 1：甲", source.Label);
         Assert.Equal(plan, source.FromRun);
+    }
+
+    [Fact]
+    public void Input_and_start_sources_name_their_origin()
+    {
+        InputSource input = new(new NodeName("取舍"));
+        StartSource start = new(new PortName("目标"));
+
+        Assert.Equal("节点「取舍」的输入", input.Label);
+        Assert.Equal("流程起点端口「目标」", start.Label);
+        Assert.Null(input.FromRun);
+        Assert.Null(start.FromRun);
+    }
+
+    [Fact]
+    public void Container_and_frame_sources_point_back_to_their_run()
+    {
+        RunId run = new(4);
+        ContainerPortSource container = new(new NodeName("文档组"), new PortName("结论"));
+        ContextFrameSource step = new(run, new NodeName("实施"), null);
+        ContextFrameSource item = new(run, new NodeName("实施"), 1);
+
+        Assert.Equal("容器「文档组」端口「结论」", container.Label);
+        Assert.Null(container.FromRun);
+        Assert.Equal("run #4 · 实施 的上下文", step.Label);
+        Assert.Equal("run #4 · 实施 条目 2 的上下文", item.Label);
+        Assert.Equal(run, item.FromRun);
     }
 
     private static RunContext Context() => new()

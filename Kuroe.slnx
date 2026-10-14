@@ -7,7 +7,9 @@
   <Project Path="Kuroe.Cli/Kuroe.Cli.csproj" />
   <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
   <Project Path="Tests/Kuroe.Shared.Tests/Kuroe.Shared.Tests.csproj" />
+  <Project Path="Tests/Kuroe.Flows.Shared.Tests/Kuroe.Flows.Shared.Tests.csproj" />
   <Project Path="Tests/Kuroe.Flows.Tests/Kuroe.Flows.Tests.csproj" />
+  <Project Path="Tests/Kuroe.Flows.Json.Tests/Kuroe.Flows.Json.Tests.csproj" />
   <Project Path="Tests/Kuroe.Cli.Tests/Kuroe.Cli.Tests.csproj" />
 </Solution>
 

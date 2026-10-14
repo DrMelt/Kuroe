@@ -28,6 +28,8 @@ dotnet build Kuroe.slnx
 dotnet test Kuroe.slnx
 ```
 
+测试项目对应生产项目的职责：`Kuroe.Shared.Tests`、`Kuroe.Flows.Shared.Tests`、`Kuroe.Flows.Json.Tests`、`Kuroe.Flows.Tests` 验证各自库的单元行为，`Kuroe.Tests` 验证宿主装配出的集成行为，`Kuroe.Cli.Tests` 验证终端呈现与命令路由。`Kuroe.Tests` 除解析冒烟外以假执行器替换 `IRunExecutor`，不覆盖真实模型执行链。
+
 生产项目依赖单向：`Kuroe.Shared` 与 `Kuroe.Flows.Shared` 是基础层，`Kuroe.Flows.Json` 依赖 `Kuroe.Flows.Shared`，`Kuroe.Flows` 依赖这两个库，`Kuroe` 依赖上述全部，`Kuroe.Cli` 依赖 `Kuroe`。
 
 引擎不反向依赖宿主：`Kuroe.Flows` 与 `Kuroe.Flows.Shared` 只依赖 .NET 与 ErrorOr，宿主经 `IRunExecutor`、`IRunContract`、`IRunPolicy`、`IExecutionTargetResolver`、`IFlowCatalog` 接入；错误码分侧放在 `Kuroe.Flows.Shared.FlowErrorCodes` 与 `Kuroe.Shared.ErrorCodes`。

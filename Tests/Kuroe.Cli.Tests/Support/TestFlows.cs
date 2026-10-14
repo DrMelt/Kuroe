@@ -1,4 +1,4 @@
-namespace Kuroe.Cli.Tests;
+namespace Kuroe.Cli.Tests.Support;
 
 /// <summary>测试共享的流程模板 JSON。</summary>
 public static class TestFlows
@@ -105,6 +105,29 @@ public static class TestFlows
                   "Nodes": [
                     { "Name": "输入一", "Kind": "Input", "Question": "问题一", "From": [ { "目标": "Start@目标" } ] },
                     { "Name": "输入二", "Kind": "Input", "Question": "问题二", "From": [ { "目标": "Start@目标" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>带校验的执行节点产出不含通过，任务停在阻塞，用于返工命令的装配。</summary>
+    public const string BlockingFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "结论": "计划@结论" } ] }
                   ]
                 }
               ]

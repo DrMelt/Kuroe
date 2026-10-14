@@ -7,12 +7,13 @@ using Kuroe.Shared;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Executions.Tools;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flows.Execution.Tasks;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Kuroe.Cli.Tests;
+namespace Kuroe.Cli.Tests.Support;
 
 /// <summary>在临时工作目录里装配一套 Kuroe，用假执行器驱动流程。</summary>
 public sealed class KuroeHarness : IDisposable
@@ -47,11 +48,11 @@ public sealed class KuroeHarness : IDisposable
 
     public FlowService Flows => _provider.GetRequiredService<FlowService>();
 
-    public WorkItemSubmitter Submitter => _provider.GetRequiredService<WorkItemSubmitter>();
-
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 
     public ModelService Models => _provider.GetRequiredService<ModelService>();
+
+    public ToolCollection Tools => _provider.GetRequiredService<ToolCollection>();
 
     public IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition> CommandTools =>
         _provider.GetRequiredService<IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition>>();

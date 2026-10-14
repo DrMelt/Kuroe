@@ -1,24 +1,11 @@
-using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.StaticGraph;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Shared.Tests;
 
-/// <summary>流程值对象的解析：直接调用各 Create，断言规范化结果或错误说明。</summary>
+/// <summary>流程名与端口名的解析：入口校验与去空白。</summary>
 public sealed class FlowValueObjectTests
 {
-    [Fact]
-    public void Tool_path_segment_with_whitespace_is_rejected() =>
-        Assert.Equal("路径 a b 的段 a b 不能为空或含空白与花括号。", ToolPath.InvalidReason("a b"));
-
-    [Fact]
-    public void Tool_path_with_trailing_slash_is_rejected() =>
-        Assert.Equal("路径 git/ 不能以 / 开头或结尾。", ToolPath.InvalidReason("git/"));
-
-    [Fact]
-    public void Blank_tool_path_has_no_invalid_reason() =>
-        Assert.Null(ToolPath.InvalidReason("  "));
-
     [Theory]
     [InlineData("  ")]
     [InlineData("结论@甲")]

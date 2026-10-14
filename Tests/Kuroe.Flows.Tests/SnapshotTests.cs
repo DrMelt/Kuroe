@@ -1,6 +1,4 @@
 using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.Execution.Runs;
-using Kuroe.Flows.Shared.Execution.Turns;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph;
@@ -10,38 +8,9 @@ using Xunit;
 
 namespace Kuroe.Flows.Tests;
 
-/// <summary>快照的派生属性：终态判定、已耗时与任务进度。</summary>
+/// <summary>任务快照的派生属性：任务进度与执行节点顺位。</summary>
 public sealed class SnapshotTests
 {
-    [Fact]
-    public void Run_state_tells_whether_it_settles()
-    {
-        Assert.False(Run(RunState.Queued).IsSettled);
-        Assert.False(Run(RunState.Running).IsSettled);
-        Assert.True(Run(RunState.Succeeded).IsSettled);
-        Assert.True(Run(RunState.Failed).IsSettled);
-        Assert.True(Run(RunState.Canceled).IsSettled);
-    }
-
-    [Fact]
-    public void Elapsed_uses_finished_when_present()
-    {
-        DateTimeOffset started = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        DateTimeOffset finished = started.AddMinutes(2);
-
-        Assert.Equal(TimeSpan.FromMinutes(2), Run(RunState.Succeeded, started, finished).Elapsed);
-    }
-
-    [Fact]
-    public void Elapsed_falls_back_to_now_while_live()
-    {
-        DateTimeOffset started = DateTimeOffset.UtcNow.AddSeconds(-5);
-
-        TimeSpan elapsed = Run(RunState.Running, started, null).Elapsed;
-
-        Assert.InRange(elapsed, TimeSpan.FromSeconds(4.5), TimeSpan.FromSeconds(5.5));
-    }
-
     [Fact]
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
@@ -58,20 +27,18 @@ public sealed class SnapshotTests
         Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
-    private static RunSnapshot Run(RunState state, DateTimeOffset? started = null, DateTimeOffset? finished = null) =>
-        new(new RunId(1), Context(), state, string.Empty, new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
-            started, finished, null, [], [], 0);
+    [Fact]
+    public void Executable_ordinal_follows_the_compiled_order()
+    {
+        TaskSnapshot snapshot = TaskBuilder.Snap([]);
+
+        Assert.Equal(1, snapshot.OrdinalOf(1));
+        Assert.Equal(2, snapshot.OrdinalOf(2));
+        Assert.Equal(3, snapshot.OrdinalOf(0));
+    }
 
     private static ExecutableStateSnapshot State(int index, NodeState state) =>
         new(index, state, [], 0, [], [], null);
-
-    private static RunContext Context() => new()
-    {
-        Task = new TaskId(1),
-        NodeIndex = 0,
-        NodeName = new NodeName("制定计划"),
-        Instruction = "做",
-    };
 
     private static class TaskBuilder
     {

@@ -86,12 +86,6 @@ public sealed class FlowLoadTests
         Assert.Equal(["流程 默认 的节点 组实例：引用容器不能声明 From，容器自身不接线。"], Errors(ReferenceContainerFrom));
 
     [Fact]
-    public void Source_port_repeated_across_groups_is_rejected() =>
-        Assert.Equal(
-            ["流程 默认 的节点 交付.实施：From 的来源端口 Start@目标 出现在多个组里。"],
-            Errors(RepeatedSourcePortAcrossGroups));
-
-    [Fact]
     public void Structural_fields_survive_a_write_read_round_trip()
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-map-{Guid.NewGuid():N}");
@@ -169,21 +163,6 @@ public sealed class FlowLoadTests
 
         Assert.Single(imported.Names);
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
-    }
-
-    /// <summary>写回的流程文件保留缩进与可读中文，枚举写成名字。</summary>
-    [Fact]
-    public void Saved_flow_file_keeps_readable_text_and_string_enums()
-    {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), SingleFunnelFlow);
-
-        harness.Flows.Import("extra.json").ThrowIfError();
-
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
-        Assert.Contains("\"Kind\": \"Executable\"", text);
-        Assert.Contains("制定计划", text);
-        Assert.Contains("分配执行", text);
     }
 
     /// <summary>端口说明随声明载入，保存后仍写在文件里。</summary>
@@ -417,27 +396,6 @@ public sealed class FlowLoadTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "组实例", "Use": "组", "Models": { "执行者": "执行者" }, "From": [ { "做": "做@结论" } ] }
-            ] }
-          ] } ]
-        }
-        """;
-
-    private const string RepeatedSourcePortAcrossGroups = """
-        {
-          "Nodes": [
-            {
-              "Name": "交付",
-              "Kind": "Container",
-              "Models": ["执行者"],
-              "Inputs": [{ "Name": "计划" }, { "Name": "补充" }],
-              "Nodes": [
-                { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "任务": "@计划" }, { "任务": "@计划", "依据": "@补充" } ] }
-              ]
-            }
-          ],
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "交付", "Use": "交付", "In": { "计划": "Start@目标", "补充": "Start@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ] } ]
         }

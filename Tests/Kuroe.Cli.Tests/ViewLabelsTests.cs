@@ -68,6 +68,17 @@ public sealed class ViewLabelsTests
         Assert.Equal("已完成", ViewLabels.State(Run("调用工具 GetTime") with { State = RunState.Succeeded }));
     }
 
+    [Fact]
+    public void Style_of_state_picks_the_host_style()
+    {
+        Assert.Equal(Styles.Success, ViewLabels.StyleOf(TaskState.Done));
+        Assert.Equal(Styles.Key, ViewLabels.StyleOf(TaskState.Running));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.AwaitingApproval));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.AwaitingInput));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.Blocked));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Canceled));
+    }
+
     private static RunSnapshot Run(string progress) => new(
         new RunId(1), Context(), RunState.Running, progress,
         DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, null, [], [], 0);

@@ -12,6 +12,7 @@
     <InternalsVisibleTo Include="Kuroe.Flows" />
     <InternalsVisibleTo Include="Kuroe" />
     <InternalsVisibleTo Include="Kuroe.Tests" />
+    <InternalsVisibleTo Include="Kuroe.Flows.Json.Tests" />
   </ItemGroup>
 
 </Project>

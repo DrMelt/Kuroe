@@ -1,9 +1,8 @@
-using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Tests;
 
 /// <summary>流程静态校验规则：直接构造模型，一条规则一个测试，断言完整错误说明集合。</summary>
 public sealed class FlowRuleTests

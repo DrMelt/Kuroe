@@ -73,23 +73,4 @@ public sealed class NodePathTests
         Assert.Equal("整体", Assert.Single(snapshot.Containers, container => container.Name == "整体").Path.Value);
         Assert.Equal("整体/文档组", Assert.Single(snapshot.Containers, container => container.Name == "文档组").Path.Value);
     }
-
-    [Fact]
-    public void Paths_with_same_segments_are_equal_regardless_of_collection_instance()
-    {
-        NodePath first = new([new NodeName("整体"), new NodeName("文档组"), new NodeName("撰写")]);
-        NodePath second = new([new NodeName("整体"), new NodeName("文档组"), new NodeName("撰写")]);
-
-        Assert.Equal(first, second);
-        Assert.Equal(first.GetHashCode(), second.GetHashCode());
-    }
-
-    [Fact]
-    public void Paths_with_different_segments_are_not_equal()
-    {
-        NodePath shallow = new([new NodeName("整体")]);
-        NodePath deep = new([new NodeName("整体"), new NodeName("文档组")]);
-
-        Assert.NotEqual(shallow, deep);
-    }
 }

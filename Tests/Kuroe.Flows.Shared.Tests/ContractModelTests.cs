@@ -3,7 +3,7 @@ using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Xunit;
 
-namespace Kuroe.Flows.Tests;
+namespace Kuroe.Flows.Shared.Tests;
 
 /// <summary>余下的契约模型：标识文本与通知构成。</summary>
 public sealed class ContractModelTests
@@ -24,5 +24,17 @@ public sealed class ContractModelTests
 
         Assert.Equal(NoticeLevel.Error, notice.Level);
         Assert.Equal("启动失败：甲失败；乙失败", notice.Text);
+    }
+
+    [Fact]
+    public void Run_verdict_distinguishes_completion_from_a_blocked_run()
+    {
+        Assert.False(RunVerdict.Done.Blocked);
+        Assert.Null(RunVerdict.Done.Reason);
+
+        RunVerdict blocked = RunVerdict.CannotComplete("缺输入");
+
+        Assert.True(blocked.Blocked);
+        Assert.Equal("缺输入", blocked.Reason);
     }
 }

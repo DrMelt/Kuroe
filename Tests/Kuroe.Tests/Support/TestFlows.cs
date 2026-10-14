@@ -1,4 +1,4 @@
-namespace Kuroe.Tests;
+namespace Kuroe.Tests.Support;
 
 /// <summary>测试共享的流程模板 JSON。</summary>
 public static class TestFlows

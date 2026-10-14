@@ -1,4 +1,3 @@
-using ModelName = ApiHub.Shared.Models.ModelName;
 using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.StaticGraph;
@@ -8,7 +7,7 @@ using Kuroe.Flows.StaticGraph;
 using ExecutableNode = Kuroe.Flows.Shared.StaticGraph.ExecutableNode;
 using Xunit;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Flows.Tests;
 
 /// <summary>输入侧就绪判定：组间任一齐备、组内全部齐备、整节点按版本驱动、按条目逐实例判定。
 /// 判定是纯函数，来源侧按接口读数，不创建节点。</summary>

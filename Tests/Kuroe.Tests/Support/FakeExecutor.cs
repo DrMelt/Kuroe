@@ -5,7 +5,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.Execution.Tasks;
 
-namespace Kuroe.Tests;
+namespace Kuroe.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回条目或结论，并记录并发峰值。</summary>
 public sealed class FakeExecutor : IRunExecutor
