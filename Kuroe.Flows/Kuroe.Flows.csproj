@@ -16,7 +16,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Kuroe" />
     <InternalsVisibleTo Include="Kuroe.Tests" />
-    <InternalsVisibleTo Include="Kuroe.TestSupport" />
     <InternalsVisibleTo Include="Kuroe.Flows.Tests" />
   </ItemGroup>
 

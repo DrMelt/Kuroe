@@ -20,7 +20,6 @@
     <ProjectReference Include="..\..\Kuroe\Kuroe.csproj" />
     <ProjectReference Include="..\..\Kuroe.Shared\Kuroe.Shared.csproj" />
     <ProjectReference Include="..\..\Kuroe.Flows.Json\Kuroe.Flows.Json.csproj" />
-    <ProjectReference Include="..\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
   </ItemGroup>
 
 </Project>

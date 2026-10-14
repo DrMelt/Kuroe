@@ -5,7 +5,6 @@
   <Project Path="Kuroe.Flows/Kuroe.Flows.csproj" />
   <Project Path="Kuroe/Kuroe.csproj" />
   <Project Path="Kuroe.Cli/Kuroe.Cli.csproj" />
-  <Project Path="Tests/Kuroe.TestSupport/Kuroe.TestSupport.csproj" />
   <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
   <Project Path="Tests/Kuroe.Shared.Tests/Kuroe.Shared.Tests.csproj" />
   <Project Path="Tests/Kuroe.Flows.Tests/Kuroe.Flows.Tests.csproj" />

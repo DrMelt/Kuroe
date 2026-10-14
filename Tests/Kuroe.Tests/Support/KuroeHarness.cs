@@ -12,7 +12,7 @@ using Kuroe.Flows.Execution.Tasks;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Kuroe.TestSupport;
+namespace Kuroe.Tests;
 
 /// <summary>在临时工作目录里装配一套 Kuroe，用假执行器驱动流程。</summary>
 public sealed class KuroeHarness : IDisposable

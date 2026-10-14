@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Kuroe.Tests" />
-    <InternalsVisibleTo Include="Kuroe.TestSupport" />
   </ItemGroup>
 
 </Project>

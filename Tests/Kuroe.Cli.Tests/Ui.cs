@@ -1,6 +1,5 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
-using Kuroe.TestSupport;
 using Spectre.Console.Testing;
 
 namespace Kuroe.Cli.Tests;

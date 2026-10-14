@@ -9,12 +9,13 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="ErrorOr" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Spectre.Console.Testing" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Kuroe.Cli\Kuroe.Cli.csproj" />
-    <ProjectReference Include="..\Kuroe.TestSupport\Kuroe.TestSupport.csproj" />
   </ItemGroup>
 
 </Project>
