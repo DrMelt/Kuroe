@@ -6,7 +6,7 @@ namespace Kuroe.Flows.StaticGraph;
 /// 声明为拆分的来源端口给目标实例空间。</summary>
 public static class FeedRules
 {
-    /// <summary>逐条对齐、等全部实例、提供拆分空间、取单份产出。拆分支票端口只对按条目目标有效。</summary>
+    /// <summary>逐条对齐、等全部实例、提供拆分空间、取单份产出。WorkItems 端口只对按条目目标有效。</summary>
     public static (EdgeKind Kind, FeedScope Scope, FeedRecurrence Recurrence) Of(
         GraphNode source,
         NodeMode targetMode,

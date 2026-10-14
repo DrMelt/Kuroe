@@ -1,4 +1,4 @@
-using Kuroe.Workflows.Tools.Info;
+using Kuroe.Presentation;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
@@ -49,7 +49,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
-                + $"（{node.Executable.Kind.Label()} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
+                + $"（{InfoLabels.Of(node.Executable.Kind)} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
 
             if (node.Runs.Count == 0)
             {

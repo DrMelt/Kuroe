@@ -118,7 +118,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowAssembler.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError()).ThrowIfError();
+        var (Nodes, _) = FlowReader.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }
@@ -432,7 +432,7 @@ public sealed class NodeLibraryTests
     [InlineData(LibraryContainerOutBadPort, "无法取用")]
     [InlineData(LibraryContainerOutSubContainer, "不是执行节点")]
     [InlineData(LibraryContainerOutInputContext, "不能作为上下文端口来源")]
-    [InlineData(LibraryContainerOutItemsPort, "容器不透出拆分支票")]
+    [InlineData(LibraryContainerOutItemsPort, "容器不透出 WorkItems 端口")]
     [InlineData(LeafWithOut, "执行节点的输出端口条目写 Name 与 Type，不写 Ref")]
     [InlineData(ReferenceWithOut, "引用节点不能声明输出端口")]
     [InlineData(AssemblyContainerOut, "没有输出端口")]
@@ -1309,7 +1309,7 @@ public sealed class NodeLibraryTests
         ], "Flows": [] }
         """;
 
-    /// <summary>库容器输出端口绑定成员的拆分支票端口，容器不透出拆分支票，装配校验拒绝。</summary>
+    /// <summary>库容器输出端口绑定成员的 WorkItems 端口，容器不透出 WorkItems 端口，装配校验拒绝。</summary>
     private const string LibraryContainerOutItemsPort = """
         { "Nodes": [
           { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "结果", "Ref": "计划@拆分" }], "Nodes": [ { "Name": "计划", "Kind": "Executable", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }] } ] }

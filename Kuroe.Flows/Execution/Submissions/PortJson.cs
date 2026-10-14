@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Kuroe.Flows.Execution.Files;
+namespace Kuroe.Flows.Execution.Submissions;
 
 /// <summary>输出端口交回的 JSON 绑定。读法由源生成固定，不经反射式序列化。</summary>
 [JsonSourceGenerationOptions(

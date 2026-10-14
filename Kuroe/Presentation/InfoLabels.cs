@@ -4,13 +4,22 @@ using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.Execution.Tasks;
 
-namespace Kuroe.Workflows.Tools.Info;
+namespace Kuroe.Presentation;
 
-/// <summary>库与宿主共用的状态、展开方式、放行方式与时间展示名。</summary>
+/// <summary>库与宿主共用的状态、节点类型、展开方式、放行方式与时间展示名。</summary>
 public static class InfoLabels
 {
     /// <summary>任务状态的展示名。</summary>
     public static string Of(TaskState state) => state.Label();
+
+    /// <summary>节点类型的展示名。</summary>
+    public static string Of(NodeKind kind) => kind switch
+    {
+        NodeKind.Container => "容器",
+        NodeKind.Executable => "执行",
+        NodeKind.Input => "输入",
+        _ => kind.ToString(),
+    };
 
     /// <summary>执行节点状态的展示名。</summary>
     public static string Of(NodeState state) => state switch

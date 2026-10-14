@@ -8,6 +8,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.Execution.Turns;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Presentation;
 
 namespace Kuroe.Workflows.Tools.Info;
 
@@ -157,7 +158,7 @@ internal sealed class TaskInfoTool : ITool
 
             IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
             text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
-                + $"（{node.Executable.Kind.Label()} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
+                + $"（{InfoLabels.Of(node.Executable.Kind)} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
             foreach (RunSnapshot run in node.Runs)
             {
                 text.AppendLine($"    {RunLine(run, awaitingRuns)}");

@@ -44,12 +44,12 @@ internal static class NodeInterfaceRules
 
         if (node.Outputs.Count(port => port.Type == Flow.PortType.WorkItems) > 1)
         {
-            fail("拆分支票端口至多声明一个。");
+            fail("WorkItems 输出端口至多声明一个。");
         }
 
         if (node.Outputs.Count(port => port.Type == Flow.PortType.Context) > 1)
         {
-            fail("装配上下文端口至多声明一个。");
+            fail("Context 输出端口至多声明一个。");
         }
 
         foreach (string _ in node.SystemPrompt.Where(string.IsNullOrWhiteSpace))

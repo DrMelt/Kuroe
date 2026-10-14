@@ -2,57 +2,6 @@ using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Flows.RuntimeGraph;
 
-/// <summary>运行期节点的只读状态，就绪判定按它取值。未实例化的节点给未放行、版本零、没有实例的默认状态。</summary>
-internal interface ISourceState
-{
-    /// <summary>产出已放行，可被下游消费。</summary>
-    bool Released { get; }
-
-    /// <summary>整节点的产出版本，版本驱动的依据。</summary>
-    long Revision { get; }
-
-    /// <summary>该实例是否已有发表产出。</summary>
-    bool ProducedItem(int item);
-}
-
-/// <summary>判定读的来源侧：节点状态与已交回的拆分。</summary>
-internal interface IExecutionSources
-{
-    /// <summary>序号对应的节点状态，未实例化的节点给未放行的默认状态。</summary>
-    ISourceState Source(int nodeIndex);
-
-    /// <summary>某执行节点是否已交回拆分支票。</summary>
-    bool HasSplit(int nodeIndex);
-
-    /// <summary>某执行节点交回的条目序，按分支过滤；尚未交回为空。</summary>
-    IReadOnlyList<int>? SplitItems(int nodeIndex, BranchName? branch);
-
-    /// <summary>某执行节点已展开的实例集，尚未展开与整节点、容器为空。</summary>
-    IReadOnlyList<int>? Items(int nodeIndex);
-}
-
-/// <summary>判定要读的目标自身状态：实例集、消费账、产出记录与执行次数。</summary>
-internal interface IInputProgress
-{
-    /// <summary>已固定的实例集，尚未展开为空。</summary>
-    IReadOnlyList<int>? AdoptedItems { get; }
-
-    /// <summary>某来源的已消费版本，未消费过为零。</summary>
-    long ConsumedRevision(int source);
-
-    /// <summary>某来源的一次性消费是否已发生。</summary>
-    bool ConsumedOnce(int source);
-
-    /// <summary>整节点或某实例是否已有发表产出。</summary>
-    bool Produced(int? item);
-
-    /// <summary>整节点或某实例已启动的 run 数。</summary>
-    int Runs(int? item);
-
-    /// <summary>返工作废后要求越过就绪条件重启一次。</summary>
-    bool ForceRerun { get; }
-}
-
 /// <summary>输入侧的就绪判定：实例空间、组齐备与驱动三个维度各一处实现，纯函数不改状态。
 /// 组间任一齐备即启动，组内全部齐备；整节点驱动只有一个实例，按条目驱动按空间逐实例判定。</summary>
 internal static class NodeReadiness

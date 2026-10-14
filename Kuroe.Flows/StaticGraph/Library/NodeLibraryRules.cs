@@ -386,7 +386,7 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
-    /// 上下文端口不落在输入节点上，拆分支票端口不透出。</summary>
+    /// 上下文端口不落在输入节点上，WorkItems 端口不透出。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
         IReadOnlyDictionary<PortName, ContainerOutput> outs,
@@ -437,7 +437,7 @@ internal static class NodeLibraryRules
             if (memberPort.Type == Flow.PortType.WorkItems)
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标是拆分支票端口，容器不透出拆分支票。"));
+                    $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
             }
         }
     }

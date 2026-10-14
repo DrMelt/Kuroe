@@ -234,7 +234,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Two_items_ports_are_rejected() =>
         Assert.Equal(
-            [NodeError("制定", "拆分支票端口至多声明一个。")],
+            [NodeError("制定", "WorkItems 输出端口至多声明一个。")],
             Errors(Flow(
                 Container("整体", Plan("制定", "规划者") with { Outputs = [WorkItems("甲"), WorkItems("乙")] }),
                 Models("规划者"))));
@@ -242,7 +242,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Two_context_ports_are_rejected() =>
         Assert.Equal(
-            [NodeError("分析", "装配上下文端口至多声明一个。")],
+            [NodeError("分析", "Context 输出端口至多声明一个。")],
             Errors(Flow(
                 Container("整体", Text("分析", "执行者") with { Outputs = [ContextPort("甲"), ContextPort("乙")] }),
                 Models("执行者"))));
@@ -426,7 +426,7 @@ public sealed class FlowRuleTests
     public void Branch_on_single_executable_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("撰写", "拆分支票端口只能被按条目展开的执行节点消费。"),
+                NodeError("撰写", "WorkItems 端口只能被按条目展开的执行节点消费。"),
                 NodeError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"),
             ],
             Errors(Flow(
@@ -596,7 +596,7 @@ public sealed class FlowRuleTests
             From = [StartRef()],
         };
 
-    /// <summary>交回规划的拆分源，声明拆分支票端口。</summary>
+    /// <summary>交回规划的拆分源，声明 WorkItems 端口。</summary>
     private static NodeSpec Plan(string name, string model) =>
         Exec(name, model, new ExecutableSpec()) with { Outputs = [WorkItems("拆分")] };
 
@@ -613,10 +613,10 @@ public sealed class FlowRuleTests
     /// <summary>Text 端口声明。</summary>
     private static Port P(string name) => new(new PortName(name), PortType.Text);
 
-    /// <summary>拆分支票端口声明。</summary>
+    /// <summary>WorkItems 端口声明。</summary>
     private static Port WorkItems(string name) => new(new PortName(name), PortType.WorkItems);
 
-    /// <summary>装配上下文端口声明。</summary>
+    /// <summary>Context 端口声明。</summary>
     private static Port ContextPort(string name) => new(new PortName(name), PortType.Context);
 
     /// <summary>输入端口声明，未写类型时按 Text。</summary>

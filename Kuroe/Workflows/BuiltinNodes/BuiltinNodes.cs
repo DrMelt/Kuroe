@@ -8,7 +8,7 @@ internal static class BuiltinNodes
     /// <summary>内置容器成员「实施」的模型槽位名，绑定由引用处的模型绑定提供。</summary>
     internal static ModelRef ExecutorSlot { get; } = new("执行者");
 
-    /// <summary>规划节点的拆分支票端口名。</summary>
+    /// <summary>规划节点的条目拆分端口名。</summary>
     internal static PortName SplitPort { get; } = new("拆分");
 
     /// <summary>规划节点承接任务目标的输入端口名。</summary>

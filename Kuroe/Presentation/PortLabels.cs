@@ -1,6 +1,6 @@
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Workflows.Tools.Info;
+namespace Kuroe.Presentation;
 
 /// <summary>端口与上游连接的展示名。</summary>
 public static class PortLabels

@@ -34,4 +34,4 @@ dotnet test Kuroe.slnx
 
 引擎不反向依赖宿主：`Kuroe.Flows` 与 `Kuroe.Flows.Shared` 只依赖 .NET 与 ErrorOr，宿主经 `IRunExecutor`、`IRunContract`、`IRunPolicy`、`IExecutionTargetResolver`、`IFlowCatalog` 接入；错误码分侧放在 `Kuroe.Flows.Shared.FlowErrorCodes` 与 `Kuroe.Shared.ErrorCodes`。执行节点的模型执行独立在 `Kuroe.Flows.Node.Llm`，它只依赖 `Kuroe.Flows.Shared` 与 `Kuroe.Shared`，模型接入与请求参数由宿主经 `IModelAccess`、`IModelSettings` 提供。
 
-`Kuroe` 内部按域分层，依赖单向：`Storage` → `Configuration` → `Catalogs` → `Workflows`，装配入口 `Kuroe` 依赖全部；`Configuration` 与 `Catalogs` 分别实现 `Kuroe.Flows.Node.Llm` 的 `IModelSettings` 与 `IModelAccess` 端口。
+`Kuroe` 内部按域分层，依赖单向：`Storage` → `Configuration` → `Catalogs` → `Workflows`，装配入口 `Kuroe` 依赖全部；`Configuration` 与 `Catalogs` 分别实现 `Kuroe.Flows.Node.Llm` 的 `IModelSettings` 与 `IModelAccess` 端口。`Presentation` 提供状态、节点类型、端口与连接的展示名，只依赖引擎的只读类型，被 `Workflows` 与 `Kuroe.Cli` 引用。

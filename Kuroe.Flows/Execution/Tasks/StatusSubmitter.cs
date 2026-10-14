@@ -12,9 +12,10 @@ public sealed class StatusSubmitter(TaskRegistry registry)
     /// <summary>声明本轮结论。status 取 completed 或 blocked，blocked 必须给出原因。错误以 ErrorOr 表达。</summary>
     public ErrorOr<string> SubmitVerdict(RunId id, string? status, string? reason)
     {
-        if (Owner(id) is not { } run)
+        ErrorOr<(Run Run, WorkTask Task)> owner = SubmitterContext.Resolve(registry, id, "声明本轮状态");
+        if (owner.IsError)
         {
-            return Error.Validation("Tool.Argument", "只有进行中的 run 能声明本轮状态。");
+            return owner.ErrorsOrEmptyList;
         }
 
         ErrorOr<RunVerdict> parsed = Parse(status, reason);
@@ -23,13 +24,7 @@ public sealed class StatusSubmitter(TaskRegistry registry)
             return parsed.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
-        if (found.IsError)
-        {
-            return Error.Unexpected("Tool.Internal", "该 run 没有归属任务。");
-        }
-
-        WorkTask task = found.Value;
+        (Run run, WorkTask task) = owner.Value;
         lock (task.Gate)
         {
             task.Runtime.Instance(run).CollectVerdict(run.Id, parsed.Value);
@@ -61,10 +56,4 @@ public sealed class StatusSubmitter(TaskRegistry registry)
 
         return RunVerdict.CannotComplete(reason.Trim());
     }
-
-    /// <summary>提交者身份必须是仍在跑的 run。</summary>
-    private Run? Owner(RunId id) =>
-        registry.FindRun(id) is { IsError: false } found && found.Value.IsLive
-            ? found.Value
-            : null;
 }

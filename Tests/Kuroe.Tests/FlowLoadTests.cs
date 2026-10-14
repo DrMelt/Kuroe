@@ -96,13 +96,13 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowAssembler.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
+            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
-            store.Save(FlowAssembler.ToDto(nodes, flows)).ThrowIfError();
+            store.Save(FlowWriter.ToDto(nodes, flows)).ThrowIfError();
             string once = File.ReadAllText(file);
 
-            var (Nodes, Flows) = FlowAssembler.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
-            store.Save(FlowAssembler.ToDto(Nodes, Flows)).ThrowIfError();
+            var (Nodes, Flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
+            store.Save(FlowWriter.ToDto(Nodes, Flows)).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }

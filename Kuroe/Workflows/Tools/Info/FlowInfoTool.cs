@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Workflows.Flows;
+using Kuroe.Presentation;
 
 namespace Kuroe.Workflows.Tools.Info;
 
@@ -87,7 +88,7 @@ internal sealed class FlowInfoTool : ITool
             if (node.Execution is { } executable)
             {
                 NodeKind kind = node.EffectiveKind;
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Label()}节点）");
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{InfoLabels.Of(kind)}节点）");
 
                 List<string> attributes = [];
                 if (kind != NodeKind.Input)
@@ -107,7 +108,7 @@ internal sealed class FlowInfoTool : ITool
             }
             else if (node.Nodes is { Count: > 0 })
             {
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Label()}节点）· 放行 {InfoLabels.Of(node.Gate)}");
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{InfoLabels.Of(node.EffectiveKind)}节点）· 放行 {InfoLabels.Of(node.Gate)}");
                 if (node.Inputs.Count > 0)
                 {
                     text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");

@@ -3,7 +3,7 @@ using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.Execution.Model;
+using Kuroe.Flows.Execution.Submissions;
 using Kuroe.Flows.RuntimeNodes;
 using ExecutableNode = Kuroe.Flows.Shared.StaticGraph.ExecutableNode;
 
@@ -16,18 +16,13 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
     /// <summary>声明 WorkItems 端口的执行节点交回条目拆分。引用它的执行节点声明了分支时，交回的条目都要落在这些分支上。错误以 ErrorOr 表达。</summary>
     public ErrorOr<string> SubmitItems(RunId id, string itemsJson)
     {
-        if (Owner(id) is not { } run)
+        ErrorOr<(Run Run, WorkTask Task)> owner = SubmitterContext.Resolve(registry, id, "提交条目拆分");
+        if (owner.IsError)
         {
-            return Error.Validation("Tool.Argument", "只有进行中的 run 能提交条目拆分。");
+            return owner.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkTask> found = registry.Find(run.Context.Task);
-        if (found.IsError)
-        {
-            return Error.Unexpected("Tool.Internal", "该 run 没有归属任务。");
-        }
-
-        WorkTask task = found.Value;
+        (Run run, WorkTask task) = owner.Value;
         ErrorOr<IReadOnlyList<WorkItem>> parsed = WorkItemParser.Parse(itemsJson);
         if (parsed.IsError)
         {
@@ -77,11 +72,5 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
             return $"已记录 {parsed.Value.Count} 个条目。{ContractText.Outstanding(task, run)}";
         }
     }
-
-    /// <summary>提交者身份必须是仍在跑的 run。</summary>
-    private Run? Owner(RunId id) =>
-        registry.FindRun(id) is { IsError: false } found && found.Value.IsLive
-            ? found.Value
-            : null;
 }
 

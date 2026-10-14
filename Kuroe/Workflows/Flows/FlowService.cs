@@ -94,7 +94,7 @@ public sealed class FlowService : IFlowCatalog
             return file.ErrorsOrEmptyList;
         }
 
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowAssembler.ToContent(file.Value);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowReader.ToContent(file.Value);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
@@ -110,8 +110,8 @@ public sealed class FlowService : IFlowCatalog
 
         lock (_gate)
         {
-            List<NodeSpec> fileNodes = MergeFileNodes(_fileNodes, read.Value.Nodes);
-            List<FlowDefinition> flowModels = MergeFlowModels(_flowModels, read.Value.Flows);
+            List<NodeSpec> fileNodes = MergeByName(_fileNodes, read.Value.Nodes, node => node.Name);
+            List<FlowDefinition> flowModels = MergeByName(_flowModels, read.Value.Flows, flow => flow.Name);
 
             ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library);
             if (assembled.IsError)
@@ -127,7 +127,7 @@ public sealed class FlowService : IFlowCatalog
                 .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = _store.Save(FlowAssembler.ToDto(fileNodes, flowModels));
+            ErrorOr<Success> saved = _store.Save(FlowWriter.ToDto(fileNodes, flowModels));
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;
@@ -142,25 +142,14 @@ public sealed class FlowService : IFlowCatalog
         }
     }
 
-    /// <summary>新节点定义按名覆盖旧定义、其余保留，顺序是旧在前新在后。</summary>
-    private static List<NodeSpec> MergeFileNodes(IReadOnlyList<NodeSpec> current, IReadOnlyList<NodeSpec> incoming)
+    /// <summary>按名覆盖合并：新项覆盖旧项、其余保留，顺序是旧在前新在后。</summary>
+    private static List<T> MergeByName<T, TKey>(IReadOnlyList<T> current, IReadOnlyList<T> incoming, Func<T, TKey> key)
+        where TKey : notnull
     {
-        Dictionary<NodeName, NodeSpec> merged = current.ToDictionary(node => node.Name);
-        foreach (NodeSpec node in incoming)
+        Dictionary<TKey, T> merged = current.ToDictionary(key);
+        foreach (T item in incoming)
         {
-            merged[node.Name] = node;
-        }
-
-        return [.. merged.Values];
-    }
-
-    /// <summary>新流程按名覆盖旧流程、其余保留，顺序是旧在前新在后。</summary>
-    private static List<FlowDefinition> MergeFlowModels(IReadOnlyList<FlowDefinition> current, IReadOnlyList<FlowDefinition> incoming)
-    {
-        Dictionary<FlowName, FlowDefinition> merged = current.ToDictionary(flow => flow.Name);
-        foreach (FlowDefinition flow in incoming)
-        {
-            merged[flow.Name] = flow;
+            merged[key(item)] = item;
         }
 
         return [.. merged.Values];

@@ -2,10 +2,9 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.Execution.Files;
 using Kuroe.Flows.Execution.Tasks;
 
-namespace Kuroe.Flows.Execution.Model;
+namespace Kuroe.Flows.Execution.Submissions;
 
 /// <summary>声明 WorkItems 端口的执行节点交回的条目拆分：把模型给的 JSON 数组解析成条目，不合法时给出一条可回给模型的原因。</summary>
 static class WorkItemParser
@@ -51,16 +50,4 @@ static class WorkItemParser
 
         return items;
     }
-}
-
-/// <summary>模型交回的条目文本的形状，不含序号与去空白后的结果。</summary>
-internal sealed class WorkItemDto
-{
-    public string? Title { get; set; }
-
-    public string? Instruction { get; set; }
-
-    public string? Acceptance { get; set; }
-
-    public string? Branch { get; set; }
 }

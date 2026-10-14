@@ -527,7 +527,7 @@ static class FlowRules
             if (memberPort.Type == Flow.PortType.WorkItems)
             {
                 errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标是拆分支票端口，容器不透出拆分支票。"));
+                    $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
             }
         }
     }
@@ -705,7 +705,7 @@ static class FlowRules
 
             if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems && edge.Kind != EdgeKind.Split)
             {
-                errors.Add(scope.Node(target.Name.Value, "拆分支票端口只能被按条目展开的执行节点消费。"));
+                errors.Add(scope.Node(target.Name.Value, "WorkItems 端口只能被按条目展开的执行节点消费。"));
             }
 
             if (edge.Scope == FeedScope.Item

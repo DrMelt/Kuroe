@@ -283,7 +283,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         if (type == PortType.WorkItems)
         {
-            // 拆分支票是结构化产出，不产生可注入文本
+            // 条目拆分是结构化产出，不产生可注入文本
             return null;
         }
 
@@ -343,7 +343,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         if (type == PortType.WorkItems)
         {
-            // 拆分支票是结构化产出，不注入文本上下文
+            // 条目拆分是结构化产出，不注入文本上下文
             return [];
         }
 

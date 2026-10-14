@@ -4,7 +4,7 @@ using Kuroe.Configuration;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Workflows.Flows;
-using Kuroe.Workflows.Tools.Info;
+using Kuroe.Presentation;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
@@ -117,7 +117,7 @@ internal sealed class FlowCommands(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + node.Name.Value),
                     new Text(node.Model?.Value ?? "—"),
-                    new Text(node.EffectiveKind.Label()),
+                    new Text(InfoLabels.Of(node.EffectiveKind)),
                     new Text(ViewLabels.Of(executable.Mode)),
                     new Text(ViewLabels.Of(node.Gate)),
                     new Text(Requirement(node, executable), Styles.Hint));

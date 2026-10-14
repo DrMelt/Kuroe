@@ -1,5 +1,5 @@
 using Kuroe.Cli.Views;
-using Kuroe.Workflows.Tools.Info;
+using Kuroe.Presentation;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
@@ -33,9 +33,9 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Node_kind_labels_cover_the_kinds()
     {
-        Assert.Equal("容器", NodeKindLabels.Label(NodeKind.Container));
-        Assert.Equal("执行", NodeKindLabels.Label(NodeKind.Executable));
-        Assert.Equal("输入", NodeKindLabels.Label(NodeKind.Input));
+        Assert.Equal("容器", InfoLabels.Of(NodeKind.Container));
+        Assert.Equal("执行", InfoLabels.Of(NodeKind.Executable));
+        Assert.Equal("输入", InfoLabels.Of(NodeKind.Input));
     }
 
     [Fact]
