@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph;
+namespace Kuroe.Flow.Json.Parameters;
 
 /// <summary>参数段的一轮取值：按字段名置入的取值集合，文件层按形态写回 JSON。不含 JSON 类型，形态与内容在此声明。</summary>
 public sealed class ParameterValues

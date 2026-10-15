@@ -3,7 +3,7 @@ using ErrorOr;
 namespace Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>一个节点类型：静态形状与类型规则。由实现方注册进 <see cref="NodeTypeRegistry"/>。
-/// 形状之外的声明约束由 <see cref="Validate"/> 表达；参数段的文件形状由 <see cref="INodeParameterFile"/> 给出；
+/// 形状之外的声明约束由 <see cref="Validate"/> 表达；参数段的文件形状由文件层的 INodeParameterFile 给出；
 /// 不派发 run 的类型自建运行期对象的职责在 <see cref="INodeRuntimeFactory"/>。</summary>
 public interface INodeType
 {

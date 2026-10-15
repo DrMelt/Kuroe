@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph;
+namespace Kuroe.Flow.Json.Parameters;
 
 /// <summary>参数段取值的形态：文件里一个字段承载的 JSON 形状。</summary>
 public enum ParameterValueKind

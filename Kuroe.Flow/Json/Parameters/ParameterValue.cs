@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph;
+namespace Kuroe.Flow.Json.Parameters;
 
 /// <summary>参数段的一轮取值里的一个字段：名字、形态与内容，形态决定内容在哪一边。</summary>
 public sealed record ParameterValue

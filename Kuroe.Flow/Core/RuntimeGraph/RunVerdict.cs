@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph;
+namespace Kuroe.Flow.RuntimeGraph;
 
 /// <summary>模型对某一轮执行声明的结论：交付完毕或无法完成。无法完成时带原因。</summary>
 /// <param name="Blocked">无法完成时置真。</param>

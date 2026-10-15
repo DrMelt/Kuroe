@@ -1,4 +1,6 @@
-namespace Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph;
+
+namespace Kuroe.Flow.Json.Parameters;
 
 /// <summary>节点类型参数的文件形状：字段表与取值到参数对象的转换。JSON 的读写由文件层的扩展承担，
 /// 类型只声明有哪些字段与参数怎么建，引擎只透传参数对象。</summary>
