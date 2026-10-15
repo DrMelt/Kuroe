@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-namespace Kuroe.Flow.NodeDefinition;
+namespace Kuroe.Flow.NodeLibrary;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，端口绑定沿作用域链透传。
 /// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
 internal static class NodeExpander

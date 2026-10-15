@@ -45,6 +45,10 @@
             Exclude="..\Kuroe.Flow\Json\**\bin\**;..\Kuroe.Flow\Json\**\obj\**"
             Link="source\Kuroe.Flow\Json\%(RecursiveDir)%(Filename)%(Extension)"
             CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Flow\NodeLibrary\**\*.cs"
+            Exclude="..\Kuroe.Flow\NodeLibrary\**\bin\**;..\Kuroe.Flow\NodeLibrary\**\obj\**"
+            Link="source\Kuroe.Flow\NodeLibrary\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
         <None Include="..\Kuroe.Flow.Node\Llm\**\*.cs"
             Exclude="..\Kuroe.Flow.Node\Llm\**\bin\**;..\Kuroe.Flow.Node\Llm\**\obj\**"
             Link="source\Kuroe.Flow.Node\Llm\%(RecursiveDir)%(Filename)%(Extension)"

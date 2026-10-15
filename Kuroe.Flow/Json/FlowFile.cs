@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Json.Files;
-using Kuroe.Flow.NodeDefinition;
+using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 
@@ -15,7 +15,7 @@ static class FlowFile
         NodeTypeRegistry types) => FlowReader.ToContent(file, types);
 
     /// <summary>装入文件形状：读成模型后交装配层校验并展开。</summary>
-    internal static ErrorOr<AssembledFlows> Assemble(FlowFileDto file, NodeLibrary library, NodeTypeRegistry types)
+    internal static ErrorOr<AssembledFlows> Assemble(FlowFileDto file, Kuroe.Flow.NodeLibrary.NodeLibrary library, NodeTypeRegistry types)
     {
         ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(file, types);
 

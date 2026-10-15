@@ -1,14 +1,13 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeDefinition;
 namespace Kuroe.Flow.StaticGraph;
 
 using Flow = Shared.StaticGraph;
 
 /// <summary>流程模板的校验规则。任务推进依赖这些不变量成立，加载与导入时逐条校验。
 /// 一条流程内的错误一次给全。</summary>
-static class FlowRules
+public static class FlowRules
 {
     /// <summary>校验一条流程。类型规则由注册表给出的节点类型定义承担。</summary>
     public static ErrorOr<Success> Validate(FlowDefinition flow, NodeTypeRegistry types)

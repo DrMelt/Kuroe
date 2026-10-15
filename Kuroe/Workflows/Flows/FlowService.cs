@@ -3,7 +3,7 @@ using Kuroe.Flow.Json;
 using Kuroe.Flow.Json.Files;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
-using Kuroe.Flow.NodeDefinition;
+using Kuroe.Flow.NodeLibrary;
 using Kuroe.Workflows.Flows.Files;
 
 namespace Kuroe.Workflows.Flows;

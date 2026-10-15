@@ -3,6 +3,7 @@
     <Project Path="Kuroe.Flow.Node/Llm/Kuroe.Flow.Node.Llm.csproj" />
     <Project Path="Kuroe.Flow.Node/Input/Kuroe.Flow.Node.Input.csproj" />
     <Project Path="Kuroe.Flow/Core/Kuroe.Flow.csproj" />
+    <Project Path="Kuroe.Flow/NodeLibrary/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Kuroe.Flow/Json/Kuroe.Flow.Json.csproj" />
     <Project Path="Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
     <Project Path="Kuroe.Flow.Node/Approval/Kuroe.Flow.Node.Approval.csproj" />

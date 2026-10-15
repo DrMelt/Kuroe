@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeDefinition;
+using Kuroe.Flow.StaticGraph;
 
-namespace Kuroe.Flow.StaticGraph;
+namespace Kuroe.Flow.NodeLibrary;
 
 /// <summary>流程的装配：把模型内容校验并展开。文件形状的读写与转换由文件层扩展承担。</summary>
 static class FlowAssembler
