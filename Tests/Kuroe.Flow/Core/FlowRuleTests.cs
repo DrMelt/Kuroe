@@ -488,7 +488,7 @@ public sealed class FlowRuleTests
         new()
         {
             Name = new NodeName(name),
-            Kind = BuiltinNodeKinds.Llm,
+            Kind = TestNodeTypes.Executable,
             Model = new ModelRef(model),
             Execution = execution,
             From = [StartRef()],

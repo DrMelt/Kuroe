@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kuroe.Flow.Shared.StaticGraph;
 
-namespace Kuroe.Flow.Shared.Files;
+namespace Kuroe.Flow.Json.Files;
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
 /// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，结构字段在此固定，类型专属字段落在参数段。</summary>
@@ -50,7 +50,7 @@ public sealed class NodeDto
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
     public string? Branch { get; set; }
 
-    /// <summary>节点类型的参数段：键为类型声明的参数名。读侧由类型的参数形状消费，未被消费的键按未知字段报出。</summary>
+    /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Parameters { get; set; }
 

@@ -59,8 +59,8 @@ public sealed class SnapshotTests
             Kind = BuiltinNodeKinds.Container,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Kind = BuiltinNodeKinds.Llm, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("制定计划"), Kind = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("实施"), Kind = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
@@ -77,7 +77,7 @@ public sealed class SnapshotTests
             Index = 1,
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
-            Kind = BuiltinNodeKinds.Llm,
+            Kind = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
@@ -89,7 +89,7 @@ public sealed class SnapshotTests
             Index = 2,
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
-            Kind = BuiltinNodeKinds.Llm,
+            Kind = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],

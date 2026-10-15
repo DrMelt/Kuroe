@@ -157,7 +157,7 @@ static class FlowRules
 
     /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
     private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
+        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
 
     /// <summary>收集按条目展开的执行节点名，上下文输入端口来源据此拦截。</summary>
     private static void CollectPerItem(NodeSpec node, HashSet<NodeName> names)
@@ -303,7 +303,7 @@ static class FlowRules
 
         if (node.Nodes is { Count: > 0 } children)
         {
-            if (node.Kind is { } containerKind && types.Of(containerKind) is { } containerType)
+            if (node.Kind is { } containerKind && types.Create(containerKind) is { } containerType)
             {
                 containerType.Validate(node, scope, errors.Add);
             }
@@ -337,7 +337,7 @@ static class FlowRules
         }
         else if (node.Execution is not null)
         {
-            INodeType? definition = node.Kind is { } declared ? types.Of(declared) : null;
+            INodeType? definition = node.Kind is { } declared ? types.Create(declared) : null;
             NodeTypeShape? shape = definition?.Shape;
 
             if (shape is null)

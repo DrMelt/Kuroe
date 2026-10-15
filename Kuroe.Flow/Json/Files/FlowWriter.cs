@@ -1,9 +1,8 @@
 using System.Text.Json;
 using Kuroe.Flow.Json;
-using Kuroe.Flow.Shared.Files;
 using Kuroe.Flow.Shared.StaticGraph;
 
-namespace Kuroe.Flow.StaticGraph;
+namespace Kuroe.Flow.Json.Files;
 
 /// <summary>模型到流程文件形状的写入：把节点定义与流程转回 DTO，保留引用形态。</summary>
 static class FlowWriter
@@ -134,18 +133,18 @@ static class FlowWriter
 
     /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
     private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
+        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
 
     /// <summary>节点参数的参数段：类型未注册或不声明参数时为空，未写的字段不写出。</summary>
     private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeTypeRegistry types)
     {
-        if (node.Kind is not { } kind || types.Of(kind)?.Parameters is not { } shape)
+        if (node.Kind is not { } kind || types.Create(kind) is not INodeParameterFile shape)
         {
             return null;
         }
 
         Dictionary<string, JsonElement> parameters = [];
-        shape.Write(node.Parameters, parameters);
+        NodeParameterJson.Write(shape, node.Parameters, parameters);
 
         return parameters.Count == 0 ? null : parameters;
     }

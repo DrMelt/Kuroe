@@ -11,9 +11,6 @@ public sealed class NodeKindTests
         Assert.Equal("Input", new NodeKind("Input").ToString());
 
     [Fact]
-    public void Builtin_names_are_the_kinds_written_in_files()
-    {
+    public void Builtin_name_is_the_kind_written_in_files() =>
         Assert.Equal("Container", BuiltinNodeKinds.Container.Value);
-        Assert.Equal("Llm", BuiltinNodeKinds.Llm.Value);
-    }
 }

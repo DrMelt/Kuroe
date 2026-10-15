@@ -6,10 +6,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\Core\Kuroe.Flow.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Kuroe.Flow" />
         <InternalsVisibleTo Include="Kuroe" />
         <InternalsVisibleTo Include="Kuroe.Tests" />
         <InternalsVisibleTo Include="Kuroe.Flow.Json.Tests" />

@@ -79,7 +79,7 @@ public sealed class NodePortTests
         Index = 1,
         Name = new NodeName("实施"),
         Path = new NodePath([new NodeName("实施")]),
-        Kind = BuiltinNodeKinds.Llm,
+        Kind = new NodeKind("Executable"),
         Execution = new ExecutableSpec(),
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
         Outputs = outputs,

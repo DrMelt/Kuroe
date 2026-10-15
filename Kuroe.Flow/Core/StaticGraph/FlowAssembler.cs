@@ -1,24 +1,13 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.Files;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.NodeDefinition;
 
 namespace Kuroe.Flow.StaticGraph;
 
-/// <summary>流程的装配：把文件形状的 DTO 转成模型并校验、展开。文件的读写由宿主承担。</summary>
+/// <summary>流程的装配：把模型内容校验并展开。文件形状的读写与转换由文件层扩展承担。</summary>
 static class FlowAssembler
 {
-    /// <summary>装配文件形状：DTO 转模型后校验并展开。</summary>
-    public static ErrorOr<AssembledFlows> Assemble(FlowFileDto dto, NodeLibrary library, NodeTypeRegistry types)
-    {
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(dto, types);
-
-        return content.IsError
-            ? content.ErrorsOrEmptyList
-            : Assemble(content.Value.Nodes, content.Value.Flows, library, types);
-    }
-
     /// <summary>校验并展开模型内容：文件节点并入节点库副本后逐流程展开，错误一次给全，流程名重复一并报出。
     /// 文件内节点重名直接报错，结果里的节点库是叠加文件定义后的生效库。</summary>
     public static ErrorOr<AssembledFlows> Assemble(

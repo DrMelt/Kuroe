@@ -1,7 +1,5 @@
-using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.Files;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
@@ -9,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Node.Input;
 
 /// <summary>输入节点类型：不启动 run，依赖齐备后停在待输入，用户回答即产出放行下游。</summary>
-internal sealed class InputNodeType : INodeType, INodeParameterJson
+internal sealed class InputNodeType : INodeType, INodeRuntimeFactory, INodeParameterFile
 {
     private const string QuestionName = "Question";
 
@@ -24,8 +22,8 @@ internal sealed class InputNodeType : INodeType, INodeParameterJson
         OutputTypes = [PortType.Text],
     };
 
-    /// <summary>类型参数的文件形状。</summary>
-    public INodeParameterJson Parameters => this;
+    /// <summary>参数段声明的字段与取值形态。</summary>
+    public IReadOnlyList<ParameterField> Fields { get; } = [new(QuestionName, ParameterValueKind.Text)];
 
     /// <summary>输入节点的类型规则：只以用户输入为产出，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
@@ -50,29 +48,19 @@ internal sealed class InputNodeType : INodeType, INodeParameterJson
     /// <summary>输入节点的运行期对象。</summary>
     public NodeRuntime Create(GraphNode node, INodeContext context) => new InputRuntime((ExecutableNode)node);
 
-    /// <summary>读出参数段：不认识的键与形状不符的值经 fail 报出。</summary>
-    public INodeParameters? Read(
-        NodeScope scope,
-        NodeName node,
-        IReadOnlyDictionary<string, JsonElement> values,
-        Action<Error> fail)
-    {
-        void Report(string message) => fail(scope.Node(node.Value, message));
-
-        foreach (string name in values.Keys.Where(name => name != QuestionName))
-        {
-            Report($"字段 {name} 不属于 {Kind.Value} 节点。");
-        }
-
-        return new InputParameters { Question = ParameterJson.ReadText(values, QuestionName, Report) };
-    }
+    /// <summary>读出参数段：参数只有提问文本，未知字段与形状由文件层报出。</summary>
+    public INodeParameters? Read(IParameterReader values, Action<string> fail) =>
+        new InputParameters { Question = values.Text(QuestionName) };
 
     /// <summary>写回参数段：只写有值的字段。</summary>
-    public void Write(INodeParameters? parameters, IDictionary<string, JsonElement> target)
+    public ParameterValues Write(INodeParameters? parameters)
     {
+        ParameterValues values = new();
         if (parameters is InputParameters input && input.Question is { Length: > 0 } question)
         {
-            target[QuestionName] = ParameterJson.Text(question);
+            values.Set(QuestionName, question);
         }
+
+        return values;
     }
 }

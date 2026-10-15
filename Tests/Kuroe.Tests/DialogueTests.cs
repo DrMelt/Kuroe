@@ -6,7 +6,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeType.Llm;
+using Kuroe.Flow.Node.Llm;
 using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Workflows.Tools.Info;
 using Kuroe.Workflows.Flows;
@@ -25,7 +25,7 @@ public sealed class DialogueTests
         IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
 
         Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
-        Assert.Equal(BuiltinNodeKinds.Llm, nodes[1].Kind);
+        Assert.Equal(LlmNodeTypes.Name, nodes[1].Kind);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeType.Llm;
+using Kuroe.Flow.Node.Llm;
 
 namespace Kuroe.Workflows.BuiltinNodes;
 
@@ -25,7 +25,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
-        Kind = BuiltinNodeKinds.Llm,
+        Kind = LlmNodeTypes.Name,
         Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
         Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec(),
@@ -39,7 +39,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec ExecuteNodeDefinition = new()
     {
         Name = new NodeName("执行"),
-        Kind = BuiltinNodeKinds.Llm,
+        Kind = LlmNodeTypes.Name,
         Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {

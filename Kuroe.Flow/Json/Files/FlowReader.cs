@@ -1,11 +1,11 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.Shared.Files;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph;
 using ModelDefinition = Kuroe.Flow.Shared.StaticGraph.ModelDefinition;
 
-namespace Kuroe.Flow.StaticGraph;
+namespace Kuroe.Flow.Json.Files;
 
 /// <summary>流程文件形状到模型的读取：把 DTO 绑成节点定义与流程模型，错误逐条收集。</summary>
 static class FlowReader
@@ -434,7 +434,7 @@ static class FlowReader
             return null;
         }
 
-        if (declared.Parameters is not { } shape)
+        if (declared is not INodeParameterFile shape)
         {
             errors.Add(scope.Node(dto.Name ?? string.Empty,
                 $"{declared.Kind.Value} 节点不能声明参数 {string.Join("、", values.Keys)}。"));
@@ -442,7 +442,7 @@ static class FlowReader
             return null;
         }
 
-        return shape.Read(scope, new NodeName(dto.Name ?? string.Empty), values, errors.Add);
+        return NodeParameterJson.Read(declared.Kind, scope, new NodeName(dto.Name ?? string.Empty), shape, values, errors.Add);
     }
 
     /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>

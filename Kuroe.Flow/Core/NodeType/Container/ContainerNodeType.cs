@@ -1,13 +1,11 @@
 using ErrorOr;
-using Kuroe.Flow.RuntimeNodes;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using ContainerNode = Kuroe.Flow.Shared.StaticGraph.ContainerNode;
 
 namespace Kuroe.Flow.NodeType.Container;
 
-/// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎内置。</summary>
+/// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎内置，运行期对象由引擎建立。</summary>
 internal sealed class ContainerNodeType : INodeType
 {
     /// <summary>类型名。</summary>
@@ -28,7 +26,4 @@ internal sealed class ContainerNodeType : INodeType
             fail(scope.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
         }
     }
-
-    /// <summary>容器的运行期对象。</summary>
-    public NodeRuntime Create(GraphNode node, INodeContext context) => new RuntimeContainer((ContainerNode)node, context);
 }

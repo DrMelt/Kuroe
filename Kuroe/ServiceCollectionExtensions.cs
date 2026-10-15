@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
 
         NodeTypeRegistry nodeTypes = new();
         BuiltinTypeRegistry.RegisterInto(nodeTypes);
+        LlmNodeTypes.RegisterInto(nodeTypes);
         InputNodeTypes.RegisterInto(nodeTypes);
         ApprovalNodeTypes.RegisterInto(nodeTypes);
 

@@ -7,7 +7,8 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
-using Kuroe.Flow.NodeType.Llm;
+using Kuroe.Flow.Json;
+using Kuroe.Flow.Node.Llm;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
@@ -29,7 +30,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(2, root.Nodes.Count);
         NodeSpec plan = root.Nodes[0];
         Assert.NotNull(plan.Execution);
-        Assert.Equal(BuiltinNodeKinds.Llm, plan.Kind);
+        Assert.Equal(LlmNodeTypes.Name, plan.Kind);
         Assert.Equal("Start@目标", Assert.Single(Assert.Single(plan.From).Links).Ref.Display);
 
         NodeSpec deliver = root.Nodes[1];
@@ -119,7 +120,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowReader.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }
@@ -152,7 +153,7 @@ public sealed class NodeLibraryTests
     public void Library_executable_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxRuns 必须是正整数。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Kind = BuiltinNodeKinds.Llm, Execution = new ExecutableSpec { MaxRuns = 0 } }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Kind = LlmNodeTypes.Name, Execution = new ExecutableSpec { MaxRuns = 0 } }));
 
     /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
@@ -165,7 +166,7 @@ public sealed class NodeLibraryTests
                 Kind = BuiltinNodeKinds.Container,
                 MaxRuns = 0,
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = BuiltinNodeKinds.Llm, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -183,9 +184,9 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = BuiltinNodeKinds.Llm,
+                Kind = LlmNodeTypes.Name,
                 Execution = new ExecutableSpec(),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = BuiltinNodeKinds.Llm, Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
@@ -203,7 +204,7 @@ public sealed class NodeLibraryTests
                 Outputs = [new Port(new PortName("结论"), PortType.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = BuiltinNodeKinds.Llm, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
@@ -214,7 +215,7 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = BuiltinNodeKinds.Llm,
+                Kind = LlmNodeTypes.Name,
                 Execution = new ExecutableSpec(),
                 ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeName("干活"), new PortName("结论"))) },
             }));

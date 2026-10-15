@@ -71,7 +71,7 @@ public sealed class NodeGraph : INodeGraph
 
     /// <summary>节点类型的形状，开始与未注册的类型为空。</summary>
     public NodeTypeShape? ShapeOf(int index) =>
-        DeclaredKind(index) is { } type ? Types.Of(type)?.Shape : null;
+        DeclaredKind(index) is { } type ? Types.Create(type)?.Shape : null;
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }

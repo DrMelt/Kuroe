@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Kuroe.Flow.Shared.Files;
+using Kuroe.Flow.Json.Files;
 using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
@@ -115,7 +115,7 @@ public sealed class FlowJsonTests
     {
         FlowFileDto file = new()
         {
-            Nodes = [new NodeDto { Name = "制定计划", Kind = BuiltinNodeKinds.Llm.Value }],
+            Nodes = [new NodeDto { Name = "制定计划", Kind = "Llm" }],
             Flows = [new FlowDto { Name = "默认" }],
         };
 

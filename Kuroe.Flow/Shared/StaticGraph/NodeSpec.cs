@@ -38,7 +38,7 @@ public sealed record NodeSpec
     /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
-    /// <summary>类型专属参数：由节点类型的参数形状读写，展开时随之搬运，引擎只透传。</summary>
+    /// <summary>类型专属参数：由类型的参数段文件形状读写，展开时随之搬运，引擎只透传。</summary>
     public INodeParameters? Parameters { get; init; }
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>

@@ -227,7 +227,7 @@ public sealed class ReadinessTests
         Index = index,
         Name = new NodeName($"节点{index}"),
         Path = new NodePath([new NodeName($"节点{index}")]),
-        Kind = BuiltinNodeKinds.Llm,
+        Kind = TestNodeTypes.Executable,
         Execution = new ExecutableSpec { Mode = mode },
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
         Outputs = outputs ?? [],

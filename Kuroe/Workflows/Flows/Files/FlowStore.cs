@@ -1,12 +1,12 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Json;
-using Kuroe.Flow.Shared.Files;
+using Kuroe.Flow.Json.Files;
 using Kuroe.Storage;
 
 namespace Kuroe.Workflows.Flows.Files;
 
-/// <summary>flows.json 的文件存取：路径解析、读取与原子写入。文件形状的装配由 FlowAssembler 承担。</summary>
+/// <summary>flows.json 的文件存取：路径解析、读取与原子写入。文本与文件形状的转换由 Json 扩展承担。</summary>
 sealed class FlowStore(string file, string baseDirectory)
 {
     private readonly string _file = Path.GetFullPath(file);
@@ -50,8 +50,7 @@ sealed class FlowStore(string file, string baseDirectory)
     {
         try
         {
-            AtomicFile.WriteText(_file,
-                JsonSerializer.Serialize(file, FlowJson.WriteOptions.GetTypeInfo(typeof(FlowFileDto))));
+            AtomicFile.WriteText(_file, FlowFileJson.Serialize(file));
 
             return Result.Success;
         }
@@ -77,7 +76,7 @@ sealed class FlowStore(string file, string baseDirectory)
         FlowFileDto? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize(text, FlowJson.Default.FlowFileDto);
+            parsed = FlowFileJson.Parse(text);
         }
         catch (JsonException ex)
         {

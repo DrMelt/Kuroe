@@ -60,11 +60,11 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Node_without_kind_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型名：Llm、Container、Input、Approval。"], Errors(NodeWithoutKind));
+        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型名：Container、Llm、Input、Approval。"], Errors(NodeWithoutKind));
 
     [Fact]
     public void Node_with_unregistered_kind_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：节点类型名 Bogus 未注册，可用类型名：Llm、Container、Input、Approval。"], Errors(NodeWithUnknownKind));
+        Assert.Equal(["流程 默认 的节点 实施：节点类型名 Bogus 未注册，可用类型名：Container、Llm、Input、Approval。"], Errors(NodeWithUnknownKind));
 
     [Fact]
     public void Reference_node_with_kind_is_rejected() =>
@@ -125,16 +125,16 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowWriter.ToDto(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
             string once = File.ReadAllText(file);
 
             Assert.Contains("\"Prompt\": \"拆一下\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
 
-            var (Nodes, Flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowWriter.ToDto(Nodes, Flows, TestNodeTypes.Registry())).ThrowIfError();
+            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            store.Save(FlowFile.Write(Nodes, Flows, TestNodeTypes.Registry())).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -156,9 +156,9 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowWriter.ToDto(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
             string text = File.ReadAllText(file);
 
             Assert.Contains("\"Tools\": [", text);
@@ -627,5 +627,5 @@ public sealed class FlowLoadTests
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowAssembler.Assemble(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!, new NodeLibrary(), TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

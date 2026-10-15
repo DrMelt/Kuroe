@@ -36,7 +36,7 @@ internal static class NodeLibraryRules
 
     /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
     private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
+        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
 
     /// <summary>节点类型名，未声明类型的节点为空。</summary>
     private static string KindName(NodeSpec node) =>

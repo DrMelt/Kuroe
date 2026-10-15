@@ -9,9 +9,9 @@ public sealed class NodeSpecTests
     [Fact]
     public void Effective_kind_returns_the_declared_kind()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = new NodeKind("Executable") };
 
-        Assert.Equal(BuiltinNodeKinds.Llm, node.EffectiveKind);
+        Assert.Equal(new NodeKind("Executable"), node.EffectiveKind);
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class NodeSpecTests
     [Fact]
     public void Node_defaults_stay_empty()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = new NodeKind("Executable") };
 
         Assert.Empty(node.Inputs);
         Assert.Empty(node.From);

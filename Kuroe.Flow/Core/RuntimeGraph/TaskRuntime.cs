@@ -60,14 +60,20 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>某序号的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
     public NodeRuntime Runtime(int nodeIndex) => this[nodeIndex];
 
-    /// <summary>按注册表建立节点对象，类型未注册时给出诊断。</summary>
+    /// <summary>按注册表建立节点对象：容器与派发 run 的节点由引擎按形状建立，其余由类型自建，类型未注册或形状不成对时给出诊断。</summary>
     private NodeRuntime CreateNode(int index)
     {
+        GraphNode node = Graph.Nodes[index];
         NodeKind? kind = Graph.DeclaredKind(index);
-        INodeType? declared = kind is { } name ? Graph.Types.Of(name) : null;
+        INodeType? declared = kind is { } name ? Graph.Types.Create(name) : null;
 
-        return declared?.Create(Graph.Nodes[index], this)
-            ?? throw new InvalidOperationException($"节点 {Graph.Nodes[index].Name} 的类型未注册。");
+        return node switch
+        {
+            ExecutableNode executable when declared is { Shape.DispatchesRuns: true } => new RuntimeExecutable(executable),
+            ContainerNode container when declared is { Shape.Organizes: true } => new RuntimeContainer(container, this),
+            _ when declared is INodeRuntimeFactory factory => factory.Create(node, this),
+            _ => throw new InvalidOperationException($"节点 {node.Name} 的类型未注册。"),
+        };
     }
 
     /// <summary>序号对应的运行时节点对象，尚未实例化时按图定义创建，创建后若任务已取消直接落在取消态。</summary>

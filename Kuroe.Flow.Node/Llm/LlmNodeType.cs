@@ -1,23 +1,18 @@
-using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.RuntimeNodes;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.Files;
-using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
-namespace Kuroe.Flow.NodeType.Llm;
+namespace Kuroe.Flow.Node.Llm;
 
-/// <summary>Llm 类型：由模型执行并交回端口产出，引擎内置。</summary>
-internal sealed class LlmNodeType : INodeType, INodeParameterJson
+/// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立。</summary>
+internal sealed class LlmNodeType : INodeType, INodeParameterFile
 {
     private const string PromptName = "Prompt";
     private const string ToolsName = "Tools";
     private const string SystemPromptName = "SystemPrompt";
 
     /// <summary>类型名。</summary>
-    public NodeKind Kind => BuiltinNodeKinds.Llm;
+    public NodeKind Kind => LlmNodeTypes.Name;
 
     /// <summary>派发 run，输入输出端口取值域由模型产出的形态决定。</summary>
     public NodeTypeShape Shape { get; } = new()
@@ -27,8 +22,13 @@ internal sealed class LlmNodeType : INodeType, INodeParameterJson
         OutputTypes = [PortType.Text, PortType.WorkItems, PortType.Context],
     };
 
-    /// <summary>类型参数的文件形状。</summary>
-    public INodeParameterJson Parameters => this;
+    /// <summary>参数段声明的字段与取值形态。</summary>
+    public IReadOnlyList<ParameterField> Fields { get; } =
+    [
+        new(PromptName, ParameterValueKind.Text),
+        new(ToolsName, ParameterValueKind.Texts),
+        new(SystemPromptName, ParameterValueKind.Texts),
+    ];
 
     /// <summary>Llm 类型的规则：执行上限、输出校验与按条目展开的组合约束。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
@@ -59,67 +59,56 @@ internal sealed class LlmNodeType : INodeType, INodeParameterJson
         }
     }
 
-    /// <summary>Llm 类型的运行期对象。</summary>
-    public NodeRuntime Create(GraphNode node, INodeContext context) => new RuntimeExecutable((ExecutableNode)node);
-
-    /// <summary>读出参数段：不认识的键与形状不符的值经 fail 报出。</summary>
-    public INodeParameters? Read(
-        NodeScope scope,
-        NodeName node,
-        IReadOnlyDictionary<string, JsonElement> values,
-        Action<Error> fail)
+    /// <summary>读出参数段：能力路径与系统指令块的规则在此报出，形状与未知字段由文件层报出。</summary>
+    public INodeParameters? Read(IParameterReader values, Action<string> fail)
     {
-        void Report(string message) => fail(scope.Node(node.Value, message));
-
-        foreach (string name in values.Keys.Where(name => name is not (PromptName or ToolsName or SystemPromptName)))
-        {
-            Report($"字段 {name} 不属于 {Kind.Value} 节点。");
-        }
-
-        IReadOnlyList<string> tools = ParameterJson.ReadTexts(values, ToolsName, Report);
+        IReadOnlyList<string> tools = values.Texts(ToolsName);
         foreach (string tool in tools)
         {
             if (CapabilityPath.InvalidReason(tool) is { } reason)
             {
-                Report(reason);
+                fail(reason);
             }
         }
 
-        IReadOnlyList<string> systemPrompt = ParameterJson.ReadTexts(values, SystemPromptName, Report);
+        IReadOnlyList<string> systemPrompt = values.Texts(SystemPromptName);
         foreach (string _ in systemPrompt.Where(string.IsNullOrWhiteSpace))
         {
-            Report("系统指令块不能为空。");
+            fail("系统指令块不能为空。");
         }
 
         return new LlmParameters
         {
-            Prompt = ParameterJson.ReadText(values, PromptName, Report),
+            Prompt = values.Text(PromptName),
             Tools = [.. tools.Select(tool => new CapabilityPath(tool))],
             SystemPrompt = systemPrompt,
         };
     }
 
     /// <summary>写回参数段：只写有值的字段。</summary>
-    public void Write(INodeParameters? parameters, IDictionary<string, JsonElement> target)
+    public ParameterValues Write(INodeParameters? parameters)
     {
+        ParameterValues values = new();
         if (parameters is not LlmParameters llm)
         {
-            return;
+            return values;
         }
 
         if (llm.Prompt is { Length: > 0 } prompt)
         {
-            target[PromptName] = ParameterJson.Text(prompt);
+            values.Set(PromptName, prompt);
         }
 
         if (llm.Tools.Count > 0)
         {
-            target[ToolsName] = ParameterJson.Texts(llm.Tools.Select(tool => tool.Value));
+            values.Set(ToolsName, [.. llm.Tools.Select(tool => tool.Value)]);
         }
 
         if (llm.SystemPrompt.Count > 0)
         {
-            target[SystemPromptName] = ParameterJson.Texts(llm.SystemPrompt);
+            values.Set(SystemPromptName, llm.SystemPrompt);
         }
+
+        return values;
     }
 }

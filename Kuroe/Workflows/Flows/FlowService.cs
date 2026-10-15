@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Files;
+using Kuroe.Flow.Json;
+using Kuroe.Flow.Json.Files;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.NodeDefinition;
@@ -7,7 +8,7 @@ using Kuroe.Workflows.Flows.Files;
 
 namespace Kuroe.Workflows.Flows;
 
-/// <summary>运行期的流程模板集合。装配交给 FlowAssembler，文件的读取与落盘交给 FlowStore，
+/// <summary>运行期的流程模板集合。文件形状的读写交给 Json 扩展，装配交给 FlowAssembler，落盘交给 FlowStore，
 /// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。默认流程名由宿主给出。</summary>
 public sealed class FlowService : IFlowCatalog
 {
@@ -45,7 +46,7 @@ public sealed class FlowService : IFlowCatalog
             return loaded.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(loaded.Value ?? new FlowFileDto(), builtins, types);
+        ErrorOr<AssembledFlows> assembled = FlowFile.Assemble(loaded.Value ?? new FlowFileDto(), builtins, types);
         if (assembled.IsError)
         {
             return assembled.ErrorsOrEmptyList;
@@ -59,7 +60,7 @@ public sealed class FlowService : IFlowCatalog
 
     /// <summary>节点在注册表里的形状，节点类型未注册或引用节点未展开时为空。</summary>
     public NodeTypeShape? ShapeOf(NodeSpec node) =>
-        node.Kind is { } kind ? _types.Of(kind)?.Shape : null;
+        node.Kind is { } kind ? _types.Create(kind)?.Shape : null;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -100,7 +101,7 @@ public sealed class FlowService : IFlowCatalog
             return file.ErrorsOrEmptyList;
         }
 
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowReader.ToContent(file.Value, _types);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowFile.Read(file.Value, _types);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
@@ -133,7 +134,7 @@ public sealed class FlowService : IFlowCatalog
                 .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = _store.Save(FlowWriter.ToDto(fileNodes, flowModels, _types));
+            ErrorOr<Success> saved = _store.Save(FlowFile.Write(fileNodes, flowModels, _types));
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;

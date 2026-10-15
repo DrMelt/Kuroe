@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Input;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeType.Llm;
+using Kuroe.Flow.Node.Llm;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -80,7 +80,7 @@ internal static class DialogueFlow
                 new NodeSpec
                 {
                     Name = ReplyNodeName,
-                    Kind = BuiltinNodeKinds.Llm,
+                    Kind = LlmNodeTypes.Name,
                     Inputs = [new InputPort(InputPort, PortType.Text)],
                     Execution = new ExecutableSpec(),
                     Parameters = new LlmParameters
