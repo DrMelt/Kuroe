@@ -1,6 +1,6 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Workflows.Tools.Command.Model;
 using Spectre.Console.Testing;

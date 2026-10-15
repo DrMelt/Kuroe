@@ -1,4 +1,4 @@
-using Kuroe.Flows.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.Execution.Runs;
 
 namespace Kuroe.Configuration;
 

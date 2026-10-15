@@ -1,8 +1,8 @@
 using Kuroe.Cli.Views;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.Execution.Runs;
-using Kuroe.Flows.Shared.RuntimeGraph;
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;

@@ -1,5 +1,5 @@
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;

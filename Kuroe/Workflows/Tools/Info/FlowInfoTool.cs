@@ -1,7 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 

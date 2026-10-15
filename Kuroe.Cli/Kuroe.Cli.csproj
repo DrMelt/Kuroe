@@ -1,52 +1,67 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="ApiHub.Shared" />
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+        <PackageReference Include="Spectre.Console" />
+        <PackageReference Include="System.CommandLine" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ApiHub.Shared" />
-    <PackageReference Include="ErrorOr" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="Spectre.Console" />
-    <PackageReference Include="System.CommandLine" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Kuroe\Kuroe.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow.Node\Llm\Kuroe.Flow.Node.Llm.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Kuroe\Kuroe.csproj" />
-    <ProjectReference Include="..\Kuroe.Flows.Node.Llm\Kuroe.Flows.Node.Llm.csproj" />
-    <ProjectReference Include="..\Kuroe.Flows.Shared\Kuroe.Flows.Shared.csproj" />
-    <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Cli.Tests" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Kuroe.Cli.Tests" />
-  </ItemGroup>
-
-  <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
-  <ItemGroup>
-    <None Include="..\Kuroe\**\*.cs" Exclude="..\Kuroe\**\bin\**;..\Kuroe\**\obj\**"
-          Link="source\Kuroe\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Shared\**\*.cs" Exclude="..\Kuroe.Shared\**\bin\**;..\Kuroe.Shared\**\obj\**"
-          Link="source\Kuroe.Shared\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Flows.Shared\**\*.cs" Exclude="..\Kuroe.Flows.Shared\**\bin\**;..\Kuroe.Flows.Shared\**\obj\**"
-          Link="source\Kuroe.Flows.Shared\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Flows.Json\**\*.cs" Exclude="..\Kuroe.Flows.Json\**\bin\**;..\Kuroe.Flows.Json\**\obj\**"
-          Link="source\Kuroe.Flows.Json\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Flows\**\*.cs" Exclude="..\Kuroe.Flows\**\bin\**;..\Kuroe.Flows\**\obj\**"
-          Link="source\Kuroe.Flows\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Flows.Node.Llm\**\*.cs" Exclude="..\Kuroe.Flows.Node.Llm\**\bin\**;..\Kuroe.Flows.Node.Llm\**\obj\**"
-          Link="source\Kuroe.Flows.Node.Llm\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Kuroe.Cli\**\*.cs" Exclude="..\Kuroe.Cli\**\bin\**;..\Kuroe.Cli\**\obj\**"
-          Link="source\Kuroe.Cli\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Tests\**\*.cs" Exclude="..\Tests\**\bin\**;..\Tests\**\obj\**;..\Tests\**\TestResults\**"
-          Link="source\Tests\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\docs\**\*.md"
-          Link="source\docs\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\README.md;..\LICENSE;..\Kuroe.slnx;..\Directory.Build.props;..\Directory.Packages.props;..\nuget.config;..\.editorconfig"
-          Link="source\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
+    <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
+    <ItemGroup>
+        <None Include="..\Kuroe\**\*.cs" Exclude="..\Kuroe\**\bin\**;..\Kuroe\**\obj\**"
+            Link="source\Kuroe\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Shared\**\*.cs"
+            Exclude="..\Kuroe.Shared\**\bin\**;..\Kuroe.Shared\**\obj\**"
+            Link="source\Kuroe.Shared\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Flow\Core\**\*.cs"
+            Exclude="..\Kuroe.Flow\Core\**\bin\**;..\Kuroe.Flow\Core\**\obj\**"
+            Link="source\Kuroe.Flow\Core\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Flow\Shared\**\*.cs"
+            Exclude="..\Kuroe.Flow\Shared\**\bin\**;..\Kuroe.Flow\Shared\**\obj\**"
+            Link="source\Kuroe.Flow\Shared\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Flow\Json\**\*.cs"
+            Exclude="..\Kuroe.Flow\Json\**\bin\**;..\Kuroe.Flow\Json\**\obj\**"
+            Link="source\Kuroe.Flow\Json\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Flow.Node\Llm\**\*.cs"
+            Exclude="..\Kuroe.Flow.Node\Llm\**\bin\**;..\Kuroe.Flow.Node\Llm\**\obj\**"
+            Link="source\Kuroe.Flow.Node\Llm\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Kuroe.Cli\**\*.cs"
+            Exclude="..\Kuroe.Cli\**\bin\**;..\Kuroe.Cli\**\obj\**"
+            Link="source\Kuroe.Cli\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\Tests\**\*.cs"
+            Exclude="..\Tests\**\bin\**;..\Tests\**\obj\**;..\Tests\**\TestResults\**"
+            Link="source\Tests\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\docs\**\*.md"
+            Link="source\docs\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
+        <None
+            Include="..\README.md;..\LICENSE;..\Kuroe.slnx;..\Directory.Build.props;..\Directory.Packages.props;..\nuget.config;..\.editorconfig"
+            Link="source\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>

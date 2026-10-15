@@ -4,13 +4,13 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.Execution.Runs;
-using Kuroe.Flows.Shared.RuntimeGraph;
-using Kuroe.Flows.Shared.Waiting;
-using Kuroe.Flows.Node.Llm.Tools;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Workflows.Execution;
-using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Waiting;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,7 +139,7 @@ public sealed class KuroeHarness : IDisposable
     public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
         TryCreate(flowsJson, seedCatalog, defaultFlow).ThrowIfError();
 
-    public TaskId Submit(string goal, Kuroe.Flows.Shared.StaticGraph.FlowName? flow = null) =>
+    public TaskId Submit(string goal, Kuroe.Flow.Shared.StaticGraph.FlowName? flow = null) =>
         Tasks.Submit(goal, flow, null).ThrowIfError().Id;
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();

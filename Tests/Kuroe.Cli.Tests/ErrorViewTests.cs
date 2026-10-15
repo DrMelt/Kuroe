@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Flows.Shared;
+using Kuroe.Flow.Shared;
 using Kuroe.Shared;
 using Spectre.Console.Testing;
 using Xunit;

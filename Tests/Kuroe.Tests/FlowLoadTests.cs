@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.StaticGraph;
-using Kuroe.Flows.Json;
-using Kuroe.Flows.StaticGraph.Library;
+using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph;
+using Kuroe.Flow.Json;
+using Kuroe.Flow.StaticGraph.Library;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 

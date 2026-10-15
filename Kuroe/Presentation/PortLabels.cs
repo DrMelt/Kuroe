@@ -1,4 +1,4 @@
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Presentation;
 

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shared\Kuroe.Flow.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Flow" />
+        <InternalsVisibleTo Include="Kuroe" />
+        <InternalsVisibleTo Include="Kuroe.Tests" />
+        <InternalsVisibleTo Include="Kuroe.Flow.Json.Tests" />
+    </ItemGroup>
+
+</Project>

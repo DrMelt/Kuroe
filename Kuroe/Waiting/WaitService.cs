@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Flows.Execution.Tasks;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.RuntimeGraph;
-using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.Shared.Waiting;
+using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.Waiting;
 
 namespace Kuroe.Waiting;
 

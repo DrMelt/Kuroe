@@ -1,5 +1,5 @@
 using Kuroe.Cli;
-using Kuroe.Flows.Shared.Execution;
+using Kuroe.Flow.Shared.Execution;
 using Spectre.Console.Testing;
 using Xunit;
 

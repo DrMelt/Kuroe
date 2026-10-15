@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Configuration;
-using Kuroe.Flows.Node.Llm;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Node.Llm;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;

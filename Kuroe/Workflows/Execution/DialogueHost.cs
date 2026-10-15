@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Catalogs;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.Execution.Turns;
-using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Shared.Workflows;
-using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Flow.Execution.Tasks;
 
 namespace Kuroe.Workflows.Execution;
 

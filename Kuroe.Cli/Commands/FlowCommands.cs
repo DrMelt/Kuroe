@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
 using Kuroe.Configuration;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 using Spectre.Console;

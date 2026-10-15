@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Xunit;
 
 namespace Kuroe.Tests;

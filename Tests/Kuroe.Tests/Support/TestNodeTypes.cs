@@ -1,7 +1,7 @@
-using Kuroe.Flows.Node.Approval;
-using Kuroe.Flows.Node.Input;
-using Kuroe.Flows.Shared.StaticGraph;
-using Kuroe.Flows.StaticGraph.Types;
+using Kuroe.Flow.Node.Approval;
+using Kuroe.Flow.Node.Input;
+using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 
 namespace Kuroe.Tests.Support;
 

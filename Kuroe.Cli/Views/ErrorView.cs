@@ -1,7 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
-using Kuroe.Flows.Shared;
+using Kuroe.Flow.Shared;
 using Kuroe.Shared;
 
 namespace Kuroe.Cli.Views;

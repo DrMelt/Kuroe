@@ -1,6 +1,6 @@
-using Kuroe.Flows.Shared.Execution;
-using Kuroe.Flows.Shared.RuntimeGraph;
-using Kuroe.Flows.Shared.Waiting;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
