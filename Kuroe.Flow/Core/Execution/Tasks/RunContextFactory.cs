@@ -46,19 +46,28 @@ internal static class RunContextFactory
         }
 
         int count = instance.Runs + 1;
+        RunMaterials materials = new()
+        {
+            Steps = Steps(item, count),
+            Briefing = BuildBriefing(task, node, inputs),
+            ContractTools = ContractToolsOf(node.Executable),
+        };
+
+        RunRequest request = (node.Executable.Parameters as INodeParameterRun)?.Compose(materials)
+            ?? RunRequest.From(materials);
 
         return new RunContext
         {
             Task = task.Id,
             NodeIndex = node.Index,
             NodeName = node.Name,
-            Instruction = BuildInstruction(node, item, count),
+            Instruction = request.Instruction,
             Declaration = declaration,
             ItemIndex = instance.ItemIndex,
             ExecutionCount = count,
-            Tools = ToolsFor(node.Executable),
+            Tools = request.Tools,
             Seed = seed,
-            SystemPrompt = Combine(node.Executable.SystemPrompt, BuildBriefing(task, node, inputs)),
+            SystemPrompt = request.SystemPrompt,
             OutputPorts = [.. node.Executable.Outputs.Where(port => port.Type == PortType.Text)],
         };
     }
@@ -94,15 +103,10 @@ internal static class RunContextFactory
             ? split.Origin
             : new RunId(0);
 
-    /// <summary>指令正文：节点要求、本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
-    private static string BuildInstruction(RuntimeExecutable node, WorkItem? item, int count)
+    /// <summary>本轮执行说明：本次负责的条目与第几轮。目标经依赖边进入上下文，端口要求进系统指令，都不在此拼接。</summary>
+    private static List<string> Steps(WorkItem? item, int count)
     {
         List<string> lines = [];
-        if (node.Executable.Execution.Prompt is { Length: > 0 } prompt)
-        {
-            lines.Add(prompt);
-        }
-
         if (item is { } entry)
         {
             string branch = entry.Branch is { } name ? $"（分支 {name}）" : string.Empty;
@@ -114,7 +118,7 @@ internal static class RunContextFactory
             lines.Add($"这是第 {count} 轮实施。");
         }
 
-        return string.Join('\n', lines);
+        return lines;
     }
 
     /// <summary>本轮接口说明：本节点的输入端口与需要交回的产出，随系统指令发给模型。</summary>
@@ -149,7 +153,7 @@ internal static class RunContextFactory
             return $"- 输入「{edge.TargetInput}」取自 {source}{port}：仅作启动信号，不进上下文。";
         }
 
-        string consumption = edge.Kind == EdgeKind.Split
+        string consumption = edge.Role == EdgeKind.Split
             ? "该来源交回的条目拆分，本实例对应其中一个条目"
             : edge.Scope switch
             {
@@ -191,7 +195,7 @@ internal static class RunContextFactory
         List<string> branches = [];
         foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
         {
-            if (edge.Kind == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } name })
+            if (edge.Role == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } name })
             {
                 branches.Add(name.Value);
             }
@@ -200,14 +204,10 @@ internal static class RunContextFactory
         return branches;
     }
 
-    /// <summary>系统指令：节点声明的恒定块在前，本轮接口说明在后。</summary>
-    private static string Combine(IReadOnlyList<string> declared, string briefing) =>
-        declared.Count == 0 ? briefing : $"{string.Join('\n', declared)}\n\n{briefing}";
-
-    /// <summary>本轮工具面：节点声明的能力工具加按输出端口附上的契约工具，执行状态工具所有节点都有。</summary>
-    private static List<CapabilityPath> ToolsFor(ExecutableNode node)
+    /// <summary>引擎按输出端口附上的契约工具，执行状态工具所有节点都有。</summary>
+    private static List<CapabilityPath> ContractToolsOf(ExecutableNode node)
     {
-        List<CapabilityPath> names = [.. node.Execution.Tools];
+        List<CapabilityPath> names = [];
         if (node.HasWorkItemsPort)
         {
             names.Add(new CapabilityPath(ContractTools.WorkItems));

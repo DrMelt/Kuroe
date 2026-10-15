@@ -57,6 +57,10 @@ public sealed class FlowService : IFlowCatalog
     /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
     public FlowName? DefaultName => _defaultName();
 
+    /// <summary>节点在注册表里的形状，节点类型未注册或引用节点未展开时为空。</summary>
+    public NodeTypeShape? ShapeOf(NodeSpec node) =>
+        node.Kind is { } kind ? _types.Of(kind)?.Shape : null;
+
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
     {

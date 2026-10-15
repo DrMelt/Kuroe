@@ -7,11 +7,11 @@ using ContainerNode = Kuroe.Flow.Shared.StaticGraph.ContainerNode;
 
 namespace Kuroe.Flow.StaticGraph.Types;
 
-/// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎自带的机制型类型。</summary>
+/// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎内置。</summary>
 internal sealed class ContainerNodeType : INodeType
 {
     /// <summary>类型名。</summary>
-    public NodeTypeName Type => NodeTypes.Container;
+    public NodeKind Kind => BuiltinNodeKinds.Container;
 
     /// <summary>组织子节点，不派发 run，输入端口声明由引用处绑定。</summary>
     public NodeTypeShape Shape { get; } = new()

@@ -95,7 +95,7 @@ static class FlowWriter
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
             Outputs = OutputsFor(node, types),
-            SystemPrompt = node.SystemPrompt.Count == 0 ? null : [.. node.SystemPrompt],
+            Parameters = ParametersFor(node, types),
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
                 : null,
@@ -108,20 +108,12 @@ static class FlowWriter
             dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, types))];
         }
 
-        if (node.Execution is { } execution)
+        if (node.Execution is { } execution && ShapeOf(node, types) is { DispatchesRuns: true })
         {
-            // 对外输入的提示对所有类型有效，执行配置只属于派发 run 的类型
-            dto.Question = execution.Question;
-
-            if (ShapeOf(node, types) is { DispatchesRuns: true })
-            {
-                dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(path => path.Value)];
-                dto.Prompt = execution.Prompt;
-                dto.Mode = execution.Mode.ToString();
-                dto.Branch = execution.Branch?.Value;
-                dto.Validate = ToValidationDto(execution.Validate);
-                dto.MaxRuns = execution.MaxRuns;
-            }
+            dto.Mode = execution.Mode.ToString();
+            dto.Branch = execution.Branch?.Value;
+            dto.Validate = ToValidationDto(execution.Validate);
+            dto.MaxRuns = execution.MaxRuns;
         }
 
         return dto;
@@ -143,6 +135,20 @@ static class FlowWriter
     /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
     private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
         node.Kind is { } kind ? types.Of(kind)?.Shape : null;
+
+    /// <summary>节点参数的参数段：类型未注册或不声明参数时为空，未写的字段不写出。</summary>
+    private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeTypeRegistry types)
+    {
+        if (node.Kind is not { } kind || types.Of(kind)?.Parameters is not { } shape)
+        {
+            return null;
+        }
+
+        Dictionary<string, JsonElement> parameters = [];
+        shape.Write(node.Parameters, parameters);
+
+        return parameters.Count == 0 ? null : parameters;
+    }
 
     /// <summary>把一组上游连接转回文件形状：组内是输入名到来源端口引用的映射。</summary>
     private static JsonElement ToFromDto(FromGroup group) =>

@@ -9,9 +9,9 @@ public sealed class NodeSpecTests
     [Fact]
     public void Effective_kind_returns_the_declared_kind()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeTypes.Executable };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm };
 
-        Assert.Equal(NodeTypes.Executable, node.EffectiveKind);
+        Assert.Equal(BuiltinNodeKinds.Llm, node.EffectiveKind);
     }
 
     [Fact]
@@ -27,25 +27,22 @@ public sealed class NodeSpecTests
     [Fact]
     public void Node_defaults_stay_empty()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeTypes.Executable };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm };
 
         Assert.Empty(node.Inputs);
         Assert.Empty(node.From);
         Assert.Empty(node.Outputs);
-        Assert.Empty(node.SystemPrompt);
+        Assert.Null(node.Parameters);
         Assert.Null(node.Execution);
         Assert.Null(node.Nodes);
     }
 
     [Fact]
-    public void Executable_defaults_to_single_without_abilities()
+    public void Executable_defaults_to_single_without_branch_or_validation()
     {
         ExecutableSpec execution = new();
 
         Assert.Equal(NodeMode.Single, execution.Mode);
-        Assert.Empty(execution.Tools);
-        Assert.Null(execution.Prompt);
-        Assert.Null(execution.Question);
         Assert.Null(execution.Branch);
         Assert.Null(execution.Validate);
         Assert.Null(execution.MaxRuns);

@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Waiting;
+using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;
 
@@ -84,21 +85,19 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
         _terminal.Line("执行节点状态：");
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
+            ExecutableNode? asked = task.Graph[node.Index] as ExecutableNode;
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
             string blocked = node.BlockedItems.Count == 0
                 ? string.Empty
                 : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
-            string question = pending.Contains(node.Index)
-                && task.Graph[node.Index] is ExecutableNode asked
-                && asked.Execution.Question is { Length: > 0 } questionText
+            string question = pending.Contains(node.Index) && NodeParameterView.Question(asked?.Parameters) is { Length: > 0 } questionText
                     ? $" · {questionText}"
                     : string.Empty;
-            string ports = task.Graph[node.Index] is ExecutableNode { Outputs.Count: > 0 } ported
+            string ports = asked is { Outputs.Count: > 0 } ported
                 ? $" · 端口：{string.Join('、', ported.Outputs.Select(port => port.Label()))}"
                 : string.Empty;
-            string systemPrompt = task.Graph[node.Index] is ExecutableNode { SystemPrompt.Count: > 0 } systemPrompted
-                ? $" · 系统指令：{systemPrompted.SystemPrompt.Count} 块"
-                : string.Empty;
+            int blocks = NodeParameterView.Llm(asked?.Parameters)?.SystemPrompt.Count ?? 0;
+            string systemPrompt = blocks > 0 ? $" · 系统指令：{blocks} 块" : string.Empty;
             _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
         }
     }

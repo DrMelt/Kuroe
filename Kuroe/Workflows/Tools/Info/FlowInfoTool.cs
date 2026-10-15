@@ -2,6 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 
@@ -25,7 +26,7 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
         new ToolName("GetFlow"),
-        "查看指定流程的展开节点表：模型、节点类型、展开方式与要求。",
+        "查看指定流程的展开节点表：模型、节点类型名、展开方式与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
         InfoTools.Group);
 
@@ -87,11 +88,11 @@ internal sealed class FlowInfoTool : ITool
         {
             if (node.Execution is { } executable)
             {
-                NodeTypeName kind = node.EffectiveKind;
+                NodeKind kind = node.EffectiveKind;
                 text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Value}节点）");
 
                 List<string> attributes = [];
-                if (kind == NodeTypes.Executable)
+                if (_flows.ShapeOf(node) is { DispatchesRuns: true })
                 {
                     attributes.Add($"模型 {NodeModel(node)}");
                     attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
@@ -136,15 +137,16 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>节点要求：分支、工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
+        LlmParameters? parameters = NodeParameterView.Llm(node.Parameters);
         List<string> parts = [];
         if (executable.Branch is { } branch)
         {
             parts.Add($"分支 {branch}");
         }
 
-        if (executable.Tools.Count > 0)
+        if (parameters?.Tools is { Count: > 0 } tools)
         {
-            parts.Add($"工具 {string.Join("、", executable.Tools)}");
+            parts.Add($"工具 {string.Join("、", tools)}");
         }
 
         if (node.Inputs.Count > 0)
@@ -157,9 +159,9 @@ internal sealed class FlowInfoTool : ITool
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
-        if (executable.Question is { Length: > 0 })
+        if (NodeParameterView.Question(node.Parameters) is { Length: > 0 } question)
         {
-            parts.Add($"提问 {executable.Question}");
+            parts.Add($"提问 {question}");
         }
 
         if (node.Outputs.Count > 0)
@@ -167,9 +169,9 @@ internal sealed class FlowInfoTool : ITool
             parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
         }
 
-        if (node.SystemPrompt.Count > 0)
+        if (parameters?.SystemPrompt is { Count: > 0 } blocks)
         {
-            parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
+            parts.Add($"系统指令 {blocks.Count} 块");
         }
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";

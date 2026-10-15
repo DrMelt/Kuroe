@@ -42,7 +42,7 @@ public sealed class NodeInputPlanTests
 
         Assert.Equal(1, edge.Source);
         Assert.Equal(2, edge.Target);
-        Assert.Equal(EdgeKind.Split, edge.Kind);
+        Assert.Equal(EdgeKind.Split, edge.Role);
         Assert.Equal(FeedScope.Whole, edge.Scope);
         Assert.Equal(FeedRecurrence.Repeat, edge.Recurrence);
         Assert.Equal(new PortName("任务"), edge.SourcePort);

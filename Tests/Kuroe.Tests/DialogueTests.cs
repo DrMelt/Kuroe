@@ -6,6 +6,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Workflows.Tools.Info;
 using Kuroe.Workflows.Flows;
@@ -24,7 +25,7 @@ public sealed class DialogueTests
         IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
 
         Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
-        Assert.Equal(NodeTypes.Executable, nodes[1].Kind);
+        Assert.Equal(BuiltinNodeKinds.Llm, nodes[1].Kind);
     }
 
     [Fact]
@@ -40,9 +41,10 @@ public sealed class DialogueTests
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
         NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];
+        LlmParameters parameters = Assert.IsType<LlmParameters>(reply.Parameters);
 
-        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], reply.SystemPrompt);
-        Assert.Null(reply.Execution!.Prompt);
+        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], parameters.SystemPrompt);
+        Assert.Null(parameters.Prompt);
     }
 
     [Fact]

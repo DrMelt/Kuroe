@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Node.Approval;
 public static class ApprovalNodeTypes
 {
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
-    public static NodeTypeName Name { get; } = new("Approval");
+    public static NodeKind Name { get; } = new("Approval");
 
     /// <summary>把审批类型注册进注册表。</summary>
     public static void RegisterInto(NodeTypeRegistry registry) => registry.Register(new ApprovalNodeType());

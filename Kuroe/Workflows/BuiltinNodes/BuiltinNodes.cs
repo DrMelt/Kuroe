@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 
 namespace Kuroe.Workflows.BuiltinNodes;
 
@@ -24,10 +25,11 @@ internal static class BuiltinNodes
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
-        Kind = NodeTypes.Executable,
+        Kind = BuiltinNodeKinds.Llm,
         Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
         Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
-        Execution = new ExecutableSpec
+        Execution = new ExecutableSpec(),
+        Parameters = new LlmParameters
         {
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
         },
@@ -37,12 +39,15 @@ internal static class BuiltinNodes
     private static readonly NodeSpec ExecuteNodeDefinition = new()
     {
         Name = new NodeName("执行"),
-        Kind = NodeTypes.Executable,
+        Kind = BuiltinNodeKinds.Llm,
         Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {
-            Tools = [new CapabilityPath("GetLocalTime")],
             Mode = NodeMode.PerItem,
+        },
+        Parameters = new LlmParameters
+        {
+            Tools = [new CapabilityPath("GetLocalTime")],
         },
     };
 
@@ -50,7 +55,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
-        Kind = NodeTypes.Container,
+        Kind = BuiltinNodeKinds.Container,
         Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =

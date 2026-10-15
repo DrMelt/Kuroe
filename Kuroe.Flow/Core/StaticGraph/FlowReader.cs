@@ -134,12 +134,15 @@ static class FlowReader
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点的类型由被引用的库定义决定，不写 Kind。"));
             }
 
-            if (dto.Prompt is not null || dto.Tools is { Count: > 0 }
-                || dto.Mode is not null || dto.Branch is not null
-                || dto.Question is not null
-                || dto.Nodes is { Count: > 0 })
+            if (dto.Mode is not null || dto.Branch is not null || dto.Nodes is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行配置、Question 或子节点。"));
+                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行方式或子节点。"));
+            }
+
+            if (dto.Parameters is { Count: > 0 } declaredParameters)
+            {
+                useErrors.Add(scope.Node(dto.Name ?? string.Empty,
+                    $"引用节点不能声明类型参数 {string.Join("、", declaredParameters.Keys)}。"));
             }
 
             if (dto.Model is not null && HasModels(dto.Models))
@@ -152,9 +155,9 @@ static class FlowReader
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于被引用的定义。"));
             }
 
-            if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
+            if (dto.Outputs is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输出端口与系统指令。"));
+                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输出端口。"));
             }
 
             if (useErrors.Count > 0)
@@ -212,25 +215,20 @@ static class FlowReader
         if (dto.Kind is not { } kind)
         {
             return scope.Node(dto.Name ?? string.Empty,
-                $"节点必须声明 Kind，可用类型：{string.Join("、", types.Types.Select(item => item.Value))}。");
+                $"节点必须声明 Kind，可用类型名：{string.Join("、", types.Kinds.Select(item => item.Value))}。");
         }
 
         INodeType? declared = types.Find(kind);
         if (declared is null)
         {
             return scope.Node(dto.Name ?? string.Empty,
-                $"节点类型 {kind} 未注册，可用类型：{string.Join("、", types.Types.Select(item => item.Value))}。");
+                $"节点类型名 {kind} 未注册，可用类型名：{string.Join("、", types.Kinds.Select(item => item.Value))}。");
         }
 
-        NodeTypeName type = declared.Type;
+        NodeKind type = declared.Kind;
         if (declared.Shape.Organizes)
         {
             List<Error> containerErrors = [];
-            if (dto.Prompt is not null)
-            {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Prompt。"));
-            }
-
             if (dto.Mode is not null)
             {
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, $"容器不支持 Mode，收到 {dto.Mode}。"));
@@ -241,10 +239,9 @@ static class FlowReader
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 From。"));
             }
 
-            if (dto.Model is not null || dto.Branch is not null
-                || dto.Tools is { Count: > 0 })
+            if (dto.Model is not null || dto.Branch is not null)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持执行配置。"));
+                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持模型选择与分支。"));
             }
 
             IReadOnlyList<ModelRef>? declaredSlots = null;
@@ -282,19 +279,9 @@ static class FlowReader
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
-            if (dto.SystemPrompt is { Count: > 0 })
-            {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持系统指令。"));
-            }
-
             if (dto.Validate is not null)
             {
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
-            }
-
-            if (dto.Question is not null)
-            {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Question。"));
             }
 
             IReadOnlyList<NodeSpec> children = [];
@@ -327,6 +314,8 @@ static class FlowReader
                 containerErrors.AddRange(outputPorts.ErrorsOrEmptyList);
             }
 
+            INodeParameters? containerParameters = ReadParameters(declared, dto, scope, containerErrors);
+
             if (containerErrors.Count > 0)
             {
                 return containerErrors;
@@ -335,9 +324,10 @@ static class FlowReader
             return new NodeSpec
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
-                Kind = declared.Type,
+                Kind = declared.Kind,
                 Inputs = inputs.Value,
                 ContainerOutputs = outputPorts.Value,
+                Parameters = containerParameters,
                 MaxRuns = dto.MaxRuns,
                 ModelSlots = declaredSlots,
                 Nodes = children,
@@ -367,13 +357,7 @@ static class FlowReader
             leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。"));
         }
 
-        foreach (string toolPath in dto.Tools ?? [])
-        {
-            if (CapabilityPath.InvalidReason(toolPath) is { } reason)
-            {
-                leafErrors.Add(scope.Node(dto.Name ?? string.Empty, reason));
-            }
-        }
+        INodeParameters? leafParameters = ReadParameters(declared, dto, scope, leafErrors);
 
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
@@ -404,7 +388,7 @@ static class FlowReader
         if (declared.Shape.DerivesOutputsFromInputs && dto.Outputs is { Count: > 0 })
         {
             leafErrors.Add(scope.Node(dto.Name ?? string.Empty,
-                $"{declared.Type.Value}节点不声明输出端口，对外端口取自身输入端口。"));
+                $"{declared.Kind.Value}节点不声明输出端口，对外端口取自身输入端口。"));
         }
 
         if (leafErrors.Count > 0)
@@ -425,13 +409,10 @@ static class FlowReader
             Inputs = leafInputs.Value,
             From = parsedFrom.Value,
             Model = ToModel(dto.Model),
+            Parameters = leafParameters,
             Outputs = declared.Shape.DerivesOutputsFromInputs ? ForwardedPorts(leafInputs.Value) : outputs.Value,
-            SystemPrompt = [.. dto.SystemPrompt ?? []],
             Execution = new ExecutableSpec
             {
-                Tools = [.. (dto.Tools ?? []).Select(name => new CapabilityPath(name))],
-                Prompt = dto.Prompt,
-                Question = dto.Question,
                 Mode = leafMode.Value,
                 Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
                 Validate = declaredValidation,
@@ -445,6 +426,25 @@ static class FlowReader
     [
         .. inputs.Select(input => new Port(input.Name, input.Type, input.Description)),
     ];
+
+    /// <summary>读出类型参数段：类型不声明参数时任何键都算未知字段，返回的参数对象随错误一起丢弃。</summary>
+    private static INodeParameters? ReadParameters(INodeType declared, NodeDto dto, NodeScope scope, List<Error> errors)
+    {
+        if (dto.Parameters is not { Count: > 0 } values)
+        {
+            return null;
+        }
+
+        if (declared.Parameters is not { } shape)
+        {
+            errors.Add(scope.Node(dto.Name ?? string.Empty,
+                $"{declared.Kind.Value} 节点不能声明参数 {string.Join("、", values.Keys)}。"));
+
+            return null;
+        }
+
+        return shape.Read(scope, new NodeName(dto.Name ?? string.Empty), values, errors.Add);
+    }
 
     /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>
     private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(Dictionary<string, string>? bindings)

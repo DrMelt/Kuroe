@@ -3,9 +3,9 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.RuntimeGraph;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 namespace Kuroe.Flow.RuntimeNodes;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>一个容器在任务内的运行时对象：容器定义与内容版本。容器不执行、不启动 run，
 /// 内容齐备与内容版本按输入侧方案随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。

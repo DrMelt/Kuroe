@@ -150,12 +150,6 @@ public sealed class FlowRuleTests
                 Models("执行者"))));
 
     [Fact]
-    public void Question_on_text_executable_is_rejected() =>
-        Assert.Equal(
-            [NodeError("干活", "Question 只属于等待外部输入的节点。")],
-            Errors(Flow(Container("整体", Exec("干活", "执行者", new ExecutableSpec { Question = "你想问什么" })), Models("执行者"))));
-
-    [Fact]
     public void Data_and_items_ports_coexist_on_executable() =>
         Assert.Empty(Errors(Flow(
             Container("整体", Text("分析", "执行者") with { Outputs = [P("结论"), WorkItems("拆解")] }),
@@ -483,7 +477,7 @@ public sealed class FlowRuleTests
 
     /// <summary>容器。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
-        new() { Name = new NodeName(name), Kind = NodeTypes.Container, Nodes = [.. members] };
+        new() { Name = new NodeName(name), Kind = BuiltinNodeKinds.Container, Nodes = [.. members] };
 
     /// <summary>执行节点，默认由开始入口触发。</summary>
     private static NodeSpec Text(string name, string model) =>
@@ -494,7 +488,7 @@ public sealed class FlowRuleTests
         new()
         {
             Name = new NodeName(name),
-            Kind = NodeTypes.Executable,
+            Kind = BuiltinNodeKinds.Llm,
             Model = new ModelRef(model),
             Execution = execution,
             From = [StartRef()],

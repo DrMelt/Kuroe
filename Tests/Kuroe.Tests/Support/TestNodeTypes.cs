@@ -12,7 +12,7 @@ internal static class TestNodeTypes
     internal static NodeTypeRegistry Registry()
     {
         NodeTypeRegistry types = new();
-        BuiltinNodeTypes.RegisterInto(types);
+        BuiltinTypeRegistry.RegisterInto(types);
         InputNodeTypes.RegisterInto(types);
         ApprovalNodeTypes.RegisterInto(types);
 

@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 namespace Kuroe.Flow.StaticGraph.Library;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，端口绑定沿作用域链透传。
 /// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
@@ -105,20 +105,22 @@ internal static class NodeExpander
                 errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
             }
 
+            Flow.ExecutableSpec libraryExecution = definition.Execution!;
+
             return new Flow.NodeSpec
             {
                 Name = instance,
                 Kind = definition.Kind,
                 Inputs = definition.Inputs,
-                Execution = definition.Execution with
+                Execution = libraryExecution with
                 {
-                    Validate = node.Validate ?? definition.Execution.Validate,
-                    MaxRuns = ResolveMaxRuns(node.MaxRuns, definition.Execution.MaxRuns, currentLimit),
+                    Validate = node.Validate ?? libraryExecution.Validate,
+                    MaxRuns = ResolveMaxRuns(node.MaxRuns, libraryExecution.MaxRuns, currentLimit),
                 },
                 Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, scope, errors),
                 Outputs = definition.Outputs,
-                SystemPrompt = definition.SystemPrompt,
+                Parameters = definition.Parameters,
             };
         }
 
@@ -139,20 +141,22 @@ internal static class NodeExpander
             };
         }
 
+        Flow.ExecutableSpec execution = node.Execution!;
+
         return new Flow.NodeSpec
         {
             Name = own,
             Kind = node.Kind,
             Inputs = node.Inputs,
-            Execution = node.Execution with
+            Execution = execution with
             {
-                Validate = node.Execution.Validate,
-                MaxRuns = ResolveMaxRuns(node.Execution.MaxRuns, null, currentLimit),
+                Validate = execution.Validate,
+                MaxRuns = ResolveMaxRuns(execution.MaxRuns, null, currentLimit),
             },
             Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
             From = ResolveAll(node.From, env, scope, errors),
             Outputs = node.Outputs,
-            SystemPrompt = node.SystemPrompt,
+            Parameters = node.Parameters,
         };
     }
 
@@ -218,7 +222,7 @@ internal static class NodeExpander
         IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
     {
         Dictionary<Flow.NodeName, Flow.NodeName> renames = [];
-        CollectRenames(container.Nodes, renames, instanceName.Value + ".");
+        CollectRenames(container.Nodes ?? [], renames, instanceName.Value + ".");
 
         return new Env(parent, renames, bindings ?? new Dictionary<Flow.PortName, Flow.PortRef>(), modelSlots);
     }

@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Node.Input;
 public static class InputNodeTypes
 {
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
-    public static NodeTypeName Name { get; } = new("Input");
+    public static NodeKind Name { get; } = new("Input");
 
     /// <summary>把输入类型注册进注册表。</summary>
     public static void RegisterInto(NodeTypeRegistry registry) => registry.Register(new InputNodeType());

@@ -64,8 +64,8 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>按注册表建立节点对象，类型未注册时给出诊断。</summary>
     private NodeRuntime CreateNode(int index)
     {
-        NodeTypeName? type = Graph.DeclaredType(index);
-        INodeType? declared = type is { } name ? Graph.Types.Of(name) : null;
+        NodeKind? kind = Graph.DeclaredKind(index);
+        INodeType? declared = kind is { } name ? Graph.Types.Of(name) : null;
 
         return declared?.Create(Graph.Nodes[index], this)
             ?? throw new InvalidOperationException($"节点 {Graph.Nodes[index].Name} 的类型未注册。");

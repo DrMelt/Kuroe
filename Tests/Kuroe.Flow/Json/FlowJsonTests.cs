@@ -115,13 +115,13 @@ public sealed class FlowJsonTests
     {
         FlowFileDto file = new()
         {
-            Nodes = [new NodeDto { Name = "制定计划", Kind = NodeTypes.Executable.Value }],
+            Nodes = [new NodeDto { Name = "制定计划", Kind = BuiltinNodeKinds.Llm.Value }],
             Flows = [new FlowDto { Name = "默认" }],
         };
 
         string text = JsonSerializer.Serialize(file, FlowJson.WriteOptions.GetTypeInfo(typeof(FlowFileDto)));
 
-        Assert.Contains("\"Kind\": \"Executable\"", text);
+        Assert.Contains("\"Kind\": \"Llm\"", text);
         Assert.Contains("制定计划", text);
         Assert.Contains("\n", text);
         Assert.Contains("  ", text);

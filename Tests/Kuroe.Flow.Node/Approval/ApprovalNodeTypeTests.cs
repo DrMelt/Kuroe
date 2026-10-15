@@ -14,7 +14,7 @@ public sealed class ApprovalNodeTypeTests
     public void Name_is_the_kind_written_in_files()
     {
         Assert.Equal("Approval", ApprovalNodeTypes.Name.Value);
-        Assert.Equal(ApprovalNodeTypes.Name, NodeType.Type);
+        Assert.Equal(ApprovalNodeTypes.Name, NodeType.Kind);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class ApprovalNodeTypeTests
         NodeTypeRegistry registry = new();
         ApprovalNodeTypes.RegisterInto(registry);
 
-        Assert.Equal(ApprovalNodeTypes.Name, registry.Find("approval")?.Type);
+        Assert.Equal(ApprovalNodeTypes.Name, registry.Find("approval")?.Kind);
     }
 
     [Fact]
@@ -64,11 +64,8 @@ public sealed class ApprovalNodeTypeTests
         {
             Model = new ModelRef("规划者"),
             MaxRuns = 3,
-            SystemPrompt = ["指令"],
             Execution = new ExecutableSpec
             {
-                Tools = [new CapabilityPath("shell")],
-                Prompt = "写点什么",
                 Mode = NodeMode.PerItem,
                 Branch = new BranchName("甲"),
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
@@ -77,14 +74,11 @@ public sealed class ApprovalNodeTypeTests
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(8, errors.Length);
+        Assert.Equal(5, errors.Length);
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Tools。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Prompt。"));
         Assert.Contains(errors, error => error.EndsWith("审批节点只能整节点等待批准。"));
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Branch。"));
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Validate。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明系统指令。"));
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 MaxRuns。"));
     }
 

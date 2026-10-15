@@ -19,9 +19,9 @@ public static class TestFlows
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
                 { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
+                { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -44,7 +44,7 @@ public static class TestFlows
                   "Kind": "Container",
                   "Nodes": [
                     { "Name": "用户输入", "Kind": "Input", "Question": "请补充需要的背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
                   ]
                 }
               ]
@@ -79,11 +79,11 @@ public static class TestFlows
                       "Kind": "Container",
                       "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }],
                       "Nodes": [
-                        { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                        { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
                     },
                     { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论" }], "From": [ { "结论": "审查分支@结论" } ] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审阅@结论" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审阅@结论" } ] }
                   ]
                 }
               ]
@@ -127,8 +127,8 @@ public static class TestFlows
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "结论": "计划@结论" } ] }
+                    { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "结论": "计划@结论" } ] }
                   ]
                 }
               ]

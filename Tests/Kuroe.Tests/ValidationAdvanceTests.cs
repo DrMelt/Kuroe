@@ -100,8 +100,8 @@ public sealed class ValidationAdvanceTests
         string flow = $$"""
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "{{predicate}}"{{argumentJson}} } }
+                { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "{{predicate}}"{{argumentJson}} } }
               ] }
             ] } ] }
             """;
@@ -277,9 +277,9 @@ public sealed class ValidationAdvanceTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-                    { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "修订@结论" } ] }
+                    { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+                    { "Name": "交付", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "修订@结论" } ] }
                   ]
                 }
               ]
@@ -291,8 +291,8 @@ public sealed class ValidationAdvanceTests
     private const string BadPredicate = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "Sprout" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "Sprout" } }
           ] }
         ] } ] }
         """";
@@ -300,8 +300,8 @@ public sealed class ValidationAdvanceTests
     private const string NumericPredicate = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "2" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "2" } }
           ] }
         ] } ] }
         """";
@@ -309,8 +309,8 @@ public sealed class ValidationAdvanceTests
     private const string NonEmptyWithArgument = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "NonEmpty", "Argument": "多余" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "NonEmpty", "Argument": "多余" } }
           ] }
         ] } ] }
         """";
@@ -318,8 +318,8 @@ public sealed class ValidationAdvanceTests
     private const string TextAssertMissingArgument = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains" } }
           ] }
         ] } ] }
         """";
@@ -327,8 +327,8 @@ public sealed class ValidationAdvanceTests
     private const string BadPattern = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "Pattern", "Argument": "[" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "Pattern", "Argument": "[" } }
           ] }
         ] } ] }
         """";
@@ -336,8 +336,8 @@ public sealed class ValidationAdvanceTests
     private const string ValidateOnPerItem = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ], "Validate": { "Predicate": "NonEmpty" } }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ], "Validate": { "Predicate": "NonEmpty" } }
           ] }
         ] } ] }
         """";
@@ -345,8 +345,8 @@ public sealed class ValidationAdvanceTests
     private const string OrMissingNode = """"
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "不存在的节点@结论" } ] }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "不存在的节点@结论" } ] }
           ] }
         ] } ] }
         """";
@@ -355,9 +355,9 @@ public sealed class ValidationAdvanceTests
     private const string FromGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "乙@结论" } ] },
-            { "Name": "乙", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [ { "甲": "甲@结论", "乙": "乙@结论" } ] }
+            { "Name": "甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "乙@结论" } ] },
+            { "Name": "乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "汇合", "Kind": "Llm", "Model": "执行者", "From": [ { "甲": "甲@结论", "乙": "乙@结论" } ] }
           ] }
         ] } ] }
         """;
@@ -365,9 +365,9 @@ public sealed class ValidationAdvanceTests
     private const string FreshGateFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-            { "Name": "汇合", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "修订@结论" } ] }
+            { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+            { "Name": "汇合", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "修订@结论" } ] }
           ] }
         ] } ] }
         """;
@@ -377,9 +377,9 @@ public sealed class ValidationAdvanceTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
             { "Name": "汇聚", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "甲@结论" }], "Nodes": [
-              { "Name": "甲", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "目标": "Start@目标" } ] }
+              { "Name": "甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "目标": "Start@目标" } ] }
             ] },
-            { "Name": "闸门", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "汇聚@结论" } ] }
+            { "Name": "闸门", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "汇聚@结论" } ] }
           ] }
         ] } ] }
         """;
@@ -389,10 +389,10 @@ public sealed class ValidationAdvanceTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "修订", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
-              { "Name": "审查", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxRuns": 2, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "审查@结论" } ] }
+              { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "修订", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
+              { "Name": "审查", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxRuns": 2, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }

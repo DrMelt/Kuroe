@@ -68,7 +68,7 @@ public sealed class ContextTests
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "背景": "Start@背景" } ] }
+                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "背景": "Start@背景" } ] }
                 ] }
               ]
             }

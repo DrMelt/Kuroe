@@ -8,11 +8,11 @@ public sealed record NodeSpec
     public required NodeName Name { get; init; }
 
     /// <summary>节点类型名。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
-    public required NodeTypeName? Kind { get; init; }
+    public required NodeKind? Kind { get; init; }
 
     /// <summary>生效的节点类型名：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
-    public NodeTypeName EffectiveKind => Kind
-        ?? throw new InvalidOperationException($"节点 {Name.Value} 没有节点类型，只有展开后的节点树可取生效类型。");
+    public NodeKind EffectiveKind => Kind
+        ?? throw new InvalidOperationException($"节点 {Name.Value} 没有类型名，只有展开后的节点树可取生效类型。");
 
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
@@ -38,8 +38,8 @@ public sealed record NodeSpec
     /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
-    /// <summary>恒定系统指令块：作为系统指令置于请求最前。仅执行节点声明。</summary>
-    public IReadOnlyList<string> SystemPrompt { get; init; } = [];
+    /// <summary>类型专属参数：由节点类型的参数形状读写，展开时随之搬运，引擎只透传。</summary>
+    public INodeParameters? Parameters { get; init; }
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
     public OutputValidation? Validate { get; init; }
@@ -59,6 +59,6 @@ public sealed record NodeSpec
     /// <summary>容器定义声明的模型槽位：成员用 <see cref="Model"/> 写槽位名，引用处用 <see cref="Models"/> 绑定到流程模型选择名，按声明序。只有节点库容器定义声明，装配层内联容器与引用节点为空。</summary>
     public IReadOnlyList<ModelRef>? ModelSlots { get; init; }
 
-    /// <summary>执行配置，非空即执行节点或输入节点，输入节点只用其中的 Question。</summary>
+    /// <summary>执行配置，非空即执行节点或输入节点，只有派发 run 的类型会用到其中的执行方式。</summary>
     public ExecutableSpec? Execution { get; init; }
 }

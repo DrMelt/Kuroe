@@ -1,17 +1,9 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
-/// <summary>执行配置：执行节点带有的能力声明。模型选择由节点自身的 Model 引用承载。</summary>
+/// <summary>执行配置：执行节点的执行方式与产出校验声明。模型选择由节点自身的 Model 引用承载，
+/// 能力与措辞等类型专属声明由节点参数承载。</summary>
 public sealed record ExecutableSpec
 {
-    /// <summary>能力白名单，按能力路径前缀匹配，写上级路径即放行整棵子树。未写或空时不给出任何能力。</summary>
-    public IReadOnlyList<CapabilityPath> Tools { get; init; } = [];
-
-    /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
-    public string? Prompt { get; init; }
-
-    /// <summary>输入节点的提示文本，控制台呈现给用户，未写时用通用提示。</summary>
-    public string? Question { get; init; }
-
     /// <summary>整节点一个执行还是按条目各派一个。</summary>
     public NodeMode Mode { get; init; } = NodeMode.Single;
 

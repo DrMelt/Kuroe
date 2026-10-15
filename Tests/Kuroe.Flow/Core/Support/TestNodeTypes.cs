@@ -10,7 +10,7 @@ internal static class TestNodeTypes
     internal static NodeTypeRegistry Builtin()
     {
         NodeTypeRegistry types = new();
-        BuiltinNodeTypes.RegisterInto(types);
+        BuiltinTypeRegistry.RegisterInto(types);
 
         return types;
     }

@@ -14,9 +14,9 @@ public sealed class NodePathTests
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Executable", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "制定计划", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] },
               { "Name": "文档组", "Kind": "Container", "Nodes": [
-                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
+                { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
               ] }
             ] }
           ] } ]
@@ -27,7 +27,7 @@ public sealed class NodePathTests
     private const string RootExecutableFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "直接执行", "Kind": "Executable", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "直接执行", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
           ] } ]
         }
         """;

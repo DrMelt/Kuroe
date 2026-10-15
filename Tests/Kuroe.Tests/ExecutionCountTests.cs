@@ -118,8 +118,8 @@ public sealed class ExecutionCountTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "计划", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ] }
+                    { "Name": "计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划@拆分" } ] }
                   ]
                 }
               ]
@@ -141,7 +141,7 @@ public sealed class ExecutionCountTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                    { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]
@@ -163,8 +163,8 @@ public sealed class ExecutionCountTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "上游", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "下游", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "上游@结论" } ] }
+                    { "Name": "上游", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "下游", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "上游@结论" } ] }
                   ]
                 }
               ]

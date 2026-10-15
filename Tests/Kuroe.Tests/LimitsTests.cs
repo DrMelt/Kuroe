@@ -37,8 +37,8 @@ public sealed class LimitsTests
         const string flow = """
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "接收", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "来源@结论" } ] }
+                { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "接收", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "来源@结论" } ] }
               ] }
             ] } ] }
             """;

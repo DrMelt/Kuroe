@@ -8,10 +8,13 @@ namespace Kuroe.Flow.Shared.StaticGraph;
 public interface INodeType
 {
     /// <summary>类型名，与文件里 Kind 的取值对应。</summary>
-    NodeTypeName Type { get; }
+    NodeKind Kind { get; }
 
     /// <summary>静态形状。</summary>
     NodeTypeShape Shape { get; }
+
+    /// <summary>类型参数的文件形状，不声明参数的类型为空。</summary>
+    INodeParameterJson? Parameters => null;
 
     /// <summary>类型规则：形状落地后仍要成立的不变量，逐条经 fail 报出。与类型无关的规则不在其中。</summary>
     void Validate(NodeSpec node, NodeScope scope, Action<Error> fail);

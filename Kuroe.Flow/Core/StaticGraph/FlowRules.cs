@@ -2,9 +2,9 @@ using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph.Library;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 namespace Kuroe.Flow.StaticGraph;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>流程模板的校验规则。任务推进依赖这些不变量成立，加载与导入时逐条校验。
 /// 一条流程内的错误一次给全。</summary>
@@ -663,7 +663,7 @@ static class FlowRules
             }
 
             if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems
-                && edge.Kind != EdgeKind.Split
+                && edge.Role != EdgeKind.Split
                 && edge.Type != Flow.PortType.Signal)
             {
                 errors.Add(scope.Node(target.Name.Value, "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"));
@@ -693,7 +693,7 @@ static class FlowRules
             }
 
             int splitSources = graph.Incoming(executable.Index)
-                .Where(edge => edge.Kind == EdgeKind.Split)
+                .Where(edge => edge.Role == EdgeKind.Split)
                 .Select(edge => edge.Source)
                 .Distinct()
                 .Count();
@@ -703,7 +703,7 @@ static class FlowRules
             }
 
             bool expandable = graph.Incoming(executable.Index).Any(edge =>
-                edge.Kind == EdgeKind.Split || edge.Scope == FeedScope.Item);
+                edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item);
             if (!expandable)
             {
                 // 容器来源只供整份上下文，不提供实例集，单独出现时节点永远无法展开
@@ -720,7 +720,7 @@ static class FlowRules
     private static void CheckGroupSources(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (IGrouping<(int Target, int Source, PortName SourcePort), FlowEdge> group in graph.Edges
-            .Where(edge => edge.Kind != EdgeKind.Split)
+            .Where(edge => edge.Role != EdgeKind.Split)
             .GroupBy(edge => (edge.Target, edge.Source, edge.SourcePort)))
         {
             if (group.Select(edge => edge.Group).Distinct().Count() < 2
@@ -823,7 +823,7 @@ static class FlowRules
             outgoing[index] = [];
         }
 
-        foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Kind == EdgeKind.Split || edge.Scope == FeedScope.Item))
+        foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item))
         {
             foreach (int source in graph.ExecutablesIn(edge.Source))
             {

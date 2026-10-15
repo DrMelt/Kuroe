@@ -92,11 +92,11 @@ public sealed class ModelResolutionTests
         Index = 1,
         Name = new NodeName("干活"),
         Path = new NodePath([new NodeName("干活")]),
-        Kind = NodeTypes.Executable,
+        Kind = BuiltinNodeKinds.Llm,
         Execution = new ExecutableSpec(),
         Model = model,
         Outputs = [],
-        SystemPrompt = [],
+        Parameters = null,
         MaxRuns = ExecutableNode.DefaultMaxRuns,
     };
 }

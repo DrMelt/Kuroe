@@ -45,7 +45,7 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
             List<BranchName> branches = [];
             foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
             {
-                if (edge.Kind == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } branch })
+                if (edge.Role == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } branch })
                 {
                     branches.Add(branch);
                 }

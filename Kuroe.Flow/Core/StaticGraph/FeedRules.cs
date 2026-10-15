@@ -22,7 +22,7 @@ public static class FeedRules
                 _ => (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat),
             },
             // 图上的来源只有开始、容器与执行节点三类，此分支不可达
-            _ => throw new ArgumentException($"不支持的来源节点类型：{source.GetType().Name}"),
+            _ => throw new ArgumentException($"不支持的来源节点形态：{source.GetType().Name}"),
         };
 
     /// <summary>来源端口声明的类型，未声明时按 Text。</summary>

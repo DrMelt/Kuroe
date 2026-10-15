@@ -358,7 +358,7 @@ public sealed class CommandRouteTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "唯一步骤", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                    { "Name": "唯一步骤", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
                   ]
                 }
               ]

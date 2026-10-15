@@ -3,6 +3,7 @@ using Kuroe.Cli.Views;
 using Kuroe.Configuration;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 using Spectre.Console;
@@ -179,15 +180,16 @@ internal sealed class FlowCommands(
 
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
+        LlmParameters? parameters = NodeParameterView.Llm(node.Parameters);
         List<string> parts = [];
         if (executable.Branch is { } branch)
         {
             parts.Add($"分支 {branch}");
         }
 
-        if (executable.Tools.Count > 0)
+        if (parameters?.Tools is { Count: > 0 } tools)
         {
-            parts.Add($"工具 {string.Join("、", executable.Tools)}");
+            parts.Add($"工具 {string.Join("、", tools)}");
         }
 
         if (node.Inputs.Count > 0)
@@ -200,9 +202,9 @@ internal sealed class FlowCommands(
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
-        if (executable.Question is { Length: > 0 })
+        if (NodeParameterView.Question(node.Parameters) is { Length: > 0 } question)
         {
-            parts.Add($"提问 {executable.Question}");
+            parts.Add($"提问 {question}");
         }
 
         if (node.Outputs.Count > 0)
@@ -210,9 +212,9 @@ internal sealed class FlowCommands(
             parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
         }
 
-        if (node.SystemPrompt.Count > 0)
+        if (parameters?.SystemPrompt is { Count: > 0 } blocks)
         {
-            parts.Add($"系统指令 {node.SystemPrompt.Count} 块");
+            parts.Add($"系统指令 {blocks.Count} 块");
         }
 
         return parts.Count == 0 ? "—" : string.Join("；", parts);

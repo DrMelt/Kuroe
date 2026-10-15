@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.StaticGraph;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 namespace Kuroe.Flow.StaticGraph;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>把流程树编译成执行视图：开始登记为序号 0 的唯一来源，节点按先根序统一编号，容器登记成员与子容器，
 /// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
@@ -148,7 +148,7 @@ internal static class FlowCompiler
         }
 
         path.Add(node.Name);
-        foreach (Flow.NodeSpec child in node.Nodes)
+        foreach (Flow.NodeSpec child in node.Nodes ?? [])
         {
             SecondPass(child, models, nodes, byName, containers, dependencies, path, container);
         }
@@ -169,7 +169,7 @@ internal static class FlowCompiler
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
             Outputs = node.Outputs,
-            SystemPrompt = node.SystemPrompt,
+            Parameters = node.Parameters,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
         };
 

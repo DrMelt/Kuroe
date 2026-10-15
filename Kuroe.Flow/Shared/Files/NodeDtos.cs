@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph;
 namespace Kuroe.Flow.Shared.Files;
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
-/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，字段允许集合由节点类型决定。</summary>
+/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，结构字段在此固定，类型专属字段落在参数段。</summary>
 public sealed class NodeDto
 {
     /// <summary>节点名：库定义名或装配实例名。</summary>
@@ -17,18 +17,9 @@ public sealed class NodeDto
     /// <summary>引用的节点库定义名。</summary>
     public string? Use { get; set; }
 
-    /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
-    public string? Prompt { get; set; }
-
-    /// <summary>等待外部输入时的提示文本。</summary>
-    public string? Question { get; set; }
-
     /// <summary>节点输出端口表：条目形状由节点类型决定。执行节点与输入节点写 Name 与 Type；
     /// 容器写 Name 与 Ref，Ref 写 成员@端口。</summary>
     public List<JsonElement>? Outputs { get; set; }
-
-    /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
-    public List<string>? SystemPrompt { get; set; }
 
     /// <summary>上游启动组：数组元素是一个组，组内是输入端口名到来源端口引用的映射，值写 @端口 或 来源@端口。
     /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 FlowRules 校验。</summary>
@@ -53,14 +44,15 @@ public sealed class NodeDto
     /// <summary>模型槽位：容器定义写槽位名数组声明，引用节点组写槽位名到本流程模型选择名的对象绑定。</summary>
     public JsonElement? Models { get; set; }
 
-    /// <summary>能力工具白名单，按工具路径前缀匹配，写上级路径即放行整棵子树。未写或空时不给出任何能力工具。</summary>
-    public List<string>? Tools { get; set; }
-
     /// <summary>执行节点模式的名字：Single、PerItem。</summary>
     public string? Mode { get; set; }
 
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
     public string? Branch { get; set; }
+
+    /// <summary>节点类型的参数段：键为类型声明的参数名。读侧由类型的参数形状消费，未被消费的键按未知字段报出。</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Parameters { get; set; }
 
     /// <summary>子节点，非空即容器。</summary>
     public List<NodeDto>? Nodes { get; set; }

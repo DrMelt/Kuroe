@@ -3,10 +3,11 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Flow.Tests;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>任务快照的派生属性：任务进度与执行节点顺位。</summary>
 public sealed class SnapshotTests
@@ -55,11 +56,11 @@ public sealed class SnapshotTests
         new NodeSpec
         {
             Name = new NodeName("整体"),
-            Kind = NodeTypes.Container,
+            Kind = BuiltinNodeKinds.Container,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Kind = NodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Name = new NodeName("实施"), Kind = NodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("制定计划"), Kind = BuiltinNodeKinds.Llm, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("实施"), Kind = BuiltinNodeKinds.Llm, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
@@ -76,11 +77,11 @@ public sealed class SnapshotTests
             Index = 1,
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
-            Kind = NodeTypes.Executable,
+            Kind = BuiltinNodeKinds.Llm,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
-            SystemPrompt = [],
+            Parameters = null,
             MaxRuns = 100,
         },
         new ExecutableNode
@@ -88,11 +89,11 @@ public sealed class SnapshotTests
             Index = 2,
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
-            Kind = NodeTypes.Executable,
+            Kind = BuiltinNodeKinds.Llm,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
-            SystemPrompt = [],
+            Parameters = null,
             MaxRuns = 100,
         },
     ], [], TestNodeTypes.Builtin());

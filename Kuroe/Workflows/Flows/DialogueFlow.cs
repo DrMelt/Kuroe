@@ -1,5 +1,6 @@
 using Kuroe.Flow.Node.Input;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.StaticGraph.Types;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -48,7 +49,7 @@ internal static class DialogueFlow
         new NodeSpec
         {
             Name = new NodeName("对话"),
-            Kind = NodeTypes.Container,
+            Kind = BuiltinNodeKinds.Container,
             Nodes =
             [
                 new NodeSpec
@@ -61,7 +62,8 @@ internal static class DialogueFlow
                         // 回复输入只作回边的触发，不消费回话产出，回复内容由 run 结果交给调用方
                         new InputPort(ReplyPort, PortType.Signal),
                     ],
-                    Execution = new ExecutableSpec
+                    Execution = new ExecutableSpec(),
+                    Parameters = new InputParameters
                     {
                         Question = "请输入",
                     },
@@ -78,12 +80,13 @@ internal static class DialogueFlow
                 new NodeSpec
                 {
                     Name = ReplyNodeName,
-                    Kind = NodeTypes.Executable,
+                    Kind = BuiltinNodeKinds.Llm,
                     Inputs = [new InputPort(InputPort, PortType.Text)],
-                    SystemPrompt = SystemPrompt,
-                    Execution = new ExecutableSpec
+                    Execution = new ExecutableSpec(),
+                    Parameters = new LlmParameters
                     {
                         Tools = Tools,
+                        SystemPrompt = SystemPrompt,
                     },
                     Model = RuntimeModel,
                     Outputs = [new Port(ReplyPort, PortType.Text)],

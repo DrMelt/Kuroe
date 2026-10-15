@@ -2,9 +2,9 @@ using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 namespace Kuroe.Flow.StaticGraph.Library;
+
+using Flow = Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeExpander 里进行。</summary>
 internal static class NodeLibraryRules
@@ -40,7 +40,7 @@ internal static class NodeLibraryRules
         node.Kind is { } kind ? types.Of(kind)?.Shape : null;
 
     /// <summary>节点类型名，未声明类型的节点为空。</summary>
-    private static string TypeName(NodeSpec node) =>
+    private static string KindName(NodeSpec node) =>
         node.Kind is { } kind ? kind.Value : string.Empty;
 
     private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(
@@ -111,11 +111,6 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。"));
                 }
 
-                if (node.SystemPrompt.Count > 0)
-                {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不是执行节点，不声明系统指令。"));
-                }
-
                 if (node.Validate is not null)
                 {
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明 Validate，输出校验只属于执行节点。"));
@@ -143,7 +138,7 @@ internal static class NodeLibraryRules
                     if (node.Model is not null)
                     {
                         errors.Add(NodeScope.Library.Node(node.Name.Value,
-                            $"{TypeName(node)}成员不启动 run，不声明模型槽位。"));
+                            $"{KindName(node)}成员不启动 run，不声明模型槽位。"));
                     }
                 }
                 else
@@ -214,10 +209,9 @@ internal static class NodeLibraryRules
     {
         NodeInterfaceRules.Check(node, ShapeOf(node, types), message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
 
-        if ((node.Execution is null || ShapeOf(node, types) is { DispatchesRuns: false })
-            && (node.Outputs.Count > 1 || node.SystemPrompt.Count > 0))
+        if ((node.Execution is null || ShapeOf(node, types) is { DispatchesRuns: false }) && node.Outputs.Count > 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "非执行节点最多一个输出端口，也不能声明系统指令。"));
+            errors.Add(NodeScope.Library.Node(node.Name.Value, "非执行节点最多一个输出端口。"));
         }
     }
 
@@ -603,7 +597,7 @@ internal static class NodeLibraryRules
                 if (member.Model is not null)
                 {
                     errors.Add(NodeScope.Library.Node(member.Name.Value,
-                        $"引用{TypeName(referenced)}成员的节点不声明模型槽位。"));
+                        $"引用{KindName(referenced)}成员的节点不声明模型槽位。"));
                 }
 
                 return;
@@ -614,7 +608,7 @@ internal static class NodeLibraryRules
             if (member.Model is not null)
             {
                 errors.Add(NodeScope.Library.Node(member.Name.Value,
-                    $"{TypeName(member)}成员不启动 run，不声明模型槽位。"));
+                    $"{KindName(member)}成员不启动 run，不声明模型槽位。"));
             }
 
             return;

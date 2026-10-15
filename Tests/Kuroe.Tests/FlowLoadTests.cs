@@ -5,6 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.StaticGraph.Library;
+using Kuroe.Tests.Support;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
@@ -27,7 +28,31 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Container_prompt_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 容器：容器节点不是执行节点，不支持 Prompt。"], Errors(ContainerPrompt));
+        Assert.Equal(["流程 默认 的节点 容器：Container 节点不能声明参数 Prompt。"], Errors(ContainerPrompt));
+
+    [Fact]
+    public void Llm_question_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 规划：字段 Question 不属于 Llm 节点。"], Errors(QuestionOnLlm));
+
+    [Fact]
+    public void Field_outside_the_kind_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 规划：字段 备注 不属于 Llm 节点。"], Errors(FieldOutsideKind));
+
+    [Fact]
+    public void Parameter_name_is_case_sensitive() =>
+        Assert.Equal(["流程 默认 的节点 规划：字段 PROMPT 不属于 Llm 节点。"], Errors(CaseSensitiveParameterName));
+
+    [Fact]
+    public void Tools_parameter_must_be_a_text_array() =>
+        Assert.Equal(["流程 默认 的节点 规划：字段 Tools 必须是文本数组。"], Errors(ToolsNotArray));
+
+    [Fact]
+    public void Input_question_parameter_must_be_text() =>
+        Assert.Equal(["流程 默认 的节点 收集：字段 Question 必须是文本。"], Errors(InputQuestionNotText));
+
+    [Fact]
+    public void Llm_system_prompt_block_must_not_be_blank() =>
+        Assert.Equal(["流程 默认 的节点 规划：系统指令块不能为空。"], Errors(BlankSystemPromptBlock));
 
     [Fact]
     public void Container_mode_is_rejected() =>
@@ -35,11 +60,11 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Node_without_kind_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型：Executable、Container、Input、Approval。"], Errors(NodeWithoutKind));
+        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型名：Llm、Container、Input、Approval。"], Errors(NodeWithoutKind));
 
     [Fact]
     public void Node_with_unregistered_kind_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：节点类型 Bogus 未注册，可用类型：Executable、Container、Input、Approval。"], Errors(NodeWithUnknownKind));
+        Assert.Equal(["流程 默认 的节点 实施：节点类型名 Bogus 未注册，可用类型名：Llm、Container、Input、Approval。"], Errors(NodeWithUnknownKind));
 
     [Fact]
     public void Reference_node_with_kind_is_rejected() =>
@@ -51,7 +76,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Executable_with_children_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 整体：Executable 节点不能声明子节点，子节点只属于容器。"], Errors(ExecutableWithChildren));
+        Assert.Equal(["流程 默认 的节点 整体：Llm 节点不能声明子节点，子节点只属于容器。"], Errors(ExecutableWithChildren));
 
     [Fact]
     public void Input_node_with_non_data_port_is_rejected() =>
@@ -67,7 +92,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Reference_node_with_outputs_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 分析：引用节点不能声明输出端口与系统指令。"], Errors(ReferenceWithOutputs));
+        Assert.Equal(["流程 默认 的节点 分析：引用节点不能声明输出端口。"], Errors(ReferenceWithOutputs));
 
     [Fact]
     public void Input_type_out_of_domain_is_rejected() =>
@@ -105,10 +130,39 @@ public sealed class FlowLoadTests
             store.Save(FlowWriter.ToDto(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
             string once = File.ReadAllText(file);
 
+            Assert.Contains("\"Prompt\": \"拆一下\"", once);
+            Assert.Contains("\"SystemPrompt\": [", once);
+
             var (Nodes, Flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
             store.Save(FlowWriter.ToDto(Nodes, Flows, TestNodeTypes.Registry())).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>类型参数段的字段随写出回到文件：能力白名单与等待型节点的提问。</summary>
+    [Fact]
+    public void Parameters_survive_a_write_read_round_trip()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"kuroe-params-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        string file = Path.Combine(root, "flows.json");
+        File.WriteAllText(file, TestFlows.ReviewPerItemFlow);
+        try
+        {
+            FlowStore store = new(file, root);
+
+            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
+            store.Save(FlowWriter.ToDto(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
+            string text = File.ReadAllText(file);
+
+            Assert.Contains("\"Tools\": [", text);
+            Assert.Contains("\"Question\": \"确认计划\"", text);
         }
         finally
         {
@@ -221,7 +275,7 @@ public sealed class FlowLoadTests
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "干活", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
                 ] }
               ]
             }
@@ -233,7 +287,7 @@ public sealed class FlowLoadTests
     private const string NodeOutputWithValue = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "干活", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定" }], "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定" }], "From": [ { "目标": "Start@目标" } ] }
           ] }
         ] } ] }
         """;
@@ -244,29 +298,71 @@ public sealed class FlowLoadTests
 
     private const string MultipleRootNodes = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "实施", "Kind": "Executable", "Model": "执行者" },
-          { "Name": "收尾", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
+          { "Name": "实施", "Kind": "Llm", "Model": "执行者" },
+          { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
         ] } ] }
         """;
 
     private const string BadNodeMode = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-          { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Mode": "PerItemm" }
+          { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Mode": "PerItemm" }
           ] }
         ] } ] }
         """;
 
     private const string ContainerPrompt = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "容器", "Kind": "Container", "Prompt": "不落地的提示", "Nodes": [ { "Name": "规划", "Kind": "Executable", "Model": "规划者" } ] }
+          { "Name": "容器", "Kind": "Container", "Prompt": "不落地的提示", "Nodes": [ { "Name": "规划", "Kind": "Llm", "Model": "规划者" } ] }
+        ] } ] }
+        """;
+
+    private const string FieldOutsideKind = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "规划", "Kind": "Llm", "Model": "规划者", "备注": "随手加的" }
+        ] } ] }
+        """;
+
+    private const string QuestionOnLlm = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "规划", "Kind": "Llm", "Model": "规划者", "Question": "你想问什么" }
+        ] } ] }
+        """;
+
+    /// <summary>参数名按原文精确匹配，大小写变体按未知字段报出。</summary>
+    private const string CaseSensitiveParameterName = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "规划", "Kind": "Llm", "Model": "规划者", "PROMPT": "写点什么" }
+        ] } ] }
+        """;
+
+    /// <summary>Tools 参数写成文本，形状不符报出。</summary>
+    private const string ToolsNotArray = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "规划", "Kind": "Llm", "Model": "规划者", "Tools": "GetLocalTime" }
+        ] } ] }
+        """;
+
+    /// <summary>Question 参数写成数字，形状不符报出。</summary>
+    private const string InputQuestionNotText = """
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "收集", "Kind": "Input", "Question": 3 }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>SystemPrompt 参数含空白块，报出空块。</summary>
+    private const string BlankSystemPromptBlock = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "规划者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "规划", "Kind": "Llm", "Model": "规划者", "SystemPrompt": ["  "] }
         ] } ] }
         """;
 
     private const string ContainerModeRejected = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "实施", "Kind": "Container", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Kind": "Executable", "Model": "执行者" } ] }
+            "Nodes": [ { "Name": "撰写", "Kind": "Llm", "Model": "执行者" } ] }
         ] } ] }
         """;
 
@@ -287,10 +383,10 @@ public sealed class FlowLoadTests
         """;
 
     private const string ReferenceNodeWithKind = """
-        { "Nodes": [ { "Name": "执行", "Kind": "Executable" } ],
+        { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "实施", "Kind": "Executable", "Use": "执行", "Model": "执行者" }
+              { "Name": "实施", "Kind": "Llm", "Use": "执行", "Model": "执行者" }
             ] }
           ] } ] }
         """;
@@ -303,8 +399,8 @@ public sealed class FlowLoadTests
 
     private const string ExecutableWithChildren = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Executable", "Nodes": [
-            { "Name": "实施", "Kind": "Executable", "Model": "执行者" }
+          { "Name": "整体", "Kind": "Llm", "Nodes": [
+            { "Name": "实施", "Kind": "Llm", "Model": "执行者" }
           ] }
         ] } ] }
         """;
@@ -320,8 +416,8 @@ public sealed class FlowLoadTests
     private const string ExecutionWithIn = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "准备", "Kind": "Executable", "Model": "执行者" },
-            { "Name": "实施", "Kind": "Executable", "Model": "执行者", "In": { "计划": "准备" } }
+            { "Name": "准备", "Kind": "Llm", "Model": "执行者" },
+            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "In": { "计划": "准备" } }
           ] }
         ] } ] }
         """;
@@ -330,13 +426,13 @@ public sealed class FlowLoadTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
             { "Name": "收集", "Kind": "Input", "In": { "计划": "准备" } },
-            { "Name": "准备", "Kind": "Executable", "Model": "执行者" }
+            { "Name": "准备", "Kind": "Llm", "Model": "执行者" }
           ] }
         ] } ] }
         """;
 
     private const string ReferenceWithOutputs = """
-        { "Nodes": [ { "Name": "分析库", "Kind": "Executable" } ],
+        { "Nodes": [ { "Name": "分析库", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "分析", "Use": "分析库", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] }
@@ -347,8 +443,8 @@ public sealed class FlowLoadTests
     private const string InputTypeOutOfDomain = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
-            { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Bogus" }], "From": [ { "结论": "准备@结论" } ] }
+            { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
+            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Bogus" }], "From": [ { "结论": "准备@结论" } ] }
           ] }
         ] } ] }
         """;
@@ -356,15 +452,15 @@ public sealed class FlowLoadTests
     private const string OutputTypeOutOfDomain = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Bogus" }] },
-            { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "准备@结论" } ] }
+            { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Bogus" }] },
+            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "准备@结论" } ] }
           ] }
         ] } ] }
         """;
 
     private const string ContainerOutPortMissing = """
         { "Nodes": [
-            { "Name": "允许工具", "Kind": "Executable", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
+            { "Name": "允许工具", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
             {
               "Name": "交付",
               "Kind": "Container",
@@ -376,7 +472,7 @@ public sealed class FlowLoadTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
-              { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": [ { "不存在": "交付@不存在" } ] }
+              { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "不存在": "交付@不存在" } ] }
             ] }
           ] } ]
         }
@@ -384,7 +480,7 @@ public sealed class FlowLoadTests
 
     private const string ContainerOutCrossContainer = """
         { "Nodes": [
-            { "Name": "允许工具", "Kind": "Executable", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
+            { "Name": "允许工具", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
             {
               "Name": "交付",
               "Kind": "Container",
@@ -396,7 +492,7 @@ public sealed class FlowLoadTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
-              { "Name": "复盘", "Kind": "Executable", "Model": "执行者", "From": [ { "结论": "交付.实施@结论" } ] }
+              { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "交付.实施@结论" } ] }
             ] }
           ] } ]
         }
@@ -404,7 +500,7 @@ public sealed class FlowLoadTests
 
     private const string ReferenceContainerFrom = """
         {
-          "Nodes": [ { "Name": "组", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "做", "Kind": "Executable", "Model": "执行者" } ] } ],
+          "Nodes": [ { "Name": "组", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "做", "Kind": "Llm", "Model": "执行者" } ] } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "组实例", "Use": "组", "Models": { "执行者": "执行者" }, "From": [ { "做": "做@结论" } ] }
@@ -428,8 +524,8 @@ public sealed class FlowLoadTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Prompt": "拆分条目。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "拆分条目。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
                   ]
                 }
               ]
@@ -453,8 +549,8 @@ public sealed class FlowLoadTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
                   ]
                 }
               ]
@@ -467,7 +563,7 @@ public sealed class FlowLoadTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
             { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
-            { "Name": "回话", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
+            { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
           ] }
         ] } ] }
         """;
@@ -483,7 +579,7 @@ public sealed class FlowLoadTests
               "Inputs": [{ "Name": "计划", "Description": "待实施的条目拆分" }],
               "Outputs": [{ "Name": "结论", "Ref": "分析@结论", "Description": "透出的结论" }],
               "Nodes": [
-                { "Name": "分析", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Description": "最终结论" }], "From": [ { "计划": "@计划" } ] }
+                { "Name": "分析", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Description": "最终结论" }], "From": [ { "计划": "@计划" } ] }
               ]
             }
           ],
@@ -509,10 +605,10 @@ public sealed class FlowLoadTests
             { "Name": "默认", "Description": "结构覆盖", "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [ { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [
-                { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "规划", "Kind": "Executable", "Model": "执行者", "Prompt": "拆一下", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "规划@拆分" } ] },
-                { "Name": "收尾", "Kind": "Executable", "Model": "执行者",
+                { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "规划", "Kind": "Llm", "Model": "执行者", "Prompt": "拆一下", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "规划@拆分" } ] },
+                { "Name": "收尾", "Kind": "Llm", "Model": "执行者",
                   "Inputs": [{ "Name": "结论" }, { "Name": "信号", "Type": "Signal" }],
                   "From": [ { "结论": "准备@结论", "信号": "准备@结论" } ] }
               ] } ] }
@@ -524,7 +620,7 @@ public sealed class FlowLoadTests
     private const string SurroundingSpacesFlowName = """
         { "Flows": [ { "Name": "  默认 ", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "分析", "Kind": "Executable", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "分析", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
           ] }
         ] } ] }
         """;

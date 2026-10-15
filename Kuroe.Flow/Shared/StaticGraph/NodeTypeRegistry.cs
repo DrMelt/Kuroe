@@ -10,7 +10,7 @@ public sealed class NodeTypeRegistry
     /// <summary>注册一个类型，同名覆盖。同名注册在原位替换，类型序不变。</summary>
     public void Register(INodeType type)
     {
-        int existing = _ordered.FindIndex(entry => string.Equals(entry.Type.Value, type.Type.Value, StringComparison.OrdinalIgnoreCase));
+        int existing = _ordered.FindIndex(entry => string.Equals(entry.Kind.Value, type.Kind.Value, StringComparison.OrdinalIgnoreCase));
         if (existing >= 0)
         {
             _ordered[existing] = type;
@@ -20,15 +20,15 @@ public sealed class NodeTypeRegistry
             _ordered.Add(type);
         }
 
-        _byName[type.Type.Value] = type;
+        _byName[type.Kind.Value] = type;
     }
 
     /// <summary>按文件里写的名字取类型，名字不区分大小写，未注册时为空。</summary>
     public INodeType? Find(string name) => _byName.GetValueOrDefault(name);
 
     /// <summary>按类型名取类型，未注册时为空。</summary>
-    public INodeType? Of(NodeTypeName type) => _byName.GetValueOrDefault(type.Value);
+    public INodeType? Of(NodeKind kind) => _byName.GetValueOrDefault(kind.Value);
 
     /// <summary>已注册的类型名，按注册序。</summary>
-    public IReadOnlyList<NodeTypeName> Types => [.. _ordered.Select(type => type.Type)];
+    public IReadOnlyList<NodeKind> Kinds => [.. _ordered.Select(type => type.Kind)];
 }

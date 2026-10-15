@@ -62,16 +62,16 @@ public sealed class NodeGraph : INodeGraph
     public NodeTypeRegistry Types { get; }
 
     /// <summary>节点声明的类型名，开始没有类型。</summary>
-    public NodeTypeName? DeclaredType(int index) => Nodes[index] switch
+    public NodeKind? DeclaredKind(int index) => Nodes[index] switch
     {
         ExecutableNode executable => executable.Kind,
-        ContainerNode => NodeTypes.Container,
+        ContainerNode => BuiltinNodeKinds.Container,
         _ => null,
     };
 
     /// <summary>节点类型的形状，开始与未注册的类型为空。</summary>
     public NodeTypeShape? ShapeOf(int index) =>
-        DeclaredType(index) is { } type ? Types.Of(type)?.Shape : null;
+        DeclaredKind(index) is { } type ? Types.Of(type)?.Shape : null;
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
@@ -153,7 +153,7 @@ public sealed class NodeGraph : INodeGraph
         IReadOnlyList<int> alignedSources =
         [
             .. incoming
-                .Where(edge => edge.Kind == EdgeKind.Value && edge.Scope == FeedScope.Item)
+                .Where(edge => edge.Role == EdgeKind.Value && edge.Scope == FeedScope.Item)
                 .Select(edge => edge.Source)
                 .Distinct(),
         ];
@@ -204,11 +204,11 @@ public sealed class NodeGraph : INodeGraph
     };
 
     private static InputBinding BindingOf(FlowEdge edge) =>
-        new(edge.Kind, edge.Source, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
+        new(edge.Role, edge.Source, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
 
     /// <summary>入边里提供拆分空间的空间边来源，没有时为空。</summary>
     private static int? SplitSource(IReadOnlyList<FlowEdge> incoming) =>
-        incoming.FirstOrDefault(edge => edge.Kind == EdgeKind.Split)?.Source;
+        incoming.FirstOrDefault(edge => edge.Role == EdgeKind.Split)?.Source;
 
     /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环合法性校验。</summary>
     public IReadOnlyList<int[]> Loops()

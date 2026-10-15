@@ -14,7 +14,7 @@ public sealed class InputNodeTypeTests
     public void Name_is_the_kind_written_in_files()
     {
         Assert.Equal("Input", InputNodeTypes.Name.Value);
-        Assert.Equal(InputNodeTypes.Name, NodeType.Type);
+        Assert.Equal(InputNodeTypes.Name, NodeType.Kind);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class InputNodeTypeTests
         NodeTypeRegistry registry = new();
         InputNodeTypes.RegisterInto(registry);
 
-        Assert.Equal(InputNodeTypes.Name, registry.Find("input")?.Type);
+        Assert.Equal(InputNodeTypes.Name, registry.Find("input")?.Kind);
     }
 
     [Fact]
@@ -48,27 +48,21 @@ public sealed class InputNodeTypeTests
     {
         NodeSpec node = Node(new ExecutableSpec
         {
-            Tools = [new CapabilityPath("shell")],
-            Prompt = "写点什么",
             Mode = NodeMode.PerItem,
             Branch = new BranchName("甲"),
             Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
         }) with
         {
             Model = new ModelRef("规划者"),
-            SystemPrompt = ["指令"],
         };
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(7, errors.Length);
+        Assert.Equal(4, errors.Length);
         Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Tools。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Prompt。"));
         Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Validate。"));
         Assert.Contains(errors, error => error.EndsWith("输入节点只能整节点等待用户输入。"));
         Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Branch。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明系统指令。"));
     }
 
     [Fact]

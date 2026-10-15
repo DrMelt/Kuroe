@@ -6,7 +6,7 @@ using Kuroe.Flow.Shared.Files;
 namespace Kuroe.Flow.Json;
 
 /// <summary>流程文件的 JSON 绑定。读法由源生成固定，本上下文的写侧选项只改缩进与转义，
-/// 字段是否写出由 DTO 上的特性决定。文件里出现未定义字段即拒绝，去掉的字段不会被静默忽略。</summary>
+/// 字段是否写出由 DTO 上的特性决定。节点之外的未定义字段被拒绝，节点对象里类型不承认的字段由节点类型的参数形状报出。</summary>
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip,
