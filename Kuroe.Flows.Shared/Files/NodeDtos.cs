@@ -2,17 +2,17 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Flows.Json.Model;
+namespace Kuroe.Flows.Shared.Files;
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
-/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，有 <c>Nodes</c> 子数组为容器，否则为执行节点。</summary>
-internal sealed class NodeDto
+/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，字段允许集合由节点类型决定。</summary>
+public sealed class NodeDto
 {
     /// <summary>节点名：库定义名或装配实例名。</summary>
     public string? Name { get; set; }
 
-    /// <summary>节点类型：Container、Executable 或 Input。非引用节点必填，引用节点不写。</summary>
-    public NodeKind? Kind { get; set; }
+    /// <summary>节点类型名，取值由节点类型注册表决定。非引用节点必填，引用节点不写。</summary>
+    public string? Kind { get; set; }
 
     /// <summary>引用的节点库定义名。</summary>
     public string? Use { get; set; }
@@ -20,10 +20,10 @@ internal sealed class NodeDto
     /// <summary>对执行单元的额外要求，与目标一起构成指令。</summary>
     public string? Prompt { get; set; }
 
-    /// <summary>输入节点的提示文本。</summary>
+    /// <summary>等待外部输入时的提示文本。</summary>
     public string? Question { get; set; }
 
-    /// <summary>节点输出端口表：条目形状由节点类型决定。执行节点与输入节点写 Name 与 Kind，Kind 必填；
+    /// <summary>节点输出端口表：条目形状由节点类型决定。执行节点与输入节点写 Name 与 Type；
     /// 容器写 Name 与 Ref，Ref 写 成员@端口。</summary>
     public List<JsonElement>? Outputs { get; set; }
 
@@ -62,16 +62,17 @@ internal sealed class NodeDto
     /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
     public string? Branch { get; set; }
 
-    public NodeGate? Gate { get; set; }
-
+    /// <summary>子节点，非空即容器。</summary>
     public List<NodeDto>? Nodes { get; set; }
 }
 
 /// <summary>端口的对象形状：输出端口写 Name 与 Type，容器输出端口写 Name 与 Ref，输入端口写 Name 与可选 Type，键名与读侧一致。</summary>
-internal sealed class PortEntryDto
+public sealed class PortEntryDto
 {
+    /// <summary>端口名。</summary>
     public string? Name { get; set; }
 
+    /// <summary>端口类型，未写时按 Text。</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PortType? Type { get; set; }
 
@@ -89,7 +90,7 @@ internal sealed class PortEntryDto
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>
-internal sealed class ValidationDto
+public sealed class ValidationDto
 {
     /// <summary>谓词名，读取时按枚举解析。</summary>
     public string? Predicate { get; set; }

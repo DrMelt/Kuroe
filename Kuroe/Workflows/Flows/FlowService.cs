@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.Files;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph;
 using Kuroe.Flows.StaticGraph.Library;
@@ -14,17 +14,19 @@ public sealed class FlowService : IFlowCatalog
     private readonly FlowStore _store;
     private readonly Func<FlowName?> _defaultName;
     private readonly NodeLibrary _builtins;
+    private readonly NodeTypeRegistry _types;
     private readonly Lock _gate = new();
     private NodeLibrary _library;
     private List<NodeSpec> _fileNodes;
     private List<FlowDefinition> _flowModels;
     private List<FlowDefinition> _flows;
 
-    private FlowService(FlowStore store, Func<FlowName?> defaultName, NodeLibrary builtins, AssembledFlows assembled)
+    private FlowService(FlowStore store, Func<FlowName?> defaultName, NodeLibrary builtins, NodeTypeRegistry types, AssembledFlows assembled)
     {
         _store = store;
         _defaultName = defaultName;
         _builtins = builtins;
+        _types = types;
         _library = assembled.Library;
         _fileNodes = [.. assembled.FileNodes];
         _flowModels = [.. assembled.FlowModels];
@@ -32,7 +34,7 @@ public sealed class FlowService : IFlowCatalog
     }
 
     /// <summary>从流程文件装配模板集合。内置节点装进基线库，节点库或任一条流程不合法时返回全部错误，装配失败。</summary>
-    internal static ErrorOr<FlowService> Create(FlowStore store, IReadOnlyList<NodeSpec> builtinNodes, Func<FlowName?> defaultName)
+    internal static ErrorOr<FlowService> Create(FlowStore store, IReadOnlyList<NodeSpec> builtinNodes, NodeTypeRegistry types, Func<FlowName?> defaultName)
     {
         NodeLibrary builtins = new();
         builtins.Register(builtinNodes);
@@ -43,13 +45,13 @@ public sealed class FlowService : IFlowCatalog
             return loaded.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(loaded.Value ?? new FlowFileDto(), builtins);
+        ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(loaded.Value ?? new FlowFileDto(), builtins, types);
         if (assembled.IsError)
         {
             return assembled.ErrorsOrEmptyList;
         }
 
-        return new FlowService(store, defaultName, builtins, assembled.Value);
+        return new FlowService(store, defaultName, builtins, types, assembled.Value);
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
@@ -94,13 +96,13 @@ public sealed class FlowService : IFlowCatalog
             return file.ErrorsOrEmptyList;
         }
 
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowReader.ToContent(file.Value);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowReader.ToContent(file.Value, _types);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> checkedStandalone = FlowAssembler.Assemble(read.Value.Nodes, read.Value.Flows, _builtins);
+        ErrorOr<AssembledFlows> checkedStandalone = FlowAssembler.Assemble(read.Value.Nodes, read.Value.Flows, _builtins, _types);
         if (checkedStandalone.IsError)
         {
             List<Error> errors = [.. checkedStandalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
@@ -113,7 +115,7 @@ public sealed class FlowService : IFlowCatalog
             List<NodeSpec> fileNodes = MergeByName(_fileNodes, read.Value.Nodes, node => node.Name);
             List<FlowDefinition> flowModels = MergeByName(_flowModels, read.Value.Flows, flow => flow.Name);
 
-            ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library);
+            ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library, _types);
             if (assembled.IsError)
             {
                 return assembled.ErrorsOrEmptyList;
@@ -127,7 +129,7 @@ public sealed class FlowService : IFlowCatalog
                 .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = _store.Save(FlowWriter.ToDto(fileNodes, flowModels));
+            ErrorOr<Success> saved = _store.Save(FlowWriter.ToDto(fileNodes, flowModels, _types));
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;

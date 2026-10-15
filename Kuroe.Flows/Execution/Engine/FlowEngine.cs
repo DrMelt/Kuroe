@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Tasks;
@@ -7,7 +6,7 @@ using Kuroe.Flows.RuntimeGraph;
 
 namespace Kuroe.Flows.Execution.Engine;
 
-/// <summary>任务推进的宿主：每次提交为任务建一个推进循环，批准、返工与取消经信号恢复或终止。
+/// <summary>任务推进的宿主：每次提交为任务建一个推进循环，返工与取消经信号恢复或终止。
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 sealed class FlowEngine(
     TaskRegistry registry,
@@ -40,49 +39,17 @@ sealed class FlowEngine(
         });
     }
 
-    /// <summary>要求持有任务 Gate：批准待批准的产出，空列表时放行全部待批准节点与容器，再发出继续信号，返回被批准的数量。</summary>
-    public int Approve(WorkTask task, IReadOnlyList<RunId> runs)
+    /// <summary>给定节点的产出已变，推进它的下游与祖先容器。要求持有任务 Gate 之外的调用。</summary>
+    public void Resume(WorkTask task, IReadOnlyList<int> nodes)
     {
-        int approved;
+        List<int> targets;
         lock (task.Gate)
         {
-            approved = runs.Count == 0
-                ? task.Runtime.AwaitingRuns.Count + task.Runtime.AwaitingContainers.Count
-                : task.Runtime.CountAwaitingRuns(runs);
-            if (approved > 0)
-            {
-                task.Touch();
-            }
+            targets = [.. task.Runtime.Notify(nodes)];
+            task.Touch();
         }
 
-        if (approved > 0 && Find(task.Id) is { } driver)
-        {
-            driver.Approve(runs);
-        }
-
-        return approved;
-    }
-
-    /// <summary>要求持有任务 Gate：回答等待输入的节点，回答即产出并放行下游，然后发出继续信号。</summary>
-    public ErrorOr<Success> Answer(WorkTask task, string? nodeName, string input)
-    {
-        ErrorOr<List<int>> result;
-        lock (task.Gate)
-        {
-            result = task.Runtime.Answer(nodeName, input);
-            if (!result.IsError)
-            {
-                task.Touch();
-            }
-        }
-
-        // 推进循环只在任务收口后移除，回答成功时任务必未收口，推进循环一定还在
-        if (!result.IsError)
-        {
-            Find(task.Id)?.Answer(result.Value);
-        }
-
-        return result.IsError ? result.ErrorsOrEmptyList : Result.Success;
+        Find(task.Id)?.Resume(targets);
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的执行单元再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>

@@ -35,7 +35,11 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Node_without_kind_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，取值 Container、Executable 或 Input。"], Errors(NodeWithoutKind));
+        Assert.Equal(["流程 默认 的节点 实施：节点必须声明 Kind，可用类型：Executable、Container、Input、Approval。"], Errors(NodeWithoutKind));
+
+    [Fact]
+    public void Node_with_unregistered_kind_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 实施：节点类型 Bogus 未注册，可用类型：Executable、Container、Input、Approval。"], Errors(NodeWithUnknownKind));
 
     [Fact]
     public void Reference_node_with_kind_is_rejected() =>
@@ -51,7 +55,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Input_node_with_non_data_port_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 收集：输入节点的输出端口只能是 Text 端口，回答写入该端口。"], Errors(InputWithContextPort));
+        Assert.Equal(["流程 默认 的节点 收集：输出端口 背景 的类型只能是 Text。"], Errors(InputWithContextPort));
 
     [Fact]
     public void Execution_in_binding_is_rejected() =>
@@ -96,13 +100,13 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
-            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
-            store.Save(FlowWriter.ToDto(nodes, flows)).ThrowIfError();
+            var (nodes, flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
+            store.Save(FlowWriter.ToDto(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
             string once = File.ReadAllText(file);
 
-            var (Nodes, Flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError()).ThrowIfError();
-            store.Save(FlowWriter.ToDto(Nodes, Flows)).ThrowIfError();
+            var (Nodes, Flows) = FlowReader.ToContent(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            store.Save(FlowWriter.ToDto(Nodes, Flows, TestNodeTypes.Registry())).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -274,6 +278,14 @@ public sealed class FlowLoadTests
         ] } ] }
         """;
 
+    private const string NodeWithUnknownKind = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "实施", "Kind": "Bogus", "Model": "执行者" }
+          ] }
+        ] } ] }
+        """;
+
     private const string ReferenceNodeWithKind = """
         { "Nodes": [ { "Name": "执行", "Kind": "Executable" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
@@ -408,7 +420,7 @@ public sealed class FlowLoadTests
               "Name": "默认",
               "Models": [
                 { "Name": "规划者" },
-                { "Name": "执行者", "Tools": ["GetLocalTime"] }
+                { "Name": "执行者" }
               ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
@@ -490,14 +502,14 @@ public sealed class FlowLoadTests
         }
         """;
 
-    /// <summary>覆盖端口声明、系统指令、门控、次数上限与接线标记等结构字段，用于读写往返。</summary>
+    /// <summary>覆盖端口声明、系统指令、次数上限与接线标记等结构字段，用于读写往返。</summary>
     private const string StructuralFlow = """
         {
           "Flows": [
             { "Name": "默认", "Description": "结构覆盖", "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [ { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [
-                { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "Gate": "Review", "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] },
                 { "Name": "规划", "Kind": "Executable", "Model": "执行者", "Prompt": "拆一下", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
                 { "Name": "实施", "Kind": "Executable", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "规划@拆分" } ] },
                 { "Name": "收尾", "Kind": "Executable", "Model": "执行者",
@@ -519,5 +531,5 @@ public sealed class FlowLoadTests
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowAssembler.Assemble(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!, new NodeLibrary()).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowAssembler.Assemble(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!, new NodeLibrary(), TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

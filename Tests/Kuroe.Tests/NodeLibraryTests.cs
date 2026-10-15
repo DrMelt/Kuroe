@@ -28,7 +28,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(2, root.Nodes.Count);
         NodeSpec plan = root.Nodes[0];
         Assert.NotNull(plan.Execution);
-        Assert.Equal(NodeKind.Executable, plan.Kind);
+        Assert.Equal(NodeTypes.Executable, plan.Kind);
         Assert.Equal("Start@目标", Assert.Single(Assert.Single(plan.From).Links).Ref.Display);
 
         NodeSpec deliver = root.Nodes[1];
@@ -118,7 +118,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowReader.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError()).ThrowIfError();
+        var (Nodes, _) = FlowReader.ToContent(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }
@@ -151,7 +151,7 @@ public sealed class NodeLibraryTests
     public void Library_executable_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxRuns 必须是正整数。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Kind = NodeKind.Executable, Execution = new ExecutableSpec { MaxRuns = 0 } }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Kind = NodeTypes.Executable, Execution = new ExecutableSpec { MaxRuns = 0 } }));
 
     /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
@@ -161,10 +161,10 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
-                Kind = NodeKind.Container,
+                Kind = NodeTypes.Container,
                 MaxRuns = 0,
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeKind.Executable, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeTypes.Executable, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -172,7 +172,7 @@ public sealed class NodeLibraryTests
     public void Library_container_without_children_is_rejected() =>
         Assert.Equal(
             ["节点库定义 空组：容器节点必须声明子节点。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Kind = NodeKind.Container }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Kind = NodeTypes.Container }));
 
     /// <summary>库执行定义不能声明子节点，子节点只属于容器。</summary>
     [Fact]
@@ -182,9 +182,9 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = NodeKind.Executable,
+                Kind = NodeTypes.Executable,
                 Execution = new ExecutableSpec(),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeKind.Executable, Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeTypes.Executable, Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
@@ -198,11 +198,11 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
-                Kind = NodeKind.Container,
+                Kind = NodeTypes.Container,
                 Outputs = [new Port(new PortName("结论"), PortType.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeKind.Executable, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = NodeTypes.Executable, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
@@ -213,35 +213,10 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = NodeKind.Executable,
+                Kind = NodeTypes.Executable,
                 Execution = new ExecutableSpec(),
                 ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeName("干活"), new PortName("结论"))) },
             }));
-
-    /// <summary>引用成员不写 Gate，门控由被引用的库定义决定。</summary>
-    [Fact]
-    public void Reference_member_with_gate_is_rejected() =>
-        Assert.Equal(
-            ["节点库定义 干活：引用成员不声明 Gate，门控由被引用定义决定。"],
-            LibraryErrors(
-                new NodeSpec { Name = new NodeName("干活库"), Kind = NodeKind.Executable, Execution = new ExecutableSpec() },
-                new NodeSpec
-                {
-                    Name = new NodeName("干活组"),
-                    Kind = NodeKind.Container,
-                    ModelSlots = [new ModelRef("执行者")],
-                    Nodes =
-                    [
-                        new NodeSpec
-                        {
-                            Name = new NodeName("干活"),
-                            Kind = null,
-                            Use = new NodeName("干活库"),
-                            Model = new ModelRef("执行者"),
-                            Gate = NodeGate.Review,
-                        },
-                    ],
-                }));
 
     /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出，装配层容器的输入端口声明仍被拒。</summary>
     [Fact]
@@ -400,10 +375,11 @@ public sealed class NodeLibraryTests
     [InlineData(LibraryLeafFrom, "执行节点库定义的接线由引用处提供")]
     [InlineData(UnknownLibraryReference, "不在节点库")]
     [InlineData(UnboundPort, "没有绑定来源")]
-    [InlineData(ReferenceWithBody, "引用成员不能同时声明执行配置或子节点")]
+    [InlineData(ReferenceWithBody, "引用成员不能同时声明执行配置、Question 或子节点")]
+    [InlineData(ReferenceWithQuestion, "引用成员不能同时声明执行配置、Question 或子节点")]
+    [InlineData(ContainerWithQuestion, "容器节点不是执行节点，不支持 Question")]
     [InlineData(UnknownPortBinding, "不在容器")]
     [InlineData(PortNotDeclared, "没有在此容器上声明")]
-    [InlineData(ReferenceWithGate, "引用节点不能声明 Gate")]
     [InlineData(ReferenceContainerFrom, "引用容器不能声明 From")]
     [InlineData(AssemblyContainerInputs, "端口声明属于节点库容器定义")]
     [InlineData(DuplicateMemberNames, "在容器子树内重复")]
@@ -425,7 +401,7 @@ public sealed class NodeLibraryTests
     [InlineData(LibraryInputWithModel, "不声明模型槽位")]
     [InlineData(LibraryInputWithModels, "不声明模型槽位与模型绑定")]
     [InlineData(LibraryPortOnInput, "最多一个输出端口")]
-    [InlineData(LibraryQuestionOnText, "Question 只属于输入节点")]
+    [InlineData(LibraryQuestionOnText, "Question 只属于等待外部输入的节点")]
     [InlineData(LibraryContainerWithOutputs, "容器输出端口不认识键 Type")]
     [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口与系统指令")]
     [InlineData(LibraryContainerOutMissingMember, "不在容器 交付 的子树里")]
@@ -702,15 +678,21 @@ public sealed class NodeLibraryTests
         ] }
         """;
 
-    private const string ContainerWithExecutionFields = """
+    private const string ReferenceWithQuestion = """
         { "Nodes": [ { "Name": "执行", "Kind": "Executable", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Kind": "Container", "Model": "执行者", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Question": "确认" } ] } ] }
         ] }
         """;
 
-    private const string ReferenceWithGate = """
+    private const string ContainerWithQuestion = """
+        { "Nodes": [], "Flows": [
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Question": "确认", "Nodes": [ { "Name": "实施", "Kind": "Executable", "Model": "执行者" } ] } ] }
+        ] }
+        """;
+
+    private const string ContainerWithExecutionFields = """
         { "Nodes": [ { "Name": "执行", "Kind": "Executable", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Gate": "Review" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Kind": "Container", "Model": "执行者", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者" } ] } ] }
         ] }
         """;
 
@@ -1438,6 +1420,6 @@ public sealed class NodeLibraryTests
             nodeLibrary.Register(node);
         }
 
-        return [.. NodeLibraryRules.Validate(nodeLibrary).ErrorsOrEmptyList.Select(error => error.Description)];
+        return [.. NodeLibraryRules.Validate(nodeLibrary, TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
     }
 }

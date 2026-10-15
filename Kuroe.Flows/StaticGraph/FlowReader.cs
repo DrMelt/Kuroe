@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.Files;
 using Kuroe.Flows.Shared;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph.Library;
@@ -12,13 +12,13 @@ namespace Kuroe.Flows.StaticGraph;
 static class FlowReader
 {
     /// <summary>把文件形状转成节点定义与流程模型，错误逐条收集。</summary>
-    internal static ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> ToContent(FlowFileDto file)
+    internal static ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> ToContent(FlowFileDto file, NodeTypeRegistry types)
     {
         List<NodeSpec> nodes = [];
         List<Error> errors = [];
         foreach (NodeDto dto in file.Nodes)
         {
-            ErrorOr<NodeSpec> converted = ToNode(dto, NodeScope.Library);
+            ErrorOr<NodeSpec> converted = ToNode(dto, NodeScope.Library, types);
             if (converted.IsError)
             {
                 errors.AddRange(converted.ErrorsOrEmptyList);
@@ -39,7 +39,7 @@ static class FlowReader
                 continue;
             }
 
-            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto);
+            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto, types);
             if (flow.IsError)
             {
                 errors.AddRange(flow.ErrorsOrEmptyList);
@@ -57,7 +57,7 @@ static class FlowReader
 
         return (nodes, flows);
     }
-    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto)
+    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto, NodeTypeRegistry types)
     {
         List<ModelDefinition> models = [];
         foreach (ModelDto model in dto.Models)
@@ -85,7 +85,7 @@ static class FlowReader
             return startOutputs.ErrorsOrEmptyList;
         }
 
-        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!));
+        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!), types);
         if (root.IsError)
         {
             return root.ErrorsOrEmptyList;
@@ -101,14 +101,14 @@ static class FlowReader
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
-    private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, NodeScope scope)
+    private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, NodeScope scope, NodeTypeRegistry types)
     {
         List<NodeSpec> result = [];
         List<Error> errors = [];
 
         foreach (NodeDto dto in nodes)
         {
-            ErrorOr<NodeSpec> converted = ToNode(dto, scope);
+            ErrorOr<NodeSpec> converted = ToNode(dto, scope, types);
             if (converted.IsError)
             {
                 errors.AddRange(converted.ErrorsOrEmptyList);
@@ -124,7 +124,7 @@ static class FlowReader
 
     /// <summary>把文件里的节点装配成模型：写有 Use 即引用库定义，否则按 Kind 分容器、执行节点与输入节点。
     /// 省略的字段取安全默认值，合法性交校验。</summary>
-    private static ErrorOr<NodeSpec> ToNode(NodeDto dto, NodeScope scope)
+    private static ErrorOr<NodeSpec> ToNode(NodeDto dto, NodeScope scope, NodeTypeRegistry types)
     {
         if (dto.Use is { Length: > 0 })
         {
@@ -136,9 +136,10 @@ static class FlowReader
 
             if (dto.Prompt is not null || dto.Tools is { Count: > 0 }
                 || dto.Mode is not null || dto.Branch is not null
+                || dto.Question is not null
                 || dto.Nodes is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行配置或子节点。"));
+                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行配置、Question 或子节点。"));
             }
 
             if (dto.Model is not null && HasModels(dto.Models))
@@ -154,11 +155,6 @@ static class FlowReader
             if (dto.Outputs is { Count: > 0 } || dto.SystemPrompt is { Count: > 0 })
             {
                 useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输出端口与系统指令。"));
-            }
-
-            if (dto.Gate is not null)
-            {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明 Gate，门控由库定义决定。"));
             }
 
             if (useErrors.Count > 0)
@@ -204,7 +200,6 @@ static class FlowReader
                 Name = new NodeName(dto.Name ?? string.Empty),
                 Kind = null,
                 Use = new NodeName(dto.Use),
-                Gate = dto.Gate ?? NodeGate.Auto,
                 From = resolvedFrom.Value,
                 Validate = declareValidation,
                 MaxRuns = dto.MaxRuns,
@@ -216,10 +211,19 @@ static class FlowReader
 
         if (dto.Kind is not { } kind)
         {
-            return scope.Node(dto.Name ?? string.Empty, "节点必须声明 Kind，取值 Container、Executable 或 Input。");
+            return scope.Node(dto.Name ?? string.Empty,
+                $"节点必须声明 Kind，可用类型：{string.Join("、", types.Types.Select(item => item.Value))}。");
         }
 
-        if (kind == NodeKind.Container)
+        INodeType? declared = types.Find(kind);
+        if (declared is null)
+        {
+            return scope.Node(dto.Name ?? string.Empty,
+                $"节点类型 {kind} 未注册，可用类型：{string.Join("、", types.Types.Select(item => item.Value))}。");
+        }
+
+        NodeTypeName type = declared.Type;
+        if (declared.Shape.Organizes)
         {
             List<Error> containerErrors = [];
             if (dto.Prompt is not null)
@@ -288,10 +292,15 @@ static class FlowReader
                 containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
             }
 
+            if (dto.Question is not null)
+            {
+                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Question。"));
+            }
+
             IReadOnlyList<NodeSpec> children = [];
             if (dto.Nodes is { Count: > 0 })
             {
-                ErrorOr<IReadOnlyList<NodeSpec>> parsedChildren = ToNodes(dto.Nodes, scope);
+                ErrorOr<IReadOnlyList<NodeSpec>> parsedChildren = ToNodes(dto.Nodes, scope, types);
                 if (parsedChildren.IsError)
                 {
                     containerErrors.AddRange(parsedChildren.ErrorsOrEmptyList);
@@ -326,8 +335,7 @@ static class FlowReader
             return new NodeSpec
             {
                 Name = new NodeName(dto.Name ?? string.Empty),
-                Kind = NodeKind.Container,
-                Gate = dto.Gate ?? NodeGate.Auto,
+                Kind = declared.Type,
                 Inputs = inputs.Value,
                 ContainerOutputs = outputPorts.Value,
                 MaxRuns = dto.MaxRuns,
@@ -393,6 +401,12 @@ static class FlowReader
             leafErrors.AddRange(outputs.ErrorsOrEmptyList);
         }
 
+        if (declared.Shape.DerivesOutputsFromInputs && dto.Outputs is { Count: > 0 })
+        {
+            leafErrors.Add(scope.Node(dto.Name ?? string.Empty,
+                $"{declared.Type.Value}节点不声明输出端口，对外端口取自身输入端口。"));
+        }
+
         if (leafErrors.Count > 0)
         {
             return leafErrors;
@@ -407,12 +421,11 @@ static class FlowReader
         return new NodeSpec
         {
             Name = new NodeName(dto.Name ?? string.Empty),
-            Kind = kind,
-            Gate = dto.Gate ?? NodeGate.Auto,
+            Kind = type,
             Inputs = leafInputs.Value,
             From = parsedFrom.Value,
             Model = ToModel(dto.Model),
-            Outputs = outputs.Value,
+            Outputs = declared.Shape.DerivesOutputsFromInputs ? ForwardedPorts(leafInputs.Value) : outputs.Value,
             SystemPrompt = [.. dto.SystemPrompt ?? []],
             Execution = new ExecutableSpec
             {
@@ -426,6 +439,13 @@ static class FlowReader
             },
         };
     }
+
+    /// <summary>派生对外端口：输入端口原样转发为同名同类型输出。</summary>
+    private static IReadOnlyList<Port> ForwardedPorts(IReadOnlyList<InputPort> inputs) =>
+    [
+        .. inputs.Select(input => new Port(input.Name, input.Type, input.Description)),
+    ];
+
     /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>
     private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(Dictionary<string, string>? bindings)
     {

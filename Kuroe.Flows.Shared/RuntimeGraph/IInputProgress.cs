@@ -1,7 +1,7 @@
-namespace Kuroe.Flows.RuntimeGraph;
+namespace Kuroe.Flows.Shared.RuntimeGraph;
 
 /// <summary>判定要读的目标自身状态：实例集、消费账、产出记录与执行次数。</summary>
-internal interface IInputProgress
+public interface IInputProgress
 {
     /// <summary>已固定的实例集，尚未展开为空。</summary>
     IReadOnlyList<int>? AdoptedItems { get; }

@@ -4,6 +4,7 @@ using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Shared.Workflows;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Waiting;
 using Kuroe.Workflows.Flows;
 using Xunit;
 
@@ -128,7 +129,7 @@ public sealed class DialogueHostTests
     [Fact]
     public void Settled_dialogue_error_names_the_state_in_its_display_form()
     {
-        Error error = TaskErrors.DialogueSettled(new TaskId(1), TaskState.Blocked);
+        Error error = WaitErrors.Settled(new TaskId(1), TaskState.Blocked);
 
         Assert.Equal("任务 #1 已阻塞，无法继续对话。", error.Description);
     }

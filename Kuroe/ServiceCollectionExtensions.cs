@@ -24,6 +24,10 @@ using Kuroe.Workflows.Execution;
 using Kuroe.Flows.Execution.Engine;
 using Kuroe.Flows.Execution.Tasks;
 using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.StaticGraph.Types;
+using Kuroe.Flows.Node.Input;
+using Kuroe.Flows.Node.Approval;
+using Kuroe.Waiting;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,9 +57,15 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
+        NodeTypeRegistry nodeTypes = new();
+        BuiltinNodeTypes.RegisterInto(nodeTypes);
+        InputNodeTypes.RegisterInto(nodeTypes);
+        ApprovalNodeTypes.RegisterInto(nodeTypes);
+
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
             BuiltinNodes.Nodes,
+            nodeTypes,
             () => settings.Value.Current.Runtime.DefaultFlow);
         if (flows.IsError)
         {
@@ -109,9 +119,17 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IFlowCatalog>(),
-            sp.GetRequiredService<IExecutionTargetResolver>()));
+            sp.GetRequiredService<IExecutionTargetResolver>(),
+            nodeTypes));
+        services.AddSingleton(sp => new WaitService(
+            sp.GetRequiredService<TaskRegistry>(),
+            sp.GetRequiredService<FlowEngine>()));
+        services.AddSingleton(sp => new DialogueRound(
+            sp.GetRequiredService<TaskRegistry>(),
+            sp.GetRequiredService<WaitService>()));
         services.AddSingleton(sp => new DialogueHost(
             sp.GetRequiredService<TaskService>(),
+            sp.GetRequiredService<DialogueRound>(),
             sp.GetRequiredService<ModelService>(),
             sp.GetRequiredService<TaskRegistry>()));
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));

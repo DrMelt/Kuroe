@@ -10,7 +10,7 @@ namespace Kuroe.Flows.RuntimeNodes;
 
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，执行单元的产出与交回在 RuntimeInstance 上。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode(executable), IInputProgress
+internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime(executable), IInputProgress
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
@@ -55,29 +55,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>在跑的实例数。推进时经 AddActive 与 ReleaseActive 改动。</summary>
     public int Active { get; private set; }
 
-    private readonly HashSet<RunId> _awaitingRuns = [];
     private bool _canceled;
     private bool _rerunRequested;
-    private bool _awaitingInput;
-    private string? _inputAnswer;
-
-    /// <summary>有待批准的产出 run。</summary>
-    public override bool Awaiting => _awaitingRuns.Count > 0;
-
-    /// <summary>节点是否为输入节点：不启动 run，回答即产出。</summary>
-    public bool IsInput => Executable.Kind == NodeKind.Input;
-
-    /// <summary>输入节点停在等待用户回答。</summary>
-    public bool AwaitingInput => _awaitingInput;
-
-    /// <summary>输入节点已收到的回答，未回答时为空。</summary>
-    public string? InputAnswer => _inputAnswer;
-
-    /// <summary>输入节点对用户的提示文本，未写时为通用提示。</summary>
-    public string? Question => Executable.Execution.Question;
-
-    /// <summary>等待批准的产出 run。</summary>
-    public IReadOnlyCollection<RunId> AwaitingRuns => _awaitingRuns;
 
     /// <summary>是否有执行单元停在等待返工或放行。</summary>
     public bool HasBlocked =>
@@ -114,12 +93,12 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>重跑请求已消耗。</summary>
     public void ClearRerun() => _rerunRequested = false;
 
-    /// <summary>产出已放行、可被下游消费：产出已发布且不在等待、阻塞与取消。PerItem 要求全部实例已发布。</summary>
+    /// <summary>产出已放行、可被下游消费：产出已发布且不在阻塞与取消。PerItem 要求全部实例已发布。</summary>
     public override bool Released =>
         (Mode == NodeMode.PerItem
             ? Expanded && Items.All(item => Complete(item))
             : Complete(null))
-        && !Awaiting && !HasBlocked && !Canceled;
+        && !HasBlocked && !Canceled;
 
     /// <summary>单调的发布计数，作废归零发表号但不清计数。消费账按它记账，重跑后版本不回退。</summary>
     public override long Revision => _stamp;
@@ -157,10 +136,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     bool IInputProgress.ForceRerun => RerunRequested;
 
-    /// <summary>执行单元是否已有发表产出。输入节点不落 run，产出就是当前回答。</summary>
-    public bool Complete(int? item) => IsInput
-        ? item is null && _inputAnswer is not null
-        : FindRuntimeInstance(item)?.PublishedRun is not null;
+    /// <summary>执行单元是否已有发表产出。</summary>
+    public bool Complete(int? item) => FindRuntimeInstance(item)?.PublishedRun is not null;
 
     /// <summary>产出发布：产出锚指向这次执行，发表号单调递增，下游据此重新评估。</summary>
     public void Publish(Run run)
@@ -210,56 +187,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>记下新启动的实例数。</summary>
     public void AddActive(int count) => Active += count;
 
-    /// <summary>清掉一个产出 run 的等待，返回该 run 原本在等待中。</summary>
-    public bool ClearAwaiting(RunId run) => _awaitingRuns.Remove(run);
-
-    /// <summary>清掉全部等待批准。</summary>
-    public void ClearAllAwaiting() => _awaitingRuns.Clear();
-
-    /// <summary>产出后按门控停在等待批准，Auto 不停。返回是否停留。</summary>
-    public bool Park(RunId run)
-    {
-        if (Gate != NodeGate.Review)
-        {
-            return false;
-        }
-
-        _awaitingRuns.Add(run);
-
-        return true;
-    }
-
-    /// <summary>输入节点停驻等待用户回答，重复停驻不改变状态。</summary>
-    public void ParkInput()
-    {
-        if (!IsInput)
-        {
-            return;
-        }
-
-        _awaitingInput = true;
-    }
-
-    /// <summary>记下回答并发布产出，发表号随之推进。输入节点复位后可再次回答。</summary>
-    public void Answer(string text)
-    {
-        _awaitingInput = false;
-        _inputAnswer = text;
-        _stamp++;
-    }
-
-    /// <summary>输入节点复位：清掉当前回答，回到可挂起状态。</summary>
-    public void ResetInput()
-    {
-        if (!IsInput || _inputAnswer is null)
-        {
-            return;
-        }
-
-        _inputAnswer = null;
-        _awaitingInput = false;
-    }
-
     /// <summary>把一个执行单元置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
     public void EnterBlocked(int? item, IReadOnlyList<(int Node, int? Item)> targets) =>
         Instance(item).EnterBlocked(targets);
@@ -272,8 +199,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     public override void Cancel() => _canceled = true;
 
     /// <summary>按输出端口取单段文本：Context 端口给拼合文本，WorkItems 端口不产生文本，Text 端口取该节点交回的端口值。
-    /// 输入节点的产出是当前回答，PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
-    public override string? PortText(WorkTask task, PortName port)
+    /// PerItem 给全部已发布实例的该端口值按实例序拼接。</summary>
+    public override string? PortText(INodeTask task, PortName port)
     {
         PortType? type = Executable.FindPort(port)?.Type;
         if (type == PortType.Context)
@@ -285,16 +212,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         {
             // 条目拆分是结构化产出，不产生可注入文本
             return null;
-        }
-
-        if (IsInput)
-        {
-            if (type != PortType.Text)
-            {
-                return null;
-            }
-
-            return InputAnswer is { Length: > 0 } answer ? answer : null;
         }
 
         if (Mode == NodeMode.PerItem)
@@ -321,7 +238,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     /// <summary>按输出端口取可注入的产出消息集：PerItem 逐实例，其余单条，Context 端口给装配帧，Items 端口不注入。
     /// item 指定时只取该实例的产出，供同序号实例取值，不受整节点放行状态约束。</summary>
-    public override IReadOnlyList<ContextMessage> OutputMessages(WorkTask task, PortName port, int? item)
+    public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, PortName port, int? item)
     {
         PortType? type = Executable.FindPort(port)?.Type;
         if (type == PortType.Context)
@@ -371,20 +288,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         return SingleMessage(port, null);
     }
 
-    /// <summary>按端口取该实例或整节点的一条产出消息。输入节点给回答消息，出处指向用户输入。取值或出处缺失时不产生消息。</summary>
+    /// <summary>按端口取该实例或整节点的一条产出消息。取值或出处缺失时不产生消息。</summary>
     private IReadOnlyList<ContextMessage> SingleMessage(PortName port, int? item)
     {
-        if (IsInput)
-        {
-            if (Executable.Outputs.Find(port) is not { Type: PortType.Text }
-                || InputAnswer is not { Length: > 0 } answer)
-            {
-                return [];
-            }
-
-            return [new ContextMessage(MessageRole.User, $"节点「{Name}」的输入：\n{answer}", new InputSource(Name))];
-        }
-
         if (FindRuntimeInstance(item)?.PublishedRun is not { } run
             || PortValue(port, item) is not { Length: > 0 } content)
         {
@@ -434,7 +340,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
-    public ExecutableStateSnapshot StateSnapshot()
+    public override ExecutableStateSnapshot Snapshot()
     {
         List<int> items = Expanded ? [.. Items] : [];
         int completed;
@@ -451,21 +357,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         if (Canceled)
         {
             state = NodeState.Canceled;
-        }
-        else if (IsInput)
-        {
-            if (AwaitingInput)
-            {
-                state = NodeState.AwaitingInput;
-            }
-            else
-            {
-                state = Complete(null) ? NodeState.Done : NodeState.Pending;
-            }
-        }
-        else if (Awaiting)
-        {
-            state = NodeState.AwaitingApproval;
         }
         else if (HasBlocked)
         {
@@ -486,6 +377,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         List<int> blocked = [.. BlockedInstances.Select(instance => instance.ItemIndex).OfType<int>()];
 
-        return new ExecutableStateSnapshot(Index, state, items, completed, blocked, [.. _awaitingRuns.OrderBy(run => run.Value)], _inputAnswer);
+        return new ExecutableStateSnapshot(Index, state, items, completed, blocked);
     }
 }

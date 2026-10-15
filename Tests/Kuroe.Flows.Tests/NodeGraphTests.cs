@@ -18,7 +18,6 @@ public sealed class NodeGraphTests
                 Index = 0,
                 Name = StartNode.ReservedName,
                 Path = new NodePath([StartNode.ReservedName]),
-                Gate = NodeGate.Auto,
                 Outputs = [new Port(new PortName("目标"), PortType.Text)],
             },
             new ExecutableNode
@@ -26,8 +25,7 @@ public sealed class NodeGraphTests
                 Index = 1,
                 Name = new NodeName("规划"),
                 Path = new NodePath([new NodeName("规划")]),
-                Gate = NodeGate.Auto,
-                Kind = NodeKind.Executable,
+                Kind = NodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
                 Outputs = [],
@@ -39,15 +37,14 @@ public sealed class NodeGraphTests
                 Index = 2,
                 Name = new NodeName("实施"),
                 Path = new NodePath([new NodeName("实施")]),
-                Gate = NodeGate.Auto,
-                Kind = NodeKind.Executable,
+                Kind = NodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
                 Outputs = [],
                 SystemPrompt = [],
                 MaxRuns = 100,
             },
-        ], []);
+        ], [], TestNodeTypes.Builtin());
 
         Assert.Equal(3, graph.Count);
         Assert.Equal(2, graph.TotalExecutables);

@@ -13,7 +13,7 @@ using ExecutableNode = Kuroe.Flows.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flows.Execution.Engine;
 
 /// <summary>一个任务的推进循环：激活目标去重入队后逐个评估，run 异步派发不阻塞循环，
-/// 收口回调入队下游或重派目标并唤醒挂起。批准与返工意图从这里入队重新评估，
+/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与返工意图经 Resume 与 Rework 从这里入队重新评估，
 /// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
 internal sealed class TaskDriver(
     WorkTask task,
@@ -44,33 +44,16 @@ internal sealed class TaskDriver(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>批准语义：清掉指定 run 的等待，等待清空的节点放行下游并刷新容器，再连同待批准容器入队进入下一步评估。
-    /// runs 为空时批准全部等待。</summary>
-    public void Approve(IReadOnlyList<RunId> runs)
+    /// <summary>产出已变的目标入队，由推进循环重新评估。</summary>
+    public void Resume(IReadOnlyList<int> targets)
     {
-        List<int> targets;
-        lock (task.Gate)
-        {
-            targets = [.. task.Runtime.ApproveRuns(runs)];
-            if (runs.Count == 0)
-            {
-                targets.AddRange(task.Runtime.ReleaseContainers());
-            }
-        }
-
-        Enqueue(targets.Distinct());
+        Enqueue(targets);
     }
 
     /// <summary>返工语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
     public void Rework(IReadOnlyList<TaskRuntime.ReworkTarget> targets)
     {
         Enqueue(targets.Select(target => target.Node));
-    }
-
-    /// <summary>回答语义：回答已产出的输入节点要放行的下游入队，由推进循环重新评估。</summary>
-    public void Answer(IReadOnlyList<int> targets)
-    {
-        Enqueue(targets);
     }
 
     /// <summary>停止推进循环：取消任务停掉全部 run，唤醒挂起点后主循环按停止位退出。</summary>
@@ -176,16 +159,16 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>一个执行节点收到评估意图：输入节点重新挂起等回答，其余按就绪条件启动实例。
+    /// <summary>一个节点收到评估意图：输入节点重新挂起等回答，审批节点按就绪停在待批准，其余按就绪条件启动实例。
     /// 启动的 run 异步派发由收口回调处理，通知的下游即时入队。</summary>
     private void Activate(int nodeIndex)
     {
         List<int> notify = [];
         List<TaskRuntime.RunStarter> starters = [];
-        RuntimeExecutable node;
+        NodeRuntime node;
         lock (task.Gate)
         {
-            node = task.Runtime.Executable(nodeIndex);
+            node = task.Runtime[nodeIndex];
             TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             starters.AddRange(result.Starters);
@@ -196,6 +179,12 @@ internal sealed class TaskDriver(
             Enqueue([next]);
         }
 
+        // 只有执行节点会给出启动项，审批节点与输入节点不派发 run
+        if (node is not RuntimeExecutable executable)
+        {
+            return;
+        }
+
         foreach (TaskRuntime.RunStarter starter in starters)
         {
             lock (_gate)
@@ -204,7 +193,7 @@ internal sealed class TaskDriver(
             }
 
             // 直接调用让装配段按 starter 顺序同步完成，run 编号与派发顺序保持确定，await 之后才回到线程池
-            _ = DispatchAndSettleAsync(node, starter);
+            _ = DispatchAndSettleAsync(executable, starter);
         }
     }
 

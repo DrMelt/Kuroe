@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared;
+using Kuroe.Flows.Shared.Files;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph.Library;
 
@@ -9,13 +10,13 @@ namespace Kuroe.Flows.StaticGraph;
 static class FlowAssembler
 {
     /// <summary>装配文件形状：DTO 转模型后校验并展开。</summary>
-    public static ErrorOr<AssembledFlows> Assemble(FlowFileDto dto, NodeLibrary library)
+    public static ErrorOr<AssembledFlows> Assemble(FlowFileDto dto, NodeLibrary library, NodeTypeRegistry types)
     {
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(dto);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(dto, types);
 
         return content.IsError
             ? content.ErrorsOrEmptyList
-            : Assemble(content.Value.Nodes, content.Value.Flows, library);
+            : Assemble(content.Value.Nodes, content.Value.Flows, library, types);
     }
 
     /// <summary>校验并展开模型内容：文件节点并入节点库副本后逐流程展开，错误一次给全，流程名重复一并报出。
@@ -23,7 +24,8 @@ static class FlowAssembler
     public static ErrorOr<AssembledFlows> Assemble(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,
-        NodeLibrary library)
+        NodeLibrary library,
+        NodeTypeRegistry types)
     {
         NodeLibrary effective = library.Copy();
         List<Error> errors = [.. effective.Register(fileNodes)
@@ -33,7 +35,7 @@ static class FlowAssembler
             return errors;
         }
 
-        errors.AddRange(Validate(effective, flows, out List<FlowDefinition> valid));
+        errors.AddRange(Validate(effective, flows, types, out List<FlowDefinition> valid));
         if (FlowRules.Duplicated(valid) is { } repeated)
         {
             errors.Add(FlowErrors.Body(repeated.Value, "流程名重复。"));
@@ -46,9 +48,10 @@ static class FlowAssembler
     private static List<Error> Validate(
         NodeLibrary library,
         IReadOnlyList<FlowDefinition> flows,
+        NodeTypeRegistry types,
         out List<FlowDefinition> valid)
     {
-        ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(library);
+        ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(library, types);
         if (libraryChecked.IsError)
         {
             valid = [];
@@ -68,7 +71,7 @@ static class FlowAssembler
             }
 
             FlowDefinition concrete = new(flow.Name, flow.Description, flow.Models, flow.StartOutputs, expanded.Value);
-            ErrorOr<Success> checkedFlow = FlowRules.Validate(concrete);
+            ErrorOr<Success> checkedFlow = FlowRules.Validate(concrete, types);
             if (checkedFlow.IsError)
             {
                 errors.AddRange(checkedFlow.ErrorsOrEmptyList);

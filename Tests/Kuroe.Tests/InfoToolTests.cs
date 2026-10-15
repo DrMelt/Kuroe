@@ -150,7 +150,7 @@ public sealed class InfoToolTests : IDisposable
         FlowInfoTool tool = new(harness.Flows);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
-        Assert.Contains("制定计划（执行节点）", output);
+        Assert.Contains("制定计划（Executable节点）", output);
         Assert.Contains("模型 规划者", output);
     }
 

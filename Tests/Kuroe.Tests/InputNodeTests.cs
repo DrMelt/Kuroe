@@ -3,6 +3,7 @@ using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -12,7 +13,7 @@ public sealed class InputNodeTests
 {
     /// <summary>等待全部输入节点停驻后返回快照。</summary>
     private static TaskSnapshot WaitForInputs(KuroeHarness harness, TaskId id, int count) =>
-        harness.Wait(id, snapshot => snapshot.ExecutableStates.Count(state => state.State == NodeState.AwaitingInput) == count);
+        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count == count);
 
     [Fact]
     public void Input_node_parks_until_answered_then_releases_downstream()
@@ -22,15 +23,14 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = WaitForInputs(harness, id, 1);
 
-        Assert.Equal(TaskState.AwaitingInput, parked.State);
-        ExecutableStateSnapshot input = Assert.Single(parked.ExecutableStates, state => state.State == NodeState.AwaitingInput);
-        Assert.Empty(input.AwaitingRuns);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Answer));
 
-        harness.Tasks.Answer(id, null, "需要支持多语言").ThrowIfError();
+        harness.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.DoesNotContain(done.ExecutableStates, state => state.State == NodeState.AwaitingInput);
+        Assert.Empty(harness.Awaiting(id, AwaitKind.Answer));
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         WaitForInputs(harness, id, 1);
 
-        harness.Tasks.Answer(id, null, "需要支持多语言").ThrowIfError();
+        harness.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         RunSnapshot implement = done.Executables
@@ -60,10 +60,10 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         WaitForInputs(harness, id, 1);
 
-        harness.Tasks.Answer(id, null, "x").ThrowIfError();
+        harness.Waits.Answer(id, null, "x").ThrowIfError();
         harness.Settle(id);
 
-        ErrorOr<Success> answered = harness.Tasks.Answer(id, null, "又");
+        ErrorOr<Success> answered = harness.Waits.Answer(id, null, "又");
         Assert.True(answered.IsError);
         Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
     }
@@ -76,15 +76,15 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("目标");
         WaitForInputs(harness, id, 2);
 
-        ErrorOr<Success> ambiguous = harness.Tasks.Answer(id, null, "x");
+        ErrorOr<Success> ambiguous = harness.Waits.Answer(id, null, "x");
         Assert.True(ambiguous.IsError);
         Assert.Contains(ambiguous.ErrorsOrEmptyList, error => error.Description.Contains("有 2 个输入节点等待回答"));
 
-        harness.Tasks.Answer(id, "输入一", "甲").ThrowIfError();
+        harness.Waits.Answer(id, "输入一", "甲").ThrowIfError();
         TaskSnapshot stepped = WaitForInputs(harness, id, 1);
-        Assert.Equal(TaskState.AwaitingInput, stepped.State);
+        Assert.Equal(TaskState.Running, stepped.State);
 
-        harness.Tasks.Answer(id, "输入二", "乙").ThrowIfError();
+        harness.Waits.Answer(id, "输入二", "乙").ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -98,12 +98,12 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("目标");
         _ = harness.Wait(id, snapshot =>
             harness.Executor.Started.Any(run => run.Context.NodeName.Value == "准备" && run.State == RunState.Succeeded)
-            && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+            && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
         TaskSnapshot parked = harness.Snapshot(id);
 
-        Assert.Equal(TaskState.AwaitingInput, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
 
-        harness.Tasks.Answer(id, "用户输入", "回答").ThrowIfError();
+        harness.Waits.Answer(id, "用户输入", "回答").ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -116,17 +116,17 @@ public sealed class InputNodeTests
         harness.Executor.Output = run => $"回复{run.Context.ExecutionCount}";
 
         TaskId id = harness.Submit("目标");
-        harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Tasks.Answer(id, "收话", "第一问").ThrowIfError();
+        harness.Waits.Answer(id, "收话", "第一问").ThrowIfError();
         _ = harness.Wait(id, snapshot =>
             harness.Executor.Started.Any(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
-            && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+            && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Tasks.Answer(id, "收话", "第二问").ThrowIfError();
+        harness.Waits.Answer(id, "收话", "第二问").ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
-        Assert.Equal(TaskState.AwaitingInput, done.State);
+        Assert.Equal(TaskState.Running, done.State);
         Assert.Equal([1, 2], [.. harness.Executor.Started
             .Where(run => run.Context.NodeName.Value == "回话")
             .Select(run => run.Context.ExecutionCount)]);
@@ -140,13 +140,13 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         WaitForInputs(harness, id, 1);
 
-        ErrorOr<Success> empty = harness.Tasks.Answer(id, null, "   ");
+        ErrorOr<Success> empty = harness.Waits.Answer(id, null, "   ");
         Assert.True(empty.IsError);
         Assert.Contains(empty.ErrorsOrEmptyList, error => error.Description.Contains("回答内容不能为空"));
 
         TaskSnapshot still = harness.Snapshot(id);
-        Assert.Equal(TaskState.AwaitingInput, still.State);
-        Assert.Single(still.ExecutableStates, state => state.State == NodeState.AwaitingInput);
+        Assert.Equal(TaskState.Running, still.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Answer));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         WaitForInputs(harness, id, 1);
 
-        harness.Tasks.Answer(id, null, "需要支持多语言").ThrowIfError();
+        harness.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
@@ -181,24 +181,25 @@ public sealed class InputNodeTests
     }
 
     [Fact]
-    public void Answer_parks_review_container_until_approve()
+    public void Answer_then_approval_releases_task()
     {
         using KuroeHarness harness = KuroeHarness.Create(InputInReviewContainerFlow);
 
         TaskId id = harness.Submit("补齐 README");
         WaitForInputs(harness, id, 1);
 
-        harness.Tasks.Answer(id, null, "需要支持多语言").ThrowIfError();
+        harness.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot awaiting = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, awaiting.State);
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(awaiting.Containers, container => container.Name == "审查容器").State);
+        Assert.Equal(TaskState.Running, awaiting.State);
+        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Name == "审查容器").State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
 
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(NodeState.Done, Assert.Single(done.Containers, container => container.Name == "审查容器").State);
+        Assert.Empty(harness.Awaiting(id, AwaitKind.Approve));
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public sealed class InputNodeTests
         harness.Tasks.StopTask(id).ThrowIfError();
         harness.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
-        ErrorOr<Success> answered = harness.Tasks.Answer(id, null, "甲");
+        ErrorOr<Success> answered = harness.Waits.Answer(id, null, "甲");
         Assert.True(answered.IsError);
         Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
     }
@@ -239,8 +240,9 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = WaitForInputs(harness, id, 1);
 
-        // 直接含输入节点的容器与沿祖先链的外层容器都停在待输入
-        Assert.All(parked.Containers, container => Assert.Equal(NodeState.AwaitingInput, container.State));
+        // 容器不表达成员的等待，只按成员活动给状态；等待由节点的待处理报告给出
+        Assert.All(parked.Containers, container => Assert.Equal(NodeState.Pending, container.State));
+        Assert.Single(harness.Awaiting(id, AwaitKind.Answer));
     }
 
     [Fact]
@@ -249,14 +251,14 @@ public sealed class InputNodeTests
         using KuroeHarness harness = KuroeHarness.Create(TestFlows.ParallelInputAndReviewFlow);
 
         TaskId id = harness.Submit("目标");
-        TaskSnapshot parked = harness.Wait(id, snapshot =>
-            snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput)
-            && snapshot.Containers.Any(container => container.Name == "审查分支" && container.State == NodeState.AwaitingApproval));
+        TaskSnapshot parked = harness.Wait(id, _ =>
+            harness.Awaiting(id, AwaitKind.Answer).Count > 0
+            && harness.Awaiting(id, AwaitKind.Approve).Count > 0);
 
-        // 任务级汇总只表达优先的待输入，两个等待在快照里各自可见
-        Assert.Equal(TaskState.AwaitingInput, parked.State);
-        Assert.Contains(parked.ExecutableStates, state => state.State == NodeState.AwaitingInput);
-        Assert.Contains(parked.Containers, container => container.Name == "审查分支" && container.State == NodeState.AwaitingApproval);
+        // 两种等待在待处理报告里各自可见
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Answer));
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
     }
 
     /// <summary>环内输入节点每轮回答驱动一轮迭代：回话随来源新版本重跑，反馈复位后重新挂起。</summary>
@@ -268,21 +270,21 @@ public sealed class InputNodeTests
 
         TaskId id = harness.Submit("对话");
         TaskSnapshot parked = WaitForInputs(harness, id, 1);
-        Assert.Equal(TaskState.AwaitingInput, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
 
-        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
+        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
         TaskSnapshot first = WaitForInputs(harness, id, 1);
-        Assert.Equal(TaskState.AwaitingInput, first.State);
+        Assert.Equal(TaskState.Running, first.State);
         ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Name.Value == "回话");
         RunSnapshot firstRun = Assert.Single(replyNode.Runs);
         Assert.Contains(firstRun.Context.Seed, message => message.Text.Contains("第一问"));
         Assert.Equal("回复第1轮", firstRun.Result);
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
-        Assert.Null(first.ExecutableStates.Single(state => state.Index == replyNode.Index).InputAnswer);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Answer));
 
-        harness.Tasks.Answer(id, null, "第二问").ThrowIfError();
+        harness.Waits.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot second = WaitForInputs(harness, id, 1);
-        Assert.Equal(TaskState.AwaitingInput, second.State);
+        Assert.Equal(TaskState.Running, second.State);
         ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Name.Value == "回话");
         Assert.Equal(2, replyNodeSecond.Runs.Count);
         RunSnapshot secondRun = replyNodeSecond.Runs[^1];
@@ -300,15 +302,15 @@ public sealed class InputNodeTests
         TaskId id = harness.Submit("对话");
         WaitForInputs(harness, id, 1);
 
-        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
+        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
         harness.Wait(id, snapshot => snapshot.LiveRuns == 1);
 
-        ErrorOr<Success> busy = harness.Tasks.Answer(id, null, "挤进来");
+        ErrorOr<Success> busy = harness.Waits.Answer(id, null, "挤进来");
         Assert.True(busy.IsError);
         Assert.Contains(busy.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
 
         TaskSnapshot back = WaitForInputs(harness, id, 1);
-        Assert.Equal(TaskState.AwaitingInput, back.State);
+        Assert.Equal(TaskState.Running, back.State);
     }
 
     /// <summary>输入节点包在自动容器里，回答后容器放行，下游实施消费回答。</summary>
@@ -341,7 +343,7 @@ public sealed class InputNodeTests
         }
         """;
 
-    /// <summary>输入节点包在带 Review 门控的容器里，回答后容器停在待批准，批准后放行。</summary>
+    /// <summary>输入节点包在容器里，回答后容器产出经审批节点停在待批准，批准后放行。</summary>
     private const string InputInReviewContainerFlow = """
         {
           "Flows": [
@@ -356,11 +358,12 @@ public sealed class InputNodeTests
                     {
                       "Name": "审查容器",
                       "Kind": "Container",
-                      "Gate": "Review",
+                      "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                       "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "From": [ { "目标": "Start@目标" } ] }
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
-                    }
+                    },
+                    { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "回答" }], "From": [ { "回答": "审查容器@回答" } ] }
                   ]
                 }
               ]

@@ -5,7 +5,9 @@ using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Waiting;
 
 namespace Kuroe.Cli.Commands;
 
@@ -13,6 +15,7 @@ namespace Kuroe.Cli.Commands;
 internal sealed class TaskCommands(
     TaskRegistry registry,
     TaskService tasks,
+    WaitService waits,
     TaskListView list,
     TaskDetailView detail,
     RunDetailView runView,
@@ -30,8 +33,8 @@ internal sealed class TaskCommands(
         ("/task show <任务号>", "打印该任务的节点与 run"),
         ("/task run <run号>", "打印该 run 的上下文来源与过程"),
         ("/task title <任务号> <文本>", "改任务标题"),
-        ("/task approve <任务号>", "批准待批准的产出"),
-        ("/task approve <任务号> run <run号>", "批准单个 run 的产出"),
+        ("/task approve <任务号>", "批准全部待批准的审批节点"),
+        ("/task approve <任务号> <@节点名>", "批准指定审批节点，多个待批准时用 @节点名 点名"),
         ("/task answer <任务号> [<@节点名>] <文本>", "回答等待输入的节点，多个待输入时用 @节点名 点名"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
         ("/task stop <任务号>", "取消任务"),
@@ -73,13 +76,11 @@ internal sealed class TaskCommands(
                 break;
 
             case ("approve", 3) when Number(parts[2], "任务号") is { } task:
-                results.Report(tasks.Approve(new TaskId(task)), $"{new TaskId(task)} 已批准，继续下一步。");
+                Approve(task, string.Empty);
                 break;
 
-            case ("approve", 5) when parts[3].Equals("run", StringComparison.OrdinalIgnoreCase)
-                && Number(parts[2], "任务号") is { } task
-                && Number(parts[4], "run号") is { } run:
-                results.Report(tasks.Approve(new TaskId(task), [new RunId(run)]), $"{new TaskId(task)} 已批准，继续下一步。");
+            case ("approve", 4) when Number(parts[2], "任务号") is { } task:
+                Approve(task, parts[3]);
                 break;
 
             case ("answer", >= 4) when Number(parts[2], "任务号") is { } task:
@@ -139,20 +140,20 @@ internal sealed class TaskCommands(
         list.Print([task]);
     }
 
-    /// <summary>回答等待输入的节点。首词以 @ 开头且命中等待节点名时按点名回答，唯一待输入节点不需点名。</summary>
+    /// <summary>回答待输入的节点。首词以 @ 开头且命中等待节点名时按点名回答，唯一待输入节点不需点名。</summary>
     private void Answer(int number, string[] inputParts)
     {
-        ErrorOr<WorkTask> found = registry.Find(new TaskId(number));
-        if (found.IsError)
+        TaskId id = new(number);
+        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        if (pending.IsError)
         {
-            results.Reject(found.ErrorsOrEmptyList);
+            results.Reject(pending.ErrorsOrEmptyList);
             return;
         }
 
-        TaskSnapshot snapshot = found.Value.Snapshot();
-        HashSet<string> waiting = [.. snapshot.ExecutableStates
-            .Where(state => state.State == NodeState.AwaitingInput)
-            .Select(state => snapshot.Graph[state.Index].Name.Value)];
+        HashSet<string> waiting = [.. pending.Value
+            .Where(node => node.Kind == AwaitKind.Answer)
+            .Select(node => node.Name)];
 
         string? nodeName;
         string input;
@@ -170,7 +171,38 @@ internal sealed class TaskCommands(
             input = string.Join(' ', inputParts);
         }
 
-        results.Report(tasks.Answer(new TaskId(number), nodeName, input), $"{new TaskId(number)} 已收到回答，继续下一步。");
+        results.Report(waits.Answer(id, nodeName, input), $"{id} 已收到回答，继续下一步。");
+    }
+
+    /// <summary>批准审批节点。参数以 @ 开头且命中待批准节点名时按点名批准，未点名时批准全部待批准节点。</summary>
+    private void Approve(int number, string marker)
+    {
+        TaskId id = new(number);
+        if (marker.Length <= 1 || marker[0] != '@')
+        {
+            results.Report(waits.Approve(id), $"{id} 已批准，继续下一步。");
+            return;
+        }
+
+        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        if (pending.IsError)
+        {
+            results.Reject(pending.ErrorsOrEmptyList);
+            return;
+        }
+
+        string name = marker[1..];
+        foreach (PendingNode node in pending.Value)
+        {
+            if (node.Kind == AwaitKind.Approve && node.Name == name)
+            {
+                results.Report(waits.Approve(id, [node.Index]), $"{id} 已批准，继续下一步。");
+
+                return;
+            }
+        }
+
+        terminal.Warn($"节点「{name}」不在待批准。");
     }
 
     private void Show(int number)

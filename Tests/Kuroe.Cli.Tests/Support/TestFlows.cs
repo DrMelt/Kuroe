@@ -3,7 +3,7 @@ namespace Kuroe.Cli.Tests.Support;
 /// <summary>测试共享的流程模板 JSON。</summary>
 public static class TestFlows
 {
-    /// <summary>按条目展开且每个条目 run 都停在待批准的执行节点。</summary>
+    /// <summary>审批节点把计划放行给按条目展开的执行节点。</summary>
     public const string ReviewPerItemFlow = """
         {
           "Flows": [
@@ -20,7 +20,8 @@ public static class TestFlows
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Gate": "Review", "From": [ { "拆分": "制定计划@拆分" } ] }
+                { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -52,7 +53,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>并行分支：一分支停在输入等待回答，另一分支 Review 容器停在待批准。</summary>
+    /// <summary>并行分支：一分支停在输入等待回答，另一分支经审批节点停在待批准。</summary>
     public const string ParallelInputAndReviewFlow = """
         {
           "Flows": [
@@ -76,13 +77,13 @@ public static class TestFlows
                     {
                       "Name": "审查分支",
                       "Kind": "Container",
-                      "Gate": "Review",
                       "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }],
                       "Nodes": [
                         { "Name": "准备", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                       ]
                     },
-                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审查分支@结论" } ] }
+                    { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论" }], "From": [ { "结论": "审查分支@结论" } ] },
+                    { "Name": "实施", "Kind": "Executable", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审阅@结论" } ] }
                   ]
                 }
               ]

@@ -25,7 +25,7 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
         new ToolName("GetFlow"),
-        "查看指定流程的展开节点表：模型、节点类型、展开方式与放行规则。",
+        "查看指定流程的展开节点表：模型、节点类型、展开方式与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
         InfoTools.Group);
 
@@ -87,18 +87,20 @@ internal sealed class FlowInfoTool : ITool
         {
             if (node.Execution is { } executable)
             {
-                NodeKind kind = node.EffectiveKind;
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{InfoLabels.Of(kind)}节点）");
+                NodeTypeName kind = node.EffectiveKind;
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Value}节点）");
 
                 List<string> attributes = [];
-                if (kind != NodeKind.Input)
+                if (kind == NodeTypes.Executable)
                 {
                     attributes.Add($"模型 {NodeModel(node)}");
+                    attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
                 }
 
-                attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
-                attributes.Add($"放行 {InfoLabels.Of(node.Gate)}");
-                text.AppendLine($"    {string.Join(" · ", attributes)}");
+                if (attributes.Count > 0)
+                {
+                    text.AppendLine($"    {string.Join(" · ", attributes)}");
+                }
 
                 string requirement = Requirement(node, executable);
                 if (requirement.Length > 0)
@@ -108,7 +110,7 @@ internal sealed class FlowInfoTool : ITool
             }
             else if (node.Nodes is { Count: > 0 })
             {
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{InfoLabels.Of(node.EffectiveKind)}节点）· 放行 {InfoLabels.Of(node.Gate)}");
+                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Value}节点）");
                 if (node.Inputs.Count > 0)
                 {
                     text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");

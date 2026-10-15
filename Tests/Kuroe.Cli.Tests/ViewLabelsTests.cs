@@ -1,5 +1,4 @@
 using Kuroe.Cli.Views;
-using Kuroe.Presentation;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
@@ -15,27 +14,17 @@ public sealed class ViewLabelsTests
     public void State_labels_cover_every_body_state()
     {
         Assert.Equal("执行中", ViewLabels.Of(TaskState.Running));
-        Assert.Equal("待批准", ViewLabels.Of(TaskState.AwaitingApproval));
         Assert.Equal("已阻塞", ViewLabels.Of(TaskState.Blocked));
         Assert.Equal("已完成", ViewLabels.Of(TaskState.Done));
         Assert.Equal("已取消", ViewLabels.Of(TaskState.Canceled));
     }
 
     [Fact]
-    public void Mode_and_gate_labels_cover_the_scope()
+    public void Mode_labels_cover_the_scope()
     {
         Assert.Equal("执行中", ViewLabels.Of(NodeState.Running));
         Assert.Equal("按条目", ViewLabels.Of(NodeMode.PerItem));
         Assert.Equal("整节点", ViewLabels.Of(NodeMode.Single));
-        Assert.Equal("自动放行", ViewLabels.Of(NodeGate.Auto));
-    }
-
-    [Fact]
-    public void Node_kind_labels_cover_the_kinds()
-    {
-        Assert.Equal("容器", InfoLabels.Of(NodeKind.Container));
-        Assert.Equal("执行", InfoLabels.Of(NodeKind.Executable));
-        Assert.Equal("输入", InfoLabels.Of(NodeKind.Input));
     }
 
     [Fact]
@@ -73,8 +62,6 @@ public sealed class ViewLabelsTests
     {
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(TaskState.Done));
         Assert.Equal(Styles.Key, ViewLabels.StyleOf(TaskState.Running));
-        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.AwaitingApproval));
-        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.AwaitingInput));
         Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.Blocked));
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Canceled));
     }

@@ -8,8 +8,8 @@ namespace Kuroe.Flows.StaticGraph;
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
-    /// <summary>编译流程树。</summary>
-    public static NodeGraph Compile(Flow.FlowDefinition flow)
+    /// <summary>编译流程树，类型经注册表解析。</summary>
+    public static NodeGraph Compile(Flow.FlowDefinition flow, NodeTypeRegistry types)
     {
         Dictionary<Flow.ModelRef, Flow.ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
@@ -32,7 +32,6 @@ internal static class FlowCompiler
                 Index = builder.Index,
                 Name = builder.Name,
                 Path = builder.Path,
-                Gate = builder.Gate,
                 Members = builder.Members,
                 SubContainers = builder.SubContainers,
                 PortBindings = builder.PortBindings,
@@ -62,7 +61,7 @@ internal static class FlowCompiler
             }
         }
 
-        return new NodeGraph(nodes, edges);
+        return new NodeGraph(nodes, edges, types);
     }
 
     /// <summary>开始节点：序号 0，不属于任何容器，任务启动即已放行。</summary>
@@ -71,7 +70,6 @@ internal static class FlowCompiler
         Index = 0,
         Name = StartNode.ReservedName,
         Path = new Flow.NodePath([StartNode.ReservedName]),
-        Gate = Flow.NodeGate.Auto,
         Outputs = outputs,
     };
 
@@ -80,7 +78,6 @@ internal static class FlowCompiler
         int Index,
         Flow.NodeName Name,
         Flow.NodePath Path,
-        Flow.NodeGate Gate,
         List<int> Members,
         List<int> SubContainers,
         IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? PortBindings);
@@ -135,13 +132,12 @@ internal static class FlowCompiler
         int container = nodes.Count;
         Flow.NodePath containerPath = new([.. path, node.Name]);
         IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? bindings = ToBindings(node.ContainerOutputs);
-        containers[container] = new ContainerBuilder(container, node.Name, containerPath, node.Gate, [], [], bindings);
+        containers[container] = new ContainerBuilder(container, node.Name, containerPath, [], [], bindings);
         nodes.Add(new ContainerNode
         {
             Index = container,
             Name = node.Name,
             Path = containerPath,
-            Gate = node.Gate,
             Members = [],
             SubContainers = [],
             PortBindings = bindings,
@@ -169,7 +165,6 @@ internal static class FlowCompiler
             Index = index,
             Name = node.Name,
             Path = new Flow.NodePath([.. path, node.Name]),
-            Gate = node.Gate,
             Kind = node.EffectiveKind,
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,

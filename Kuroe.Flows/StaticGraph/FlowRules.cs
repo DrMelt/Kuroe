@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flows.Shared;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph.Library;
 using Flow = Kuroe.Flows.Shared.StaticGraph;
@@ -9,8 +10,8 @@ namespace Kuroe.Flows.StaticGraph;
 /// 一条流程内的错误一次给全。</summary>
 static class FlowRules
 {
-    /// <summary>校验一条流程。</summary>
-    public static ErrorOr<Success> Validate(FlowDefinition flow)
+    /// <summary>校验一条流程。类型规则由注册表给出的节点类型定义承担。</summary>
+    public static ErrorOr<Success> Validate(FlowDefinition flow, NodeTypeRegistry types)
     {
         List<Error> errors = [];
 
@@ -43,8 +44,8 @@ static class FlowRules
         var executableNames = new HashSet<NodeName>();
         CollectExecutables(flow.RootNode, executableNames);
 
-        var inputNames = new HashSet<NodeName>();
-        CollectInputs(flow.RootNode, inputNames);
+        var contextlessNames = new HashSet<NodeName>();
+        CollectContextless(flow.RootNode, contextlessNames, types);
 
         var perItemNames = new HashSet<NodeName>();
         CollectPerItem(flow.RootNode, perItemNames);
@@ -60,12 +61,12 @@ static class FlowRules
         var parentOf = new Dictionary<NodeName, NodeName>();
         CollectParents(flow.RootNode, parentOf, parent: null);
 
-        CheckTree(flow.RootNode, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, NodeScope.Flow(flow.Name.Value), errors);
+        CheckTree(flow.RootNode, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, types, NodeScope.Flow(flow.Name.Value), errors);
 
         // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
         {
-            CheckShape(FlowCompiler.Compile(flow), NodeScope.Flow(flow.Name.Value), errors);
+            CheckShape(FlowCompiler.Compile(flow, types), NodeScope.Flow(flow.Name.Value), errors);
         }
 
         return errors.Count > 0 ? errors : Result.Success;
@@ -137,10 +138,11 @@ static class FlowRules
         }
     }
 
-    /// <summary>收集输入节点名，上下文端口来源据此拦截。</summary>
-    private static void CollectInputs(NodeSpec node, HashSet<NodeName> names)
+    /// <summary>收集不产出上下文端口的节点名，Context 输入来源据此拦截。</summary>
+    private static void CollectContextless(NodeSpec node, HashSet<NodeName> names, NodeTypeRegistry types)
     {
-        if (node.Kind == Flow.NodeKind.Input)
+        if (ShapeOf(node, types) is { Organizes: false } shape
+            && !shape.OutputTypes.Contains(PortType.Context))
         {
             names.Add(node.Name);
         }
@@ -148,10 +150,14 @@ static class FlowRules
         {
             foreach (NodeSpec child in children)
             {
-                CollectInputs(child, names);
+                CollectContextless(child, names, types);
             }
         }
     }
+
+    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
+    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
+        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
 
     /// <summary>收集按条目展开的执行节点名，上下文输入端口来源据此拦截。</summary>
     private static void CollectPerItem(NodeSpec node, HashSet<NodeName> names)
@@ -263,17 +269,18 @@ static class FlowRules
         NodeSpec node,
         HashSet<NodeName> names,
         HashSet<NodeName> executableNames,
-        HashSet<NodeName> inputNames,
+        HashSet<NodeName> contextlessNames,
         HashSet<NodeName> perItemNames,
         HashSet<ModelRef> modelNames,
         HashSet<NodeName> containerNames,
         IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
         IReadOnlyDictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>> containerOutputs,
         IReadOnlyDictionary<NodeName, NodeName> parentOf,
+        NodeTypeRegistry types,
         NodeScope scope,
         List<Error> errors)
     {
-        CheckSourceReferences(node, executableNames, inputNames, perItemNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
+        CheckSourceReferences(node, executableNames, contextlessNames, perItemNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
 
         CheckValidation(node, scope, errors);
 
@@ -296,9 +303,9 @@ static class FlowRules
 
         if (node.Nodes is { Count: > 0 } children)
         {
-            if (node.MaxRuns is { } containerLimit && containerLimit < 1)
+            if (node.Kind is { } containerKind && types.Of(containerKind) is { } containerType)
             {
-                errors.Add(scope.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
+                containerType.Validate(node, scope, errors.Add);
             }
 
             if (node.Model is not null || node.Models is not null)
@@ -314,7 +321,7 @@ static class FlowRules
             {
                 foreach (NodeSpec child in children)
                 {
-                    CheckTree(child, names, executableNames, inputNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
+                    CheckTree(child, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, types, scope, errors);
                 }
             }
 
@@ -330,22 +337,31 @@ static class FlowRules
         }
         else if (node.Execution is not null)
         {
-            // 输入节点不启动 run，不需要模型选择
-            if (node.Kind != Flow.NodeKind.Input)
-            {
-                if (node.Model is not { } model)
-                {
-                    errors.Add(scope.Node(node.Name.Value, "执行节点必须声明模型选择。"));
-                }
-                else if (!modelNames.Contains(model))
-                {
-                    errors.Add(scope.Node(node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
-                }
-            }
+            INodeType? definition = node.Kind is { } declared ? types.Of(declared) : null;
+            NodeTypeShape? shape = definition?.Shape;
 
-            CheckExpansion(node, scope, errors);
-            ValidateInput(node, scope, errors);
-            ValidateInterface(node, scope, errors);
+            if (shape is null)
+            {
+                errors.Add(scope.Node(node.Name.Value, $"节点类型 {node.Kind?.Value ?? "(未写)"} 未注册。"));
+            }
+            else
+            {
+                // 不派发 run 的类型不需要模型选择
+                if (shape.DispatchesRuns)
+                {
+                    if (node.Model is not { } model)
+                    {
+                        errors.Add(scope.Node(node.Name.Value, "执行节点必须声明模型选择。"));
+                    }
+                    else if (!modelNames.Contains(model))
+                    {
+                        errors.Add(scope.Node(node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
+                    }
+                }
+
+                definition!.Validate(node, scope, errors.Add);
+                ValidateInterface(node, shape, scope, errors);
+            }
         }
         else if (node.Use is null)
         {
@@ -357,7 +373,7 @@ static class FlowRules
     private static void CheckSourceReferences(
         NodeSpec node,
         HashSet<NodeName> executableNames,
-        HashSet<NodeName> inputNames,
+        HashSet<NodeName> contextlessNames,
         HashSet<NodeName> perItemNames,
         HashSet<NodeName> containerNames,
         IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
@@ -423,10 +439,10 @@ static class FlowRules
                         errors.Add(scope.Node(node.Name.Value,
                             $"Context 输入来源 {contextSource} 必须是非输入执行节点。"));
                     }
-                    else if (inputNames.Contains(contextSource))
+                    else if (contextlessNames.Contains(contextSource))
                     {
                         errors.Add(scope.Node(node.Name.Value,
-                            $"Context 输入来源 {contextSource} 不能是输入节点。"));
+                            $"Context 输入来源 {contextSource} 不产出上下文端口。"));
                     }
                     else if (perItemNames.Contains(contextSource))
                     {
@@ -570,66 +586,9 @@ static class FlowRules
         return false;
     }
 
-    /// <summary>输入节点的静态规则：只以用户输入为产出，不接受执行配置与门控。</summary>
-    private static void ValidateInput(NodeSpec node, NodeScope scope, List<Error> errors)
-    {
-        if (node.Execution is not { } executable || node.Kind != Flow.NodeKind.Input)
-        {
-            return;
-        }
-
-        void Reject(bool condition, string message)
-        {
-            if (condition)
-            {
-                errors.Add(scope.Node(node.Name.Value, message));
-            }
-        }
-
-        Reject(node.Model is not null, "输入节点不启动 run，不能声明模型选择。");
-        Reject(executable.Tools.Count > 0, "输入节点不启动 run，不能声明 Tools。");
-        Reject(executable.Prompt is { Length: > 0 }, "输入节点不启动 run，不能声明 Prompt。");
-        Reject(executable.Validate is not null, "输入节点不启动 run，不能声明 Validate。");
-        Reject(node.Inputs.Any(port => port.Type is not (Flow.PortType.Text or Flow.PortType.Signal)), "输入节点只等待外部回答，输入端口只能是 Text 或 Signal 类型。");
-        Reject(executable.Mode != Flow.NodeMode.Single, "输入节点只能整节点等待用户输入。");
-        Reject(executable.Branch is not null, "输入节点不启动 run，不能声明 Branch。");
-        Reject(node.Gate == Flow.NodeGate.Review, "输入节点回答即放行，不能声明 Review 门控。");
-        Reject(node.Outputs.Any(port => port.Type != Flow.PortType.Text), "输入节点的输出端口只能是 Text 端口，回答写入该端口。");
-        Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
-        Reject(node.SystemPrompt.Count > 0, "输入节点不启动 run，不能声明系统指令。");
-    }
-
-    /// <summary>节点接口的静态规则：端口名与端口类型，与节点库校验共用同一份实现。</summary>
-    private static void ValidateInterface(NodeSpec node, NodeScope scope, List<Error> errors) =>
-        NodeInterfaceRules.Check(node, message => errors.Add(scope.Node(node.Name.Value, message)));
-
-    /// <summary>Validate 与非 Text 输入端口的组合约束：两者都要求整节点执行。</summary>
-    private static void CheckExpansion(NodeSpec node, NodeScope scope, List<Error> errors)
-    {
-        ExecutableSpec execution = node.Execution!;
-        if (execution.MaxRuns is { } limit && limit < 1)
-        {
-            errors.Add(scope.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
-        }
-
-        if (execution.Validate is not null)
-        {
-            if (!node.Outputs.Any(port => port.Type == Flow.PortType.Text))
-            {
-                errors.Add(scope.Node(node.Name.Value, "声明 Validate 的节点必须声明 Text 输出端口，校验对象是端口产出。"));
-            }
-
-            if (execution.Mode == Flow.NodeMode.PerItem)
-            {
-                errors.Add(scope.Node(node.Name.Value, "声明 Validate 的执行节点不能按条目展开，必须是整节点执行。"));
-            }
-        }
-
-        if (execution.Mode == Flow.NodeMode.PerItem && node.Inputs.Any(port => port.Type != Flow.PortType.Text))
-        {
-            errors.Add(scope.Node(node.Name.Value, "声明 Context 或 Signal 输入端口的执行节点不能按条目展开，必须是整节点执行。"));
-        }
-    }
+    /// <summary>节点接口的静态规则：端口名与端口类型，端口值域与 Question 归属按类型形状判定。</summary>
+    private static void ValidateInterface(NodeSpec node, NodeTypeShape shape, NodeScope scope, List<Error> errors) =>
+        NodeInterfaceRules.Check(node, shape, message => errors.Add(scope.Node(node.Name.Value, message)));
 
     /// <summary>输出校验的取值边界：参数必要性、正则合法性。</summary>
     private static void CheckValidation(NodeSpec node, NodeScope scope, List<Error> errors)
@@ -703,9 +662,11 @@ static class FlowRules
                 errors.Add(scope.Node(target.Name.Value, "声明 WorkItems 端口的执行节点不能从按条目展开的执行节点取输入。"));
             }
 
-            if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems && edge.Kind != EdgeKind.Split)
+            if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems
+                && edge.Kind != EdgeKind.Split
+                && edge.Type != Flow.PortType.Signal)
             {
-                errors.Add(scope.Node(target.Name.Value, "WorkItems 端口只能被按条目展开的执行节点消费。"));
+                errors.Add(scope.Node(target.Name.Value, "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"));
             }
 
             if (edge.Scope == FeedScope.Item
@@ -831,8 +792,8 @@ static class FlowRules
 
         foreach (int[] members in graph.Loops())
         {
-            // 环内输入节点是挂点也是周期外源，无需环外来源即可启动
-            if (members.Any(member => graph[member] is ExecutableNode { Kind: Flow.NodeKind.Input }))
+            // 环内可自启动的节点是挂点也是周期外源，无需环外来源即可启动
+            if (members.Any(member => graph.ShapeOf(member) is { StartsUnaided: true }))
             {
                 continue;
             }

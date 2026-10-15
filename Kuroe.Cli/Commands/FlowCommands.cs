@@ -98,14 +98,13 @@ internal sealed class FlowCommands(
             return;
         }
 
-        Grid grid = Terminal.Columns(7, wrapColumns: 6);
+        Grid grid = Terminal.Columns(6, wrapColumns: 6);
         grid.AddRow(
             new Text("序号", Styles.Hint),
             new Text("执行节点", Styles.Hint),
             new Text("模型", Styles.Hint),
             new Text("类型", Styles.Hint),
             new Text("展开", Styles.Hint),
-            new Text("产出后", Styles.Hint),
             new Text("上游与要求", Styles.Hint));
 
         int index = 0;
@@ -117,9 +116,8 @@ internal sealed class FlowCommands(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + node.Name.Value),
                     new Text(node.Model?.Value ?? "—"),
-                    new Text(InfoLabels.Of(node.EffectiveKind)),
+                    new Text(node.EffectiveKind.Value),
                     new Text(ViewLabels.Of(executable.Mode)),
-                    new Text(ViewLabels.Of(node.Gate)),
                     new Text(Requirement(node, executable), Styles.Hint));
                 index++;
             }
@@ -131,7 +129,6 @@ internal sealed class FlowCommands(
                     new Text("容器", Styles.Hint),
                     new Text(string.Empty),
                     new Text(string.Empty),
-                    new Text(ViewLabels.Of(node.Gate), Styles.Hint),
                     new Text(string.Empty));
             }
         }

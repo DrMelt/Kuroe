@@ -42,4 +42,16 @@ public interface INodeGraph
 
     /// <summary>容器及它的全部子容器里的执行节点，递归展开。</summary>
     IReadOnlyList<int> ExecutablesIn(int containerIndex);
+
+    /// <summary>节点的输入侧方案，未参与就绪判定的节点为空。</summary>
+    NodeInputPlan? PlanOf(int index);
+
+    /// <summary>节点类型的形状，类型未注册时为空。</summary>
+    NodeTypeShape? ShapeOf(int index);
+
+    /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。</summary>
+    PortType TypeOf(int nodeIndex, PortName port);
+
+    /// <summary>来源节点提供实例空间的拆分标识，没有时为空。</summary>
+    int? ItemSpace(int executableIndex);
 }

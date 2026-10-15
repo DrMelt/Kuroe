@@ -1,34 +1,37 @@
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>容器作为节点实体的推进：容器门控停在待批准、容器汇合后才放下游。</summary>
+/// <summary>容器作为节点实体的推进：审批节点停在待批准、容器汇合后才放下游。</summary>
 public sealed class ContainerAdvanceTests
 {
     [Fact]
-    public void Container_gate_parks_until_approved()
+    public void Approval_node_parks_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerGateFlow);
+        using KuroeHarness harness = KuroeHarness.Create(ApprovalGateFlow);
         harness.Executor.ItemsJson = BranchedItemsJson;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        // 成员全部完成，收拢节点等容器放行，还没有 run
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        // 两条分支各一个 run，审批节点停在待批准，汇总还没有 run
         Assert.Single(parked.Executables[1].Runs);
         Assert.Single(parked.Executables[2].Runs);
         Assert.Empty(parked.Executables[3].Runs);
-        ContainerSnapshot container = Assert.Single(parked.Containers, pending => pending.State == NodeState.AwaitingApproval);
-        Assert.Equal(NodeState.AwaitingApproval, container.State);
+        Assert.Empty(parked.Executables[4].Runs);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[3].Runs);
+        Assert.Single(done.Executables[4].Runs);
+        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
 
     [Fact]
@@ -66,44 +69,44 @@ public sealed class ContainerAdvanceTests
     }
 
     [Fact]
-    public void Review_container_inside_auto_container_parks_until_approved()
+    public void Approval_inside_container_parks_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(NestedReviewContainerFlow);
+        using KuroeHarness harness = KuroeHarness.Create(NestedApprovalFlow);
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        Assert.Empty(parked.Executables[2].Runs);
-        // 子容器停在待批准，父容器不广播下游
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.Containers, container => container.Path.Value == "整体/交付/撰写组").State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Empty(parked.Executables[3].Runs);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "撰写组").State);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 子容器获得批准后，容器广播接续到收拢节点，只跑一轮
-        Assert.Single(done.Executables[2].Runs);
+        // 审批节点获得批准后，容器广播接续到收拢节点，只跑一轮
+        Assert.Single(done.Executables[3].Runs);
         Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
 
     [Fact]
-    public void Review_executable_inside_container_parks_downstream_until_approved()
+    public void Approval_of_container_parks_downstream_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewMemberFlow);
+        using KuroeHarness harness = KuroeHarness.Create(ApprovalOfContainerFlow);
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        Assert.Empty(parked.Executables[2].Runs);
-        Assert.Equal(2, parked.Containers.Count);
-        Assert.All(parked.Containers, container => Assert.Equal(NodeState.Running, container.State));
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Empty(parked.Executables[3].Runs);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[2].Runs);
-        Assert.Equal(2, done.Containers.Count);
+        Assert.Single(done.Executables[3].Runs);
         Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
     }
 
@@ -149,7 +152,7 @@ public sealed class ContainerAdvanceTests
         ]
         """;
 
-    private const string ContainerGateFlow = """
+    private const string ApprovalGateFlow = """
         {
           "Flows": [
             {
@@ -165,11 +168,12 @@ public sealed class ContainerAdvanceTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Kind": "Container", "Gate": "Review", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
                   { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Branch": "撰写", "From": [ { "拆分": "制定计划@拆分" } ] },
                   { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Branch": "排版", "From": [ { "拆分": "制定计划@拆分" } ] }
                 ] },
-                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] }
+                { "Name": "审阅", "Kind": "Approval", "Question": "确认两版结论", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
+                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
                   ]
                 }
               ]
@@ -207,7 +211,7 @@ public sealed class ContainerAdvanceTests
         }
         """;
 
-    private const string NestedReviewContainerFlow = """
+    private const string NestedApprovalFlow = """
         {
           "Flows": [
             {
@@ -222,12 +226,13 @@ public sealed class ContainerAdvanceTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写组", "Kind": "Container", "Gate": "Review", "Nodes": [
+                  { "Name": "撰写组", "Kind": "Container", "Nodes": [
                     { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                   ] },
                   { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                 ] },
-                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] }
+                { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
+                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
                   ]
                 }
               ]
@@ -236,7 +241,7 @@ public sealed class ContainerAdvanceTests
         }
         """;
 
-    private const string ReviewMemberFlow = """
+    private const string ApprovalOfContainerFlow = """
         {
           "Flows": [
             {
@@ -251,10 +256,11 @@ public sealed class ContainerAdvanceTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Gate": "Review", "From": [ { "目标": "Start@目标" } ] },
+                  { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
                   { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
                 ] },
-                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] }
+                { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
+                { "Name": "汇总", "Kind": "Executable", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
                   ]
                 }
               ]

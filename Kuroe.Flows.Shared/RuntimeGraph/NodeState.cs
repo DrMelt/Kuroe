@@ -9,12 +9,6 @@ public enum NodeState
     /// <summary>有 run 在跑。</summary>
     Running,
 
-    /// <summary>输入节点停在等待用户回答。</summary>
-    AwaitingInput,
-
-    /// <summary>本节点产出已就绪，待批准后才向下游发布。</summary>
-    AwaitingApproval,
-
     /// <summary>停在执行错误或未收口，等待返工或放行。</summary>
     Blocked,
 

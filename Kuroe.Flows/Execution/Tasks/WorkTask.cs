@@ -11,7 +11,7 @@ namespace Kuroe.Flows.Execution.Tasks;
 
 /// <summary>任务 = 一条长期执行线程：按流程推进的执行节点状态与启动的全部 run。
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
-public sealed class WorkTask
+public sealed class WorkTask : INodeTask
 {
     private const int TitleLimit = 40;
 
@@ -44,6 +44,21 @@ public sealed class WorkTask
     /// <summary>提交时锁定的流程编译视图。</summary>
     internal NodeGraph Graph { get; }
 
+    /// <summary>任务的流程编译视图，节点实现经它定位成员与读端口类型。</summary>
+    INodeGraph INodeTask.Graph => Graph;
+
+    /// <summary>任务的节点上下文，宿主扩展按序号取节点运行期对象时使用。</summary>
+    public INodeContext Context => Runtime;
+
+    /// <summary>在任务状态锁下执行一段操作。状态改动都要经它串行。</summary>
+    public T UnderLock<T>(Func<T> action)
+    {
+        lock (Gate)
+        {
+            return action();
+        }
+    }
+
     /// <summary>任务的过程记录，只记执行侧诊断内容。</summary>
     internal TurnJournal Journal { get; }
 
@@ -56,7 +71,7 @@ public sealed class WorkTask
     internal void NotifyRunSettled(Run run) => RunSettled?.Invoke(run);
 
     /// <summary>订阅 run 收口通知，返回解除订阅的委托。</summary>
-    internal Action SubscribeRunSettled(Action<Run> handler)
+    public Action SubscribeRunSettled(Action<Run> handler)
     {
         RunSettled += handler;
 
@@ -88,8 +103,8 @@ public sealed class WorkTask
         }
     }
 
-    /// <summary>提交顺序排列的 run。仅在持有 <see cref="Gate"/> 时读写。</summary>
-    internal IReadOnlyList<Run> Runs => _runs;
+    /// <summary>提交顺序排列的 run，宿主对话功能读数用。仅在持有 <see cref="Gate"/> 时读写。</summary>
+    public IReadOnlyList<Run> Runs => _runs;
 
     /// <summary>任务的整体状态，由取消标记、执行节点状态与在跑的 run 汇总得出。</summary>
     public TaskState State
@@ -113,16 +128,6 @@ public sealed class WorkTask
         if (_runs.Any(run => run.IsLive))
         {
             return TaskState.Running;
-        }
-
-        if (Runtime.HasAwaitingInput)
-        {
-            return TaskState.AwaitingInput;
-        }
-
-        if (Runtime.HasAwaiting)
-        {
-            return TaskState.AwaitingApproval;
         }
 
         if (Runtime.HasBlocked)
@@ -158,7 +163,7 @@ public sealed class WorkTask
     private event Action<Run>? RunAttached;
 
     /// <summary>订阅新 run 启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
-    internal Action SubscribeRunAttached(Action<Run> handler)
+    public Action SubscribeRunAttached(Action<Run> handler)
     {
         RunAttached += handler;
 

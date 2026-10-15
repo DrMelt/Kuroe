@@ -6,28 +6,17 @@ using Kuroe.Flows.Execution.Tasks;
 
 namespace Kuroe.Presentation;
 
-/// <summary>库与宿主共用的状态、节点类型、展开方式、放行方式与时间展示名。</summary>
+/// <summary>库与宿主共用的状态、展开方式与时间展示名。</summary>
 public static class InfoLabels
 {
     /// <summary>任务状态的展示名。</summary>
     public static string Of(TaskState state) => state.Label();
-
-    /// <summary>节点类型的展示名。</summary>
-    public static string Of(NodeKind kind) => kind switch
-    {
-        NodeKind.Container => "容器",
-        NodeKind.Executable => "执行",
-        NodeKind.Input => "输入",
-        _ => kind.ToString(),
-    };
 
     /// <summary>执行节点状态的展示名。</summary>
     public static string Of(NodeState state) => state switch
     {
         NodeState.Pending => "待执行",
         NodeState.Running => "执行中",
-        NodeState.AwaitingInput => "待输入",
-        NodeState.AwaitingApproval => "待批准",
         NodeState.Blocked => "已阻塞",
         NodeState.Done => "已完成",
         NodeState.Canceled => "已取消",
@@ -39,13 +28,6 @@ public static class InfoLabels
     {
         NodeMode.PerItem => "按条目",
         _ => "整节点",
-    };
-
-    /// <summary>执行节点产出后放行方式的展示名。</summary>
-    public static string Of(NodeGate gate) => gate switch
-    {
-        NodeGate.Review => "需批准",
-        _ => "自动放行",
     };
 
     /// <summary>run 状态的展示名，有正在进行的工具调用时附在其后。</summary>

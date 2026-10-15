@@ -9,7 +9,7 @@ using Kuroe.Flows.Execution.Tasks;
 namespace Kuroe.Workflows.Execution;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等待回复，无模型时返回固定引导。</summary>
-public sealed class DialogueHost(TaskService tasks, ModelService models, TaskRegistry registry)
+public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelService models, TaskRegistry registry)
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
@@ -30,7 +30,7 @@ public sealed class DialogueHost(TaskService tasks, ModelService models, TaskReg
 
         TaskId id = EnsureDialogue();
 
-        ErrorOr<string> reply = await tasks.AskAsync(id, null, input, observer, cancellationToken);
+        ErrorOr<string> reply = await rounds.AskAsync(id, null, input, observer, cancellationToken);
 
         return reply.IsError ? reply.ErrorsOrEmptyList : new DialogueReply(reply.Value);
     }
@@ -88,7 +88,7 @@ public sealed class DialogueHost(TaskService tasks, ModelService models, TaskReg
 
         lock (found.Value.Gate)
         {
-            return found.Value.State is TaskState.AwaitingInput or TaskState.Running or TaskState.AwaitingApproval;
+            return found.Value.State is TaskState.Running;
         }
     }
 }

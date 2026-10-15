@@ -1,9 +1,9 @@
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Flows.RuntimeGraph;
+namespace Kuroe.Flows.Shared.RuntimeGraph;
 
 /// <summary>判定读的来源侧：节点状态与已交回的拆分。</summary>
-internal interface IExecutionSources
+public interface IExecutionSources
 {
     /// <summary>序号对应的节点状态，未实例化的节点给未放行的默认状态。</summary>
     ISourceState Source(int nodeIndex);

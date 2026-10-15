@@ -3,15 +3,15 @@ using Xunit;
 
 namespace Kuroe.Flows.Shared.Tests;
 
-/// <summary>节点声明：生效类型只对展开后的节点树可取，执行方式与门控有缺省值。</summary>
+/// <summary>节点声明：生效类型只对展开后的节点树可取，执行方式有缺省值。</summary>
 public sealed class NodeSpecTests
 {
     [Fact]
     public void Effective_kind_returns_the_declared_kind()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeKind.Executable };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeTypes.Executable };
 
-        Assert.Equal(NodeKind.Executable, node.EffectiveKind);
+        Assert.Equal(NodeTypes.Executable, node.EffectiveKind);
     }
 
     [Fact]
@@ -25,11 +25,10 @@ public sealed class NodeSpecTests
     }
 
     [Fact]
-    public void Node_defaults_stay_auto_and_empty()
+    public void Node_defaults_stay_empty()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeKind.Executable };
+        NodeSpec node = new() { Name = new NodeName("实施"), Kind = NodeTypes.Executable };
 
-        Assert.Equal(NodeGate.Auto, node.Gate);
         Assert.Empty(node.Inputs);
         Assert.Empty(node.From);
         Assert.Empty(node.Outputs);

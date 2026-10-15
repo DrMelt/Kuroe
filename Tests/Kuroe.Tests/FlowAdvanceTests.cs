@@ -2,6 +2,8 @@ using ErrorOr;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -36,20 +38,22 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Review_gate_parks_plan_until_approved()
+    public void Approval_on_plan_parks_until_approved()
     {
         using KuroeHarness harness = KuroeHarness.Create(ReviewOnPlanFlow);
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
         Assert.Single(parked.Executables[0].Runs);
+        Assert.Empty(parked.Executables[2].Runs);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables[1].Runs.Count);
+        Assert.Equal(2, done.Executables[2].Runs.Count);
     }
 
     [Fact]
@@ -133,8 +137,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot canceled = harness.Settle(id);
 
         Assert.Equal(TaskState.Canceled, canceled.State);
-        Assert.DoesNotContain(canceled.ExecutableStates,
-            state => state.State is NodeState.Blocked or NodeState.AwaitingApproval);
+        Assert.DoesNotContain(canceled.ExecutableStates, state => state.State == NodeState.Blocked);
         Assert.Equal(1, harness.Registry.ClearSettled());
     }
 
@@ -191,15 +194,16 @@ public sealed class FlowAdvanceTests
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 批准推进必须展开分支而不是整节点顶替：每个分支各一个实施者
-        Assert.Single(done.Executables[1].Runs);
         Assert.Single(done.Executables[2].Runs);
+        Assert.Single(done.Executables[3].Runs);
     }
 
     [Fact]
@@ -210,14 +214,15 @@ public sealed class FlowAdvanceTests
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 单分支也要按拆分展开：两条目各一个实施者
-        Assert.Equal(2, done.Executables[1].Runs.Count);
+        Assert.Equal(2, done.Executables[2].Runs.Count);
     }
 
     [Fact]
@@ -256,49 +261,23 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Review_per_item_parks_each_run_until_its_run_approved()
+    public void Approve_one_approval_keeps_the_other_branch_waiting()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ReviewPerItemFlow);
+        using KuroeHarness harness = KuroeHarness.Create(ParallelApprovalFlow);
+        harness.Executor.ItemsJson = BranchedItemsJson;
 
         TaskId id = harness.Submit("补齐 README");
         TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        Assert.Equal(2, parked.Executables[1].Runs.Count);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Equal(2, harness.Awaiting(id, AwaitKind.Approve).Count);
 
-        // 每个条目 run 各自停在待批准，批准其中一个后剩下的仍停
-        RunId[] parkedRuns = [.. parked.Executables[1].Runs.Select(run => run.Id)];
-        Assert.Equal(2, Assert.Single(parked.ExecutableStates, state => state.Index == parked.Executables[1].Index).AwaitingRuns.Count);
+        int review = parked.Graph.IndexOf(new NodeName("审阅甲")) ?? throw new InvalidOperationException("找不到节点 审阅甲。");
+        harness.Waits.Approve(id, [review]).ThrowIfError();
 
-        harness.Tasks.Approve(id, [parkedRuns[0]]).ThrowIfError();
+        // 只放行甲分支的审批节点，乙分支仍停在待批准，汇总不启动
         TaskSnapshot partial = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, partial.State);
-        ExecutableStateSnapshot still = Assert.Single(partial.ExecutableStates, state => state.Index == partial.Executables[1].Index);
-        Assert.Equal([parkedRuns[1]], still.AwaitingRuns);
-
-        // 批准剩下的 run 后节点放行，任务走完
-        harness.Tasks.Approve(id, [parkedRuns[1]]).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        Assert.Empty(Assert.Single(done.ExecutableStates, state => state.Index == done.Executables[1].Index).AwaitingRuns);
-    }
-
-    [Fact]
-    public void Approve_one_run_keeps_downstream_waiting_for_the_other()
-    {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ReviewPerItemFlow);
-
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot parked = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-
-        RunId first = parked.Executables[1].Runs[0].Id;
-        harness.Tasks.Approve(id, [first]).ThrowIfError();
-
-        // 还差一个 run 未批准，节点不放行，汇总不启动
-        TaskSnapshot partial = harness.Settle(id);
-        Assert.Equal(TaskState.AwaitingApproval, partial.State);
-        Assert.Single(partial.ExecutableStates, state => state.State == NodeState.AwaitingApproval);
+        Assert.Equal(TaskState.Running, partial.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
     }
 
     private const string BranchedItemsJson = """
@@ -330,8 +309,9 @@ public sealed class FlowAdvanceTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "分配执行", "Kind": "Executable", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -381,9 +361,10 @@ public sealed class FlowAdvanceTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": [ { "拆分": "制定计划@拆分" } ] },
-                { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "From": [ { "拆分": "制定计划@拆分" } ] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] },
+                { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -407,8 +388,37 @@ public sealed class FlowAdvanceTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Gate": "Review", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "From": [ { "拆分": "制定计划@拆分" } ] }
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    private const string ParallelApprovalFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [
+                { "Name": "规划者", "Model": "fake" },
+                { "Name": "实施者", "Model": "fake" }
+              ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                { "Name": "制定计划", "Kind": "Executable", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "审阅甲", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "审阅乙", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
+                { "Name": "撰写", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "撰写", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅甲@计划" } ] },
+                { "Name": "排版", "Kind": "Executable", "Model": "实施者", "Mode": "PerItem", "Branch": "排版", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅乙@计划" } ] }
                   ]
                 }
               ]

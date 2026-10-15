@@ -13,11 +13,12 @@ public sealed class NodeGraph : INodeGraph
     private readonly Dictionary<int, int> _parentContainer;
     private readonly NodeInputPlan?[] _plans;
 
-    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引。</summary>
-    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
+    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引，类型经注册表解析。</summary>
+    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges, NodeTypeRegistry types)
     {
         Nodes = nodes;
         Edges = edges;
+        Types = types;
         Start = nodes[0] as StartNode
             ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
         ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
@@ -56,6 +57,21 @@ public sealed class NodeGraph : INodeGraph
 
     /// <summary>流程的唯一来源节点，序号 0。</summary>
     public StartNode Start { get; }
+
+    /// <summary>节点类型注册表，装配与运行期按它解析类型。装配前一次填齐，装配完成后只读。</summary>
+    public NodeTypeRegistry Types { get; }
+
+    /// <summary>节点声明的类型名，开始没有类型。</summary>
+    public NodeTypeName? DeclaredType(int index) => Nodes[index] switch
+    {
+        ExecutableNode executable => executable.Kind,
+        ContainerNode => NodeTypes.Container,
+        _ => null,
+    };
+
+    /// <summary>节点类型的形状，开始与未注册的类型为空。</summary>
+    public NodeTypeShape? ShapeOf(int index) =>
+        DeclaredType(index) is { } type ? Types.Of(type)?.Shape : null;
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
@@ -107,19 +123,17 @@ public sealed class NodeGraph : INodeGraph
             _ => null,
         };
 
-    /// <summary>节点的输入侧方案，开始节点与输入节点为空。</summary>
+    /// <summary>节点的输入侧方案，开始节点与不需来源即可挂起的类型为空。</summary>
     public NodeInputPlan? PlanOf(int index) => _plans[index];
 
-    /// <summary>启动条件只读方案，方案由入边与节点声明一次算出：取值边成组、空间边给实例空间来源、驱动按展开模式定。</summary>
+    /// <summary>启动条件只读方案，方案由入边与节点声明一次算出：取值边成组、空间边给实例空间来源、驱动按展开模式定。
+    /// 不需来源即可挂起的类型不建方案，它们不按就绪判定。</summary>
     private NodeInputPlan[] BuildPlans()
     {
         NodeInputPlan[] plans = new NodeInputPlan[Nodes.Count];
-        foreach (ExecutableNode executable in ExecutableNodes)
+        foreach (ExecutableNode executable in ExecutableNodes.Where(node => ShapeOf(node.Index) is not { StartsUnaided: true }))
         {
-            if (executable.Kind != NodeKind.Input)
-            {
-                plans[executable.Index] = PlanFor(executable);
-            }
+            plans[executable.Index] = PlanFor(executable);
         }
 
         foreach (ContainerNode container in Containers)

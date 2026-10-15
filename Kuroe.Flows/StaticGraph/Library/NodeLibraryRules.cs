@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flows.Shared;
 using Kuroe.Flows.Shared.StaticGraph;
 using Kuroe.Flows.StaticGraph;
 using Flow = Kuroe.Flows.Shared.StaticGraph;
@@ -9,32 +10,43 @@ namespace Kuroe.Flows.StaticGraph.Library;
 internal static class NodeLibraryRules
 {
     /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复名报告在注册处完成，
-    /// 这里看到的是去重后的定义表。</summary>
-    public static ErrorOr<Success> Validate(NodeLibrary library)
+    /// 这里看到的是去重后的定义表。types 给出类型的形状，判定分派到哪一支。</summary>
+    public static ErrorOr<Success> Validate(NodeLibrary library, NodeTypeRegistry types)
     {
         List<Error> errors = [];
         IReadOnlyList<NodeSpec> definitions = library.All();
-        var byName = ValidateDefinitions(definitions, errors);
+        var byName = ValidateDefinitions(definitions, errors, types);
 
         foreach (NodeSpec node in definitions)
         {
-            if (node.Kind == Flow.NodeKind.Container)
+            if (ShapeOf(node, types) is { Organizes: true })
             {
                 if (node.Nodes is { Count: > 0 } members)
                 {
-                    CheckContainer(node, members, byName, errors, checkSlots: true);
+                    CheckContainer(node, members, byName, errors, checkSlots: true, types);
                 }
             }
             else
             {
-                CheckLeaf(node, errors);
+                CheckLeaf(node, errors, types);
             }
         }
 
         return errors.Count > 0 ? errors : Result.Success;
     }
 
-    private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(IReadOnlyList<NodeSpec> definitions, List<Error> errors)
+    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
+    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
+        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
+
+    /// <summary>节点类型名，未声明类型的节点为空。</summary>
+    private static string TypeName(NodeSpec node) =>
+        node.Kind is { } kind ? kind.Value : string.Empty;
+
+    private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(
+        IReadOnlyList<NodeSpec> definitions,
+        List<Error> errors,
+        NodeTypeRegistry types)
     {
         var byName = new Dictionary<NodeName, NodeSpec>();
         foreach (NodeSpec node in definitions)
@@ -65,7 +77,7 @@ internal static class NodeLibraryRules
 
             byName[node.Name] = node;
 
-            if (node.Kind == Flow.NodeKind.Container)
+            if (ShapeOf(node, types) is { Organizes: true })
             {
                 if (node.Nodes is not { Count: > 0 })
                 {
@@ -126,11 +138,12 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "节点必须声明执行配置。"));
                 }
 
-                if (node.Kind == Flow.NodeKind.Input)
+                if (ShapeOf(node, types) is { DispatchesRuns: false })
                 {
                     if (node.Model is not null)
                     {
-                        errors.Add(NodeScope.Library.Node(node.Name.Value, "输入成员不启动 run，不声明模型槽位。"));
+                        errors.Add(NodeScope.Library.Node(node.Name.Value,
+                            $"{TypeName(node)}成员不启动 run，不声明模型槽位。"));
                     }
                 }
                 else
@@ -171,7 +184,7 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>执行节点库叶子：不能再带结构与接线，输入端口与输出端口在此声明。</summary>
-    private static void CheckLeaf(NodeSpec node, List<Error> errors)
+    private static void CheckLeaf(NodeSpec node, List<Error> errors, NodeTypeRegistry types)
     {
         if (node.From.Count > 0)
         {
@@ -193,15 +206,15 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
-        ValidateInterface(node, errors);
+        ValidateInterface(node, types, errors);
     }
 
     /// <summary>节点接口的库规则：端口名与端口类型与流程校验共用一份，非执行节点的输出与指令另有库层限制。</summary>
-    private static void ValidateInterface(NodeSpec node, List<Error> errors)
+    private static void ValidateInterface(NodeSpec node, NodeTypeRegistry types, List<Error> errors)
     {
-        NodeInterfaceRules.Check(node, message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
+        NodeInterfaceRules.Check(node, ShapeOf(node, types), message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
 
-        if ((node.Execution is null || node.Kind == Flow.NodeKind.Input)
+        if ((node.Execution is null || ShapeOf(node, types) is { DispatchesRuns: false })
             && (node.Outputs.Count > 1 || node.SystemPrompt.Count > 0))
         {
             errors.Add(NodeScope.Library.Node(node.Name.Value, "非执行节点最多一个输出端口，也不能声明系统指令。"));
@@ -215,7 +228,8 @@ internal static class NodeLibraryRules
         IReadOnlyList<NodeSpec> members,
         Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors,
-        bool checkSlots)
+        bool checkSlots,
+        NodeTypeRegistry types)
     {
         if (container.MaxRuns is { } limit && limit < 1)
         {
@@ -228,12 +242,12 @@ internal static class NodeLibraryRules
         var subtreeOutputs = new Dictionary<NodeName, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
-        var subtreeInputs = new HashSet<NodeName>();
-        CollectSubtreeInputs(members, byName, subtreeInputs);
+        var contextless = new HashSet<NodeName>();
+        CollectContextless(members, byName, contextless, types);
 
         if (container.ContainerOutputs is { } outs)
         {
-            CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, subtreeInputs, errors);
+            CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, contextless, errors);
         }
 
         var literalNames = new HashSet<NodeName>();
@@ -248,11 +262,11 @@ internal static class NodeLibraryRules
         foreach (NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
-            CheckMemberModel(member, byName, errors);
-            ValidateInterface(member, errors);
+            CheckMemberModel(member, byName, errors, types);
+            ValidateInterface(member, types, errors);
             if (member.Nodes is { Count: > 0 })
             {
-                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false);
+                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false, types);
             }
         }
     }
@@ -363,36 +377,38 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内全部输入节点名，上下文端口绑定不允许落在输入节点上。被引用执行节点取定义上的输出端口表。</summary>
-    private static void CollectSubtreeInputs(
+    /// <summary>收集子树内不产出上下文端口的节点名，上下文端口绑定不允许落在这些节点上。
+    /// 判断按类型的输出端口值域，组织子节点的类型不在此列。</summary>
+    private static void CollectContextless(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeName> inputs)
+        HashSet<NodeName> contextless,
+        NodeTypeRegistry types)
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node.Kind == Flow.NodeKind.Input
-                || (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition)
-                    && definition.Kind == Flow.NodeKind.Input))
+            NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) ? definition : node;
+            if (ShapeOf(declared, types) is { Organizes: false } shape
+                && !shape.OutputTypes.Contains(Flow.PortType.Context))
             {
-                inputs.Add(node.Name);
+                contextless.Add(node.Name);
             }
 
             if (node.Nodes is { Count: > 0 })
             {
-                CollectSubtreeInputs(node.Nodes, byName, inputs);
+                CollectContextless(node.Nodes, byName, contextless, types);
             }
         }
     }
 
     /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
-    /// 上下文端口不落在输入节点上，WorkItems 端口不透出。</summary>
+    /// 上下文端口不落在不产出上下文端口的节点上，WorkItems 端口不透出。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
         IReadOnlyDictionary<PortName, ContainerOutput> outs,
         HashSet<NodeName> subtreeNames,
         Dictionary<NodeName, IReadOnlyList<Port>> subtreeOutputs,
-        HashSet<NodeName> subtreeInputs,
+        HashSet<NodeName> contextless,
         List<Error> errors)
     {
         foreach ((PortName port, ContainerOutput output) in outs)
@@ -427,10 +443,10 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (memberPort.Type == Flow.PortType.Context && subtreeInputs.Contains(sourceName))
+            if (memberPort.Type == Flow.PortType.Context && contextless.Contains(sourceName))
             {
                 errors.Add(NodeScope.Library.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 是输入节点，不能作为上下文端口来源。"));
+                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不产出上下文端口，不能作为上下文端口来源。"));
                 continue;
             }
 
@@ -522,11 +538,6 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
         }
 
-        if (member.Use is not null && member.Gate != Flow.NodeGate.Auto)
-        {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "引用成员不声明 Gate，门控由被引用定义决定。"));
-        }
-
         if (member.Use is not null && member.MaxRuns is { } referenceLimit && referenceLimit < 1)
         {
             errors.Add(NodeScope.Library.Node(member.Name.Value, "MaxRuns 必须是正整数。"));
@@ -557,7 +568,8 @@ internal static class NodeLibraryRules
     private static void CheckMemberModel(
         NodeSpec member,
         Dictionary<NodeName, NodeSpec> byName,
-        List<Error> errors)
+        List<Error> errors,
+        NodeTypeRegistry types)
     {
         if (member.Nodes is { Count: > 0 })
         {
@@ -585,13 +597,24 @@ internal static class NodeLibraryRules
 
                 return;
             }
-        }
 
-        if (member.Kind == Flow.NodeKind.Input)
+            if (ShapeOf(referenced, types) is { DispatchesRuns: false })
+            {
+                if (member.Model is not null)
+                {
+                    errors.Add(NodeScope.Library.Node(member.Name.Value,
+                        $"引用{TypeName(referenced)}成员的节点不声明模型槽位。"));
+                }
+
+                return;
+            }
+        }
+        else if (ShapeOf(member, types) is { DispatchesRuns: false })
         {
             if (member.Model is not null)
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, "输入成员不启动 run，不声明模型槽位。"));
+                errors.Add(NodeScope.Library.Node(member.Name.Value,
+                    $"{TypeName(member)}成员不启动 run，不声明模型槽位。"));
             }
 
             return;

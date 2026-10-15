@@ -1,3 +1,4 @@
+using Kuroe.Flows.Node.Input;
 using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Workflows.Flows;
@@ -47,13 +48,13 @@ internal static class DialogueFlow
         new NodeSpec
         {
             Name = new NodeName("对话"),
-            Kind = NodeKind.Container,
+            Kind = NodeTypes.Container,
             Nodes =
             [
                 new NodeSpec
                 {
                     Name = InputNodeName,
-                    Kind = NodeKind.Input,
+                    Kind = InputNodeTypes.Name,
                     Inputs =
                     [
                         new InputPort(StartPort, PortType.Text),
@@ -77,7 +78,7 @@ internal static class DialogueFlow
                 new NodeSpec
                 {
                     Name = ReplyNodeName,
-                    Kind = NodeKind.Executable,
+                    Kind = NodeTypes.Executable,
                     Inputs = [new InputPort(InputPort, PortType.Text)],
                     SystemPrompt = SystemPrompt,
                     Execution = new ExecutableSpec

@@ -1,5 +1,6 @@
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -39,14 +40,14 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_approve_without_review_gate_rejects()
+    public void Task_approve_without_awaiting_approval_rejects()
     {
         using Ui ui = new();
         ui.Tasks.Run(["/task", "new", "补齐 README"]);
 
         ui.Tasks.Run(["/task", "approve", "1"]);
 
-        Assert.Contains("没有等待批准的产出", ui.ErrorsOut.Output);
+        Assert.Contains("没有等待批准的审批节点", ui.ErrorsOut.Output);
         Assert.Contains("未生效。", ui.ErrorsOut.Output);
     }
 
@@ -64,19 +65,18 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_approve_run_approves_only_that_run()
+    public void Task_approve_targets_a_named_approval_node()
     {
         using Ui ui = new(flowsJson: TestFlows.ReviewPerItemFlow);
         ui.Tasks.Run(["/task", "new", "补齐 README"]);
-        ui.Harness.Settle(new TaskId(1));
+        TaskSnapshot parked = ui.Harness.Settle(new TaskId(1));
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(ui.Harness.Awaiting(new TaskId(1), AwaitKind.Approve));
 
-        TaskSnapshot parked = ui.Harness.Snapshot(new TaskId(1));
-        RunId first = parked.Executables[1].Runs[0].Id;
-        ui.Tasks.Run(["/task", "approve", "1", "run", first.Value.ToString()]);
+        ui.Tasks.Run(["/task", "approve", "1", "@审阅"]);
+        TaskSnapshot done = ui.Harness.Settle(new TaskId(1));
 
-        ExecutableStateSnapshot still = Assert.Single(ui.Harness.Snapshot(new TaskId(1)).ExecutableStates,
-            state => state.Index == parked.Executables[1].Index);
-        Assert.Single(still.AwaitingRuns);
+        Assert.Equal(TaskState.Done, done.State);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class TaskAndReplTests
     {
         using Ui ui = new(flowsJson: TestFlows.TwoInputFlow);
         ui.Tasks.Run(["/task", "new", "目标"]);
-        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+        ui.Harness.Wait(new TaskId(1), _ => ui.Harness.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
 
         // 文本首词命中节点名不会隐式点名，未点名回答仍被拒
         ui.Tasks.Run(["/task", "answer", "1", "输入二", "内容"]);
@@ -102,7 +102,7 @@ public sealed class TaskAndReplTests
     {
         using Ui ui = new(flowsJson: TestFlows.InputFlow);
         ui.Tasks.Run(["/task", "new", "补齐 README"]);
-        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+        ui.Harness.Wait(new TaskId(1), _ => ui.Harness.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
 
         ui.Tasks.Run(["/task", "answer", "1", "用户输入", "需要", "补充多语言"]);
         ui.Harness.Settle(new TaskId(1));
@@ -118,13 +118,13 @@ public sealed class TaskAndReplTests
     {
         using Ui ui = new(flowsJson: TestFlows.ParallelInputAndReviewFlow);
         ui.Tasks.Run(["/task", "new", "目标"]);
-        ui.Harness.Wait(new TaskId(1), snapshot =>
-            snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput)
-            && snapshot.Containers.Any(container => container.Name == "审查分支" && container.State == NodeState.AwaitingApproval));
+        ui.Harness.Wait(new TaskId(1), _ =>
+            ui.Harness.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0
+            && ui.Harness.Awaiting(new TaskId(1), AwaitKind.Approve).Count > 0);
 
         ui.Tasks.Run(["/task", "approve", "1"]);
-        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput
-            && snapshot.Containers.Single(container => container.Name == "审查分支").State == NodeState.Done);
+        ui.Harness.Wait(new TaskId(1), _ => ui.Harness.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0
+            && ui.Harness.Awaiting(new TaskId(1), AwaitKind.Approve).Count == 0);
 
         ui.Tasks.Run(["/task", "answer", "1", "用户输入", "补充背景"]);
         ui.Harness.Settle(new TaskId(1));
@@ -137,7 +137,7 @@ public sealed class TaskAndReplTests
     {
         using Ui ui = new(flowsJson: TestFlows.InputFlow);
         ui.Tasks.Run(["/task", "new", "补齐 README"]);
-        ui.Harness.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.AwaitingInput);
+        ui.Harness.Wait(new TaskId(1), _ => ui.Harness.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
 
         ui.Tasks.Run(["/task", "answer", "1", "需要", "补充多语言"]);
 

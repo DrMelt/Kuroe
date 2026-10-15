@@ -7,18 +7,15 @@ public sealed record NodeSpec
     /// <summary>节点名：库定义名或流程/容器内的实例名。</summary>
     public required NodeName Name { get; init; }
 
-    /// <summary>节点类型：容器、执行节点或输入节点。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
-    public required NodeKind? Kind { get; init; }
+    /// <summary>节点类型名。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
+    public required NodeTypeName? Kind { get; init; }
 
-    /// <summary>生效的节点类型：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
-    public NodeKind EffectiveKind => Kind
+    /// <summary>生效的节点类型名：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
+    public NodeTypeName EffectiveKind => Kind
         ?? throw new InvalidOperationException($"节点 {Name.Value} 没有节点类型，只有展开后的节点树可取生效类型。");
 
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
-
-    /// <summary>节点产出后是否停在待批准：执行节点产出后，容器成员产出齐备后。</summary>
-    public NodeGate Gate { get; init; } = NodeGate.Auto;
 
     /// <summary>输入端口声明：执行节点与容器共用，容器由引用处绑定，执行节点由自身 From 绑定；
     /// 成员用 @端口 引用容器传入端口。</summary>

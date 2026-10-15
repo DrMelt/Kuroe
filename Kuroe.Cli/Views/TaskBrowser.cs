@@ -2,7 +2,9 @@ using ErrorOr;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Waiting;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
@@ -11,6 +13,7 @@ namespace Kuroe.Cli.Views;
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
+    WaitService waits,
     TaskListView list,
     TaskDetailView detail,
     RunDetailView runView,
@@ -66,10 +69,9 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
             detail.Print(task);
 
-            HashSet<RunId> awaiting = [.. task.ExecutableStates.SelectMany(state => state.AwaitingRuns)];
             List<Item> items = [.. task.Executables.SelectMany(node => node.Runs)
                 .OrderBy(run => run.Id.Value)
-                .Select(run => new Item("  " + TaskDetailView.RunLabel(run, awaiting.Contains(run.Id)), "run", Task: id, Run: run.Id))];
+                .Select(run => new Item("  " + TaskDetailView.RunLabel(run), "run", Task: id, Run: run.Id))];
             AddTaskActions(items, task);
             items.Add(Refresh);
             items.Add(Back);
@@ -85,7 +87,7 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "approve":
-                    Act(tasks.Approve(id));
+                    Act(waits.Approve(id));
                     break;
 
                 case "answer":
@@ -109,15 +111,13 @@ internal sealed class TaskBrowser(
 
     private void PromptAnswer(TaskId id)
     {
-        if (registry.Find(id) is not { IsError: false } found)
+        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        if (pending.IsError)
         {
             return;
         }
 
-        TaskSnapshot task = found.Value.Snapshot();
-        string[] waiting = [.. task.ExecutableStates
-            .Where(state => state.State == NodeState.AwaitingInput)
-            .Select(state => task.Graph[state.Index].Name.Value)];
+        string[] waiting = [.. pending.Value.Where(node => node.Kind == AwaitKind.Answer).Select(node => node.Name)];
 
         if (waiting.Length != 1)
         {
@@ -134,7 +134,7 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        Act(tasks.Answer(id, waiting[0], input));
+        Act(waits.Answer(id, waiting[0], input));
     }
 
     private void ShowRun(RunId runId)
@@ -161,14 +161,6 @@ internal sealed class TaskBrowser(
                 .Select(message => new Item($"↑ {message.Source.Label}", "run", Run: message.Source.FromRun))
                 .DistinctBy(item => item.Run)];
 
-            bool awaitingRun = task.ExecutableStates.Any(state =>
-                state.Index == snapshot.Context.NodeIndex && state.AwaitingRuns.Contains(runId));
-
-            if (awaitingRun)
-            {
-                items.Add(new Item("✓ 批准该 run 的产出", "approveRun", Task: task.Id, Run: runId));
-            }
-
             if (!snapshot.IsSettled)
             {
                 items.Add(new Item("✕ 取消该 run", "stopRun", Run: runId));
@@ -187,10 +179,6 @@ internal sealed class TaskBrowser(
                     runId = upstream;
                     break;
 
-                case "approveRun" when picked.Task is { } owner:
-                    Act(tasks.Approve(owner, [runId]));
-                    break;
-
                 case "stopRun":
                     Act(tasks.StopRun(runId));
                     break;
@@ -198,25 +186,23 @@ internal sealed class TaskBrowser(
         }
     }
 
-    private static void AddTaskActions(List<Item> items, TaskSnapshot task)
+    private void AddTaskActions(List<Item> items, TaskSnapshot task)
     {
         if (task.State is TaskState.Done or TaskState.Canceled)
         {
             return;
         }
 
-        // 多个等待并存时任务级状态只表达其一，入口按节点与容器的实际停留各自给出
-        bool awaitingApproval = task.ExecutableStates.Any(state => state.State == NodeState.AwaitingApproval)
-            || task.Containers.Any(container => container.State == NodeState.AwaitingApproval);
-        bool awaitingInput = task.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput);
+        // 等待与阻塞可以并存，任务级状态只表达阻塞，入口按节点的实际停留各自给出
+        List<PendingNode> waiting = waits.Pending(task.Id) is { IsError: false } found ? found.Value : [];
         bool blocked = task.ExecutableStates.Any(state => state.State == NodeState.Blocked);
 
-        if (awaitingApproval)
+        if (waiting.Any(node => node.Kind == AwaitKind.Approve))
         {
-            items.Add(new Item("✓ 批准当前节点，开下一步", "approve", Task: task.Id));
+            items.Add(new Item("✓ 批准待批准的节点，开下一步", "approve", Task: task.Id));
         }
 
-        if (awaitingInput)
+        if (waiting.Any(node => node.Kind == AwaitKind.Answer))
         {
             items.Add(new Item("✎ 回答等待输入的节点", "answer", Task: task.Id));
         }

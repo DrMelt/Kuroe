@@ -3,8 +3,8 @@ namespace Kuroe.Flows.Shared.StaticGraph;
 /// <summary>一棵流程树展平后的一个执行节点及其解析结果。Kind 区分执行节点与输入节点，只有执行节点会派发执行。</summary>
 public sealed record ExecutableNode : GraphNode
 {
-    /// <summary>节点类型：执行节点或输入节点。输入节点不启动 run。</summary>
-    public required NodeKind Kind { get; init; }
+    /// <summary>节点类型名：由节点类型注册表给出。输入节点与审批节点不启动 run。</summary>
+    public required NodeTypeName Kind { get; init; }
 
     /// <summary>展开后的执行配置：能力声明与执行方式，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Execution { get; init; }
@@ -18,7 +18,7 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public required IReadOnlyList<string> SystemPrompt { get; init; }
 
-    /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。</summary>
+    /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。审批节点不启动 run，不限次数。</summary>
     public required int MaxRuns { get; init; }
 
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>

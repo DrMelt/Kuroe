@@ -1,19 +1,15 @@
-using ErrorOr;
 using Kuroe.Flows.Shared.Execution;
 
 namespace Kuroe.Flows.Execution.Tasks;
 
-/// <summary>任务命令对流程宿主的驱动：启动流程运行，批准、返工与取消经信号恢复或终止。由引擎实现。</summary>
+/// <summary>任务命令对流程宿主的驱动：启动流程运行，返工与取消经信号恢复或终止。由引擎实现。</summary>
 public interface IFlowRunner
 {
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     void Start(WorkTask task);
 
-    /// <summary>要求持有任务 Gate：批准待批准的产出，空列表时放行全部待批准节点与容器并发出继续信号，返回被批准的数量。</summary>
-    int Approve(WorkTask task, IReadOnlyList<RunId> runs);
-
-    /// <summary>要求持有任务 Gate：回答等待输入的节点并放行下游。</summary>
-    ErrorOr<Success> Answer(WorkTask task, string? nodeName, string input);
+    /// <summary>要求持有任务 Gate 之外的调用：给定节点的产出已变，推进它的下游与祖先容器。</summary>
+    void Resume(WorkTask task, IReadOnlyList<int> nodes);
 
     /// <summary>要求持有任务 Gate：对被阻塞的执行单元再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     int Rework(WorkTask task, int? itemIndex);

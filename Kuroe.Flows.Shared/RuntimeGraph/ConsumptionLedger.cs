@@ -1,10 +1,10 @@
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Flows.RuntimeGraph;
+namespace Kuroe.Flows.Shared.RuntimeGraph;
 
 /// <summary>消费账：按来源序号记已消费的版本，并记下已发生的一次性消费。
 /// 执行节点的输入消费与容器的内容版本共用这一份记账。读写要求持有任务 Gate。</summary>
-internal sealed class ConsumptionLedger
+public sealed class ConsumptionLedger
 {
     private readonly Dictionary<int, long> _revisions = [];
     private readonly HashSet<int> _consumedOnce = [];

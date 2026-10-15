@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.Files;
 using Kuroe.Flows.Shared.StaticGraph;
 using Xunit;
 
@@ -51,27 +51,17 @@ public sealed class FlowJsonTests
         Assert.Null(flow.Start);
     }
 
-    /// <summary>节点类型与门控按枚举名字绑定，名字不区分大小写。</summary>
+    /// <summary>节点类型名按文件里写的原样保留，大小写不敏感的比较在装配层。</summary>
     [Fact]
-    public void Enums_bind_by_name_ignoring_case()
+    public void Node_kind_is_kept_as_written()
     {
-        const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container", "Gate": "review" } ] }""";
+        const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container" } ] }""";
 
         FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
 
         NodeDto node = Assert.Single(file.Nodes);
-        Assert.Equal(NodeKind.Container, node.Kind);
-        Assert.Equal(NodeGate.Review, node.Gate);
+        Assert.Equal("container", node.Kind);
         Assert.Null(node.Use);
-    }
-
-    /// <summary>枚举位置收到不认识的名字时拒绝。</summary>
-    [Fact]
-    public void Unknown_enum_name_is_rejected()
-    {
-        const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "Bogus" } ] }""";
-
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
     }
 
     /// <summary>JsonElement 成员保留原始形状：模型槽位声明是数组、槽位绑定是对象，端口条目是对象。</summary>
@@ -125,7 +115,7 @@ public sealed class FlowJsonTests
     {
         FlowFileDto file = new()
         {
-            Nodes = [new NodeDto { Name = "制定计划", Kind = NodeKind.Executable }],
+            Nodes = [new NodeDto { Name = "制定计划", Kind = NodeTypes.Executable.Value }],
             Flows = [new FlowDto { Name = "默认" }],
         };
 

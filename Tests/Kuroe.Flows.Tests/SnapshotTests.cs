@@ -38,7 +38,7 @@ public sealed class SnapshotTests
     }
 
     private static ExecutableStateSnapshot State(int index, NodeState state) =>
-        new(index, state, [], 0, [], [], null);
+        new(index, state, [], 0, []);
 
     private static class TaskBuilder
     {
@@ -55,11 +55,11 @@ public sealed class SnapshotTests
         new NodeSpec
         {
             Name = new NodeName("整体"),
-            Kind = NodeKind.Container,
+            Kind = NodeTypes.Container,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Kind = NodeKind.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Name = new NodeName("实施"), Kind = NodeKind.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("制定计划"), Kind = NodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("实施"), Kind = NodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
@@ -69,7 +69,6 @@ public sealed class SnapshotTests
             Index = 0,
             Name = StartNode.ReservedName,
             Path = new NodePath([StartNode.ReservedName]),
-            Gate = NodeGate.Auto,
             Outputs = [new Port(new PortName("目标"), PortType.Text)],
         },
         new ExecutableNode
@@ -77,8 +76,7 @@ public sealed class SnapshotTests
             Index = 1,
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
-            Gate = NodeGate.Auto,
-            Kind = NodeKind.Executable,
+            Kind = NodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
@@ -90,13 +88,12 @@ public sealed class SnapshotTests
             Index = 2,
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
-            Gate = NodeGate.Auto,
-            Kind = NodeKind.Executable,
+            Kind = NodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
             SystemPrompt = [],
             MaxRuns = 100,
         },
-    ], []);
+    ], [], TestNodeTypes.Builtin());
 }

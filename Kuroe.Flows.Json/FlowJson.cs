@@ -1,16 +1,17 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.Files;
 
 namespace Kuroe.Flows.Json;
 
 /// <summary>流程文件的 JSON 绑定。读法由源生成固定，本上下文的写侧选项只改缩进与转义，
-/// 字段是否写出由 DTO 上的特性决定。</summary>
+/// 字段是否写出由 DTO 上的特性决定。文件里出现未定义字段即拒绝，去掉的字段不会被静默忽略。</summary>
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip,
     AllowTrailingCommas = true,
+    UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(FlowFileDto))]
 [JsonSerializable(typeof(PortEntryDto))]

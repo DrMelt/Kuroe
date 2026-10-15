@@ -1,6 +1,6 @@
 namespace Kuroe.Flows.Shared.StaticGraph;
 
-/// <summary>流程图上的节点实体：开始、执行节点或容器。统一编号、路径与门控。
+/// <summary>流程图上的节点实体：开始、执行节点或容器。统一编号与路径。
 /// 开始是流程的唯一来源，执行节点会启动 run 并交回产出，容器是成员的组织与汇合点。</summary>
 public abstract record GraphNode
 {
@@ -12,7 +12,4 @@ public abstract record GraphNode
 
     /// <summary>从根到本节点的路径，用于展示与定位。</summary>
     public required NodePath Path { get; init; }
-
-    /// <summary>产出后是否停在等待批准。</summary>
-    public required NodeGate Gate { get; init; }
 }

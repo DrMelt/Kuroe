@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flows.Shared;
 using Kuroe.Flows.Shared.StaticGraph;
 using Flow = Kuroe.Flows.Shared.StaticGraph;
 
@@ -88,7 +89,6 @@ internal static class NodeExpander
                 {
                     Name = instance,
                     Kind = definition.Kind,
-                    Gate = definition.Gate,
                     Inputs = definition.Inputs,
                     Nodes = members,
                     ContainerOutputs = ResolveContainerOutputs(definition.ContainerOutputs, childEnv, scope, errors),
@@ -109,7 +109,6 @@ internal static class NodeExpander
             {
                 Name = instance,
                 Kind = definition.Kind,
-                Gate = definition.Gate,
                 Inputs = definition.Inputs,
                 Execution = definition.Execution! with
                 {
@@ -133,7 +132,6 @@ internal static class NodeExpander
             {
                 Name = own,
                 Kind = node.Kind,
-                Gate = node.Gate,
                 Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
                 ContainerOutputs = ResolveContainerOutputs(node.ContainerOutputs, env, scope, errors),
@@ -145,7 +143,6 @@ internal static class NodeExpander
         {
             Name = own,
             Kind = node.Kind,
-            Gate = node.Gate,
             Inputs = node.Inputs,
             Execution = node.Execution! with
             {

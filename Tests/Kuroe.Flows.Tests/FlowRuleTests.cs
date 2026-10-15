@@ -140,89 +140,19 @@ public sealed class FlowRuleTests
                     Exec("收尾", "执行者", new ExecutableSpec()) with { From = [] }),
                 Models("执行者"))));
 
+    /// <summary>Signal 只作审批节点的驱动端口，执行节点不能声明 Signal 输出端口。</summary>
     [Fact]
-    public void Input_with_tools_is_rejected() =>
+    public void Executable_with_signal_output_is_rejected() =>
         Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明 Tools。")],
-            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Tools = [new CapabilityPath("GetLocalTime")] } }))));
-
-    [Fact]
-    public void Input_with_prompt_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明 Prompt。")],
-            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Prompt = "多想想" } }))));
-
-    [Fact]
-    public void Input_with_model_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明模型选择。")],
-            Errors(Flow(Container("整体", Input("收集") with { Model = new ModelRef("执行者") }))));
-
-    [Fact]
-    public void Input_with_per_item_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点只能整节点等待用户输入。")],
+            [NodeError("干活", "输出端口 信号 的类型只能是 Text、WorkItems 或 Context。")],
             Errors(Flow(
-                Container("整体", Input("收集") with { Execution = new ExecutableSpec { Mode = NodeMode.PerItem } }))));
-
-    [Fact]
-    public void Input_with_branch_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明 Branch。")],
-            Errors(Flow(Container("整体", Input("收集") with { Execution = new ExecutableSpec { Branch = new BranchName("甲") } }))));
-
-    [Fact]
-    public void Input_with_validate_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明 Validate。")],
-            Errors(Flow(Container("整体", Input("收集") with { Outputs = [P("回答")], Execution = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) } }))));
-
-    [Fact]
-    public void Input_with_signal_port_is_accepted() =>
-        Assert.Empty(Errors(Flow(
-            Container("整体",
-                Text("准备", "执行者") with { Outputs = [P("结论")] },
-                Input("收集") with { Inputs = [In("结论", PortType.Signal)], From = [Signal("准备", "结论")] }),
-            Models("执行者"))));
-
-    [Fact]
-    public void Input_with_context_input_port_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点只等待外部回答，输入端口只能是 Text 或 Signal 类型。")],
-            Errors(Flow(
-                Container("整体",
-                    Text("准备", "执行者") with { Outputs = [P("结论")] },
-                    Input("收集") with { Inputs = [In("任选", PortType.Context)], From = [InGroup("准备", "结论", "任选")] }),
+                Container("整体", Text("干活", "执行者") with { Outputs = [new Port(new PortName("信号"), PortType.Signal)] }),
                 Models("执行者"))));
-
-    [Fact]
-    public void Input_with_review_gate_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点回答即放行，不能声明 Review 门控。")],
-            Errors(Flow(Container("整体", Input("收集") with { Gate = NodeGate.Review }))));
-
-    [Fact]
-    public void Input_with_system_prompt_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点不启动 run，不能声明系统指令。")],
-            Errors(Flow(Container("整体", Input("收集") with { SystemPrompt = ["背景"] }))));
-
-    [Fact]
-    public void Input_with_two_outputs_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点最多声明一个输出端口，回答写入该端口。")],
-            Errors(Flow(Container("整体", Input("收集") with { Outputs = [P("结论"), P("理由")] }))));
-
-    [Fact]
-    public void Input_with_context_output_port_is_rejected() =>
-        Assert.Equal(
-            [NodeError("收集", "输入节点的输出端口只能是 Text 端口，回答写入该端口。")],
-            Errors(Flow(Container("整体", Input("收集") with { Outputs = [ContextPort("背景")] }))));
 
     [Fact]
     public void Question_on_text_executable_is_rejected() =>
         Assert.Equal(
-            [NodeError("干活", "Question 只属于输入节点。")],
+            [NodeError("干活", "Question 只属于等待外部输入的节点。")],
             Errors(Flow(Container("整体", Exec("干活", "执行者", new ExecutableSpec { Question = "你想问什么" })), Models("执行者"))));
 
     [Fact]
@@ -302,16 +232,6 @@ public sealed class FlowRuleTests
             Errors(Flow(Container("整体", Text("实施", "执行者") with { Inputs = [In("输入", PortType.Context)], From = [BoundContext("输入")] }), Models("执行者"))));
 
     [Fact]
-    public void Context_input_from_input_node_is_rejected() =>
-        Assert.Equal(
-            [NodeError("实施", "Context 输入来源 用户输入 不能是输入节点。")],
-            Errors(Flow(
-                Container("整体",
-                    Input("用户输入") with { Outputs = [P("回答")] },
-                    Text("实施", "执行者") with { Inputs = [In("回答", PortType.Context)], From = [Context("用户输入", "回答")] }),
-                Models("执行者"))));
-
-    [Fact]
     public void Context_input_from_per_item_node_is_rejected() =>
         Assert.Equal(
             [NodeError("汇报", "Context 输入来源 实施 不能是按条目展开的节点。")],
@@ -367,14 +287,23 @@ public sealed class FlowRuleTests
             Models("执行者"))));
 
     [Fact]
-    public void Per_item_with_signal_port_is_rejected() =>
-        Assert.Equal(
-            [NodeError("实施", "声明 Context 或 Signal 输入端口的执行节点不能按条目展开，必须是整节点执行。")],
-            Errors(Flow(
-                Container("整体",
-                    Text("来源", "执行者") with { Outputs = [P("结论")] },
-                    Exec("实施", "执行者", PerItem()) with { Inputs = [In("结论", PortType.Signal)], From = [Signal("来源", "结论")] }),
-                Models("执行者"))));
+    public void Per_item_with_signal_driver_is_accepted() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Plan("制定计划", "规划者"),
+                Text("放行", "执行者") with { Outputs = [P("结论")] },
+                Exec("实施", "执行者", PerItem()) with
+                {
+                    Inputs = [In("任务"), In("批准", PortType.Signal)],
+                    From =
+                    [
+                        new([
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定计划"), new PortName("拆分"))),
+                            new FromLink(new PortName("批准"), PortRef.Named(new NodeName("放行"), new PortName("结论"))),
+                        ]),
+                    ],
+                }),
+            Models("规划者", "执行者"))));
 
     [Fact]
     public void Container_out_bound_to_sub_container_is_rejected() =>
@@ -385,18 +314,6 @@ public sealed class FlowRuleTests
                     Container("交付", Container("撰写组", Text("撰写", "执行者") with { Outputs = [P("结论")] })) with
                     {
                         ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结果")] = new(PortRef.Named(new NodeName("撰写组"), PN("结论"))) },
-                    }),
-                Models("执行者"))));
-
-    [Fact]
-    public void Container_out_bound_to_missing_member_port_is_rejected() =>
-        Assert.Equal(
-            [NodeError("交付", "容器输出端口 结果 的绑定目标节点 收集 没有输出端口 背景。")],
-            Errors(Flow(
-                Container("整体",
-                    Container("交付", Input("收集") with { Outputs = [P("回答")] }) with
-                    {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结果")] = new(PortRef.Named(new NodeName("收集"), PN("背景"))) },
                     }),
                 Models("执行者"))));
 
@@ -426,7 +343,7 @@ public sealed class FlowRuleTests
     public void Branch_on_single_executable_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("撰写", "WorkItems 端口只能被按条目展开的执行节点消费。"),
+                NodeError("撰写", "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"),
                 NodeError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"),
             ],
             Errors(Flow(
@@ -515,19 +432,6 @@ public sealed class FlowRuleTests
                     }),
                 Models("执行者"))));
 
-    [Fact]
-    public void Loop_with_input_node_without_start_is_rejected() =>
-        Assert.Equal(
-            [
-                NodeError("收话", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                NodeError("回话", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-            ],
-            Errors(Flow(
-                Container("整体",
-                    Input("收话") with { Outputs = [P("回答")], From = [Ref("回话", "回复")] },
-                    Text("回话", "执行者") with { Outputs = [P("回复")], From = [Ref("收话", "回答")] }),
-                Models("执行者"))));
-
     /// <summary>按条目展开的实例空间只能有一个拆分来源：多个来源的条目无法归属同一个实例空间。</summary>
     [Fact]
     public void Two_split_sources_are_rejected() =>
@@ -579,7 +483,7 @@ public sealed class FlowRuleTests
 
     /// <summary>容器。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
-        new() { Name = new NodeName(name), Kind = NodeKind.Container, Nodes = [.. members] };
+        new() { Name = new NodeName(name), Kind = NodeTypes.Container, Nodes = [.. members] };
 
     /// <summary>执行节点，默认由开始入口触发。</summary>
     private static NodeSpec Text(string name, string model) =>
@@ -590,7 +494,7 @@ public sealed class FlowRuleTests
         new()
         {
             Name = new NodeName(name),
-            Kind = NodeKind.Executable,
+            Kind = NodeTypes.Executable,
             Model = new ModelRef(model),
             Execution = execution,
             From = [StartRef()],
@@ -599,16 +503,6 @@ public sealed class FlowRuleTests
     /// <summary>交回规划的拆分源，声明 WorkItems 端口。</summary>
     private static NodeSpec Plan(string name, string model) =>
         Exec(name, model, new ExecutableSpec()) with { Outputs = [WorkItems("拆分")] };
-
-    /// <summary>输入节点，默认由开始入口触发。</summary>
-    private static NodeSpec Input(string name) =>
-        new()
-        {
-            Name = new NodeName(name),
-            Kind = NodeKind.Input,
-            Execution = new ExecutableSpec(),
-            From = [StartRef()],
-        };
 
     /// <summary>Text 端口声明。</summary>
     private static Port P(string name) => new(new PortName(name), PortType.Text);
@@ -642,8 +536,6 @@ public sealed class FlowRuleTests
     private static FromGroup BoundContext(string port) =>
         new([new FromLink(new PortName(port), PortRef.Bound(new PortName(port)))]);
 
-    /// <summary>输入名取组名的单连接组。</summary>
-    private static FromGroup InGroup(string source, string port, string group) => One(group, source, port);
 
     /// <summary>一条连接构成的启动组。</summary>
     private static FromGroup One(string input, string source, string port) =>
@@ -692,7 +584,7 @@ public sealed class FlowRuleTests
     private static string ModelError(string model, string message) =>
         $"流程 默认 的模型选择 {model}：{message}";
 
-    /// <summary>校验流程，取错误说明。</summary>
+    /// <summary>校验流程，取错误说明。类型规则按引擎内置类型注册表判定。</summary>
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowRules.Validate(flow).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowRules.Validate(flow, TestNodeTypes.Builtin()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

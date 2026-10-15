@@ -2,6 +2,7 @@ using Kuroe.Flows.Execution.Runs;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -33,17 +34,17 @@ public sealed class TriggerNodeTests
         using KuroeHarness harness = KuroeHarness.Create(TriggerLoopFlow);
 
         TaskId id = harness.Submit("对话");
-        harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
-        harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
+        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
         RunSnapshot first = harness.Executor.Started
             .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
 
-        harness.Tasks.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot done = harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        harness.Waits.Answer(id, null, "第二问").ThrowIfError();
+        TaskSnapshot done = harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
         Assert.Equal(2, done.Executables.Single(node => node.Executable.Name.Value == "回话").Runs.Count);
         RunSnapshot second = harness.Executor.Started
             .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 2)
@@ -102,13 +103,13 @@ public sealed class TriggerNodeTests
         using KuroeHarness harness = KuroeHarness.Create(TriggerLoopWithLimitFlow);
 
         TaskId id = harness.Submit("对话");
-        harness.Wait(id, snapshot => snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
+        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Tasks.Answer(id, null, "第一问").ThrowIfError();
-        harness.Wait(id, snapshot => harness.Executor.Started.Count == 1 && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
-        harness.Tasks.Answer(id, null, "第二问").ThrowIfError();
-        harness.Wait(id, snapshot => harness.Executor.Started.Count == 2 && snapshot.ExecutableStates.Any(state => state.State == NodeState.AwaitingInput));
-        harness.Tasks.Answer(id, null, "第三问").ThrowIfError();
+        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
+        harness.Wait(id, _ => harness.Executor.Started.Count == 1 && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        harness.Waits.Answer(id, null, "第二问").ThrowIfError();
+        harness.Wait(id, _ => harness.Executor.Started.Count == 2 && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        harness.Waits.Answer(id, null, "第三问").ThrowIfError();
 
         TaskSnapshot done = harness.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
@@ -130,19 +131,20 @@ public sealed class TriggerNodeTests
         Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」的产出"));
     }
 
-    /// <summary>触发节点可叠加 Review 门控：触发启动后产出停在待批准，批准后放行。</summary>
+    /// <summary>审批节点挡住信号驱动的触发节点：来源发布后停在待批准，批准后触发放行。</summary>
     [Fact]
-    public void Trigger_with_review_gate_parks_until_approval()
+    public void Approval_gates_a_signal_driven_trigger()
     {
         using KuroeHarness harness = KuroeHarness.Create(TriggerReviewFlow);
 
         TaskId id = harness.Submit("目标");
         TaskSnapshot parked = harness.Settle(id);
 
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
-        Assert.Equal(NodeState.AwaitingApproval, Assert.Single(parked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -184,7 +186,7 @@ public sealed class TriggerNodeTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Count);
     }
-    /// <summary>Review 容器作触发源：成员齐备后容器停等批准，批准放行后再触发目标启动。</summary>
+    /// <summary>Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动。</summary>
     [Fact]
     public void Review_container_trigger_parks_until_approval()
     {
@@ -193,10 +195,11 @@ public sealed class TriggerNodeTests
         TaskId id = harness.Submit("目标");
         TaskSnapshot parked = harness.Settle(id);
 
-        Assert.Equal(TaskState.AwaitingApproval, parked.State);
+        Assert.Equal(TaskState.Running, parked.State);
+        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
 
-        harness.Tasks.Approve(id).ThrowIfError();
+        harness.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -289,13 +292,14 @@ public sealed class TriggerNodeTests
         }
         """;
 
-    /// <summary>触发节点叠加 Review 门控，产出停在待批准。</summary>
+    /// <summary>审批节点挡住信号驱动的触发节点，来源发布后停在待批准。</summary>
     private const string TriggerReviewFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "来源", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "触发", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "来源@结论" } ], "Gate": "Review" }
+              { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "来源@结论" } ] },
+              { "Name": "触发", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "审阅@结论" } ] }
             ] }
           ] } ]
         }
@@ -313,13 +317,14 @@ public sealed class TriggerNodeTests
         }
         """;
 
-    /// <summary>Review 容器作触发源：成员齐备停等批准，批准放行后触发目标启动。</summary>
+    /// <summary>审查箱作触发源的载体：成员齐备经审批节点停等批准，批准放行后触发目标启动。</summary>
     private const string ReviewContainerTriggerFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "审查箱", "Kind": "Container", "Gate": "Review", "Outputs": [{ "Name": "结论", "Ref": "干工@结论" }], "Nodes": [ { "Name": "干工", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] } ] },
-              { "Name": "触发", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "审查箱@结论" } ] }
+              { "Name": "审查箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "干工@结论" }], "Nodes": [ { "Name": "干工", "Kind": "Executable", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] } ] },
+              { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "审查箱@结论" } ] },
+              { "Name": "触发", "Kind": "Executable", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "审阅@结论" } ] }
             ] }
           ] } ]
         }

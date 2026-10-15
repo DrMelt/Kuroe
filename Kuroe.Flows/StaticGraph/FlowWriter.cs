@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Kuroe.Flows.Json;
-using Kuroe.Flows.Json.Model;
+using Kuroe.Flows.Shared.Files;
 using Kuroe.Flows.Shared.StaticGraph;
 
 namespace Kuroe.Flows.StaticGraph;
@@ -8,14 +8,17 @@ namespace Kuroe.Flows.StaticGraph;
 /// <summary>模型到流程文件形状的写入：把节点定义与流程转回 DTO，保留引用形态。</summary>
 static class FlowWriter
 {
-    /// <summary>把节点定义与流程转回文件形状，保留引用形态，只写文件来源的节点定义。</summary>
-    internal static FlowFileDto ToDto(IReadOnlyList<NodeSpec> fileNodes, IReadOnlyList<FlowDefinition> flows) => new()
-    {
-        Nodes = [.. fileNodes.Select(ToNodeDto)],
-        Flows = [.. flows.Select(ToFlowDto)],
-    };
+    /// <summary>把节点定义与流程转回文件形状，保留引用形态，只写文件来源的节点定义。types 给出类型形状，决定字段与端口的写出。</summary>
+    internal static FlowFileDto ToDto(
+        IReadOnlyList<NodeSpec> fileNodes,
+        IReadOnlyList<FlowDefinition> flows,
+        NodeTypeRegistry types) => new()
+        {
+            Nodes = [.. fileNodes.Select(node => ToNodeDto(node, types))],
+            Flows = [.. flows.Select(flow => ToFlowDto(flow, types))],
+        };
 
-    private static FlowDto ToFlowDto(FlowDefinition flow) => new()
+    private static FlowDto ToFlowDto(FlowDefinition flow, NodeTypeRegistry types) => new()
     {
         Name = flow.Name.Value,
         Description = flow.Description,
@@ -25,7 +28,7 @@ static class FlowWriter
             Model = model.Model,
         })],
         Start = new StartDto { Outputs = ToPortDtos(flow.StartOutputs) },
-        Nodes = [ToNodeDto(flow.RootNode)],
+        Nodes = [ToNodeDto(flow.RootNode, types)],
     };
 
     /// <summary>把输出端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
@@ -80,21 +83,18 @@ static class FlowWriter
         return entries;
     }
 
-    private static NodeDto ToNodeDto(NodeSpec node)
+    private static NodeDto ToNodeDto(NodeSpec node, NodeTypeRegistry types)
     {
         NodeDto dto = new()
         {
             Name = node.Name.Value,
-            Kind = node.Kind,
+            Kind = node.Kind?.Value,
             Use = node.Use?.Value,
-            Gate = node.Gate == NodeGate.Auto ? null : node.Gate,
             From = node.From.Count == 0 ? null : [.. node.From.Select(ToFromDto)],
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
-            Outputs = node.ContainerOutputs is { Count: > 0 } containerOutputs
-                ? ToContainerOutputDtos(containerOutputs)
-                : ToPortDtos(node.Outputs),
+            Outputs = OutputsFor(node, types),
             SystemPrompt = node.SystemPrompt.Count == 0 ? null : [.. node.SystemPrompt],
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
@@ -105,22 +105,44 @@ static class FlowWriter
 
         if (node.Nodes is { Count: > 0 })
         {
-            dto.Nodes = [.. node.Nodes.Select(ToNodeDto)];
+            dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, types))];
         }
 
         if (node.Execution is { } execution)
         {
-            dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(path => path.Value)];
-            dto.Prompt = execution.Prompt;
+            // 对外输入的提示对所有类型有效，执行配置只属于派发 run 的类型
             dto.Question = execution.Question;
-            dto.Mode = execution.Mode.ToString();
-            dto.Branch = execution.Branch?.Value;
-            dto.Validate = ToValidationDto(execution.Validate);
-            dto.MaxRuns = execution.MaxRuns;
+
+            if (ShapeOf(node, types) is { DispatchesRuns: true })
+            {
+                dto.Tools = execution.Tools.Count == 0 ? null : [.. execution.Tools.Select(path => path.Value)];
+                dto.Prompt = execution.Prompt;
+                dto.Mode = execution.Mode.ToString();
+                dto.Branch = execution.Branch?.Value;
+                dto.Validate = ToValidationDto(execution.Validate);
+                dto.MaxRuns = execution.MaxRuns;
+            }
         }
 
         return dto;
     }
+
+    /// <summary>节点对外端口的文件形状：派生端口的类型不写输出端口，容器写转发条目，其余写执行节点输出端口。</summary>
+    private static List<JsonElement>? OutputsFor(NodeSpec node, NodeTypeRegistry types)
+    {
+        if (ShapeOf(node, types) is { DerivesOutputsFromInputs: true })
+        {
+            return null;
+        }
+
+        return node.ContainerOutputs is { Count: > 0 } containerOutputs
+            ? ToContainerOutputDtos(containerOutputs)
+            : ToPortDtos(node.Outputs);
+    }
+
+    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
+    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
+        node.Kind is { } kind ? types.Of(kind)?.Shape : null;
 
     /// <summary>把一组上游连接转回文件形状：组内是输入名到来源端口引用的映射。</summary>
     private static JsonElement ToFromDto(FromGroup group) =>

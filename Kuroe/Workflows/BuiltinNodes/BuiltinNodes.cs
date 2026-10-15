@@ -24,7 +24,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
-        Kind = NodeKind.Executable,
+        Kind = NodeTypes.Executable,
         Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
         Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec
@@ -37,7 +37,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec ExecuteNodeDefinition = new()
     {
         Name = new NodeName("执行"),
-        Kind = NodeKind.Executable,
+        Kind = NodeTypes.Executable,
         Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {
@@ -50,7 +50,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
-        Kind = NodeKind.Container,
+        Kind = NodeTypes.Container,
         Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =

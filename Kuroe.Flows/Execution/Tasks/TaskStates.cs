@@ -12,8 +12,6 @@ public static class TaskStates
     public static string Label(this TaskState state) => state switch
     {
         TaskState.Running => "执行中",
-        TaskState.AwaitingInput => "待输入",
-        TaskState.AwaitingApproval => "待批准",
         TaskState.Blocked => "已阻塞",
         TaskState.Done => "已完成",
         TaskState.Canceled => "已取消",

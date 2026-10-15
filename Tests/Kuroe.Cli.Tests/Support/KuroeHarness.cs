@@ -7,9 +7,11 @@ using Kuroe.Shared;
 using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
+using Kuroe.Flows.Shared.Waiting;
 using Kuroe.Flows.Node.Llm.Tools;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flows.Execution.Tasks;
+using Kuroe.Waiting;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +29,7 @@ public sealed class KuroeHarness : IDisposable
         Executor = executor;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
+        Waits = provider.GetRequiredService<WaitService>();
         executor.Submitter = provider.GetRequiredService<WorkItemSubmitter>();
         executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
         executor.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
@@ -40,6 +43,9 @@ public sealed class KuroeHarness : IDisposable
     public TaskRegistry Registry { get; }
 
     public TaskService Tasks { get; }
+
+    /// <summary>等待型节点的宿主功能，回答与批准经它交付外部输入。</summary>
+    public WaitService Waits { get; }
 
     /// <summary>常驻对话任务的管理层宿主。</summary>
     public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
@@ -164,11 +170,11 @@ public sealed class KuroeHarness : IDisposable
         }
     }
 
-    /// <summary>等执行侧不再有任何在跑或待推进的 run。待批准状态要求连续两次采样一致，避免批准信号落地前的瞬态。</summary>
+    /// <summary>等执行侧不再有任何在跑或待推进的 run。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
     public TaskSnapshot Settle(TaskId id)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);
-        TaskState? previous = null;
+        bool previous = false;
         while (true)
         {
             TaskSnapshot snapshot = Snapshot(id);
@@ -178,16 +184,8 @@ public sealed class KuroeHarness : IDisposable
                 return snapshot;
             }
 
-            if (snapshot.LiveRuns == 0
-                && snapshot.State == TaskState.AwaitingApproval
-                && previous == TaskState.AwaitingApproval)
-            {
-                return snapshot;
-            }
-
-            if (snapshot.LiveRuns == 0
-                && snapshot.State == TaskState.AwaitingInput
-                && previous == TaskState.AwaitingInput)
+            bool waiting = snapshot.LiveRuns == 0 && Awaiting(id);
+            if (waiting && previous)
             {
                 return snapshot;
             }
@@ -197,10 +195,20 @@ public sealed class KuroeHarness : IDisposable
                 throw new TimeoutException($"任务 {id} 未在超时内稳定，状态 {snapshot.State}、LiveRuns {snapshot.LiveRuns}、执行节点 [{NodeStates(snapshot)}]。");
             }
 
-            previous = snapshot.State;
+            previous = waiting;
             Thread.Sleep(20);
         }
     }
+
+    /// <summary>任务里是否有停在等待的节点。</summary>
+    public bool Awaiting(TaskId id) =>
+        Waits.Pending(id) is { IsError: false } pending && pending.Value.Count > 0;
+
+    /// <summary>任务里停在给定等待种类的节点序号。</summary>
+    public IReadOnlyList<int> Awaiting(TaskId id, AwaitKind kind) =>
+        Waits.Pending(id) is { IsError: false } pending
+            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => node.Index)]
+            : [];
 
     public void Dispose()
     {

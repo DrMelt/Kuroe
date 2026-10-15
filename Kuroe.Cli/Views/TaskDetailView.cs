@@ -3,11 +3,12 @@ using Kuroe.Flows.Shared.Execution;
 using Kuroe.Flows.Shared.Execution.Runs;
 using Kuroe.Flows.Shared.RuntimeGraph;
 using Kuroe.Flows.Shared.StaticGraph;
+using Kuroe.Waiting;
 
 namespace Kuroe.Cli.Views;
 
 /// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与过程记录。</summary>
-internal sealed class TaskDetailView(Terminal terminal)
+internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
 {
     private readonly Terminal _terminal = terminal;
 
@@ -49,7 +50,7 @@ internal sealed class TaskDetailView(Terminal terminal)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
-                + $"（{InfoLabels.Of(node.Executable.Kind)} · {ViewLabels.Of(node.Executable.Execution.Mode)} · {ViewLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Kind.Value} · {ViewLabels.Of(node.Executable.Execution.Mode)}）");
 
             if (node.Runs.Count == 0)
             {
@@ -59,8 +60,7 @@ internal sealed class TaskDetailView(Terminal terminal)
 
             foreach (RunSnapshot run in node.Runs)
             {
-                IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
-                _terminal.Line($"  {RunLabel(run, awaitingRuns.Contains(run.Id))}");
+                _terminal.Line($"  {RunLabel(run)}");
             }
         }
 
@@ -77,6 +77,9 @@ internal sealed class TaskDetailView(Terminal terminal)
             return;
         }
 
+        List<PendingNode> waiting = waits.Pending(task.Id) is { IsError: false } found ? found.Value : [];
+        HashSet<int> pending = [.. waiting.Select(node => node.Index)];
+
         _terminal.NewLine();
         _terminal.Line("执行节点状态：");
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
@@ -85,9 +88,9 @@ internal sealed class TaskDetailView(Terminal terminal)
             string blocked = node.BlockedItems.Count == 0
                 ? string.Empty
                 : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
-            string question = node.State == NodeState.AwaitingInput
-                && task.Graph[node.Index] is ExecutableNode input
-                && input.Execution.Question is { Length: > 0 } questionText
+            string question = pending.Contains(node.Index)
+                && task.Graph[node.Index] is ExecutableNode asked
+                && asked.Execution.Question is { Length: > 0 } questionText
                     ? $" · {questionText}"
                     : string.Empty;
             string ports = task.Graph[node.Index] is ExecutableNode { Outputs.Count: > 0 } ported
@@ -96,16 +99,12 @@ internal sealed class TaskDetailView(Terminal terminal)
             string systemPrompt = task.Graph[node.Index] is ExecutableNode { SystemPrompt.Count: > 0 } systemPrompted
                 ? $" · 系统指令：{systemPrompted.SystemPrompt.Count} 块"
                 : string.Empty;
-            string answered = node.State == NodeState.Done
-                && node.InputAnswer is { Length: > 0 } answerText
-                    ? $" · 回答：{answerText}"
-                    : string.Empty;
-            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}{answered}");
+            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
         }
     }
 
-    /// <summary>列表里一行的 run 概况，待批准的 run 标出。</summary>
-    internal static string RunLabel(RunSnapshot run, bool awaiting = false)
+    /// <summary>列表里一行的 run 概况。</summary>
+    internal static string RunLabel(RunSnapshot run)
     {
         List<string> parts =
         [
@@ -115,10 +114,6 @@ internal sealed class TaskDetailView(Terminal terminal)
             ViewLabels.State(run),
             ViewLabels.Elapsed(run.Elapsed),
         ];
-        if (awaiting)
-        {
-            parts.Add("待批准");
-        }
 
         return string.Join(" · ", parts);
     }

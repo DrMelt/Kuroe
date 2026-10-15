@@ -1,10 +1,10 @@
 using Kuroe.Flows.Shared.StaticGraph;
 
-namespace Kuroe.Flows.RuntimeGraph;
+namespace Kuroe.Flows.Shared.RuntimeGraph;
 
 /// <summary>输入侧的就绪判定：实例空间、组齐备与驱动三个维度各一处实现，纯函数不改状态。
 /// 组间任一齐备即启动，组内全部齐备；整节点驱动只有一个实例，按条目驱动按空间逐实例判定。</summary>
-internal static class NodeReadiness
+public static class NodeReadiness
 {
     /// <summary>实例集：已固定的实例集优先，否则按方案从拆分或对齐来源求出，来源未就绪时为空。</summary>
     public static IReadOnlyList<int> Instances(NodeInputPlan plan, IInputProgress progress, IExecutionSources sources)
@@ -24,7 +24,21 @@ internal static class NodeReadiness
 
     /// <summary>组齐备：任一组内的绑定对该实例全部可用。</summary>
     public static bool Available(NodeInputPlan plan, int? item, IExecutionSources sources) =>
-        plan.Groups.Any(group => group.Bindings.All(binding => BindingAvailable(binding, item, sources)));
+        AvailableGroup(plan, item, sources) is not null;
+
+    /// <summary>第一个齐备的组序号，没有齐备的组时为空。</summary>
+    public static int? AvailableGroup(NodeInputPlan plan, int? item, IExecutionSources sources)
+    {
+        for (int index = 0; index < plan.Groups.Count; index++)
+        {
+            if (plan.Groups[index].Bindings.All(binding => BindingAvailable(binding, item, sources)))
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>可启动的实例：空间内的实例逐个按驱动与齐备判定，达到次数上限的不在其中。</summary>
     public static IReadOnlyList<int?> Ready(NodeInputPlan plan, IInputProgress progress, IExecutionSources sources)
@@ -90,6 +104,7 @@ internal static class NodeReadiness
         }
 
         ISourceState source = sources.Source(binding.Source);
+
         return binding.Recurrence == FeedRecurrence.Once
             ? source.Released && !progress.ConsumedOnce(binding.Source)
             : source.Released && source.Revision > progress.ConsumedRevision(binding.Source);

@@ -156,12 +156,11 @@ internal sealed class TaskInfoTool : ITool
                 continue;
             }
 
-            IReadOnlyList<RunId> awaitingRuns = task.ExecutableStates.FirstOrDefault(state => state.Index == node.Index)?.AwaitingRuns ?? [];
             text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
-                + $"（{InfoLabels.Of(node.Executable.Kind)} · {InfoLabels.Of(node.Executable.Execution.Mode)} · {InfoLabels.Of(node.Executable.Gate)}）");
+                + $"（{node.Executable.Kind.Value} · {InfoLabels.Of(node.Executable.Execution.Mode)}）");
             foreach (RunSnapshot run in node.Runs)
             {
-                text.AppendLine($"    {RunLine(run, awaitingRuns)}");
+                text.AppendLine($"    {RunLine(run)}");
             }
         }
 
@@ -275,8 +274,8 @@ internal sealed class TaskInfoTool : ITool
         }
     }
 
-    /// <summary>列表里一行的 run 概况，停在待批准的 run 标出。</summary>
-    private static string RunLine(RunSnapshot run, IReadOnlyList<RunId> awaitingRuns)
+    /// <summary>列表里一行的 run 概况。</summary>
+    private static string RunLine(RunSnapshot run)
     {
         List<string> parts =
         [
@@ -286,10 +285,6 @@ internal sealed class TaskInfoTool : ITool
             InfoLabels.State(run),
             InfoLabels.Elapsed(run.Elapsed),
         ];
-        if (awaitingRuns.Contains(run.Id))
-        {
-            parts.Add("待批准");
-        }
 
         return string.Join(" · ", parts);
     }

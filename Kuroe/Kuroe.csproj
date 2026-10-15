@@ -22,6 +22,8 @@
     <ProjectReference Include="..\Kuroe.Flows.Json\Kuroe.Flows.Json.csproj" />
     <ProjectReference Include="..\Kuroe.Flows\Kuroe.Flows.csproj" />
     <ProjectReference Include="..\Kuroe.Flows.Node.Llm\Kuroe.Flows.Node.Llm.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows.Node.Input\Kuroe.Flows.Node.Input.csproj" />
+    <ProjectReference Include="..\Kuroe.Flows.Node.Approval\Kuroe.Flows.Node.Approval.csproj" />
   </ItemGroup>
 
   <ItemGroup>

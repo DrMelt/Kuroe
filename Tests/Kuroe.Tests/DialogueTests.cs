@@ -1,3 +1,4 @@
+using Kuroe.Flows.Node.Input;
 using Kuroe.Flows.Node.Llm.Tools;
 using Kuroe.Flows.Execution.Turns;
 using Kuroe.Flows.Shared.Execution;
@@ -22,8 +23,8 @@ public sealed class DialogueTests
     {
         IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
 
-        Assert.Equal(NodeKind.Input, nodes[0].Kind);
-        Assert.Equal(NodeKind.Executable, nodes[1].Kind);
+        Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
+        Assert.Equal(NodeTypes.Executable, nodes[1].Kind);
     }
 
     [Fact]
