@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Node.Llm.Json;
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
@@ -471,7 +472,7 @@ public sealed class CommandToolTests
     {
         CommandTool tool = Tool(template, parameters);
         TurnScope scope = Scope();
-        AITool built = Assert.Single(new ToolCollection([tool]).Build(scope, scope.Sink, null));
+        AITool built = Assert.Single(new ToolCollection([tool], new ToolJson()).Build(scope, scope.Sink, null));
 
         return (AIFunction)built;
     }

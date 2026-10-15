@@ -4,6 +4,7 @@ using Kuroe.Catalogs.Files;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Node.Llm;
+using Kuroe.Flow.Node.Llm.Json;
 using Kuroe.Flow.Node.Llm.Runs;
 using Kuroe.Flow.Node.Llm.Sessions;
 using Kuroe.Flow.Node.Llm.Tools;
@@ -25,8 +26,11 @@ using Kuroe.Flow.Execution.Engine;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.NodeType;
+using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Node.Input;
+using Kuroe.Flow.Node.Input.Json;
 using Kuroe.Flow.Node.Approval;
+using Kuroe.Flow.Node.Approval.Json;
 using Kuroe.Waiting;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
@@ -63,10 +67,16 @@ public static class ServiceCollectionExtensions
         InputNodeTypes.RegisterInto(nodeTypes);
         ApprovalNodeTypes.RegisterInto(nodeTypes);
 
+        NodeParameterFileRegistry nodeParameters = new();
+        LlmParameterFiles.RegisterInto(nodeParameters);
+        InputParameterFiles.RegisterInto(nodeParameters);
+        ApprovalParameterFiles.RegisterInto(nodeParameters);
+
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
             BuiltinNodes.Nodes,
             nodeTypes,
+            nodeParameters,
             () => settings.Value.Current.Runtime.DefaultFlow);
         if (flows.IsError)
         {
@@ -104,6 +114,7 @@ public static class ServiceCollectionExtensions
             return registered.ErrorsOrEmptyList;
         }
 
+        services.AddSingleton<IToolJson, ToolJson>();
         services.AddSingleton<ToolCollection>();
         services.AddSingleton<IRunPolicy>(sp => new SettingsRunPolicy(sp.GetRequiredService<SettingsProvider>()));
         services.AddSingleton<RunDispatcher>();

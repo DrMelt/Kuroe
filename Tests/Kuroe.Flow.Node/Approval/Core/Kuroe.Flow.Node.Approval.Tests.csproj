@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -11,15 +10,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ApiHub.ChatClient" />
-        <PackageReference Include="ApiHub.Shared" />
         <PackageReference Include="ErrorOr" />
-        <PackageReference Include="Microsoft.Agents.AI" />
-        <PackageReference Include="Microsoft.Extensions.AI" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Flow.Node\Llm\Kuroe.Flow.Node.Llm.csproj" />
+        <ProjectReference
+            Include="..\..\..\..\Kuroe.Flow.Node\Approval\Core\Kuroe.Flow.Node.Approval.csproj" />
     </ItemGroup>
-
 </Project>

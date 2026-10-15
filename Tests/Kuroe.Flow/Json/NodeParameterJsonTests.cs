@@ -79,10 +79,9 @@ public sealed class NodeParameterJsonTests
 
     private static INodeParameters? ReadParameters((string Name, string Json)[] entries, List<string> errors) =>
         NodeParameterJson.Read(
-            Shape.Kind,
+            Shape,
             NodeScope.Flow("测试"),
             new NodeName("干活"),
-            Shape,
             Values(entries),
             error => errors.Add(error.Description));
 

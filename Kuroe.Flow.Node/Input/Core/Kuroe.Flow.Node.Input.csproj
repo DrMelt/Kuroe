@@ -9,12 +9,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Kuroe.Flow.Node.Approval.Tests" />
+        <InternalsVisibleTo Include="Kuroe.Flow.Node.Input.Tests" />
     </ItemGroup>
 
 </Project>

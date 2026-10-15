@@ -12,13 +12,14 @@ static class FlowWriter
     internal static FlowFileDto ToDto(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,
-        NodeTypeRegistry types) => new()
+        NodeTypeRegistry types,
+        NodeParameterFileRegistry files) => new()
         {
-            Nodes = [.. fileNodes.Select(node => ToNodeDto(node, types))],
-            Flows = [.. flows.Select(flow => ToFlowDto(flow, types))],
+            Nodes = [.. fileNodes.Select(node => ToNodeDto(node, types, files))],
+            Flows = [.. flows.Select(flow => ToFlowDto(flow, types, files))],
         };
 
-    private static FlowDto ToFlowDto(FlowDefinition flow, NodeTypeRegistry types) => new()
+    private static FlowDto ToFlowDto(FlowDefinition flow, NodeTypeRegistry types, NodeParameterFileRegistry files) => new()
     {
         Name = flow.Name.Value,
         Description = flow.Description,
@@ -28,7 +29,7 @@ static class FlowWriter
             Model = model.Model,
         })],
         Start = new StartDto { Outputs = ToPortDtos(flow.StartOutputs) },
-        Nodes = [ToNodeDto(flow.RootNode, types)],
+        Nodes = [ToNodeDto(flow.RootNode, types, files)],
     };
 
     /// <summary>把输出端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
@@ -83,7 +84,7 @@ static class FlowWriter
         return entries;
     }
 
-    private static NodeDto ToNodeDto(NodeSpec node, NodeTypeRegistry types)
+    private static NodeDto ToNodeDto(NodeSpec node, NodeTypeRegistry types, NodeParameterFileRegistry files)
     {
         NodeDto dto = new()
         {
@@ -95,7 +96,7 @@ static class FlowWriter
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
             Outputs = OutputsFor(node, types),
-            Parameters = ParametersFor(node, types),
+            Parameters = ParametersFor(node, files),
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
                 : null,
@@ -105,7 +106,7 @@ static class FlowWriter
 
         if (node.Nodes is { Count: > 0 })
         {
-            dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, types))];
+            dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, types, files))];
         }
 
         if (node.Execution is { } execution && ShapeOf(node, types) is { DispatchesRuns: true })
@@ -136,10 +137,10 @@ static class FlowWriter
     private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
         node.Kind is { } kind ? types.Create(kind)?.Shape : null;
 
-    /// <summary>节点参数的参数段：类型未注册或不声明参数时为空，未写的字段不写出。</summary>
-    private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeTypeRegistry types)
+    /// <summary>节点参数的参数段：类型未注册形状时不写出参数，未写的字段不写出。</summary>
+    private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeParameterFileRegistry files)
     {
-        if (node.Kind is not { } kind || types.Create(kind) is not INodeParameterFile shape)
+        if (node.Kind is not { } kind || files.Find(kind) is not { } shape)
         {
             return null;
         }

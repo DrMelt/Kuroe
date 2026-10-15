@@ -11,11 +11,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="ApiHub.ChatClient" />
+        <PackageReference Include="ApiHub.Shared" />
         <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Agents.AI" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Flow.Node\Input\Kuroe.Flow.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow.Node\Llm\Core\Kuroe.Flow.Node.Llm.csproj" />
     </ItemGroup>
 
 </Project>

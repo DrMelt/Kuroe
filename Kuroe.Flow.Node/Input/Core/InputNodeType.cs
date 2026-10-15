@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -8,10 +7,8 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Node.Input;
 
 /// <summary>输入节点类型：不启动 run，依赖齐备后停在待输入，用户回答即产出放行下游。</summary>
-internal sealed class InputNodeType : INodeType, INodeRuntimeFactory, INodeParameterFile
+internal sealed class InputNodeType : INodeType, INodeRuntimeFactory
 {
-    private const string QuestionName = "Question";
-
     /// <summary>类型名。</summary>
     public NodeKind Kind => InputNodeTypes.Name;
 
@@ -22,9 +19,6 @@ internal sealed class InputNodeType : INodeType, INodeRuntimeFactory, INodeParam
         InputTypes = [PortType.Text, PortType.Signal],
         OutputTypes = [PortType.Text],
     };
-
-    /// <summary>参数段声明的字段与取值形态。</summary>
-    public IReadOnlyList<ParameterField> Fields { get; } = [new(QuestionName, ParameterValueKind.Text)];
 
     /// <summary>输入节点的类型规则：只以用户输入为产出，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
@@ -48,20 +42,4 @@ internal sealed class InputNodeType : INodeType, INodeRuntimeFactory, INodeParam
 
     /// <summary>输入节点的运行期对象。</summary>
     public NodeRuntime Create(GraphNode node, INodeContext context) => new InputRuntime((ExecutableNode)node);
-
-    /// <summary>读出参数段：参数只有提问文本，未知字段与形状由文件层报出。</summary>
-    public INodeParameters? Read(IParameterReader values, Action<string> fail) =>
-        new InputParameters { Question = values.Text(QuestionName) };
-
-    /// <summary>写回参数段：只写有值的字段。</summary>
-    public ParameterValues Write(INodeParameters? parameters)
-    {
-        ParameterValues values = new();
-        if (parameters is InputParameters input && input.Question is { Length: > 0 } question)
-        {
-            values.Set(QuestionName, question);
-        }
-
-        return values;
-    }
 }

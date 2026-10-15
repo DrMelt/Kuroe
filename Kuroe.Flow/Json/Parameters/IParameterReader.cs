@@ -1,7 +1,7 @@
 namespace Kuroe.Flow.Json.Parameters;
 
 /// <summary>参数段取值的读侧：按字段名取本轮取值，形状不符经 fail 报出，缺失取安全默认。
-/// 由文件层的扩展实现，类型只按名字取用，不认识承载格式。</summary>
+/// 由文件层实现，形状只按名字取用，不认识承载格式。</summary>
 public interface IParameterReader
 {
     /// <summary>取文本值，未写或为空值时为 null。</summary>

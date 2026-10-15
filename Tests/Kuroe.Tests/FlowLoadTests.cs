@@ -125,16 +125,16 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
             string once = File.ReadAllText(file);
 
             Assert.Contains("\"Prompt\": \"拆一下\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
 
-            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(Nodes, Flows, TestNodeTypes.Registry())).ThrowIfError();
+            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
+            store.Save(FlowFile.Write(Nodes, Flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -156,9 +156,9 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
             FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry())).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
             string text = File.ReadAllText(file);
 
             Assert.Contains("\"Tools\": [", text);
@@ -627,5 +627,5 @@ public sealed class FlowLoadTests
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

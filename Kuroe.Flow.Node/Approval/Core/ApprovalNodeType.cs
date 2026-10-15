@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -8,10 +7,8 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Node.Approval;
 
 /// <summary>审批节点类型：不启动 run，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。</summary>
-internal sealed class ApprovalNodeType : INodeType, INodeRuntimeFactory, INodeParameterFile
+internal sealed class ApprovalNodeType : INodeType, INodeRuntimeFactory
 {
-    private const string QuestionName = "Question";
-
     /// <summary>类型名。</summary>
     public NodeKind Kind => ApprovalNodeTypes.Name;
 
@@ -22,9 +19,6 @@ internal sealed class ApprovalNodeType : INodeType, INodeRuntimeFactory, INodePa
         InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
         OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
     };
-
-    /// <summary>参数段声明的字段与取值形态。</summary>
-    public IReadOnlyList<ParameterField> Fields { get; } = [new(QuestionName, ParameterValueKind.Text)];
 
     /// <summary>审批节点的类型规则：对外端口取自身输入端口，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
@@ -51,20 +45,4 @@ internal sealed class ApprovalNodeType : INodeType, INodeRuntimeFactory, INodePa
     /// <summary>审批节点的运行期对象。</summary>
     public NodeRuntime Create(GraphNode node, INodeContext context) =>
         new ApprovalRuntime((ExecutableNode)node, context);
-
-    /// <summary>读出参数段：参数只有提问文本，未知字段与形状由文件层报出。</summary>
-    public INodeParameters? Read(IParameterReader values, Action<string> fail) =>
-        new ApprovalParameters { Question = values.Text(QuestionName) };
-
-    /// <summary>写回参数段：只写有值的字段。</summary>
-    public ParameterValues Write(INodeParameters? parameters)
-    {
-        ParameterValues values = new();
-        if (parameters is ApprovalParameters approval && approval.Question is { Length: > 0 } question)
-        {
-            values.Set(QuestionName, question);
-        }
-
-        return values;
-    }
 }

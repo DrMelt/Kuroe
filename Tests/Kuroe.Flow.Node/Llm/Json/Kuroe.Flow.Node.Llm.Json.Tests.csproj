@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
     <PropertyGroup>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -10,11 +11,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference
-            Include="..\..\..\Kuroe.Flow.Node\Approval\Kuroe.Flow.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow.Node\Llm\Json\Kuroe.Flow.Node.Llm.Json.csproj" />
     </ItemGroup>
+
 </Project>

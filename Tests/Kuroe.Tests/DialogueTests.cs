@@ -1,4 +1,5 @@
 using Kuroe.Flow.Node.Input;
+using Kuroe.Flow.Node.Llm.Json;
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
@@ -68,7 +69,8 @@ public sealed class DialogueTests
             new TimeTool(),
             new TaskInfoTool(new TaskRegistry()),
             new SampleTool(),
-        ]);
+        ],
+        new ToolJson());
         TurnScope scope = Scope();
 
         IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), DialogueFlow.Tools);
@@ -86,7 +88,8 @@ public sealed class DialogueTests
             new TimeTool(),
             new TaskInfoTool(new TaskRegistry()),
             new SampleTool(),
-        ]);
+        ],
+        new ToolJson());
         TurnScope scope = Scope();
 
         IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info")]);
@@ -103,7 +106,8 @@ public sealed class DialogueTests
         [
             new TimeTool(),
             new TaskInfoTool(new TaskRegistry()),
-        ]);
+        ],
+        new ToolJson());
         TurnScope scope = Scope();
 
         IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info/GetTask")]);
@@ -114,7 +118,7 @@ public sealed class DialogueTests
     [Fact]
     public void Whitelist_with_similar_prefix_does_not_match_group()
     {
-        ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())]);
+        ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())], new ToolJson());
         TurnScope scope = Scope();
 
         IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("infoX")]);

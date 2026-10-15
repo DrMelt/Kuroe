@@ -6,16 +6,15 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Json.Files;
 
-/// <summary>参数段的 JSON 形状：文件里的键值转成一轮取值交给类型，类型给出的一轮取值写回键值。
-/// 未知字段与形状不符在此报出，参数怎么建与语义规则由类型自己报出。</summary>
+/// <summary>参数段的 JSON 形状：文件里的键值转成一轮取值交给形状，形状给出的一轮取值写回键值。
+/// 未知字段与形状不符在此报出，参数怎么建与语义规则由形状自己报出。</summary>
 static class NodeParameterJson
 {
     /// <summary>读出参数段：未知字段与形状不符经 fail 报出，返回的参数对象随错误一起丢弃。</summary>
     internal static INodeParameters? Read(
-        NodeKind kind,
+        INodeParameterFile shape,
         NodeScope scope,
         NodeName node,
-        INodeParameterFile shape,
         IReadOnlyDictionary<string, JsonElement> values,
         Action<Error> fail)
     {
@@ -23,7 +22,7 @@ static class NodeParameterJson
 
         foreach (string name in values.Keys.Where(name => shape.Fields.All(field => field.Name != name)))
         {
-            Report($"字段 {name} 不属于 {kind.Value} 节点。");
+            Report($"字段 {name} 不属于 {shape.Kind.Value} 节点。");
         }
 
         return shape.Read(new Reader(values, Report), Report);

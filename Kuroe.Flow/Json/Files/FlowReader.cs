@@ -12,13 +12,16 @@ namespace Kuroe.Flow.Json.Files;
 static class FlowReader
 {
     /// <summary>把文件形状转成节点定义与流程模型，错误逐条收集。</summary>
-    internal static ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> ToContent(FlowFileDto file, NodeTypeRegistry types)
+    internal static ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> ToContent(
+        FlowFileDto file,
+        NodeTypeRegistry types,
+        NodeParameterFileRegistry files)
     {
         List<NodeSpec> nodes = [];
         List<Error> errors = [];
         foreach (NodeDto dto in file.Nodes)
         {
-            ErrorOr<NodeSpec> converted = ToNode(dto, NodeScope.Library, types);
+            ErrorOr<NodeSpec> converted = ToNode(dto, NodeScope.Library, types, files);
             if (converted.IsError)
             {
                 errors.AddRange(converted.ErrorsOrEmptyList);
@@ -39,7 +42,7 @@ static class FlowReader
                 continue;
             }
 
-            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto, types);
+            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto, types, files);
             if (flow.IsError)
             {
                 errors.AddRange(flow.ErrorsOrEmptyList);
@@ -57,7 +60,7 @@ static class FlowReader
 
         return (nodes, flows);
     }
-    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto, NodeTypeRegistry types)
+    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto, NodeTypeRegistry types, NodeParameterFileRegistry files)
     {
         List<ModelDefinition> models = [];
         foreach (ModelDto model in dto.Models)
@@ -85,7 +88,7 @@ static class FlowReader
             return startOutputs.ErrorsOrEmptyList;
         }
 
-        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!), types);
+        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!), types, files);
         if (root.IsError)
         {
             return root.ErrorsOrEmptyList;
@@ -101,14 +104,14 @@ static class FlowReader
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
-    private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, NodeScope scope, NodeTypeRegistry types)
+    private static ErrorOr<IReadOnlyList<NodeSpec>> ToNodes(List<NodeDto> nodes, NodeScope scope, NodeTypeRegistry types, NodeParameterFileRegistry files)
     {
         List<NodeSpec> result = [];
         List<Error> errors = [];
 
         foreach (NodeDto dto in nodes)
         {
-            ErrorOr<NodeSpec> converted = ToNode(dto, scope, types);
+            ErrorOr<NodeSpec> converted = ToNode(dto, scope, types, files);
             if (converted.IsError)
             {
                 errors.AddRange(converted.ErrorsOrEmptyList);
@@ -124,7 +127,7 @@ static class FlowReader
 
     /// <summary>把文件里的节点装配成模型：写有 Use 即引用库定义，否则按 Kind 分容器、执行节点与输入节点。
     /// 省略的字段取安全默认值，合法性交校验。</summary>
-    private static ErrorOr<NodeSpec> ToNode(NodeDto dto, NodeScope scope, NodeTypeRegistry types)
+    private static ErrorOr<NodeSpec> ToNode(NodeDto dto, NodeScope scope, NodeTypeRegistry types, NodeParameterFileRegistry files)
     {
         if (dto.Use is { Length: > 0 })
         {
@@ -287,7 +290,7 @@ static class FlowReader
             IReadOnlyList<NodeSpec> children = [];
             if (dto.Nodes is { Count: > 0 })
             {
-                ErrorOr<IReadOnlyList<NodeSpec>> parsedChildren = ToNodes(dto.Nodes, scope, types);
+                ErrorOr<IReadOnlyList<NodeSpec>> parsedChildren = ToNodes(dto.Nodes, scope, types, files);
                 if (parsedChildren.IsError)
                 {
                     containerErrors.AddRange(parsedChildren.ErrorsOrEmptyList);
@@ -314,7 +317,7 @@ static class FlowReader
                 containerErrors.AddRange(outputPorts.ErrorsOrEmptyList);
             }
 
-            INodeParameters? containerParameters = ReadParameters(declared, dto, scope, containerErrors);
+            INodeParameters? containerParameters = ReadParameters(declared, dto, scope, files, containerErrors);
 
             if (containerErrors.Count > 0)
             {
@@ -357,7 +360,7 @@ static class FlowReader
             leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。"));
         }
 
-        INodeParameters? leafParameters = ReadParameters(declared, dto, scope, leafErrors);
+        INodeParameters? leafParameters = ReadParameters(declared, dto, scope, files, leafErrors);
 
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
@@ -427,15 +430,20 @@ static class FlowReader
         .. inputs.Select(input => new Port(input.Name, input.Type, input.Description)),
     ];
 
-    /// <summary>读出类型参数段：类型不声明参数时任何键都算未知字段，返回的参数对象随错误一起丢弃。</summary>
-    private static INodeParameters? ReadParameters(INodeType declared, NodeDto dto, NodeScope scope, List<Error> errors)
+    /// <summary>读出类型参数段：类型未注册形状时任何键都算未知字段，返回的参数对象随错误一起丢弃。</summary>
+    private static INodeParameters? ReadParameters(
+        INodeType declared,
+        NodeDto dto,
+        NodeScope scope,
+        NodeParameterFileRegistry files,
+        List<Error> errors)
     {
         if (dto.Parameters is not { Count: > 0 } values)
         {
             return null;
         }
 
-        if (declared is not INodeParameterFile shape)
+        if (files.Find(declared.Kind) is not { } shape)
         {
             errors.Add(scope.Node(dto.Name ?? string.Empty,
                 $"{declared.Kind.Value} 节点不能声明参数 {string.Join("、", values.Keys)}。"));
@@ -443,7 +451,7 @@ static class FlowReader
             return null;
         }
 
-        return NodeParameterJson.Read(declared.Kind, scope, new NodeName(dto.Name ?? string.Empty), shape, values, errors.Add);
+        return NodeParameterJson.Read(shape, scope, new NodeName(dto.Name ?? string.Empty), values, errors.Add);
     }
 
     /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>

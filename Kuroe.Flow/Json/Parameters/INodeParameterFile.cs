@@ -2,10 +2,13 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Json.Parameters;
 
-/// <summary>节点类型参数的文件形状：字段表与取值到参数对象的转换。JSON 的读写由文件层的扩展承担，
-/// 类型只声明有哪些字段与参数怎么建，引擎只透传参数对象。</summary>
+/// <summary>节点类型参数的文件形状：字段表与取值到参数对象的转换。每个节点类型由配套的 Json 项目实现本接口，
+/// JSON 的读写由文件层承担，引擎只透传参数对象。</summary>
 public interface INodeParameterFile
 {
+    /// <summary>形状所属的节点类型名，注册与查找按它进行。</summary>
+    NodeKind Kind { get; }
+
     /// <summary>参数段声明的字段与取值形态，文件层按它判定未知字段。</summary>
     IReadOnlyList<ParameterField> Fields { get; }
 

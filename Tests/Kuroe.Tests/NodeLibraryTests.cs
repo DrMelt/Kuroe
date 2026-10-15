@@ -120,7 +120,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry()).ThrowIfError();
+        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }

@@ -1,12 +1,15 @@
 <Solution>
     <Project Path="Kuroe/Shared/Kuroe.Shared.csproj" />
-    <Project Path="Kuroe.Flow.Node/Llm/Kuroe.Flow.Node.Llm.csproj" />
-    <Project Path="Kuroe.Flow.Node/Input/Kuroe.Flow.Node.Input.csproj" />
+    <Project Path="Kuroe.Flow.Node/Llm/Core/Kuroe.Flow.Node.Llm.csproj" />
+    <Project Path="Kuroe.Flow.Node/Llm/Json/Kuroe.Flow.Node.Llm.Json.csproj" />
+    <Project Path="Kuroe.Flow.Node/Input/Core/Kuroe.Flow.Node.Input.csproj" />
+    <Project Path="Kuroe.Flow.Node/Input/Json/Kuroe.Flow.Node.Input.Json.csproj" />
     <Project Path="Kuroe.Flow/Core/Kuroe.Flow.csproj" />
     <Project Path="Kuroe.Flow/NodeLibrary/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Kuroe.Flow/Json/Kuroe.Flow.Json.csproj" />
     <Project Path="Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
-    <Project Path="Kuroe.Flow.Node/Approval/Kuroe.Flow.Node.Approval.csproj" />
+    <Project Path="Kuroe.Flow.Node/Approval/Core/Kuroe.Flow.Node.Approval.csproj" />
+    <Project Path="Kuroe.Flow.Node/Approval/Json/Kuroe.Flow.Node.Approval.Json.csproj" />
     <Project Path="Kuroe/Core/Kuroe.csproj" />
     <Project Path="Kuroe.Cli/Kuroe.Cli.csproj" />
     <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
@@ -14,8 +17,11 @@
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Core/Kuroe.Flow.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Json/Kuroe.Flow.Json.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow.Node/Llm/Kuroe.Flow.Node.Llm.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow.Node/Input/Kuroe.Flow.Node.Input.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow.Node/Approval/Kuroe.Flow.Node.Approval.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Llm/Core/Kuroe.Flow.Node.Llm.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Llm/Json/Kuroe.Flow.Node.Llm.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Input/Core/Kuroe.Flow.Node.Input.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Input/Json/Kuroe.Flow.Node.Input.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Approval/Core/Kuroe.Flow.Node.Approval.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow.Node/Approval/Json/Kuroe.Flow.Node.Approval.Json.Tests.csproj" />
     <Project Path="Tests/Kuroe.Cli.Tests/Kuroe.Cli.Tests.csproj" />
 </Solution>
