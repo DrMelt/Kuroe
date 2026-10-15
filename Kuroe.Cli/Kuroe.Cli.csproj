@@ -14,10 +14,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Kuroe\Kuroe.csproj" />
+        <ProjectReference Include="..\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\Kuroe.Flow.Node\Llm\Kuroe.Flow.Node.Llm.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -26,12 +26,13 @@
 
     <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
     <ItemGroup>
-        <None Include="..\Kuroe\**\*.cs" Exclude="..\Kuroe\**\bin\**;..\Kuroe\**\obj\**"
-            Link="source\Kuroe\%(RecursiveDir)%(Filename)%(Extension)"
+        <None Include="..\Kuroe\Core\**\*.cs"
+            Exclude="..\Kuroe\Core\**\bin\**;..\Kuroe\Core\**\obj\**"
+            Link="source\Kuroe\Core\%(RecursiveDir)%(Filename)%(Extension)"
             CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Shared\**\*.cs"
-            Exclude="..\Kuroe.Shared\**\bin\**;..\Kuroe.Shared\**\obj\**"
-            Link="source\Kuroe.Shared\%(RecursiveDir)%(Filename)%(Extension)"
+        <None Include="..\Kuroe\Shared\**\*.cs"
+            Exclude="..\Kuroe\Shared\**\bin\**;..\Kuroe\Shared\**\obj\**"
+            Link="source\Kuroe\Shared\%(RecursiveDir)%(Filename)%(Extension)"
             CopyToOutputDirectory="PreserveNewest" />
         <None Include="..\Kuroe.Flow\Core\**\*.cs"
             Exclude="..\Kuroe.Flow\Core\**\bin\**;..\Kuroe.Flow\Core\**\obj\**"

@@ -17,9 +17,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe\Kuroe.csproj" />
+        <ProjectReference Include="..\..\Kuroe\Core\Kuroe.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow.Node\Llm\Kuroe.Flow.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\NodeLibrary\Kuroe.Flow.NodeLibrary.csproj" />
     </ItemGroup>
