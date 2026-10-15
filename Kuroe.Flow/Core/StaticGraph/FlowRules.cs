@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Library;
+using Kuroe.Flow.NodeDefinition;
 namespace Kuroe.Flow.StaticGraph;
 
-using Flow = Kuroe.Flow.Shared.StaticGraph;
+using Flow = Shared.StaticGraph;
 
 /// <summary>流程模板的校验规则。任务推进依赖这些不变量成立，加载与导入时逐条校验。
 /// 一条流程内的错误一次给全。</summary>

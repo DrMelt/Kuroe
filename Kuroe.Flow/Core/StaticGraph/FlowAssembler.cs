@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Files;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Library;
+using Kuroe.Flow.NodeDefinition;
 
 namespace Kuroe.Flow.StaticGraph;
 

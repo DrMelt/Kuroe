@@ -1,10 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-namespace Kuroe.Flow.StaticGraph.Library;
-
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
+namespace Kuroe.Flow.NodeDefinition;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，端口绑定沿作用域链透传。
 /// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
 internal static class NodeExpander
@@ -13,26 +10,26 @@ internal static class NodeExpander
     /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口与模型绑定。</summary>
     private sealed class Env(
         Env? parent,
-        IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> renames,
-        IReadOnlyDictionary<Flow.PortName, Flow.PortRef> bindings,
-        IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
+        IReadOnlyDictionary<NodeName, NodeName> renames,
+        IReadOnlyDictionary<PortName, PortRef> bindings,
+        IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots)
     {
         public Env? Parent { get; } = parent;
-        public IReadOnlyDictionary<Flow.NodeName, Flow.NodeName> Renames { get; } = renames;
-        public IReadOnlyDictionary<Flow.PortName, Flow.PortRef> Bindings { get; } = bindings;
+        public IReadOnlyDictionary<NodeName, NodeName> Renames { get; } = renames;
+        public IReadOnlyDictionary<PortName, PortRef> Bindings { get; } = bindings;
 
         /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型选择名或外层槽位名的映射。</summary>
-        public IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? ModelSlots { get; } = modelSlots;
+        public IReadOnlyDictionary<ModelRef, ModelRef>? ModelSlots { get; } = modelSlots;
     }
 
     /// <summary>展开流程根节点。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
-    public static ErrorOr<Flow.NodeSpec> Expand(
+    public static ErrorOr<NodeSpec> Expand(
         NodeLibrary library,
-        Flow.NodeSpec root,
+        NodeSpec root,
         NodeScope scope)
     {
         List<Error> errors = [];
-        Flow.NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, currentLimit: null, scope, errors);
+        NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, currentLimit: null, scope, errors);
 
         if (errors.Count > 0)
         {
@@ -44,9 +41,9 @@ internal static class NodeExpander
 
     /// <summary>展开一个节点。prefix 是库实例链前缀；装配层内联容器成员保持原名（原与校验的扁平唯一联动）。
     /// 库定义实例化时，子树成员名都带实例前缀。</summary>
-    private static Flow.NodeSpec? ExpandNode(
+    private static NodeSpec? ExpandNode(
         NodeLibrary library,
-        Flow.NodeSpec node,
+        NodeSpec node,
         Env? env,
         string prefix,
         bool inInstance,
@@ -56,14 +53,14 @@ internal static class NodeExpander
     {
         if (node.Use is { } use)
         {
-            if (!library.TryFind(use, out Flow.NodeSpec? definition))
+            if (!library.TryFind(use, out NodeSpec? definition))
             {
                 errors.Add(scope.Node(node.Name.Value, $"引用的节点 {use} 不在节点库。"));
                 return null;
             }
 
             string invocation = node.Name.Value.Length > 0 ? node.Name.Value : definition.Name.Value;
-            Flow.NodeName instance = new(prefix + invocation);
+            NodeName instance = new(prefix + invocation);
             if (definition.Nodes is { Count: > 0 })
             {
                 if (node.From.Count > 0)
@@ -84,8 +81,8 @@ internal static class NodeExpander
                 CheckBindings(node, definition, scope, errors);
                 Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
                 int? memberLimit = node.MaxRuns ?? definition.MaxRuns ?? currentLimit;
-                List<Flow.NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", scope, errors, memberLimit);
-                return new Flow.NodeSpec
+                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", scope, errors, memberLimit);
+                return new NodeSpec
                 {
                     Name = instance,
                     Kind = definition.Kind,
@@ -105,9 +102,9 @@ internal static class NodeExpander
                 errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
             }
 
-            Flow.ExecutableSpec libraryExecution = definition.Execution!;
+            ExecutableSpec libraryExecution = definition.Execution!;
 
-            return new Flow.NodeSpec
+            return new NodeSpec
             {
                 Name = instance,
                 Kind = definition.Kind,
@@ -124,13 +121,13 @@ internal static class NodeExpander
             };
         }
 
-        Flow.NodeName own = new(prefix + node.Name.Value);
+        NodeName own = new(prefix + node.Name.Value);
         if (node.Nodes is { Count: > 0 } children)
         {
             // 装配层内联容器成员不再叠加容器名，库实例内成员才叠加实例前缀
             string memberPrefix = inInstance ? own.Value + "." : prefix;
-            List<Flow.NodeSpec> expanded = ExpandMembers(library, children, env, memberPrefix, scope, errors, node.MaxRuns ?? currentLimit);
-            return new Flow.NodeSpec
+            List<NodeSpec> expanded = ExpandMembers(library, children, env, memberPrefix, scope, errors, node.MaxRuns ?? currentLimit);
+            return new NodeSpec
             {
                 Name = own,
                 Kind = node.Kind,
@@ -141,9 +138,9 @@ internal static class NodeExpander
             };
         }
 
-        Flow.ExecutableSpec execution = node.Execution!;
+        ExecutableSpec execution = node.Execution!;
 
-        return new Flow.NodeSpec
+        return new NodeSpec
         {
             Name = own,
             Kind = node.Kind,
@@ -164,19 +161,19 @@ internal static class NodeExpander
     private static int ResolveMaxRuns(int? own, int? library, int? currentLimit) =>
         own ?? library ?? currentLimit ?? ExecutableNode.DefaultMaxRuns;
 
-    private static List<Flow.NodeSpec> ExpandMembers(
+    private static List<NodeSpec> ExpandMembers(
         NodeLibrary library,
-        IReadOnlyList<Flow.NodeSpec> members,
+        IReadOnlyList<NodeSpec> members,
         Env? env,
         string prefix,
         NodeScope scope,
         List<Error> errors,
         int? currentLimit)
     {
-        List<Flow.NodeSpec> expanded = [];
-        foreach (Flow.NodeSpec member in members)
+        List<NodeSpec> expanded = [];
+        foreach (NodeSpec member in members)
         {
-            Flow.NodeSpec? item = ExpandNode(library, member, env, prefix, inInstance: prefix.Length > 0, currentLimit, scope, errors);
+            NodeSpec? item = ExpandNode(library, member, env, prefix, inInstance: prefix.Length > 0, currentLimit, scope, errors);
             if (item is not null)
             {
                 expanded.Add(item);
@@ -188,15 +185,15 @@ internal static class NodeExpander
 
     /// <summary>引用容器的绑定域：端口绑定只能指向定义声明的输入端口，模型绑定只能指向定义声明的槽位。</summary>
     private static void CheckBindings(
-        Flow.NodeSpec node,
-        Flow.NodeSpec definition,
+        NodeSpec node,
+        NodeSpec definition,
         NodeScope scope,
         List<Error> errors)
     {
         if (node.In is { } bindings)
         {
-            var declared = new HashSet<Flow.PortName>([.. definition.Inputs.Select(port => port.Name)]);
-            foreach (Flow.PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
+            var declared = new HashSet<PortName>([.. definition.Inputs.Select(port => port.Name)]);
+            foreach (PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
             {
                 errors.Add(scope.Node(node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
             }
@@ -204,8 +201,8 @@ internal static class NodeExpander
 
         if (node.Models is { } modelBindings)
         {
-            var slots = new HashSet<Flow.ModelRef>(definition.ModelSlots ?? []);
-            foreach (Flow.ModelRef slot in modelBindings.Keys.Where(slot => !slots.Contains(slot)))
+            var slots = new HashSet<ModelRef>(definition.ModelSlots ?? []);
+            foreach (ModelRef slot in modelBindings.Keys.Where(slot => !slots.Contains(slot)))
             {
                 errors.Add(scope.Node(node.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
             }
@@ -216,29 +213,29 @@ internal static class NodeExpander
     /// parent 沿当前环境链挂上，便于 @更外层端口 与更外层模型槽位透传。</summary>
     private static Env BuildContainerEnv(
         Env? parent,
-        Flow.NodeSpec container,
-        Flow.NodeName instanceName,
-        IReadOnlyDictionary<Flow.PortName, Flow.PortRef>? bindings,
-        IReadOnlyDictionary<Flow.ModelRef, Flow.ModelRef>? modelSlots)
+        NodeSpec container,
+        NodeName instanceName,
+        IReadOnlyDictionary<PortName, PortRef>? bindings,
+        IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots)
     {
-        Dictionary<Flow.NodeName, Flow.NodeName> renames = [];
+        Dictionary<NodeName, NodeName> renames = [];
         CollectRenames(container.Nodes ?? [], renames, instanceName.Value + ".");
 
-        return new Env(parent, renames, bindings ?? new Dictionary<Flow.PortName, Flow.PortRef>(), modelSlots);
+        return new Env(parent, renames, bindings ?? new Dictionary<PortName, PortRef>(), modelSlots);
     }
 
     /// <summary>递归收集容器子树全部成员的实例名映射：成员原名对齐到带实例名前缀的实例名。</summary>
     private static void CollectRenames(
-        IReadOnlyList<Flow.NodeSpec> nodes,
-        Dictionary<Flow.NodeName, Flow.NodeName> renames,
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeName> renames,
         string prefix)
     {
-        foreach (Flow.NodeSpec node in nodes)
+        foreach (NodeSpec node in nodes)
         {
-            Flow.NodeName localName = node.Name.Value.Length > 0
+            NodeName localName = node.Name.Value.Length > 0
                 ? node.Name
-                : new Flow.NodeName(node.Use?.Value ?? string.Empty);
-            Flow.NodeName instanceName = new(prefix + localName.Value);
+                : new NodeName(node.Use?.Value ?? string.Empty);
+            NodeName instanceName = new(prefix + localName.Value);
             renames[localName] = instanceName;
             if (node.Nodes is { Count: > 0 })
             {
@@ -248,8 +245,8 @@ internal static class NodeExpander
     }
 
     /// <summary>逐个解析上游启动组：来源名沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
-    private static IReadOnlyList<Flow.FromGroup> ResolveAll(
-        IReadOnlyList<Flow.FromGroup> from,
+    private static IReadOnlyList<FromGroup> ResolveAll(
+        IReadOnlyList<FromGroup> from,
         Env? env,
         NodeScope scope,
         List<Error> errors) =>
@@ -262,7 +259,7 @@ internal static class NodeExpander
 
     /// <summary>解析一个端口引用：来源为空（@端口）沿绑定链找实际来源，普通来源名沿实例映射解析并保留选取。
     /// 绑定链找不到来源时保留原引用并报错，交既有校验判断。</summary>
-    private static Flow.PortRef ResolveRef(Flow.PortRef reference, Env? env, NodeScope scope, List<Error> errors)
+    private static PortRef ResolveRef(PortRef reference, Env? env, NodeScope scope, List<Error> errors)
     {
         if (reference.Source is { } source)
         {
@@ -273,7 +270,7 @@ internal static class NodeExpander
         Env? chain = env;
         while (chain is not null)
         {
-            if (chain.Bindings.TryGetValue(reference.Port, out Flow.PortRef bound))
+            if (chain.Bindings.TryGetValue(reference.Port, out PortRef bound))
             {
                 return bound.Source is null
                     ? ResolveRef(bound, chain.Parent, scope, errors)
@@ -288,12 +285,12 @@ internal static class NodeExpander
     }
 
     /// <summary>普通节点引用沿环境链找实例映射，找不到时保留原名。</summary>
-    private static Flow.NodeName ResolveName(Flow.NodeName name, Env? env)
+    private static NodeName ResolveName(NodeName name, Env? env)
     {
         Env? scope = env;
         while (scope is not null)
         {
-            if (scope.Renames.TryGetValue(name, out Flow.NodeName renamed))
+            if (scope.Renames.TryGetValue(name, out NodeName renamed))
             {
                 return renamed;
             }
@@ -305,8 +302,8 @@ internal static class NodeExpander
     }
 
     /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上，说明原样保留。</summary>
-    private static Dictionary<Flow.PortName, Flow.ContainerOutput>? ResolveContainerOutputs(
-        IReadOnlyDictionary<Flow.PortName, Flow.ContainerOutput>? outs,
+    private static Dictionary<PortName, ContainerOutput>? ResolveContainerOutputs(
+        IReadOnlyDictionary<PortName, ContainerOutput>? outs,
         Env? env,
         NodeScope scope,
         List<Error> errors)
@@ -318,13 +315,13 @@ internal static class NodeExpander
 
         return outs.ToDictionary(
             entry => entry.Key,
-            entry => new Flow.ContainerOutput(ResolveRef(entry.Value.Ref, env, scope, errors), entry.Value.Description));
+            entry => new ContainerOutput(ResolveRef(entry.Value.Ref, env, scope, errors), entry.Value.Description));
     }
 
     /// <summary>执行节点的模型引用：装配层节点直接是流程模型选择名，节点组实例内成员是模型槽位，沿绑定链解析成选择名。
     /// 装配层引用执行节点未写模型时留空，交 FlowRules 报错。</summary>
-    private static Flow.ModelRef? ResolveModel(
-        Flow.ModelRef? model,
+    private static ModelRef? ResolveModel(
+        ModelRef? model,
         Env? env,
         bool inInstance,
         NodeScope scope,
@@ -341,8 +338,8 @@ internal static class NodeExpander
 
     /// <summary>沿模型绑定链解析槽位：当前层命中取绑定值继续向更外层解析，直到装配层拿到流程模型选择名。
     /// 节点组内执行节点的模型必须从引用处绑定，未命中报错。</summary>
-    private static Flow.ModelRef? ResolveSlot(
-        Flow.ModelRef name,
+    private static ModelRef? ResolveSlot(
+        ModelRef name,
         Env? env,
         bool mustBind,
         NodeScope scope,
@@ -360,7 +357,7 @@ internal static class NodeExpander
             return name;
         }
 
-        if (env.ModelSlots.TryGetValue(name, out Flow.ModelRef bound))
+        if (env.ModelSlots.TryGetValue(name, out ModelRef bound))
         {
             return ResolveSlot(bound, env.Parent, mustBind: false, scope, nodeName, errors);
         }

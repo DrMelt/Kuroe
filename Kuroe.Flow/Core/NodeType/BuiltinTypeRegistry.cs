@@ -1,6 +1,8 @@
+using Kuroe.Flow.NodeType.Container;
+using Kuroe.Flow.NodeType.Llm;
 using Kuroe.Flow.Shared.StaticGraph;
 
-namespace Kuroe.Flow.StaticGraph.Types;
+namespace Kuroe.Flow.NodeType;
 
 /// <summary>引擎内置的节点类型：由模型执行的节点与容器。装配前并入注册表，已有同名注册时保留调用方注册的实现。</summary>
 internal static class BuiltinTypeRegistry

@@ -7,7 +7,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
-namespace Kuroe.Flow.StaticGraph.Types;
+namespace Kuroe.Flow.NodeType.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出，引擎内置。</summary>
 internal sealed class LlmNodeType : INodeType, INodeParameterJson

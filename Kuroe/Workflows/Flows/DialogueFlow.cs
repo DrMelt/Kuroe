@@ -1,6 +1,6 @@
 using Kuroe.Flow.Node.Input;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Types;
+using Kuroe.Flow.NodeType.Llm;
 
 namespace Kuroe.Workflows.Flows;
 

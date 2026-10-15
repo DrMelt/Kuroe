@@ -2,7 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Types;
+using Kuroe.Flow.NodeType.Llm;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 

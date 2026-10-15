@@ -1,12 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Execution.Tasks;
-using Kuroe.Flow.RuntimeGraph;
 namespace Kuroe.Flow.RuntimeNodes;
-
-using Flow = Kuroe.Flow.Shared.StaticGraph;
-
 /// <summary>一个容器在任务内的运行时对象：容器定义与内容版本。容器不执行、不启动 run，
 /// 内容齐备与内容版本按输入侧方案随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
 /// 读写都要求持有任务 Gate。</summary>
@@ -64,10 +59,10 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     public override void Cancel() => _canceled = true;
 
     /// <summary>按输出端口取单段文本：声明的命名端口按绑定转发成员产出，其余端口为空。成员未实例化、未放行或端口未交回时为空。</summary>
-    public override string? PortText(INodeTask task, Flow.PortName port)
+    public override string? PortText(INodeTask task, PortName port)
     {
         if (Container.PortBindings is not { } bindings
-            || !bindings.TryGetValue(port, out Flow.PortRef target)
+            || !bindings.TryGetValue(port, out PortRef target)
             || target.Source is not { } memberName
             || task.Graph.IndexOf(memberName) is not { } memberIndex
             || context.Materialized(memberIndex) is not NodeRuntime member)
@@ -80,7 +75,7 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
 
     /// <summary>按输出端口取可注入的产出消息集：声明的输出端口按绑定转成一条容器端口消息，出处指向容器。
     /// 容器没有整份产出，一切对外内容都经声明端口。</summary>
-    public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, Flow.PortName port, int? item)
+    public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, PortName port, int? item)
     {
         if (item is not null)
         {
@@ -89,7 +84,7 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
 
         if (Released
             && Container.PortBindings is { } bindings
-            && bindings.TryGetValue(port, out Flow.PortRef target)
+            && bindings.TryGetValue(port, out PortRef target)
             && target.Source is { } memberName
             && task.Graph.IndexOf(memberName) is { } memberIndex
             && context.Materialized(memberIndex) is NodeRuntime member)

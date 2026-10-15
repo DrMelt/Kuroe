@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph;
 
-namespace Kuroe.Flow.StaticGraph.Types;
+namespace Kuroe.Flow.NodeType.Llm;
 
 /// <summary>Llm 类型的参数：对执行单元的额外要求、能力白名单与恒定系统指令块。</summary>
 public sealed record LlmParameters : INodeParameters, INodeParameterRun

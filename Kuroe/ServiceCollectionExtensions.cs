@@ -24,7 +24,7 @@ using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Engine;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Types;
+using Kuroe.Flow.NodeType;
 using Kuroe.Flow.Node.Input;
 using Kuroe.Flow.Node.Approval;
 using Kuroe.Waiting;

@@ -1,6 +1,6 @@
-namespace Kuroe.Flow.StaticGraph;
+namespace Kuroe.Flow.NodeDefinition;
 
-using Flow = Kuroe.Flow.Shared.StaticGraph;
+using Flow = Shared.StaticGraph;
 
 /// <summary>节点接口的静态规则：输入与输出端口名在同一节点内唯一，端口类型落在类型形状给出的值域，
 /// WorkItems 与 Context 输出端口至多声明一个。流程校验与节点库校验共用这一份，报错出口由调用方给出。</summary>

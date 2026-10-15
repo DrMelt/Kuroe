@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Kuroe.Flow.Shared.StaticGraph;
 
-namespace Kuroe.Flow.StaticGraph.Library;
+namespace Kuroe.Flow.NodeDefinition;
 
 /// <summary>节点库：节点定义的注册中心。同名后注册覆盖先注册，注册在装配期完成，之后只读查找。</summary>
 internal sealed class NodeLibrary

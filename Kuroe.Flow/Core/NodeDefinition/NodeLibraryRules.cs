@@ -1,10 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph;
-namespace Kuroe.Flow.StaticGraph.Library;
+namespace Kuroe.Flow.NodeDefinition;
 
-using Flow = Kuroe.Flow.Shared.StaticGraph;
+using Flow = Shared.StaticGraph;
 
 /// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeExpander 里进行。</summary>
 internal static class NodeLibraryRules

@@ -2,12 +2,12 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.StaticGraph.Library;
+using Kuroe.Flow.NodeDefinition;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
-using Kuroe.Flow.StaticGraph.Types;
+using Kuroe.Flow.NodeType.Llm;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 

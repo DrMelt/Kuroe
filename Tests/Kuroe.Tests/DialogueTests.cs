@@ -6,7 +6,7 @@ using Kuroe.Shared.Executions.Tools;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph.Types;
+using Kuroe.Flow.NodeType.Llm;
 using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Workflows.Tools.Info;
 using Kuroe.Workflows.Flows;

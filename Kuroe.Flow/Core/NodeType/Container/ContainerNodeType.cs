@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using ContainerNode = Kuroe.Flow.Shared.StaticGraph.ContainerNode;
 
-namespace Kuroe.Flow.StaticGraph.Types;
+namespace Kuroe.Flow.NodeType.Container;
 
 /// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎内置。</summary>
 internal sealed class ContainerNodeType : INodeType
