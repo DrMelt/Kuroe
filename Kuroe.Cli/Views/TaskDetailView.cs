@@ -90,13 +90,13 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
             string blocked = node.BlockedItems.Count == 0
                 ? string.Empty
                 : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
-            string question = pending.Contains(node.Index) && NodeParameterView.Question(asked?.Parameters) is { Length: > 0 } questionText
+            string question = pending.Contains(node.Index) && NodeParameterView.Question(asked?.Type) is { Length: > 0 } questionText
                     ? $" · {questionText}"
                     : string.Empty;
             string ports = asked is { Outputs.Count: > 0 } ported
                 ? $" · 端口：{string.Join('、', ported.Outputs.Select(port => port.Label()))}"
                 : string.Empty;
-            int blocks = NodeParameterView.Llm(asked?.Parameters)?.SystemPrompt.Count ?? 0;
+            int blocks = NodeParameterView.Llm(asked?.Type)?.SystemPrompt.Count ?? 0;
             string systemPrompt = blocks > 0 ? $" · 系统指令：{blocks} 块" : string.Empty;
             _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
         }

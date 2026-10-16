@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Node.Input.Tests;
 /// <summary>输入节点类型的形状与类型规则：不启动 run，只以用户回答为产出。</summary>
 public sealed class InputNodeTypeTests
 {
-    private static readonly InputNodeType NodeType = new();
+    private static readonly InputNodeType NodeType = new(null);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -18,12 +18,12 @@ public sealed class InputNodeTypeTests
     }
 
     [Fact]
-    public void Registration_adds_the_type_to_a_registry()
+    public void Create_keeps_the_declaration_on_the_instance()
     {
-        NodeTypeRegistry registry = new();
-        InputNodeTypes.RegisterInto(registry);
+        INodeType type = InputNodeTypes.Create(new InputParameters { Question = "要做什么" });
 
-        Assert.Equal(InputNodeTypes.Name, registry.Find("input")?.Kind);
+        Assert.Equal(InputNodeTypes.Name, type.Kind);
+        Assert.Equal("要做什么", Assert.IsType<InputNodeType>(type).Parameters?.Question);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class InputNodeTypeTests
     private static NodeSpec Node(ExecutableSpec? execution = null) => new()
     {
         Name = new NodeName("收话"),
-        Kind = InputNodeTypes.Name,
+        Type = InputNodeTypes.Create(null),
         Execution = execution ?? new ExecutableSpec(),
     };
 }

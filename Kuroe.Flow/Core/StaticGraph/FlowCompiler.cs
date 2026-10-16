@@ -8,8 +8,8 @@ using Flow = Shared.StaticGraph;
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
 internal static class FlowCompiler
 {
-    /// <summary>编译流程树，类型经注册表解析。</summary>
-    public static NodeGraph Compile(FlowDefinition flow, NodeTypeRegistry types)
+    /// <summary>编译流程树。</summary>
+    public static NodeGraph Compile(FlowDefinition flow)
     {
         Dictionary<ModelRef, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
 
@@ -32,6 +32,7 @@ internal static class FlowCompiler
                 Index = builder.Index,
                 Name = builder.Name,
                 Path = builder.Path,
+                Type = builder.Type,
                 Members = builder.Members,
                 SubContainers = builder.SubContainers,
                 PortBindings = builder.PortBindings,
@@ -61,7 +62,7 @@ internal static class FlowCompiler
             }
         }
 
-        return new NodeGraph(nodes, edges, types);
+        return new NodeGraph(nodes, edges);
     }
 
     /// <summary>开始节点：序号 0，不属于任何容器，任务启动即已放行。</summary>
@@ -78,6 +79,7 @@ internal static class FlowCompiler
         int Index,
         NodeName Name,
         NodePath Path,
+        INodeType Type,
         List<int> Members,
         List<int> SubContainers,
         IReadOnlyDictionary<PortName, PortRef>? PortBindings);
@@ -132,12 +134,13 @@ internal static class FlowCompiler
         int container = nodes.Count;
         NodePath containerPath = new([.. path, node.Name]);
         IReadOnlyDictionary<PortName, PortRef>? bindings = ToBindings(node.ContainerOutputs);
-        containers[container] = new ContainerBuilder(container, node.Name, containerPath, [], [], bindings);
+        containers[container] = new ContainerBuilder(container, node.Name, containerPath, TypeOf(node), [], [], bindings);
         nodes.Add(new ContainerNode
         {
             Index = container,
             Name = node.Name,
             Path = containerPath,
+            Type = TypeOf(node),
             Members = [],
             SubContainers = [],
             PortBindings = bindings,
@@ -165,13 +168,16 @@ internal static class FlowCompiler
             Index = index,
             Name = node.Name,
             Path = new NodePath([.. path, node.Name]),
-            Kind = node.EffectiveKind,
+            Type = TypeOf(node),
             Model = node.Model is { } modelReference ? models[modelReference] : null,
             Execution = execution,
             Outputs = node.Outputs,
-            Parameters = node.Parameters,
             MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
         };
+
+    /// <summary>节点的类型描述。编译只接受已通过校验的节点树，类型缺失在此防御性报出。</summary>
+    private static INodeType TypeOf(NodeSpec node) =>
+        node.Type ?? throw new InvalidOperationException($"节点 {node.Name} 没有类型，编译只接受已校验的节点树。");
 
     /// <summary>容器输出端口声明投影成图上的绑定表：说明只属于定义与展示，图上只留成员引用。</summary>
     private static Dictionary<PortName, PortRef>? ToBindings(

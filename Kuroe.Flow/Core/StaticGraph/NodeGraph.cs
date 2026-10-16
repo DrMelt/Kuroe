@@ -13,12 +13,11 @@ public sealed class NodeGraph : INodeGraph
     private readonly Dictionary<int, int> _parentContainer;
     private readonly NodeInputPlan?[] _plans;
 
-    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引，类型经注册表解析。</summary>
-    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges, NodeTypeRegistry types)
+    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引。</summary>
+    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
         Nodes = nodes;
         Edges = edges;
-        Types = types;
         Start = nodes[0] as StartNode
             ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
         ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
@@ -58,20 +57,13 @@ public sealed class NodeGraph : INodeGraph
     /// <summary>流程的唯一来源节点，序号 0。</summary>
     public StartNode Start { get; }
 
-    /// <summary>节点类型注册表，装配与运行期按它解析类型。装配前一次填齐，装配完成后只读。</summary>
-    public NodeTypeRegistry Types { get; }
-
-    /// <summary>节点声明的类型名，开始没有类型。</summary>
-    public NodeKind? DeclaredKind(int index) => Nodes[index] switch
+    /// <summary>节点类型的形状，开始为空。</summary>
+    public NodeTypeShape? ShapeOf(int index) => Nodes[index] switch
     {
-        ExecutableNode executable => executable.Kind,
-        ContainerNode => BuiltinNodeKinds.Container,
+        ExecutableNode executable => executable.Type.Shape,
+        ContainerNode container => container.Type.Shape,
         _ => null,
     };
-
-    /// <summary>节点类型的形状，开始与未注册的类型为空。</summary>
-    public NodeTypeShape? ShapeOf(int index) =>
-        DeclaredKind(index) is { } type ? Types.Create(type)?.Shape : null;
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }

@@ -6,6 +6,7 @@ using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Tests.Support;
+using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
@@ -28,7 +29,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Container_prompt_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 容器：Container 节点不能声明参数 Prompt。"], Errors(ContainerPrompt));
+        Assert.Equal(["流程 默认 的节点 容器：字段 Prompt 不属于 Container 节点。"], Errors(ContainerPrompt));
 
     [Fact]
     public void Llm_question_is_rejected() =>
@@ -125,16 +126,16 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
-            FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
+            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestTypeFiles.Registry())).ThrowIfError();
             string once = File.ReadAllText(file);
 
             Assert.Contains("\"Prompt\": \"拆一下\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
 
-            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(Nodes, Flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
+            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
+            store.Save(FlowFile.Write(Nodes, Flows, TestTypeFiles.Registry())).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -156,9 +157,9 @@ public sealed class FlowLoadTests
         {
             FlowStore store = new(file, root);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
-            FlowAssembler.Assemble(nodes, flows, new NodeLibrary(), TestNodeTypes.Registry()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestNodeTypes.Registry(), TestParameterFiles.Registry())).ThrowIfError();
+            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
+            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
+            store.Save(FlowFile.Write(nodes, flows, TestTypeFiles.Registry())).ThrowIfError();
             string text = File.ReadAllText(file);
 
             Assert.Contains("\"Tools\": [", text);
@@ -627,5 +628,5 @@ public sealed class FlowLoadTests
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestTypeFiles.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
 }

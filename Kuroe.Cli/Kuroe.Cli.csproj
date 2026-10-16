@@ -26,6 +26,10 @@
 
     <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
     <ItemGroup>
+        <None Include="..\Kuroe.Tool\**\*.cs"
+            Exclude="..\Kuroe.Tool\**\bin\**;..\Kuroe.Tool\**\obj\**"
+            Link="source\Kuroe.Tool\%(RecursiveDir)%(Filename)%(Extension)"
+            CopyToOutputDirectory="PreserveNewest" />
         <None Include="..\Kuroe\Core\**\*.cs"
             Exclude="..\Kuroe\Core\**\bin\**;..\Kuroe\Core\**\obj\**"
             Link="source\Kuroe\Core\%(RecursiveDir)%(Filename)%(Extension)"

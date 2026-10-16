@@ -2,7 +2,7 @@ using System.Text;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 
 namespace Kuroe.Workflows.Tools.Info;
 

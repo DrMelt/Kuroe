@@ -2,7 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Shared.Configuration;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 
 namespace Kuroe.Workflows.Tools.Info;
 

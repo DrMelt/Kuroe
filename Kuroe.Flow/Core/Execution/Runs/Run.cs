@@ -32,7 +32,6 @@ public sealed class Run : IRun
             ItemIndex = context.ItemIndex,
             Journal = Journal,
             Sink = TurnSinks.For(Journal, new ProgressSink(this)),
-            Tools = context.Tools,
         };
     }
 

@@ -180,7 +180,7 @@ public sealed class Session
     {
         return new ChatClientAgentRunOptions(new ChatOptions
         {
-            Tools = [.. _tools.Build(scope, scope.Sink, scope.Tools)],
+            Tools = [.. _tools.Build(scope, scope.Sink, _history.ToolPaths)],
             Temperature = _settings.Temperature,
             MaxOutputTokens = _settings.MaxOutputTokens,
             Instructions = _history.SystemPrompt,

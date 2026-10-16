@@ -16,8 +16,7 @@ public sealed class FlowService : IFlowCatalog
     private readonly FlowStore _store;
     private readonly Func<FlowName?> _defaultName;
     private readonly NodeLibrary _builtins;
-    private readonly NodeTypeRegistry _types;
-    private readonly NodeParameterFileRegistry _parameterFiles;
+    private readonly NodeTypeFileRegistry _typeFiles;
     private readonly Lock _gate = new();
     private NodeLibrary _library;
     private List<NodeSpec> _fileNodes;
@@ -28,15 +27,13 @@ public sealed class FlowService : IFlowCatalog
         FlowStore store,
         Func<FlowName?> defaultName,
         NodeLibrary builtins,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry parameterFiles,
+        NodeTypeFileRegistry typeFiles,
         AssembledFlows assembled)
     {
         _store = store;
         _defaultName = defaultName;
         _builtins = builtins;
-        _types = types;
-        _parameterFiles = parameterFiles;
+        _typeFiles = typeFiles;
         _library = assembled.Library;
         _fileNodes = [.. assembled.FileNodes];
         _flowModels = [.. assembled.FlowModels];
@@ -47,8 +44,7 @@ public sealed class FlowService : IFlowCatalog
     internal static ErrorOr<FlowService> Create(
         FlowStore store,
         IReadOnlyList<NodeSpec> builtinNodes,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry parameterFiles,
+        NodeTypeFileRegistry typeFiles,
         Func<FlowName?> defaultName)
     {
         NodeLibrary builtins = new();
@@ -60,21 +56,17 @@ public sealed class FlowService : IFlowCatalog
             return loaded.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> assembled = FlowFile.Assemble(loaded.Value ?? new FlowFileDto(), builtins, types, parameterFiles);
+        ErrorOr<AssembledFlows> assembled = FlowFile.Assemble(loaded.Value ?? new FlowFileDto(), builtins, typeFiles);
         if (assembled.IsError)
         {
             return assembled.ErrorsOrEmptyList;
         }
 
-        return new FlowService(store, defaultName, builtins, types, parameterFiles, assembled.Value);
+        return new FlowService(store, defaultName, builtins, typeFiles, assembled.Value);
     }
 
     /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
     public FlowName? DefaultName => _defaultName();
-
-    /// <summary>节点在注册表里的形状，节点类型未注册或引用节点未展开时为空。</summary>
-    public NodeTypeShape? ShapeOf(NodeSpec node) =>
-        node.Kind is { } kind ? _types.Create(kind)?.Shape : null;
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -115,13 +107,13 @@ public sealed class FlowService : IFlowCatalog
             return file.ErrorsOrEmptyList;
         }
 
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowFile.Read(file.Value, _types, _parameterFiles);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> read = FlowFile.Read(file.Value, _typeFiles);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
         }
 
-        ErrorOr<AssembledFlows> checkedStandalone = FlowAssembler.Assemble(read.Value.Nodes, read.Value.Flows, _builtins, _types);
+        ErrorOr<AssembledFlows> checkedStandalone = FlowAssembler.Assemble(read.Value.Nodes, read.Value.Flows, _builtins);
         if (checkedStandalone.IsError)
         {
             List<Error> errors = [.. checkedStandalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
@@ -134,7 +126,7 @@ public sealed class FlowService : IFlowCatalog
             List<NodeSpec> fileNodes = MergeByName(_fileNodes, read.Value.Nodes, node => node.Name);
             List<FlowDefinition> flowModels = MergeByName(_flowModels, read.Value.Flows, flow => flow.Name);
 
-            ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library, _types);
+            ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library);
             if (assembled.IsError)
             {
                 return assembled.ErrorsOrEmptyList;
@@ -148,7 +140,7 @@ public sealed class FlowService : IFlowCatalog
                 .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = _store.Save(FlowFile.Write(fileNodes, flowModels, _types, _parameterFiles));
+            ErrorOr<Success> saved = _store.Save(FlowFile.Write(fileNodes, flowModels, _typeFiles));
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;

@@ -6,35 +6,36 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Json.Files;
 
-/// <summary>参数段的 JSON 形状：文件里的键值转成一轮取值交给形状，形状给出的一轮取值写回键值。
-/// 未知字段与形状不符在此报出，参数怎么建与语义规则由形状自己报出。</summary>
+/// <summary>参数段的 JSON 形状：文件里的键值转成一轮取值交给类型的文件形状，形状给出的一轮取值写回键值。
+/// 未知字段与形状不符在此报出，类型实例怎么建与语义规则由形状自己报出。</summary>
 static class NodeParameterJson
 {
-    /// <summary>读出参数段：未知字段与形状不符经 fail 报出，返回的参数对象随错误一起丢弃。</summary>
-    internal static INodeParameters? Read(
-        INodeParameterFile shape,
+    /// <summary>读出参数段：未知字段与形状不符经 fail 报出，类型实例随错误一起丢弃。参数段没有内容时取默认声明。</summary>
+    internal static INodeType Read(
+        INodeTypeFile declaration,
         NodeScope scope,
         NodeName node,
-        IReadOnlyDictionary<string, JsonElement> values,
+        IReadOnlyDictionary<string, JsonElement>? values,
         Action<Error> fail)
     {
         void Report(string message) => fail(scope.Node(node.Value, message));
 
-        foreach (string name in values.Keys.Where(name => shape.Fields.All(field => field.Name != name)))
+        IReadOnlyDictionary<string, JsonElement> declared = values ?? new Dictionary<string, JsonElement>();
+        foreach (string name in declared.Keys.Where(name => declaration.Fields.All(field => field.Name != name)))
         {
-            Report($"字段 {name} 不属于 {shape.Kind.Value} 节点。");
+            Report($"字段 {name} 不属于 {declaration.Kind.Value} 节点。");
         }
 
-        return shape.Read(new Reader(values, Report), Report);
+        return declaration.Read(new Reader(declared, Report), Report);
     }
 
     /// <summary>写回参数段：按取值形态写出 JSON 值，类型未写的字段不写出。</summary>
     internal static void Write(
-        INodeParameterFile shape,
-        INodeParameters? parameters,
+        INodeTypeFile declaration,
+        INodeType? type,
         IDictionary<string, JsonElement> target)
     {
-        foreach (ParameterValue value in shape.Write(parameters).Values)
+        foreach (ParameterValue value in declaration.Write(type).Values)
         {
             target[value.Name] = value.Kind == ParameterValueKind.Texts
                 ? JsonSerializer.SerializeToElement([.. value.Texts], FlowJson.Default.ListString)

@@ -20,7 +20,7 @@ public sealed class ReadinessTests
     {
         ExecutableNode source = Definition(1, NodeMode.Single);
         ExecutableNode target = Definition(2, NodeMode.Single);
-        NodeGraph graph = new([StartDefinition(), source, target], [Value(1, 2, Text, new PortName("结论"))], TestNodeTypes.Builtin());
+        NodeGraph graph = new([StartDefinition(), source, target], [Value(1, 2, Text, new PortName("结论"))]);
         NodeInputPlan plan = Plan(graph, 2);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -53,7 +53,7 @@ public sealed class ReadinessTests
         ExecutableNode target = Definition(2, NodeMode.Single);
         FlowEdge data = new(1, 2, EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once, OutputPort, new PortName("结论"), Text);
         FlowEdge trigger = new(1, 2, EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, new PortName("信号"), Signal);
-        NodeGraph graph = new([StartDefinition(), source, target], signalFirst ? [trigger, data] : [data, trigger], TestNodeTypes.Builtin());
+        NodeGraph graph = new([StartDefinition(), source, target], signalFirst ? [trigger, data] : [data, trigger]);
         NodeInputPlan plan = Plan(graph, 2);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -101,8 +101,7 @@ public sealed class ReadinessTests
             [
                 Value(1, 3, Text, new PortName("甲"), group: 0),
                 Value(2, 3, Text, new PortName("乙"), group: 1),
-            ],
-            TestNodeTypes.Builtin());
+            ]);
         NodeInputPlan plan = Plan(graph, 3);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -135,6 +134,7 @@ public sealed class ReadinessTests
         NodeIndex = node.Index,
         NodeName = node.Name,
         Instruction = "产出",
+        Type = TestNodeTypes.Executable,
         ItemIndex = item,
     });
 
@@ -154,7 +154,7 @@ public sealed class ReadinessTests
     {
         ExecutableNode source = Definition(1, NodeMode.PerItem);
         ExecutableNode target = Definition(2, NodeMode.PerItem);
-        NodeGraph graph = new([StartDefinition(), source, target], [Aligned(1, 2, OutputPort)], TestNodeTypes.Builtin());
+        NodeGraph graph = new([StartDefinition(), source, target], [Aligned(1, 2, OutputPort)]);
         NodeInputPlan plan = Plan(graph, 2);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -177,8 +177,7 @@ public sealed class ReadinessTests
             [
                 FlowEdge.Split(1, 3, new PortName("拆分"), new PortName("任务")),
                 Aligned(2, 3, new PortName("依据")),
-            ],
-            TestNodeTypes.Builtin());
+            ]);
         NodeInputPlan plan = Plan(graph, 3);
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -205,8 +204,7 @@ public sealed class ReadinessTests
                 FlowEdge.Split(1, 4, new PortName("拆分"), new PortName("任务"), 0),
                 Value(2, 4, Text, new PortName("结论"), group: 0),
                 Value(3, 4, Text, new PortName("依据"), group: 1),
-            ],
-            TestNodeTypes.Builtin());
+            ]);
 
         return new Loop(Plan(graph, 4), new RuntimeExecutable(target), new FakeSources());
     }
@@ -227,11 +225,10 @@ public sealed class ReadinessTests
         Index = index,
         Name = new NodeName($"节点{index}"),
         Path = new NodePath([new NodeName($"节点{index}")]),
-        Kind = TestNodeTypes.Executable,
+        Type = TestNodeTypes.Executable,
         Execution = new ExecutableSpec { Mode = mode },
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
         Outputs = outputs ?? [],
-        Parameters = null,
         MaxRuns = 100,
     };
 

@@ -79,11 +79,10 @@ public sealed class NodePortTests
         Index = 1,
         Name = new NodeName("实施"),
         Path = new NodePath([new NodeName("实施")]),
-        Kind = new NodeKind("Executable"),
+        Type = new StubNodeType(new NodeKind("Executable")),
         Execution = new ExecutableSpec(),
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
         Outputs = outputs,
-        Parameters = null,
         MaxRuns = ExecutableNode.DefaultMaxRuns,
     };
 }

@@ -25,11 +25,10 @@ public sealed class NodeGraphTests
                 Index = 1,
                 Name = new NodeName("规划"),
                 Path = new NodePath([new NodeName("规划")]),
-                Kind = TestNodeTypes.Executable,
+                Type = TestNodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
                 Outputs = [],
-                Parameters = null,
                 MaxRuns = 100,
             },
             new ExecutableNode
@@ -37,14 +36,13 @@ public sealed class NodeGraphTests
                 Index = 2,
                 Name = new NodeName("实施"),
                 Path = new NodePath([new NodeName("实施")]),
-                Kind = TestNodeTypes.Executable,
+                Type = TestNodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
                 Outputs = [],
-                Parameters = null,
                 MaxRuns = 100,
             },
-        ], [], TestNodeTypes.Builtin());
+        ], []);
 
         Assert.Equal(3, graph.Count);
         Assert.Equal(2, graph.TotalExecutables);

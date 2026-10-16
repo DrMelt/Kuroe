@@ -9,14 +9,10 @@ namespace Kuroe.Flow.NodeType.Container;
 internal sealed class ContainerNodeType : INodeType
 {
     /// <summary>类型名。</summary>
-    public NodeKind Kind => BuiltinNodeKinds.Container;
+    public NodeKind Kind => ContainerNodeTypes.Name;
 
-    /// <summary>组织子节点，不派发 run，输入端口声明由引用处绑定。</summary>
-    public NodeTypeShape Shape { get; } = new()
-    {
-        Organizes = true,
-        InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-    };
+    /// <summary>容器类型的静态形状。</summary>
+    public NodeTypeShape Shape => ContainerNodeTypes.Shape;
 
     /// <summary>容器的类型规则：统一执行上限与输出端口绑定。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)

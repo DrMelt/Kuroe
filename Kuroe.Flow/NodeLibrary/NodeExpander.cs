@@ -85,7 +85,7 @@ internal static class NodeExpander
                 return new NodeSpec
                 {
                     Name = instance,
-                    Kind = definition.Kind,
+                    Type = definition.Type,
                     Inputs = definition.Inputs,
                     Nodes = members,
                     ContainerOutputs = ResolveContainerOutputs(definition.ContainerOutputs, childEnv, scope, errors),
@@ -107,7 +107,7 @@ internal static class NodeExpander
             return new NodeSpec
             {
                 Name = instance,
-                Kind = definition.Kind,
+                Type = definition.Type,
                 Inputs = definition.Inputs,
                 Execution = libraryExecution with
                 {
@@ -117,7 +117,6 @@ internal static class NodeExpander
                 Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
                 From = ResolveAll(node.From, env, scope, errors),
                 Outputs = definition.Outputs,
-                Parameters = definition.Parameters,
             };
         }
 
@@ -130,7 +129,7 @@ internal static class NodeExpander
             return new NodeSpec
             {
                 Name = own,
-                Kind = node.Kind,
+                Type = node.Type,
                 Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
                 ContainerOutputs = ResolveContainerOutputs(node.ContainerOutputs, env, scope, errors),
@@ -143,7 +142,7 @@ internal static class NodeExpander
         return new NodeSpec
         {
             Name = own,
-            Kind = node.Kind,
+            Type = node.Type,
             Inputs = node.Inputs,
             Execution = execution with
             {
@@ -153,7 +152,6 @@ internal static class NodeExpander
             Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
             From = ResolveAll(node.From, env, scope, errors),
             Outputs = node.Outputs,
-            Parameters = node.Parameters,
         };
     }
 

@@ -59,5 +59,6 @@ public sealed class RunSnapshotTests
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
+        Type = new StubNodeType(new NodeKind("Executable")),
     };
 }

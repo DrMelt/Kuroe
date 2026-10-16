@@ -1,17 +1,20 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
-/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Kind"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。</summary>
+/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。</summary>
 public sealed record NodeSpec
 {
     /// <summary>节点名：库定义名或流程/容器内的实例名。</summary>
     public required NodeName Name { get; init; }
 
-    /// <summary>节点类型名。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
-    public required NodeKind? Kind { get; init; }
+    /// <summary>节点类型的描述实例，类型专属声明封在它里面。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
+    public INodeType? Type { get; init; }
+
+    /// <summary>节点声明的类型名，引用节点为空。</summary>
+    public NodeKind? Kind => Type?.Kind;
 
     /// <summary>生效的节点类型名：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
-    public NodeKind EffectiveKind => Kind
+    public NodeKind EffectiveKind => Type?.Kind
         ?? throw new InvalidOperationException($"节点 {Name.Value} 没有类型名，只有展开后的节点树可取生效类型。");
 
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
@@ -37,9 +40,6 @@ public sealed record NodeSpec
     /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
     /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
-
-    /// <summary>类型专属参数：由类型的参数段文件形状读写，展开时随之搬运，引擎只透传。</summary>
-    public INodeParameters? Parameters { get; init; }
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
     public OutputValidation? Validate { get; init; }

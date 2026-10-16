@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Tasks;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 
@@ -110,15 +110,16 @@ public sealed class FakeExecutor : IRunExecutor
         {
             await Task.Delay(DelayFor?.Invoke(run) ?? DelayMs, cancellationToken);
 
-            if (run.Context.Tools.Contains(new CapabilityPath(ContractTools.WorkItems)) && SubmitsPlan)
+            IReadOnlyList<Port> textPorts = run.Context.TextPorts;
+            if (run.Context.OutputPorts.Any(port => port.Type == PortType.WorkItems) && SubmitsPlan)
             {
                 _submissions.Enqueue(ToolResult.Render(Submitter!.SubmitItems(run.Id, ItemsJson)));
             }
 
-            if (run.Context.OutputPorts.Count > 0 && SubmitsPorts)
+            if (textPorts.Count > 0 && SubmitsPorts)
             {
                 string json = PortValuesJsonFor?.Invoke(run)
-                    ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(run.Context.OutputPorts));
+                    ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(textPorts));
                 _submissions.Enqueue(ToolResult.Render(PortSubmitter!.SubmitValues(run.Id, json)));
                 if (DoubleSubmitPorts)
                 {
@@ -126,7 +127,7 @@ public sealed class FakeExecutor : IRunExecutor
                 }
             }
 
-            if (run.Context.Tools.Contains(new CapabilityPath(ContractTools.Status)) && SubmitsVerdict)
+            if (SubmitsVerdict)
             {
                 _submissions.Enqueue(ToolResult.Render(StatusSubmitter!.SubmitVerdict(
                     run.Id,

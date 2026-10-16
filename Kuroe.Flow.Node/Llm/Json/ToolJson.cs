@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Kuroe.Flow.Node.Llm.Tools;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Flow.Node.Llm.Json;

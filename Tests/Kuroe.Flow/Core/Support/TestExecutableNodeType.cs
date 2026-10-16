@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Tests.Support;
 internal sealed class TestExecutableNodeType : INodeType
 {
     /// <summary>类型名。</summary>
-    public NodeKind Kind => TestNodeTypes.Executable;
+    public NodeKind Kind => TestNodeTypes.ExecutableKind;
 
     /// <summary>派发 run，输入输出与执行节点同形。</summary>
     public NodeTypeShape Shape { get; } = new()

@@ -12,7 +12,7 @@ using Kuroe.Flow.Execution.Runs;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Tasks;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Workflows.Tools.Command;
@@ -25,7 +25,6 @@ using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Engine;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.NodeType;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Node.Input;
 using Kuroe.Flow.Node.Input.Json;
@@ -61,22 +60,16 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
-        NodeTypeRegistry nodeTypes = new();
-        BuiltinTypeRegistry.RegisterInto(nodeTypes);
-        LlmNodeTypes.RegisterInto(nodeTypes);
-        InputNodeTypes.RegisterInto(nodeTypes);
-        ApprovalNodeTypes.RegisterInto(nodeTypes);
-
-        NodeParameterFileRegistry nodeParameters = new();
-        LlmParameterFiles.RegisterInto(nodeParameters);
-        InputParameterFiles.RegisterInto(nodeParameters);
-        ApprovalParameterFiles.RegisterInto(nodeParameters);
+        NodeTypeFileRegistry typeFiles = new();
+        ContainerTypeFiles.RegisterInto(typeFiles);
+        LlmTypeFiles.RegisterInto(typeFiles);
+        InputTypeFiles.RegisterInto(typeFiles);
+        ApprovalTypeFiles.RegisterInto(typeFiles);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
             BuiltinNodes.Nodes,
-            nodeTypes,
-            nodeParameters,
+            typeFiles,
             () => settings.Value.Current.Runtime.DefaultFlow);
         if (flows.IsError)
         {
@@ -131,8 +124,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IFlowCatalog>(),
-            sp.GetRequiredService<IExecutionTargetResolver>(),
-            nodeTypes));
+            sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton(sp => new WaitService(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>()));

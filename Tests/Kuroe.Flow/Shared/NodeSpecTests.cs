@@ -9,7 +9,7 @@ public sealed class NodeSpecTests
     [Fact]
     public void Effective_kind_returns_the_declared_kind()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = new NodeKind("Executable") };
+        NodeSpec node = new() { Name = new NodeName("实施"), Type = Typed("Executable") };
 
         Assert.Equal(new NodeKind("Executable"), node.EffectiveKind);
     }
@@ -17,7 +17,7 @@ public sealed class NodeSpecTests
     [Fact]
     public void Effective_kind_on_a_reference_node_fails_with_the_node_name()
     {
-        NodeSpec reference = new() { Name = new NodeName("复用"), Kind = null, Use = new NodeName("实施") };
+        NodeSpec reference = new() { Name = new NodeName("复用"), Use = new NodeName("实施") };
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => reference.EffectiveKind);
 
@@ -27,15 +27,19 @@ public sealed class NodeSpecTests
     [Fact]
     public void Node_defaults_stay_empty()
     {
-        NodeSpec node = new() { Name = new NodeName("实施"), Kind = new NodeKind("Executable") };
+        NodeSpec node = new() { Name = new NodeName("实施"), Type = Typed("Executable") };
 
         Assert.Empty(node.Inputs);
         Assert.Empty(node.From);
         Assert.Empty(node.Outputs);
-        Assert.Null(node.Parameters);
+        Assert.Null(node.Use);
         Assert.Null(node.Execution);
         Assert.Null(node.Nodes);
     }
+
+    [Fact]
+    public void Kind_comes_from_the_type_instance() =>
+        Assert.Equal(new NodeKind("Executable"), new NodeSpec { Name = new NodeName("实施"), Type = Typed("Executable") }.Kind);
 
     [Fact]
     public void Executable_defaults_to_single_without_branch_or_validation()
@@ -47,4 +51,6 @@ public sealed class NodeSpecTests
         Assert.Null(execution.Validate);
         Assert.Null(execution.MaxRuns);
     }
+
+    private static StubNodeType Typed(string kind) => new(new NodeKind(kind));
 }

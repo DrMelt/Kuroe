@@ -76,5 +76,6 @@ public sealed class ViewLabelsTests
         NodeIndex = 0,
         NodeName = new NodeName("制定计划"),
         Instruction = "做",
+        Type = new StubNodeType(new NodeKind("Executable")),
     };
 }

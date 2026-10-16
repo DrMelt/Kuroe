@@ -3,7 +3,7 @@ using Kuroe.Flow.Node.Llm.Json;
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -42,7 +42,7 @@ public sealed class DialogueTests
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
         NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];
-        LlmParameters parameters = Assert.IsType<LlmParameters>(reply.Parameters);
+        LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
         Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], parameters.SystemPrompt);
         Assert.Null(parameters.Prompt);
@@ -53,10 +53,10 @@ public sealed class DialogueTests
     {
         Assert.Equal(
             [
-                new CapabilityPath("GetLocalTime"),
-                new CapabilityPath("info"),
-                new CapabilityPath("files"),
-                new CapabilityPath("source"),
+                new ToolPath("GetLocalTime"),
+                new ToolPath("info"),
+                new ToolPath("files"),
+                new ToolPath("source"),
             ],
             DialogueFlow.Tools);
     }
@@ -92,7 +92,7 @@ public sealed class DialogueTests
         new ToolJson());
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info")]);
 
         Assert.Equal(
             ["ListTasks", "GetTask", "GetRun"],
@@ -110,7 +110,7 @@ public sealed class DialogueTests
         new ToolJson());
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("info/GetTask")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info/GetTask")]);
 
         Assert.Equal(["GetTask"], built.Select(tool => tool.Name));
     }
@@ -121,7 +121,7 @@ public sealed class DialogueTests
         ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())], new ToolJson());
         TurnScope scope = Scope();
 
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new CapabilityPath("infoX")]);
+        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("infoX")]);
 
         Assert.Empty(built);
     }

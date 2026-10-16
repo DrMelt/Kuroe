@@ -1,3 +1,4 @@
+using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -56,11 +57,11 @@ public sealed class SnapshotTests
         new NodeSpec
         {
             Name = new NodeName("整体"),
-            Kind = BuiltinNodeKinds.Container,
+            Type = ContainerNodeTypes.Type,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Kind = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Name = new NodeName("实施"), Kind = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Name = new NodeName("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
@@ -77,11 +78,10 @@ public sealed class SnapshotTests
             Index = 1,
             Name = new NodeName("制定计划"),
             Path = new NodePath([new NodeName("制定计划")]),
-            Kind = TestNodeTypes.Executable,
+            Type = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
-            Parameters = null,
             MaxRuns = 100,
         },
         new ExecutableNode
@@ -89,12 +89,11 @@ public sealed class SnapshotTests
             Index = 2,
             Name = new NodeName("实施"),
             Path = new NodePath([new NodeName("实施")]),
-            Kind = TestNodeTypes.Executable,
+            Type = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
             Outputs = [],
-            Parameters = null,
             MaxRuns = 100,
         },
-    ], [], TestNodeTypes.Builtin());
+    ], []);
 }

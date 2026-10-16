@@ -79,5 +79,6 @@ public sealed class ContextModelTests
         NodeIndex = 1,
         NodeName = new NodeName("实施"),
         Instruction = "做事",
+        Type = new StubNodeType(new NodeKind("Executable")),
     };
 }

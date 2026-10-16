@@ -180,7 +180,7 @@ internal sealed class FlowCommands(
 
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
-        LlmParameters? parameters = NodeParameterView.Llm(node.Parameters);
+        LlmParameters? parameters = NodeParameterView.Llm(node.Type);
         List<string> parts = [];
         if (executable.Branch is { } branch)
         {
@@ -202,7 +202,7 @@ internal sealed class FlowCommands(
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
-        if (NodeParameterView.Question(node.Parameters) is { Length: > 0 } question)
+        if (NodeParameterView.Question(node.Type) is { Length: > 0 } question)
         {
             parts.Add($"提问 {question}");
         }

@@ -9,8 +9,8 @@ using Flow = Shared.StaticGraph;
 /// 一条流程内的错误一次给全。</summary>
 public static class FlowRules
 {
-    /// <summary>校验一条流程。类型规则由注册表给出的节点类型定义承担。</summary>
-    public static ErrorOr<Success> Validate(FlowDefinition flow, NodeTypeRegistry types)
+    /// <summary>校验一条流程。类型规则由节点持有的类型描述承担。</summary>
+    public static ErrorOr<Success> Validate(FlowDefinition flow)
     {
         List<Error> errors = [];
 
@@ -44,7 +44,7 @@ public static class FlowRules
         CollectExecutables(flow.RootNode, executableNames);
 
         var contextlessNames = new HashSet<NodeName>();
-        CollectContextless(flow.RootNode, contextlessNames, types);
+        CollectContextless(flow.RootNode, contextlessNames);
 
         var perItemNames = new HashSet<NodeName>();
         CollectPerItem(flow.RootNode, perItemNames);
@@ -60,12 +60,12 @@ public static class FlowRules
         var parentOf = new Dictionary<NodeName, NodeName>();
         CollectParents(flow.RootNode, parentOf, parent: null);
 
-        CheckTree(flow.RootNode, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, types, NodeScope.Flow(flow.Name.Value), errors);
+        CheckTree(flow.RootNode, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, NodeScope.Flow(flow.Name.Value), errors);
 
         // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
         if (errors.Count == 0)
         {
-            CheckShape(FlowCompiler.Compile(flow, types), NodeScope.Flow(flow.Name.Value), errors);
+            CheckShape(FlowCompiler.Compile(flow), NodeScope.Flow(flow.Name.Value), errors);
         }
 
         return errors.Count > 0 ? errors : Result.Success;
@@ -138,9 +138,9 @@ public static class FlowRules
     }
 
     /// <summary>收集不产出上下文端口的节点名，Context 输入来源据此拦截。</summary>
-    private static void CollectContextless(NodeSpec node, HashSet<NodeName> names, NodeTypeRegistry types)
+    private static void CollectContextless(NodeSpec node, HashSet<NodeName> names)
     {
-        if (ShapeOf(node, types) is { Organizes: false } shape
+        if (ShapeOf(node) is { Organizes: false } shape
             && !shape.OutputTypes.Contains(PortType.Context))
         {
             names.Add(node.Name);
@@ -149,14 +149,13 @@ public static class FlowRules
         {
             foreach (NodeSpec child in children)
             {
-                CollectContextless(child, names, types);
+                CollectContextless(child, names);
             }
         }
     }
 
-    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
-    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
+    /// <summary>节点持有的类型形状，引用节点为空。</summary>
+    private static NodeTypeShape? ShapeOf(NodeSpec node) => node.Type?.Shape;
 
     /// <summary>收集按条目展开的执行节点名，上下文输入端口来源据此拦截。</summary>
     private static void CollectPerItem(NodeSpec node, HashSet<NodeName> names)
@@ -275,7 +274,6 @@ public static class FlowRules
         IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
         IReadOnlyDictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>> containerOutputs,
         IReadOnlyDictionary<NodeName, NodeName> parentOf,
-        NodeTypeRegistry types,
         NodeScope scope,
         List<Error> errors)
     {
@@ -302,10 +300,7 @@ public static class FlowRules
 
         if (node.Nodes is { Count: > 0 } children)
         {
-            if (node.Kind is { } containerKind && types.Create(containerKind) is { } containerType)
-            {
-                containerType.Validate(node, scope, errors.Add);
-            }
+            node.Type?.Validate(node, scope, errors.Add);
 
             if (node.Model is not null || node.Models is not null)
             {
@@ -320,7 +315,7 @@ public static class FlowRules
             {
                 foreach (NodeSpec child in children)
                 {
-                    CheckTree(child, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, types, scope, errors);
+                    CheckTree(child, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
                 }
             }
 
@@ -336,12 +331,12 @@ public static class FlowRules
         }
         else if (node.Execution is not null)
         {
-            INodeType? definition = node.Kind is { } declared ? types.Create(declared) : null;
+            INodeType? definition = node.Type;
             NodeTypeShape? shape = definition?.Shape;
 
             if (shape is null)
             {
-                errors.Add(scope.Node(node.Name.Value, $"节点类型 {node.Kind?.Value ?? "(未写)"} 未注册。"));
+                errors.Add(scope.Node(node.Name.Value, "执行节点必须写类型。"));
             }
             else
             {

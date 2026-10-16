@@ -9,8 +9,4 @@ public sealed class NodeKindTests
     [Fact]
     public void Text_form_is_the_value() =>
         Assert.Equal("Input", new NodeKind("Input").ToString());
-
-    [Fact]
-    public void Builtin_name_is_the_kind_written_in_files() =>
-        Assert.Equal("Container", BuiltinNodeKinds.Container.Value);
 }

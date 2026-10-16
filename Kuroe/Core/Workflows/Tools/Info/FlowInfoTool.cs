@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Node.Llm;
 using Kuroe.Workflows.Flows;
@@ -92,7 +92,7 @@ internal sealed class FlowInfoTool : ITool
                 text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Value}节点）");
 
                 List<string> attributes = [];
-                if (_flows.ShapeOf(node) is { DispatchesRuns: true })
+                if (node.Type is { Shape.DispatchesRuns: true })
                 {
                     attributes.Add($"模型 {NodeModel(node)}");
                     attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
@@ -137,7 +137,7 @@ internal sealed class FlowInfoTool : ITool
     /// <summary>节点要求：分支、工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node, ExecutableSpec executable)
     {
-        LlmParameters? parameters = NodeParameterView.Llm(node.Parameters);
+        LlmParameters? parameters = NodeParameterView.Llm(node.Type);
         List<string> parts = [];
         if (executable.Branch is { } branch)
         {
@@ -159,7 +159,7 @@ internal sealed class FlowInfoTool : ITool
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
-        if (NodeParameterView.Question(node.Parameters) is { Length: > 0 } question)
+        if (NodeParameterView.Question(node.Type) is { Length: > 0 } question)
         {
             parts.Add($"提问 {question}");
         }

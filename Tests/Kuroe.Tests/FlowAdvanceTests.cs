@@ -235,9 +235,9 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = harness.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        // 规划者的系统指令里给出可用的分支名，模型据此交回带 Branch 的条目
+        // 规划者的本轮接口说明里给出可用的分支名，模型据此交回带 Branch 的条目
         RunSnapshot planner = done.Executables[0].Runs[0];
-        Assert.Contains("可选分支：撰写、排版", planner.Context.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("可选分支：撰写、排版", planner.Context.Briefing, StringComparison.Ordinal);
     }
 
     [Fact]

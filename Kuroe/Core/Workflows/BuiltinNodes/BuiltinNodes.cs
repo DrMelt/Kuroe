@@ -1,5 +1,7 @@
+using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Node.Llm;
+using Kuroe.Tool;
 
 namespace Kuroe.Workflows.BuiltinNodes;
 
@@ -25,29 +27,27 @@ internal static class BuiltinNodes
     private static readonly NodeSpec PlanNodeDefinition = new()
     {
         Name = new NodeName("规划"),
-        Kind = LlmNodeTypes.Name,
+        Type = LlmNodeTypes.Create(new LlmParameters
+        {
+            Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
+        }),
         Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
         Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
         Execution = new ExecutableSpec(),
-        Parameters = new LlmParameters
-        {
-            Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
-        },
     };
 
     /// <summary>执行节点：按条目实施。</summary>
     private static readonly NodeSpec ExecuteNodeDefinition = new()
     {
         Name = new NodeName("执行"),
-        Kind = LlmNodeTypes.Name,
+        Type = LlmNodeTypes.Create(new LlmParameters
+        {
+            Tools = [new ToolPath("GetLocalTime")],
+        }),
         Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
         Execution = new ExecutableSpec
         {
             Mode = NodeMode.PerItem,
-        },
-        Parameters = new LlmParameters
-        {
-            Tools = [new CapabilityPath("GetLocalTime")],
         },
     };
 
@@ -55,7 +55,7 @@ internal static class BuiltinNodes
     private static readonly NodeSpec DeliveryContainerDefinition = new()
     {
         Name = new NodeName("交付"),
-        Kind = BuiltinNodeKinds.Container,
+        Type = ContainerNodeTypes.Type,
         Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =
@@ -63,7 +63,6 @@ internal static class BuiltinNodes
             new NodeSpec
             {
                 Name = new NodeName("实施"),
-                Kind = null,
                 Use = new NodeName("执行"),
                 Model = ExecutorSlot,
                 From = [new FromGroup([new FromLink(TaskPort, PortRef.Bound(PlanPort))])],

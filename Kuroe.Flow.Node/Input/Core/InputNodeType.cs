@@ -7,18 +7,16 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Node.Input;
 
 /// <summary>输入节点类型：不启动 run，依赖齐备后停在待输入，用户回答即产出放行下游。</summary>
-internal sealed class InputNodeType : INodeType, INodeRuntimeFactory
+public sealed class InputNodeType(InputParameters? parameters) : INodeType
 {
+    /// <summary>本节点的类型专属声明，未声明时为空。</summary>
+    public InputParameters? Parameters { get; } = parameters;
+
     /// <summary>类型名。</summary>
     public NodeKind Kind => InputNodeTypes.Name;
 
-    /// <summary>输入节点类型的形状：不派发 run，输入侧只作驱动与内容引用，输出侧只写回答。</summary>
-    public NodeTypeShape Shape { get; } = new()
-    {
-        StartsUnaided = true,
-        InputTypes = [PortType.Text, PortType.Signal],
-        OutputTypes = [PortType.Text],
-    };
+    /// <summary>输入节点类型的静态形状。</summary>
+    public NodeTypeShape Shape => InputNodeTypes.Shape;
 
     /// <summary>输入节点的类型规则：只以用户输入为产出，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)

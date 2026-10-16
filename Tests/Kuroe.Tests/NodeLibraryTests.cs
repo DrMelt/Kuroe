@@ -2,13 +2,16 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.NodeType;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.Node.Llm;
+using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
 
@@ -120,7 +123,7 @@ public sealed class NodeLibraryTests
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestNodeTypes.Registry(), TestParameterFiles.Registry()).ThrowIfError();
+        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }
@@ -153,7 +156,7 @@ public sealed class NodeLibraryTests
     public void Library_executable_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxRuns 必须是正整数。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Kind = LlmNodeTypes.Name, Execution = new ExecutableSpec { MaxRuns = 0 } }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec { MaxRuns = 0 } }));
 
     /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
@@ -163,10 +166,10 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
-                Kind = BuiltinNodeKinds.Container,
+                Type = ContainerNodeTypes.Type,
                 MaxRuns = 0,
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -174,7 +177,7 @@ public sealed class NodeLibraryTests
     public void Library_container_without_children_is_rejected() =>
         Assert.Equal(
             ["节点库定义 空组：容器节点必须声明子节点。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Kind = BuiltinNodeKinds.Container }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Type = ContainerNodeTypes.Type }));
 
     /// <summary>库执行定义不能声明子节点，子节点只属于容器。</summary>
     [Fact]
@@ -184,9 +187,9 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = LlmNodeTypes.Name,
+                Type = LlmNodeTypes.Create(null),
                 Execution = new ExecutableSpec(),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
@@ -200,11 +203,11 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
-                Kind = BuiltinNodeKinds.Container,
+                Type = ContainerNodeTypes.Type,
                 Outputs = [new Port(new PortName("结论"), PortType.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Kind = LlmNodeTypes.Name, Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
@@ -215,7 +218,7 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
-                Kind = LlmNodeTypes.Name,
+                Type = LlmNodeTypes.Create(null),
                 Execution = new ExecutableSpec(),
                 ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeName("干活"), new PortName("结论"))) },
             }));
@@ -281,7 +284,7 @@ public sealed class NodeLibraryTests
         FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec implement = flow.RootNode.Nodes![0];
 
-        Assert.Equal("文件覆写的指令", Assert.IsType<LlmParameters>(implement.Parameters).Prompt);
+        Assert.Equal("文件覆写的指令", Assert.IsType<LlmNodeType>(implement.Type).Parameters?.Prompt);
     }
 
     [Fact]
@@ -379,7 +382,7 @@ public sealed class NodeLibraryTests
     [InlineData(UnboundPort, "没有绑定来源")]
     [InlineData(ReferenceWithBody, "引用成员不能同时声明执行方式或子节点")]
     [InlineData(ReferenceWithQuestion, "引用节点不能声明类型参数 Question")]
-    [InlineData(ContainerWithQuestion, "Container 节点不能声明参数 Question")]
+    [InlineData(ContainerWithQuestion, "字段 Question 不属于 Container 节点")]
     [InlineData(UnknownPortBinding, "不在容器")]
     [InlineData(PortNotDeclared, "没有在此容器上声明")]
     [InlineData(ReferenceContainerFrom, "引用容器不能声明 From")]
@@ -1422,6 +1425,6 @@ public sealed class NodeLibraryTests
             nodeLibrary.Register(node);
         }
 
-        return [.. NodeLibraryRules.Validate(nodeLibrary, TestNodeTypes.Registry()).ErrorsOrEmptyList.Select(error => error.Description)];
+        return [.. NodeLibraryRules.Validate(nodeLibrary).ErrorsOrEmptyList.Select(error => error.Description)];
     }
 }

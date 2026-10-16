@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.StaticGraph;
 using Microsoft.Extensions.AI;
@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Node.Llm.Tools;
 
 /// <summary>工具载体声明的函数构成的模型可调用集合，外加记录调用的包装。
 /// 每轮请求按回合归属重新取载体，使调用记录落到该回合的记录上。
-/// 工具面从回合的归属取用：null 表示全部，名单表示只给这些函数。JSON 承载由 <see cref="IToolJson"/> 给出。</summary>
+/// 工具面按白名单给出：只给路径落在名单里的函数及其子树。JSON 承载由 <see cref="IToolJson"/> 给出。</summary>
 public sealed class ToolCollection
 {
     private readonly ITool[] _carriers;
@@ -28,17 +28,16 @@ public sealed class ToolCollection
     public IReadOnlyList<ToolName> Names { get; }
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
-    /// 工具面从回合的归属取用：null 表示全部，路径名单表示只给这些函数及其子树。</summary>
-    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<CapabilityPath>? tools)
+    /// 工具面按本轮的能力路径给出：只给路径落在名单里的函数及其子树。</summary>
+    internal IReadOnlyList<AITool> Build(TurnScope scope, ITurnSink sink, IReadOnlyList<ToolPath> tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
         {
             ITool bound = carrier is IScopedTool scoped ? scoped.ForTurn(scope) : carrier;
-            IEnumerable<ToolFunction> allowed = tools is null
-                ? bound.Functions
-                : bound.Functions.Where(function => tools.Any(entry => entry.Allows(function.Definition.Path.Value)));
-            result.AddRange(allowed.Select(function => new DeclaredFunction(function, sink, _json)));
+            result.AddRange(bound.Functions
+                .Where(function => tools.Any(entry => entry.Allows(function.Definition.Path.Value)))
+                .Select(function => new DeclaredFunction(function, sink, _json)));
         }
 
         return result;

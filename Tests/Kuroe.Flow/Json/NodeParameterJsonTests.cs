@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ErrorOr;
 using Kuroe.Flow.Json.Files;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
@@ -15,11 +16,11 @@ public sealed class NodeParameterJsonTests
     {
         List<string> errors = [];
 
-        Parameters parameters = Assert.IsType<Parameters>(ReadParameters([("Text", "\"展开\""), ("Texts", "[\"甲\", \"乙\"]")], errors));
+        TestNodeType type = Assert.IsType<TestNodeType>(ReadParameters([("Text", "\"展开\""), ("Texts", "[\"甲\", \"乙\"]")], errors));
 
         Assert.Empty(errors);
-        Assert.Equal("展开", parameters.Text);
-        Assert.Equal(["甲", "乙"], parameters.Texts);
+        Assert.Equal("展开", type.Parameters!.Text);
+        Assert.Equal(["甲", "乙"], type.Parameters.Texts);
     }
 
     [Fact]
@@ -27,11 +28,11 @@ public sealed class NodeParameterJsonTests
     {
         List<string> errors = [];
 
-        Parameters parameters = Assert.IsType<Parameters>(ReadParameters([], errors));
+        TestNodeType type = Assert.IsType<TestNodeType>(ReadParameters([], errors));
 
         Assert.Empty(errors);
-        Assert.Null(parameters.Text);
-        Assert.Empty(parameters.Texts);
+        Assert.Null(type.Parameters!.Text);
+        Assert.Empty(type.Parameters.Texts);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public sealed class NodeParameterJsonTests
     {
         Dictionary<string, JsonElement> target = [];
 
-        NodeParameterJson.Write(Shape, new Parameters("展开", ["甲", "乙"]), target);
+        NodeParameterJson.Write(File, Typed("展开", ["甲", "乙"]), target);
 
         Assert.Equal(JsonValueKind.String, target["Text"].ValueKind);
         Assert.Equal("展开", target["Text"].GetString());
@@ -70,16 +71,16 @@ public sealed class NodeParameterJsonTests
     {
         Dictionary<string, JsonElement> target = [];
 
-        NodeParameterJson.Write(Shape, new Parameters(null, []), target);
+        NodeParameterJson.Write(File, Typed(null, []), target);
 
         Assert.Empty(target);
     }
 
-    private static readonly TestParameterShape Shape = new();
+    private static readonly TestTypeFile File = new();
 
-    private static INodeParameters? ReadParameters((string Name, string Json)[] entries, List<string> errors) =>
+    private static INodeType ReadParameters((string Name, string Json)[] entries, List<string> errors) =>
         NodeParameterJson.Read(
-            Shape,
+            File,
             NodeScope.Flow("测试"),
             new NodeName("干活"),
             Values(entries),
@@ -105,11 +106,17 @@ public sealed class NodeParameterJsonTests
         return values;
     }
 
-    /// <summary>测试用的参数段形状：一个文本字段与一个文本数组字段。</summary>
-    private sealed class TestParameterShape : INodeParameterFile
+    private static TestNodeType Typed(string? text, IReadOnlyList<string> texts) =>
+        TestNodeTypes.Create(new TestParameters(text, texts));
+
+    /// <summary>测试用的类型文件形状：一个文本字段与一个文本数组字段。</summary>
+    private sealed class TestTypeFile : INodeTypeFile
     {
         /// <summary>类型名。</summary>
-        public NodeKind Kind { get; } = new("Test");
+        public NodeKind Kind => TestNodeTypes.Name;
+
+        /// <summary>静态形状，取默认。</summary>
+        public NodeTypeShape Shape { get; } = new();
 
         /// <summary>字段表。</summary>
         public IReadOnlyList<ParameterField> Fields { get; } =
@@ -118,33 +125,61 @@ public sealed class NodeParameterJsonTests
             new("Texts", ParameterValueKind.Texts),
         ];
 
-        /// <summary>按字段取用本轮取值。</summary>
-        public INodeParameters? Read(IParameterReader values, Action<string> fail) =>
-            new Parameters(values.Text("Text"), values.Texts("Texts"));
+        /// <summary>按字段取用本轮取值并建出类型实例。</summary>
+        public INodeType Read(IParameterReader values, Action<string> fail) =>
+            TestNodeTypes.Create(new TestParameters(values.Text("Text"), values.Texts("Texts")));
 
         /// <summary>只写有值的字段。</summary>
-        public ParameterValues Write(INodeParameters? parameters)
+        public ParameterValues Write(INodeType? type)
         {
             ParameterValues values = new();
-            if (parameters is not Parameters shape)
+            if (type is not TestNodeType { Parameters: { } parameters })
             {
                 return values;
             }
 
-            if (shape.Text is { Length: > 0 } text)
+            if (parameters.Text is { Length: > 0 } text)
             {
                 values.Set("Text", text);
             }
 
-            if (shape.Texts.Count > 0)
+            if (parameters.Texts.Count > 0)
             {
-                values.Set("Texts", shape.Texts);
+                values.Set("Texts", parameters.Texts);
             }
 
             return values;
         }
     }
 
-    /// <summary>测试用的参数对象。</summary>
-    private sealed record Parameters(string? Text, IReadOnlyList<string> Texts) : INodeParameters;
+    /// <summary>测试用的节点类型：持有测试声明。</summary>
+    private sealed class TestNodeType(TestParameters? parameters) : INodeType
+    {
+        /// <summary>类型名。</summary>
+        public NodeKind Kind => TestNodeTypes.Name;
+
+        /// <summary>静态形状，取默认。</summary>
+        public NodeTypeShape Shape { get; } = new();
+
+        /// <summary>本节点的声明。</summary>
+        public TestParameters? Parameters { get; } = parameters;
+
+        /// <summary>类型规则，替身没有约束。</summary>
+        public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+        {
+        }
+    }
+
+    /// <summary>测试用的类型入口。</summary>
+    private static class TestNodeTypes
+    {
+        /// <summary>类型名。</summary>
+        public static NodeKind Name { get; } = new("Test");
+
+        /// <summary>建出类型实例。</summary>
+        public static TestNodeType Create(TestParameters parameters) => new(parameters);
+    }
+
+    /// <summary>测试用的类型声明。</summary>
+    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts);
 }

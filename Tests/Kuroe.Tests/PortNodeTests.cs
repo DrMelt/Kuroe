@@ -1,7 +1,8 @@
+using Kuroe.Flow.Node.Llm;
 using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Workflows.Tools.Builtin;
 using Xunit;
@@ -133,8 +134,9 @@ public sealed class PortNodeTests
         RunSnapshot run = done.Executables.Single().Runs.Single();
 
         // 节点声明的恒定块在前，引擎生成的本轮接口说明在后
-        Assert.StartsWith("固定背景一\n固定背景二", run.Context.SystemPrompt);
-        Assert.Contains("SubmitStatus", run.Context.SystemPrompt, StringComparison.Ordinal);
+        string prompt = Assert.IsType<LlmNodeType>(run.Context.Type).Instructions(run.Context.Briefing) ?? string.Empty;
+        Assert.StartsWith("固定背景一\n固定背景二", prompt);
+        Assert.Contains("SubmitStatus", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

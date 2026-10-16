@@ -23,7 +23,4 @@ public sealed record TurnScope
 
     /// <summary>本回合的过程写给谁。</summary>
     public required ITurnSink Sink { get; init; }
-
-    /// <summary>本轮可用的能力路径白名单，null 表示全部能力，空列表表示不放行任何能力。</summary>
-    public IReadOnlyList<CapabilityPath>? Tools { get; init; }
 }

@@ -7,18 +7,16 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Node.Approval;
 
 /// <summary>审批节点类型：不启动 run，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。</summary>
-internal sealed class ApprovalNodeType : INodeType, INodeRuntimeFactory
+public sealed class ApprovalNodeType(ApprovalParameters? parameters) : INodeType
 {
+    /// <summary>本节点的类型专属声明，未声明时为空。</summary>
+    public ApprovalParameters? Parameters { get; } = parameters;
+
     /// <summary>类型名。</summary>
     public NodeKind Kind => ApprovalNodeTypes.Name;
 
-    /// <summary>审批节点类型的形状：对外端口由输入端口派生，Signal 只作驱动。</summary>
-    public NodeTypeShape Shape { get; } = new()
-    {
-        DerivesOutputsFromInputs = true,
-        InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-    };
+    /// <summary>审批节点类型的静态形状。</summary>
+    public NodeTypeShape Shape => ApprovalNodeTypes.Shape;
 
     /// <summary>审批节点的类型规则：对外端口取自身输入端口，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)

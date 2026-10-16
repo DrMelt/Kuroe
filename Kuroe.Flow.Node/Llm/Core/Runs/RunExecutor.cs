@@ -4,7 +4,8 @@ using Kuroe.Flow.Shared.Execution.Runs;
 
 namespace Kuroe.Flow.Node.Llm.Runs;
 
-/// <summary>按上下文装配会话并发起请求。产出契约未满足时在同一会话里补发要求再请求，模型因此能看到自己上一轮的回复。</summary>
+/// <summary>按上下文装配会话并发起请求。产出契约未满足时在同一会话里补发要求再请求，模型因此能看到自己上一轮的回复。
+/// 请求的模型侧内容全部取自节点类型自身给出的指令、系统指令与工具面，因此只适用于 Llm 类型的执行节点。</summary>
 sealed class RunExecutor(SessionFactory sessions, IRunContract contract) : IRunExecutor
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>

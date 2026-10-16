@@ -1,7 +1,7 @@
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution.Turns;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 
@@ -34,12 +34,11 @@ public sealed class PortTool : IScopedTool
     /// <summary>换一份绑定到该回合的载体。</summary>
     public ITool ForTurn(TurnScope scope) => new PortTool(_intake, _registry, scope);
 
-    /// <summary>绑定回合所属 run 声明的输出端口，没有声明时为空。</summary>
+    /// <summary>绑定回合所属 run 声明的 Text 输出端口，没有声明时为空。</summary>
     private IReadOnlyList<Port>? PortsOf(TurnScope scope) =>
-        _registry.FindRun(scope.Run) is not { IsError: false } found
-        || found.Value.Context.OutputPorts is not { Count: > 0 } ports
-            ? null
-            : ports;
+        _registry.FindRun(scope.Run) is { IsError: false } found && found.Value.Context.TextPorts.Count > 0
+            ? found.Value.Context.TextPorts
+            : null;
 
     /// <summary>把契约定义绑上提交该回合端口内容的调用体，有端口清单时写进说明。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, TurnScope? scope, IReadOnlyList<Port>? ports) =>

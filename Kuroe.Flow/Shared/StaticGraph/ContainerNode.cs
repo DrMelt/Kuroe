@@ -5,6 +5,9 @@ namespace Kuroe.Flow.Shared.StaticGraph;
 /// 命名的输出端口经 <see cref="PortBindings"/> 映射到子树内成员引用，运行时按表解析成员产出。</summary>
 public sealed record ContainerNode : GraphNode
 {
+    /// <summary>节点类型的描述实例。</summary>
+    public required INodeType Type { get; init; }
+
     /// <summary>直接成员执行节点，先根序。</summary>
     public required IReadOnlyList<int> Members { get; init; }
 

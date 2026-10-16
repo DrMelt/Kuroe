@@ -1,4 +1,4 @@
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Workflows.Tools.Command.Model;
 
 namespace Kuroe.Workflows.Tools.Command;

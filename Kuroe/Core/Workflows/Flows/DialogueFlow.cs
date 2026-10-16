@@ -1,6 +1,8 @@
 using Kuroe.Flow.Node.Input;
+using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Node.Llm;
+using Kuroe.Tool;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -29,12 +31,12 @@ internal static class DialogueFlow
     internal static PortName ReplyPort { get; } = new("完成");
 
     /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。</summary>
-    internal static IReadOnlyList<CapabilityPath> Tools { get; } =
+    internal static IReadOnlyList<ToolPath> Tools { get; } =
     [
-        new CapabilityPath("GetLocalTime"),
-        new CapabilityPath("info"),
-        new CapabilityPath("files"),
-        new CapabilityPath("source"),
+        new ToolPath("GetLocalTime"),
+        new ToolPath("info"),
+        new ToolPath("files"),
+        new ToolPath("source"),
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
@@ -49,13 +51,16 @@ internal static class DialogueFlow
         new NodeSpec
         {
             Name = new NodeName("对话"),
-            Kind = BuiltinNodeKinds.Container,
+            Type = ContainerNodeTypes.Type,
             Nodes =
             [
                 new NodeSpec
                 {
                     Name = InputNodeName,
-                    Kind = InputNodeTypes.Name,
+                    Type = InputNodeTypes.Create(new InputParameters
+                    {
+                        Question = "请输入",
+                    }),
                     Inputs =
                     [
                         new InputPort(StartPort, PortType.Text),
@@ -63,10 +68,6 @@ internal static class DialogueFlow
                         new InputPort(ReplyPort, PortType.Signal),
                     ],
                     Execution = new ExecutableSpec(),
-                    Parameters = new InputParameters
-                    {
-                        Question = "请输入",
-                    },
                     Outputs = [new Port(InputPort, PortType.Text)],
                     From =
                     [
@@ -80,14 +81,13 @@ internal static class DialogueFlow
                 new NodeSpec
                 {
                     Name = ReplyNodeName,
-                    Kind = LlmNodeTypes.Name,
-                    Inputs = [new InputPort(InputPort, PortType.Text)],
-                    Execution = new ExecutableSpec(),
-                    Parameters = new LlmParameters
+                    Type = LlmNodeTypes.Create(new LlmParameters
                     {
                         Tools = Tools,
                         SystemPrompt = SystemPrompt,
-                    },
+                    }),
+                    Inputs = [new InputPort(InputPort, PortType.Text)],
+                    Execution = new ExecutableSpec(),
                     Model = RuntimeModel,
                     Outputs = [new Port(ReplyPort, PortType.Text)],
                     From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeName, InputPort))])],

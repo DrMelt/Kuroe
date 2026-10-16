@@ -13,8 +13,7 @@ static class FlowAssembler
     public static ErrorOr<AssembledFlows> Assemble(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,
-        NodeLibrary library,
-        NodeTypeRegistry types)
+        NodeLibrary library)
     {
         NodeLibrary effective = library.Copy();
         List<Error> errors = [.. effective.Register(fileNodes)
@@ -24,7 +23,7 @@ static class FlowAssembler
             return errors;
         }
 
-        errors.AddRange(Validate(effective, flows, types, out List<FlowDefinition> valid));
+        errors.AddRange(Validate(effective, flows, out List<FlowDefinition> valid));
         if (FlowRules.Duplicated(valid) is { } repeated)
         {
             errors.Add(FlowErrors.Body(repeated.Value, "流程名重复。"));
@@ -37,10 +36,9 @@ static class FlowAssembler
     private static List<Error> Validate(
         NodeLibrary library,
         IReadOnlyList<FlowDefinition> flows,
-        NodeTypeRegistry types,
         out List<FlowDefinition> valid)
     {
-        ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(library, types);
+        ErrorOr<Success> libraryChecked = NodeLibraryRules.Validate(library);
         if (libraryChecked.IsError)
         {
             valid = [];
@@ -60,7 +58,7 @@ static class FlowAssembler
             }
 
             FlowDefinition concrete = new(flow.Name, flow.Description, flow.Models, flow.StartOutputs, expanded.Value);
-            ErrorOr<Success> checkedFlow = FlowRules.Validate(concrete, types);
+            ErrorOr<Success> checkedFlow = FlowRules.Validate(concrete);
             if (checkedFlow.IsError)
             {
                 errors.AddRange(checkedFlow.ErrorsOrEmptyList);

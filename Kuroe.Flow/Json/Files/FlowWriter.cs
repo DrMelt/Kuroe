@@ -8,18 +8,17 @@ namespace Kuroe.Flow.Json.Files;
 /// <summary>模型到流程文件形状的写入：把节点定义与流程转回 DTO，保留引用形态。</summary>
 static class FlowWriter
 {
-    /// <summary>把节点定义与流程转回文件形状，保留引用形态，只写文件来源的节点定义。types 给出类型形状，决定字段与端口的写出。</summary>
+    /// <summary>把节点定义与流程转回文件形状，保留引用形态，只写文件来源的节点定义。files 给出类型形状，决定字段与端口的写出。</summary>
     internal static FlowFileDto ToDto(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry files) => new()
+        NodeTypeFileRegistry files) => new()
         {
-            Nodes = [.. fileNodes.Select(node => ToNodeDto(node, types, files))],
-            Flows = [.. flows.Select(flow => ToFlowDto(flow, types, files))],
+            Nodes = [.. fileNodes.Select(node => ToNodeDto(node, files))],
+            Flows = [.. flows.Select(flow => ToFlowDto(flow, files))],
         };
 
-    private static FlowDto ToFlowDto(FlowDefinition flow, NodeTypeRegistry types, NodeParameterFileRegistry files) => new()
+    private static FlowDto ToFlowDto(FlowDefinition flow, NodeTypeFileRegistry files) => new()
     {
         Name = flow.Name.Value,
         Description = flow.Description,
@@ -29,7 +28,7 @@ static class FlowWriter
             Model = model.Model,
         })],
         Start = new StartDto { Outputs = ToPortDtos(flow.StartOutputs) },
-        Nodes = [ToNodeDto(flow.RootNode, types, files)],
+        Nodes = [ToNodeDto(flow.RootNode, files)],
     };
 
     /// <summary>把输出端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
@@ -84,7 +83,7 @@ static class FlowWriter
         return entries;
     }
 
-    private static NodeDto ToNodeDto(NodeSpec node, NodeTypeRegistry types, NodeParameterFileRegistry files)
+    private static NodeDto ToNodeDto(NodeSpec node, NodeTypeFileRegistry files)
     {
         NodeDto dto = new()
         {
@@ -95,7 +94,7 @@ static class FlowWriter
             Validate = ToValidationDto(node.Validate),
             MaxRuns = node.MaxRuns,
             Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
-            Outputs = OutputsFor(node, types),
+            Outputs = OutputsFor(node),
             Parameters = ParametersFor(node, files),
             In = node.In is { Count: > 0 } inBindings
                 ? inBindings.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Display)
@@ -106,10 +105,10 @@ static class FlowWriter
 
         if (node.Nodes is { Count: > 0 })
         {
-            dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, types, files))];
+            dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, files))];
         }
 
-        if (node.Execution is { } execution && ShapeOf(node, types) is { DispatchesRuns: true })
+        if (node.Execution is { } execution && node.Type is { Shape.DispatchesRuns: true })
         {
             dto.Mode = execution.Mode.ToString();
             dto.Branch = execution.Branch?.Value;
@@ -121,9 +120,9 @@ static class FlowWriter
     }
 
     /// <summary>节点对外端口的文件形状：派生端口的类型不写输出端口，容器写转发条目，其余写执行节点输出端口。</summary>
-    private static List<JsonElement>? OutputsFor(NodeSpec node, NodeTypeRegistry types)
+    private static List<JsonElement>? OutputsFor(NodeSpec node)
     {
-        if (ShapeOf(node, types) is { DerivesOutputsFromInputs: true })
+        if (node.Type is { Shape.DerivesOutputsFromInputs: true })
         {
             return null;
         }
@@ -133,20 +132,16 @@ static class FlowWriter
             : ToPortDtos(node.Outputs);
     }
 
-    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
-    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
-
-    /// <summary>节点参数的参数段：类型未注册形状时不写出参数，未写的字段不写出。</summary>
-    private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeParameterFileRegistry files)
+    /// <summary>节点参数的参数段：类型没有文件形状时不写出参数，未写的字段不写出。</summary>
+    private static Dictionary<string, JsonElement>? ParametersFor(NodeSpec node, NodeTypeFileRegistry files)
     {
-        if (node.Kind is not { } kind || files.Find(kind) is not { } shape)
+        if (node.Kind is not { } kind || files.Find(kind) is not { } declaration)
         {
             return null;
         }
 
         Dictionary<string, JsonElement> parameters = [];
-        NodeParameterJson.Write(shape, node.Parameters, parameters);
+        NodeParameterJson.Write(declaration, node.Type, parameters);
 
         return parameters.Count == 0 ? null : parameters;
     }

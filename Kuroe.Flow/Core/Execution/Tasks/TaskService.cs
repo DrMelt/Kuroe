@@ -17,20 +17,17 @@ public sealed class TaskService
     private readonly IFlowRunner _driver;
     private readonly IFlowCatalog _flows;
     private readonly IExecutionTargetResolver _targets;
-    private readonly NodeTypeRegistry _types;
 
     internal TaskService(
         TaskRegistry registry,
         IFlowRunner driver,
         IFlowCatalog flows,
-        IExecutionTargetResolver targets,
-        NodeTypeRegistry types)
+        IExecutionTargetResolver targets)
     {
         _registry = registry;
         _driver = driver;
         _flows = flows;
         _targets = targets;
-        _types = types;
     }
 
     /// <summary>提交任务：按流程建任务并启动 run。</summary>
@@ -55,7 +52,7 @@ public sealed class TaskService
     /// <summary>按流程定义提交：编译图、校验开始直连下游的宿主声明、建任务并启动推进。供宿主按自带流程提交。</summary>
     public ErrorOr<TaskSnapshot> SubmitFlow(string goal, FlowDefinition flow, string? title)
     {
-        NodeGraph graph = FlowCompiler.Compile(flow, _types);
+        NodeGraph graph = FlowCompiler.Compile(flow);
 
         // 不启动 run 的节点不需要宿主声明；开始直连的派发节点要求声明可解析
         foreach (FlowEdge edge in graph.Outgoing(graph.Start.Index))

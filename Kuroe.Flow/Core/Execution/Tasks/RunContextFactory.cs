@@ -46,29 +46,26 @@ internal static class RunContextFactory
         }
 
         int count = instance.Runs + 1;
+        string briefing = BuildBriefing(task, node, inputs);
         RunMaterials materials = new()
         {
             Steps = Steps(item, count),
-            Briefing = BuildBriefing(task, node, inputs),
-            ContractTools = ContractToolsOf(node.Executable),
+            Briefing = briefing,
         };
-
-        RunRequest request = (node.Executable.Parameters as INodeParameterRun)?.Compose(materials)
-            ?? RunRequest.From(materials);
 
         return new RunContext
         {
             Task = task.Id,
             NodeIndex = node.Index,
             NodeName = node.Name,
-            Instruction = request.Instruction,
+            Instruction = node.Executable.Type.Compose(materials),
+            Type = node.Executable.Type,
             Declaration = declaration,
             ItemIndex = instance.ItemIndex,
             ExecutionCount = count,
-            Tools = request.Tools,
             Seed = seed,
-            SystemPrompt = request.SystemPrompt,
-            OutputPorts = [.. node.Executable.Outputs.Where(port => port.Type == PortType.Text)],
+            Briefing = briefing,
+            OutputPorts = node.Executable.Outputs,
         };
     }
 
@@ -202,25 +199,6 @@ internal static class RunContextFactory
         }
 
         return branches;
-    }
-
-    /// <summary>引擎按输出端口附上的契约工具，执行状态工具所有节点都有。</summary>
-    private static List<CapabilityPath> ContractToolsOf(ExecutableNode node)
-    {
-        List<CapabilityPath> names = [];
-        if (node.HasWorkItemsPort)
-        {
-            names.Add(new CapabilityPath(ContractTools.WorkItems));
-        }
-
-        if (node.HasTextPorts)
-        {
-            names.Add(new CapabilityPath(ContractTools.Port));
-        }
-
-        names.Add(new CapabilityPath(ContractTools.Status));
-
-        return names;
     }
 
     private static string Truncate(string text) =>

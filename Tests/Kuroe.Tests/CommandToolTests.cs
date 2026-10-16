@@ -3,7 +3,7 @@ using Kuroe.Flow.Node.Llm.Json;
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Workflows.Tools.Command;
@@ -472,7 +472,8 @@ public sealed class CommandToolTests
     {
         CommandTool tool = Tool(template, parameters);
         TurnScope scope = Scope();
-        AITool built = Assert.Single(new ToolCollection([tool], new ToolJson()).Build(scope, scope.Sink, null));
+        AITool built = Assert.Single(new ToolCollection([tool], new ToolJson())
+            .Build(scope, scope.Sink, [.. tool.Functions.Select(function => function.Definition.Path)]));
 
         return (AIFunction)built;
     }

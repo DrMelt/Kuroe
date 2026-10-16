@@ -10,34 +10,33 @@ using Flow = Shared.StaticGraph;
 internal static class NodeLibraryRules
 {
     /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复名报告在注册处完成，
-    /// 这里看到的是去重后的定义表。types 给出类型的形状，判定分派到哪一支。</summary>
-    public static ErrorOr<Success> Validate(NodeLibrary library, NodeTypeRegistry types)
+    /// 这里看到的是去重后的定义表。类型的形状由节点持有的类型描述给出，判定分派到哪一支。</summary>
+    public static ErrorOr<Success> Validate(NodeLibrary library)
     {
         List<Error> errors = [];
         IReadOnlyList<NodeSpec> definitions = library.All();
-        var byName = ValidateDefinitions(definitions, errors, types);
+        var byName = ValidateDefinitions(definitions, errors);
 
         foreach (NodeSpec node in definitions)
         {
-            if (ShapeOf(node, types) is { Organizes: true })
+            if (ShapeOf(node) is { Organizes: true })
             {
                 if (node.Nodes is { Count: > 0 } members)
                 {
-                    CheckContainer(node, members, byName, errors, checkSlots: true, types);
+                    CheckContainer(node, members, byName, errors, checkSlots: true);
                 }
             }
             else
             {
-                CheckLeaf(node, errors, types);
+                CheckLeaf(node, errors);
             }
         }
 
         return errors.Count > 0 ? errors : Result.Success;
     }
 
-    /// <summary>节点声明的类型形状，引用节点与未注册的类型为空。</summary>
-    private static NodeTypeShape? ShapeOf(NodeSpec node, NodeTypeRegistry types) =>
-        node.Kind is { } kind ? types.Create(kind)?.Shape : null;
+    /// <summary>节点持有的类型形状，引用节点为空。</summary>
+    private static NodeTypeShape? ShapeOf(NodeSpec node) => node.Type?.Shape;
 
     /// <summary>节点类型名，未声明类型的节点为空。</summary>
     private static string KindName(NodeSpec node) =>
@@ -45,8 +44,7 @@ internal static class NodeLibraryRules
 
     private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(
         IReadOnlyList<NodeSpec> definitions,
-        List<Error> errors,
-        NodeTypeRegistry types)
+        List<Error> errors)
     {
         var byName = new Dictionary<NodeName, NodeSpec>();
         foreach (NodeSpec node in definitions)
@@ -77,7 +75,7 @@ internal static class NodeLibraryRules
 
             byName[node.Name] = node;
 
-            if (ShapeOf(node, types) is { Organizes: true })
+            if (ShapeOf(node) is { Organizes: true })
             {
                 if (node.Nodes is not { Count: > 0 })
                 {
@@ -133,7 +131,7 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Name.Value, "节点必须声明执行配置。"));
                 }
 
-                if (ShapeOf(node, types) is { DispatchesRuns: false })
+                if (ShapeOf(node) is { DispatchesRuns: false })
                 {
                     if (node.Model is not null)
                     {
@@ -179,7 +177,7 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>执行节点库叶子：不能再带结构与接线，输入端口与输出端口在此声明。</summary>
-    private static void CheckLeaf(NodeSpec node, List<Error> errors, NodeTypeRegistry types)
+    private static void CheckLeaf(NodeSpec node, List<Error> errors)
     {
         if (node.From.Count > 0)
         {
@@ -201,15 +199,15 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
         }
 
-        ValidateInterface(node, types, errors);
+        ValidateInterface(node, errors);
     }
 
     /// <summary>节点接口的库规则：端口名与端口类型与流程校验共用一份，非执行节点的输出与指令另有库层限制。</summary>
-    private static void ValidateInterface(NodeSpec node, NodeTypeRegistry types, List<Error> errors)
+    private static void ValidateInterface(NodeSpec node, List<Error> errors)
     {
-        NodeInterfaceRules.Check(node, ShapeOf(node, types), message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
+        NodeInterfaceRules.Check(node, ShapeOf(node), message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
 
-        if ((node.Execution is null || ShapeOf(node, types) is { DispatchesRuns: false }) && node.Outputs.Count > 1)
+        if ((node.Execution is null || ShapeOf(node) is { DispatchesRuns: false }) && node.Outputs.Count > 1)
         {
             errors.Add(NodeScope.Library.Node(node.Name.Value, "非执行节点最多一个输出端口。"));
         }
@@ -222,8 +220,7 @@ internal static class NodeLibraryRules
         IReadOnlyList<NodeSpec> members,
         Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors,
-        bool checkSlots,
-        NodeTypeRegistry types)
+        bool checkSlots)
     {
         if (container.MaxRuns is { } limit && limit < 1)
         {
@@ -237,7 +234,7 @@ internal static class NodeLibraryRules
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
         var contextless = new HashSet<NodeName>();
-        CollectContextless(members, byName, contextless, types);
+        CollectContextless(members, byName, contextless);
 
         if (container.ContainerOutputs is { } outs)
         {
@@ -256,11 +253,11 @@ internal static class NodeLibraryRules
         foreach (NodeSpec member in members)
         {
             CheckMember(member, ports, subtreeNames, byName, errors);
-            CheckMemberModel(member, byName, errors, types);
-            ValidateInterface(member, types, errors);
+            CheckMemberModel(member, byName, errors);
+            ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
             {
-                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false, types);
+                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false);
             }
         }
     }
@@ -376,13 +373,12 @@ internal static class NodeLibraryRules
     private static void CollectContextless(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeName> contextless,
-        NodeTypeRegistry types)
+        HashSet<NodeName> contextless)
     {
         foreach (NodeSpec node in nodes)
         {
             NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) ? definition : node;
-            if (ShapeOf(declared, types) is { Organizes: false } shape
+            if (ShapeOf(declared) is { Organizes: false } shape
                 && !shape.OutputTypes.Contains(Flow.PortType.Context))
             {
                 contextless.Add(node.Name);
@@ -390,7 +386,7 @@ internal static class NodeLibraryRules
 
             if (node.Nodes is { Count: > 0 })
             {
-                CollectContextless(node.Nodes, byName, contextless, types);
+                CollectContextless(node.Nodes, byName, contextless);
             }
         }
     }
@@ -562,8 +558,7 @@ internal static class NodeLibraryRules
     private static void CheckMemberModel(
         NodeSpec member,
         Dictionary<NodeName, NodeSpec> byName,
-        List<Error> errors,
-        NodeTypeRegistry types)
+        List<Error> errors)
     {
         if (member.Nodes is { Count: > 0 })
         {
@@ -592,7 +587,7 @@ internal static class NodeLibraryRules
                 return;
             }
 
-            if (ShapeOf(referenced, types) is { DispatchesRuns: false })
+            if (ShapeOf(referenced) is { DispatchesRuns: false })
             {
                 if (member.Model is not null)
                 {
@@ -603,7 +598,7 @@ internal static class NodeLibraryRules
                 return;
             }
         }
-        else if (ShapeOf(member, types) is { DispatchesRuns: false })
+        else if (ShapeOf(member) is { DispatchesRuns: false })
         {
             if (member.Model is not null)
             {

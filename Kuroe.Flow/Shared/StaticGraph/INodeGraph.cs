@@ -46,7 +46,7 @@ public interface INodeGraph
     /// <summary>节点的输入侧方案，未参与就绪判定的节点为空。</summary>
     NodeInputPlan? PlanOf(int index);
 
-    /// <summary>节点类型的形状，类型未注册时为空。</summary>
+    /// <summary>节点类型的形状，开始为空。</summary>
     NodeTypeShape? ShapeOf(int index);
 
     /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。</summary>

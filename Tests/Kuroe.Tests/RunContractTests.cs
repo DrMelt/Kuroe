@@ -1,7 +1,8 @@
+using Kuroe.Flow.Node.Llm;
 using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Flow.Execution.Tasks;
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>run 的接口契约：输入端口与需交回的产出写进系统指令，执行状态由 SubmitStatus 声明并与收口判定配合。</summary>
+/// <summary>run 的接口契约：输入端口与需交回的产出写进本轮接口说明，执行状态由 SubmitStatus 声明并与收口判定配合。</summary>
 public sealed class RunContractTests
 {
     [Fact]
@@ -20,7 +21,7 @@ public sealed class RunContractTests
         TaskId id = harness.Submit("目标");
         harness.Settle(id);
 
-        string prompt = Ported(harness).Context.SystemPrompt ?? string.Empty;
+        string prompt = Ported(harness).Context.Briefing;
 
         Assert.Contains("输入端口：", prompt, StringComparison.Ordinal);
         Assert.Contains("流程起点端口「目标」", prompt, StringComparison.Ordinal);
@@ -39,8 +40,12 @@ public sealed class RunContractTests
         harness.Settle(id);
 
         IRun run = Assert.Single(harness.Executor.Started);
-        Assert.StartsWith("固定背景一\n固定背景二", run.Context.SystemPrompt, StringComparison.Ordinal);
+        Assert.StartsWith("固定背景一\n固定背景二", LlmInstructions(run), StringComparison.Ordinal);
     }
+
+    /// <summary>本轮模型侧的系统指令：节点的恒定块与本轮接口说明。</summary>
+    private static string LlmInstructions(IRun run) =>
+        Assert.IsType<LlmNodeType>(run.Context.Type).Instructions(run.Context.Briefing) ?? string.Empty;
 
     [Fact]
     public void Upstream_ports_are_listed_as_inputs()
@@ -52,7 +57,7 @@ public sealed class RunContractTests
 
         IRun follow = harness.Executor.Started.Single(run => run.Context.NodeName.Value == "实施");
 
-        Assert.Contains("节点「分析」端口「结论」", follow.Context.SystemPrompt ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("节点「分析」端口「结论」", follow.Context.Briefing, StringComparison.Ordinal);
     }
 
     [Fact]

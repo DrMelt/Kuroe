@@ -1,12 +1,15 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
-/// <summary>一棵流程树展平后的一个执行节点及其解析结果。Kind 区分执行节点与输入节点，只有执行节点会派发执行。</summary>
+/// <summary>一棵流程树展平后的一个执行节点及其解析结果。类型给出执行方式，只有派发 run 的类型会派发执行。</summary>
 public sealed record ExecutableNode : GraphNode
 {
-    /// <summary>节点类型名：由节点类型注册表给出。输入节点与审批节点不启动 run。</summary>
-    public required NodeKind Kind { get; init; }
+    /// <summary>节点类型的描述实例，类型专属声明封在它里面。</summary>
+    public required INodeType Type { get; init; }
 
-    /// <summary>展开后的执行配置：能力声明与执行方式，编译期只把执行上限落定为生效值。</summary>
+    /// <summary>节点类型名。</summary>
+    public NodeKind Kind => Type.Kind;
+
+    /// <summary>展开后的执行配置：执行方式与输出校验，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Execution { get; init; }
 
     /// <summary>引用的模型选择解析结果：输入节点不启动 run，为空。</summary>
@@ -14,9 +17,6 @@ public sealed record ExecutableNode : GraphNode
 
     /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
-
-    /// <summary>类型专属参数：由类型的参数段文件形状读写，运行期只透传与合成。</summary>
-    public required INodeParameters? Parameters { get; init; }
 
     /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。审批节点不启动 run，不限次数。</summary>
     public required int MaxRuns { get; init; }

@@ -13,27 +13,24 @@ static class FlowFile
     /// <summary>把文件形状读成节点定义与流程模型，错误逐条收集。</summary>
     internal static ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> Read(
         FlowFileDto file,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry files) => FlowReader.ToContent(file, types, files);
+        NodeTypeFileRegistry files) => FlowReader.ToContent(file, files);
 
     /// <summary>装入文件形状：读成模型后交装配层校验并展开。</summary>
     internal static ErrorOr<AssembledFlows> Assemble(
         FlowFileDto file,
         Kuroe.Flow.NodeLibrary.NodeLibrary library,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry files)
+        NodeTypeFileRegistry files)
     {
-        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(file, types, files);
+        ErrorOr<(IReadOnlyList<NodeSpec> Nodes, IReadOnlyList<FlowDefinition> Flows)> content = FlowReader.ToContent(file, files);
 
         return content.IsError
             ? content.ErrorsOrEmptyList
-            : FlowAssembler.Assemble(content.Value.Nodes, content.Value.Flows, library, types);
+            : FlowAssembler.Assemble(content.Value.Nodes, content.Value.Flows, library);
     }
 
     /// <summary>把节点定义与流程转回文件形状，保留引用形态。</summary>
     internal static FlowFileDto Write(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,
-        NodeTypeRegistry types,
-        NodeParameterFileRegistry files) => FlowWriter.ToDto(fileNodes, flows, types, files);
+        NodeTypeFileRegistry files) => FlowWriter.ToDto(fileNodes, flows, files);
 }

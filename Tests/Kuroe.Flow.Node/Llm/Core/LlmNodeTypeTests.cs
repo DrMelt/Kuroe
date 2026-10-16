@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Node.Llm.Tests;
 /// <summary>Llm 节点类型：类型名与注册、静态形状与类型规则。</summary>
 public sealed class LlmNodeTypeTests
 {
-    private static readonly LlmNodeType NodeType = new();
+    private static readonly LlmNodeType NodeType = new(null);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -17,12 +17,12 @@ public sealed class LlmNodeTypeTests
     }
 
     [Fact]
-    public void Registration_adds_the_type_to_a_registry()
+    public void Create_keeps_the_declaration_on_the_instance()
     {
-        NodeTypeRegistry registry = new();
-        LlmNodeTypes.RegisterInto(registry);
+        INodeType type = LlmNodeTypes.Create(new LlmParameters { Prompt = "拆一下" });
 
-        Assert.Equal(LlmNodeTypes.Name, registry.Find("llm")?.Kind);
+        Assert.Equal(LlmNodeTypes.Name, type.Kind);
+        Assert.Equal("拆一下", Assert.IsType<LlmNodeType>(type).Parameters?.Prompt);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class LlmNodeTypeTests
     private static NodeSpec Node(ExecutableSpec execution) => new()
     {
         Name = new NodeName("干活"),
-        Kind = LlmNodeTypes.Name,
+        Type = LlmNodeTypes.Create(null),
         Outputs = [new Port(new PortName("结论"), PortType.Text)],
         Execution = execution,
     };

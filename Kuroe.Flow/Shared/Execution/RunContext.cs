@@ -17,6 +17,9 @@ public sealed record RunContext
     /// <summary>本次执行要做的事。</summary>
     public required string Instruction { get; init; }
 
+    /// <summary>本节点的类型描述，类型专属声明的取用口由类型自己给出。</summary>
+    public required INodeType Type { get; init; }
+
     /// <summary>宿主对该执行节点的声明，引擎透传，未声明时为空。</summary>
     public INodeDeclaration? Declaration { get; init; }
 
@@ -29,15 +32,15 @@ public sealed record RunContext
     /// <summary>当前节点下本实例的执行次数，按节点与条目各自累计，从 1 起。</summary>
     public int ExecutionCount { get; init; } = 1;
 
-    /// <summary>本轮可用的能力路径：节点声明的能力加引擎附上的契约能力。</summary>
-    public IReadOnlyList<CapabilityPath> Tools { get; init; } = [];
-
     /// <summary>上游装配进来的已有内容，按序置于指令之前。</summary>
     public IReadOnlyList<ContextMessage> Seed { get; init; } = [];
 
-    /// <summary>系统指令：节点声明的恒定块在前，引擎生成的本轮接口说明在后。</summary>
-    public string? SystemPrompt { get; init; }
+    /// <summary>本轮接口说明：本节点的输入端口、需交回的产出与状态工具。</summary>
+    public string Briefing { get; init; } = string.Empty;
 
-    /// <summary>节点声明的 Text 输出端口，未声明时为空。交回契约据此给模型端口名与说明。</summary>
+    /// <summary>节点声明的输出端口，未声明时为空。交回契约据此给模型端口名与说明。</summary>
     public IReadOnlyList<Port> OutputPorts { get; init; } = [];
+
+    /// <summary>本轮需交回的命名端口：声明为 Text 的输出端口，未声明时为空。</summary>
+    public IReadOnlyList<Port> TextPorts => [.. OutputPorts.Where(port => port.Type == PortType.Text)];
 }

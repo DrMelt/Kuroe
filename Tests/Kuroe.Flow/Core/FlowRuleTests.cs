@@ -1,3 +1,4 @@
+using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.StaticGraph;
 using Xunit;
@@ -477,7 +478,7 @@ public sealed class FlowRuleTests
 
     /// <summary>容器。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
-        new() { Name = new NodeName(name), Kind = BuiltinNodeKinds.Container, Nodes = [.. members] };
+        new() { Name = new NodeName(name), Type = ContainerNodeTypes.Type, Nodes = [.. members] };
 
     /// <summary>执行节点，默认由开始入口触发。</summary>
     private static NodeSpec Text(string name, string model) =>
@@ -488,7 +489,7 @@ public sealed class FlowRuleTests
         new()
         {
             Name = new NodeName(name),
-            Kind = TestNodeTypes.Executable,
+            Type = TestNodeTypes.Executable,
             Model = new ModelRef(model),
             Execution = execution,
             From = [StartRef()],
@@ -580,5 +581,5 @@ public sealed class FlowRuleTests
 
     /// <summary>校验流程，取错误说明。类型规则按引擎内置类型注册表判定。</summary>
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
-        [.. FlowRules.Validate(flow, TestNodeTypes.Builtin()).ErrorsOrEmptyList.Select(error => error.Description)];
+        [.. FlowRules.Validate(flow).ErrorsOrEmptyList.Select(error => error.Description)];
 }

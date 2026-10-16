@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Tasks;
-using Kuroe.Shared.Executions.Tools;
+using Kuroe.Tool;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 
@@ -40,20 +40,18 @@ public sealed class FakeExecutor : IRunExecutor
     {
         await Task.Delay(DelayMs, cancellationToken);
 
-        if (run.Context.Tools.Contains(new CapabilityPath(ContractTools.WorkItems)))
+        if (run.Context.OutputPorts.Any(port => port.Type == PortType.WorkItems))
         {
             _ = Submitter!.SubmitItems(run.Id, ItemsJson);
         }
 
-        if (run.Context.OutputPorts.Count > 0)
+        IReadOnlyList<Port> ports = run.Context.TextPorts;
+        if (ports.Count > 0)
         {
-            _ = PortSubmitter!.SubmitValues(run.Id, PortValuesFor(run.Context.OutputPorts));
+            _ = PortSubmitter!.SubmitValues(run.Id, PortValuesFor(ports));
         }
 
-        if (run.Context.Tools.Contains(new CapabilityPath(ContractTools.Status)))
-        {
-            _ = StatusSubmitter!.SubmitVerdict(run.Id, "completed", null);
-        }
+        _ = StatusSubmitter!.SubmitVerdict(run.Id, "completed", null);
 
         return $"{run.Context.NodeName}产出";
     }
