@@ -14,9 +14,9 @@ public sealed class ContextTests
     [Fact]
     public void First_step_gets_goal_from_start_port_and_no_other_upstream_seed()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
+        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
 
         ContextMessage goal = Assert.Single(plan.Context.Seed);
@@ -28,9 +28,9 @@ public sealed class ContextTests
     [Fact]
     public void Implement_item_context_carries_plan_output_and_its_own_item()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
+        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
         RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
 
@@ -48,9 +48,9 @@ public sealed class ContextTests
     [Fact]
     public void Start_constant_port_feeds_downstream_instead_of_goal()
     {
-        using KuroeHarness harness = KuroeHarness.Create(StartConstantFlow);
+        using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
+        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         RunSnapshot run = Assert.Single(done.Executables[0].Runs);
 
         ContextMessage seed = Assert.Single(run.Context.Seed);

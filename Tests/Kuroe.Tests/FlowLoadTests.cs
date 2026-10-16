@@ -1,11 +1,7 @@
-using System.Text.Json;
-using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
-using Kuroe.Tests.Support;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
@@ -174,18 +170,18 @@ public sealed class FlowLoadTests
     [Fact]
     public void Flow_loads_and_imports_a_custom_definition()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SingleFunnelFlow);
-        Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("默认"));
+        using TestEnvironment environment = TestEnvironment.Create(SingleFunnelFlow);
+        Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("默认"));
 
         string source = Path.Combine(Path.GetTempPath(), $"kuroe-flow-{Guid.NewGuid():N}.json");
         File.WriteAllText(source, TwoCustomFlows);
         try
         {
-            FlowImport imported = harness.Flows.Import(source).ThrowIfError();
+            FlowImport imported = environment.Flows.Import(source).ThrowIfError();
 
             Assert.Single(imported.Names);
-            Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("两级"));
-            Assert.Equal(2, harness.Flows.Find(new FlowName("两级")).ThrowIfError().RootNode.Nodes!.Count);
+            Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("两级"));
+            Assert.Equal(2, environment.Flows.Find(new FlowName("两级")).ThrowIfError().RootNode.Nodes!.Count);
         }
         finally
         {
@@ -196,29 +192,29 @@ public sealed class FlowLoadTests
     [Fact]
     public void Loop_with_input_node_loads()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LoopWithInputNode);
+        using TestEnvironment environment = TestEnvironment.Create(LoopWithInputNode);
 
-        Assert.Contains(harness.Flows.All(), flow => flow.Name == new FlowName("默认"));
+        Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("默认"));
     }
 
     /// <summary>流程名两侧空白在加载时去掉，按去空白后的名字可查到。</summary>
     [Fact]
     public void Flow_name_with_surrounding_spaces_is_trimmed_on_load()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SurroundingSpacesFlowName);
+        using TestEnvironment environment = TestEnvironment.Create(SurroundingSpacesFlowName);
 
-        FlowDefinition flow = Assert.Single(harness.Flows.All());
+        FlowDefinition flow = Assert.Single(environment.Flows.All());
         Assert.Equal(new FlowName("默认"), flow.Name);
-        Assert.True(harness.Flows.Find(new FlowName("默认")).IsSuccess);
+        Assert.True(environment.Flows.Find(new FlowName("默认")).IsSuccess);
     }
 
     [Fact]
     public void Import_resolves_a_relative_path_against_the_work_directory()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), SingleFunnelFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), SingleFunnelFlow);
 
-        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+        FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
         Assert.Single(imported.Names);
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
@@ -228,18 +224,18 @@ public sealed class FlowLoadTests
     [Fact]
     public void Port_descriptions_survive_load_and_save()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "ports.json"), PortDescriptions);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "ports.json"), PortDescriptions);
 
-        harness.Flows.Import("ports.json").ThrowIfError();
+        environment.Flows.Import("ports.json").ThrowIfError();
 
         // 展开后的容器实例保留声明的传入端口、输出端口与成员端口，说明都随声明带过来
-        NodeSpec container = harness.Flows.Find(new FlowName("端口说明")).ThrowIfError().RootNode.Nodes![0];
+        NodeSpec container = environment.Flows.Find(new FlowName("端口说明")).ThrowIfError().RootNode.Nodes![0];
         Assert.Equal("待实施的条目拆分", container.Inputs.Single().Description);
         Assert.Equal("透出的结论", container.ContainerOutputs![new PortName("结论")].Description);
         Assert.Equal("最终结论", container.Nodes![0].Outputs.Single().Description);
 
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
+        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
         Assert.Contains("\"Description\": \"待实施的条目拆分\"", text);
         Assert.Contains("\"Description\": \"透出的结论\"", text);
         Assert.Contains("\"Description\": \"最终结论\"", text);
@@ -249,16 +245,16 @@ public sealed class FlowLoadTests
     [Fact]
     public void Start_port_value_survives_load_and_save()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "start.json"), StartWithValueFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "start.json"), StartWithValueFlow);
 
-        harness.Flows.Import("start.json").ThrowIfError();
+        environment.Flows.Import("start.json").ThrowIfError();
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
         Port background = Assert.Single(flow.StartOutputs, port => port.Name == new PortName("背景"));
         Assert.Equal("固定背景", background.Value);
 
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
+        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
         Assert.Contains("\"Value\": \"固定背景\"", text);
     }
 

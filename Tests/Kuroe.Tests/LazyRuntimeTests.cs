@@ -27,12 +27,12 @@ public sealed class LazyRuntimeTests
     [Fact]
     public void Untouched_nodes_stay_unmaterialized()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewQueueFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ReviewQueueFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot snapshot = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot snapshot = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
         // 触达的是开始、根容器、制定计划、审批节点与它顺带评估的按条目实施；收尾从未被激活
         Assert.Equal(5, task.Runtime.MaterializedCount);
@@ -46,28 +46,28 @@ public sealed class LazyRuntimeTests
     [Fact]
     public void Unreleased_container_member_stays_unmaterialized()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
-        harness.Executor.DelayMs = 200;
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
+        environment.Executor.DelayMs = 200;
 
-        TaskId id = harness.Submit("目标");
-        harness.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
+        TaskId id = environment.Submit("目标");
+        environment.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
         // 已实例化的是开始、根容器、根容器成员「制定计划」与在跑的容器成员「交付.实施」
         Assert.Equal(4, task.Runtime.MaterializedCount);
-        Assert.Equal(NodeState.Pending, harness.Snapshot(id).ExecutableStates[2].State);
+        Assert.Equal(NodeState.Pending, environment.Snapshot(id).ExecutableStates[2].State);
     }
 
     [Fact]
     public void Snapshot_never_materializes_nodes()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ReviewPerItemFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ReviewPerItemFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         int before = task.Runtime.MaterializedCount;
 
         task.Snapshot();
@@ -79,17 +79,17 @@ public sealed class LazyRuntimeTests
     [Fact]
     public void Canceled_task_materializes_late_node_canceled()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.InputFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Tasks.StopTask(id).ThrowIfError();
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
+        environment.Tasks.StopTask(id).ThrowIfError();
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         RuntimeExecutable late = task.Runtime.Executable(3);
         Assert.True(late.Canceled);
-        Assert.Equal(NodeState.Canceled, harness.Snapshot(id).ExecutableStates[1].State);
+        Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[1].State);
     }
 }

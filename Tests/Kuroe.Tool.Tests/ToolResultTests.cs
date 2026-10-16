@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Tool;
 using Xunit;
 
 namespace Kuroe.Tool.Tests;

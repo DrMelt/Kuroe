@@ -1,4 +1,3 @@
-using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -15,10 +14,10 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Trigger_only_node_starts_and_omits_source_output()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TriggerOnceFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TriggerOnceFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "来源").Runs);
@@ -31,22 +30,22 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Every_trigger_version_starts_one_run_without_data()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TriggerLoopFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TriggerLoopFlow);
 
-        TaskId id = harness.Submit("对话");
-        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        TaskId id = environment.Submit("对话");
+        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
-        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
-        RunSnapshot first = harness.Executor.Started
+        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
+        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        RunSnapshot first = environment.Executor.Started
             .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
 
-        harness.Waits.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot done = harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Waits.Answer(id, null, "第二问").ThrowIfError();
+        TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         Assert.Equal(2, done.Executables.Single(node => node.Executable.Name.Value == "回话").Runs.Count);
-        RunSnapshot second = harness.Executor.Started
+        RunSnapshot second = environment.Executor.Started
             .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 2)
             .Snapshot();
         Assert.DoesNotContain(second.Context.Seed, message => message.Text.Contains("第二问"));
@@ -56,10 +55,10 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Mixed_trigger_and_data_from_keeps_data_only()
     {
-        using KuroeHarness harness = KuroeHarness.Create(MixedTriggerFlow);
+        using TestEnvironment environment = TestEnvironment.Create(MixedTriggerFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot merged = done.Executables.Single(entry => entry.Executable.Name.Value == "合并").Runs.Single();
         Assert.Contains(merged.Context.Seed, message => message.Text.Contains("节点「数据」的端口「结论」产出"));
@@ -70,10 +69,10 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Released_container_acts_as_trigger_source()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerTriggerFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ContainerTriggerFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
@@ -84,11 +83,11 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Named_port_trigger_fires_without_injecting_port_content()
     {
-        using KuroeHarness harness = KuroeHarness.Create(NamedPortTriggerFlow);
-        harness.Executor.PortValuesJson = """{ "信号": "信号产出" }""";
+        using TestEnvironment environment = TestEnvironment.Create(NamedPortTriggerFlow);
+        environment.Executor.PortValuesJson = """{ "信号": "信号产出" }""";
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
@@ -100,31 +99,31 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Trigger_loop_stops_restarting_at_max_runs()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TriggerLoopWithLimitFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TriggerLoopWithLimitFlow);
 
-        TaskId id = harness.Submit("对话");
-        harness.Wait(id, _ => harness.Awaiting(id, AwaitKind.Answer).Count > 0);
+        TaskId id = environment.Submit("对话");
+        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        harness.Waits.Answer(id, null, "第一问").ThrowIfError();
-        harness.Wait(id, _ => harness.Executor.Started.Count == 1 && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
-        harness.Waits.Answer(id, null, "第二问").ThrowIfError();
-        harness.Wait(id, _ => harness.Executor.Started.Count == 2 && harness.Awaiting(id, AwaitKind.Answer).Count > 0);
-        harness.Waits.Answer(id, null, "第三问").ThrowIfError();
+        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
+        environment.Wait(id, _ => environment.Executor.Started.Count == 1 && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Waits.Answer(id, null, "第二问").ThrowIfError();
+        environment.Wait(id, _ => environment.Executor.Started.Count == 2 && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Waits.Answer(id, null, "第三问").ThrowIfError();
 
-        TaskSnapshot done = harness.Settle(id);
+        TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Name.Value == "回话").Runs.Count);
-        Assert.Equal([1, 2], [.. harness.Executor.Started.Select(run => run.Context.ExecutionCount)]);
+        Assert.Equal([1, 2], [.. environment.Executor.Started.Select(run => run.Context.ExecutionCount)]);
     }
 
     /// <summary>装配层引用库执行节点注入信号条目：引用处的信号接线随实例生效，且库定义本身不写接线。</summary>
     [Fact]
     public void Library_reference_receives_trigger_injection()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LibraryTriggerInjectionFlow);
+        using TestEnvironment environment = TestEnvironment.Create(LibraryTriggerInjectionFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发实例").Runs.Single();
@@ -135,17 +134,17 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Approval_gates_a_signal_driven_trigger()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TriggerReviewFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TriggerReviewFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot parked = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot parked = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
 
-        harness.Waits.Approve(id).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Waits.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
@@ -155,8 +154,8 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Trigger_run_honors_validate_and_rework()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TriggerValidateFlow);
-        harness.Executor.Output = run =>
+        using TestEnvironment environment = TestEnvironment.Create(TriggerValidateFlow);
+        environment.Executor.Output = run =>
         {
             if (run.Context.NodeIndex == 2)
             {
@@ -165,7 +164,7 @@ public sealed class TriggerNodeTests
 
             return run.Context.ExecutionCount == 1 ? "初稿不够好" : "修订通过";
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             2 => """{"结论": "来源产出"}""",
             3 => run.Context.ExecutionCount == 1
@@ -174,14 +173,14 @@ public sealed class TriggerNodeTests
             _ => null,
         };
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
 
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Count);
@@ -190,17 +189,17 @@ public sealed class TriggerNodeTests
     [Fact]
     public void Review_container_trigger_parks_until_approval()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewContainerTriggerFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ReviewContainerTriggerFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot parked = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot parked = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
 
-        harness.Waits.Approve(id).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Waits.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);

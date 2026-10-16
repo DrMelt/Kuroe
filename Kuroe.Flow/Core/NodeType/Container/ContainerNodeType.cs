@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
-using ContainerNode = Kuroe.Flow.Shared.StaticGraph.ContainerNode;
 
 namespace Kuroe.Flow.NodeType.Container;
 

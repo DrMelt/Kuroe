@@ -17,11 +17,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Kuroe.Tests.Support;
 
 /// <summary>在临时工作目录里装配一套 Kuroe，用假执行器驱动流程。</summary>
-public sealed class KuroeHarness : IDisposable
+public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
 
-    private KuroeHarness(string root, ServiceProvider provider, FakeExecutor executor)
+    private TestEnvironment(string root, ServiceProvider provider, FakeExecutor executor)
     {
         Root = root;
         _provider = provider;
@@ -92,7 +92,7 @@ public sealed class KuroeHarness : IDisposable
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试默认流程，flowsJson 传空对象即空流程库，
     /// defaultFlow 为 null 时不写入用户层默认流程。</summary>
-    public static ErrorOr<KuroeHarness> TryCreate(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认")
+    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认")
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
@@ -132,10 +132,10 @@ public sealed class KuroeHarness : IDisposable
             provider.GetRequiredService<SettingsProvider>().SetText("Runtime:DefaultFlow", defaultFlow).ThrowIfError();
         }
 
-        return new KuroeHarness(root, provider, executor);
+        return new TestEnvironment(root, provider, executor);
     }
 
-    public static KuroeHarness Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
+    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
         TryCreate(flowsJson, seedCatalog, defaultFlow).ThrowIfError();
 
     public TaskId Submit(string goal, Kuroe.Flow.Shared.StaticGraph.FlowName? flow = null) =>

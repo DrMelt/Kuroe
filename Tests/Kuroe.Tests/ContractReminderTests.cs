@@ -34,14 +34,14 @@ public sealed class ContractReminderTests
     [Fact]
     public void Missing_port_values_remind_the_port_and_the_contract_tool()
     {
-        using KuroeHarness harness = KuroeHarness.Create(PortFlow);
-        harness.Executor.SubmitsPorts = false;
+        using TestEnvironment environment = TestEnvironment.Create(PortFlow);
+        environment.Executor.SubmitsPorts = false;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        string reminder = Reminder(harness, Assert.Single(blocked.Executables[0].Runs).Id);
+        string reminder = Reminder(environment, Assert.Single(blocked.Executables[0].Runs).Id);
 
         Assert.Contains("「结论」", reminder, StringComparison.Ordinal);
         Assert.Contains("SubmitPortValues", reminder, StringComparison.Ordinal);
@@ -50,14 +50,14 @@ public sealed class ContractReminderTests
     [Fact]
     public void Missing_items_remind_the_contract_tool()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.SubmitsPlan = false;
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.SubmitsPlan = false;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        string reminder = Reminder(harness, Assert.Single(blocked.Executables[0].Runs).Id);
+        string reminder = Reminder(environment, Assert.Single(blocked.Executables[0].Runs).Id);
 
         Assert.Contains("SubmitWorkItems", reminder, StringComparison.Ordinal);
     }
@@ -65,19 +65,19 @@ public sealed class ContractReminderTests
     [Fact]
     public void Collected_outputs_give_no_reminder()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunReminder reminder = new(harness.Registry);
+        RunReminder reminder = new(environment.Registry);
         foreach (RunSnapshot run in done.Executables.SelectMany(executable => executable.Runs))
         {
-            Assert.Null(reminder.Reminder(harness.Registry.FindRun(run.Id).ThrowIfError()));
+            Assert.Null(reminder.Reminder(environment.Registry.FindRun(run.Id).ThrowIfError()));
         }
     }
 
-    private static string Reminder(KuroeHarness harness, RunId id) =>
-        Assert.IsType<string>(new RunReminder(harness.Registry).Reminder(harness.Registry.FindRun(id).ThrowIfError()));
+    private static string Reminder(TestEnvironment environment, RunId id) =>
+        Assert.IsType<string>(new RunReminder(environment.Registry).Reminder(environment.Registry.FindRun(id).ThrowIfError()));
 }

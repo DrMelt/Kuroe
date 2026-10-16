@@ -11,21 +11,21 @@ public sealed class ModelServiceTests
     [Fact]
     public void Selecting_an_unregistered_model_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<ModelSelection> selected = harness.Models.Select(ModelName.Create("nope").Value);
+        ErrorOr<ModelSelection> selected = environment.Models.Select(ModelName.Create("nope").Value);
 
         Assert.True(selected.IsError);
-        Assert.Equal("fake", harness.Models.Current?.Value);
+        Assert.Equal("fake", environment.Models.Current?.Value);
     }
 
     [Fact]
     public void Unselect_without_a_selection_changes_nothing()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Models.Unselect().ThrowIfError();
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Models.Unselect().ThrowIfError();
 
-        ModelSelection again = harness.Models.Unselect().ThrowIfError();
+        ModelSelection again = environment.Models.Unselect().ThrowIfError();
 
         Assert.False(again.Changed);
     }
@@ -33,26 +33,26 @@ public sealed class ModelServiceTests
     [Fact]
     public void Removing_the_current_model_cancels_the_selection()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ModelRemoval removal = harness.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
+        ModelRemoval removal = environment.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
 
-        Assert.Null(harness.Models.Current);
+        Assert.Null(environment.Models.Current);
         Assert.Empty(removal.Failures);
-        Assert.DoesNotContain(harness.Catalog.Snapshot().Models,
+        Assert.DoesNotContain(environment.Catalog.Snapshot().Models,
             model => model.ModelName.Value == "fake");
     }
 
     [Fact]
     public void Removing_an_unselected_model_keeps_the_selection()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
-        harness.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
+        environment.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
 
-        ModelRemoval removal = harness.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
+        ModelRemoval removal = environment.Models.Remove(ModelName.Create("fake").Value).ThrowIfError();
 
-        Assert.Equal("m2", harness.Models.Current?.Value);
+        Assert.Equal("m2", environment.Models.Current?.Value);
         Assert.Empty(removal.Failures);
     }
 }

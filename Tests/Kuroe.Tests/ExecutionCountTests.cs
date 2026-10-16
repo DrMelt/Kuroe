@@ -13,15 +13,15 @@ public sealed class ExecutionCountTests
     [Fact]
     public void Rework_of_one_item_leaves_blocked_siblings_waiting()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ExecutionCount == 1;
+        using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
+        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
-        harness.Tasks.Rework(id, 0).ThrowIfError();
-        TaskSnapshot still = harness.Wait(id, snapshot =>
+        environment.Tasks.Rework(id, 0).ThrowIfError();
+        TaskSnapshot still = environment.Wait(id, snapshot =>
             snapshot.State == TaskState.Blocked
             && snapshot.Executables.Single(node => node.Index == 3)
                 .Runs.Any(run => run.Context.ItemIndex == 0 && run.State == RunState.Succeeded));
@@ -37,16 +37,16 @@ public sealed class ExecutionCountTests
     [Fact]
     public void PerItem_partial_rework_counts_item_runs_independently()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
-        harness.Executor.FailsWhen = run =>
+        using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
+        environment.Executor.FailsWhen = run =>
             run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, task.Runtime.Executable(3).ExecutionCount(0));
         Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
@@ -55,15 +55,15 @@ public sealed class ExecutionCountTests
     [Fact]
     public void Single_node_rework_increments_max()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SingleNodeFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 2 && run.Context.ExecutionCount == 1;
+        using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
+        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 2 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(null));
     }
@@ -71,13 +71,13 @@ public sealed class ExecutionCountTests
     [Fact]
     public void Blocked_upstream_leaves_downstream_on_zero()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ChainFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 2;
+        using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
+        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 2;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
         Assert.Equal(0, task.Runtime.Executable(3).ExecutionCount(null));
@@ -87,15 +87,15 @@ public sealed class ExecutionCountTests
     [Fact]
     public void Executions_agree_with_run_records()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SplitFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
+        using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
+        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 3 && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         foreach (var node in task.Runs.GroupBy(run => run.Context.NodeIndex))
         {
             foreach (var item in node.GroupBy(run => run.Context.ItemIndex))

@@ -13,7 +13,7 @@ public sealed class ErrorViewTests
     [Fact]
     public void Report_writes_code_and_description_to_the_error_stream()
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out TestConsole error);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out TestConsole error);
         ErrorView errors = new(terminal);
 
         errors.Report([Error.Failure("Demo.Code", "出问题了")]);
@@ -38,7 +38,7 @@ public sealed class ErrorViewTests
     [InlineData(ErrorCodes.ToolFormat, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完用 /tool list 确认是否加载成功。")]
     public void Guide_maps_error_codes_to_hints(string code, string hint)
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         ErrorView errors = new(terminal);
 
         errors.Guide([Error.Failure(code, "说明")]);
@@ -49,7 +49,7 @@ public sealed class ErrorViewTests
     [Fact]
     public void Guide_without_a_mapped_code_prints_nothing()
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         ErrorView errors = new(terminal);
 
         errors.Guide([Error.Failure("Demo.Unmapped", "说明")]);
@@ -60,11 +60,11 @@ public sealed class ErrorViewTests
     [Fact]
     public void Guide_without_a_model_choice_points_to_selection()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        using TestEnvironment environment = TestEnvironment.Create();
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         ErrorView errors = new(terminal);
 
-        errors.GuideModelRegistration(harness.Models, null);
+        errors.GuideModelRegistration(environment.Models, null);
 
         Assert.Contains("用 /model <模型> 选择模型", output.Output);
     }
@@ -72,11 +72,11 @@ public sealed class ErrorViewTests
     [Fact]
     public void Guide_for_an_unregistered_model_names_the_registration_command()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        using TestEnvironment environment = TestEnvironment.Create();
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         ErrorView errors = new(terminal);
 
-        errors.GuideModelRegistration(harness.Models, "未注册");
+        errors.GuideModelRegistration(environment.Models, "未注册");
 
         Assert.Contains("用 /model add 未注册 <提供商> 注册该模型。", output.Output);
     }
@@ -84,12 +84,12 @@ public sealed class ErrorViewTests
     [Fact]
     public void Guide_skips_blank_and_registered_models()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        using TestEnvironment environment = TestEnvironment.Create();
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         ErrorView errors = new(terminal);
 
-        errors.GuideModelRegistration(harness.Models, "   ");
-        errors.GuideModelRegistration(harness.Models, "fake");
+        errors.GuideModelRegistration(environment.Models, "   ");
+        errors.GuideModelRegistration(environment.Models, "fake");
 
         Assert.Equal(string.Empty, output.Output);
     }

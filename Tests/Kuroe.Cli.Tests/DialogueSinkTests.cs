@@ -1,6 +1,5 @@
 using Kuroe.Cli.Views;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Tool;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -12,7 +11,7 @@ public sealed class DialogueSinkTests
     [Fact]
     public void OnToolCall_success_prints_tool_result_line()
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         DialogueSink sink = new(terminal);
 
         sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "已写入 5 字符。", false));
@@ -25,7 +24,7 @@ public sealed class DialogueSinkTests
     [Fact]
     public void OnToolCall_failure_prints_warning_line()
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         DialogueSink sink = new(terminal);
 
         sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "被拒绝：缺少参数。", true));
@@ -37,7 +36,7 @@ public sealed class DialogueSinkTests
     [Fact]
     public void OnToolCall_after_text_starts_on_new_line()
     {
-        Terminal terminal = Ui.NewTerminal(out TestConsole output, out _);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
         DialogueSink sink = new(terminal);
 
         sink.OnText("我来查看一下。");

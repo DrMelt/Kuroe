@@ -35,10 +35,10 @@ public sealed class NodePathTests
     [Fact]
     public void Compiled_nodes_carry_tree_path_segmented_by_level()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ChainFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        NodeGraph graph = harness.Registry.Find(id).ThrowIfError().Graph;
+        TaskId id = environment.Submit("补齐 README");
+        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
 
         Assert.Equal([StartNode.ReservedName.Value], graph[0].Path.Levels.Select(level => level.Value));
         Assert.Equal(["整体"], graph[1].Path.Levels.Select(level => level.Value));
@@ -52,10 +52,10 @@ public sealed class NodePathTests
     [Fact]
     public void Root_executable_path_is_itself()
     {
-        using KuroeHarness harness = KuroeHarness.Create(RootExecutableFlow);
+        using TestEnvironment environment = TestEnvironment.Create(RootExecutableFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        NodeGraph graph = harness.Registry.Find(id).ThrowIfError().Graph;
+        TaskId id = environment.Submit("补齐 README");
+        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
 
         Assert.Equal([StartNode.ReservedName.Value], graph[0].Path.Levels.Select(level => level.Value));
         Assert.Equal(["直接执行"], graph[1].Path.Levels.Select(level => level.Value));
@@ -65,10 +65,10 @@ public sealed class NodePathTests
     [Fact]
     public void Container_snapshot_carries_typed_tree_path()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ChainFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot snapshot = harness.Snapshot(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot snapshot = environment.Snapshot(id);
 
         Assert.Equal("整体", Assert.Single(snapshot.Containers, container => container.Name == "整体").Path.Value);
         Assert.Equal("整体/文档组", Assert.Single(snapshot.Containers, container => container.Name == "文档组").Path.Value);

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Kuroe.Tool;
 using Xunit;
 
 namespace Kuroe.Tool.Tests;

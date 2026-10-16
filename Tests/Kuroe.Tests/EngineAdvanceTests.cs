@@ -11,18 +11,18 @@ public sealed class EngineAdvanceTests
     [Fact]
     public void Downstream_starts_while_unrelated_slow_run_is_running()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SlowParallelFlow);
-        harness.Executor.DelayFor = run => run.Context.NodeName.Value == "慢工" ? 500 : 10;
+        using TestEnvironment environment = TestEnvironment.Create(SlowParallelFlow);
+        environment.Executor.DelayFor = run => run.Context.NodeName.Value == "慢工" ? 500 : 10;
 
-        TaskId id = harness.Submit("并行推进");
+        TaskId id = environment.Submit("并行推进");
 
         // 慢 run 的下游链末端已启动，慢 run 自身应尚未收口
-        harness.Wait(id, snapshot => snapshot.Executables.Any(node =>
+        environment.Wait(id, snapshot => snapshot.Executables.Any(node =>
             node.Executable.Name.Value == "收官" && node.Runs.Count > 0));
 
-        Assert.Contains(harness.Registry.LiveRuns(), run => run.Context.NodeName.Value == "慢工");
+        Assert.Contains(environment.Registry.LiveRuns(), run => run.Context.NodeName.Value == "慢工");
 
-        Assert.Equal(TaskState.Done, harness.Settle(id).State);
+        Assert.Equal(TaskState.Done, environment.Settle(id).State);
     }
 
     /// <summary>多组各自独立的汇合：前一个来源先发布拉起汇合 run，后一个来源在 run 在跑时发布，
@@ -30,13 +30,13 @@ public sealed class EngineAdvanceTests
     [Fact]
     public void Groups_advance_past_interleaved_source_release()
     {
-        using KuroeHarness harness = KuroeHarness.Create(IndependentGroupsFlow);
-        harness.Executor.DelayMs = 30;
+        using TestEnvironment environment = TestEnvironment.Create(IndependentGroupsFlow);
+        environment.Executor.DelayMs = 30;
 
         for (int i = 0; i < 10; i++)
         {
-            TaskId id = harness.Submit("补齐 README");
-            TaskSnapshot done = harness.Settle(id);
+            TaskId id = environment.Submit("补齐 README");
+            TaskSnapshot done = environment.Settle(id);
 
             Assert.Equal(TaskState.Done, done.State);
             Assert.NotEmpty(done.Executables[2].Runs);

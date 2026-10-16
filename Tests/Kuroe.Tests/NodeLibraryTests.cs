@@ -1,14 +1,11 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.NodeType;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.StaticGraph;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.Node.Llm;
 using Kuroe.Workflows.Flows;
@@ -23,9 +20,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Flow_references_library_leaf_and_container_with_port_binding()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LibraryFlow);
+        using TestEnvironment environment = TestEnvironment.Create(LibraryFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
 
         // 展开后：根容器包住制定计划与交付容器，容器成员名带实例前缀，@计划 绑定为制定计划
         NodeSpec root = flow.RootNode;
@@ -48,9 +45,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Same_library_container_instantiated_twice_keeps_members_distinct()
     {
-        using KuroeHarness harness = KuroeHarness.Create(DualInstanceFlow);
+        using TestEnvironment environment = TestEnvironment.Create(DualInstanceFlow);
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README", new FlowName("双线")));
+        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README", new FlowName("双线")));
 
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -58,13 +55,13 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Container_model_slot_bound_to_distinct_models_per_flow()
     {
-        using KuroeHarness harness = KuroeHarness.Create(PerFlowModelBinding);
+        using TestEnvironment environment = TestEnvironment.Create(PerFlowModelBinding);
 
-        FlowDefinition first = harness.Flows.Find(new FlowName("甲")).ThrowIfError();
+        FlowDefinition first = environment.Flows.Find(new FlowName("甲")).ThrowIfError();
         NodeSpec firstImplement = first.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("执行者"), firstImplement.Model!.Value);
 
-        FlowDefinition second = harness.Flows.Find(new FlowName("乙")).ThrowIfError();
+        FlowDefinition second = environment.Flows.Find(new FlowName("乙")).ThrowIfError();
         NodeSpec secondImplement = second.RootNode.Nodes![1].Nodes![0];
         Assert.Equal(new ModelRef("实施者"), secondImplement.Model!.Value);
     }
@@ -72,23 +69,23 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Unknown_reference_does_not_report_model_slot_loss()
     {
-        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(UnknownReferenceWithoutModel);
+        ErrorOr<TestEnvironment> environment = TestEnvironment.TryCreate(UnknownReferenceWithoutModel);
 
-        Assert.True(harness.IsError);
-        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains("不在节点库"));
-        Assert.DoesNotContain(harness.ErrorsOrEmptyList, error => error.Description.Contains("必须声明模型槽位"));
+        Assert.True(environment.IsError);
+        Assert.Contains(environment.ErrorsOrEmptyList, error => error.Description.Contains("不在节点库"));
+        Assert.DoesNotContain(environment.ErrorsOrEmptyList, error => error.Description.Contains("必须声明模型槽位"));
     }
 
     [Fact]
     public void Import_keeps_library_and_reference_shape_on_save()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "library.json"), LibraryFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "library.json"), LibraryFlow);
 
-        FlowImport imported = harness.Flows.Import("library.json").ThrowIfError();
+        FlowImport imported = environment.Flows.Import("library.json").ThrowIfError();
         Assert.Contains(imported.Notes, note => note.Contains("节点库"));
 
-        string text = File.ReadAllText(KuroePaths.At(harness.Root).FlowsFile);
+        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
         Assert.Contains("\"Nodes\"", text);
         Assert.Contains("\"Use\"", text);
         Assert.Contains("\"In\"", text);
@@ -111,19 +108,19 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Builtin_node_stays_usable_and_unwritten_when_file_defines_its_own()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "builtin.json"), BuiltinReferenceFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "builtin.json"), BuiltinReferenceFlow);
 
-        harness.Flows.Import("builtin.json").ThrowIfError();
+        environment.Flows.Import("builtin.json").ThrowIfError();
 
-        NodeSpec container = harness.Flows.Find(new FlowName("内置引用")).ThrowIfError().RootNode.Nodes![1];
+        NodeSpec container = environment.Flows.Find(new FlowName("内置引用")).ThrowIfError().RootNode.Nodes![1];
         Assert.NotNull(container.Nodes);
         NodeSpec implement = container.Nodes[0];
         Assert.NotNull(implement.Execution);
         Assert.Equal(new NodeName("交付.实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
-        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(harness.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
+        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(environment.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
         IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
         Assert.Equal([new NodeName("准备")], savedNodes);
     }
@@ -132,20 +129,20 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Member_from_outside_container_scope_is_rejected()
     {
-        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(MemberFromOutOfScope);
+        ErrorOr<TestEnvironment> environment = TestEnvironment.TryCreate(MemberFromOutOfScope);
 
-        Assert.True(harness.IsError);
-        Assert.Contains(harness.ErrorsOrEmptyList,
+        Assert.True(environment.IsError);
+        Assert.Contains(environment.ErrorsOrEmptyList,
             error => error.Description.Contains("From 引用的节点 外来 不在容器 实施 的作用域里"));
     }
 
     [Fact]
     public void Import_rejects_duplicated_flow_names()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "duplicated.json"), DuplicateImportedFlows);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "duplicated.json"), DuplicateImportedFlows);
 
-        ErrorOr<FlowImport> imported = harness.Flows.Import("duplicated.json");
+        ErrorOr<FlowImport> imported = environment.Flows.Import("duplicated.json");
 
         Assert.True(imported.IsError);
         Assert.Contains(imported.ErrorsOrEmptyList, error => error.Description.Contains("流程名重复"));
@@ -227,7 +224,7 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Flow_named_like_library_scope_keeps_flow_errors()
     {
-        ErrorOr<KuroeHarness> created = KuroeHarness.TryCreate(FlowNamedLikeLibraryScope);
+        ErrorOr<TestEnvironment> created = TestEnvironment.TryCreate(FlowNamedLikeLibraryScope);
 
         Assert.Equal(
             ["流程 节点库 的节点 整体：容器节点不能声明输入端口，端口声明属于节点库容器定义。"],
@@ -238,10 +235,10 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Import_rejects_flow_referencing_library_node_outside_the_file()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LibraryFlow);
-        File.WriteAllText(Path.Combine(harness.Root, "reuse.json"), LibraryReferenceOnlyFlow);
+        using TestEnvironment environment = TestEnvironment.Create(LibraryFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "reuse.json"), LibraryReferenceOnlyFlow);
 
-        ErrorOr<FlowImport> imported = harness.Flows.Import("reuse.json");
+        ErrorOr<FlowImport> imported = environment.Flows.Import("reuse.json");
 
         Assert.Equal(
             [
@@ -255,10 +252,10 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Import_reports_new_flow()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), ExtraFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), ExtraFlow);
 
-        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+        FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
         Assert.Equal(["新增流程 额外"], imported.Notes);
     }
@@ -267,10 +264,10 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Import_reports_overwritten_flow()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        File.WriteAllText(Path.Combine(harness.Root, "extra.json"), OverwritingFlow);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), OverwritingFlow);
 
-        FlowImport imported = harness.Flows.Import("extra.json").ThrowIfError();
+        FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
         Assert.Equal(["覆盖流程 默认"], imported.Notes);
     }
@@ -279,9 +276,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void File_node_overrides_builtin_definition()
     {
-        using KuroeHarness harness = KuroeHarness.Create(OverridingBuiltinFlow);
+        using TestEnvironment environment = TestEnvironment.Create(OverridingBuiltinFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec implement = flow.RootNode.Nodes![0];
 
         Assert.Equal("文件覆写的指令", Assert.IsType<LlmNodeType>(implement.Type).Parameters?.Prompt);
@@ -290,9 +287,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Port_binding_value_resolves_outer_member_name()
     {
-        using KuroeHarness harness = KuroeHarness.Create(MemberNameBindingFlow);
+        using TestEnvironment environment = TestEnvironment.Create(MemberNameBindingFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
@@ -303,9 +300,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Port_binding_value_passes_through_outer_scope()
     {
-        using KuroeHarness harness = KuroeHarness.Create(OuterPortBindingFlow);
+        using TestEnvironment environment = TestEnvironment.Create(OuterPortBindingFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("透传")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("透传")).ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0].Nodes![0];
@@ -316,9 +313,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Port_binding_value_keeps_port_selection()
     {
-        using KuroeHarness harness = KuroeHarness.Create(PortSelectionBindingFlow);
+        using TestEnvironment environment = TestEnvironment.Create(PortSelectionBindingFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0];
@@ -330,9 +327,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Reference_executable_inherits_library_validate_and_injects_from()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ReferenceInheritFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.TextContains, reviewed.Execution!.Validate!.Predicate);
         Assert.Equal("计划@上下文", Assert.Single(Assert.Single(reviewed.From).Links).Ref.Display);
@@ -341,9 +338,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Reference_validate_overrides_library_definition()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReferenceOverrideValidateFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ReferenceOverrideValidateFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("默认")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("默认")).ThrowIfError();
         NodeSpec reviewed = flow.RootNode.Nodes![1];
         Assert.Equal(ValidationPredicate.NonEmpty, reviewed.Execution!.Validate!.Predicate);
     }
@@ -351,11 +348,11 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Reference_executable_with_inherited_validate_blocks_bad_output()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
-        harness.Executor.PortValuesJson = """{ "结论": "修订产出不达标" }""";
+        using TestEnvironment environment = TestEnvironment.Create(ReferenceInheritFlow);
+        environment.Executor.PortValuesJson = """{ "结论": "修订产出不达标" }""";
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
@@ -364,11 +361,11 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Reference_executable_with_injected_group_releases_done()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReferenceInheritFlow);
-        harness.Executor.PortValuesJson = """{ "结论": "修订产出已通过" }""";
+        using TestEnvironment environment = TestEnvironment.Create(ReferenceInheritFlow);
+        environment.Executor.PortValuesJson = """{ "结论": "修订产出已通过" }""";
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[1].Runs);
@@ -433,10 +430,10 @@ public sealed class NodeLibraryTests
     [InlineData(UnknownSlotBinding, "不在容器 交付 上")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
-        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
+        ErrorOr<TestEnvironment> environment = TestEnvironment.TryCreate(flowsJson);
 
-        Assert.True(harness.IsError);
-        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains(expected));
+        Assert.True(environment.IsError);
+        Assert.Contains(environment.ErrorsOrEmptyList, error => error.Description.Contains(expected));
     }
 
     /// <summary>流程名取库作用域的固定文本，用于验证错误按流程作用域给出。</summary>
@@ -956,9 +953,9 @@ public sealed class NodeLibraryTests
     [Fact]
     public void Document_example_loads_with_library_and_reference()
     {
-        using KuroeHarness harness = KuroeHarness.Create(DocumentExampleFlow);
+        using TestEnvironment environment = TestEnvironment.Create(DocumentExampleFlow);
 
-        FlowDefinition flow = harness.Flows.Find(new FlowName("单线交付")).ThrowIfError();
+        FlowDefinition flow = environment.Flows.Find(new FlowName("单线交付")).ThrowIfError();
         NodeSpec root = flow.RootNode;
         Assert.NotNull(root.Nodes);
         Assert.Equal(2, root.Nodes.Count);

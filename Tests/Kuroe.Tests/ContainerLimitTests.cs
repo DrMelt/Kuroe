@@ -12,11 +12,11 @@ public sealed class ContainerLimitTests
     [Fact]
     public void Inline_container_limit_applies_to_unconfigured_members()
     {
-        using KuroeHarness harness = KuroeHarness.Create(InlineContainerLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(InlineContainerLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.All(task.Graph.ExecutableNodes, node => Assert.Equal(2, node.MaxRuns));
     }
 
@@ -24,11 +24,11 @@ public sealed class ContainerLimitTests
     [Fact]
     public void Explicit_member_limit_overrides_container()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ExplicitMemberLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(ExplicitMemberLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "重点").MaxRuns);
         Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "普通").MaxRuns);
     }
@@ -37,11 +37,11 @@ public sealed class ContainerLimitTests
     [Fact]
     public void Nested_container_limit_overrides_outer()
     {
-        using KuroeHarness harness = KuroeHarness.Create(NestedContainerLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(NestedContainerLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "内层干活").MaxRuns);
         Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "外层干活").MaxRuns);
     }
@@ -50,11 +50,11 @@ public sealed class ContainerLimitTests
     [Fact]
     public void Reference_overrides_and_inherits_container_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReferenceContainerLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(ReferenceContainerLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "较重.干活").MaxRuns);
         Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "较轻.干活").MaxRuns);
     }
@@ -63,16 +63,16 @@ public sealed class ContainerLimitTests
     [Fact]
     public void Container_limit_blocks_failed_member_at_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SingleRunContainerFlow);
-        harness.Executor.FailsWhen = _ => true;
+        using TestEnvironment environment = TestEnvironment.Create(SingleRunContainerFlow);
+        environment.Executor.FailsWhen = _ => true;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
-        Assert.True(harness.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
+        Assert.True(environment.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
 
     private const string InlineContainerLimitFlow = """

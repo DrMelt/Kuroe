@@ -1,5 +1,4 @@
 using Kuroe.Flow.Node.Llm;
-using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
@@ -15,10 +14,10 @@ public sealed class PortNodeTests
     [Fact]
     public void Port_output_feeds_named_segment_to_downstream()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot implement = done.Executables
@@ -33,11 +32,11 @@ public sealed class PortNodeTests
     [Fact]
     public void Port_output_without_submitted_values_blocks()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.SubmitsPorts = false;
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.SubmitsPorts = false;
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot blocked = harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         Assert.Contains(blocked.ExecutableStates, state => state.State == NodeState.Blocked);
     }
@@ -45,13 +44,13 @@ public sealed class PortNodeTests
     [Fact]
     public void Whole_node_reference_loads_as_named_port()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
         // 复盘不带端口引用在解析层拒绝；若按端口引用则出处带端口标签
-        RunSnapshot review = harness.Executor.Started
+        RunSnapshot review = environment.Executor.Started
             .Single(run => run.Context.NodeIndex == 4 && run.Context.ItemIndex is null)
             .Snapshot();
         Assert.Contains(review.Context.Seed, message => message.Text.Contains("端口「理由」产出"));
@@ -60,10 +59,10 @@ public sealed class PortNodeTests
     [Fact]
     public void Context_port_injects_upstream_frame_keeping_sources()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContextPortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContextPortFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot report = done.Executables
             .Single(entry => entry.Executable.Name.Value == "汇报")
@@ -82,10 +81,10 @@ public sealed class PortNodeTests
     [Fact]
     public void Context_input_places_source_output_first()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContextInputFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContextInputFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Name.Value == "实施")
@@ -111,10 +110,10 @@ public sealed class PortNodeTests
             }
             """;
 
-        using KuroeHarness harness = KuroeHarness.Create(flow);
+        using TestEnvironment environment = TestEnvironment.Create(flow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot implement = done.Executables
@@ -126,10 +125,10 @@ public sealed class PortNodeTests
     [Fact]
     public void System_prompt_is_assembled_into_run_context()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.SystemPromptFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SystemPromptFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot run = done.Executables.Single().Runs.Single();
 
@@ -142,16 +141,16 @@ public sealed class PortNodeTests
     [Fact]
     public void Contract_tool_description_lists_declared_ports()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        PortTool tool = new(harness.Executor.PortSubmitter!, harness.Registry);
+        PortTool tool = new(environment.Executor.PortSubmitter!, environment.Registry);
 
         // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
         Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);
-        IRun ported = harness.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
+        IRun ported = environment.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(tool.ForTurn(ported.Scope).Functions);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
@@ -159,20 +158,20 @@ public sealed class PortNodeTests
     [Fact]
     public void Port_submission_with_at_in_key_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.PortValuesJson = """{ "结论@甲": "结论产出", "理由": "理由产出" }""";
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.PortValuesJson = """{ "结论@甲": "结论产出", "理由": "理由产出" }""";
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        Assert.Contains(harness.Executor.Submissions, text => text.Contains("端口名不能为空或含 @"));
+        Assert.Contains(environment.Executor.Submissions, text => text.Contains("端口名不能为空或含 @"));
     }
 
     /// <summary>PerItem 节点的单条目返工只作废该条目，其余实例的端口值保留，下游再次消费不缺内容。</summary>
     [Fact]
     public void Per_item_port_values_survive_single_item_rework()
     {
-        using KuroeHarness harness = KuroeHarness.Create("""
+        using TestEnvironment environment = TestEnvironment.Create("""
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
@@ -185,15 +184,15 @@ public sealed class PortNodeTests
               ] } ]
             }
             """);
-        harness.Executor.ItemsJson = """
+        environment.Executor.ItemsJson = """
             [
               { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
               { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" }
             ]
             """;
-        harness.Executor.FailsWhen = run =>
+        environment.Executor.FailsWhen = run =>
             run.Context.NodeIndex == 3 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
-        harness.Executor.PortValuesJsonFor = run =>
+        environment.Executor.PortValuesJsonFor = run =>
         {
             if (run.Context.NodeIndex != 3)
             {
@@ -210,13 +209,13 @@ public sealed class PortNodeTests
                 : """{"结论": "乙产出通过"}""";
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
 
         // 单条目返工只作废乙，甲的交回值保留，汇总上下文不缺甲的产出
-        harness.Tasks.Rework(id, 1).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, 1).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot collect = Assert.Single(done.Executables[2].Runs);
@@ -228,7 +227,7 @@ public sealed class PortNodeTests
     [Fact]
     public void Per_item_missing_port_values_rework_only_that_item()
     {
-        using KuroeHarness harness = KuroeHarness.Create("""
+        using TestEnvironment environment = TestEnvironment.Create("""
             {
               "Flows": [ { "Name": "默认", "Models": [
                 { "Name": "规划者", "Model": "fake" },
@@ -241,14 +240,14 @@ public sealed class PortNodeTests
               ] } ]
             }
             """);
-        harness.Executor.ItemsJson = """
+        environment.Executor.ItemsJson = """
             [
               { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
               { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" }
             ]
             """;
         // 甲的第一轮提交空端口表，端口与声明不一一对应，视为未交回
-        harness.Executor.PortValuesJsonFor = run =>
+        environment.Executor.PortValuesJsonFor = run =>
         {
             if (run.Context.NodeIndex != 3)
             {
@@ -265,13 +264,13 @@ public sealed class PortNodeTests
                 : """{"结论": "乙产出通过"}""";
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
 
         // 指定条目返工只重跑甲，乙的交回值保留，汇总上下文同时取到两端口产出
-        harness.Tasks.Rework(id, 0).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, 0).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot collect = Assert.Single(done.Executables[2].Runs);

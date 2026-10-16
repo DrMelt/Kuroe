@@ -1,8 +1,6 @@
-using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Workflows.Tools.Builtin;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -13,10 +11,10 @@ public sealed class ContainerOutputsTests
     [Fact]
     public void Container_out_port_consumes_bound_member_named_segment()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
 
@@ -33,11 +31,11 @@ public sealed class ContainerOutputsTests
     [Fact]
     public void Container_out_port_without_submitted_values_blocks()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.ContainerOutputsFlow);
-        harness.Executor.SubmitsPorts = false;
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
+        environment.Executor.SubmitsPorts = false;
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot blocked = harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         Assert.Contains(blocked.ExecutableStates, state => state.State == NodeState.Blocked);
     }

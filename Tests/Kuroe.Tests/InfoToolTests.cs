@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Node.Llm.Tools;
@@ -21,10 +20,10 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void ListTasks_lists_tasks()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        TaskId id = harness.Submit("写一段百字以内的欢迎致辞");
+        using TestEnvironment environment = TestEnvironment.Create();
+        TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
         string output = Call(tool, "ListTasks");
 
         Assert.Contains($"#{id.Value}", output);
@@ -34,9 +33,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void ListTasks_without_tasks_prints_hint()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
 
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
     }
@@ -44,10 +43,10 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetTask_describes_task()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        TaskId id = harness.Submit("写一段百字以内的欢迎致辞");
+        using TestEnvironment environment = TestEnvironment.Create();
+        TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
         string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
 
         Assert.Contains($"#{id.Value}", output);
@@ -60,9 +59,9 @@ public sealed class InfoToolTests : IDisposable
     [InlineData("99", "没有任务 #99")]
     public void GetTask_rejects_bad_arguments(string taskId, string expected)
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
 
         Assert.Contains(expected, Call(tool, "GetTask", ("taskId", taskId)));
     }
@@ -70,12 +69,12 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetRun_describes_run_and_result()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        TaskId id = harness.Submit("做一个测试任务");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create();
+        TaskId id = environment.Submit("做一个测试任务");
+        environment.Settle(id);
 
-        RunId runId = harness.Snapshot(id).Executables.SelectMany(node => node.Runs).First().Id;
-        TaskInfoTool tool = new(harness.Registry);
+        RunId runId = environment.Snapshot(id).Executables.SelectMany(node => node.Runs).First().Id;
+        TaskInfoTool tool = new(environment.Registry);
         string output = Call(tool, "GetRun", ("runId", runId.Value.ToString()));
 
         Assert.Contains(runId.ToString(), output);
@@ -85,9 +84,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetRun_rejects_bad_arguments()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
 
         Assert.Contains("run号要写成数字", Call(tool, "GetRun", ("runId", "x")));
         Assert.Contains("没有 run", Call(tool, "GetRun", ("runId", "99")));
@@ -96,21 +95,21 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void Run_state_attaches_ongoing_tool_call_progress()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.DelayMs = 60_000;
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.DelayMs = 60_000;
 
-        TaskId id = harness.Submit("做一个测试任务");
-        harness.Wait(id, snapshot => snapshot.LiveRuns > 0);
+        TaskId id = environment.Submit("做一个测试任务");
+        environment.Wait(id, snapshot => snapshot.LiveRuns > 0);
 
-        RunId runId = harness.Snapshot(id).Executables
+        RunId runId = environment.Snapshot(id).Executables
             .SelectMany(node => node.Runs)
             .First(run => !run.IsSettled)
             .Id;
-        Run run = harness.Registry.FindRun(runId).Value;
+        Run run = environment.Registry.FindRun(runId).Value;
         run.MarkRunning();
         run.Report("调用工具 files/ReadFile");
 
-        TaskInfoTool tool = new(harness.Registry);
+        TaskInfoTool tool = new(environment.Registry);
 
         Assert.Contains("执行中（调用工具 files/ReadFile）",
             Call(tool, "GetRun", ("runId", runId.Value.ToString())));
@@ -121,9 +120,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetCatalog_describes_entries_without_credentials()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        CatalogInfoTool tool = new(harness.Catalog, harness.Models);
+        CatalogInfoTool tool = new(environment.Catalog, environment.Models);
         string output = Call(tool, "GetCatalog");
 
         Assert.Contains("test", output);
@@ -134,9 +133,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void ListFlows_lists_flows_and_default()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(harness.Flows);
+        FlowInfoTool tool = new(environment.Flows);
         string output = Call(tool, "ListFlows");
 
         Assert.Contains("默认", output);
@@ -145,9 +144,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetFlow_describes_nodes()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(harness.Flows);
+        FlowInfoTool tool = new(environment.Flows);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
@@ -157,9 +156,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetFlow_reports_missing_flow()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(harness.Flows);
+        FlowInfoTool tool = new(environment.Flows);
 
         Assert.Contains("没有名为 missing 的流程", Call(tool, "GetFlow", ("flowName", "missing")));
     }
@@ -167,9 +166,9 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void GetConfig_lists_sections()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        SettingsInfoTool tool = new(harness.Settings);
+        SettingsInfoTool tool = new(environment.Settings);
         string output = Call(tool, "GetConfig");
 
         Assert.Contains("用户层文件：", output);
@@ -178,8 +177,8 @@ public sealed class InfoToolTests : IDisposable
     [Fact]
     public void ListTools_lists_dialogue_functions_and_command_tools()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        ToolboxInfoTool empty = new(harness.CommandTools);
+        using TestEnvironment environment = TestEnvironment.Create();
+        ToolboxInfoTool empty = new(environment.CommandTools);
         string noTools = Call(empty, "ListTools");
 
         Assert.Contains("内置对话可用函数", noTools);

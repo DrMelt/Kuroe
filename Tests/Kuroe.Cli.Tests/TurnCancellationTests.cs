@@ -1,4 +1,3 @@
-using Kuroe.Cli;
 using Kuroe.Flow.Shared.Execution;
 using Spectre.Console.Testing;
 using Xunit;
@@ -13,8 +12,8 @@ public sealed class TurnCancellationTests
     [Fact]
     public void Begin_hands_out_a_token_and_cancel_triggers_it()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        using TurnCancellation cancellation = NewCancellation(harness, out _);
+        using TestEnvironment environment = TestEnvironment.Create();
+        using TurnCancellation cancellation = NewCancellation(environment, out _);
 
         CancellationToken token = cancellation.Begin();
 
@@ -26,12 +25,12 @@ public sealed class TurnCancellationTests
     [Fact]
     public void Cancel_with_the_single_live_run_cancels_it()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.DelayMs = LongDelay;
-        TaskId id = harness.Submit("长任务");
-        harness.Wait(id, snapshot => snapshot.LiveRuns > 0);
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.DelayMs = LongDelay;
+        TaskId id = environment.Submit("长任务");
+        environment.Wait(id, snapshot => snapshot.LiveRuns > 0);
 
-        using TurnCancellation cancellation = NewCancellation(harness, out TestConsole output);
+        using TurnCancellation cancellation = NewCancellation(environment, out TestConsole output);
         cancellation.Cancel();
 
         Assert.Contains("已取消 run #1。", output.Output);
@@ -40,14 +39,14 @@ public sealed class TurnCancellationTests
     [Fact]
     public void Cancel_with_several_live_runs_asks_to_pick_one()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.DelayMs = LongDelay;
-        TaskId first = harness.Submit("甲");
-        TaskId second = harness.Submit("乙");
-        harness.Wait(first, snapshot => snapshot.LiveRuns > 0);
-        harness.Wait(second, snapshot => snapshot.LiveRuns > 0);
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.DelayMs = LongDelay;
+        TaskId first = environment.Submit("甲");
+        TaskId second = environment.Submit("乙");
+        environment.Wait(first, snapshot => snapshot.LiveRuns > 0);
+        environment.Wait(second, snapshot => snapshot.LiveRuns > 0);
 
-        using TurnCancellation cancellation = NewCancellation(harness, out TestConsole output);
+        using TurnCancellation cancellation = NewCancellation(environment, out TestConsole output);
         cancellation.Cancel();
 
         Assert.Contains("有 2 个 run 在跑", output.Output);
@@ -56,18 +55,18 @@ public sealed class TurnCancellationTests
     [Fact]
     public void Cancel_with_nothing_running_says_so()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        using TurnCancellation cancellation = NewCancellation(harness, out TestConsole output);
+        using TurnCancellation cancellation = NewCancellation(environment, out TestConsole output);
         cancellation.Cancel();
 
         Assert.Contains("没有可中断的执行。", output.Output);
     }
 
-    private static TurnCancellation NewCancellation(KuroeHarness harness, out TestConsole output)
+    private static TurnCancellation NewCancellation(TestEnvironment environment, out TestConsole output)
     {
-        Terminal terminal = Ui.NewTerminal(out output, out _);
+        Terminal terminal = CliSession.NewTerminal(out output, out _);
 
-        return new TurnCancellation(harness.Registry, terminal);
+        return new TurnCancellation(environment.Registry, terminal);
     }
 }

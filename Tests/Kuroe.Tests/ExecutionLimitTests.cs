@@ -12,67 +12,67 @@ public sealed class ExecutionLimitTests
     [Fact]
     public void Failed_node_exhausts_limit_and_rejects_rework()
     {
-        using KuroeHarness harness = KuroeHarness.Create(FailingNodeFlow);
-        harness.Executor.FailsWhen = _ => true;
+        using TestEnvironment environment = TestEnvironment.Create(FailingNodeFlow);
+        environment.Executor.FailsWhen = _ => true;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot blocked = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(2, task.Runtime.Executable(2).ExecutionCount(null));
         Assert.Contains(blocked.Journal, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
-        Assert.True(harness.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
+        Assert.True(environment.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
 
     [Fact]
     public void Uncollected_plan_exhausts_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(PlanNodeFlow);
-        harness.Executor.SubmitsPlan = false;
+        using TestEnvironment environment = TestEnvironment.Create(PlanNodeFlow);
+        environment.Executor.SubmitsPlan = false;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
-        Assert.True(harness.Tasks.Rework(id, null).IsError);
+        Assert.Equal(2, environment.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
+        Assert.True(environment.Tasks.Rework(id, null).IsError);
     }
 
     [Fact]
     public void Validation_failure_exhausts_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ValidationFlow);
-        harness.Executor.Output = _ => "产出不达标";
+        using TestEnvironment environment = TestEnvironment.Create(ValidationFlow);
+        environment.Executor.Output = _ => "产出不达标";
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, harness.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
-        Assert.True(harness.Tasks.Rework(id, null).IsError);
+        Assert.Equal(2, environment.Registry.Find(id).ThrowIfError().Runtime.Executable(2).ExecutionCount(null));
+        Assert.True(environment.Tasks.Rework(id, null).IsError);
     }
 
     /// <summary>环迭代触发的新来源版本被上限拦截：上限低于自然停止点时，修订不再被审查新版本重启。</summary>
     [Fact]
     public void Loop_stops_restarting_at_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LoopWithLimitFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(LoopWithLimitFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             4 => """{"结论": "审查通过"}""",
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(node => node.Index == 3).Runs);
@@ -83,16 +83,16 @@ public sealed class ExecutionLimitTests
     [Fact]
     public void Loop_iterates_to_max_runs()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LoopWithoutLimitFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(LoopWithoutLimitFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex == 4 ? "审查通过" : "产出";
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             4 => """{"结论": "审查通过"}""",
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(5, done.Executables.Single(node => node.Index == 3).Runs.Count);
@@ -104,18 +104,18 @@ public sealed class ExecutionLimitTests
     [Fact]
     public void PerItem_limits_each_item_path_independently()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SplitFlowWithLimit);
-        harness.Executor.FailsWhen = run =>
+        using TestEnvironment environment = TestEnvironment.Create(SplitFlowWithLimit);
+        environment.Executor.FailsWhen = run =>
             run.Context.NodeIndex == 3 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(0));
         Assert.Equal(1, task.Runtime.Executable(3).ExecutionCount(1));
-        Assert.True(harness.Tasks.Rework(id, null).IsError, "条目路径到上限后不再重跑");
+        Assert.True(environment.Tasks.Rework(id, null).IsError, "条目路径到上限后不再重跑");
     }
 
     /// <summary>恒失败的单个节点，满 2 次后停在阻塞。</summary>
@@ -230,33 +230,33 @@ public sealed class ExecutionLimitTests
     [Fact]
     public void Unconfigured_limit_defaults_to_one_hundred()
     {
-        using KuroeHarness harness = KuroeHarness.Create(DefaultLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(DefaultLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(100, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "干活").MaxRuns);
     }
 
     [Fact]
     public void Configured_limit_takes_effect()
     {
-        using KuroeHarness harness = KuroeHarness.Create(SingleNodeLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(SingleNodeLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "干活").MaxRuns);
     }
 
     [Fact]
     public void Reference_overrides_and_inherits_library_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LibraryLimitFlow);
-        TaskId id = harness.Submit("补齐 README");
-        harness.Settle(id);
+        using TestEnvironment environment = TestEnvironment.Create(LibraryLimitFlow);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
 
-        WorkTask task = harness.Registry.Find(id).ThrowIfError();
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "覆盖干活").MaxRuns);
         Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "继承干活").MaxRuns);
     }

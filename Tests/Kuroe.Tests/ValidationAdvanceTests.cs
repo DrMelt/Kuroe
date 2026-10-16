@@ -11,21 +11,21 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Validate_pass_releases_downstream()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             3 => "修订产出已通过",
             _ => "交付产出",
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             3 => """{"结论": "修订产出已通过"}""",
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[0].Runs);
@@ -36,16 +36,16 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Validate_failure_blocks_node_without_releasing()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             3 => "修订产出不够好",
             _ => "交付产出",
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
@@ -55,14 +55,14 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Validate_rework_resumes_and_passes()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ReviewReviseFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "交付产出",
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
@@ -70,12 +70,12 @@ public sealed class ValidationAdvanceTests
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
 
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables[1].Runs.Count);
@@ -106,17 +106,17 @@ public sealed class ValidationAdvanceTests
             ] } ] }
             """;
 
-        using KuroeHarness harness = KuroeHarness.Create(flow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(flow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             _ => output,
         };
-        harness.Executor.PortValuesJsonFor = run =>
+        environment.Executor.PortValuesJsonFor = run =>
             run.Context.NodeIndex == 3 ? $$"""{"结论": "{{output}}"}""" : null;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot snapshot = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot snapshot = environment.Settle(id);
 
         if (expectPass)
         {
@@ -133,14 +133,14 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Group_stays_gated_until_source_releases_new_version()
     {
-        using KuroeHarness harness = KuroeHarness.Create(FreshGateFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(FreshGateFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "汇合产出",
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
@@ -148,13 +148,13 @@ public sealed class ValidationAdvanceTests
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Empty(blocked.Executables[2].Runs);
 
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[2].Runs);
@@ -170,25 +170,25 @@ public sealed class ValidationAdvanceTests
     [InlineData(TextAssertMissingArgument, "需要指定文本参数")]
     public void Invalid_validation_flow_fails_setup(string flowsJson, string expected)
     {
-        ErrorOr<KuroeHarness> harness = KuroeHarness.TryCreate(flowsJson);
+        ErrorOr<TestEnvironment> environment = TestEnvironment.TryCreate(flowsJson);
 
-        Assert.True(harness.IsError);
-        Assert.Contains(harness.ErrorsOrEmptyList, error => error.Description.Contains(expected));
+        Assert.True(environment.IsError);
+        Assert.Contains(environment.ErrorsOrEmptyList, error => error.Description.Contains(expected));
     }
 
     [Fact]
     public void Group_must_be_ready_before_start()
     {
-        using KuroeHarness harness = KuroeHarness.Create(FromGateFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(FromGateFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             1 => "甲产出",
             2 => "乙产出",
             _ => "汇合产出",
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[2].Runs);
@@ -197,13 +197,13 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Container_source_waits_and_resumes_with_revision()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerGateFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(ContainerGateFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             3 => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
             _ => "闸门产出",
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             3 => run.Context.ExecutionCount == 1
                 ? """{"结论": "甲产出不达标"}"""
@@ -211,15 +211,15 @@ public sealed class ValidationAdvanceTests
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
         Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Index == 4).Runs);
 
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Index == 3).Runs.Count);
@@ -229,15 +229,15 @@ public sealed class ValidationAdvanceTests
     [Fact]
     public void Loop_restarts_writer_on_reviewer_new_version()
     {
-        using KuroeHarness harness = KuroeHarness.Create(LoopFlow);
-        harness.Executor.Output = run => run.Context.NodeIndex switch
+        using TestEnvironment environment = TestEnvironment.Create(LoopFlow);
+        environment.Executor.Output = run => run.Context.NodeIndex switch
         {
             2 => "计划产出",
             3 => "修订产出",
             4 => run.Context.ExecutionCount == 1 ? "审查未达标准" : "审查通过",
             _ => "交付产出",
         };
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
         {
             4 => run.Context.ExecutionCount == 1
                 ? """{"结论": "审查未达标准"}"""
@@ -245,17 +245,17 @@ public sealed class ValidationAdvanceTests
             _ => null,
         };
 
-        TaskId id = harness.Submit("补齐 README");
+        TaskId id = environment.Submit("补齐 README");
 
         // 首次：计划驱动修订初稿，审查判定未达标准停驻
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 4).State);
         Assert.Empty(blocked.Executables[3].Runs);
 
         // 返工：审查通过并放行后，修订被审查的新版本再次驱动，交付随终稿放行
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[0].Runs);

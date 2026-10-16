@@ -12,13 +12,13 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Approval_node_parks_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ApprovalGateFlow);
-        harness.Executor.ItemsJson = BranchedItemsJson;
+        using TestEnvironment environment = TestEnvironment.Create(ApprovalGateFlow);
+        environment.Executor.ItemsJson = BranchedItemsJson;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot parked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         // 两条分支各一个 run，审批节点停在待批准，汇总还没有 run
         Assert.Single(parked.Executables[1].Runs);
         Assert.Single(parked.Executables[2].Runs);
@@ -26,8 +26,8 @@ public sealed class ContainerAdvanceTests
         Assert.Empty(parked.Executables[4].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
 
-        harness.Waits.Approve(id).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Waits.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[4].Runs);
@@ -37,11 +37,11 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Container_join_releases_downstream_after_all_members()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerJoinFlow);
-        harness.Executor.ItemsJson = BranchedItemsJson;
+        using TestEnvironment environment = TestEnvironment.Create(ContainerJoinFlow);
+        environment.Executor.ItemsJson = BranchedItemsJson;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 两条分支各一个 run，收拢节点等容器齐备后一条 run 汇拢
@@ -56,11 +56,11 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Container_source_context_carries_every_member_output()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerJoinFlow);
-        harness.Executor.ItemsJson = BranchedItemsJson;
+        using TestEnvironment environment = TestEnvironment.Create(ContainerJoinFlow);
+        environment.Executor.ItemsJson = BranchedItemsJson;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
         RunSnapshot check = Assert.Single(done.Executables[3].Runs);
 
         // 容器来源把成员命名段按输出端口转进：每条绑定端口一条容器端口消息
@@ -71,18 +71,18 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Approval_inside_container_parks_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(NestedApprovalFlow);
+        using TestEnvironment environment = TestEnvironment.Create(NestedApprovalFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot parked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "撰写组").State);
 
-        harness.Waits.Approve(id).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Waits.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 审批节点获得批准后，容器广播接续到收拢节点，只跑一轮
@@ -93,17 +93,17 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Approval_of_container_parks_downstream_until_approved()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ApprovalOfContainerFlow);
+        using TestEnvironment environment = TestEnvironment.Create(ApprovalOfContainerFlow);
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot parked = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(harness.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
 
-        harness.Waits.Approve(id).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        environment.Waits.Approve(id).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables[3].Runs);
@@ -113,13 +113,13 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Nested_container_rebroadcasts_after_failed_rework()
     {
-        using KuroeHarness harness = KuroeHarness.Create(NestedContainerReworkFlow);
-        harness.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ExecutionCount == 1;
+        using TestEnvironment environment = TestEnvironment.Create(NestedContainerReworkFlow);
+        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ExecutionCount == 1;
 
-        TaskId id = harness.Submit("补齐 README");
-        harness.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        harness.Tasks.Rework(id, null).ThrowIfError();
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        environment.Tasks.Rework(id, null).ThrowIfError();
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 容器广播在成员作废复位后重新发出，重跑的撰写重新激活下游
@@ -130,11 +130,11 @@ public sealed class ContainerAdvanceTests
     [Fact]
     public void Snapshot_ordinal_counts_executables_not_graph_slots()
     {
-        using KuroeHarness harness = KuroeHarness.Create(ContainerJoinFlow);
-        harness.Executor.ItemsJson = BranchedItemsJson;
+        using TestEnvironment environment = TestEnvironment.Create(ContainerJoinFlow);
+        environment.Executor.ItemsJson = BranchedItemsJson;
 
-        TaskId id = harness.Submit("补齐 README");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
 
         // 容器参与编号后图序号有空洞，展示顺位按执行节点表取名次
         Assert.Equal(4, done.TotalExecutableNodes);

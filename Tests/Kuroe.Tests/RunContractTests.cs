@@ -1,5 +1,4 @@
 using Kuroe.Flow.Node.Llm;
-using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
@@ -16,12 +15,12 @@ public sealed class RunContractTests
     [Fact]
     public void System_prompt_names_input_and_output_ports()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        string prompt = Ported(harness).Context.Briefing;
+        string prompt = Ported(environment).Context.Briefing;
 
         Assert.Contains("输入端口：", prompt, StringComparison.Ordinal);
         Assert.Contains("流程起点端口「目标」", prompt, StringComparison.Ordinal);
@@ -34,12 +33,12 @@ public sealed class RunContractTests
     [Fact]
     public void Declared_system_prompt_blocks_stay_in_front()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.SystemPromptFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SystemPromptFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        IRun run = Assert.Single(harness.Executor.Started);
+        IRun run = Assert.Single(environment.Executor.Started);
         Assert.StartsWith("固定背景一\n固定背景二", LlmInstructions(run), StringComparison.Ordinal);
     }
 
@@ -50,12 +49,12 @@ public sealed class RunContractTests
     [Fact]
     public void Upstream_ports_are_listed_as_inputs()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        IRun follow = harness.Executor.Started.Single(run => run.Context.NodeName.Value == "实施");
+        IRun follow = environment.Executor.Started.Single(run => run.Context.NodeName.Value == "实施");
 
         Assert.Contains("节点「分析」端口「结论」", follow.Context.Briefing, StringComparison.Ordinal);
     }
@@ -63,16 +62,16 @@ public sealed class RunContractTests
     [Fact]
     public void Status_tool_description_states_values_and_required_ports()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        StatusTool tool = new(harness.Executor.StatusSubmitter!, harness.Registry);
+        StatusTool tool = new(environment.Executor.StatusSubmitter!, environment.Registry);
 
         // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
         Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description, StringComparison.Ordinal);
-        ToolFunction declared = Assert.Single(tool.ForTurn(Ported(harness).Scope).Functions);
+        ToolFunction declared = Assert.Single(tool.ForTurn(Ported(environment).Scope).Functions);
         Assert.Contains("completed", declared.Definition.Description, StringComparison.Ordinal);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
@@ -80,78 +79,78 @@ public sealed class RunContractTests
     [Fact]
     public void Receipts_list_what_is_still_missing()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.SubmitsPorts = false;
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.SubmitsPorts = false;
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        Assert.Contains(harness.Executor.Submissions,
+        Assert.Contains(environment.Executor.Submissions,
             text => text.Contains("本轮仍需交回：端口「结论」、「理由」", StringComparison.Ordinal));
-        Assert.Contains(harness.Executor.Submissions,
+        Assert.Contains(environment.Executor.Submissions,
             text => text.Contains("本轮状态：completed", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Blocked_verdict_stops_without_asking_again()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.SubmitsPorts = false;
-        harness.Executor.VerdictStatus = "blocked";
-        harness.Executor.VerdictReason = "缺少输入资料";
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.SubmitsPorts = false;
+        environment.Executor.VerdictStatus = "blocked";
+        environment.Executor.VerdictReason = "缺少输入资料";
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot blocked = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
 
-        IRun run = Ported(harness);
+        IRun run = Ported(environment);
         Assert.Contains("模型报告无法完成：缺少输入资料", string.Join('；', run.Snapshot().Failures), StringComparison.Ordinal);
-        Assert.Null(new RunReminder(harness.Registry).Reminder(run));
+        Assert.Null(new RunReminder(environment.Registry).Reminder(run));
     }
 
     [Fact]
     public void Blocked_verdict_without_reason_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.VerdictStatus = "blocked";
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.VerdictStatus = "blocked";
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Contains(harness.Executor.Submissions,
+        Assert.Contains(environment.Executor.Submissions,
             text => text.Contains("blocked 时必须给出 reason", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Unknown_status_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.VerdictStatus = "done";
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.VerdictStatus = "done";
 
-        TaskId id = harness.Submit("目标");
-        harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
 
-        Assert.Contains(harness.Executor.Submissions,
+        Assert.Contains(environment.Executor.Submissions,
             text => text.Contains("status 只能取 completed 或 blocked", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Without_verdict_ports_still_decide()
     {
-        using KuroeHarness harness = KuroeHarness.Create(TestFlows.PortFlow);
-        harness.Executor.SubmitsVerdict = false;
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Executor.SubmitsVerdict = false;
 
-        TaskId id = harness.Submit("目标");
-        TaskSnapshot done = harness.Settle(id);
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Contains(harness.Executor.Submissions,
+        Assert.Contains(environment.Executor.Submissions,
             text => text.Contains("本轮状态未提交", StringComparison.Ordinal));
     }
 
     /// <summary>声明了输出端口的那个 run，端口相关的系统指令与工具描述都在它身上。</summary>
-    private static IRun Ported(KuroeHarness harness) =>
-        harness.Executor.Started.First(run => run.Context.OutputPorts.Count > 0);
+    private static IRun Ported(TestEnvironment environment) =>
+        environment.Executor.Started.First(run => run.Context.OutputPorts.Count > 0);
 }

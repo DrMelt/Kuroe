@@ -10,43 +10,43 @@ public sealed class ConcurrencyTests
     [Fact]
     public void MaxConcurrentRuns_limits_parallel_runs()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Settings.Set("Runtime:MaxConcurrentRuns", "1").ThrowIfError();
-        harness.Executor.DelayMs = 60;
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Settings.Set("Runtime:MaxConcurrentRuns", "1").ThrowIfError();
+        environment.Executor.DelayMs = 60;
 
-        harness.Settle(harness.Submit("补齐 README"));
+        environment.Settle(environment.Submit("补齐 README"));
 
-        Assert.Equal(1, harness.Executor.Peak);
+        Assert.Equal(1, environment.Executor.Peak);
     }
 
     [Fact]
     public void Items_run_in_parallel_within_the_limit()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.DelayMs = 120;
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.DelayMs = 120;
 
-        harness.Settle(harness.Submit("补齐 README"));
+        environment.Settle(environment.Submit("补齐 README"));
 
-        Assert.True(harness.Executor.Peak > 1, $"两个条目本可并行，实测峰值 {harness.Executor.Peak}。");
+        Assert.True(environment.Executor.Peak > 1, $"两个条目本可并行，实测峰值 {environment.Executor.Peak}。");
     }
 
     [Fact]
     public void Several_tasks_run_concurrently_while_being_read()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Executor.DelayMs = 30;
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Executor.DelayMs = 30;
 
-        TaskId[] ids = [harness.Submit("任务甲"), harness.Submit("任务乙"), harness.Submit("任务丙")];
+        TaskId[] ids = [environment.Submit("任务甲"), environment.Submit("任务乙"), environment.Submit("任务丙")];
 
         // 边推进边读快照，正是宿主浏览时的形态
         foreach (TaskId id in ids)
         {
-            TaskSnapshot done = harness.Settle(id);
+            TaskSnapshot done = environment.Settle(id);
 
             Assert.Equal(TaskState.Done, done.State);
             Assert.Equal(3, done.Executables.Sum(node => node.Runs.Count));
         }
 
-        Assert.Equal(3, harness.Registry.ClearSettled());
+        Assert.Equal(3, environment.Registry.ClearSettled());
     }
 }

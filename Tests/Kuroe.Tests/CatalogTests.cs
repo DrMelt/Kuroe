@@ -1,6 +1,5 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared.Catalogs;
 using Xunit;
@@ -13,21 +12,21 @@ public sealed class CatalogTests
     [Fact]
     public void Add_model_registers_it_for_selection()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        harness.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
+        environment.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
 
-        Assert.True(harness.Models.IsRegistered(ModelName.Create("m2").Value));
-        harness.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
-        Assert.Equal("m2", harness.Models.Current?.Value);
+        Assert.True(environment.Models.IsRegistered(ModelName.Create("m2").Value));
+        environment.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
+        Assert.Equal("m2", environment.Models.Current?.Value);
     }
 
     [Fact]
     public void Duplicate_provider_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<Success> added = harness.Catalog.AddProvider("test", "https://example.invalid/v2", "k2");
+        ErrorOr<Success> added = environment.Catalog.AddProvider("test", "https://example.invalid/v2", "k2");
 
         Assert.True(added.IsError);
     }
@@ -35,35 +34,35 @@ public sealed class CatalogTests
     [Fact]
     public void Provider_still_referenced_by_a_model_is_refused()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<Success> removed = harness.Catalog.RemoveProvider("test");
+        ErrorOr<Success> removed = environment.Catalog.RemoveProvider("test");
 
         Assert.True(removed.IsError);
-        Assert.Contains(harness.Catalog.Snapshot().Providers,
+        Assert.Contains(environment.Catalog.Snapshot().Providers,
             provider => provider.ProviderName.Value == "test");
     }
 
     [Fact]
     public void Unreferenced_provider_can_be_removed()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        harness.Catalog.AddProvider("备用", "https://example.invalid/v2", "k2").ThrowIfError();
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Catalog.AddProvider("备用", "https://example.invalid/v2", "k2").ThrowIfError();
 
-        harness.Catalog.RemoveProvider("备用").ThrowIfError();
+        environment.Catalog.RemoveProvider("备用").ThrowIfError();
 
-        Assert.DoesNotContain(harness.Catalog.Snapshot().Providers,
+        Assert.DoesNotContain(environment.Catalog.Snapshot().Providers,
             provider => provider.ProviderName.Value == "备用");
     }
 
     [Fact]
     public void Provider_key_replaces_the_credentials()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        harness.Catalog.SetProviderKey("test", "新凭据").ThrowIfError();
+        environment.Catalog.SetProviderKey("test", "新凭据").ThrowIfError();
 
-        ProviderDefinition provider = harness.Catalog.Snapshot().Providers
+        ProviderDefinition provider = environment.Catalog.Snapshot().Providers
             .Single(candidate => candidate.ProviderName.Value == "test");
         Assert.Equal("新凭据", provider.ApiKey.Value);
     }
@@ -71,16 +70,16 @@ public sealed class CatalogTests
     [Fact]
     public void Export_masks_credentials_and_import_merges_them()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
-        string target = Path.Combine(harness.Root, "catalog-meta.json");
+        using TestEnvironment environment = TestEnvironment.Create();
+        string target = Path.Combine(environment.Root, "catalog-meta.json");
 
-        string exported = harness.Catalog.Export(target).ThrowIfError();
+        string exported = environment.Catalog.Export(target).ThrowIfError();
 
         Assert.True(File.Exists(exported));
         string text = File.ReadAllText(exported);
         Assert.Contains("***", text);
 
-        using KuroeHarness fresh = KuroeHarness.Create(seedCatalog: false);
+        using TestEnvironment fresh = TestEnvironment.Create(seedCatalog: false);
         CatalogMerge merged = fresh.Catalog.Import(exported).ThrowIfError();
 
         Assert.Equal("test", Assert.Single(fresh.Catalog.Snapshot().Providers).ProviderName.Value);
@@ -90,9 +89,9 @@ public sealed class CatalogTests
     [Fact]
     public void Export_onto_the_catalog_file_is_refused()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<string> exported = harness.Catalog.Export(KuroePaths.At(harness.Root).CatalogFile);
+        ErrorOr<string> exported = environment.Catalog.Export(KuroePaths.At(environment.Root).CatalogFile);
 
         Assert.True(exported.IsError);
         Assert.Equal("CatalogFile.OverwritesCatalog", exported.FirstError.Code);
@@ -101,9 +100,9 @@ public sealed class CatalogTests
     [Fact]
     public void Export_accepts_a_relative_path_against_the_work_directory()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        string path = harness.Catalog.Export("meta.json").ThrowIfError();
+        string path = environment.Catalog.Export("meta.json").ThrowIfError();
 
         Assert.True(Path.IsPathRooted(path));
         Assert.True(File.Exists(path));
@@ -112,9 +111,9 @@ public sealed class CatalogTests
     [Fact]
     public void Invalid_export_path_is_rejected()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<string> exported = harness.Catalog.Export("bad\u0000path");
+        ErrorOr<string> exported = environment.Catalog.Export("bad\u0000path");
 
         Assert.True(exported.IsError);
         Assert.Equal("CatalogFile.InvalidPath", exported.FirstError.Code);

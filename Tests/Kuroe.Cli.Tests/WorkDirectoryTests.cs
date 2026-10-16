@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Cli;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;

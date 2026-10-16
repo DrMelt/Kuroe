@@ -5,11 +5,11 @@ using Spectre.Console.Testing;
 namespace Kuroe.Cli.Tests;
 
 /// <summary>一套与库装配对应的命令对象和两个方向独立的终端捕获。</summary>
-internal sealed class Ui : IDisposable
+internal sealed class CliSession : IDisposable
 {
-    public Ui(bool seedCatalog = true, string? flowsJson = null)
+    public CliSession(bool seedCatalog = true, string? flowsJson = null)
     {
-        Harness = KuroeHarness.Create(flowsJson, seedCatalog: seedCatalog);
+        Environment = TestEnvironment.Create(flowsJson, seedCatalog: seedCatalog);
         Terminal = NewTerminal(out TestConsole output, out TestConsole errorsOut);
         Output = output;
         ErrorsOut = errorsOut;
@@ -18,7 +18,7 @@ internal sealed class Ui : IDisposable
         Printer = new CatalogView(Terminal);
     }
 
-    public KuroeHarness Harness { get; }
+    public TestEnvironment Environment { get; }
 
     public TestConsole Output { get; }
 
@@ -51,26 +51,26 @@ internal sealed class Ui : IDisposable
         return console;
     }
 
-    public ProviderCommands Providers => new(Harness.Catalog, Printer, Terminal, Results);
+    public ProviderCommands Providers => new(Environment.Catalog, Printer, Terminal, Results);
 
-    public ModelCommands Models => new(Harness.Catalog, Harness.Models, Printer, Terminal, Results, Errors);
+    public ModelCommands Models => new(Environment.Catalog, Environment.Models, Printer, Terminal, Results, Errors);
 
-    public CatalogCommands Catalogs => new(Harness.Catalog, Printer, Terminal, Results);
+    public CatalogCommands Catalogs => new(Environment.Catalog, Printer, Terminal, Results);
 
-    public FlowCommands Flows => new(Harness.Flows, Harness.Settings, Terminal, Results);
+    public FlowCommands Flows => new(Environment.Flows, Environment.Settings, Terminal, Results);
 
-    public SettingsCommands Settings => new(Harness.Settings, Terminal, Results);
+    public SettingsCommands Settings => new(Environment.Settings, Terminal, Results);
 
     public TaskCommands Tasks
     {
         get
         {
             TaskListView list = new(Terminal);
-            TaskDetailView detail = new(Terminal, Harness.Waits);
+            TaskDetailView detail = new(Terminal, Environment.Waits);
             RunDetailView runView = new(Terminal);
-            TaskBrowser browser = new(Harness.Registry, Harness.Tasks, Harness.Waits, list, detail, runView, Terminal, Results);
+            TaskBrowser browser = new(Environment.Registry, Environment.Tasks, Environment.Waits, list, detail, runView, Terminal, Results);
 
-            return new TaskCommands(Harness.Registry, Harness.Tasks, Harness.Waits, list, detail, runView, browser, Terminal, Results);
+            return new TaskCommands(Environment.Registry, Environment.Tasks, Environment.Waits, list, detail, runView, browser, Terminal, Results);
         }
     }
 
@@ -84,12 +84,12 @@ internal sealed class Ui : IDisposable
             SettingsCommands settings = Settings;
             TaskCommands tasks = Tasks;
             FlowCommands flows = Flows;
-            ToolCommands tools = new(Harness.CommandTools, Terminal);
+            ToolCommands tools = new(Environment.CommandTools, Terminal);
 
-            return new ReplCommands(Harness.Dialogue, Harness.Models, providers, models, catalogs,
+            return new ReplCommands(Environment.Dialogue, Environment.Models, providers, models, catalogs,
                 settings, tasks, flows, tools, Terminal, Errors);
         }
     }
 
-    public void Dispose() => Harness.Dispose();
+    public void Dispose() => Environment.Dispose();
 }

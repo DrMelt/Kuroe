@@ -11,9 +11,9 @@ public sealed class LimitsTests
     [Fact]
     public void Title_is_trimmed_to_the_first_line()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskSnapshot snapshot = harness.Snapshot(harness.Submit("第一行\n第二行"));
+        TaskSnapshot snapshot = environment.Snapshot(environment.Submit("第一行\n第二行"));
 
         Assert.Equal("第一行", snapshot.Title);
     }
@@ -21,10 +21,10 @@ public sealed class LimitsTests
     [Fact]
     public void Title_is_truncated_at_forty_characters()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
         string goal = new('目', 50);
 
-        TaskSnapshot snapshot = harness.Snapshot(harness.Submit(goal));
+        TaskSnapshot snapshot = environment.Snapshot(environment.Submit(goal));
 
         Assert.Equal(41, snapshot.Title.Length);
         Assert.StartsWith(new string('目', 40), snapshot.Title);
@@ -43,13 +43,13 @@ public sealed class LimitsTests
             ] } ] }
             """;
 
-        using KuroeHarness harness = KuroeHarness.Create(flow);
-        harness.Executor.Output = _ => new string('长', 3000);
-        harness.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 2
+        using TestEnvironment environment = TestEnvironment.Create(flow);
+        environment.Executor.Output = _ => new string('长', 3000);
+        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 2
             ? $$"""{"结论": "{{new string('长', 3000)}}"}"""
             : null;
 
-        TaskSnapshot done = harness.Settle(harness.Submit("补齐 README"));
+        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         RunSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Name.Value == "接收")
             .Runs.Single();

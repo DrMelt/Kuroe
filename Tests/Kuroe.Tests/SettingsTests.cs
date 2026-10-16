@@ -12,28 +12,28 @@ public sealed class SettingsTests
     [Fact]
     public void Literal_write_refuses_a_name_that_looks_like_json()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        Assert.True(harness.Settings.Set("Runtime:DefaultFlow", "3").IsError);
+        Assert.True(environment.Settings.Set("Runtime:DefaultFlow", "3").IsError);
     }
 
     [Fact]
     public void Text_write_accepts_a_name_that_looks_like_json()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        harness.Settings.SetText("Runtime:DefaultFlow", "3").ThrowIfError();
+        environment.Settings.SetText("Runtime:DefaultFlow", "3").ThrowIfError();
 
-        Assert.Equal(new FlowName("3"), harness.Flows.DefaultName);
+        Assert.Equal(new FlowName("3"), environment.Flows.DefaultName);
     }
 
     /// <summary>列出的节与项来自声明表，路径与设置项同源。</summary>
     [Fact]
     public void Listing_comes_from_the_declared_items()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        SettingSection section = Assert.Single(harness.Settings.Sections());
+        SettingSection section = Assert.Single(environment.Settings.Sections());
 
         Assert.Equal("Runtime", section.Name);
         Assert.Contains(section.Entries, entry => entry.Path == "Runtime:Temperature");
@@ -44,12 +44,12 @@ public sealed class SettingsTests
     [Fact]
     public void Declarations_the_section_and_the_file_shape_agree()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
         Assembly library = typeof(SettingsProvider).Assembly;
 
         IEnumerable<string> section = Properties(library, "Kuroe.Configuration.Model.RuntimeSettings");
         IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.Model.RuntimeSectionDto");
-        IEnumerable<string> declared = harness.Settings.Sections().Single().Entries
+        IEnumerable<string> declared = environment.Settings.Sections().Single().Entries
             .Select(entry => entry.Name)
             .Order();
 
@@ -61,9 +61,9 @@ public sealed class SettingsTests
     [Fact]
     public void Absent_items_keep_their_declared_defaults()
     {
-        using KuroeHarness harness = KuroeHarness.Create();
+        using TestEnvironment environment = TestEnvironment.Create();
 
-        IReadOnlyList<SettingEntry> entries = harness.Settings.Sections().Single().Entries;
+        IReadOnlyList<SettingEntry> entries = environment.Settings.Sections().Single().Entries;
 
         Assert.Equal("未设置", Value(entries, "Temperature"));
         Assert.Equal("Warning", Value(entries, "LogLevel"));

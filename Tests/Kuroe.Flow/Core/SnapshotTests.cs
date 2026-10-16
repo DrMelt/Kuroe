@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Tests;
 
-using Flow = Kuroe.Flow.Shared.StaticGraph;
+using Flow = Shared.StaticGraph;
 
 /// <summary>任务快照的派生属性：任务进度与执行节点顺位。</summary>
 public sealed class SnapshotTests
