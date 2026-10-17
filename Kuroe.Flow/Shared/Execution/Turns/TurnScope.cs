@@ -11,8 +11,8 @@ public sealed record TurnScope
     /// <summary>所属 run。</summary>
     public required RunId Run { get; init; }
 
-    /// <summary>所属执行节点名。</summary>
-    public required NodeName NodeName { get; init; }
+    /// <summary>所属执行节点路径。</summary>
+    public required NodePath Node { get; init; }
 
     /// <summary>所属条目序号，非按条目展开时为空。</summary>
     public required int? ItemIndex { get; init; }

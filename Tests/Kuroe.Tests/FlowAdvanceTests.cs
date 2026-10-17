@@ -75,7 +75,7 @@ public sealed class FlowAdvanceTests
     public void Rework_with_unknown_item_keeps_task_blocked()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ItemIndex == 0;
+        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "分配执行" && run.Context.ItemIndex == 0;
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
@@ -111,7 +111,7 @@ public sealed class FlowAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create();
         int failures = 0;
         environment.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 4 && Interlocked.Increment(ref failures) <= 2;
+            run.Context.Node.Name.Value == "分配执行" && Interlocked.Increment(ref failures) <= 2;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -128,7 +128,7 @@ public sealed class FlowAdvanceTests
     public void Cancel_after_block_settles_the_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 4;
+        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "分配执行";
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -271,7 +271,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Equal(2, environment.Awaiting(id, AwaitKind.Approve).Count);
 
-        int review = parked.Graph.IndexOf(new NodeName("审阅甲")) ?? throw new InvalidOperationException("找不到节点 审阅甲。");
+        NodePath review = NodePath.Of("整体", "审阅甲");
         environment.Waits.Approve(id, [review]).ThrowIfError();
 
         // 只放行甲分支的审批节点，乙分支仍停在待批准，汇总不启动

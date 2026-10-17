@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Shared.Waiting;
 using Xunit;
 
@@ -38,7 +39,7 @@ public sealed class TriggerNodeTests
         environment.Waits.Answer(id, null, "第一问").ThrowIfError();
         environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         RunSnapshot first = environment.Executor.Started
-            .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1)
+            .Single(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
 
@@ -46,7 +47,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         Assert.Equal(2, done.Executables.Single(node => node.Executable.Name.Value == "回话").Runs.Count);
         RunSnapshot second = environment.Executor.Started
-            .Single(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 2)
+            .Single(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 2)
             .Snapshot();
         Assert.DoesNotContain(second.Context.Seed, message => message.Text.Contains("第二问"));
     }
@@ -61,8 +62,8 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot merged = done.Executables.Single(entry => entry.Executable.Name.Value == "合并").Runs.Single();
-        Assert.Contains(merged.Context.Seed, message => message.Text.Contains("节点「数据」的端口「结论」产出"));
-        Assert.DoesNotContain(merged.Context.Seed, message => message.Text.Contains("节点「信号」的端口「信号」产出"));
+        Assert.Contains(merged.Context.Seed, message => message.Text.Contains("节点「整体/数据」的端口「结论」产出"));
+        Assert.DoesNotContain(merged.Context.Seed, message => message.Text.Contains("节点「整体/信号」的端口「信号」产出"));
     }
 
     /// <summary>容器作触发源：成员齐备放行后目标被触发，容器产出不进目标上下文。</summary>
@@ -157,17 +158,17 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerValidateFlow);
         environment.Executor.Output = run =>
         {
-            if (run.Context.NodeIndex == 2)
+            if (run.Context.Node.Name.Value == "来源")
             {
                 return "来源产出";
             }
 
             return run.Context.ExecutionCount == 1 ? "初稿不够好" : "修订通过";
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            2 => """{"结论": "来源产出"}""",
-            3 => run.Context.ExecutionCount == 1
+            "来源" => """{"结论": "来源产出"}""",
+            "触发" => run.Context.ExecutionCount == 1
                 ? """{"结论": "初稿不够好"}"""
                 : """{"结论": "修订通过"}""",
             _ => null,
@@ -177,7 +178,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("触发")).State);
 
         environment.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);

@@ -45,7 +45,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
     /// <summary>某执行单元的运行时节点。条目执行单元必须已登记，条目序为空时给按需建出的整节点执行单元。要求持有任务 Gate。</summary>
     public RuntimeInstance Instance(int? item) =>
         item is { } index
-            ? FindRuntimeInstance(index) ?? throw new InvalidOperationException($"节点「{Name}」没有条目 {index} 的执行单元。")
+            ? FindRuntimeInstance(index) ?? throw new InvalidOperationException($"节点「{Path}」没有条目 {index} 的执行单元。")
             : _wholeInstance ??= new RuntimeInstance(null, null);
 
     /// <summary>输入侧消费账，版本驱动的判定按它比较来源版本。</summary>
@@ -71,9 +71,13 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
                 yield return whole;
             }
 
-            foreach (RuntimeInstance instance in _itemInstances.Values.Where(instance => instance.Blocked))
+            foreach (int item in _items)
             {
-                yield return instance;
+                RuntimeInstance instance = _itemInstances[item];
+                if (instance.Blocked)
+                {
+                    yield return instance;
+                }
             }
         }
     }
@@ -125,9 +129,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
 
     IReadOnlyList<int>? IInputProgress.AdoptedItems => Expanded ? _items : null;
 
-    long IInputProgress.ConsumedRevision(int source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
 
-    bool IInputProgress.ConsumedOnce(int source) => _consumed.ConsumedOnce(source);
+    bool IInputProgress.ConsumedOnce(NodePath source) => _consumed.ConsumedOnce(source);
 
     bool IInputProgress.Produced(int? item) => Complete(item);
 
@@ -187,11 +191,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
     public void AddActive(int count) => Active += count;
 
     /// <summary>把一个执行单元置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
-    public void EnterBlocked(int? item, IReadOnlyList<(int Node, int? Item)> targets) =>
+    public void EnterBlocked(int? item, IReadOnlyList<(NodePath Node, int? Item)> targets) =>
         Instance(item).EnterBlocked(targets);
 
     /// <summary>移除一个执行单元本次返工处理的目标，全部处理后解除阻塞。</summary>
-    public void FinishRework(int? item, IReadOnlyList<(int Node, int? Item)> handled) =>
+    public void FinishRework(int? item, IReadOnlyList<(NodePath Node, int? Item)> handled) =>
         Instance(item).FinishRework(handled);
 
     /// <summary>随任务进入取消态。</summary>
@@ -297,10 +301,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
         }
 
         string prefix = item is { } index
-            ? $"条目「{ItemTitle(index)}」在节点「{Name}」的端口「{port}」产出：\n"
-            : $"节点「{Name}」的端口「{port}」产出：\n";
+            ? $"条目「{ItemTitle(index)}」在节点「{Path}」的端口「{port}」产出：\n"
+            : $"节点「{Path}」的端口「{port}」产出：\n";
 
-        return [new ContextMessage(MessageRole.User, $"{prefix}{content}", new RunSource(run.Id, Name))];
+        return [new ContextMessage(MessageRole.User, $"{prefix}{content}", new RunSource(run.Id, Path))];
     }
 
     /// <summary>上下文输出端口的注入消息：来源 run 的装配帧逐条保留，指令单列。</summary>
@@ -311,7 +315,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
             return [];
         }
 
-        ContextFrame frame = new(frameRun.Id, Name, item, frameRun.Context.Seed, frameRun.Context.Instruction);
+        ContextFrame frame = new(frameRun.Id, Path, item, frameRun.Context.Seed, frameRun.Context.Instruction);
         List<ContextMessage> messages =
         [
             .. frame.Messages,
@@ -332,7 +336,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
             return null;
         }
 
-        ContextFrame frame = new(frameRun.Id, Name, null, frameRun.Context.Seed, frameRun.Context.Instruction);
+        ContextFrame frame = new(frameRun.Id, Path, null, frameRun.Context.Seed, frameRun.Context.Instruction);
         string content = string.Join("\n\n", frame.Messages.Select(message => message.Text));
 
         return $"{content}\n\n指令：\n{frame.Instruction}";
@@ -376,6 +380,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
 
         List<int> blocked = [.. BlockedInstances.Select(instance => instance.ItemIndex).OfType<int>()];
 
-        return new ExecutableStateSnapshot(Index, state, items, completed, blocked);
+        return new ExecutableStateSnapshot(Path, state, items, completed, blocked);
     }
 }

@@ -10,11 +10,8 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     /// <summary>提交时锁定的节点定义，不可变。</summary>
     public GraphNode Node { get; } = node;
 
-    /// <summary>节点在图里的序号，框架路由与快照定位以它为准。</summary>
-    public int Index => Node.Index;
-
-    /// <summary>节点名。</summary>
-    public NodeName Name => Node.Name;
+    /// <summary>节点路径，框架路由、来源读数与快照定位都以它为准。</summary>
+    public NodePath Path => Node.Path;
 
     /// <summary>产出已放行、可被下游消费。</summary>
     public abstract bool Released { get; }
@@ -40,7 +37,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     }
 
     /// <summary>节点在快照里的一刻状态。</summary>
-    public virtual ExecutableStateSnapshot Snapshot() => new(Index, NodeState.Pending, [], 0, []);
+    public virtual ExecutableStateSnapshot Snapshot() => new(Path, NodeState.Pending, [], 0, []);
 
     /// <summary>按输出端口取单段文本，端口未交回或未放行时为空。容器按绑定解析成员取值。</summary>
     public abstract string? PortText(INodeTask task, PortName port);

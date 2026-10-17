@@ -36,7 +36,7 @@ public sealed class NodeLibraryTests
         NodeSpec deliver = root.Nodes[1];
         Assert.NotNull(deliver.Nodes);
         NodeSpec implement = deliver.Nodes[0];
-        Assert.Equal(new NodeName("交付.实施"), implement.Name);
+        Assert.Equal(new NodeName("实施"), implement.Name);
         Assert.NotNull(implement.Execution);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
         Assert.Equal("制定计划@拆分", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
@@ -117,7 +117,7 @@ public sealed class NodeLibraryTests
         Assert.NotNull(container.Nodes);
         NodeSpec implement = container.Nodes[0];
         Assert.NotNull(implement.Execution);
-        Assert.Equal(new NodeName("交付.实施"), implement.Name);
+        Assert.Equal(new NodeName("实施"), implement.Name);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
         var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(environment.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
@@ -293,8 +293,8 @@ public sealed class NodeLibraryTests
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
-        Assert.Equal(new NodeName("交付.里.实施"), implement.Name);
-        Assert.Equal("交付.目标条目@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
+        Assert.Equal(new NodeName("实施"), implement.Name);
+        Assert.Equal("目标条目@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public sealed class NodeLibraryTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("审查实例")).State);
     }
 
     [Fact]
@@ -1331,8 +1331,8 @@ public sealed class NodeLibraryTests
 
     /// <summary>装配层内联容器声明输出端口，绑定目标端口必须被成员声明。</summary>
     private const string AssemblyContainerOut = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "实施@不存在" }], "Nodes": [ { "Name": "实施", "Kind": "Llm", "Model": "执行者" } ] }
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "实施@不存在" }], "Nodes": [ { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] } ] }
         ] } ] }
         """;
 

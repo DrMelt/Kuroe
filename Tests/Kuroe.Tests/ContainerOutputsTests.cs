@@ -23,7 +23,7 @@ public sealed class ContainerOutputsTests
             .Single(entry => entry.Executable.Name.Value == "复盘")
             .Runs.Single();
         Assert.Contains(retrospective.Context.Seed,
-            message => message.Text.Contains("节点「交付」的端口「结论」产出")
+            message => message.Text.Contains("节点「整体/交付」的端口「结论」产出")
                 && message.Text.Contains("结论产出"));
         Assert.DoesNotContain(retrospective.Context.Seed, message => message.Text.Contains("理由产出"));
     }

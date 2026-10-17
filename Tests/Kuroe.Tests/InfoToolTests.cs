@@ -54,6 +54,21 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("目标：", output);
     }
 
+    [Fact]
+    public void GetTask_lists_every_split_source_in_node_table_order()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.TwoSplitFlow);
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
+
+        TaskInfoTool tool = new(environment.Registry);
+        string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
+
+        int first = output.IndexOf("在节点「整体/计划甲」交回", StringComparison.Ordinal);
+        int second = output.IndexOf("在节点「整体/计划乙」交回", StringComparison.Ordinal);
+        Assert.True(first >= 0 && second > first, output);
+    }
+
     [Theory]
     [InlineData("x", "任务号要写成数字")]
     [InlineData("99", "没有任务 #99")]

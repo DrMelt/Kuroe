@@ -3,19 +3,17 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
 namespace Kuroe.Flow.NodeLibrary;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，端口绑定沿作用域链透传。
-/// 装配层直接写的节点名保持原名，扁平唯一由校验保证；库定义实例化时整棵子树成员名带实例前缀，避免重名。</summary>
+/// 节点名按作者写下的原文保留，层级由树给出，重名只需同一容器内避免；引用由编译期按作用域链解析。</summary>
 internal static class NodeExpander
 {
-    /// <summary>展开作用域的一层：容器实例的成员原名到实例名的映射，以及端口绑定与模型槽位绑定。
-    /// 每层以 parent 串起，从内向外解析成员名，从内向外透传端口与模型绑定。</summary>
+    /// <summary>展开作用域的一层：容器实例的端口绑定与模型槽位绑定。
+    /// 每层以 parent 串起，从内向外透传端口与模型绑定。</summary>
     private sealed class Env(
         Env? parent,
-        IReadOnlyDictionary<NodeName, NodeName> renames,
         IReadOnlyDictionary<PortName, PortRef> bindings,
         IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots)
     {
         public Env? Parent { get; } = parent;
-        public IReadOnlyDictionary<NodeName, NodeName> Renames { get; } = renames;
         public IReadOnlyDictionary<PortName, PortRef> Bindings { get; } = bindings;
 
         /// <summary>引用节点组时的模型槽位绑定：槽位名到流程模型选择名或外层槽位名的映射。</summary>
@@ -29,7 +27,7 @@ internal static class NodeExpander
         NodeScope scope)
     {
         List<Error> errors = [];
-        NodeSpec? expanded = ExpandNode(library, root, null, string.Empty, inInstance: false, currentLimit: null, scope, errors);
+        NodeSpec? expanded = ExpandNode(library, root, null, inInstance: false, currentLimit: null, scope, errors);
 
         if (errors.Count > 0)
         {
@@ -39,13 +37,11 @@ internal static class NodeExpander
         return expanded!;
     }
 
-    /// <summary>展开一个节点。prefix 是库实例链前缀；装配层内联容器成员保持原名（原与校验的扁平唯一联动）。
-    /// 库定义实例化时，子树成员名都带实例前缀。</summary>
+    /// <summary>展开一个节点：引用按库定义实例化，实例根采用引用处写下的名字，库定义内成员沿用定义里的名字。</summary>
     private static NodeSpec? ExpandNode(
         NodeLibrary library,
         NodeSpec node,
         Env? env,
-        string prefix,
         bool inInstance,
         int? currentLimit,
         NodeScope scope,
@@ -59,8 +55,7 @@ internal static class NodeExpander
                 return null;
             }
 
-            string invocation = node.Name.Value.Length > 0 ? node.Name.Value : definition.Name.Value;
-            NodeName instance = new(prefix + invocation);
+            NodeName invocation = node.Name.Value.Length > 0 ? node.Name : definition.Name;
             if (definition.Nodes is { Count: > 0 })
             {
                 if (node.From.Count > 0)
@@ -79,12 +74,12 @@ internal static class NodeExpander
                 }
 
                 CheckBindings(node, definition, scope, errors);
-                Env childEnv = BuildContainerEnv(env, definition, instance, node.In, node.Models);
+                Env childEnv = BuildContainerEnv(env, node.In, node.Models);
                 int? memberLimit = node.MaxRuns ?? definition.MaxRuns ?? currentLimit;
-                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, instance.Value + ".", scope, errors, memberLimit);
+                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors, memberLimit);
                 return new NodeSpec
                 {
-                    Name = instance,
+                    Name = invocation,
                     Type = definition.Type,
                     Inputs = definition.Inputs,
                     Nodes = members,
@@ -106,7 +101,7 @@ internal static class NodeExpander
 
             return new NodeSpec
             {
-                Name = instance,
+                Name = invocation,
                 Type = definition.Type,
                 Inputs = definition.Inputs,
                 Execution = libraryExecution with
@@ -120,15 +115,12 @@ internal static class NodeExpander
             };
         }
 
-        NodeName own = new(prefix + node.Name.Value);
         if (node.Nodes is { Count: > 0 } children)
         {
-            // 装配层内联容器成员不再叠加容器名，库实例内成员才叠加实例前缀
-            string memberPrefix = inInstance ? own.Value + "." : prefix;
-            List<NodeSpec> expanded = ExpandMembers(library, children, env, memberPrefix, scope, errors, node.MaxRuns ?? currentLimit);
+            List<NodeSpec> expanded = ExpandMembers(library, children, env, inInstance, scope, errors, node.MaxRuns ?? currentLimit);
             return new NodeSpec
             {
-                Name = own,
+                Name = node.Name,
                 Type = node.Type,
                 Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
@@ -141,7 +133,7 @@ internal static class NodeExpander
 
         return new NodeSpec
         {
-            Name = own,
+            Name = node.Name,
             Type = node.Type,
             Inputs = node.Inputs,
             Execution = execution with
@@ -163,7 +155,7 @@ internal static class NodeExpander
         NodeLibrary library,
         IReadOnlyList<NodeSpec> members,
         Env? env,
-        string prefix,
+        bool inInstance,
         NodeScope scope,
         List<Error> errors,
         int? currentLimit)
@@ -171,7 +163,7 @@ internal static class NodeExpander
         List<NodeSpec> expanded = [];
         foreach (NodeSpec member in members)
         {
-            NodeSpec? item = ExpandNode(library, member, env, prefix, inInstance: prefix.Length > 0, currentLimit, scope, errors);
+            NodeSpec? item = ExpandNode(library, member, env, inInstance, currentLimit, scope, errors);
             if (item is not null)
             {
                 expanded.Add(item);
@@ -207,40 +199,13 @@ internal static class NodeExpander
         }
     }
 
-    /// <summary>构造容器实例的子作用域：整棵子树成员名对齐到带实例前缀的实例名，端口绑定与模型槽位绑定进作用域。
+    /// <summary>构造容器实例的子作用域：端口绑定与模型槽位绑定进作用域。
     /// parent 沿当前环境链挂上，便于 @更外层端口 与更外层模型槽位透传。</summary>
     private static Env BuildContainerEnv(
         Env? parent,
-        NodeSpec container,
-        NodeName instanceName,
         IReadOnlyDictionary<PortName, PortRef>? bindings,
-        IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots)
-    {
-        Dictionary<NodeName, NodeName> renames = [];
-        CollectRenames(container.Nodes ?? [], renames, instanceName.Value + ".");
-
-        return new Env(parent, renames, bindings ?? new Dictionary<PortName, PortRef>(), modelSlots);
-    }
-
-    /// <summary>递归收集容器子树全部成员的实例名映射：成员原名对齐到带实例名前缀的实例名。</summary>
-    private static void CollectRenames(
-        IReadOnlyList<NodeSpec> nodes,
-        Dictionary<NodeName, NodeName> renames,
-        string prefix)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            NodeName localName = node.Name.Value.Length > 0
-                ? node.Name
-                : new NodeName(node.Use?.Value ?? string.Empty);
-            NodeName instanceName = new(prefix + localName.Value);
-            renames[localName] = instanceName;
-            if (node.Nodes is { Count: > 0 })
-            {
-                CollectRenames(node.Nodes, renames, instanceName.Value + ".");
-            }
-        }
-    }
+        IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots) =>
+        new(parent, bindings ?? new Dictionary<PortName, PortRef>(), modelSlots);
 
     /// <summary>逐个解析上游启动组：来源名沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
     private static IReadOnlyList<FromGroup> ResolveAll(
@@ -255,16 +220,16 @@ internal static class NodeExpander
             }),
         ];
 
-    /// <summary>解析一个端口引用：来源为空（@端口）沿绑定链找实际来源，普通来源名沿实例映射解析并保留选取。
+    /// <summary>解析一个端口引用：来源为空（@端口）沿绑定链找实际来源，写明来源的引用原样保留，由编译期按作用域解析。
     /// 绑定链找不到来源时保留原引用并报错，交既有校验判断。</summary>
     private static PortRef ResolveRef(PortRef reference, Env? env, NodeScope scope, List<Error> errors)
     {
-        if (reference.Source is { } source)
+        if (reference.Source is not null)
         {
-            return reference with { Source = ResolveName(source, env) };
+            return reference;
         }
 
-        // @端口：沿绑定链找到绑定来源，绑定值沿更外层作用域透传，普通名绑定在所在作用域解析成实例名
+        // @端口：沿绑定链找到绑定来源，绑定值沿更外层作用域透传，来源名保持作者写下的原文
         Env? chain = env;
         while (chain is not null)
         {
@@ -272,7 +237,7 @@ internal static class NodeExpander
             {
                 return bound.Source is null
                     ? ResolveRef(bound, chain.Parent, scope, errors)
-                    : bound with { Source = ResolveName(bound.Source.Value, chain) };
+                    : bound;
             }
 
             chain = chain.Parent;
@@ -282,24 +247,7 @@ internal static class NodeExpander
         return reference;
     }
 
-    /// <summary>普通节点引用沿环境链找实例映射，找不到时保留原名。</summary>
-    private static NodeName ResolveName(NodeName name, Env? env)
-    {
-        Env? scope = env;
-        while (scope is not null)
-        {
-            if (scope.Renames.TryGetValue(name, out NodeName renamed))
-            {
-                return renamed;
-            }
-
-            scope = scope.Parent;
-        }
-
-        return name;
-    }
-
-    /// <summary>容器输出端口的实例化：绑定值沿子作用域解析成实例成员引用，前缀由此加上，说明原样保留。</summary>
+    /// <summary>容器输出端口的实例化：绑定值按原文保留，引用在编译期按作用域解析，说明原样保留。</summary>
     private static Dictionary<PortName, ContainerOutput>? ResolveContainerOutputs(
         IReadOnlyDictionary<PortName, ContainerOutput>? outs,
         Env? env,

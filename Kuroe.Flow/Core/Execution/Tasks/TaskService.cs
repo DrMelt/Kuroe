@@ -52,13 +52,19 @@ public sealed class TaskService
     /// <summary>按流程定义提交：编译图、校验开始直连下游的宿主声明、建任务并启动推进。供宿主按自带流程提交。</summary>
     public ErrorOr<TaskSnapshot> SubmitFlow(string goal, FlowDefinition flow, string? title)
     {
-        NodeGraph graph = FlowCompiler.Compile(flow);
+        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
+        if (compiled.IsError)
+        {
+            return compiled.ErrorsOrEmptyList;
+        }
+
+        NodeGraph graph = compiled.Value;
 
         // 不启动 run 的节点不需要宿主声明；开始直连的派发节点要求声明可解析
-        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Index))
+        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
         {
             if (graph[edge.Target] is not ExecutableNode target
-                || graph.ShapeOf(target.Index) is { DispatchesRuns: false })
+                || graph.ShapeOf(target.Path) is { DispatchesRuns: false })
             {
                 continue;
             }

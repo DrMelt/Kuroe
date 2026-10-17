@@ -45,7 +45,7 @@ public sealed class LimitsTests
 
         using TestEnvironment environment = TestEnvironment.Create(flow);
         environment.Executor.Output = _ => new string('长', 3000);
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex == 2
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value == "来源"
             ? $$"""{"结论": "{{new string('长', 3000)}}"}"""
             : null;
 
@@ -57,7 +57,7 @@ public sealed class LimitsTests
             message => message.Source is RunSource);
 
         Assert.Equal(2001, upstream.Text.Length);
-        Assert.StartsWith("节点「来源」的端口「结论」产出", upstream.Text);
+        Assert.StartsWith("节点「整体/来源」的端口「结论」产出", upstream.Text);
         Assert.EndsWith("…", upstream.Text);
     }
 }

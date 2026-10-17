@@ -196,7 +196,7 @@ internal sealed class TaskCommands(
         {
             if (node.Kind == AwaitKind.Approve && node.Name == name)
             {
-                results.Report(waits.Approve(id, [node.Index]), $"{id} 已批准，继续下一步。");
+                results.Report(waits.Approve(id, [node.Node]), $"{id} 已批准，继续下一步。");
 
                 return;
             }

@@ -8,11 +8,8 @@ public sealed record RunContext
     /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }
 
-    /// <summary>所属执行节点在流程图里的序号。</summary>
-    public required int NodeIndex { get; init; }
-
-    /// <summary>所属执行节点的名称。</summary>
-    public required NodeName NodeName { get; init; }
+    /// <summary>所属执行节点的路径。</summary>
+    public required NodePath Node { get; init; }
 
     /// <summary>本次执行要做的事。</summary>
     public required string Instruction { get; init; }
@@ -26,8 +23,8 @@ public sealed record RunContext
     /// <summary>所属条目序号，非按条目展开时为空。</summary>
     public int? ItemIndex { get; init; }
 
-    /// <summary>本次执行被叫到的名字：执行节点名，展开条目时带上条目号。</summary>
-    public string Label => ItemIndex is { } index ? $"{NodeName}·条目 {index + 1}" : NodeName.ToString();
+    /// <summary>本次执行被叫到的名字：执行节点路径，展开条目时带上条目号。</summary>
+    public string Label => ItemIndex is { } index ? $"{Node}·条目 {index + 1}" : Node.Value;
 
     /// <summary>当前节点下本实例的执行次数，按节点与条目各自累计，从 1 起。</summary>
     public int ExecutionCount { get; init; } = 1;

@@ -13,7 +13,7 @@ public sealed record TaskSnapshot(
     INodeGraph Graph,
     TaskState State,
     int LiveRuns,
-    IReadOnlyDictionary<int, WorkItemList> Splits,
+    IReadOnlyDictionary<NodePath, WorkItemList> Splits,
     IReadOnlyList<ExecutableSnapshot> Executables,
     IReadOnlyList<ExecutableStateSnapshot> ExecutableStates,
     IReadOnlyList<ContainerSnapshot> Containers,
@@ -25,33 +25,19 @@ public sealed record TaskSnapshot(
     public int TotalExecutableNodes => Graph.TotalExecutables;
 
     /// <summary>已发布产出的最远执行节点在执行节点表里的位置，用于列表里的进度。</summary>
-    public int FrontierNodes
-    {
-        get
-        {
-            if (ExecutableStates.Count == 0)
-            {
-                return 0;
-            }
+    public int FrontierNodes =>
+        ExecutableStates
+            .Where(state => state.State == NodeState.Done)
+            .Select(state => OrdinalOf(state.Node))
+            .DefaultIfEmpty(0)
+            .Max();
 
-            Dictionary<int, int> rankByIndex = Graph.ExecutableNodes
-                .Select((executable, rank) => (executable.Index, rank))
-                .ToDictionary(pair => pair.Index, pair => pair.rank);
-
-            return ExecutableStates
-                .Where(state => state.State == NodeState.Done)
-                .Select(state => rankByIndex.GetValueOrDefault(state.Index) + 1)
-                .DefaultIfEmpty(0)
-                .Max();
-        }
-    }
-
-    /// <summary>执行节点在执行节点表里的顺位，用于展示；容器或未收录的序号给最末顺位之后。</summary>
-    public int OrdinalOf(int executableIndex)
+    /// <summary>执行节点在执行节点表里的顺位，用于展示；容器或未收录的节点给最末顺位之后。</summary>
+    public int OrdinalOf(NodePath executable)
     {
         for (int i = 0; i < Graph.ExecutableNodes.Count; i++)
         {
-            if (Graph.ExecutableNodes[i].Index == executableIndex)
+            if (Graph.ExecutableNodes[i].Path == executable)
             {
                 return i + 1;
             }

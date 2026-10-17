@@ -23,8 +23,8 @@ public sealed class NodeInputPlanTests
     [Fact]
     public void Group_is_driven_by_signals_only_when_a_binding_signals()
     {
-        InputBinding value = new(EdgeKind.Value, 1, FeedScope.Whole, FeedRecurrence.Repeat, Signal: false);
-        InputBinding signal = new(EdgeKind.Split, 2, FeedScope.Item, FeedRecurrence.Once, Signal: true);
+        InputBinding value = new(EdgeKind.Value, NodePath.Of("甲"), FeedScope.Whole, FeedRecurrence.Repeat, Signal: false);
+        InputBinding signal = new(EdgeKind.Split, NodePath.Of("乙"), FeedScope.Item, FeedRecurrence.Once, Signal: true);
 
         InputGroup plain = new([value]);
         InputGroup driven = new([value, signal]);
@@ -38,10 +38,10 @@ public sealed class NodeInputPlanTests
     [Fact]
     public void Split_edge_carries_the_space_role()
     {
-        FlowEdge edge = FlowEdge.Split(1, 2, new PortName("任务"), new PortName("目标"), group: 3);
+        FlowEdge edge = FlowEdge.Split(NodePath.Of("甲"), NodePath.Of("乙"), new PortName("任务"), new PortName("目标"), group: 3);
 
-        Assert.Equal(1, edge.Source);
-        Assert.Equal(2, edge.Target);
+        Assert.Equal(NodePath.Of("甲"), edge.Source);
+        Assert.Equal(NodePath.Of("乙"), edge.Target);
         Assert.Equal(EdgeKind.Split, edge.Role);
         Assert.Equal(FeedScope.Whole, edge.Scope);
         Assert.Equal(FeedRecurrence.Repeat, edge.Recurrence);

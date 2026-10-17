@@ -51,6 +51,6 @@ public sealed class FakeExecutor : IRunExecutor
 
         _ = StatusSubmitter!.SubmitVerdict(run.Id, "completed", null);
 
-        return $"{run.Context.NodeName}产出";
+        return $"{run.Context.Node}产出";
     }
 }

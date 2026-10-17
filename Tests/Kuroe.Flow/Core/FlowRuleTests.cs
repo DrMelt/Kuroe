@@ -23,7 +23,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Duplicate_node_name_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "节点名重复。")],
+            [NodeError("制定计划", "同一容器内的节点名重复。")],
             Errors(Flow(
                 Container("整体", Plan("制定计划", "规划者"), Text("制定计划", "规划者")),
                 Models("规划者"))));
@@ -132,8 +132,8 @@ public sealed class FlowRuleTests
     public void Node_unreachable_from_start_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                NodeError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -181,7 +181,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Reference_to_missing_node_is_rejected() =>
         Assert.Equal(
-            [NodeError("内部", "From 引用的节点 不存在 不在流程里。")],
+            [MemberError("容器/内部", "From 引用的节点 不存在 不在流程里。")],
             Errors(Flow(
                 Container("整体",
                     Plan("制定计划", "规划者"),
@@ -197,7 +197,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Reference_to_missing_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "节点 分析 没有输出端口 不存在。")],
+            [MemberError("实施", "节点 整体/分析 没有输出端口 不存在。")],
             Errors(Flow(
                 Container("整体",
                     Text("分析", "执行者") with { Outputs = [P("结论")] },
@@ -208,8 +208,8 @@ public sealed class FlowRuleTests
     public void Context_input_from_container_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("实施", "Context 输入来源 箱子 必须是非输入执行节点。"),
-                NodeError("实施", "容器 箱子 没有输出端口 结论。"),
+                MemberError("实施", "容器 整体/箱子 没有输出端口 结论。"),
+                MemberError("实施", "Context 输入来源 整体/箱子 必须是非输入执行节点。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -221,15 +221,14 @@ public sealed class FlowRuleTests
     public void Context_input_from_bound_port_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("实施", "Context 输入必须写节点名或 来源@端口，不能引用绑定端口。"),
-                NodeError("实施", "From 引用的节点 @输入 不在流程里。"),
+                MemberError("实施", "From 连接 @输入 是对绑定端口的引用，请写明来源节点。"),
             ],
             Errors(Flow(Container("整体", Text("实施", "执行者") with { Inputs = [In("输入", PortType.Context)], From = [BoundContext("输入")] }), Models("执行者"))));
 
     [Fact]
     public void Context_input_from_per_item_node_is_rejected() =>
         Assert.Equal(
-            [NodeError("汇报", "Context 输入来源 实施 不能是按条目展开的节点。")],
+            [MemberError("汇报", "Context 输入来源 整体/实施 不能是按条目展开的节点。")],
             Errors(Flow(
                 Container("整体",
                     Plan("制定", "执行者"),
@@ -251,7 +250,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Source_port_repeated_across_groups_is_rejected() =>
         Assert.Equal(
-            [NodeError("汇合", "From 的来源端口 甲@结论 出现在多个组里。")],
+            [MemberError("汇合", "From 的来源端口 整体/甲@结论 出现在多个组里。")],
             Errors(Flow(
                 Container("整体",
                     Text("甲", "执行者") with { Outputs = [P("结论")] },
@@ -303,7 +302,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Container_out_bound_to_sub_container_is_rejected() =>
         Assert.Equal(
-            [NodeError("交付", "容器输出端口 结果 的绑定目标节点 撰写组 不是执行节点，无法取产出。")],
+            [NodeError("整体/交付", "容器输出端口 结果 的绑定目标 整体/交付/撰写组 不是执行节点，无法取产出。")],
             Errors(Flow(
                 Container("整体",
                     Container("交付", Container("撰写组", Text("撰写", "执行者") with { Outputs = [P("结论")] })) with
@@ -315,7 +314,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Per_item_executable_without_source_is_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。")],
+            [MemberError("实施", "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。")],
             Errors(Flow(
                 Container("整体",
                     Exec("实施", "执行者", PerItem()) with { Outputs = [P("结论")] },
@@ -326,7 +325,10 @@ public sealed class FlowRuleTests
     [Fact]
     public void Per_item_split_reference_requires_declared_port() =>
         Assert.Equal(
-            [NodeError("实施", "节点 准备 没有输出端口 拆分。")],
+            [
+                MemberError("实施", "节点 整体/准备 没有输出端口 拆分。"),
+                MemberError("实施", "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。"),
+            ],
             Errors(Flow(
                 Container("整体",
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
@@ -339,7 +341,7 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [
                 NodeError("撰写", "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"),
-                NodeError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"),
+                MemberError("撰写", "声明分支 撰写 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -351,9 +353,9 @@ public sealed class FlowRuleTests
     public void Reference_cycle_without_source_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                NodeError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                NodeError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                MemberError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -378,9 +380,9 @@ public sealed class FlowRuleTests
     public void Executable_referencing_its_own_container_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
-                NodeError("撰写", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                NodeError("撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
+                MemberError("交付/撰写", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -394,8 +396,8 @@ public sealed class FlowRuleTests
     public void Executable_referencing_its_own_container_with_sibling_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
-                NodeError("撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -411,9 +413,9 @@ public sealed class FlowRuleTests
     public void Container_cycle_across_scopes_is_rejected() =>
         Assert.Equal(
             [
-                NodeError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                NodeError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                NodeError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("整体/容器乙/乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
+                NodeError("整体/容器甲/甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("整体/容器乙/乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -431,7 +433,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Two_split_sources_are_rejected() =>
         Assert.Equal(
-            [NodeError("实施", "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。")],
+            [MemberError("实施", "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。")],
             Errors(Flow(
                 Container("整体",
                     Plan("甲", "规划者"),
@@ -574,6 +576,10 @@ public sealed class FlowRuleTests
     /// <summary>流程内某个节点的错误说明。</summary>
     private static string NodeError(string node, string message) =>
         $"流程 默认 的节点 {node}：{message}";
+
+    /// <summary>根容器 整体 的直接成员的错误说明，节点按树路径展示。</summary>
+    private static string MemberError(string node, string message) =>
+        NodeError($"整体/{node}", message);
 
     /// <summary>流程内某个模型选择的错误说明。</summary>
     private static string ModelError(string model, string message) =>

@@ -22,10 +22,9 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
         if (task.Splits.Count > 0)
         {
             _terminal.NewLine();
-            foreach ((int executableIndex, WorkItemList plan) in task.Splits.OrderBy(entry => entry.Key))
+            foreach ((NodePath executable, WorkItemList plan) in task.Splits)
             {
-                string nodeName = task.Graph[executableIndex].Name.Value;
-                _terminal.Line($"拆分由 {plan.Origin} 在节点「{nodeName}」交回：");
+                _terminal.Line($"拆分由 {plan.Origin} 在节点「{executable}」交回：");
                 foreach (WorkItem item in plan.Items)
                 {
                     string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
@@ -49,7 +48,7 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
         _terminal.NewLine();
         foreach (ExecutableSnapshot node in task.Executables)
         {
-            _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Index)} · {node.Executable.Path}"
+            _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Executable.Path)} · {node.Executable.Path}"
                 + $"（{node.Executable.Kind.Value} · {ViewLabels.Of(node.Executable.Execution.Mode)}）");
 
             if (node.Runs.Count == 0)
@@ -78,18 +77,18 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
         }
 
         List<PendingNode> waiting = waits.Pending(task.Id) is { IsError: false } found ? found.Value : [];
-        HashSet<int> pending = [.. waiting.Select(node => node.Index)];
+        HashSet<NodePath> pending = [.. waiting.Select(node => node.Node)];
 
         _terminal.NewLine();
         _terminal.Line("执行节点状态：");
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
-            ExecutableNode? asked = task.Graph[node.Index] as ExecutableNode;
+            ExecutableNode? asked = task.Graph[node.Node] as ExecutableNode;
             string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
             string blocked = node.BlockedItems.Count == 0
                 ? string.Empty
                 : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
-            string question = pending.Contains(node.Index) && NodeParameterView.Question(asked?.Type) is { Length: > 0 } questionText
+            string question = pending.Contains(node.Node) && NodeParameterView.Question(asked?.Type) is { Length: > 0 } questionText
                     ? $" · {questionText}"
                     : string.Empty;
             string ports = asked is { Outputs.Count: > 0 } ported
@@ -97,7 +96,7 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
                 : string.Empty;
             int blocks = NodeParameterView.Llm(asked?.Type)?.SystemPrompt.Count ?? 0;
             string systemPrompt = blocks > 0 ? $" · 系统指令：{blocks} 块" : string.Empty;
-            _terminal.Line($"  {task.Graph[node.Index].Name} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
+            _terminal.Line($"  {task.Graph[node.Node].Path} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
         }
     }
 

@@ -1,3 +1,5 @@
+using Kuroe.Flow.Shared.StaticGraph;
+
 namespace Kuroe.Flow.Shared.RuntimeGraph;
 
 /// <summary>判定要读的目标自身状态：实例集、消费账、产出记录与执行次数。</summary>
@@ -7,10 +9,10 @@ public interface IInputProgress
     IReadOnlyList<int>? AdoptedItems { get; }
 
     /// <summary>某来源的已消费版本，未消费过为零。</summary>
-    long ConsumedRevision(int source);
+    long ConsumedRevision(NodePath source);
 
     /// <summary>某来源的一次性消费是否已发生。</summary>
-    bool ConsumedOnce(int source);
+    bool ConsumedOnce(NodePath source);
 
     /// <summary>整节点或某实例是否已有发表产出。</summary>
     bool Produced(int? item);

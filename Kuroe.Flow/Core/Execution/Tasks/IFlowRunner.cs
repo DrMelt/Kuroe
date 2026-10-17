@@ -1,3 +1,5 @@
+using Kuroe.Flow.Shared.StaticGraph;
+
 namespace Kuroe.Flow.Execution.Tasks;
 
 /// <summary>任务命令对流程宿主的驱动：启动流程运行，返工与取消经信号恢复或终止。由引擎实现。</summary>
@@ -7,7 +9,7 @@ public interface IFlowRunner
     void Start(WorkTask task);
 
     /// <summary>要求持有任务 Gate 之外的调用：给定节点的产出已变，推进它的下游与祖先容器。</summary>
-    void Resume(WorkTask task, IReadOnlyList<int> nodes);
+    void Resume(WorkTask task, IReadOnlyList<NodePath> nodes);
 
     /// <summary>要求持有任务 Gate：对被阻塞的执行单元再开一轮返工，itemIndex 为空时处理全部，返回实际发出的重跑目标数。</summary>
     int Rework(WorkTask task, int? itemIndex);

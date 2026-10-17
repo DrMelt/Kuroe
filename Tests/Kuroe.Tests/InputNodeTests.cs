@@ -80,11 +80,11 @@ public sealed class InputNodeTests
         Assert.True(ambiguous.IsError);
         Assert.Contains(ambiguous.ErrorsOrEmptyList, error => error.Description.Contains("有 2 个输入节点等待回答"));
 
-        environment.Waits.Answer(id, "输入一", "甲").ThrowIfError();
+        environment.Waits.Answer(id, "整体/输入一", "甲").ThrowIfError();
         TaskSnapshot stepped = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, stepped.State);
 
-        environment.Waits.Answer(id, "输入二", "乙").ThrowIfError();
+        environment.Waits.Answer(id, "整体/输入二", "乙").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -97,13 +97,13 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("目标");
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.NodeName.Value == "准备" && run.State == RunState.Succeeded)
+            environment.Executor.Started.Any(run => run.Context.Node.Name.Value == "准备" && run.State == RunState.Succeeded)
             && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         TaskSnapshot parked = environment.Snapshot(id);
 
         Assert.Equal(TaskState.Running, parked.State);
 
-        environment.Waits.Answer(id, "用户输入", "回答").ThrowIfError();
+        environment.Waits.Answer(id, "整体/用户输入", "回答").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -118,17 +118,17 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("目标");
         environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, "收话", "第一问").ThrowIfError();
+        environment.Waits.Answer(id, "整体/收话", "第一问").ThrowIfError();
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.NodeName.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
+            environment.Executor.Started.Any(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
             && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, "收话", "第二问").ThrowIfError();
+        environment.Waits.Answer(id, "整体/收话", "第二问").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, done.State);
         Assert.Equal([1, 2], [.. environment.Executor.Started
-            .Where(run => run.Context.NodeName.Value == "回话")
+            .Where(run => run.Context.Node.Name.Value == "回话")
             .Select(run => run.Context.ExecutionCount)]);
     }
 
@@ -192,7 +192,7 @@ public sealed class InputNodeTests
 
         TaskSnapshot awaiting = environment.Settle(id);
         Assert.Equal(TaskState.Running, awaiting.State);
-        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Name == "审查容器").State);
+        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Name == new NodeName("审查容器")).State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
 
         environment.Waits.Approve(id).ThrowIfError();

@@ -35,37 +35,22 @@ public static class FlowRules
             }
         }
 
-        var containerNames = new HashSet<NodeName>();
-        CollectContainers(flow.RootNode, containerNames);
-
         CheckStart(flow, errors);
 
-        var executableNames = new HashSet<NodeName>();
-        CollectExecutables(flow.RootNode, executableNames);
+        CheckTree(flow.RootNode, modelNames, NodeScope.Flow(flow.Name.Value), errors);
 
-        var contextlessNames = new HashSet<NodeName>();
-        CollectContextless(flow.RootNode, contextlessNames);
-
-        var perItemNames = new HashSet<NodeName>();
-        CollectPerItem(flow.RootNode, perItemNames);
-
-        var names = new HashSet<NodeName>();
-        var outputs = new Dictionary<NodeName, IReadOnlyList<Port>>();
-        CollectOutputs(flow.RootNode, outputs);
-        outputs[StartNode.ReservedName] = flow.StartOutputs;
-
-        var containerOutputs = new Dictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>>();
-        CollectContainerOutputs(flow.RootNode, containerOutputs);
-
-        var parentOf = new Dictionary<NodeName, NodeName>();
-        CollectParents(flow.RootNode, parentOf, parent: null);
-
-        CheckTree(flow.RootNode, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, NodeScope.Flow(flow.Name.Value), errors);
-
-        // 引用类错误不存在时才展平，避免编译时的模型选择查表落空
+        // 引用解析在编译期进行，解析错误与展平后的图规则一并给出
         if (errors.Count == 0)
         {
-            CheckShape(FlowCompiler.Compile(flow), NodeScope.Flow(flow.Name.Value), errors);
+            ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
+            if (compiled.IsError)
+            {
+                errors.AddRange(compiled.ErrorsOrEmptyList);
+            }
+            else
+            {
+                CheckShape(compiled.Value, NodeScope.Flow(flow.Name.Value), errors);
+            }
         }
 
         return errors.Count > 0 ? errors : Result.Success;
@@ -106,179 +91,23 @@ public static class FlowRules
         }
     }
 
-    /// <summary>收集全部容器名，From 引用允许指向容器。</summary>
-    private static void CollectContainers(NodeSpec node, HashSet<NodeName> names)
+    /// <summary>同一容器内的直接子节点名唯一：重名会让按名解析的引用落点不定。</summary>
+    private static void CheckSiblings(IReadOnlyList<NodeSpec> children, NodeScope scope, List<Error> errors)
     {
-        if (node.Nodes is not { Count: > 0 } children)
+        var seen = new HashSet<NodeName>();
+        foreach (NodeSpec child in children.Where(child => !seen.Add(child.Name)))
         {
-            return;
-        }
-
-        names.Add(node.Name);
-        foreach (NodeSpec child in children)
-        {
-            CollectContainers(child, names);
+            errors.Add(scope.Node(child.Name.Value, "同一容器内的节点名重复。"));
         }
     }
 
-    /// <summary>收集执行节点名，From 引用据此判定存在。</summary>
-    private static void CollectExecutables(NodeSpec node, HashSet<NodeName> names)
-    {
-        if (node.Execution is not null)
-        {
-            names.Add(node.Name);
-        }
-        else if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                CollectExecutables(child, names);
-            }
-        }
-    }
-
-    /// <summary>收集不产出上下文端口的节点名，Context 输入来源据此拦截。</summary>
-    private static void CollectContextless(NodeSpec node, HashSet<NodeName> names)
-    {
-        if (ShapeOf(node) is { Organizes: false } shape
-            && !shape.OutputTypes.Contains(PortType.Context))
-        {
-            names.Add(node.Name);
-        }
-        else if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                CollectContextless(child, names);
-            }
-        }
-    }
-
-    /// <summary>节点持有的类型形状，引用节点为空。</summary>
-    private static NodeTypeShape? ShapeOf(NodeSpec node) => node.Type?.Shape;
-
-    /// <summary>收集按条目展开的执行节点名，上下文输入端口来源据此拦截。</summary>
-    private static void CollectPerItem(NodeSpec node, HashSet<NodeName> names)
-    {
-        if (node.Execution is { Mode: Flow.NodeMode.PerItem })
-        {
-            names.Add(node.Name);
-        }
-        else if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                CollectPerItem(child, names);
-            }
-        }
-    }
-
-    /// <summary>收集执行节点的输出端口表，From 引用据此判定端口存在与类型。</summary>
-    private static void CollectOutputs(NodeSpec node, Dictionary<NodeName, IReadOnlyList<Port>> outputs)
-    {
-        if (node.Execution is not null)
-        {
-            outputs[node.Name] = node.Outputs;
-        }
-        else if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                CollectOutputs(child, outputs);
-            }
-        }
-    }
-
-    /// <summary>收集容器实例的输出端口表，装配层 From 引用容器端口据此判定端口存在。</summary>
-    private static void CollectContainerOutputs(
-        NodeSpec node,
-        Dictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>> containerOutputs)
-    {
-        if (node.Nodes is not { Count: > 0 } children)
-        {
-            return;
-        }
-
-        if (node.ContainerOutputs is { Count: > 0 } outs)
-        {
-            containerOutputs[node.Name] = outs;
-        }
-
-        foreach (NodeSpec child in children)
-        {
-            CollectContainerOutputs(child, containerOutputs);
-        }
-    }
-
-    /// <summary>收集每个节点的直接所属容器名，容器封装据此判定引用作用域。</summary>
-    private static void CollectParents(
-        NodeSpec node,
-        Dictionary<NodeName, NodeName> parentOf,
-        NodeName? parent)
-    {
-        if (parent is { } container)
-        {
-            parentOf[node.Name] = container;
-        }
-
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                CollectParents(child, parentOf, node.Name);
-            }
-        }
-    }
-
-    /// <summary>引用来源是否落在当前节点可见的容器作用域内：同层成员或外层容器成员可见，嵌套更深容器的成员对容器外不可见。
-    /// 引用者本身没有父容器时只允许引用同根下节点。</summary>
-    private static bool IsInScope(
-        NodeName source,
-        NodeName referrer,
-        IReadOnlyDictionary<NodeName, NodeName> parentOf)
-    {
-        if (!parentOf.TryGetValue(source, out NodeName sourceContainer))
-        {
-            return false;
-        }
-
-        if (!parentOf.TryGetValue(referrer, out NodeName referrerContainer))
-        {
-            return false;
-        }
-
-        // 沿引用者所在容器链上溯，遇到来源所在容器即可见
-        NodeName? current = referrerContainer;
-        while (current is { } container)
-        {
-            if (container == sourceContainer)
-            {
-                return true;
-            }
-
-            current = parentOf.TryGetValue(container, out NodeName parent) ? parent : null;
-        }
-
-        return false;
-    }
-
-    /// <summary>递归校验名字、From 引用、容器与模型选择引用。执行先后由拓扑排序保证，这里只检查引用落在执行节点或容器上。</summary>
+    /// <summary>递归校验名字、容器形状、模型选择与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
     private static void CheckTree(
         NodeSpec node,
-        HashSet<NodeName> names,
-        HashSet<NodeName> executableNames,
-        HashSet<NodeName> contextlessNames,
-        HashSet<NodeName> perItemNames,
         HashSet<ModelRef> modelNames,
-        HashSet<NodeName> containerNames,
-        IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
-        IReadOnlyDictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>> containerOutputs,
-        IReadOnlyDictionary<NodeName, NodeName> parentOf,
         NodeScope scope,
         List<Error> errors)
     {
-        CheckSourceReferences(node, executableNames, contextlessNames, perItemNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
-
         CheckValidation(node, scope, errors);
 
         if (string.IsNullOrWhiteSpace(node.Name.Value))
@@ -293,14 +122,15 @@ public static class FlowRules
         {
             errors.Add(scope.Node(node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
         }
-        else if (!names.Add(node.Name))
+        else if (node.Name.Value.Contains('/'))
         {
-            errors.Add(scope.Node(node.Name.Value, "节点名重复。"));
+            errors.Add(scope.Node(node.Name.Value, "节点名不能含 /，/ 是节点路径的分隔符。"));
         }
 
         if (node.Nodes is { Count: > 0 } children)
         {
             node.Type?.Validate(node, scope, errors.Add);
+            CheckSiblings(children, scope, errors);
 
             if (node.Model is not null || node.Models is not null)
             {
@@ -315,13 +145,8 @@ public static class FlowRules
             {
                 foreach (NodeSpec child in children)
                 {
-                    CheckTree(child, names, executableNames, contextlessNames, perItemNames, modelNames, containerNames, outputs, containerOutputs, parentOf, scope, errors);
+                    CheckTree(child, modelNames, scope, errors);
                 }
-            }
-
-            if (node.ContainerOutputs is { } outs)
-            {
-                CheckContainerOut(node, outs, children, outputs, scope, errors);
             }
 
             if (node.From.Count > 0)
@@ -333,6 +158,8 @@ public static class FlowRules
         {
             INodeType? definition = node.Type;
             NodeTypeShape? shape = definition?.Shape;
+
+            CheckFromGroups(node, scope, errors);
 
             if (shape is null)
             {
@@ -364,17 +191,7 @@ public static class FlowRules
     }
 
     /// <summary>校验上游启动组：组覆盖声明的输入端口、来源节点存在、端口存在、容器封装不泄漏。</summary>
-    private static void CheckSourceReferences(
-        NodeSpec node,
-        HashSet<NodeName> executableNames,
-        HashSet<NodeName> contextlessNames,
-        HashSet<NodeName> perItemNames,
-        HashSet<NodeName> containerNames,
-        IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
-        IReadOnlyDictionary<NodeName, IReadOnlyDictionary<PortName, ContainerOutput>> containerOutputs,
-        IReadOnlyDictionary<NodeName, NodeName> parentOf,
-        NodeScope scope,
-        List<Error> errors)
+    private static void CheckFromGroups(NodeSpec node, NodeScope scope, List<Error> errors)
     {
         if (node.Nodes is { Count: > 0 })
         {
@@ -412,153 +229,130 @@ public static class FlowRules
                 }
             }
         }
+    }
 
-        foreach (FromLink link in node.From.SelectMany(group => group.Links))
+    /// <summary>容器输出端口绑定与来源端口在展平后的图上校验：绑定目标必须是容器子树内声明该端口的执行节点，容器不透出 WorkItems 端口。</summary>
+    private static void CheckContainerBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        foreach (ContainerNode container in graph.Containers)
         {
-            PortRef reference = link.Ref;
-            PortType type = node.Inputs.Find(link.Input)?.Type ?? Flow.PortType.Text;
-
-            if (type == Flow.PortType.Context)
+            if (container.PortBindings is not { Count: > 0 } bindings)
             {
-                if (reference.Source is null)
-                {
-                    errors.Add(scope.Node(node.Name.Value,
-                        "Context 输入必须写节点名或 来源@端口，不能引用绑定端口。"));
-                }
-                else
-                {
-                    NodeName contextSource = reference.Source.Value;
-                    if (!executableNames.Contains(contextSource))
-                    {
-                        errors.Add(scope.Node(node.Name.Value,
-                            $"Context 输入来源 {contextSource} 必须是非输入执行节点。"));
-                    }
-                    else if (contextlessNames.Contains(contextSource))
-                    {
-                        errors.Add(scope.Node(node.Name.Value,
-                            $"Context 输入来源 {contextSource} 不产出上下文端口。"));
-                    }
-                    else if (perItemNames.Contains(contextSource))
-                    {
-                        errors.Add(scope.Node(node.Name.Value,
-                            $"Context 输入来源 {contextSource} 不能是按条目展开的节点。"));
-                    }
-                }
-            }
-
-            if (reference.Source is null)
-            {
-                // 装配层执行节点没有传入端口可绑定，绑定端口引用在 From 里不合法
-                errors.Add(scope.Node(node.Name.Value,
-                    $"From 引用的节点 @{reference.Port.Value} 不在流程里。"));
                 continue;
             }
 
-            NodeName source = reference.Source.Value;
-
-            // 开始是流程级来源，不受容器封装限制
-            if (source != StartNode.ReservedName)
+            foreach ((PortName port, NodePort target) in bindings)
             {
-                if (containerNames.Contains(source))
+                if (graph[target.Node] is not ExecutableNode member)
                 {
-                    // 容器对外只经 Outputs 声明端口，没有整份产出
-                    if (!containerOutputs.TryGetValue(source, out IReadOnlyDictionary<PortName, ContainerOutput>? containerPorts)
-                        || !containerPorts.ContainsKey(reference.Port))
-                    {
-                        errors.Add(scope.Node(node.Name.Value,
-                            $"容器 {source} 没有输出端口 {reference.Port.Value}。"));
-                    }
-
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不是执行节点，无法取产出。"));
                     continue;
                 }
 
-                if (!executableNames.Contains(source))
+                if (!target.Node.IsUnder(container.Path))
                 {
-                    errors.Add(scope.Node(node.Name.Value, $"From 引用的节点 {source} 不在流程里。"));
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不在容器 {container.Path} 的子树里。"));
                     continue;
                 }
 
-                if (!IsInScope(source, node.Name, parentOf))
+                if (member.FindPort(target.Port) is not { } memberPort)
                 {
-                    errors.Add(scope.Node(node.Name.Value,
-                        $"不能从容器外直接引用容器内成员或端口 {source}，容器对外只暴露输出端口。"));
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标节点 {target.Node} 没有输出端口 {target.Port.Value}。"));
                     continue;
                 }
-            }
 
-            if (!outputs.TryGetValue(source, out IReadOnlyList<Port>? declaredOutputs)
-                || declaredOutputs.Find(reference.Port) is null)
-            {
-                errors.Add(scope.Node(node.Name.Value, $"节点 {source} 没有输出端口 {reference.Port.Value}。"));
+                if (memberPort.Type == Flow.PortType.WorkItems)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
+                }
             }
         }
     }
 
-    /// <summary>装配容器输出端口的绑定校验：绑定目标必须在子树内且是执行节点，绑定的端口必须是目标成员声明的端口。装配层容器对外只经 Outputs 端口被消费，绑定错误会在引用处落空。</summary>
-    private static void CheckContainerOut(
-        NodeSpec container,
-        IReadOnlyDictionary<PortName, ContainerOutput> outs,
-        IReadOnlyList<NodeSpec> children,
-        IReadOnlyDictionary<NodeName, IReadOnlyList<Port>> outputs,
-        NodeScope scope,
-        List<Error> errors)
+    /// <summary>一条边的来源侧校验：来源端口必须声明存在，容器成员不能被容器外直接引用，Context 输入来源必须是产出上下文的非按条目执行节点。</summary>
+    private static void CheckEdgeSource(NodeGraph graph, FlowEdge edge, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
-        foreach ((PortName port, ContainerOutput output) in outs)
+        GraphNode source = graph[edge.Source];
+
+        // 开始是流程级来源，不受容器封装限制
+        if (source is StartNode start)
         {
-            PortRef target = output.Ref;
-            if (target.Source is not { } sourceName)
+            if (start.FindPort(edge.SourcePort) is null)
             {
-                errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标不能是对绑定端口的引用。"));
-                continue;
+                errors.Add(scope.Node(target.Path.Value, $"节点 {StartNode.ReservedName} 没有输出端口 {edge.SourcePort.Value}。"));
             }
 
-            if (!ContainsName(children, sourceName))
+            return;
+        }
+
+        // 容器对外只经 Outputs 声明端口，没有整份产出
+        if (source is ContainerNode container)
+        {
+            if (container.PortBindings?.ContainsKey(edge.SourcePort) != true)
             {
-                errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {sourceName} 不在容器 {container.Name} 的子节点里。"));
-                continue;
+                errors.Add(scope.Node(target.Path.Value, $"容器 {container.Path} 没有输出端口 {edge.SourcePort.Value}。"));
             }
 
-            if (!outputs.TryGetValue(sourceName, out IReadOnlyList<Port>? memberPorts))
+            if (edge.Type == Flow.PortType.Context)
             {
-                errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标节点 {sourceName} 不是执行节点，无法取产出。"));
-                continue;
+                errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {container.Path} 必须是非输入执行节点。"));
             }
 
-            if (memberPorts.Find(target.Port) is not { } memberPort)
-            {
-                errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标节点 {sourceName} 没有输出端口 {target.Port.Value}。"));
-                continue;
-            }
+            return;
+        }
 
-            if (memberPort.Type == Flow.PortType.WorkItems)
-            {
-                errors.Add(scope.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
-            }
+        if (source is not ExecutableNode executable)
+        {
+            return;
+        }
+
+        if (executable.FindPort(edge.SourcePort) is null)
+        {
+            errors.Add(scope.Node(target.Path.Value, $"节点 {executable.Path} 没有输出端口 {edge.SourcePort.Value}。"));
+        }
+
+        if (!Visible(executable.Path, target.Path))
+        {
+            errors.Add(scope.Node(target.Path.Value,
+                $"不能从容器外直接引用容器内成员或端口 {executable.Path}，容器对外只暴露输出端口。"));
+        }
+
+        if (edge.Type == Flow.PortType.Context)
+        {
+            CheckContextSource(graph, executable, target, scope, errors);
         }
     }
 
-    /// <summary>名字是否出现在节点表里，执行与容器都算。</summary>
-    private static bool ContainsName(IReadOnlyList<NodeSpec> nodes, NodeName name)
+    /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口，且不按条目展开。</summary>
+    private static void CheckContextSource(NodeGraph graph, ExecutableNode source, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
-        foreach (NodeSpec node in nodes)
+        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(Flow.PortType.Context))
         {
-            if (node.Name == name)
-            {
-                return true;
-            }
-
-            if (node.Nodes is { Count: > 0 } children && ContainsName(children, name))
-            {
-                return true;
-            }
+            errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不产出上下文端口。"));
+            return;
         }
 
-        return false;
+        if (source.Execution.Mode == Flow.NodeMode.PerItem)
+        {
+            errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不能是按条目展开的节点。"));
+        }
+    }
+
+    /// <summary>来源是否对目标可见：目标的祖先容器链上有一层直接包含来源，同层成员可见，更深容器的成员对容器外不可见。</summary>
+    private static bool Visible(NodePath source, NodePath target) =>
+        source.Parent is { } parent && Ancestors(target).Any(container => container == parent);
+
+    /// <summary>目标的祖先容器路径，从直接所属容器起逐层向外。</summary>
+    private static IEnumerable<NodePath> Ancestors(NodePath path)
+    {
+        for (NodePath? current = path.Parent; current is { } container; current = container.Parent)
+        {
+            yield return container;
+        }
     }
 
     /// <summary>子树里是否至少有一个执行节点。</summary>
@@ -640,14 +434,17 @@ public static class FlowRules
         CheckAlignment(graph, scope, errors);
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
+        CheckContainerBindings(graph, scope, errors);
 
         foreach (FlowEdge edge in graph.Edges)
         {
-            GraphNode source = graph[edge.Source];
             if (graph[edge.Target] is not ExecutableNode target)
             {
                 continue;
             }
+
+            GraphNode source = graph[edge.Source];
+            CheckEdgeSource(graph, edge, target, scope, errors);
 
             if (target.Execution.Mode == Flow.NodeMode.Single
                 && source is ExecutableNode { Execution.Mode: Flow.NodeMode.PerItem }
@@ -672,9 +469,9 @@ public static class FlowRules
             }
 
             if (target.Execution.Branch is { } branch
-                && (target.Execution.Mode != Flow.NodeMode.PerItem || graph.PlanOf(target.Index)?.SplitSource is null))
+                && (target.Execution.Mode != Flow.NodeMode.PerItem || graph.PlanOf(target.Path)?.SplitSource is null))
             {
-                errors.Add(scope.Node(target.Name.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"));
+                errors.Add(scope.Node(target.Path.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"));
             }
         }
 
@@ -686,25 +483,25 @@ public static class FlowRules
                 continue;
             }
 
-            int splitSources = graph.Incoming(executable.Index)
+            int splitSources = graph.Incoming(executable.Path)
                 .Where(edge => edge.Role == EdgeKind.Split)
                 .Select(edge => edge.Source)
                 .Distinct()
                 .Count();
             if (splitSources > 1)
             {
-                errors.Add(scope.Node(executable.Name.Value, "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。"));
+                errors.Add(scope.Node(executable.Path.Value, "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。"));
             }
 
-            bool expandable = graph.Incoming(executable.Index).Any(edge =>
+            bool expandable = executable.Incoming.Any(edge =>
                 edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item);
             if (!expandable)
             {
                 // 容器来源只供整份上下文，不提供实例集，单独出现时节点永远无法展开
-                string reason = graph.Incoming(executable.Index).Any(edge => graph[edge.Source] is ContainerNode)
+                string reason = executable.Incoming.Any(edge => graph[edge.Source] is ContainerNode)
                     ? "按条目展开的执行节点不能从容器取实例集，请引用声明 WorkItems 端口的执行节点或其它展开执行节点。"
                     : "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。";
-                errors.Add(scope.Node(executable.Name.Value, reason));
+                errors.Add(scope.Node(executable.Path.Value, reason));
             }
         }
     }
@@ -713,7 +510,7 @@ public static class FlowRules
     /// 为按条目目标提供实例空间的连接不驱动启动，每个组都要写它，不受此限。</summary>
     private static void CheckGroupSources(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        foreach (IGrouping<(int Target, int Source, PortName SourcePort), FlowEdge> group in graph.Edges
+        foreach (IGrouping<(NodePath Target, NodePath Source, PortName SourcePort), FlowEdge> group in graph.Edges
             .Where(edge => edge.Role != EdgeKind.Split)
             .GroupBy(edge => (edge.Target, edge.Source, edge.SourcePort)))
         {
@@ -723,8 +520,7 @@ public static class FlowRules
                 continue;
             }
 
-            string reference = new PortRef(graph[group.Key.Source].Name, group.Key.SourcePort).Display;
-            errors.Add(scope.Node(target.Name.Value, $"From 的来源端口 {reference} 出现在多个组里。"));
+            errors.Add(scope.Node(target.Path.Value, $"From 的来源端口 {group.Key.Source}@{group.Key.SourcePort} 出现在多个组里。"));
         }
     }
 
@@ -732,40 +528,39 @@ public static class FlowRules
     /// 容器是成员的汇合点，成员与子容器全部可达时容器才可达，引用容器的下游随之可达。</summary>
     private static void CheckReachability(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        var reached = new HashSet<int> { graph.Start.Index };
-        var queue = new Queue<int>();
-        queue.Enqueue(graph.Start.Index);
+        var reached = new HashSet<NodePath> { graph.Start.Path };
+        var queue = new Queue<NodePath>();
+        queue.Enqueue(graph.Start.Path);
         while (true)
         {
             // reached.Add 兼作去重判定：首次到达的节点才入队
-            while (queue.TryDequeue(out int current))
+            while (queue.TryDequeue(out NodePath current))
             {
-                foreach (int next in graph.Outgoing(current).Select(edge => edge.Target).Where(reached.Add))
+                foreach (NodePath next in graph.Outgoing(current).Select(edge => edge.Target).Where(reached.Add))
                 {
                     queue.Enqueue(next);
                 }
             }
 
             ContainerNode? closed = graph.Containers.FirstOrDefault(container =>
-                !reached.Contains(container.Index)
-                && container.Members.All(reached.Contains)
-                && container.SubContainers.All(reached.Contains));
+                !reached.Contains(container.Path)
+                && container.Children.All(child => reached.Contains(child.Path)));
             if (closed is null)
             {
                 break;
             }
 
-            reached.Add(closed.Index);
-            queue.Enqueue(closed.Index);
+            reached.Add(closed.Path);
+            queue.Enqueue(closed.Path);
         }
 
         string entry = graph.Start.Outputs
             .Where(port => port.Value is null)
             .Select(port => $" {StartNode.ReservedName}@{port.Name}")
             .FirstOrDefault() ?? " 开始入口";
-        foreach (ExecutableNode executable in graph.ExecutableNodes.Where(node => !reached.Contains(node.Index)))
+        foreach (ExecutableNode executable in graph.ExecutableNodes.Where(node => !reached.Contains(node.Path)))
         {
-            errors.Add(scope.Node(executable.Name.Value, $"从开始不可达，不会被触发，请用 From 接到来源节点或{entry}。"));
+            errors.Add(scope.Node(executable.Path.Value, $"从开始不可达，不会被触发，请用 From 接到来源节点或{entry}。"));
         }
     }
 
@@ -777,14 +572,14 @@ public static class FlowRules
         {
             // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动条件永不满足的环
             if (graph[edge.Source] is ContainerNode container
-                && graph.ExecutablesIn(container.Index).Contains(edge.Target))
+                && graph.ExecutablesIn(container.Path).Contains(edge.Target))
             {
-                errors.Add(scope.Node(graph[edge.Target].Name.Value,
+                errors.Add(scope.Node(graph[edge.Target].Path.Value,
                     "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"));
             }
         }
 
-        foreach (int[] members in graph.Loops())
+        foreach (NodePath[] members in graph.Loops())
         {
             // 环内可自启动的节点是挂点也是周期外源，无需环外来源即可启动
             if (members.Any(member => graph.ShapeOf(member) is { StartsUnaided: true }))
@@ -799,7 +594,7 @@ public static class FlowRules
             if (!externalEntry)
             {
                 ExecutableNode representative = (ExecutableNode)graph[members[0]];
-                errors.Add(scope.Node(representative.Name.Value,
+                errors.Add(scope.Node(representative.Path.Value,
                     "引用环没有环外来源且环内没有输入节点，任务无法启动。"));
             }
         }
@@ -809,29 +604,29 @@ public static class FlowRules
     /// 整节点依赖构成的环由运行时自然迭代，不在此拒绝。</summary>
     private static void CheckAlignment(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        var indegree = new Dictionary<int, int>();
-        var outgoing = new Dictionary<int, List<int>>();
-        foreach (int index in graph.ExecutableNodes.Select(node => node.Index))
+        var indegree = new Dictionary<NodePath, int>();
+        var outgoing = new Dictionary<NodePath, List<NodePath>>();
+        foreach (NodePath path in graph.ExecutableNodes.Select(node => node.Path))
         {
-            indegree[index] = 0;
-            outgoing[index] = [];
+            indegree[path] = 0;
+            outgoing[path] = [];
         }
 
         foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item))
         {
-            foreach (int source in graph.ExecutablesIn(edge.Source))
+            foreach (NodePath source in graph.ExecutablesIn(edge.Source))
             {
                 indegree[edge.Target]++;
                 outgoing[source].Add(edge.Target);
             }
         }
 
-        var ready = new Queue<int>(indegree.Where(entry => entry.Value == 0).Select(entry => entry.Key));
+        var ready = new Queue<NodePath>(indegree.Where(entry => entry.Value == 0).Select(entry => entry.Key));
         int visited = 0;
-        while (ready.TryDequeue(out int current))
+        while (ready.TryDequeue(out NodePath current))
         {
             visited++;
-            foreach (int to in outgoing[current])
+            foreach (NodePath to in outgoing[current])
             {
                 if (--indegree[to] == 0)
                 {

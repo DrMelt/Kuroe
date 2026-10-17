@@ -21,6 +21,12 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。审批节点不启动 run，不限次数。</summary>
     public required int MaxRuns { get; init; }
 
+    /// <summary>汇入本节点的边，编译期落定，按编译顺序。输入侧方案与启动判定按它读数。</summary>
+    public IReadOnlyList<FlowEdge> Incoming { get; init; } = [];
+
+    /// <summary>输入侧方案，由自身声明与入边算出。不需来源即可挂起的类型没有方案，它们不按就绪判定。</summary>
+    public NodeInputPlan? Plan => Type.Shape.StartsUnaided ? null : NodeInputPlan.Of(Execution, Incoming);
+
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxRuns = 100;
 

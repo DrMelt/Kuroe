@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Execution.Engine;
 
@@ -40,9 +41,9 @@ sealed class FlowEngine(
     }
 
     /// <summary>给定节点的产出已变，推进它的下游与祖先容器。要求持有任务 Gate 之外的调用。</summary>
-    public void Resume(WorkTask task, IReadOnlyList<int> nodes)
+    public void Resume(WorkTask task, IReadOnlyList<NodePath> nodes)
     {
-        List<int> targets;
+        List<NodePath> targets;
         lock (task.Gate)
         {
             targets = [.. task.Runtime.Notify(nodes)];
@@ -59,7 +60,7 @@ sealed class FlowEngine(
         lock (task.Gate)
         {
             targets = task.Runtime.PlanRework(itemIndex);
-            foreach (IGrouping<(int Blocked, int? BlockedItem), TaskRuntime.ReworkTarget> group
+            foreach (IGrouping<(NodePath Blocked, int? BlockedItem), TaskRuntime.ReworkTarget> group
                 in targets.GroupBy(target => (target.Blocked, target.BlockedItem)))
             {
                 task.Runtime.Unblock(group.Key.Blocked, group.Key.BlockedItem, [.. group.Select(target => (target.Node, target.Item))]);

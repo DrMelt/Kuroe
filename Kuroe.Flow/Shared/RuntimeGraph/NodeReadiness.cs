@@ -91,7 +91,7 @@ public static class NodeReadiness
 
     /// <summary>同序号取值对该条目是否可用：来源已展开实例集，且来源不负责该条目或该条目已产出。
     /// 来源不负责的条目视为齐备，来源负责的条目必须等它产出。</summary>
-    private static bool ItemAvailable(int source, int item, IExecutionSources sources) =>
+    private static bool ItemAvailable(NodePath source, int item, IExecutionSources sources) =>
         sources.Items(source) is { } items
         && (!items.Contains(item) || sources.Source(source).ProducedItem(item));
 

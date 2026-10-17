@@ -28,7 +28,7 @@ public sealed class Run : IRun
         {
             Task = context.Task,
             Run = id,
-            NodeName = context.NodeName,
+            Node = context.Node,
             ItemIndex = context.ItemIndex,
             Journal = Journal,
             Sink = TurnSinks.For(Journal, new ProgressSink(this)),

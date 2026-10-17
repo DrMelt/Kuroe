@@ -9,22 +9,18 @@ namespace Kuroe.Flow.Tests;
 public sealed class NodeGraphTests
 {
     [Fact]
-    public void NodeGraph_locates_executables_by_name()
+    public void NodeGraph_locates_executables_by_path()
     {
         var graph = new NodeGraph(
         [
             new StartNode
             {
-                Index = 0,
-                Name = StartNode.ReservedName,
                 Path = new NodePath([StartNode.ReservedName]),
                 Outputs = [new Port(new PortName("目标"), PortType.Text)],
             },
             new ExecutableNode
             {
-                Index = 1,
-                Name = new NodeName("规划"),
-                Path = new NodePath([new NodeName("规划")]),
+                Path = NodePath.Of("规划"),
                 Type = TestNodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
@@ -33,9 +29,7 @@ public sealed class NodeGraphTests
             },
             new ExecutableNode
             {
-                Index = 2,
-                Name = new NodeName("实施"),
-                Path = new NodePath([new NodeName("实施")]),
+                Path = NodePath.Of("实施"),
                 Type = TestNodeTypes.Executable,
                 Execution = new ExecutableSpec { Mode = NodeMode.Single },
                 Model = Planner,
@@ -46,9 +40,9 @@ public sealed class NodeGraphTests
 
         Assert.Equal(3, graph.Count);
         Assert.Equal(2, graph.TotalExecutables);
-        Assert.Equal(1, graph.IndexOf(new NodeName("规划")));
-        Assert.Equal(2, graph.IndexOf(new NodeName("实施")));
-        Assert.Null(graph.IndexOf(new NodeName("检查")));
+        Assert.Equal(NodePath.Of("规划"), graph[NodePath.Of("规划")].Path);
+        Assert.Equal(NodePath.Of("实施"), graph[NodePath.Of("实施")].Path);
+        Assert.Throws<ArgumentException>(() => graph[NodePath.Of("检查")]);
     }
 
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("执行者") };

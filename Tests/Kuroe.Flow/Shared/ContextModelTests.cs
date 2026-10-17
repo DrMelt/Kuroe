@@ -30,7 +30,7 @@ public sealed class ContextModelTests
     public void RunSource_points_back_to_its_run()
     {
         RunId run = new(7);
-        RunSource source = new(run, new NodeName("实施"));
+        RunSource source = new(run, NodePath.Of("实施"));
 
         Assert.Equal("run #7 · 实施 产出", source.Label);
         Assert.Equal(run, source.FromRun);
@@ -49,7 +49,7 @@ public sealed class ContextModelTests
     [Fact]
     public void Input_and_start_sources_name_their_origin()
     {
-        InputSource input = new(new NodeName("取舍"));
+        InputSource input = new(NodePath.Of("取舍"));
         StartSource start = new(new PortName("目标"));
 
         Assert.Equal("节点「取舍」的输入", input.Label);
@@ -62,9 +62,9 @@ public sealed class ContextModelTests
     public void Container_and_frame_sources_point_back_to_their_run()
     {
         RunId run = new(4);
-        ContainerPortSource container = new(new NodeName("文档组"), new PortName("结论"));
-        ContextFrameSource step = new(run, new NodeName("实施"), null);
-        ContextFrameSource item = new(run, new NodeName("实施"), 1);
+        ContainerPortSource container = new(NodePath.Of("文档组"), new PortName("结论"));
+        ContextFrameSource step = new(run, NodePath.Of("实施"), null);
+        ContextFrameSource item = new(run, NodePath.Of("实施"), 1);
 
         Assert.Equal("容器「文档组」端口「结论」", container.Label);
         Assert.Null(container.FromRun);
@@ -76,8 +76,7 @@ public sealed class ContextModelTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        NodeIndex = 1,
-        NodeName = new NodeName("实施"),
+        Node = NodePath.Of("实施"),
         Instruction = "做事",
         Type = new StubNodeType(new NodeKind("Executable")),
     };

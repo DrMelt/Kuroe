@@ -5,6 +5,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Waiting;
 
@@ -34,12 +35,12 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
         }
 
         WorkTask task = found.Value;
-        (int? Output, int Baseline) = task.UnderLock(() =>
+        (NodePath? Output, int Baseline) = task.UnderLock(() =>
         {
             INodeTask access = task;
-            int? output = access.Graph.ExecutableNodes
-                .Where(node => access.Graph.ShapeOf(node.Index) is { DispatchesRuns: true })
-                .Select(node => node.Index)
+            NodePath? output = access.Graph.ExecutableNodes
+                .Where(node => access.Graph.ShapeOf(node.Path) is { DispatchesRuns: true })
+                .Select(node => node.Path)
                 .FirstOrDefault();
 
             return (output, task.Runs.Count);
@@ -63,7 +64,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
         // 订阅先于回答挂上：本轮 run 可能紧接回答就收口，晚挂会漏掉通知
         Action unsubscribeAttached = task.SubscribeRunAttached(run =>
         {
-            if (run.Context.NodeIndex != target)
+            if (run.Context.Node != target)
             {
                 return;
             }
@@ -87,7 +88,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
         });
         Action unsubscribeSettled = task.SubscribeRunSettled(run =>
         {
-            if (run.Context.NodeIndex != target)
+            if (run.Context.Node != target)
             {
                 return;
             }

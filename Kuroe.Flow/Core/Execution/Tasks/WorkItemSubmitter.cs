@@ -31,7 +31,7 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
 
         lock (task.Gate)
         {
-            RuntimeExecutable node = task.Runtime.Executable(run.Context.NodeIndex);
+            RuntimeExecutable node = task.Runtime.Executable(run.Context.Node);
             if (!node.Executable.HasWorkItemsPort)
             {
                 return Error.Validation("Tool.Argument", "该执行节点没有声明 WorkItems 端口，不能提交条目拆分。");
@@ -43,7 +43,7 @@ public sealed class WorkItemSubmitter(TaskRegistry registry)
             }
 
             List<BranchName> branches = [];
-            foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.NodeIndex))
+            foreach (FlowEdge edge in task.Graph.Outgoing(run.Context.Node))
             {
                 if (edge.Role == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } branch })
                 {

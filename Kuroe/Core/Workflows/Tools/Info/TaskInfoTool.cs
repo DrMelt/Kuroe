@@ -7,6 +7,7 @@ using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Presentation;
 
@@ -144,7 +145,7 @@ internal sealed class TaskInfoTool : ITool
                 string blocked = node.BlockedItems.Count == 0
                     ? string.Empty
                     : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => InfoLabels.Item(item)))}";
-                text.AppendLine($"  {task.Graph[node.Index].Name} · {InfoLabels.Of(node.State)}{items}{blocked}");
+                text.AppendLine($"  {task.Graph[node.Node].Name} · {InfoLabels.Of(node.State)}{items}{blocked}");
             }
         }
 
@@ -156,7 +157,7 @@ internal sealed class TaskInfoTool : ITool
                 continue;
             }
 
-            text.AppendLine($"  {task.OrdinalOf(node.Index)}. {node.Executable.Path}"
+            text.AppendLine($"  {task.OrdinalOf(node.Executable.Path)}. {node.Executable.Path}"
                 + $"（{node.Executable.Kind.Value} · {InfoLabels.Of(node.Executable.Execution.Mode)}）");
             foreach (RunSnapshot run in node.Runs)
             {
@@ -178,9 +179,9 @@ internal sealed class TaskInfoTool : ITool
     {
         RunContext context = run.Context;
         var text = new StringBuilder();
-        text.AppendLine($"{run.Id} · {context.NodeName} · {InfoLabels.Item(context.ItemIndex)}"
+        text.AppendLine($"{run.Id} · {context.Node} · {InfoLabels.Item(context.ItemIndex)}"
             + $" · 第 {context.ExecutionCount} 轮");
-        text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}"
+        text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.Node)}/{task.TotalExecutableNodes}"
             + $" · 模型 {(context.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
         text.AppendLine($"状态 {InfoLabels.State(run)}"
             + $" · {InfoLabels.Clock(run.StartedAt)} → {InfoLabels.Clock(run.FinishedAt)}"
@@ -218,9 +219,9 @@ internal sealed class TaskInfoTool : ITool
     /// <summary>拆分的条目清单。</summary>
     private static void AppendSplits(StringBuilder text, TaskSnapshot task)
     {
-        foreach ((int executableIndex, WorkItemList list) in task.Splits.OrderBy(entry => entry.Key))
+        foreach ((NodePath executable, WorkItemList list) in task.Splits)
         {
-            text.AppendLine($"拆分 {list.Items.Count} 条，由 {list.Origin} 在节点「{task.Graph[executableIndex].Name}」交回：");
+            text.AppendLine($"拆分 {list.Items.Count} 条，由 {list.Origin} 在节点「{task.Graph[executable].Path}」交回：");
             foreach (WorkItem item in list.Items)
             {
                 string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;

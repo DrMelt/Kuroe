@@ -60,7 +60,7 @@ internal sealed class InputRuntime(ExecutableNode executable) : NodeRuntime(exec
     /// <summary>按输出端口取可注入的回答消息，出处指向用户输入。</summary>
     public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, PortName port, int? item) =>
         item is null && Released && executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer
-            ? [new ContextMessage(MessageRole.User, $"节点「{Name}」的输入：\n{answer}", new InputSource(Name))]
+            ? [new ContextMessage(MessageRole.User, $"节点「{Path}」的输入：\n{answer}", new InputSource(Path))]
             : [];
 
     /// <summary>输入节点在快照里的一刻状态。</summary>
@@ -76,6 +76,6 @@ internal sealed class InputRuntime(ExecutableNode executable) : NodeRuntime(exec
             state = NodeState.Done;
         }
 
-        return new ExecutableStateSnapshot(Index, state, [], 0, []);
+        return new ExecutableStateSnapshot(Path, state, [], 0, []);
     }
 }

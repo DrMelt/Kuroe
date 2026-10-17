@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Shared.Waiting;
 using Xunit;
 
@@ -24,7 +25,7 @@ public sealed class ContainerAdvanceTests
         Assert.Single(parked.Executables[2].Runs);
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Empty(parked.Executables[4].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -64,8 +65,8 @@ public sealed class ContainerAdvanceTests
         RunSnapshot check = Assert.Single(done.Executables[3].Runs);
 
         // 容器来源把成员命名段按输出端口转进：每条绑定端口一条容器端口消息
-        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「交付」的端口「撰写结论」产出"));
-        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「交付」的端口「排版结论」产出"));
+        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「整体/交付」的端口「撰写结论」产出"));
+        Assert.Contains(check.Context.Seed, message => message.Text.Contains("节点「整体/交付」的端口「排版结论」产出"));
     }
 
     [Fact]
@@ -78,8 +79,8 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "撰写组").State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("撰写组")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -100,7 +101,7 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Name == "交付").State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -114,7 +115,7 @@ public sealed class ContainerAdvanceTests
     public void Nested_container_rebroadcasts_after_failed_rework()
     {
         using TestEnvironment environment = TestEnvironment.Create(NestedContainerReworkFlow);
-        environment.Executor.FailsWhen = run => run.Context.NodeIndex == 4 && run.Context.ExecutionCount == 1;
+        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "撰写" && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -136,13 +137,13 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot done = environment.Settle(id);
 
-        // 容器参与编号后图序号有空洞，展示顺位按执行节点表取名次
+        // 展示顺位按执行节点表取名次
         Assert.Equal(4, done.TotalExecutableNodes);
-        Assert.Equal(1, done.OrdinalOf(done.Executables[0].Index));
-        Assert.Equal(2, done.OrdinalOf(done.Executables[1].Index));
-        Assert.Equal(3, done.OrdinalOf(done.Executables[2].Index));
-        Assert.Equal(4, done.OrdinalOf(done.Executables[3].Index));
-        Assert.Equal(5, done.OrdinalOf(0));
+        Assert.Equal(1, done.OrdinalOf(done.Executables[0].Executable.Path));
+        Assert.Equal(2, done.OrdinalOf(done.Executables[1].Executable.Path));
+        Assert.Equal(3, done.OrdinalOf(done.Executables[2].Executable.Path));
+        Assert.Equal(4, done.OrdinalOf(done.Executables[3].Executable.Path));
+        Assert.Equal(5, done.OrdinalOf(NodePath.Of("Start")));
     }
 
     private const string BranchedItemsJson = """

@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.RuntimeNodes;
@@ -36,7 +37,7 @@ public sealed class LazyRuntimeTests
         Assert.Equal(TaskState.Running, snapshot.State);
         // 触达的是开始、根容器、制定计划、审批节点与它顺带评估的按条目实施；收尾从未被激活
         Assert.Equal(5, task.Runtime.MaterializedCount);
-        Assert.Null(task.Runtime.Materialized(5));
+        Assert.Null(task.Runtime.Materialized(task.Graph.PathOf("收尾")));
         Assert.Equal(0, snapshot.ExecutableStates[2].CompletedItems);
         Assert.Equal(4, snapshot.ExecutableStates.Count);
     }
@@ -54,8 +55,8 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
-        // 已实例化的是开始、根容器、根容器成员「制定计划」与在跑的容器成员「交付.实施」
-        Assert.Equal(4, task.Runtime.MaterializedCount);
+        // 已实例化的是开始、根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
+        Assert.Equal(5, task.Runtime.MaterializedCount);
         Assert.Equal(NodeState.Pending, environment.Snapshot(id).ExecutableStates[2].State);
     }
 
@@ -88,7 +89,7 @@ public sealed class LazyRuntimeTests
         environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        RuntimeExecutable late = task.Runtime.Executable(3);
+        RuntimeExecutable late = task.Runtime.Executable(task.Graph.PathOf("实施"));
         Assert.True(late.Canceled);
         Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[1].State);
     }

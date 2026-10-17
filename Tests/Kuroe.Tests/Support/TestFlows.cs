@@ -302,4 +302,29 @@ public static class TestFlows
           ]
         }
         """;
+
+    /// <summary>两个并行拆分来源：各自的按条目下游消费各自交回的条目清单。</summary>
+    public const string TwoSplitFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    { "Name": "计划甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "计划乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施甲", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划甲@拆分" } ] },
+                    { "Name": "实施乙", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划乙@拆分" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
 }

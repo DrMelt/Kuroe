@@ -139,7 +139,7 @@ public sealed class FakeExecutor : IRunExecutor
                 return Error.Failure("模拟执行器失败");
             }
 
-            return Output?.Invoke(run) ?? $"{run.Context.NodeName}产出";
+            return Output?.Invoke(run) ?? $"{run.Context.Node}产出";
         }
         finally
         {

@@ -20,7 +20,7 @@ internal static class RunContextFactory
         List<ContextMessage> seed = [];
         List<ContextMessage> contextInput = [];
         List<string> inputs = [];
-        foreach (FlowEdge edge in task.Graph.Incoming(node.Index))
+        foreach (FlowEdge edge in task.Graph.Incoming(node.Path))
         {
             inputs.Add(InputLine(task, edge));
             if (edge.Type == PortType.Signal)
@@ -56,8 +56,7 @@ internal static class RunContextFactory
         return new RunContext
         {
             Task = task.Id,
-            NodeIndex = node.Index,
-            NodeName = node.Name,
+            Node = node.Path,
             Instruction = node.Executable.Type.Compose(materials),
             Type = node.Executable.Type,
             Declaration = declaration,
@@ -86,16 +85,16 @@ internal static class RunContextFactory
     }
 
     /// <summary>取来源节点某端口的注入消息集并入种子：整份直接取放行产出，命名端口与上下文端口返回节点已构造的消息。</summary>
-    private static void AppendPortMessages(WorkTask task, int fromIndex, PortName port, int? item, List<ContextMessage> seed)
+    private static void AppendPortMessages(WorkTask task, NodePath from, PortName port, int? item, List<ContextMessage> seed)
     {
-        foreach (ContextMessage message in task.Runtime[fromIndex].OutputMessages(task, port, item))
+        foreach (ContextMessage message in task.Runtime[from].OutputMessages(task, port, item))
         {
             seed.Add(new ContextMessage(message.Role, Truncate(message.Text), message.Source));
         }
     }
     /// <summary>条目内容的出处 run：提供实例空间的拆分由哪个 run 交回。拆分尚未交回时给出空标识。</summary>
     private static RunId OriginOf(WorkTask task, RuntimeExecutable node) =>
-        task.Graph.ItemSpace(node.Index) is { } space
+        task.Graph.ItemSpace(node.Path) is { } space
         && task.Runtime.Materialized(space) is RuntimeExecutable { Split: { } split }
             ? split.Origin
             : new RunId(0);
@@ -190,7 +189,7 @@ internal static class RunContextFactory
     private static List<string> Branches(WorkTask task, RuntimeExecutable node)
     {
         List<string> branches = [];
-        foreach (FlowEdge edge in task.Graph.Outgoing(node.Index))
+        foreach (FlowEdge edge in task.Graph.Outgoing(node.Path))
         {
             if (edge.Role == EdgeKind.Split && task.Graph[edge.Target] is ExecutableNode { Execution.Branch: { } name })
             {

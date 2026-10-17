@@ -501,7 +501,7 @@ public sealed class CommandToolTests
     {
         Task = new TaskId(1),
         Run = new RunId(1),
-        NodeName = new NodeName("对话"),
+        Node = NodePath.Of("对话"),
         ItemIndex = null,
         Journal = new TurnJournal(),
         Sink = new NullSink(),

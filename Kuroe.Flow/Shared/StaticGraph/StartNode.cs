@@ -1,6 +1,6 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
-/// <summary>流程的唯一来源节点：序号 0，不属于任何容器，任务启动时即已放行。
+/// <summary>流程的唯一来源节点：不属于任何容器，任务启动时即已放行。
 /// 产出是提交任务时给的初始输入，节点经 From 引用 Start@端口 取用，容器外也能引用。</summary>
 public sealed record StartNode : GraphNode
 {

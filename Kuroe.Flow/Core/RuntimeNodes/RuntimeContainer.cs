@@ -10,12 +10,21 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
 
+    /// <summary>已实例化的直接子节点运行时对象。层级由容器自己持有，寻址从根逐段下钻。</summary>
+    private readonly List<NodeRuntime> _children = [];
+
     private readonly ConsumptionLedger _consumed = new();
     private int _revision;
     private bool _canceled;
 
+    /// <summary>已实例化的直接子节点，按登记顺序。</summary>
+    public IReadOnlyList<NodeRuntime> Children => _children;
+
+    /// <summary>登记一个直接子节点的运行时对象。</summary>
+    public void Add(NodeRuntime child) => _children.Add(child);
+
     /// <summary>输入侧方案：一组绑定覆盖全部直接成员与子容器。</summary>
-    private NodeInputPlan Plan => context.Plan(Index)!;
+    private NodeInputPlan Plan => context.Plan(Path)!;
 
     /// <summary>内容版本：任一直接来源发布新版本且容器重新齐备即递增，是容器作来源时与执行节点一致的版本账。</summary>
     public override long Revision => _revision;
@@ -45,9 +54,9 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
 
     IReadOnlyList<int>? IInputProgress.AdoptedItems => null;
 
-    long IInputProgress.ConsumedRevision(int source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
 
-    bool IInputProgress.ConsumedOnce(int source) => _consumed.ConsumedOnce(source);
+    bool IInputProgress.ConsumedOnce(NodePath source) => _consumed.ConsumedOnce(source);
 
     bool IInputProgress.Produced(int? item) => false;
 
@@ -62,10 +71,8 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     public override string? PortText(INodeTask task, PortName port)
     {
         if (Container.PortBindings is not { } bindings
-            || !bindings.TryGetValue(port, out PortRef target)
-            || target.Source is not { } memberName
-            || task.Graph.IndexOf(memberName) is not { } memberIndex
-            || context.Materialized(memberIndex) is not NodeRuntime member)
+            || !bindings.TryGetValue(port, out NodePort target)
+            || context.Materialized(target.Node) is not NodeRuntime member)
         {
             return null;
         }
@@ -84,17 +91,15 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
 
         if (Released
             && Container.PortBindings is { } bindings
-            && bindings.TryGetValue(port, out PortRef target)
-            && target.Source is { } memberName
-            && task.Graph.IndexOf(memberName) is { } memberIndex
-            && context.Materialized(memberIndex) is NodeRuntime member)
+            && bindings.TryGetValue(port, out NodePort target)
+            && context.Materialized(target.Node) is NodeRuntime member)
         {
             string? content = member.PortText(task, target.Port);
             if (content is { Length: > 0 })
             {
                 return [new ContextMessage(MessageRole.User,
-                    $"节点「{Name}」的端口「{port}」产出：\n{content}",
-                    new ContainerPortSource(Name, port))];
+                    $"节点「{Path}」的端口「{port}」产出：\n{content}",
+                    new ContainerPortSource(Path, port))];
             }
         }
 

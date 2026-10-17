@@ -30,7 +30,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
 
         lock (task.Gate)
         {
-            ExecutableNode executable = task.Runtime.Executable(run.Context.NodeIndex).Executable;
+            ExecutableNode executable = task.Runtime.Executable(run.Context.Node).Executable;
             if (!executable.HasTextPorts)
             {
                 return Error.Validation("Tool.Argument", "该节点没有声明 Text 输出端口。");

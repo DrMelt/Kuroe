@@ -24,7 +24,7 @@ public sealed class PortNodeTests
             .Single(entry => entry.Executable.Name.Value == "实施")
             .Runs.Single();
         Assert.Contains(implement.Context.Seed,
-            message => message.Text.Contains("节点「分析」的端口「结论」产出")
+            message => message.Text.Contains("节点「整体/分析」的端口「结论」产出")
                 && message.Text.Contains("结论产出"));
         Assert.DoesNotContain(implement.Context.Seed, message => message.Text.Contains("理由产出"));
     }
@@ -51,7 +51,7 @@ public sealed class PortNodeTests
 
         // 复盘不带端口引用在解析层拒绝；若按端口引用则出处带端口标签
         RunSnapshot review = environment.Executor.Started
-            .Single(run => run.Context.NodeIndex == 4 && run.Context.ItemIndex is null)
+            .Single(run => run.Context.Node.Name.Value == "复盘" && run.Context.ItemIndex is null)
             .Snapshot();
         Assert.Contains(review.Context.Seed, message => message.Text.Contains("端口「理由」产出"));
     }
@@ -70,9 +70,10 @@ public sealed class PortNodeTests
 
         // 上游 run 的指令单列，出处标记为上下文帧
         Assert.Contains(report.Context.Seed, message =>
-            message.Source is ContextFrameSource { NodeName.Value: "实施" } frame
+            message.Source is ContextFrameSource frame
+            && frame.Node.Name.Value == "实施"
             && frame.FromRun is not null
-            && message.Text.Contains("节点「实施」的指令"));
+            && message.Text.Contains("节点「整体/实施」的指令"));
 
         // 上游 Seed 里的条目消息原样保留，出处仍可回跳；拆分边不注入规划文本
         Assert.Contains(report.Context.Seed, message => message.Source is ItemSource);
@@ -191,10 +192,10 @@ public sealed class PortNodeTests
             ]
             """;
         environment.Executor.FailsWhen = run =>
-            run.Context.NodeIndex == 3 && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
+            run.Context.Node.Name.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
         environment.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.NodeIndex != 3)
+            if (run.Context.Node.Name.Value != "实施")
             {
                 return null;
             }
@@ -249,7 +250,7 @@ public sealed class PortNodeTests
         // 甲的第一轮提交空端口表，端口与声明不一一对应，视为未交回
         environment.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.NodeIndex != 3)
+            if (run.Context.Node.Name.Value != "实施")
             {
                 return null;
             }

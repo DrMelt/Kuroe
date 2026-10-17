@@ -17,22 +17,22 @@ public sealed class ReadinessTests
     [Fact]
     public void Version_driven_node_needs_a_new_source_version()
     {
-        ExecutableNode source = Definition(1, NodeMode.Single);
-        ExecutableNode target = Definition(2, NodeMode.Single);
-        NodeGraph graph = new([StartDefinition(), source, target], [Value(1, 2, Text, new PortName("结论"))]);
-        NodeInputPlan plan = Plan(graph, 2);
+        ExecutableNode source = Definition("节点1", NodeMode.Single);
+        ExecutableNode target = Definition("节点2", NodeMode.Single);
+        NodeGraph graph = new([StartDefinition(), source, target], [Value("节点1", "节点2", Text, new PortName("结论"))]);
+        NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
 
         Assert.Empty(NodeReadiness.Ready(plan, node, sources));
 
-        sources.Of(1).Publish();
+        sources.Of("节点1").Publish();
         Assert.Single(NodeReadiness.Ready(plan, node, sources));
 
         node.Consume(plan, sources);
         Assert.Empty(NodeReadiness.Ready(plan, node, sources));
 
-        sources.Of(1).Publish();
+        sources.Of("节点1").Publish();
         Assert.Single(NodeReadiness.Ready(plan, node, sources));
     }
 
@@ -48,22 +48,22 @@ public sealed class ReadinessTests
 
     private static void Run(bool signalFirst)
     {
-        ExecutableNode source = Definition(1, NodeMode.PerItem);
-        ExecutableNode target = Definition(2, NodeMode.Single);
-        FlowEdge data = new(1, 2, EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once, OutputPort, new PortName("结论"), Text);
-        FlowEdge trigger = new(1, 2, EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, new PortName("信号"), Signal);
+        ExecutableNode source = Definition("节点1", NodeMode.PerItem);
+        ExecutableNode target = Definition("节点2", NodeMode.Single);
+        FlowEdge data = new(NodePath.Of("节点1"), NodePath.Of("节点2"), EdgeKind.Value, FeedScope.AllInstances, FeedRecurrence.Once, OutputPort, new PortName("结论"), Text);
+        FlowEdge trigger = new(NodePath.Of("节点1"), NodePath.Of("节点2"), EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, new PortName("信号"), Signal);
         NodeGraph graph = new([StartDefinition(), source, target], signalFirst ? [trigger, data] : [data, trigger]);
-        NodeInputPlan plan = Plan(graph, 2);
+        NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
 
-        sources.Of(1).Publish([0, 1]);
+        sources.Of("节点1").Publish([0, 1]);
         Assert.Single(NodeReadiness.Ready(plan, node, sources));
 
         node.Consume(plan, sources);
         Assert.Empty(NodeReadiness.Ready(plan, node, sources));
 
-        sources.Of(1).Publish([0, 1]);
+        sources.Of("节点1").Publish([0, 1]);
         Assert.Single(NodeReadiness.Ready(plan, node, sources));
     }
 
@@ -72,8 +72,8 @@ public sealed class ReadinessTests
     public void PerItem_node_starts_when_any_group_is_ready()
     {
         Loop loop = Grouped();
-        loop.Sources.Split(1, [0, 1]);
-        loop.Sources.Of(3).Publish();
+        loop.Sources.Split("节点1", [0, 1]);
+        loop.Sources.Of("节点3").Publish();
 
         Assert.Equal([0, 1], NodeReadiness.Ready(loop.Input, loop.Node, loop.Sources));
     }
@@ -83,7 +83,7 @@ public sealed class ReadinessTests
     public void PerItem_group_waits_for_every_binding()
     {
         Loop loop = Grouped();
-        loop.Sources.Split(1, [0, 1]);
+        loop.Sources.Split("节点1", [0, 1]);
 
         Assert.Empty(NodeReadiness.Ready(loop.Input, loop.Node, loop.Sources));
     }
@@ -92,21 +92,21 @@ public sealed class ReadinessTests
     [Fact]
     public void Two_ready_groups_start_once()
     {
-        ExecutableNode first = Definition(1, NodeMode.Single);
-        ExecutableNode second = Definition(2, NodeMode.Single);
-        ExecutableNode target = Definition(3, NodeMode.Single);
+        ExecutableNode first = Definition("节点1", NodeMode.Single);
+        ExecutableNode second = Definition("节点2", NodeMode.Single);
+        ExecutableNode target = Definition("节点3", NodeMode.Single);
         NodeGraph graph = new(
             [StartDefinition(), first, second, target],
             [
-                Value(1, 3, Text, new PortName("甲"), group: 0),
-                Value(2, 3, Text, new PortName("乙"), group: 1),
+                Value("节点1", "节点3", Text, new PortName("甲"), group: 0),
+                Value("节点2", "节点3", Text, new PortName("乙"), group: 1),
             ]);
-        NodeInputPlan plan = Plan(graph, 3);
+        NodeInputPlan plan = Plan(graph, "节点3");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
 
-        sources.Of(1).Publish();
-        sources.Of(2).Publish();
+        sources.Of("节点1").Publish();
+        sources.Of("节点2").Publish();
         Assert.Single(NodeReadiness.Ready(plan, node, sources));
 
         node.Consume(plan, sources);
@@ -118,8 +118,8 @@ public sealed class ReadinessTests
     public void Produced_instance_is_not_started_again()
     {
         Loop loop = Grouped();
-        loop.Sources.Split(1, [0, 1]);
-        loop.Sources.Of(3).Publish();
+        loop.Sources.Split("节点1", [0, 1]);
+        loop.Sources.Of("节点3").Publish();
         loop.Node.AdoptItems([0, 1], null);
         loop.Node.Publish(Publishing(loop.Node, 0));
 
@@ -130,8 +130,7 @@ public sealed class ReadinessTests
     private static Run Publishing(RuntimeExecutable node, int item) => new(new RunId(1), new RunContext
     {
         Task = new TaskId(1),
-        NodeIndex = node.Index,
-        NodeName = node.Name,
+        Node = node.Path,
         Instruction = "产出",
         Type = TestNodeTypes.Executable,
         ItemIndex = item,
@@ -142,7 +141,7 @@ public sealed class ReadinessTests
     public void Item_node_without_split_has_no_instance()
     {
         Loop loop = Grouped();
-        loop.Sources.Of(3).Publish();
+        loop.Sources.Of("节点3").Publish();
 
         Assert.Empty(NodeReadiness.Ready(loop.Input, loop.Node, loop.Sources));
     }
@@ -151,15 +150,15 @@ public sealed class ReadinessTests
     [Fact]
     public void Aligned_binding_waits_for_the_source_instance()
     {
-        ExecutableNode source = Definition(1, NodeMode.PerItem);
-        ExecutableNode target = Definition(2, NodeMode.PerItem);
-        NodeGraph graph = new([StartDefinition(), source, target], [Aligned(1, 2, OutputPort)]);
-        NodeInputPlan plan = Plan(graph, 2);
+        ExecutableNode source = Definition("节点1", NodeMode.PerItem);
+        ExecutableNode target = Definition("节点2", NodeMode.PerItem);
+        NodeGraph graph = new([StartDefinition(), source, target], [Aligned("节点1", "节点2", OutputPort)]);
+        NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
 
-        sources.Of(1).Publish([0, 1]);
-        sources.Of(1).Produce(0);
+        sources.Of("节点1").Publish([0, 1]);
+        sources.Of("节点1").Produce(0);
 
         Assert.Equal([0], NodeReadiness.Ready(plan, node, sources));
     }
@@ -168,62 +167,60 @@ public sealed class ReadinessTests
     [Fact]
     public void Aligned_source_not_covering_an_item_leaves_it_ready()
     {
-        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
-        ExecutableNode aligned = Definition(2, NodeMode.PerItem);
-        ExecutableNode target = Definition(3, NodeMode.PerItem);
+        ExecutableNode split = Definition("节点1", NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
+        ExecutableNode aligned = Definition("节点2", NodeMode.PerItem);
+        ExecutableNode target = Definition("节点3", NodeMode.PerItem);
         NodeGraph graph = new(
             [StartDefinition(), split, aligned, target],
             [
-                FlowEdge.Split(1, 3, new PortName("拆分"), new PortName("任务")),
-                Aligned(2, 3, new PortName("依据")),
+                FlowEdge.Split(NodePath.Of("节点1"), NodePath.Of("节点3"), new PortName("拆分"), new PortName("任务")),
+                Aligned("节点2", "节点3", new PortName("依据")),
             ]);
-        NodeInputPlan plan = Plan(graph, 3);
+        NodeInputPlan plan = Plan(graph, "节点3");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
 
-        sources.Split(1, [0, 1]);
-        sources.Of(2).Publish([0]);
+        sources.Split("节点1", [0, 1]);
+        sources.Of("节点2").Publish([0]);
 
         Assert.Equal([1], NodeReadiness.Ready(plan, node, sources));
 
-        sources.Of(2).Produce(0);
+        sources.Of("节点2").Produce(0);
         Assert.Equal([0, 1], NodeReadiness.Ready(plan, node, sources));
     }
 
     /// <summary>两个组的按条目执行节点：空间取自拆分来源，组一要求拆分与数据来源，组二要求另一个数据来源。</summary>
     private static Loop Grouped()
     {
-        ExecutableNode split = Definition(1, NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
-        ExecutableNode first = Definition(2, NodeMode.Single);
-        ExecutableNode second = Definition(3, NodeMode.Single);
-        ExecutableNode target = Definition(4, NodeMode.PerItem);
+        ExecutableNode split = Definition("节点1", NodeMode.Single, outputs: [new Port(new PortName("拆分"), PortType.WorkItems)]);
+        ExecutableNode first = Definition("节点2", NodeMode.Single);
+        ExecutableNode second = Definition("节点3", NodeMode.Single);
+        ExecutableNode target = Definition("节点4", NodeMode.PerItem);
         NodeGraph graph = new(
             [StartDefinition(), split, first, second, target],
             [
-                FlowEdge.Split(1, 4, new PortName("拆分"), new PortName("任务"), 0),
-                Value(2, 4, Text, new PortName("结论"), group: 0),
-                Value(3, 4, Text, new PortName("依据"), group: 1),
+                FlowEdge.Split(NodePath.Of("节点1"), NodePath.Of("节点4"), new PortName("拆分"), new PortName("任务"), 0),
+                Value("节点2", "节点4", Text, new PortName("结论"), group: 0),
+                Value("节点3", "节点4", Text, new PortName("依据"), group: 1),
             ]);
 
-        return new Loop(Plan(graph, 4), new RuntimeExecutable(target), new FakeSources());
+        return new Loop(Plan(graph, "节点4"), new RuntimeExecutable(target), new FakeSources());
     }
 
     private readonly record struct Loop(NodeInputPlan Input, RuntimeExecutable Node, FakeSources Sources);
 
-    private static NodeInputPlan Plan(NodeGraph graph, int index) =>
-        graph.PlanOf(index) ?? throw new InvalidOperationException($"节点 {index} 没有输入侧方案。");
+    private static NodeInputPlan Plan(NodeGraph graph, string node) =>
+        graph.PlanOf(NodePath.Of(node)) ?? throw new InvalidOperationException($"节点 {node} 没有输入侧方案。");
 
-    private static FlowEdge Value(int from, int to, PortType type, PortName input, int group = 0) =>
-        new(from, to, EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, input, type, group);
+    private static FlowEdge Value(string from, string to, PortType type, PortName input, int group = 0) =>
+        new(NodePath.Of(from), NodePath.Of(to), EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat, OutputPort, input, type, group);
 
-    private static FlowEdge Aligned(int from, int to, PortName input) =>
-        new(from, to, EdgeKind.Value, FeedScope.Item, FeedRecurrence.Repeat, OutputPort, input, Text);
+    private static FlowEdge Aligned(string from, string to, PortName input) =>
+        new(NodePath.Of(from), NodePath.Of(to), EdgeKind.Value, FeedScope.Item, FeedRecurrence.Repeat, OutputPort, input, Text);
 
-    private static ExecutableNode Definition(int index, NodeMode mode, IReadOnlyList<Port>? outputs = null) => new()
+    private static ExecutableNode Definition(string name, NodeMode mode, IReadOnlyList<Port>? outputs = null) => new()
     {
-        Index = index,
-        Name = new NodeName($"节点{index}"),
-        Path = new NodePath([new NodeName($"节点{index}")]),
+        Path = NodePath.Of(name),
         Type = TestNodeTypes.Executable,
         Execution = new ExecutableSpec { Mode = mode },
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
@@ -233,41 +230,42 @@ public sealed class ReadinessTests
 
     private static StartNode StartDefinition() => new()
     {
-        Index = 0,
-        Name = StartNode.ReservedName,
         Path = new NodePath([StartNode.ReservedName]),
         Outputs = [new Port(OutputPort, PortType.Text)],
     };
 
-    /// <summary>判定用的来源侧：按序号给出放行状态、版本、展开实例与产出，拆分另按序号登记。</summary>
+    /// <summary>判定用的来源侧：按节点路径给出放行状态、版本、展开实例与产出，拆分另按节点路径登记。</summary>
     private sealed class FakeSources : IExecutionSources
     {
-        private readonly Dictionary<int, Source> _sources = [];
-        private readonly Dictionary<int, IReadOnlyList<int>> _splits = [];
+        private readonly Dictionary<NodePath, Source> _sources = [];
+        private readonly Dictionary<NodePath, IReadOnlyList<int>> _splits = [];
 
-        public ISourceState Source(int nodeIndex) => Of(nodeIndex);
+        public ISourceState Source(NodePath node) => Of(node);
 
-        public bool HasSplit(int nodeIndex) => _splits.ContainsKey(nodeIndex);
+        public bool HasSplit(NodePath node) => _splits.ContainsKey(node);
 
-        public IReadOnlyList<int>? SplitItems(int nodeIndex, BranchName? branch) =>
-            _splits.TryGetValue(nodeIndex, out IReadOnlyList<int>? items) ? items : null;
+        public IReadOnlyList<int>? SplitItems(NodePath node, BranchName? branch) =>
+            _splits.TryGetValue(node, out IReadOnlyList<int>? items) ? items : null;
 
-        public IReadOnlyList<int>? Items(int nodeIndex) => Of(nodeIndex).Items;
+        public IReadOnlyList<int>? Items(NodePath node) => Of(node).Items;
 
         /// <summary>登记某来源已交回的条目序。</summary>
-        public void Split(int nodeIndex, IReadOnlyList<int> items) => _splits[nodeIndex] = items;
+        public void Split(string node, IReadOnlyList<int> items) => _splits[NodePath.Of(node)] = items;
 
         /// <summary>取一个来源的状态，未登记时建一个未放行的。</summary>
-        public Source Of(int nodeIndex)
+        public Source Of(NodePath node)
         {
-            if (!_sources.TryGetValue(nodeIndex, out Source? source))
+            if (!_sources.TryGetValue(node, out Source? source))
             {
                 source = new Source();
-                _sources[nodeIndex] = source;
+                _sources[node] = source;
             }
 
             return source;
         }
+
+        /// <summary>按节点名取一个来源的状态。</summary>
+        public Source Of(string node) => Of(NodePath.Of(node));
     }
 
     /// <summary>来源的一刻状态：放行、版本、展开实例与已产出实例。</summary>

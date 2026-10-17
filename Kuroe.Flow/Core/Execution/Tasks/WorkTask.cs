@@ -47,7 +47,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>任务的流程编译视图，节点实现经它定位成员与读端口类型。</summary>
     INodeGraph INodeTask.Graph => Graph;
 
-    /// <summary>任务的节点上下文，宿主扩展按序号取节点运行期对象时使用。</summary>
+    /// <summary>任务的节点上下文，宿主扩展按节点名取节点运行期对象时使用。</summary>
     public INodeContext Context => Runtime;
 
     /// <summary>在任务状态锁下执行一段操作。状态改动都要经它串行。</summary>
@@ -155,7 +155,7 @@ public sealed class WorkTask : INodeTask
     internal void Attach(Run run)
     {
         _runs.Add(run);
-        Runtime.Executable(run.Context.NodeIndex).RecordRun(run.Context.ItemIndex);
+        Runtime.Executable(run.Context.Node).RecordRun(run.Context.ItemIndex);
         _lastActivityAt = DateTimeOffset.UtcNow;
         RunAttached?.Invoke(run);
     }
@@ -181,11 +181,11 @@ public sealed class WorkTask : INodeTask
 
             List<ExecutableSnapshot> executables =
             [
-                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node.Index, node,
-                    [.. _runs.Where(run => run.Context.NodeIndex == node.Index).Select(run => runs[run.Id])])),
+                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node,
+                    [.. _runs.Where(run => run.Context.Node == node.Path).Select(run => runs[run.Id])])),
             ];
 
-            List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Index))];
+            List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Path))];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
                 _runs.Count(run => run.IsLive), Runtime.Splits(), executables, executableStates,

@@ -12,7 +12,7 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, INodeContext co
     : NodeRuntime(executable), IInputProgress, IWaitNode
 {
     /// <summary>停在待批准时解析出的内容端口到来源端口的映射，未停驻时为空。信号输入不承载内容，不在此表中。</summary>
-    private readonly Dictionary<PortName, (int Source, PortName Port)> _content = [];
+    private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _content = [];
 
     private readonly ConsumptionLedger _consumed = new();
     private long _revision;
@@ -36,9 +36,9 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, INodeContext co
 
     IReadOnlyList<int>? IInputProgress.AdoptedItems => null;
 
-    long IInputProgress.ConsumedRevision(int source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
 
-    bool IInputProgress.ConsumedOnce(int source) => _consumed.ConsumedOnce(source);
+    bool IInputProgress.ConsumedOnce(NodePath source) => _consumed.ConsumedOnce(source);
 
     bool IInputProgress.Produced(int? item) => item is null && Released;
 
@@ -49,14 +49,14 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, INodeContext co
     /// <summary>哪一组就绪就按哪一组取值：记下该组的来源端口并登记消费账，重复停驻与取消后不停驻。</summary>
     public override void Activate(INodeContext context)
     {
-        if (_canceled || _awaiting || context.Plan(Index) is not { } plan
+        if (_canceled || _awaiting || context.Plan(Path) is not { } plan
             || NodeReadiness.AvailableGroup(plan, null, context) is not { } group)
         {
             return;
         }
 
         _content.Clear();
-        foreach (FlowEdge edge in context.Graph.Incoming(Index).Where(edge => edge.Group == group))
+        foreach (FlowEdge edge in context.Graph.Incoming(Path).Where(edge => edge.Group == group))
         {
             if (edge.Type != PortType.Signal)
             {
@@ -85,18 +85,18 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, INodeContext co
 
     /// <summary>按输出端口转发来源产出：放行时取当时齐备组解析出的来源端口内容，否则为空。</summary>
     public override string? PortText(INodeTask task, PortName port) =>
-        Released && _content.TryGetValue(port, out (int Source, PortName Port) reference)
+        Released && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
             ? context.Runtime(reference.Source).PortText(task, reference.Port)
             : null;
 
     /// <summary>按输出端口取可注入的产出消息：转发来源端口的消息集。审批节点整节点放行，不按条目取值。</summary>
     public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, PortName port, int? item) =>
-        Released && item is null && _content.TryGetValue(port, out (int Source, PortName Port) reference)
+        Released && item is null && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
             ? context.Runtime(reference.Source).OutputMessages(task, reference.Port, item)
             : [];
 
     /// <summary>审批节点在快照里的一刻状态。</summary>
-    public override ExecutableStateSnapshot Snapshot() => new(Index, State, [], 0, []);
+    public override ExecutableStateSnapshot Snapshot() => new(Path, State, [], 0, []);
 
     private NodeState State
     {

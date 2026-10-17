@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 using Xunit;
 
@@ -55,8 +56,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "较重.干活").MaxRuns);
-        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "较轻.干活").MaxRuns);
+        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较重/干活").MaxRuns);
+        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较轻/干活").MaxRuns);
     }
 
     /// <summary>容器统一上限到点后，组内失败的执行节点停驻且返工不放行。</summary>
@@ -71,7 +72,7 @@ public sealed class ContainerLimitTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(1, task.Runtime.Executable(2).ExecutionCount(null));
+        Assert.Equal(1, task.Runtime.Executable(task.Graph.PathOf("干活")).ExecutionCount(null));
         Assert.True(environment.Tasks.Rework(id, null).IsError, "达到上限的节点不能再返工");
     }
 

@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -12,15 +13,15 @@ public sealed class ValidationAdvanceTests
     public void Validate_pass_releases_downstream()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
-            3 => "修订产出已通过",
+            "计划" => "计划产出",
+            "修订" => "修订产出已通过",
             _ => "交付产出",
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            3 => """{"结论": "修订产出已通过"}""",
+            "修订" => """{"结论": "修订产出已通过"}""",
             _ => null,
         };
 
@@ -37,10 +38,10 @@ public sealed class ValidationAdvanceTests
     public void Validate_failure_blocks_node_without_releasing()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
-            3 => "修订产出不够好",
+            "计划" => "计划产出",
+            "修订" => "修订产出不够好",
             _ => "交付产出",
         };
 
@@ -48,7 +49,7 @@ public sealed class ValidationAdvanceTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("修订")).State);
         Assert.Empty(blocked.Executables[2].Runs);
     }
 
@@ -56,15 +57,15 @@ public sealed class ValidationAdvanceTests
     public void Validate_rework_resumes_and_passes()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewReviseFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
-            3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
+            "计划" => "计划产出",
+            "修订" => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "交付产出",
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            3 => run.Context.ExecutionCount == 1
+            "修订" => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
                 : """{"结论": "修订产出已通过"}""",
             _ => null,
@@ -107,13 +108,13 @@ public sealed class ValidationAdvanceTests
             """;
 
         using TestEnvironment environment = TestEnvironment.Create(flow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
+            "计划" => "计划产出",
             _ => output,
         };
         environment.Executor.PortValuesJsonFor = run =>
-            run.Context.NodeIndex == 3 ? $$"""{"结论": "{{output}}"}""" : null;
+            run.Context.Node.Name.Value == "修订" ? $$"""{"结论": "{{output}}"}""" : null;
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot snapshot = environment.Settle(id);
@@ -126,7 +127,7 @@ public sealed class ValidationAdvanceTests
         else
         {
             Assert.Equal(TaskState.Blocked, snapshot.State);
-            Assert.Equal(NodeState.Blocked, Assert.Single(snapshot.ExecutableStates, state => state.Index == 3).State);
+            Assert.Equal(NodeState.Blocked, Assert.Single(snapshot.ExecutableStates, state => state.Node.Name == new NodeName("修订")).State);
         }
     }
 
@@ -134,15 +135,15 @@ public sealed class ValidationAdvanceTests
     public void Group_stays_gated_until_source_releases_new_version()
     {
         using TestEnvironment environment = TestEnvironment.Create(FreshGateFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
-            3 => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
+            "计划" => "计划产出",
+            "修订" => run.Context.ExecutionCount == 1 ? "修订产出不够好" : "修订产出已通过",
             _ => "汇合产出",
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            3 => run.Context.ExecutionCount == 1
+            "修订" => run.Context.ExecutionCount == 1
                 ? """{"结论": "修订产出不够好"}"""
                 : """{"结论": "修订产出已通过"}""",
             _ => null,
@@ -180,10 +181,10 @@ public sealed class ValidationAdvanceTests
     public void Group_must_be_ready_before_start()
     {
         using TestEnvironment environment = TestEnvironment.Create(FromGateFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            1 => "甲产出",
-            2 => "乙产出",
+            "甲" => "甲产出",
+            "乙" => "乙产出",
             _ => "汇合产出",
         };
 
@@ -198,14 +199,14 @@ public sealed class ValidationAdvanceTests
     public void Container_source_waits_and_resumes_with_revision()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerGateFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            3 => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
+            "甲" => run.Context.ExecutionCount == 1 ? "甲产出不达标" : "甲产出已通过",
             _ => "闸门产出",
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            3 => run.Context.ExecutionCount == 1
+            "甲" => run.Context.ExecutionCount == 1
                 ? """{"结论": "甲产出不达标"}"""
                 : """{"结论": "甲产出已通过"}""",
             _ => null,
@@ -215,31 +216,31 @@ public sealed class ValidationAdvanceTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 3).State);
-        Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Index == 4).Runs);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("甲")).State);
+        Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Executable.Name == new NodeName("闸门")).Runs);
 
         environment.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Index == 3).Runs.Count);
-        Assert.Single(done.Executables.Single(snapshot => snapshot.Index == 4).Runs);
+        Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Executable.Name == new NodeName("甲")).Runs.Count);
+        Assert.Single(done.Executables.Single(snapshot => snapshot.Executable.Name == new NodeName("闸门")).Runs);
     }
 
     [Fact]
     public void Loop_restarts_writer_on_reviewer_new_version()
     {
         using TestEnvironment environment = TestEnvironment.Create(LoopFlow);
-        environment.Executor.Output = run => run.Context.NodeIndex switch
+        environment.Executor.Output = run => run.Context.Node.Name.Value switch
         {
-            2 => "计划产出",
-            3 => "修订产出",
-            4 => run.Context.ExecutionCount == 1 ? "审查未达标准" : "审查通过",
+            "计划" => "计划产出",
+            "修订" => "修订产出",
+            "审查" => run.Context.ExecutionCount == 1 ? "审查未达标准" : "审查通过",
             _ => "交付产出",
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.NodeIndex switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
         {
-            4 => run.Context.ExecutionCount == 1
+            "审查" => run.Context.ExecutionCount == 1
                 ? """{"结论": "审查未达标准"}"""
                 : """{"结论": "审查通过"}""",
             _ => null,
@@ -250,7 +251,7 @@ public sealed class ValidationAdvanceTests
         // 首次：计划驱动修订初稿，审查判定未达标准停驻
         TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Index == 4).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("审查")).State);
         Assert.Empty(blocked.Executables[3].Runs);
 
         // 返工：审查通过并放行后，修订被审查的新版本再次驱动，交付随终稿放行

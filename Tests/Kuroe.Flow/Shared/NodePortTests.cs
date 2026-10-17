@@ -63,8 +63,6 @@ public sealed class NodePortTests
     {
         StartNode start = new()
         {
-            Index = 0,
-            Name = StartNode.ReservedName,
             Path = new NodePath([StartNode.ReservedName]),
             Outputs = [new Port(new PortName("目标"), PortType.Text)],
         };
@@ -76,9 +74,7 @@ public sealed class NodePortTests
 
     private static ExecutableNode Executable(IReadOnlyList<Port> outputs) => new()
     {
-        Index = 1,
-        Name = new NodeName("实施"),
-        Path = new NodePath([new NodeName("实施")]),
+        Path = NodePath.Of("实施"),
         Type = new StubNodeType(new NodeKind("Executable")),
         Execution = new ExecutableSpec(),
         Model = new ModelDefinition { Name = new ModelRef("执行者") },

@@ -7,6 +7,7 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Flow.Node.Llm.Tools;
 using Kuroe.Workflows.Execution;
@@ -147,7 +148,7 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>执行节点状态摘要，用于超时信息里的定位。</summary>
     private static string NodeStates(TaskSnapshot snapshot) =>
         string.Join("、", snapshot.ExecutableStates.Select(state =>
-            $"{state.Index} {state.State}" + (state.Items.Count > 0 ? $" {state.CompletedItems}/{state.Items.Count}" : string.Empty)));
+            $"{state.Node} {state.State}" + (state.Items.Count > 0 ? $" {state.CompletedItems}/{state.Items.Count}" : string.Empty)));
 
     /// <summary>等到任务满足条件为止，超时即失败。</summary>
     public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 5000)
@@ -204,10 +205,10 @@ public sealed class TestEnvironment : IDisposable
     public bool Awaiting(TaskId id) =>
         Waits.Pending(id) is { IsError: false } pending && pending.Value.Count > 0;
 
-    /// <summary>任务里停在给定等待种类的节点序号。</summary>
-    public IReadOnlyList<int> Awaiting(TaskId id, AwaitKind kind) =>
+    /// <summary>任务里停在给定等待种类的节点路径。</summary>
+    public IReadOnlyList<NodePath> Awaiting(TaskId id, AwaitKind kind) =>
         Waits.Pending(id) is { IsError: false } pending
-            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => node.Index)]
+            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => node.Node)]
             : [];
 
     public void Dispose()

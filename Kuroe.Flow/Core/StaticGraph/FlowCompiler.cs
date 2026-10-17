@@ -1,216 +1,289 @@
+using ErrorOr;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
 namespace Kuroe.Flow.StaticGraph;
 
 using Flow = Shared.StaticGraph;
 
-/// <summary>把流程树编译成执行视图：开始登记为序号 0 的唯一来源，节点按先根序统一编号，容器登记成员与子容器，
+/// <summary>把流程树编译成执行视图：开始是唯一来源，节点以从根到本节点的路径标识，容器登记直接子节点，
 /// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
+/// 引用按作用域链解析成路径：从引用者所在容器逐层向外，先看该层的直接子节点，再看该层子树，定义内引用因此可以指向子树的成员。
 /// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
-internal static class FlowCompiler
+internal sealed class FlowCompiler
 {
-    /// <summary>编译流程树。</summary>
-    public static NodeGraph Compile(FlowDefinition flow)
+    /// <summary>模型选择按名字解析。</summary>
+    private readonly Dictionary<ModelRef, ModelDefinition> _models;
+
+    /// <summary>报错作用域，引用解析与结构问题按它给出流程级错误。</summary>
+    private readonly NodeScope _scope;
+
+    /// <summary>开始入口的输出端口，开始不在展开后的节点树里，它的端口声明来自流程。</summary>
+    private readonly IReadOnlyList<Port> _startOutputs;
+
+    /// <summary>编译中收集的错误，引用无法解析时不抛出，交调用方按普通校验错误处理。</summary>
+    private readonly List<Error> _errors = [];
+
+    /// <summary>根级节点，开始不在其中，它由编译直接构造。</summary>
+    private readonly List<Pending> _roots = [];
+
+    /// <summary>编译出的边，按登记顺序。</summary>
+    private readonly List<FlowEdge> _edges = [];
+
+    private FlowCompiler(IReadOnlyList<ModelDefinition> models, IReadOnlyList<Port> startOutputs, NodeScope scope)
     {
-        Dictionary<ModelRef, ModelDefinition> models = flow.Models.ToDictionary(model => model.Name);
-
-        var nodes = new List<GraphNode>();
-        var byName = new Dictionary<NodeName, int>();
-        var containers = new Dictionary<int, ContainerBuilder>();
-        var dependencies = new Dictionary<int, List<Dependency>>();
-
-        // 先登记全部名字与序号，From 对后面的节点引用才可解析
-        nodes.Add(NewStart(flow.StartOutputs));
-        byName[StartNode.ReservedName] = 0;
-        RegisterNames(flow.RootNode, byName, nodes.Count);
-        SecondPass(flow.RootNode, models, nodes, byName, containers, dependencies, [], parent: null);
-
-        // 用登记好的成员与子容器固化容器定义
-        foreach (ContainerBuilder builder in containers.Values)
-        {
-            nodes[builder.Index] = new ContainerNode
-            {
-                Index = builder.Index,
-                Name = builder.Name,
-                Path = builder.Path,
-                Type = builder.Type,
-                Members = builder.Members,
-                SubContainers = builder.SubContainers,
-                PortBindings = builder.PortBindings,
-            };
-        }
-
-        List<FlowEdge> edges = [];
-        foreach (ExecutableNode executable in nodes.OfType<ExecutableNode>())
-        {
-            foreach (Dependency dependency in dependencies[executable.Index])
-            {
-                // 上下文与信号输入按整份消费，其余按来源与目标模式推导，来源端口与取值域正交
-                (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = dependency.Type == Flow.PortType.Text
-                    ? FeedRules.Of(nodes[dependency.Source], executable.Execution.Mode, dependency.SourcePort)
-                    : (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat);
-
-                edges.Add(new FlowEdge(
-                    dependency.Source,
-                    executable.Index,
-                    kind,
-                    scope,
-                    recurrence,
-                    dependency.SourcePort,
-                    dependency.TargetInput,
-                    dependency.Type,
-                    dependency.Group));
-            }
-        }
-
-        return new NodeGraph(nodes, edges);
+        _models = models.ToDictionary(model => model.Name);
+        _startOutputs = startOutputs;
+        _scope = scope;
     }
 
-    /// <summary>开始节点：序号 0，不属于任何容器，任务启动即已放行。</summary>
-    private static StartNode NewStart(IReadOnlyList<Port> outputs) => new()
+    /// <summary>开始节点的路径，流程编译视图里唯一且固定。</summary>
+    private static NodePath StartPath => new([StartNode.ReservedName]);
+
+    /// <summary>编译流程树：把流程树展开成执行视图。引用无法按作用域解析与绑定端口引用等结构问题记入错误结果，其余情况给出执行视图。</summary>
+    public static ErrorOr<NodeGraph> Compile(FlowDefinition flow) =>
+        Compile(flow, NodeScope.Flow(flow.Name.Value));
+
+    private static ErrorOr<NodeGraph> Compile(FlowDefinition flow, NodeScope scope)
     {
-        Index = 0,
-        Name = StartNode.ReservedName,
-        Path = new NodePath([StartNode.ReservedName]),
-        Outputs = outputs,
-    };
+        var compiler = new FlowCompiler(flow.Models, flow.StartOutputs, scope);
+        compiler._roots.Add(Build(flow.RootNode, parent: null));
 
-    /// <summary>容器定义的编译期登记，最终固化为 <see cref="ContainerNode"/>。</summary>
-    private sealed record ContainerBuilder(
-        int Index,
-        NodeName Name,
-        NodePath Path,
-        INodeType Type,
-        List<int> Members,
-        List<int> SubContainers,
-        IReadOnlyDictionary<PortName, PortRef>? PortBindings);
-
-    /// <summary>编译期暂存的一条依赖：来源序号、来源端口、目标输入端口、类型与组序号，编译成边后不再保留。</summary>
-    private readonly record struct Dependency(
-        int Source,
-        PortName SourcePort,
-        PortName TargetInput,
-        PortType Type,
-        int Group);
-
-    /// <summary>先根序登记全部节点名与统一序号，第二遍用它把 From 名字转成序号。</summary>
-    private static int RegisterNames(NodeSpec node, Dictionary<NodeName, int> order, int next)
-    {
-        order[node.Name] = next;
-        next++;
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                next = RegisterNames(child, order, next);
-            }
-        }
-
-        return next;
+        return compiler.Assemble();
     }
 
-    private static void SecondPass(
-        NodeSpec node,
-        Dictionary<ModelRef, ModelDefinition> models,
-        List<GraphNode> nodes,
-        Dictionary<NodeName, int> byName,
-        Dictionary<int, ContainerBuilder> containers,
-        Dictionary<int, List<Dependency>> dependencies,
-        List<NodeName> path,
-        int? parent)
+    /// <summary>编译期的节点：定义、路径、父与直接子节点，以及本轮编译落定的端口绑定与编译出的节点记录。</summary>
+    private sealed class Pending(NodeSpec spec, NodePath path, Pending? parent)
     {
-        if (node.Execution is { } execution)
-        {
-            int index = nodes.Count;
-            nodes.Add(NewExecutable(node, execution, index, path, models));
-            dependencies[index] = ResolveFrom(node.From, node, byName);
-            if (parent is { } memberContainer)
-            {
-                containers[memberContainer].Members.Add(index);
-            }
+        public NodeSpec Spec { get; } = spec;
+        public NodePath Path { get; } = path;
+        public Pending? Parent { get; } = parent;
+        public List<Pending> Children { get; } = [];
+        public Dictionary<PortName, NodePort> Bindings { get; } = [];
 
-            return;
-        }
-
-        int container = nodes.Count;
-        NodePath containerPath = new([.. path, node.Name]);
-        IReadOnlyDictionary<PortName, PortRef>? bindings = ToBindings(node.ContainerOutputs);
-        containers[container] = new ContainerBuilder(container, node.Name, containerPath, TypeOf(node), [], [], bindings);
-        nodes.Add(new ContainerNode
-        {
-            Index = container,
-            Name = node.Name,
-            Path = containerPath,
-            Type = TypeOf(node),
-            Members = [],
-            SubContainers = [],
-            PortBindings = bindings,
-        });
-        if (parent is { } childContainer)
-        {
-            containers[childContainer].SubContainers.Add(container);
-        }
-
-        path.Add(node.Name);
-        foreach (NodeSpec child in node.Nodes ?? [])
-        {
-            SecondPass(child, models, nodes, byName, containers, dependencies, path, container);
-        }
-        path.RemoveAt(path.Count - 1);
+        /// <summary>编译出的节点记录，子树编译完成后填入。</summary>
+        public GraphNode? Node { get; set; }
     }
 
-    private static ExecutableNode NewExecutable(
-        NodeSpec node,
-        ExecutableSpec execution,
-        int index,
-        List<NodeName> path,
-        Dictionary<ModelRef, ModelDefinition> models) => new()
-        {
-            Index = index,
-            Name = node.Name,
-            Path = new NodePath([.. path, node.Name]),
-            Type = TypeOf(node),
-            Model = node.Model is { } modelReference ? models[modelReference] : null,
-            Execution = execution,
-            Outputs = node.Outputs,
-            MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
-        };
-
-    /// <summary>节点的类型描述。编译只接受已通过校验的节点树，类型缺失在此防御性报出。</summary>
-    private static INodeType TypeOf(NodeSpec node) =>
-        node.Type ?? throw new InvalidOperationException($"节点 {node.Name} 没有类型，编译只接受已校验的节点树。");
-
-    /// <summary>容器输出端口声明投影成图上的绑定表：说明只属于定义与展示，图上只留成员引用。</summary>
-    private static Dictionary<PortName, PortRef>? ToBindings(
-        IReadOnlyDictionary<PortName, ContainerOutput>? outputs) =>
-        outputs?.ToDictionary(entry => entry.Key, entry => entry.Value.Ref);
-
-    /// <summary>把启动组编译成编译期依赖：来源序号经查表落定，类型取自目标输入端口的声明，组序号按组序给出。
-    /// 绑定端口引用在 From 里不成立，编译前应由校验层拦截，这里给防御性错误。</summary>
-    private static List<Dependency> ResolveFrom(
-        IReadOnlyList<FromGroup> groups,
-        NodeSpec node,
-        Dictionary<NodeName, int> order)
+    /// <summary>按先根序建出编译期的节点树：路径是父路径加本节点名，层级由树给出，不靠名字前缀。</summary>
+    private static Pending Build(NodeSpec spec, Pending? parent)
     {
-        List<Dependency> dependencies = [];
+        var pending = new Pending(spec, parent is null ? new NodePath([spec.Name]) : parent.Path.Append(spec.Name), parent);
+        parent?.Children.Add(pending);
+
+        foreach (NodeSpec child in spec.Nodes ?? [])
+        {
+            Build(child, pending);
+        }
+
+        return pending;
+    }
+
+    /// <summary>解析引用、把边与方案挂到节点上，按先根序给出节点表，构造执行视图。解析失败时只给错误。</summary>
+    private ErrorOr<NodeGraph> Assemble()
+    {
+        LinkEdges();
+
+        List<Pending> order = [.. Flatten(_roots)];
+        foreach (Pending pending in Enumerable.Reverse(order))
+        {
+            pending.Node = pending.Spec.Nodes is { Count: > 0 } ? NewContainer(pending) : NewExecutable(pending);
+        }
+
+        return _errors.Count > 0
+            ? _errors
+            : new NodeGraph([NewStart(), .. order.Select(pending => pending.Node!)], _edges);
+    }
+
+    /// <summary>把 From 启动组与容器输出端口绑定解析成路径，落定全部边。</summary>
+    private void LinkEdges()
+    {
+        foreach (Pending pending in Flatten(_roots))
+        {
+            if (pending.Spec.Execution is { } execution)
+            {
+                LinkExecutable(pending, execution);
+                continue;
+            }
+
+            LinkContainerOutputs(pending);
+        }
+    }
+
+    /// <summary>执行节点的 From 启动组编译成边：组序号按组序，来源与端口按作用域解析，取值方式按来源与目标推导。</summary>
+    private void LinkExecutable(Pending pending, ExecutableSpec execution)
+    {
         int groupIndex = 0;
-        foreach (FromGroup group in groups)
+        foreach (FromGroup group in pending.Spec.From)
         {
             foreach (FromLink link in group.Links)
             {
                 if (link.Ref.Source is not { } name)
                 {
-                    throw new InvalidOperationException(
-                        $"From 连接 {link.Ref.Display} 是对绑定端口的引用，编译只接受已展开的流程树。");
+                    _errors.Add(_scope.Node(pending.Path.Value,
+                        $"From 连接 {link.Ref.Display} 是对绑定端口的引用，请写明来源节点。"));
+                    continue;
                 }
 
-                InputPort? input = Flow.Ports.Find(node.Inputs, link.Input);
-                PortType type = input?.Type ?? Flow.PortType.Text;
-                dependencies.Add(new Dependency(order[name], link.Ref.Port, link.Input, type, groupIndex));
+                (NodePath? source, NodeMode sourceMode, PortType sourceType) = SourceOf(name, link.Ref.Port, pending);
+                if (source is not { } from)
+                {
+                    continue;
+                }
+
+                PortType type = Flow.Ports.Find(pending.Spec.Inputs, link.Input)?.Type ?? Flow.PortType.Text;
+
+                // 上下文与信号输入按整份消费，其余按来源与目标模式推导，来源端口与取值域正交
+                (EdgeKind kind, FeedScope scope, FeedRecurrence recurrence) = type != Flow.PortType.Text
+                    ? (EdgeKind.Value, FeedScope.Whole, FeedRecurrence.Repeat)
+                    : FeedRules.Of(sourceMode, sourceType, execution.Mode);
+
+                AddEdge(from, pending.Path, kind, scope, recurrence, link.Ref.Port, link.Input, type, groupIndex);
             }
 
             groupIndex++;
         }
-
-        return dependencies;
     }
+
+    /// <summary>解析一条 From 连接的来源：开始是流程级来源，其余按作用域链解析。解析失败时给空来源。</summary>
+    private (NodePath? Source, NodeMode Mode, PortType PortType) SourceOf(NodeName name, PortName port, Pending referrer)
+    {
+        if (name == StartNode.ReservedName)
+        {
+            return (StartPath, NodeMode.Single, _startOutputs.Find(port)?.Type ?? Flow.PortType.Text);
+        }
+
+        return Resolve(name, referrer) is { } source
+            ? (source.Path, source.Spec.Execution?.Mode ?? NodeMode.Single,
+                source.Spec.Outputs.Find(port)?.Type ?? Flow.PortType.Text)
+            : (null, NodeMode.Single, Flow.PortType.Text);
+    }
+
+    /// <summary>容器输出端口的名字引用解析成成员路径，端口名按声明原样保留。解析失败时给出错误。</summary>
+    private void LinkContainerOutputs(Pending pending)
+    {
+        if (pending.Spec.ContainerOutputs is not { Count: > 0 } outputs)
+        {
+            return;
+        }
+
+        foreach ((PortName port, ContainerOutput output) in outputs)
+        {
+            if (output.Ref.Source is not { } name)
+            {
+                _errors.Add(_scope.Node(pending.Path.Value,
+                    $"容器输出端口 {port} 的绑定是对绑定端口的引用，绑定目标写成目标成员名。"));
+                continue;
+            }
+
+            if (ResolveIn(pending.Children, name) is not { } member)
+            {
+                _errors.Add(_scope.Node(pending.Path.Value,
+                    $"容器输出端口 {port} 的绑定目标 {name} 不在容器 {pending.Path} 的子树里。"));
+                continue;
+            }
+
+            pending.Bindings[port] = new NodePort(member.Path, output.Ref.Port);
+        }
+    }
+
+    /// <summary>登记一条边：边表按登记顺序，入出边由执行视图在构造时挂到节点上。</summary>
+    private void AddEdge(
+        NodePath source,
+        NodePath target,
+        EdgeKind kind,
+        FeedScope scope,
+        FeedRecurrence recurrence,
+        PortName sourcePort,
+        PortName targetInput,
+        PortType type,
+        int group) =>
+        _edges.Add(new FlowEdge(source, target, kind, scope, recurrence, sourcePort, targetInput, type, group));
+
+    /// <summary>按名字在作用域子树里解析节点：从引用者所在容器逐层向外，每层先看直接子节点再看子树。找不到时记错误给空。</summary>
+    private Pending? Resolve(NodeName name, Pending referrer)
+    {
+        Pending? scope = referrer.Parent;
+        while (true)
+        {
+            if (ResolveIn(scope?.Children ?? _roots, name) is { } found)
+            {
+                return found;
+            }
+
+            if (scope is null)
+            {
+                _errors.Add(_scope.Node(referrer.Path.Value, $"From 引用的节点 {name} 不在流程里。"));
+                return null;
+            }
+
+            scope = scope.Parent;
+        }
+    }
+
+    /// <summary>按名字在一层子节点及其子树里解析节点：直接子节点优先，子树里命中多个或没有命中时给空。</summary>
+    private Pending? ResolveIn(IReadOnlyList<Pending> children, NodeName name)
+    {
+        if (children.FirstOrDefault(child => child.Spec.Name == name) is { } direct)
+        {
+            return direct;
+        }
+
+        List<Pending> deeper = [.. children.SelectMany(Descendants).Where(node => node.Spec.Name == name)];
+        if (deeper.Count > 1)
+        {
+            _errors.Add(_scope.Node(name.Value, $"引用 {name} 在作用域里命中多个节点，同层节点名不能重复。"));
+            return null;
+        }
+
+        return deeper.Count == 1 ? deeper[0] : null;
+    }
+
+    /// <summary>子树按先根序展开，容器先于它的子节点。</summary>
+    private static IEnumerable<Pending> Flatten(IReadOnlyList<Pending> nodes) =>
+        nodes.SelectMany(node => new[] { node }.Concat(Flatten(node.Children)));
+
+    /// <summary>节点的全部后代，不含自身，按先根序。</summary>
+    private static IEnumerable<Pending> Descendants(Pending node) => Flatten(node.Children);
+
+    /// <summary>开始节点：不属于任何容器，不被任何容器包含，任务启动即已放行。</summary>
+    private StartNode NewStart() => new()
+    {
+        Path = StartPath,
+        Outputs = _startOutputs,
+    };
+
+    /// <summary>执行节点：类型、模型与执行配置落定。</summary>
+    private ExecutableNode NewExecutable(Pending pending)
+    {
+        NodeSpec spec = pending.Spec;
+        ExecutableSpec execution = spec.Execution!;
+
+        return new ExecutableNode
+        {
+            Path = pending.Path,
+            Type = TypeOf(spec),
+            Model = spec.Model is { } model ? _models[model] : null,
+            Execution = execution,
+            Outputs = spec.Outputs,
+            MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
+        };
+    }
+
+    /// <summary>容器节点：类型与直接子节点落定，命名输出端口绑定一并挂上。</summary>
+    private static ContainerNode NewContainer(Pending pending)
+    {
+        List<GraphNode> children = [.. pending.Children.Select(child => child.Node!)];
+
+        return new ContainerNode
+        {
+            Path = pending.Path,
+            Type = TypeOf(pending.Spec),
+            Children = children,
+            PortBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
+        };
+    }
+
+    /// <summary>节点的类型描述。编译只接受已通过校验的节点树，类型缺失在此防御性报出。</summary>
+    private static INodeType TypeOf(NodeSpec node) =>
+        node.Type ?? throw new InvalidOperationException($"节点 {node.Name} 没有类型，编译只接受已校验的节点树。");
 }

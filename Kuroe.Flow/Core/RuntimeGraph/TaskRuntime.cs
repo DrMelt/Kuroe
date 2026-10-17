@@ -18,8 +18,10 @@ namespace Kuroe.Flow.RuntimeGraph;
 internal sealed class TaskRuntime : INodeContext
 {
     private readonly WorkTask _task;
-    private readonly NodeRuntime?[] _nodes;
     private bool _taskCanceled;
+
+    /// <summary>已实例化的根级运行时节点：开始与流程根节点。容器的直接子节点由容器自己持有。</summary>
+    private readonly List<NodeRuntime> _roots = [];
 
     /// <summary>未实例化节点的来源状态：没有产出、版本为零。</summary>
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
@@ -30,115 +32,158 @@ internal sealed class TaskRuntime : INodeContext
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _nodes = new NodeRuntime?[task.Graph.Nodes.Count];
+        // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
+        _ = Ensure(Graph.Start.Path);
     }
 
     /// <summary>任务锁定的流程编译视图。</summary>
     public NodeGraph Graph => _task.Graph;
 
     /// <summary>已实例化的运行时节点数，诊断与测试观测懒实例化的边界。</summary>
-    internal int MaterializedCount => _nodes.Count(node => node is not null);
+    internal int MaterializedCount => _roots.Sum(NodeCount);
 
-    /// <summary>按序号取运行时节点对象，未实例化时按图定义实例化。读写要求持有 Gate。</summary>
-    public NodeRuntime this[int index] => Ensure(index);
+    /// <summary>节点自身与它已实例化的子树节点数。</summary>
+    private static int NodeCount(NodeRuntime node) =>
+        1 + (node is RuntimeContainer container ? container.Children.Sum(NodeCount) : 0);
 
-    /// <summary>按序号取运行时执行节点对象，序号必须是执行节点。</summary>
-    public RuntimeExecutable Executable(int index) => (RuntimeExecutable)Ensure(index);
+    /// <summary>按节点路径取运行时节点对象，未实例化时按图定义实例化。读写要求持有 Gate。</summary>
+    public NodeRuntime this[NodePath path] => Ensure(path);
+
+    /// <summary>按节点路径取运行时执行节点对象，节点必须是执行节点。</summary>
+    public RuntimeExecutable Executable(NodePath path) => (RuntimeExecutable)Ensure(path);
 
     /// <summary>run 所属的执行单元。要求持有 Gate。</summary>
-    public RuntimeInstance Instance(IRun run) => Executable(run.Context.NodeIndex).Instance(run.Context.ItemIndex);
+    public RuntimeInstance Instance(IRun run) => Executable(run.Context.Node).Instance(run.Context.ItemIndex);
 
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
-    public NodeRuntime? Materialized(int nodeIndex) => _nodes[nodeIndex];
+    public NodeRuntime? Materialized(NodePath node) => Walk(node, materialize: false);
 
     /// <summary>任务的流程编译视图，节点实现经它定位成员。</summary>
     INodeGraph INodeContext.Graph => Graph;
 
-    /// <summary>某序号的输入侧方案，开始与不参与就绪判定的节点为空。</summary>
-    public NodeInputPlan? Plan(int nodeIndex) => Graph.PlanOf(nodeIndex);
+    /// <summary>某节点的输入侧方案，开始与不参与就绪判定的节点为空。</summary>
+    public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);
 
-    /// <summary>某序号的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
-    public NodeRuntime Runtime(int nodeIndex) => this[nodeIndex];
+    /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
+    public NodeRuntime Runtime(NodePath node) => this[node];
 
-    /// <summary>按形状建立节点对象：容器与派发 run 的节点由引擎建立，其余由类型自建。</summary>
-    private NodeRuntime CreateNode(int index)
+    /// <summary>沿路径逐段下钻：命中已实例化的节点即取它，materialize 为真时建出缺失的段，为假时给空。
+    /// 中间段必须是容器，子节点登记在所在容器上。</summary>
+    private NodeRuntime? Walk(NodePath path, bool materialize)
     {
-        GraphNode node = Graph.Nodes[index];
-
-        return node switch
+        IReadOnlyList<NodeRuntime> level = _roots;
+        RuntimeContainer? owner = null;
+        NodeRuntime? current = null;
+        for (int depth = 1; depth <= path.Depth; depth++)
         {
+            NodePath prefix = new([.. path.Levels.Take(depth)]);
+            current = level.FirstOrDefault(node => node.Path.Name == prefix.Name);
+            if (current is null)
+            {
+                if (!materialize)
+                {
+                    return null;
+                }
+
+                current = Create(prefix);
+                if (owner is null)
+                {
+                    _roots.Add(current);
+                }
+                else
+                {
+                    owner.Add(current);
+                }
+
+                if (_taskCanceled)
+                {
+                    current.Cancel();
+                }
+            }
+
+            if (depth == path.Depth)
+            {
+                return current;
+            }
+
+            if (current is not RuntimeContainer container)
+            {
+                throw new ArgumentException($"路径 {path} 的中间段不是容器，无法下钻。");
+            }
+
+            owner = container;
+            level = container.Children;
+        }
+
+        return current;
+    }
+
+    /// <summary>路径对应的运行时节点，未实例化时按图定义建出。</summary>
+    private NodeRuntime Ensure(NodePath path) => Walk(path, materialize: true)!;
+
+    /// <summary>按形状建立节点对象：开始给任务目标，容器与派发 run 的节点由引擎建立，其余由类型自建。</summary>
+    private NodeRuntime Create(NodePath path) =>
+        Graph[path] switch
+        {
+            StartNode start => new RuntimeStart(start, _task.Goal),
             ExecutableNode executable when executable.Type.Shape.DispatchesRuns => new RuntimeExecutable(executable),
             ContainerNode container when container.Type.Shape.Organizes => new RuntimeContainer(container, this),
             ContainerNode container => container.Type.Create(container, this),
             ExecutableNode executable => executable.Type.Create(executable, this),
-            _ => throw new InvalidOperationException($"节点 {node.Name} 没有类型，无法建立运行期对象。"),
-        };
-    }
-
-    /// <summary>序号对应的运行时节点对象，尚未实例化时按图定义创建，创建后若任务已取消直接落在取消态。</summary>
-    private NodeRuntime Ensure(int index)
-    {
-        if (_nodes[index] is { } existing)
-        {
-            return existing;
-        }
-
-        NodeRuntime created = Graph.Nodes[index] switch
-        {
-            StartNode start => new RuntimeStart(start, _task.Goal),
-            _ => CreateNode(index),
+            _ => throw new InvalidOperationException($"节点 {path} 没有类型，无法建立运行期对象。"),
         };
 
-        if (_taskCanceled)
-        {
-            created.Cancel();
-        }
+    /// <summary>已实例化的运行时节点，先根序。汇总与取消按它读数，不创建节点。</summary>
+    private IEnumerable<NodeRuntime> MaterializedNodes => _roots.SelectMany(Subtree);
 
-        _nodes[index] = created;
+    /// <summary>节点与它已实例化的子树节点。</summary>
+    private static IEnumerable<NodeRuntime> Subtree(NodeRuntime node) =>
+        node is RuntimeContainer container ? [node, .. container.Children.SelectMany(Subtree)] : [node];
 
-        return created;
-    }
+    ISourceState IExecutionSources.Source(NodePath node) => Materialized(node) ?? IdleSource;
 
-    ISourceState IExecutionSources.Source(int nodeIndex) => _nodes[nodeIndex] ?? IdleSource;
+    bool IExecutionSources.HasSplit(NodePath node) => SplitOf(node) is not null;
 
-    bool IExecutionSources.HasSplit(int nodeIndex) => SplitOf(nodeIndex) is not null;
-
-    IReadOnlyList<int>? IExecutionSources.SplitItems(int nodeIndex, BranchName? branch) =>
-        SplitOf(nodeIndex) is { } split
+    IReadOnlyList<int>? IExecutionSources.SplitItems(NodePath node, BranchName? branch) =>
+        SplitOf(node) is { } split
             ? [.. split.Items
                 .Where(item => branch is null || item.Branch == branch)
                 .Select(item => item.Index)]
             : null;
 
     /// <summary>某执行节点交回的条目拆分，未实例化或尚未交回时为空。判定按它读数，不创建节点。</summary>
-    private WorkItemList? SplitOf(int nodeIndex) =>
-        Materialized(nodeIndex) is RuntimeExecutable { Split: { } split } ? split : null;
+    private WorkItemList? SplitOf(NodePath node) =>
+        Materialized(node) is RuntimeExecutable { Split: { } split } ? split : null;
 
     /// <summary>执行节点的实例空间拆分，实例就是它的条目；空间来源未交回时为空。</summary>
-    private WorkItemList? SpaceSplit(int executableIndex) =>
-        Graph.ItemSpace(executableIndex) is { } space ? SplitOf(space) : null;
+    private WorkItemList? SpaceSplit(NodePath executable) =>
+        Graph.ItemSpace(executable) is { } space ? SplitOf(space) : null;
 
-    /// <summary>各执行节点交回的条目拆分，键是经它交回拆分的执行节点序号。要求持有 Gate。</summary>
-    public IReadOnlyDictionary<int, WorkItemList> Splits()
+    /// <summary>各执行节点交回的条目拆分，键是经它交回拆分的执行节点路径，按执行节点表顺序。要求持有 Gate。</summary>
+    public IReadOnlyDictionary<NodePath, WorkItemList> Splits()
     {
-        Dictionary<int, WorkItemList> splits = [];
-        foreach (RuntimeExecutable node in _nodes.OfType<RuntimeExecutable>())
+        Dictionary<NodePath, WorkItemList> splits = [];
+        foreach (RuntimeExecutable node in MaterializedExecutables())
         {
             if (node.Split is { } split)
             {
-                splits[node.Index] = split;
+                splits[node.Path] = split;
             }
         }
 
         return splits;
     }
 
-    IReadOnlyList<int>? IExecutionSources.Items(int nodeIndex) =>
-        _nodes[nodeIndex] is RuntimeExecutable { Expanded: true } node ? node.Items : null;
+    /// <summary>已实例化的执行节点，按执行节点表顺序。判定与展示按它读数，不创建节点。</summary>
+    private IEnumerable<RuntimeExecutable> MaterializedExecutables() =>
+        Graph.ExecutableNodes.Select(executable => Materialized(executable.Path)).OfType<RuntimeExecutable>();
+
+    IReadOnlyList<int>? IExecutionSources.Items(NodePath node) =>
+        Materialized(node) is RuntimeExecutable { Expanded: true } executable ? executable.Items : null;
 
     /// <summary>节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。</summary>
-    public ExecutableStateSnapshot SnapshotState(int index) => _nodes[index]?.Snapshot()
-        ?? new ExecutableStateSnapshot(index, NodeState.Pending, [], 0, []);
+    public ExecutableStateSnapshot SnapshotState(NodePath path) => Materialized(path)?.Snapshot()
+        ?? new ExecutableStateSnapshot(path, NodeState.Pending, [], 0, []);
 
     // ---- 就绪判定 ----
 
@@ -158,7 +203,7 @@ internal sealed class TaskRuntime : INodeContext
     {
         AdoptItems(node);
 
-        return Graph.PlanOf(node.Index) is { } plan
+        return Graph.PlanOf(node.Path) is { } plan
             ? [.. NodeReadiness.Ready(plan, node, this).Where(item => !node.IsBlocked(item))]
             : [];
     }
@@ -166,7 +211,7 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>按方案求出实例集并固定：拆分或对齐来源就绪后实例集不再变化，条目内容随实例落地。</summary>
     private void AdoptItems(RuntimeExecutable node)
     {
-        if (node.Expanded || Graph.PlanOf(node.Index) is not { } plan)
+        if (node.Expanded || Graph.PlanOf(node.Path) is not { } plan)
         {
             return;
         }
@@ -174,12 +219,12 @@ internal sealed class TaskRuntime : INodeContext
         IReadOnlyList<int> items = NodeReadiness.Instances(plan, node, this);
         if (items.Count > 0)
         {
-            node.AdoptItems(items, SpaceSplit(node.Index));
+            node.AdoptItems(items, SpaceSplit(node.Path));
         }
     }
 
     /// <summary>执行节点方案上的执行次数上限，输入节点没有方案，也就没有上限。</summary>
-    private int? LimitOf(RuntimeExecutable node) => Graph.PlanOf(node.Index)?.MaxRuns;
+    private int? LimitOf(RuntimeExecutable node) => Graph.PlanOf(node.Path)?.MaxRuns;
 
     /// <summary>该执行路径已达方案上的执行次数上限，达到后不再启动新 run。</summary>
     private bool AtLimit(RuntimeExecutable node, int? item) =>
@@ -189,7 +234,7 @@ internal sealed class TaskRuntime : INodeContext
     public IReadOnlyList<RunStarter> Start(RuntimeExecutable node)
     {
         List<RunStarter> starters = [.. Ready(node).Select(item => new RunStarter(node.Instance(item)))];
-        if (starters.Count > 0 && Graph.PlanOf(node.Index) is { } plan)
+        if (starters.Count > 0 && Graph.PlanOf(node.Path) is { } plan)
         {
             node.AddActive(starters.Count);
             node.ClearRerun();
@@ -208,42 +253,42 @@ internal sealed class TaskRuntime : INodeContext
     private void InvalidateNode(RuntimeExecutable node, int? item)
     {
         // 版本驱动的节点没有“未产出”这一状态可回退，作废即记下一次强制重启
-        if (Graph.PlanOf(node.Index)?.Driver == NodeDriver.Version)
+        if (Graph.PlanOf(node.Path)?.Driver == NodeDriver.Version)
         {
             node.RequestRerun();
         }
 
         node.Invalidate(item);
-        RefreshContainers(node.Index);
+        RefreshContainers(node.Path);
     }
 
-    /// <summary>作废实例或整节点的已发表产出，宿主返工入口按序号定位节点。</summary>
-    public void Invalidate(int node, int? item) => InvalidateNode(Executable(node), item);
+    /// <summary>作废实例或整节点的已发表产出，宿主返工入口按节点路径定位节点。</summary>
+    public void Invalidate(NodePath node, int? item) => InvalidateNode(Executable(node), item);
 
     // ---- 返工 ----
 
-    /// <summary>顺着出边要通知的下游执行节点，去重保持顺序。</summary>
-    public IReadOnlyList<int> Downstream(NodeRuntime node) => Downstream(node.Index);
+    /// <summary>顺着出边要通知的下游执行节点路径，去重保持顺序。</summary>
+    public IReadOnlyList<NodePath> Downstream(NodeRuntime node) => Downstream(node.Path);
 
-    /// <summary>顺着出边要通知的下游执行节点，去重保持顺序。</summary>
-    public IReadOnlyList<int> Downstream(int nodeIndex) =>
-        [.. Graph.Outgoing(nodeIndex).Select(edge => edge.Target).Distinct()];
+    /// <summary>顺着出边要通知的下游执行节点路径，去重保持顺序。</summary>
+    public IReadOnlyList<NodePath> Downstream(NodePath node) =>
+        [.. Graph.Outgoing(node).Select(edge => edge.Target).Distinct()];
 
     // ---- 容器推进 ----
 
     /// <summary>沿着节点所在的祖先链刷新容器：来源版本账有变化且内容齐备时推进内容版本并广播出边。
     /// 返回内容版本变化的容器出边目标。</summary>
-    public IReadOnlyList<int> RefreshContainers(int nodeIndex)
+    public IReadOnlyList<NodePath> RefreshContainers(NodePath path)
     {
-        List<int> notify = [];
-        while (Graph.ContainerOf(nodeIndex) is { } parent && Ensure(parent.Index) is RuntimeContainer container)
+        List<NodePath> notify = [];
+        while (Graph.ContainerOf(path) is { } parent && Ensure(parent.Path) is RuntimeContainer container)
         {
             if (container.ContentReady && container.PublishIfChanged())
             {
                 notify.AddRange(Downstream(container));
             }
 
-            nodeIndex = container.Index;
+            path = container.Path;
         }
 
         return notify;
@@ -252,11 +297,11 @@ internal sealed class TaskRuntime : INodeContext
     // ---- 汇总 ----
 
     /// <summary>是否有执行单元停在等待返工。</summary>
-    public bool HasBlocked => _nodes.OfType<RuntimeExecutable>().Any(node => node.HasBlocked);
+    public bool HasBlocked => MaterializedNodes.OfType<RuntimeExecutable>().Any(node => node.HasBlocked);
 
     /// <summary>还有在跑的 run、可启动的实例或尚未放行的节点，任务就没走完。随任务取消的节点不计。</summary>
     public bool HasWork =>
-        Graph.ExecutableNodes.Any(executable => _nodes[executable.Index] switch
+        Graph.ExecutableNodes.Any(executable => Materialized(executable.Path) switch
         {
             RuntimeExecutable node => !node.Released || node.HasActive || CanStart(node),
             NodeRuntime node => !node.Released && !node.Canceled,
@@ -266,13 +311,13 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>尚未实例化的执行节点是否已具启动条件：与启动判定共用同一实现，未实例化的来源按未放行求值。
     /// 未实例化说明推进循环还没把它激活。</summary>
     private bool Startable(ExecutableNode executable) =>
-        Graph.PlanOf(executable.Index) is { } plan && NodeReadiness.Ready(plan, IdleProgress, this).Count > 0;
+        Graph.PlanOf(executable.Path) is { } plan && NodeReadiness.Ready(plan, IdleProgress, this).Count > 0;
 
     /// <summary>给定节点的产出已变，要重新评估的目标：取下游并刷新祖先容器，去重保持顺序。要求持有 Gate。</summary>
-    public IReadOnlyList<int> Notify(IReadOnlyList<int> nodes)
+    public IReadOnlyList<NodePath> Notify(IReadOnlyList<NodePath> nodes)
     {
-        List<int> notify = [];
-        foreach (int node in nodes)
+        List<NodePath> notify = [];
+        foreach (NodePath node in nodes)
         {
             notify.AddRange(Downstream(node));
             notify.AddRange(RefreshContainers(node));
@@ -285,7 +330,7 @@ internal sealed class TaskRuntime : INodeContext
     public void Cancel()
     {
         _taskCanceled = true;
-        foreach (NodeRuntime node in _nodes.OfType<NodeRuntime>())
+        foreach (NodeRuntime node in MaterializedNodes)
         {
             node.Cancel();
         }
@@ -294,7 +339,7 @@ internal sealed class TaskRuntime : INodeContext
     // ---- run 收口 ----
 
     /// <summary>run 收口的决策结果：要通知的执行节点。</summary>
-    public sealed record SettlePlan(IReadOnlyList<int> Notify);
+    public sealed record SettlePlan(IReadOnlyList<NodePath> Notify);
 
     /// <summary>本轮该交回但尚未交回的产出：缺哪些命名端口、是否缺条目拆分。</summary>
     public sealed record RunShortfall(IReadOnlyList<PortName> Ports, bool Items)
@@ -306,7 +351,7 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>本轮该交回但尚未交回的产出，按节点声明的端口与条目拆分判定。要求持有 Gate。</summary>
     public RunShortfall Shortfall(RuntimeInstance instance, IRun run)
     {
-        RuntimeExecutable node = Executable(run.Context.NodeIndex);
+        RuntimeExecutable node = Executable(run.Context.Node);
         ExecutableNode executable = node.Executable;
         IReadOnlyDictionary<PortName, string>? values = instance.Ports(run.Id);
 
@@ -326,12 +371,12 @@ internal sealed class TaskRuntime : INodeContext
     /// 接收器先经 ReleaseActive 再进入。</summary>
     public SettlePlan Settle(RuntimeInstance instance, Run run)
     {
-        RuntimeExecutable node = Executable(run.Context.NodeIndex);
+        RuntimeExecutable node = Executable(run.Context.Node);
         int? item = instance.ItemIndex;
 
         if (run.State != RunState.Succeeded)
         {
-            return Block(node, instance, run, (node.Index, item));
+            return Block(node, instance, run, (node.Path, item));
         }
 
         // 声明无法完成的当轮不产出，直接停驻并把原因留给返工
@@ -341,7 +386,7 @@ internal sealed class TaskRuntime : INodeContext
                 ? $"模型报告无法完成：{reason}"
                 : "模型报告无法完成。");
 
-            return Block(node, instance, run, (node.Index, item));
+            return Block(node, instance, run, (node.Path, item));
         }
 
         ExecutableNode executable = node.Executable;
@@ -349,19 +394,19 @@ internal sealed class TaskRuntime : INodeContext
         if (shortfall.Items)
         {
             run.MarkUncollected("声明 WorkItems 端口的执行节点没有交回条目拆分，本步未收口。");
-            return Block(node, instance, run, (node.Index, null));
+            return Block(node, instance, run, (node.Path, null));
         }
 
         if (shortfall.Ports.Count > 0)
         {
             run.MarkUncollected("输出端口内容未交回，本步未收口。");
-            return Block(node, instance, run, (node.Index, item));
+            return Block(node, instance, run, (node.Path, item));
         }
 
         // 输出校验不通过即不发布，节点停驻等返工
         if (!PassesValidation(executable.Execution.Validate, executable, instance.Ports(run.Id)))
         {
-            return Block(node, instance, run, (node.Index, item));
+            return Block(node, instance, run, (node.Path, item));
         }
 
         // 拆分已由回执写入实例空间来源节点，其余产出直接发布
@@ -372,7 +417,7 @@ internal sealed class TaskRuntime : INodeContext
     }
 
     /// <summary>run 停驻阻塞：判定先交回等待方，再把这个执行单元记为阻塞并核算执行上限。</summary>
-    private SettlePlan Block(RuntimeExecutable node, RuntimeInstance instance, Run run, (int Node, int? Item) target)
+    private SettlePlan Block(RuntimeExecutable node, RuntimeInstance instance, Run run, (NodePath Node, int? Item) target)
     {
         _task.NotifyRunSettled(run);
         instance.EnterBlocked([target]);
@@ -451,13 +496,13 @@ internal sealed class TaskRuntime : INodeContext
             return;
         }
 
-        _task.Journal.Append(new ErrorEntry($"节点 {node.Name} 的执行次数已达上限 {limit} 次，不再重跑。"));
+        _task.Journal.Append(new ErrorEntry($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。"));
     }
 
     /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
-    private SettlePlan Settled(RuntimeExecutable node, IReadOnlyList<int> downstream)
+    private SettlePlan Settled(RuntimeExecutable node, IReadOnlyList<NodePath> downstream)
     {
-        IReadOnlyList<int> containers = RefreshContainers(node.Index);
+        IReadOnlyList<NodePath> containers = RefreshContainers(node.Path);
 
         return new SettlePlan([.. downstream, .. containers]);
     }
@@ -468,7 +513,7 @@ internal sealed class TaskRuntime : INodeContext
     /// 返回要通知的下游与要启动的实例。要求持有 Gate。</summary>
     public EvaluateResult Evaluate(NodeRuntime node)
     {
-        if (Graph.ShapeOf(node.Index) is not { } shape)
+        if (Graph.ShapeOf(node.Path) is not { } shape)
         {
             return new EvaluateResult([], []);
         }
@@ -490,12 +535,12 @@ internal sealed class TaskRuntime : INodeContext
             : new EvaluateResult([], []);
     }
 
-    /// <summary>一次评估的结果：要通知的下游执行节点与要启动的实例。</summary>
-    public readonly record struct EvaluateResult(IReadOnlyList<int> Notify, IReadOnlyList<RunStarter> Starters);
+    /// <summary>一次评估的结果：要通知的下游执行节点路径与要启动的实例。</summary>
+    public readonly record struct EvaluateResult(IReadOnlyList<NodePath> Notify, IReadOnlyList<RunStarter> Starters);
 
     /// <summary>任务启动的第一批：开始已放行，由它的直连下游起步。返回前全部实例化。</summary>
-    public IReadOnlyList<int> Roots() =>
-        [.. Graph.Outgoing(Ensure(Graph.Start.Index).Index).Select(edge => Ensure(edge.Target).Index)];
+    public IReadOnlyList<NodePath> Roots() =>
+        [.. Graph.Outgoing(Graph.Start.Path).Select(edge => Ensure(edge.Target).Path)];
 
     // ---- 容器快照 ----
 
@@ -505,7 +550,7 @@ internal sealed class TaskRuntime : INodeContext
         List<ContainerSnapshot> snapshots = [];
         foreach (ContainerNode container in Graph.Containers)
         {
-            snapshots.Add(_nodes[container.Index] is RuntimeContainer runtime
+            snapshots.Add(Materialized(container.Path) is RuntimeContainer runtime
                 ? ContainerSnapshotOf(runtime)
                 : UnmaterializedSnapshotOf(container));
         }
@@ -515,7 +560,7 @@ internal sealed class TaskRuntime : INodeContext
 
     /// <summary>未实例化容器的一刻状态：内容尚未齐备，状态全由已实例化的成员活动决定。</summary>
     private ContainerSnapshot UnmaterializedSnapshotOf(ContainerNode container) =>
-        new(container.Index, container.Name.Value, container.Path, ContainerActivityState(container), container.Members);
+        new(container.Path, ContainerActivityState(container), ChildPaths(container));
 
     /// <summary>已实例化容器的一刻状态。成员状态只在已实例化成员上读，未实例化成员视为没有活动，快照不实例化节点。</summary>
     private ContainerSnapshot ContainerSnapshotOf(RuntimeContainer container)
@@ -534,34 +579,38 @@ internal sealed class TaskRuntime : INodeContext
             state = ContainerActivityState(container.Container);
         }
 
-        return new ContainerSnapshot(container.Index, container.Name.Value, container.Container.Path, state, container.Container.Members);
+        return new ContainerSnapshot(container.Path, state, ChildPaths(container.Container));
     }
+
+    /// <summary>容器的直接子节点路径，先根序。</summary>
+    private static IReadOnlyList<NodePath> ChildPaths(ContainerNode container) =>
+        [.. container.Children.Select(child => child.Path)];
 
     /// <summary>容器里已实例化成员的活动状态：有在跑或已展开即运行中，都没有即待办。</summary>
     private NodeState ContainerActivityState(ContainerNode container)
     {
-        IReadOnlyList<int> members = Graph.ExecutablesIn(container.Index);
+        IReadOnlyList<NodePath> members = Graph.ExecutablesIn(container.Path);
 
         return members.Any(MemberActive) ? NodeState.Running : NodeState.Pending;
     }
 
     /// <summary>成员执行节点是否有在跑或已展开的实例，未实例化的成员没有活动。</summary>
-    private bool MemberActive(int executableIndex) =>
-        _nodes[executableIndex] is RuntimeExecutable node
+    private bool MemberActive(NodePath executable) =>
+        Materialized(executable) is RuntimeExecutable node
             && (node.Active > 0 || node.Complete(null) || node.Expanded);
 
     /// <summary>一个返工目标：停在阻塞的执行单元，与它记下要重跑的节点与条目。</summary>
-    public readonly record struct ReworkTarget(int Blocked, int? BlockedItem, int Node, int? Item);
+    public readonly record struct ReworkTarget(NodePath Blocked, int? BlockedItem, NodePath Node, int? Item);
 
-    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行单元记录的目标按条目过滤，配对其所在节点与条目。不改变状态。要求持有 Gate。</summary>
+    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行单元记录的目标按条目过滤，配对其所在节点与条目。顺序按执行节点表。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<ReworkTarget> PlanRework(int? itemIndex)
     {
         List<ReworkTarget> targets = [];
-        foreach (RuntimeExecutable node in _nodes.OfType<RuntimeExecutable>())
+        foreach (RuntimeExecutable node in MaterializedExecutables())
         {
             foreach (RuntimeInstance instance in node.BlockedInstances)
             {
-                foreach ((int target, int? item) in instance.ReworkTargets)
+                foreach ((NodePath target, int? item) in instance.ReworkTargets)
                 {
                     if (itemIndex is { } requested && item != requested)
                     {
@@ -573,7 +622,7 @@ internal sealed class TaskRuntime : INodeContext
                         continue;
                     }
 
-                    targets.Add(new ReworkTarget(node.Index, instance.ItemIndex, target, item));
+                    targets.Add(new ReworkTarget(node.Path, instance.ItemIndex, target, item));
                 }
             }
         }
@@ -582,7 +631,7 @@ internal sealed class TaskRuntime : INodeContext
     }
 
     /// <summary>解除一个执行单元的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
-    public void Unblock(int node, int? item, IReadOnlyList<(int Node, int? Item)> handled) =>
+    public void Unblock(NodePath node, int? item, IReadOnlyList<(NodePath Node, int? Item)> handled) =>
         Executable(node).FinishRework(item, handled);
 
     /// <summary>未实例化节点的来源状态：没有产出、版本为零。</summary>
@@ -602,9 +651,9 @@ internal sealed class TaskRuntime : INodeContext
 
         public bool ForceRerun => false;
 
-        public long ConsumedRevision(int source) => 0;
+        public long ConsumedRevision(NodePath source) => 0;
 
-        public bool ConsumedOnce(int source) => false;
+        public bool ConsumedOnce(NodePath source) => false;
 
         public bool Produced(int? item) => false;
 

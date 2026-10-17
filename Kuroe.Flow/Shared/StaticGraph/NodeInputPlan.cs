@@ -27,7 +27,7 @@ public enum NodeDriver
 /// 取值边按 <see cref="Scope"/> 取来源的哪一域，按 <see cref="Recurrence"/> 决定是否重复消费。</summary>
 public sealed record InputBinding(
     EdgeKind Kind,
-    int Source,
+    NodePath Source,
     FeedScope Scope,
     FeedRecurrence Recurrence,
     bool Signal);
@@ -50,11 +50,11 @@ public sealed record NodeInputPlan
     /// <summary>实例空间的取得方式，整节点为 <see cref="SpaceKind.None"/>。</summary>
     public SpaceKind Space { get; init; }
 
-    /// <summary>拆分来源序号，取得方式为 <see cref="SpaceKind.Split"/> 时给出。</summary>
-    public int? SplitSource { get; init; }
+    /// <summary>拆分来源节点路径，取得方式为 <see cref="SpaceKind.Split"/> 时给出。</summary>
+    public NodePath? SplitSource { get; init; }
 
-    /// <summary>对齐来源序号，取得方式为 <see cref="SpaceKind.Aligned"/> 时给出，按入边序。</summary>
-    public IReadOnlyList<int> AlignedSources { get; init; } = [];
+    /// <summary>对齐来源节点路径，取得方式为 <see cref="SpaceKind.Aligned"/> 时给出，按入边序。</summary>
+    public IReadOnlyList<NodePath> AlignedSources { get; init; } = [];
 
     /// <summary>实例的分支过滤，未声明分支时为空。</summary>
     public BranchName? Branch { get; init; }
@@ -67,4 +67,64 @@ public sealed record NodeInputPlan
 
     /// <summary>单条实例的执行次数上限。</summary>
     public int MaxRuns { get; init; } = ExecutableNode.DefaultMaxRuns;
+
+    /// <summary>执行节点的方案：入边按组聚合，空间边不进组，实例空间来源取自空间边或对齐来源。</summary>
+    public static NodeInputPlan Of(ExecutableSpec execution, IReadOnlyList<FlowEdge> incoming)
+    {
+        bool byItem = execution.Mode == NodeMode.PerItem;
+        NodePath? splitSource = incoming.FirstOrDefault(edge => edge.Role == EdgeKind.Split)?.Source;
+        IReadOnlyList<NodePath> alignedSources =
+        [
+            .. incoming
+                .Where(edge => edge.Role == EdgeKind.Value && edge.Scope == FeedScope.Item)
+                .Select(edge => edge.Source)
+                .Distinct(),
+        ];
+
+        SpaceKind space = SpaceKind.None;
+        if (splitSource is not null)
+        {
+            space = SpaceKind.Split;
+        }
+        else if (byItem && alignedSources.Count > 0)
+        {
+            space = SpaceKind.Aligned;
+        }
+
+        return new NodeInputPlan
+        {
+            Space = space,
+            SplitSource = splitSource,
+            AlignedSources = alignedSources,
+            Branch = execution.Branch,
+            Groups =
+            [
+                .. incoming
+                    .GroupBy(edge => edge.Group)
+                    .OrderBy(group => group.Key)
+                    .Select(group => new InputGroup([.. group.Select(Binding)])),
+            ],
+            Driver = byItem ? NodeDriver.Completion : NodeDriver.Version,
+            MaxRuns = execution.MaxRuns ?? ExecutableNode.DefaultMaxRuns,
+        };
+    }
+
+    /// <summary>容器的方案：一组绑定覆盖全部直接子节点，成员产出齐备且版本有变化即推进内容版本。</summary>
+    public static NodeInputPlan Of(IReadOnlyList<GraphNode> children) => new()
+    {
+        Space = SpaceKind.None,
+        Groups =
+        [
+            new InputGroup(
+            [
+                .. children.Select(child => new InputBinding(EdgeKind.Value, child.Path, FeedScope.Whole, FeedRecurrence.Repeat, false)),
+            ]),
+        ],
+        Driver = NodeDriver.Version,
+        MaxRuns = int.MaxValue,
+    };
+
+    /// <summary>一条边在方案里的绑定：取值方式取自边，信号标注按输入类型。</summary>
+    private static InputBinding Binding(FlowEdge edge) =>
+        new(edge.Role, edge.Source, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
 }

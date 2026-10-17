@@ -40,6 +40,20 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
+    public void Task_show_lists_every_split_source_in_node_table_order()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.TwoSplitFlow);
+        cli.Tasks.Run(["/task", "new", "目标"]);
+        Assert.Equal(TaskState.Done, cli.Environment.Settle(new TaskId(1)).State);
+
+        cli.Tasks.Run(["/task", "show", "1"]);
+
+        int first = cli.Output.Output.IndexOf("在节点「整体/计划甲」交回", StringComparison.Ordinal);
+        int second = cli.Output.Output.IndexOf("在节点「整体/计划乙」交回", StringComparison.Ordinal);
+        Assert.True(first >= 0 && second > first, cli.Output.Output);
+    }
+
+    [Fact]
     public void Task_approve_without_awaiting_approval_rejects()
     {
         using CliSession cli = new();
@@ -73,7 +87,7 @@ public sealed class TaskAndReplTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(cli.Environment.Awaiting(new TaskId(1), AwaitKind.Approve));
 
-        cli.Tasks.Run(["/task", "approve", "1", "@审阅"]);
+        cli.Tasks.Run(["/task", "approve", "1", "@整体/审阅"]);
         TaskSnapshot done = cli.Environment.Settle(new TaskId(1));
 
         Assert.Equal(TaskState.Done, done.State);
@@ -90,8 +104,8 @@ public sealed class TaskAndReplTests
         cli.Tasks.Run(["/task", "answer", "1", "输入二", "内容"]);
         Assert.Contains("有 2 个输入节点等待回答", cli.ErrorsOut.Output);
 
-        cli.Tasks.Run(["/task", "answer", "1", "@输入二", "乙"]);
-        cli.Tasks.Run(["/task", "answer", "1", "@输入一", "甲"]);
+        cli.Tasks.Run(["/task", "answer", "1", "@整体/输入二", "乙"]);
+        cli.Tasks.Run(["/task", "answer", "1", "@整体/输入一", "甲"]);
         cli.Environment.Settle(new TaskId(1));
 
         Assert.Equal(TaskState.Done, cli.Environment.Snapshot(new TaskId(1)).State);

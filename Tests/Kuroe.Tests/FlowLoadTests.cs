@@ -101,11 +101,16 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Referenced_container_port_missing_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 复盘：容器 交付 没有输出端口 不存在。"], Errors(ContainerOutPortMissing));
+        Assert.Equal(
+        [
+            "流程 默认 的节点 整体/交付/实施：从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。",
+            "流程 默认 的节点 整体/复盘：从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。",
+            "流程 默认 的节点 整体/复盘：容器 整体/交付 没有输出端口 不存在。",
+        ], Errors(ContainerOutPortMissing));
 
     [Fact]
     public void Cross_container_member_reference_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 复盘：不能从容器外直接引用容器内成员或端口 交付.实施，容器对外只暴露输出端口。"], Errors(ContainerOutCrossContainer));
+        Assert.Equal(["流程 默认 的节点 整体/复盘：From 引用的节点 交付.实施 不在流程里。"], Errors(ContainerOutCrossContainer));
 
     [Fact]
     public void Referenced_container_with_from_is_rejected() =>

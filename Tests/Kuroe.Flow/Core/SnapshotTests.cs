@@ -17,15 +17,15 @@ public sealed class SnapshotTests
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
         Assert.Equal(2, TaskBuilder.Snap([
-            State(1, NodeState.Done),
-            State(2, NodeState.Done)]).FrontierNodes);
+            State(NodePath.Of("制定计划"), NodeState.Done),
+            State(NodePath.Of("实施"), NodeState.Done)]).FrontierNodes);
         Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, TaskBuilder.Snap([State(1, NodeState.Running)]).FrontierNodes);
+        Assert.Equal(0, TaskBuilder.Snap([State(NodePath.Of("制定计划"), NodeState.Running)]).FrontierNodes);
         Assert.Equal(2, TaskBuilder.Snap([]).TotalExecutableNodes);
     }
 
@@ -34,19 +34,19 @@ public sealed class SnapshotTests
     {
         TaskSnapshot snapshot = TaskBuilder.Snap([]);
 
-        Assert.Equal(1, snapshot.OrdinalOf(1));
-        Assert.Equal(2, snapshot.OrdinalOf(2));
-        Assert.Equal(3, snapshot.OrdinalOf(0));
+        Assert.Equal(1, snapshot.OrdinalOf(NodePath.Of("制定计划")));
+        Assert.Equal(2, snapshot.OrdinalOf(NodePath.Of("实施")));
+        Assert.Equal(3, snapshot.OrdinalOf(NodePath.Of("Start")));
     }
 
-    private static ExecutableStateSnapshot State(int index, NodeState state) =>
-        new(index, state, [], 0, []);
+    private static ExecutableStateSnapshot State(NodePath node, NodeState state) =>
+        new(node, state, [], 0, []);
 
     private static class TaskBuilder
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
-            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<int, WorkItemList>(),
-            [.. Graph.ExecutableNodes.Select((executable, index) => new ExecutableSnapshot(index, executable, []))],
+            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<NodePath, WorkItemList>(),
+            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
 
@@ -68,16 +68,12 @@ public sealed class SnapshotTests
     private static readonly NodeGraph Graph = new([
         new StartNode
         {
-            Index = 0,
-            Name = StartNode.ReservedName,
             Path = new NodePath([StartNode.ReservedName]),
             Outputs = [new Port(new PortName("目标"), PortType.Text)],
         },
         new ExecutableNode
         {
-            Index = 1,
-            Name = new NodeName("制定计划"),
-            Path = new NodePath([new NodeName("制定计划")]),
+            Path = NodePath.Of("制定计划"),
             Type = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,
@@ -86,9 +82,7 @@ public sealed class SnapshotTests
         },
         new ExecutableNode
         {
-            Index = 2,
-            Name = new NodeName("实施"),
-            Path = new NodePath([new NodeName("实施")]),
+            Path = NodePath.Of("实施"),
             Type = TestNodeTypes.Executable,
             Execution = new ExecutableSpec { Mode = NodeMode.Single },
             Model = Planner,

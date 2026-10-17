@@ -16,8 +16,8 @@ internal sealed class RunDetailView(Terminal terminal)
     public void Print(TaskSnapshot task, RunSnapshot run)
     {
         RunContext context = run.Context;
-        _terminal.Line($"{run.Id} · {context.NodeName} · {ViewLabels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
-        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {task.OrdinalOf(context.NodeIndex)}/{task.TotalExecutableNodes}\u3000模型 {(context.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
+        _terminal.Line($"{run.Id} · {context.Node} · {ViewLabels.Item(context.ItemIndex)} · 第 {context.ExecutionCount} 轮");
+        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {task.OrdinalOf(context.Node)}/{task.TotalExecutableNodes}\u3000模型 {(context.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
         _terminal.Line($"状态 {ViewLabels.State(run)}\u3000{ViewLabels.Clock(run.StartedAt)} → {ViewLabels.Clock(run.FinishedAt)}\u3000耗时 {ViewLabels.Elapsed(run.Elapsed)}");
 
         foreach (string failure in run.Failures)

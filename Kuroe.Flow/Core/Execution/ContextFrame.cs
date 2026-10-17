@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Execution;
 /// 供 Context 类型端口整段注入下游时重组，逐条取用，角色与出处保留。run 的系统指令不随帧透传。</summary>
 public sealed record ContextFrame(
     RunId Run,
-    NodeName Node,
+    NodePath Node,
     int? Item,
     IReadOnlyList<ContextMessage> Messages,
     string Instruction);

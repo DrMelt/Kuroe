@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.RuntimeGraph;
 using Kuroe.Flow.RuntimeNodes;
@@ -22,8 +23,8 @@ internal sealed class TaskDriver(
     IExecutionTargetResolver targetResolver)
 {
     private readonly Lock _gate = new();
-    private readonly Queue<int> _pending = [];
-    private readonly HashSet<int> _queued = [];
+    private readonly Queue<NodePath> _pending = [];
+    private readonly HashSet<NodePath> _queued = [];
     private TaskCompletionSource? _signal;
     private int _inflight;
     private bool _stop;
@@ -34,7 +35,7 @@ internal sealed class TaskDriver(
     /// <summary>启动推进循环。要求持有任务 Gate：全部根执行节点入队。</summary>
     public void Start()
     {
-        List<int> roots;
+        List<NodePath> roots;
         lock (task.Gate)
         {
             roots = [.. task.Runtime.Roots()];
@@ -45,7 +46,7 @@ internal sealed class TaskDriver(
     }
 
     /// <summary>产出已变的目标入队，由推进循环重新评估。</summary>
-    public void Resume(IReadOnlyList<int> targets)
+    public void Resume(IReadOnlyList<NodePath> targets)
     {
         Enqueue(targets);
     }
@@ -79,10 +80,10 @@ internal sealed class TaskDriver(
         {
             while (true)
             {
-                List<int> batch = [];
+                List<NodePath> batch = [];
                 lock (_gate)
                 {
-                    while (_pending.TryDequeue(out int node))
+                    while (_pending.TryDequeue(out NodePath node))
                     {
                         batch.Add(node);
                     }
@@ -92,7 +93,7 @@ internal sealed class TaskDriver(
 
                 if (batch.Count > 0)
                 {
-                    foreach (int node in batch)
+                    foreach (NodePath node in batch)
                     {
                         Activate(node);
                     }
@@ -161,20 +162,20 @@ internal sealed class TaskDriver(
 
     /// <summary>一个节点收到评估意图：输入节点重新挂起等回答，审批节点按就绪停在待批准，其余按就绪条件启动实例。
     /// 启动的 run 异步派发由收口回调处理，通知的下游即时入队。</summary>
-    private void Activate(int nodeIndex)
+    private void Activate(NodePath name)
     {
-        List<int> notify = [];
+        List<NodePath> notify = [];
         List<TaskRuntime.RunStarter> starters = [];
         NodeRuntime node;
         lock (task.Gate)
         {
-            node = task.Runtime[nodeIndex];
+            node = task.Runtime[name];
             TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             starters.AddRange(result.Starters);
         }
 
-        foreach (int next in notify)
+        foreach (NodePath next in notify)
         {
             Enqueue([next]);
         }
@@ -230,7 +231,7 @@ internal sealed class TaskDriver(
                 if (declaration.IsError)
                 {
                     node.ReleaseActive();
-                    node.EnterBlocked(starter.Instance.ItemIndex, [(node.Index, starter.Instance.ItemIndex)]);
+                    node.EnterBlocked(starter.Instance.ItemIndex, [(node.Path, starter.Instance.ItemIndex)]);
                     task.Journal.Append(new ErrorEntry(declaration.FirstError.Description));
                     registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Name}"));
                     return;
@@ -275,10 +276,10 @@ internal sealed class TaskDriver(
 
             if (selfActivate)
             {
-                Enqueue([node.Index]);
+                Enqueue([node.Path]);
             }
 
-            foreach (int next in plan.Notify)
+            foreach (NodePath next in plan.Notify)
             {
                 Enqueue([next]);
             }
@@ -293,14 +294,14 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>去重入队待激活的执行节点序号，评估幂等不会重复派发。</summary>
-    private void Enqueue(IEnumerable<int> nodes)
+    /// <summary>去重入队待激活的执行节点路径，评估幂等不会重复派发。</summary>
+    private void Enqueue(IEnumerable<NodePath> nodes)
     {
         bool shouldWake;
         lock (_gate)
         {
             shouldWake = false;
-            foreach (int node in nodes.Where(n => _queued.Add(n)))
+            foreach (NodePath node in nodes.Where(n => _queued.Add(n)))
             {
                 _pending.Enqueue(node);
                 shouldWake = true;

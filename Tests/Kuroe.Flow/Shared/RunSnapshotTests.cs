@@ -56,8 +56,7 @@ public sealed class RunSnapshotTests
     private static RunContext Context() => new()
     {
         Task = new TaskId(1),
-        NodeIndex = 0,
-        NodeName = new NodeName("制定计划"),
+        Node = NodePath.Of("制定计划"),
         Instruction = "做",
         Type = new StubNodeType(new NodeKind("Executable")),
     };

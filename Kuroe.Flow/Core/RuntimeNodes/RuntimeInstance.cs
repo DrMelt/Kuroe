@@ -46,16 +46,16 @@ internal sealed class RuntimeInstance(int? itemIndex, WorkItem? item)
     /// <summary>是否停在阻塞等待返工。</summary>
     public bool Blocked { get; private set; }
 
-    private readonly List<(int Node, int? Item)> _reworkTargets = [];
+    private readonly List<(NodePath Node, int? Item)> _reworkTargets = [];
 
     /// <summary>停在本执行单元时记下的返工目标，全部处理后解除阻塞。</summary>
-    public IReadOnlyList<(int Node, int? Item)> ReworkTargets => _reworkTargets;
+    public IReadOnlyList<(NodePath Node, int? Item)> ReworkTargets => _reworkTargets;
 
     /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
-    public void EnterBlocked(IReadOnlyList<(int Node, int? Item)> targets)
+    public void EnterBlocked(IReadOnlyList<(NodePath Node, int? Item)> targets)
     {
         Blocked = true;
-        foreach ((int node, int? entry) in targets)
+        foreach ((NodePath node, int? entry) in targets)
         {
             if (!_reworkTargets.Contains((node, entry)))
             {
@@ -65,9 +65,9 @@ internal sealed class RuntimeInstance(int? itemIndex, WorkItem? item)
     }
 
     /// <summary>移除本次返工处理的目标，全部处理后解除阻塞。</summary>
-    public void FinishRework(IReadOnlyList<(int Node, int? Item)> handled)
+    public void FinishRework(IReadOnlyList<(NodePath Node, int? Item)> handled)
     {
-        foreach ((int node, int? entry) in handled)
+        foreach ((NodePath node, int? entry) in handled)
         {
             _reworkTargets.Remove((node, entry));
         }

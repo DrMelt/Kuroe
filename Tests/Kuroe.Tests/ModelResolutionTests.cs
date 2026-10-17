@@ -88,9 +88,7 @@ public sealed class ModelResolutionTests
 
     private static ExecutableNode Executable(ModelDefinition? model) => new()
     {
-        Index = 1,
-        Name = new NodeName("干活"),
-        Path = new NodePath([new NodeName("干活")]),
+        Path = NodePath.Of("干活"),
         Type = LlmNodeTypes.Create(null),
         Execution = new ExecutableSpec(),
         Model = model,

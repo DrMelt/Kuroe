@@ -8,7 +8,7 @@ public interface INodeTask
     /// <summary>任务的流程编译视图。</summary>
     INodeGraph Graph { get; }
 
-    /// <summary>任务的节点上下文，宿主扩展按序号取节点运行期对象时使用。</summary>
+    /// <summary>任务的节点上下文，宿主扩展按节点名取节点运行期对象时使用。</summary>
     INodeContext Context { get; }
 
     /// <summary>在任务状态锁下执行一段操作。状态改动都要经它串行。</summary>

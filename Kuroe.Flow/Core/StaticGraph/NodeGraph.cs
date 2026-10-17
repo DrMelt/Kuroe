@@ -2,68 +2,33 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.StaticGraph;
 
-/// <summary>流程编译出的执行视图：节点按先根序统一编号，开始在最前，执行节点与容器在一张表里，
-/// 依赖以显式边表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进，节点序号只作定位与展示。
-/// 构造时按入出边建索引、登记容器归属，并算出各节点的输入侧方案。</summary>
+/// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上，
+/// 依赖以显式边表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进。
+/// 树与边在编译期落定，与节点相关的边在构造时挂到节点上，输入侧方案由节点按自身入边算出，读取按路径逐段下钻。</summary>
 public sealed class NodeGraph : INodeGraph
 {
-    private readonly Dictionary<NodeName, int> _byName;
-    private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _incoming = [];
-    private readonly Dictionary<int, IReadOnlyList<FlowEdge>> _outgoing = [];
-    private readonly Dictionary<int, int> _parentContainer;
-    private readonly NodeInputPlan?[] _plans;
+    private readonly IReadOnlyList<GraphNode> _roots;
 
-    /// <summary>构造执行视图，首个节点必须是开始节点，边两端必须落在节点范围内。按入出边建索引。</summary>
+    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点名必须唯一，边两端必须落在节点表里。
+    /// 与节点相关的边在构造时挂到节点上：出边落在来源，入边落在执行节点。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
-        Nodes = nodes;
-        Edges = edges;
         Start = nodes[0] as StartNode
             ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
-        ExecutableNodes = [.. nodes.OfType<ExecutableNode>()];
-        Containers = [.. nodes.OfType<ContainerNode>()];
-        _byName = nodes.ToDictionary(node => node.Name, node => node.Index);
+        Edges = edges;
+        _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, edges))];
+        Nodes = [.. _roots.SelectMany(Flattened)];
+        ExecutableNodes = [.. Nodes.OfType<ExecutableNode>()];
+        Containers = [.. Nodes.OfType<ContainerNode>()];
 
-        _parentContainer = [];
-        foreach (ContainerNode container in Containers)
-        {
-            foreach (int member in container.Members)
-            {
-                _parentContainer[member] = container.Index;
-            }
-
-            foreach (int child in container.SubContainers)
-            {
-                _parentContainer[child] = container.Index;
-            }
-        }
-
-        foreach (FlowEdge edge in edges)
-        {
-            _ = this[edge.Source];
-            _ = this[edge.Target];
-            IReadOnlyList<FlowEdge> incoming = _incoming.GetValueOrDefault(edge.Target) ?? [];
-            IReadOnlyList<FlowEdge> outgoing = _outgoing.GetValueOrDefault(edge.Source) ?? [];
-            _incoming[edge.Target] = [.. incoming, edge];
-            _outgoing[edge.Source] = [.. outgoing, edge];
-        }
-
-        _plans = BuildPlans();
+        CheckTree(nodes.Count);
     }
 
-    /// <summary>全部节点：开始、执行节点与容器，按先根序统一编号。</summary>
+    /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
     public IReadOnlyList<GraphNode> Nodes { get; }
 
-    /// <summary>流程的唯一来源节点，序号 0。</summary>
+    /// <summary>流程的唯一来源节点。</summary>
     public StartNode Start { get; }
-
-    /// <summary>节点类型的形状，开始为空。</summary>
-    public NodeTypeShape? ShapeOf(int index) => Nodes[index] switch
-    {
-        ExecutableNode executable => executable.Type.Shape,
-        ContainerNode container => container.Type.Shape,
-        _ => null,
-    };
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
@@ -80,26 +45,52 @@ public sealed class NodeGraph : INodeGraph
     /// <summary>执行节点数。</summary>
     public int TotalExecutables => ExecutableNodes.Count;
 
-    /// <summary>取一个节点。</summary>
-    public GraphNode this[int index] => Nodes[index];
+    /// <summary>按路径取节点：从根级按段逐层下钻，中间段必须是容器，不存在时抛出异常。</summary>
+    public GraphNode this[NodePath path] =>
+        ChildrenOf(path.Parent).FirstOrDefault(node => node.Name == path.Name)
+        ?? throw new ArgumentException($"流程里没有节点 {path}。");
 
-    /// <summary>按名定位节点，不存在时为空。</summary>
-    public int? IndexOf(NodeName name) =>
-        _byName.TryGetValue(name, out int index) ? index : null;
+    /// <summary>直接子节点：容器给成员执行节点与子容器，路径为空给根级节点，按先根序。</summary>
+    public IReadOnlyList<GraphNode> ChildrenOf(NodePath? container)
+    {
+        if (container is not { } parent)
+        {
+            return _roots;
+        }
+
+        return this[parent] is ContainerNode node ? node.Children : [];
+    }
 
     /// <summary>节点直接所属的容器，根级节点为空。</summary>
-    public ContainerNode? ContainerOf(int nodeIndex) =>
-        _parentContainer.TryGetValue(nodeIndex, out int container) ? (ContainerNode)Nodes[container] : null;
+    public ContainerNode? ContainerOf(NodePath path) =>
+        path.Parent is { } parent ? this[parent] as ContainerNode : null;
 
-    /// <summary>目标的入边，按编译顺序。</summary>
-    public IReadOnlyList<FlowEdge> Incoming(int target) => _incoming.GetValueOrDefault(target) ?? [];
+    /// <summary>目标的入边，按编译顺序。边只汇入执行节点。</summary>
+    public IReadOnlyList<FlowEdge> Incoming(NodePath target) =>
+        this[target] is ExecutableNode executable ? executable.Incoming : [];
 
     /// <summary>来源的出边，按编译顺序。</summary>
-    public IReadOnlyList<FlowEdge> Outgoing(int source) => _outgoing.GetValueOrDefault(source) ?? [];
+    public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => this[source].Outgoing;
+
+    /// <summary>节点的输入侧方案，开始与不需来源即可挂起的类型为空。</summary>
+    public NodeInputPlan? PlanOf(NodePath path) => this[path] switch
+    {
+        ExecutableNode executable => executable.Plan,
+        ContainerNode container => container.Plan,
+        _ => null,
+    };
+
+    /// <summary>节点类型的形状，开始为空。</summary>
+    public NodeTypeShape? ShapeOf(NodePath path) => this[path] switch
+    {
+        ExecutableNode executable => executable.Type.Shape,
+        ContainerNode container => container.Type.Shape,
+        _ => null,
+    };
 
     /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。供边规则按类型校验。</summary>
-    public PortType TypeOf(int nodeIndex, PortName port) =>
-        Nodes[nodeIndex] switch
+    public PortType TypeOf(NodePath node, PortName port) =>
+        this[node] switch
         {
             ExecutableNode executable => FeedRules.TypeOf(executable, port),
             StartNode start => start.FindPort(port)?.Type ?? PortType.Text,
@@ -107,109 +98,90 @@ public sealed class NodeGraph : INodeGraph
         };
 
     /// <summary>执行节点的条目空间：实例条目归属的拆分来源。自身取方案的拆分来源，按条目对齐的沿对齐来源递推到源拆分。</summary>
-    public int? ItemSpace(int executableIndex) =>
-        PlanOf(executableIndex) switch
+    public NodePath? ItemSpace(NodePath executable) =>
+        PlanOf(executable) switch
         {
             { SplitSource: { } split } => split,
             { } plan => plan.AlignedSources.Select(ItemSpace).FirstOrDefault(space => space is not null),
             _ => null,
         };
 
-    /// <summary>节点的输入侧方案，开始节点与不需来源即可挂起的类型为空。</summary>
-    public NodeInputPlan? PlanOf(int index) => _plans[index];
-
-    /// <summary>启动条件只读方案，方案由入边与节点声明一次算出：取值边成组、空间边给实例空间来源、驱动按展开模式定。
-    /// 不需来源即可挂起的类型不建方案，它们不按就绪判定。</summary>
-    private NodeInputPlan[] BuildPlans()
+    /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。
+    /// 容器与执行节点带上自己的入出边，输入侧方案由节点按入边算出。</summary>
+    private static GraphNode Finalize(GraphNode node, IReadOnlyList<FlowEdge> edges) => node switch
     {
-        NodeInputPlan[] plans = new NodeInputPlan[Nodes.Count];
-        foreach (ExecutableNode executable in ExecutableNodes.Where(node => ShapeOf(node.Index) is not { StartsUnaided: true }))
+        StartNode start => start with { Outgoing = [.. edges.Where(edge => edge.Source == start.Path)] },
+        ContainerNode container => container with
         {
-            plans[executable.Index] = PlanFor(executable);
-        }
-
-        foreach (ContainerNode container in Containers)
+            Children = [.. container.Children.Select(child => Finalize(child, edges))],
+            Outgoing = [.. edges.Where(edge => edge.Source == container.Path)],
+        },
+        ExecutableNode executable => executable with
         {
-            plans[container.Index] = PlanFor(container);
-        }
-
-        return plans;
-    }
-
-    /// <summary>执行节点的方案：入边按组聚合，空间边不进组，实例空间来源取自空间边或对齐来源。</summary>
-    private NodeInputPlan PlanFor(ExecutableNode executable)
-    {
-        IReadOnlyList<FlowEdge> incoming = Incoming(executable.Index);
-        bool byItem = executable.Execution.Mode == NodeMode.PerItem;
-        int? splitSource = SplitSource(incoming);
-        IReadOnlyList<int> alignedSources =
-        [
-            .. incoming
-                .Where(edge => edge.Role == EdgeKind.Value && edge.Scope == FeedScope.Item)
-                .Select(edge => edge.Source)
-                .Distinct(),
-        ];
-
-        SpaceKind space = SpaceKind.None;
-        if (splitSource is not null)
-        {
-            space = SpaceKind.Split;
-        }
-        else if (byItem && alignedSources.Count > 0)
-        {
-            space = SpaceKind.Aligned;
-        }
-
-        return new NodeInputPlan
-        {
-            Space = space,
-            SplitSource = splitSource,
-            AlignedSources = alignedSources,
-            Branch = executable.Execution.Branch,
-            Groups =
-            [
-                .. incoming
-                    .GroupBy(edge => edge.Group)
-                    .OrderBy(group => group.Key)
-                    .Select(group => new InputGroup([.. group.Select(BindingOf)])),
-            ],
-            Driver = byItem ? NodeDriver.Completion : NodeDriver.Version,
-            MaxRuns = executable.MaxRuns,
-        };
-    }
-
-    /// <summary>容器的方案：一组绑定覆盖全部直接成员与子容器，成员产出齐备且版本有变化即推进内容版本。</summary>
-    private static NodeInputPlan PlanFor(ContainerNode container) => new()
-    {
-        Space = SpaceKind.None,
-        Groups =
-        [
-            new InputGroup(
-            [
-                .. container.Members
-                    .Concat(container.SubContainers)
-                    .Select(member => new InputBinding(EdgeKind.Value, member, FeedScope.Whole, FeedRecurrence.Repeat, false)),
-            ]),
-        ],
-        Driver = NodeDriver.Version,
-        MaxRuns = int.MaxValue,
+            Incoming = [.. edges.Where(edge => edge.Target == executable.Path)],
+            Outgoing = [.. edges.Where(edge => edge.Source == executable.Path)],
+        },
+        _ => node,
     };
 
-    private static InputBinding BindingOf(FlowEdge edge) =>
-        new(edge.Role, edge.Source, edge.Scope, edge.Recurrence, edge.Type == PortType.Signal);
+    /// <summary>节点与它已重建的子树，先根序。</summary>
+    private static IEnumerable<GraphNode> Flattened(GraphNode node) =>
+        node is ContainerNode container
+            ? [node, .. container.Children.SelectMany(Flattened)]
+            : [node];
 
-    /// <summary>入边里提供拆分空间的空间边来源，没有时为空。</summary>
-    private static int? SplitSource(IReadOnlyList<FlowEdge> incoming) =>
-        incoming.FirstOrDefault(edge => edge.Role == EdgeKind.Split)?.Source;
+    /// <summary>树的形状检查：同层节点名唯一、子节点路径与父一致，且节点表里的节点在树上各出现一次，边两端都能下钻到。</summary>
+    private void CheckTree(int supplied)
+    {
+        CheckLevel(_roots, parent: null);
+        foreach (ContainerNode container in Containers)
+        {
+            CheckLevel(container.Children, container.Path);
+        }
 
-    /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员序号按分量给出。用于环合法性校验。</summary>
-    public IReadOnlyList<int[]> Loops()
+        if (TreeCount(_roots) != supplied)
+        {
+            throw new ArgumentException("节点表里的节点数与流程树上的节点数不一致，同一条路径上可能出现多个节点。");
+        }
+
+        foreach (FlowEdge edge in Edges)
+        {
+            _ = this[edge.Source];
+            _ = this[edge.Target];
+        }
+    }
+
+    /// <summary>从一层子节点沿子节点表数已挂到树上的节点数。</summary>
+    private static int TreeCount(IReadOnlyList<GraphNode> level) =>
+        level.Sum(child => 1 + (child is ContainerNode container ? TreeCount(container.Children) : 0));
+
+    /// <summary>一层子节点：同层节点名唯一，子节点路径必须是父路径加本段。</summary>
+    private static void CheckLevel(IReadOnlyList<GraphNode> children, NodePath? parent)
+    {
+        string where = parent is { } container ? $"容器 {container}" : "根级";
+        HashSet<NodeName> seen = [];
+        foreach (GraphNode child in children)
+        {
+            if (!seen.Add(child.Name))
+            {
+                throw new ArgumentException($"{where}的节点名 {child.Name} 重复，节点名只需同一容器内唯一。");
+            }
+
+            if (child.Path.Parent != parent)
+            {
+                throw new ArgumentException($"{where}的子节点 {child.Path} 不在这一层。");
+            }
+        }
+    }
+
+    /// <summary>真实依赖环的强连通分量：来源容器展开到全部成员后建邻接，只取成员多于一个或带自连环的分量，成员按分量给出。用于环合法性校验。</summary>
+    public IReadOnlyList<NodePath[]> Loops()
     {
         ExecutableNode[] executables = [.. ExecutableNodes];
-        var rank = new Dictionary<int, int>();
+        var rank = new Dictionary<NodePath, int>();
         for (int i = 0; i < executables.Length; i++)
         {
-            rank[executables[i].Index] = i;
+            rank[executables[i].Path] = i;
         }
 
         var adjacent = new List<List<int>>(executables.Length);
@@ -220,13 +192,13 @@ public sealed class NodeGraph : INodeGraph
 
         foreach (FlowEdge edge in Edges)
         {
-            foreach (int source in SourcesIn(edge.Source))
+            foreach (NodePath source in SourcesIn(edge.Source))
             {
                 adjacent[rank[source]].Add(rank[edge.Target]);
             }
         }
 
-        var loops = new List<int[]>();
+        var loops = new List<NodePath[]>();
         var index = new int[executables.Length];
         var low = new int[executables.Length];
         Array.Fill(index, -1);
@@ -276,7 +248,7 @@ public sealed class NodeGraph : INodeGraph
 
             if (members.Count > 1 || selfLoop)
             {
-                loops.Add([.. members.Select(member => executables[member].Index)]);
+                loops.Add([.. members.Select(member => executables[member].Path)]);
             }
         }
 
@@ -291,18 +263,15 @@ public sealed class NodeGraph : INodeGraph
         return loops;
     }
 
-    /// <summary>容器及它的全部子容器里的执行节点，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
-    public IReadOnlyList<int> ExecutablesIn(int containerIndex) =>
-        [.. SourcesIn(containerIndex).Distinct()];
+    /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
+    public IReadOnlyList<NodePath> ExecutablesIn(NodePath source) => [.. SourcesIn(source).Distinct()];
 
-    /// <summary>来源节点展开出的执行节点集合：执行节点给自身，容器递归给全部成员，开始没有执行节点。</summary>
-    private IEnumerable<int> SourcesIn(int nodeIndex) =>
-        Nodes[nodeIndex] switch
+    /// <summary>来源节点展开出的执行节点路径集合：执行节点给自身，容器递归给全部成员，开始没有执行节点。</summary>
+    private IEnumerable<NodePath> SourcesIn(NodePath source) =>
+        this[source] switch
         {
-            ExecutableNode _ => [nodeIndex],
-            ContainerNode container => container.Members
-                .Concat(container.SubContainers)
-                .SelectMany(member => SourcesIn(member)),
+            ExecutableNode _ => [source],
+            ContainerNode container => container.Children.SelectMany(child => SourcesIn(child.Path)),
             _ => [],
         };
 }
