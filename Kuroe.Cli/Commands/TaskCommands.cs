@@ -34,8 +34,8 @@ internal sealed class TaskCommands(
         ("/task run <run号>", "打印该 run 的上下文来源与过程"),
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准全部待批准的审批节点"),
-        ("/task approve <任务号> <@节点名>", "批准指定审批节点，多个待批准时用 @节点名 点名"),
-        ("/task answer <任务号> [<@节点名>] <文本>", "回答等待输入的节点，多个待输入时用 @节点名 点名"),
+        ("/task approve <任务号> <@节点路径>", "批准指定审批节点，多个待批准时用 @节点路径 点名"),
+        ("/task answer <任务号> [<@节点路径>] <文本>", "回答等待输入的节点，多个待输入时用 @节点路径 点名"),
         ("/task rework <任务号>", "返工被阻塞的单元"),
         ("/task stop <任务号>", "取消任务"),
         ("/task stop run <run号>", "取消单个 run"),
@@ -140,7 +140,7 @@ internal sealed class TaskCommands(
         list.Print([task]);
     }
 
-    /// <summary>回答待输入的节点。首词以 @ 开头且命中等待节点名时按点名回答，唯一待输入节点不需点名。</summary>
+    /// <summary>回答待输入的节点。首词以 @ 开头且命中等待节点路径时按点名回答，唯一待输入节点不需点名。</summary>
     private void Answer(int number, string[] inputParts)
     {
         TaskId id = new(number);
@@ -153,28 +153,28 @@ internal sealed class TaskCommands(
 
         HashSet<string> waiting = [.. pending.Value
             .Where(node => node.Kind == AwaitKind.Answer)
-            .Select(node => node.Name)];
+            .Select(node => node.Node.Value)];
 
-        string? nodeName;
+        string? nodePath;
         string input;
         if (inputParts.Length > 1
             && inputParts[0].Length > 1
             && inputParts[0][0] == '@'
             && waiting.Contains(inputParts[0][1..]))
         {
-            nodeName = inputParts[0][1..];
+            nodePath = inputParts[0][1..];
             input = string.Join(' ', inputParts[1..]);
         }
         else
         {
-            nodeName = null;
+            nodePath = null;
             input = string.Join(' ', inputParts);
         }
 
-        results.Report(waits.Answer(id, nodeName, input), $"{id} 已收到回答，继续下一步。");
+        results.Report(waits.Answer(id, nodePath, input), $"{id} 已收到回答，继续下一步。");
     }
 
-    /// <summary>批准审批节点。参数以 @ 开头且命中待批准节点名时按点名批准，未点名时批准全部待批准节点。</summary>
+    /// <summary>批准审批节点。参数以 @ 开头且命中待批准节点路径时按点名批准，未点名时批准全部待批准节点。</summary>
     private void Approve(int number, string marker)
     {
         TaskId id = new(number);
@@ -191,10 +191,10 @@ internal sealed class TaskCommands(
             return;
         }
 
-        string name = marker[1..];
+        string path = marker[1..];
         foreach (PendingNode node in pending.Value)
         {
-            if (node.Kind == AwaitKind.Approve && node.Name == name)
+            if (node.Kind == AwaitKind.Approve && node.Node.Value == path)
             {
                 results.Report(waits.Approve(id, [node.Node]), $"{id} 已批准，继续下一步。");
 
@@ -202,7 +202,7 @@ internal sealed class TaskCommands(
             }
         }
 
-        terminal.Warn($"节点「{name}」不在待批准。");
+        terminal.Warn($"节点「{path}」不在待批准。");
     }
 
     private void Show(int number)

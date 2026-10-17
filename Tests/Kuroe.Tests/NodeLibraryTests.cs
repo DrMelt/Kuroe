@@ -36,7 +36,7 @@ public sealed class NodeLibraryTests
         NodeSpec deliver = root.Nodes[1];
         Assert.NotNull(deliver.Nodes);
         NodeSpec implement = deliver.Nodes[0];
-        Assert.Equal(new NodeName("实施"), implement.Name);
+        Assert.Equal(new NodeLabel("实施"), implement.Label);
         Assert.NotNull(implement.Execution);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
         Assert.Equal("制定计划@拆分", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
@@ -117,12 +117,12 @@ public sealed class NodeLibraryTests
         Assert.NotNull(container.Nodes);
         NodeSpec implement = container.Nodes[0];
         Assert.NotNull(implement.Execution);
-        Assert.Equal(new NodeName("实施"), implement.Name);
+        Assert.Equal(new NodeLabel("实施"), implement.Label);
         Assert.Equal(NodeMode.PerItem, implement.Execution.Mode);
 
         var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(environment.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
-        IReadOnlyList<NodeName> savedNodes = [.. Nodes.Select(node => node.Name)];
-        Assert.Equal([new NodeName("准备")], savedNodes);
+        IReadOnlyList<NodeLabel> savedNodes = [.. Nodes.Select(node => node.Label)];
+        Assert.Equal([new NodeLabel("准备")], savedNodes);
     }
 
     /// <summary>库容器内成员的上游接线条目必须落在子树或声明端口内，环外成员不可见。</summary>
@@ -153,7 +153,7 @@ public sealed class NodeLibraryTests
     public void Library_executable_with_non_positive_max_runs_is_rejected() =>
         Assert.Equal(
             ["节点库定义 干活库：MaxRuns 必须是正整数。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec { MaxRuns = 0 } }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("干活库"), Label = new NodeLabel("干活库"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec { MaxRuns = 0 } }));
 
     /// <summary>库容器定义的非正统一上限，未经引用也在库校验阶段拒绝。</summary>
     [Fact]
@@ -163,10 +163,11 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
+                Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 MaxRuns = 0,
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -174,7 +175,7 @@ public sealed class NodeLibraryTests
     public void Library_container_without_children_is_rejected() =>
         Assert.Equal(
             ["节点库定义 空组：容器节点必须声明子节点。"],
-            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Type = ContainerNodeTypes.Type }));
+            LibraryErrors(new NodeSpec { Name = new NodeName("空组"), Label = new NodeLabel("空组"), Type = ContainerNodeTypes.Type }));
 
     /// <summary>库执行定义不能声明子节点，子节点只属于容器。</summary>
     [Fact]
@@ -184,9 +185,10 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
+                Label = new NodeLabel("干活库"),
                 Type = LlmNodeTypes.Create(null),
                 Execution = new ExecutableSpec(),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
@@ -200,11 +202,12 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活组"),
+                Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 Outputs = [new Port(new PortName("结论"), PortType.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 ModelSlots = [new ModelRef("执行者")],
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Execution = new ExecutableSpec() }],
             }));
 
     /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
@@ -215,9 +218,10 @@ public sealed class NodeLibraryTests
             LibraryErrors(new NodeSpec
             {
                 Name = new NodeName("干活库"),
+                Label = new NodeLabel("干活库"),
                 Type = LlmNodeTypes.Create(null),
                 Execution = new ExecutableSpec(),
-                ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeName("干活"), new PortName("结论"))) },
+                ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeLabel("干活"), new PortName("结论"))) },
             }));
 
     /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出，装配层容器的输入端口声明仍被拒。</summary>
@@ -293,7 +297,7 @@ public sealed class NodeLibraryTests
 
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![1].Nodes![0];
-        Assert.Equal(new NodeName("实施"), implement.Name);
+        Assert.Equal(new NodeLabel("实施"), implement.Label);
         Assert.Equal("目标条目@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
@@ -320,7 +324,7 @@ public sealed class NodeLibraryTests
         NodeSpec deliver = flow.RootNode.Nodes![1];
         NodeSpec implement = deliver.Nodes![0];
         Assert.Equal(new PortName("结论"), Assert.Single(Assert.Single(implement.From).Links).Ref.Port);
-        Assert.Equal(new NodeName("来源"), Assert.Single(Assert.Single(implement.From).Links).Ref.Source);
+        Assert.Equal(new NodeLabel("来源"), Assert.Single(Assert.Single(implement.From).Links).Ref.Source);
         Assert.Equal("来源@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
@@ -355,7 +359,7 @@ public sealed class NodeLibraryTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("审查实例")).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("审查实例")).State);
     }
 
     [Fact]
@@ -415,7 +419,7 @@ public sealed class NodeLibraryTests
     [InlineData(ReferenceWithOut, "引用节点不能声明输出端口")]
     [InlineData(AssemblyContainerOut, "没有输出端口")]
     [InlineData(LibraryNameWithAt, "节点名不能含 @")]
-    [InlineData(MemberNameWithAt, "成员名 甲@乙 不能含 @")]
+    [InlineData(MemberNameWithAt, "成员标签 甲@乙 不能含 @")]
     [InlineData(LibraryInputPortWithAt, "端口名不能为空或含 @")]
     [InlineData(MemberSlotNotDeclared, "未在容器上声明")]
     [InlineData(UnusedSlotDeclaration, "未被成员使用")]
@@ -465,7 +469,7 @@ public sealed class NodeLibraryTests
               "Models": ["执行者"],
               "Inputs": [{ "Name": "计划" }],
               "Nodes": [
-                { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+                { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
               ]
             }
           ],
@@ -483,7 +487,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -502,7 +506,7 @@ public sealed class NodeLibraryTests
               "Models": ["执行者"],
               "Inputs": [{ "Name": "计划" }],
               "Nodes": [
-                { "Name": "实施", "Use": "干活库", "Model": "执行者", "From": [ { "结论": "外来@结论" } ] }
+                { "Label": "实施", "Use": "干活库", "Model": "执行者", "From": [ { "结论": "外来@结论" } ] }
               ]
             }
           ],
@@ -515,7 +519,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "交付组", "Use": "交付", "Models": { "执行者": "执行者" } }
+                    { "Label": "交付组", "Use": "交付", "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -529,7 +533,7 @@ public sealed class NodeLibraryTests
             { "Name": "规划", "Kind": "Llm", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }] },
             { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
             { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [
-              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+              { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
             ] }
           ],
           "Flows": [
@@ -545,10 +549,10 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定A", "Use": "规划", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "制定B", "Use": "规划", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付A", "Use": "交付", "In": { "计划": "制定A@拆分" }, "Models": { "执行者": "执行者" } },
-                { "Name": "交付B", "Use": "交付", "In": { "计划": "制定B@拆分" }, "Models": { "执行者": "执行者" } }
+                { "Label": "制定A", "Use": "规划", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
+                { "Label": "制定B", "Use": "规划", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
+                { "Label": "交付A", "Use": "交付", "In": { "计划": "制定A@拆分" }, "Models": { "执行者": "执行者" } },
+                { "Label": "交付B", "Use": "交付", "In": { "计划": "制定B@拆分" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -562,7 +566,7 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
             { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [
-              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+              { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
             ] }
           ],
           "Flows": [
@@ -575,7 +579,7 @@ public sealed class NodeLibraryTests
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
               ] } ]
             },
             {
@@ -587,7 +591,7 @@ public sealed class NodeLibraryTests
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "实施者" } }
+                { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "实施者" } }
               ] } ]
             }
           ]
@@ -602,7 +606,7 @@ public sealed class NodeLibraryTests
         """;
 
     private const string LibraryReferenceAtRoot = """
-        { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" }, { "Name": "副本", "Use": "执行" } ], "Flows": [] }
+        { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" }, { "Label": "副本", "Use": "执行" } ], "Flows": [] }
         """;
 
     private const string LibraryLeafFrom = """
@@ -612,51 +616,51 @@ public sealed class NodeLibraryTests
     private const string UnknownLibraryReference = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "实施", "Use": "不存在", "Model": "执行者" } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Label": "实施", "Use": "不存在", "Model": "执行者" } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string UnknownReferenceWithoutModel = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "不存在" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "不存在" } ] } ] }
         ] }
         """;
 
     private const string UnboundPort = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string PortNotDeclared = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "来源": "@来源" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "来源": "@来源" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string ReferenceWithBody = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "From": [ { "计划": "@计划" } ], "Mode": "PerItem" } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "From": [ { "计划": "@计划" } ], "Mode": "PerItem" } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string UnknownPortBinding = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "In": { "来源": "制定计划@拆分" }, "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "来源": "制定计划@拆分" }, "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
@@ -670,7 +674,7 @@ public sealed class NodeLibraryTests
 
     private const string ReferenceWithInputs = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Inputs": [{ "Name": "计划" }] } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Inputs": [{ "Name": "计划" }] } ] } ] }
         ] }
         """;
 
@@ -682,7 +686,7 @@ public sealed class NodeLibraryTests
 
     private const string ReferenceWithQuestion = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Question": "确认" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Question": "确认" } ] } ] }
         ] }
         """;
 
@@ -694,16 +698,16 @@ public sealed class NodeLibraryTests
 
     private const string ContainerWithExecutionFields = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Kind": "Container", "Model": "执行者", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "组", "Kind": "Container", "Model": "执行者", "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者" } ] } ] }
         ] }
         """;
 
     private const string ReferenceContainerFrom = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" }, "From": [ { "拆分": "制定计划@拆分" } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" }, "From": [ { "拆分": "制定计划@拆分" } ] } ] }
         ] }
         """;
 
@@ -730,33 +734,33 @@ public sealed class NodeLibraryTests
     private const string LibraryMemberWithoutSlot = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } } ] }
         ] }
         """;
 
     private const string MissingModelBinding = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付" } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付" } ] }
         ] }
         """;
 
     private const string ContainerReferenceWithModel = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Name": "交付", "Use": "交付", "Model": "执行者" } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [ { "Label": "交付", "Use": "交付", "Model": "执行者" } ] }
         ] }
         """;
 
     private const string LeafReferenceWithModelBindings = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" } ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Models": { "执行者": "执行者" } } ] } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Models": { "执行者": "执行者" } } ] } ] }
         ] }
         """;
 
@@ -765,10 +769,10 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "执行", "Kind": "Llm", "Mode": "PerItem" },
             { "Name": "内层", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "内部" }], "Nodes": [
-              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "内部": "@内部" } ] }
+              { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "内部": "@内部" } ] }
             ] },
             { "Name": "外层", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "目标" }], "Nodes": [
-              { "Name": "里", "Use": "内层", "In": { "内部": "@目标" }, "Models": { "执行者": "执行者" } }
+              { "Label": "里", "Use": "内层", "In": { "内部": "@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ],
           "Flows": [
@@ -785,7 +789,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标拆成可独立实施的条目。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "外层", "In": { "目标": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                { "Label": "交付", "Use": "外层", "In": { "目标": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -800,7 +804,7 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "分析", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
             { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "输入" }], "Nodes": [
-              { "Name": "实施", "Use": "分析", "Model": "执行者", "From": [ { "输入": "@输入" } ] }
+              { "Label": "实施", "Use": "分析", "Model": "执行者", "From": [ { "输入": "@输入" } ] }
             ] }
           ],
           "Flows": [
@@ -816,8 +820,8 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "来源", "Use": "分析", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "交付", "Use": "交付", "In": { "输入": "来源@结论" }, "Models": { "执行者": "执行者" } }
+                    { "Label": "来源", "Use": "分析", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] },
+                    { "Label": "交付", "Use": "交付", "In": { "输入": "来源@结论" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -838,7 +842,7 @@ public sealed class NodeLibraryTests
         { "Flows": [
           { "Name": "复用", "Models": [{ "Name": "执行者" }], "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "干活", "Use": "外部库", "Model": "执行者" }
+              { "Label": "干活", "Use": "外部库", "Model": "执行者" }
             ] }
           ] }
         ] }
@@ -856,7 +860,7 @@ public sealed class NodeLibraryTests
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] } ] }
+                { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] } ] }
               ]
             }
           ]
@@ -882,8 +886,8 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "定计划", "Use": "准备", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "交付", "Use": "交付", "In": { "计划": "定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                    { "Label": "定计划", "Use": "准备", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
+                    { "Label": "交付", "Use": "交付", "In": { "计划": "定计划@拆分" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -919,11 +923,11 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "执行", "Kind": "Llm", "Mode": "Single" },
             { "Name": "内层", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "内部" }], "Nodes": [
-              { "Name": "实施", "Use": "执行", "Model": "执行者", "From": [ { "内部": "@内部" } ] }
+              { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "内部": "@内部" } ] }
             ] },
             { "Name": "外层", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "目标" }, { "Name": "入口" }], "Nodes": [
               { "Name": "目标条目", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "入口": "@入口" } ] },
-              { "Name": "里", "Use": "内层", "In": { "内部": "目标条目@结论" }, "Models": { "执行者": "执行者" } }
+              { "Label": "里", "Use": "内层", "In": { "内部": "目标条目@结论" }, "Models": { "执行者": "执行者" } }
             ] }
           ],
           "Flows": [
@@ -940,7 +944,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "规划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "外层", "In": { "目标": "规划@拆分", "入口": "Start@目标" }, "Models": { "执行者": "执行者" } }
+                { "Label": "交付", "Use": "外层", "In": { "目标": "规划@拆分", "入口": "Start@目标" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -976,7 +980,7 @@ public sealed class NodeLibraryTests
               "Models": ["执行者"],
               "Inputs": [{ "Name": "计划" }],
               "Nodes": [
-                { "Name": "实施", "Use": "允许工具", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+                { "Label": "实施", "Use": "允许工具", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
               ]
             }
           ],
@@ -995,7 +999,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标拆成可独立实施的条目。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
+                { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@拆分" }, "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -1030,7 +1034,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "审查实例", "Use": "审查", "Model": "执行者",
+                    { "Label": "审查实例", "Use": "审查", "Model": "执行者",
                       "From": [ { "上下文": "计划@上下文" } ] }
                   ]
                 }
@@ -1066,7 +1070,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Model": "规划者", "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "审查实例", "Use": "审查", "Model": "执行者", "From": [ { "目标": "Start@目标" } ],
+                    { "Label": "审查实例", "Use": "审查", "Model": "执行者", "From": [ { "目标": "Start@目标" } ],
                       "Validate": { "Predicate": "NonEmpty" } }
                   ]
                 }
@@ -1085,7 +1089,7 @@ public sealed class NodeLibraryTests
               "Name": "组",
               "Kind": "Container",
               "Models": ["执行者"],
-              "Nodes": [ { "Name": "甲", "Use": "审查", "Model": "执行者" } ]
+              "Nodes": [ { "Label": "甲", "Use": "审查", "Model": "执行者" } ]
             }
           ],
           "Flows": [
@@ -1098,7 +1102,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Model": "执行者" },
-                    { "Name": "引用组", "Use": "组", "From": [ { "结论": "计划@结论" } ] }
+                    { "Label": "引用组", "Use": "组", "From": [ { "结论": "计划@结论" } ] }
                   ]
                 }
               ]
@@ -1115,7 +1119,7 @@ public sealed class NodeLibraryTests
               "Name": "组",
               "Kind": "Container",
               "Models": ["执行者"],
-              "Nodes": [ { "Name": "甲", "Use": "审查", "Model": "执行者" } ]
+              "Nodes": [ { "Label": "甲", "Use": "审查", "Model": "执行者" } ]
             }
           ],
           "Flows": [
@@ -1128,7 +1132,7 @@ public sealed class NodeLibraryTests
                   "Kind": "Container",
                   "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Model": "执行者" },
-                    { "Name": "引用组", "Use": "组", "Validate": { "Predicate": "NonEmpty" } }
+                    { "Label": "引用组", "Use": "组", "Validate": { "Predicate": "NonEmpty" } }
                   ]
                 }
               ]
@@ -1159,7 +1163,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
+                    { "Label": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -1190,7 +1194,7 @@ public sealed class NodeLibraryTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
+                    { "Label": "交付实例", "Use": "交付", "Models": { "执行者": "执行者" } }
                   ]
                 }
               ]
@@ -1243,17 +1247,17 @@ public sealed class NodeLibraryTests
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
           { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [
-            { "Name": "实施", "Use": "执行", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] }
+            { "Label": "实施", "Use": "执行", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] }
           ] }
         ], "Flows": [] }
         """;
 
-    /// <summary>库定义节点名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    /// <summary>库定义节点标签含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
     private const string LibraryNameWithAt = """
         { "Nodes": [ { "Name": "甲@乙", "Kind": "Llm" } ], "Flows": [] }
         """;
 
-    /// <summary>库容器成员名含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
+    /// <summary>库容器成员标签含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
     private const string MemberNameWithAt = """
         { "Nodes": [
           { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "甲@乙", "Kind": "Llm", "Model": "执行者" } ] }
@@ -1325,7 +1329,7 @@ public sealed class NodeLibraryTests
     private const string ReferenceWithOut = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "执行者", "Outputs": [{ "Name": "结论", "Ref": "实施" }] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "执行者", "Outputs": [{ "Name": "结论", "Ref": "实施" }] } ] }
         ], "Flows": [] }
         """;
 
@@ -1340,7 +1344,7 @@ public sealed class NodeLibraryTests
     private const string MemberSlotNotDeclared = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "乙" } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "乙" } ] }
         ], "Flows": [] }
         """;
 
@@ -1348,7 +1352,7 @@ public sealed class NodeLibraryTests
     private const string UnusedSlotDeclaration = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Models": ["甲", "乙"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "甲" } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["甲", "乙"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "甲" } ] }
         ], "Flows": [] }
         """;
 
@@ -1356,8 +1360,8 @@ public sealed class NodeLibraryTests
     private const string GroupBindingMissingSlot = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "甲" } ] },
-          { "Name": "外组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "里", "Use": "内组" } ] }
+          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "甲" } ] },
+          { "Name": "外组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "里", "Use": "内组" } ] }
         ], "Flows": [] }
         """;
 
@@ -1365,8 +1369,8 @@ public sealed class NodeLibraryTests
     private const string GroupBindingUnknownSlot = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "甲" } ] },
-          { "Name": "外组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "里", "Use": "内组", "Models": { "甲": "甲", "乙": "甲" } } ] }
+          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "甲" } ] },
+          { "Name": "外组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "里", "Use": "内组", "Models": { "甲": "甲", "乙": "甲" } } ] }
         ], "Flows": [] }
         """;
 
@@ -1379,8 +1383,8 @@ public sealed class NodeLibraryTests
     private const string ReferenceSlotDeclarationArray = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "甲" } ] }
-        ], "Flows": [ { "Name": "默认", "Models": [{ "Name": "甲", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "引用组", "Use": "内组", "Models": ["甲"] } ] } ] } ] }
+          { "Name": "内组", "Kind": "Container", "Models": ["甲"], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "甲" } ] }
+        ], "Flows": [ { "Name": "默认", "Models": [{ "Name": "甲", "Model": "fake" }], "Nodes": [ { "Name": "整体", "Kind": "Container", "Nodes": [ { "Label": "引用组", "Use": "内组", "Models": ["甲"] } ] } ] } ] }
         """;
 
     /// <summary>装配层内联容器声明模型槽位，装配校验拒绝。</summary>
@@ -1407,9 +1411,9 @@ public sealed class NodeLibraryTests
     private const string UnknownSlotBinding = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Models": ["甲"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Name": "实施", "Use": "执行", "Model": "甲", "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Models": ["甲"], "Inputs": [{ "Name": "计划" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Model": "甲", "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [ { "Name": "用", "Use": "交付", "In": { "计划": "Start@目标" }, "Models": { "甲": "执行者", "乙": "执行者" } } ] }
+          { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [ { "Label": "用", "Use": "交付", "In": { "计划": "Start@目标" }, "Models": { "甲": "执行者", "乙": "执行者" } } ] }
         ] }
         """;
 

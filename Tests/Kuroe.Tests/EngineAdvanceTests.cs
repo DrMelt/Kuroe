@@ -12,15 +12,15 @@ public sealed class EngineAdvanceTests
     public void Downstream_starts_while_unrelated_slow_run_is_running()
     {
         using TestEnvironment environment = TestEnvironment.Create(SlowParallelFlow);
-        environment.Executor.DelayFor = run => run.Context.Node.Name.Value == "慢工" ? 500 : 10;
+        environment.Executor.DelayFor = run => run.Context.Node.Label.Value == "慢工" ? 500 : 10;
 
         TaskId id = environment.Submit("并行推进");
 
         // 慢 run 的下游链末端已启动，慢 run 自身应尚未收口
         environment.Wait(id, snapshot => snapshot.Executables.Any(node =>
-            node.Executable.Name.Value == "收官" && node.Runs.Count > 0));
+            node.Executable.Label.Value == "收官" && node.Runs.Count > 0));
 
-        Assert.Contains(environment.Registry.LiveRuns(), run => run.Context.Node.Name.Value == "慢工");
+        Assert.Contains(environment.Registry.LiveRuns(), run => run.Context.Node.Label.Value == "慢工");
 
         Assert.Equal(TaskState.Done, environment.Settle(id).State);
     }

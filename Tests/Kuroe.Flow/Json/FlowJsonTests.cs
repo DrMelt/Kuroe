@@ -72,7 +72,7 @@ public sealed class FlowJsonTests
             {
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Models": ["执行者"], "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
-                { "Name": "组实例", "Use": "整体", "Models": { "执行者": "执行者" } }
+                { "Label": "组实例", "Use": "整体", "Models": { "执行者": "执行者" } }
               ]
             }
             """;
@@ -115,7 +115,7 @@ public sealed class FlowJsonTests
     {
         FlowFileDto file = new()
         {
-            Nodes = [new NodeDto { Name = "制定计划", Kind = "Llm" }],
+            Nodes = [new NodeDto { Label = "制定计划", Kind = "Llm" }],
             Flows = [new FlowDto { Name = "默认" }],
         };
 

@@ -123,7 +123,8 @@ public sealed class FlowService : IFlowCatalog
 
         lock (_gate)
         {
-            List<NodeSpec> fileNodes = MergeByName(_fileNodes, read.Value.Nodes, node => node.Name);
+            // 独立装配已通过校验，文件节点在这里都是定义条目
+            List<NodeSpec> fileNodes = MergeByName(_fileNodes, read.Value.Nodes, node => node.DefinitionName.Value);
             List<FlowDefinition> flowModels = MergeByName(_flowModels, read.Value.Flows, flow => flow.Name);
 
             ErrorOr<AssembledFlows> assembled = FlowAssembler.Assemble(fileNodes, flowModels, _library);
@@ -137,7 +138,7 @@ public sealed class FlowService : IFlowCatalog
                 .. read.Value.Flows.Select(flow => _flowModels.Any(existing => existing.Name == flow.Name)
                     ? $"覆盖流程 {flow.Name}"
                     : $"新增流程 {flow.Name}"),
-                .. read.Value.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
+                .. read.Value.Nodes.Select(node => $"节点库 {node.DefinitionName} 已并入。"),
             ];
 
             ErrorOr<Success> saved = _store.Save(FlowFile.Write(fileNodes, flowModels, _typeFiles));

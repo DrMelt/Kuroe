@@ -14,7 +14,7 @@ static class NodeParameterJson
     internal static INodeType Read(
         INodeTypeFile declaration,
         NodeScope scope,
-        NodeName node,
+        NodeLabel node,
         IReadOnlyDictionary<string, JsonElement>? values,
         Action<Error> fail)
     {

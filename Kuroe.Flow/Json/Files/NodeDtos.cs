@@ -8,8 +8,11 @@ namespace Kuroe.Flow.Json.Files;
 /// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，结构字段在此固定，类型专属字段落在参数段。</summary>
 public sealed class NodeDto
 {
-    /// <summary>节点名：库定义名或装配实例名。</summary>
+    /// <summary>节点名：定义条目的名字，节点库定义的名字或流程与容器内内联定义的名字。被使用的节点不写。</summary>
     public string? Name { get; set; }
+
+    /// <summary>节点标签：被使用的节点在图里的标识段。定义条目不写。</summary>
+    public string? Label { get; set; }
 
     /// <summary>节点类型名，取值由节点类型注册表决定。非引用节点必填，引用节点不写。</summary>
     public string? Kind { get; set; }
@@ -65,19 +68,15 @@ public sealed class PortEntryDto
     public string? Name { get; set; }
 
     /// <summary>端口类型，未写时按 Text。</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PortType? Type { get; set; }
 
     /// <summary>容器输出端口的转发目标，写 成员@端口。</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Ref { get; set; }
 
     /// <summary>端口承载内容的说明，未写时为空。</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
 
     /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交的任务目标。</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Value { get; set; }
 }
 

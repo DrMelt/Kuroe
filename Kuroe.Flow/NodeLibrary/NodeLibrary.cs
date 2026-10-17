@@ -3,33 +3,46 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.NodeLibrary;
 
-/// <summary>节点库：节点定义的注册中心。同名后注册覆盖先注册，注册在装配期完成，之后只读查找。</summary>
+/// <summary>节点库：节点定义的注册中心。同名后注册覆盖先注册，注册在装配期完成，之后只读查找。
+/// 定义表按注册顺序保留全部条目，名字索引只收有名条目，没有节点名的条目由校验报出。</summary>
 internal sealed class NodeLibrary
 {
-    private readonly List<NodeName> _order = [];
+    private readonly List<NodeSpec> _definitions = [];
     private readonly Dictionary<NodeName, NodeSpec> _byName = [];
 
-    /// <summary>注册一条定义，同名覆盖已有定义并保留先注册的位置。</summary>
+    /// <summary>注册一条定义，同名的条目替换定义表里的旧条目并更新名字索引。</summary>
     public void Register(NodeSpec node)
     {
-        if (!_byName.ContainsKey(node.Name))
+        if (node.Name is { } name)
         {
-            _order.Add(node.Name);
+            int index = _definitions.FindIndex(definition => definition.Name == name);
+            if (index >= 0)
+            {
+                _definitions[index] = node;
+            }
+            else
+            {
+                _definitions.Add(node);
+            }
+
+            _byName[name] = node;
+
+            return;
         }
 
-        _byName[node.Name] = node;
+        _definitions.Add(node);
     }
 
-    /// <summary>注册一批定义，同名覆盖已有定义，交回批内重复的名字。</summary>
+    /// <summary>注册一批定义，交回批内重复的节点名。</summary>
     public IReadOnlyList<NodeName> Register(IReadOnlyList<NodeSpec> nodes)
     {
         HashSet<NodeName> seen = [];
         List<NodeName> duplicated = [];
         foreach (NodeSpec node in nodes)
         {
-            if (!seen.Add(node.Name))
+            if (node.Name is { } name && !seen.Add(name))
             {
-                duplicated.Add(node.Name);
+                duplicated.Add(name);
             }
 
             Register(node);
@@ -38,20 +51,20 @@ internal sealed class NodeLibrary
         return duplicated;
     }
 
-    /// <summary>按名取定义。</summary>
+    /// <summary>按节点名取定义。</summary>
     public bool TryFind(NodeName name, [NotNullWhen(true)] out NodeSpec? definition) =>
         _byName.TryGetValue(name, out definition);
 
-    /// <summary>按注册顺序的定义快照。</summary>
-    public IReadOnlyList<NodeSpec> All() => [.. _order.Select(name => _byName[name])];
+    /// <summary>按注册顺序的定义快照，含没有节点名的条目。</summary>
+    public IReadOnlyList<NodeSpec> All() => [.. _definitions];
 
     /// <summary>复制一份，供装配在副本上叠加定义后整体替换。</summary>
     public NodeLibrary Copy()
     {
         NodeLibrary copy = new();
-        foreach (NodeName name in _order)
+        foreach (NodeSpec definition in _definitions)
         {
-            copy.Register(_byName[name]);
+            copy.Register(definition);
         }
 
         return copy;

@@ -145,7 +145,7 @@ internal sealed class TaskInfoTool : ITool
                 string blocked = node.BlockedItems.Count == 0
                     ? string.Empty
                     : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => InfoLabels.Item(item)))}";
-                text.AppendLine($"  {task.Graph[node.Node].Name} · {InfoLabels.Of(node.State)}{items}{blocked}");
+                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node.State)}{items}{blocked}");
             }
         }
 

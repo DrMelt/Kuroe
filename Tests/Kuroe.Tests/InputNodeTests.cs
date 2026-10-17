@@ -45,7 +45,7 @@ public sealed class InputNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Single(entry => entry.Executable.Label.Value == "实施")
             .Runs.Single();
         Assert.Contains(implement.Context.Seed,
             message => message.Text.Contains("需要支持多语言")
@@ -69,7 +69,7 @@ public sealed class InputNodeTests
     }
 
     [Fact]
-    public void Two_input_nodes_require_node_name()
+    public void Two_input_nodes_require_node_path()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.TwoInputFlow);
 
@@ -97,7 +97,7 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("目标");
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.Node.Name.Value == "准备" && run.State == RunState.Succeeded)
+            environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "准备" && run.State == RunState.Succeeded)
             && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         TaskSnapshot parked = environment.Snapshot(id);
 
@@ -120,7 +120,7 @@ public sealed class InputNodeTests
 
         environment.Waits.Answer(id, "整体/收话", "第一问").ThrowIfError();
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
+            environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
             && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
 
         environment.Waits.Answer(id, "整体/收话", "第二问").ThrowIfError();
@@ -128,7 +128,7 @@ public sealed class InputNodeTests
 
         Assert.Equal(TaskState.Running, done.State);
         Assert.Equal([1, 2], [.. environment.Executor.Started
-            .Where(run => run.Context.Node.Name.Value == "回话")
+            .Where(run => run.Context.Node.Label.Value == "回话")
             .Select(run => run.Context.ExecutionCount)]);
     }
 
@@ -157,8 +157,8 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
 
-        ExecutableNode input = parked.Graph.ExecutableNodes.Single(node => node.Name.Value == "用户输入");
-        ExecutableNode implement = parked.Graph.ExecutableNodes.Single(node => node.Name.Value == "实施");
+        ExecutableNode input = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
+        ExecutableNode implement = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
 
         Assert.Null(input.Model);
         Assert.NotNull(implement.Model);
@@ -176,7 +176,7 @@ public sealed class InputNodeTests
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        ExecutableSnapshot implement = Assert.Single(done.Executables, entry => entry.Executable.Name.Value == "实施");
+        ExecutableSnapshot implement = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "实施");
         Assert.Single(implement.Runs);
     }
 
@@ -192,7 +192,7 @@ public sealed class InputNodeTests
 
         TaskSnapshot awaiting = environment.Settle(id);
         Assert.Equal(TaskState.Running, awaiting.State);
-        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Name == new NodeName("审查容器")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Label == new NodeLabel("审查容器")).State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
 
         environment.Waits.Approve(id).ThrowIfError();
@@ -275,7 +275,7 @@ public sealed class InputNodeTests
         environment.Waits.Answer(id, null, "第一问").ThrowIfError();
         TaskSnapshot first = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, first.State);
-        ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Name.Value == "回话");
+        ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
         RunSnapshot firstRun = Assert.Single(replyNode.Runs);
         Assert.Contains(firstRun.Context.Seed, message => message.Text.Contains("第一问"));
         Assert.Equal("回复第1轮", firstRun.Result);
@@ -285,7 +285,7 @@ public sealed class InputNodeTests
         environment.Waits.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot second = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, second.State);
-        ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Name.Value == "回话");
+        ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Label.Value == "回话");
         Assert.Equal(2, replyNodeSecond.Runs.Count);
         RunSnapshot secondRun = replyNodeSecond.Runs[^1];
         Assert.Contains(secondRun.Context.Seed, message => message.Text.Contains("第二问"));

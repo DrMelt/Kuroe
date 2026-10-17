@@ -27,7 +27,7 @@ public sealed class InputNodeType(InputParameters? parameters) : INodeType
         {
             if (condition)
             {
-                fail(scope.Node(node.Name.Value, message));
+                fail(scope.Node(node.Label.Value, message));
             }
         }
 

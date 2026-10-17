@@ -18,11 +18,17 @@ internal static class DialogueFlow
     /// <summary>运行时模型选择名：执行时取宿主当前选中的模型。</summary>
     internal static ModelRef RuntimeModel { get; } = new("运行时");
 
-    /// <summary>收话节点名：环的挂点。</summary>
+    /// <summary>收话节点的节点名，环的挂点。</summary>
     internal static NodeName InputNodeName { get; } = new("收话");
 
-    /// <summary>回话节点名：面向运行时模型的一问一答。</summary>
+    /// <summary>收话节点的标签。</summary>
+    internal static NodeLabel InputNodeLabel { get; } = new(InputNodeName.Value);
+
+    /// <summary>回话节点的节点名，面向运行时模型的一问一答。</summary>
     internal static NodeName ReplyNodeName { get; } = new("回话");
+
+    /// <summary>回话节点的标签。</summary>
+    internal static NodeLabel ReplyNodeLabel { get; } = new(ReplyNodeName.Value);
 
     /// <summary>收话节点回答写入的输出端口名。</summary>
     internal static PortName InputPort { get; } = new("回答");
@@ -48,15 +54,13 @@ internal static class DialogueFlow
         "内置对话：回答用户的每轮输入",
         [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
         [new Port(StartPort, PortType.Text, "任务的初始输入，提交时给出。")],
-        new NodeSpec
+        NodeSpec.Define(new NodeName("对话")) with
         {
-            Name = new NodeName("对话"),
             Type = ContainerNodeTypes.Type,
             Nodes =
             [
-                new NodeSpec
+                NodeSpec.Define(InputNodeName) with
                 {
-                    Name = InputNodeName,
                     Type = InputNodeTypes.Create(new InputParameters
                     {
                         Question = "请输入",
@@ -73,14 +77,13 @@ internal static class DialogueFlow
                     [
                         new FromGroup(
                         [
-                            new FromLink(StartPort, PortRef.Named(StartNode.ReservedName, StartPort)),
-                            new FromLink(ReplyPort, PortRef.Named(ReplyNodeName, ReplyPort)),
+                            new FromLink(StartPort, PortRef.Named(StartNode.ReservedLabel, StartPort)),
+                            new FromLink(ReplyPort, PortRef.Named(ReplyNodeLabel, ReplyPort)),
                         ]),
                     ],
                 },
-                new NodeSpec
+                NodeSpec.Define(ReplyNodeName) with
                 {
-                    Name = ReplyNodeName,
                     Type = LlmNodeTypes.Create(new LlmParameters
                     {
                         Tools = Tools,
@@ -90,7 +93,7 @@ internal static class DialogueFlow
                     Execution = new ExecutableSpec(),
                     Model = RuntimeModel,
                     Outputs = [new Port(ReplyPort, PortType.Text)],
-                    From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeName, InputPort))])],
+                    From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeLabel, InputPort))])],
                 },
             ],
         });

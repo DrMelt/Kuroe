@@ -21,9 +21,15 @@ public sealed class FlowRuleTests
             Errors(Flow(Container("整体", Text("甲@乙", "执行者")), Models("执行者"))));
 
     [Fact]
-    public void Duplicate_node_name_is_rejected() =>
+    public void Node_with_at_label_is_rejected() =>
         Assert.Equal(
-            [NodeError("制定计划", "同一容器内的节点名重复。")],
+            [NodeError("甲@乙", "节点标签不能含 @，@ 是端口引用的分隔符。")],
+            Errors(Flow(Container("整体", Reference("甲@乙", "干活", "执行者")), Models("执行者"))));
+
+    [Fact]
+    public void Duplicate_node_label_is_rejected() =>
+        Assert.Equal(
+            [NodeError("制定计划", "同一容器内的节点标签重复。")],
             Errors(Flow(
                 Container("整体", Plan("制定计划", "规划者"), Text("制定计划", "规划者")),
                 Models("规划者"))));
@@ -127,6 +133,12 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [NodeError("Start", "节点名 Start 是流程起点的保留名。")],
             Errors(Flow(Container("整体", Text("Start", "执行者")), Models("执行者"))));
+
+    [Fact]
+    public void Node_with_start_label_is_rejected() =>
+        Assert.Equal(
+            [NodeError("Start", "节点标签 Start 是流程起点的保留标签。")],
+            Errors(Flow(Container("整体", Reference("Start", "干活", "执行者")), Models("执行者"))));
 
     [Fact]
     public void Node_unreachable_from_start_is_rejected() =>
@@ -273,8 +285,8 @@ public sealed class FlowRuleTests
                     From =
                     [
                         new([
-                            new FromLink(new PortName("甲"), PortRef.Named(new NodeName("来源"), new PortName("结论"))),
-                            new FromLink(new PortName("乙"), PortRef.Named(new NodeName("来源"), new PortName("结论"))),
+                            new FromLink(new PortName("甲"), PortRef.Named(new NodeLabel("来源"), new PortName("结论"))),
+                            new FromLink(new PortName("乙"), PortRef.Named(new NodeLabel("来源"), new PortName("结论"))),
                         ]),
                     ],
                 }),
@@ -292,8 +304,8 @@ public sealed class FlowRuleTests
                     From =
                     [
                         new([
-                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定计划"), new PortName("拆分"))),
-                            new FromLink(new PortName("批准"), PortRef.Named(new NodeName("放行"), new PortName("结论"))),
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeLabel("制定计划"), new PortName("拆分"))),
+                            new FromLink(new PortName("批准"), PortRef.Named(new NodeLabel("放行"), new PortName("结论"))),
                         ]),
                     ],
                 }),
@@ -307,7 +319,7 @@ public sealed class FlowRuleTests
                 Container("整体",
                     Container("交付", Container("撰写组", Text("撰写", "执行者") with { Outputs = [P("结论")] })) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结果")] = new(PortRef.Named(new NodeName("撰写组"), PN("结论"))) },
+                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结果")] = new(PortRef.Named(new NodeLabel("撰写组"), PN("结论"))) },
                     }),
                 Models("执行者"))));
 
@@ -388,7 +400,7 @@ public sealed class FlowRuleTests
                 Container("整体",
                     Container("交付", Text("撰写", "执行者") with { Outputs = [P("结论")], From = [Ref("交付", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeName("撰写"), PN("结论"))) },
+                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("撰写"), PN("结论"))) },
                     }),
                 Models("执行者"))));
 
@@ -405,7 +417,7 @@ public sealed class FlowRuleTests
                         Text("撰写", "执行者") with { Outputs = [P("结论")], From = [Ref("交付", "结论")] },
                         Text("排版", "执行者")) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeName("撰写"), PN("结论"))) },
+                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("撰写"), PN("结论"))) },
                     }),
                 Models("执行者"))));
 
@@ -421,11 +433,11 @@ public sealed class FlowRuleTests
                 Container("整体",
                     Container("容器甲", Text("甲", "执行者") with { Outputs = [P("结论")], From = [Ref("容器乙", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeName("甲"), PN("结论"))) },
+                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("甲"), PN("结论"))) },
                     },
                     Container("容器乙", Text("乙", "执行者") with { Outputs = [P("结论")], From = [Ref("容器甲", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeName("乙"), PN("结论"))) },
+                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("乙"), PN("结论"))) },
                     }),
                 Models("执行者"))));
 
@@ -456,12 +468,12 @@ public sealed class FlowRuleTests
                     From =
                     [
                         new([
-                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定"), new PortName("拆分"))),
-                            new FromLink(new PortName("结论"), PortRef.Named(new NodeName("甲"), new PortName("结论"))),
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeLabel("制定"), new PortName("拆分"))),
+                            new FromLink(new PortName("结论"), PortRef.Named(new NodeLabel("甲"), new PortName("结论"))),
                         ]),
                         new([
-                            new FromLink(new PortName("任务"), PortRef.Named(new NodeName("制定"), new PortName("拆分"))),
-                            new FromLink(new PortName("结论"), PortRef.Named(new NodeName("乙"), new PortName("结论"))),
+                            new FromLink(new PortName("任务"), PortRef.Named(new NodeLabel("制定"), new PortName("拆分"))),
+                            new FromLink(new PortName("结论"), PortRef.Named(new NodeLabel("乙"), new PortName("结论"))),
                         ]),
                     ],
                 }),
@@ -478,22 +490,31 @@ public sealed class FlowRuleTests
                     Text("接收", "执行者") with { Inputs = [In("结论"), In("结论")], From = [Ref("来源", "结论")] }),
                 Models("执行者"))));
 
-    /// <summary>容器。</summary>
+    /// <summary>容器定义条目。</summary>
     private static NodeSpec Container(string name, params NodeSpec[] members) =>
-        new() { Name = new NodeName(name), Type = ContainerNodeTypes.Type, Nodes = [.. members] };
+        NodeSpec.Define(new NodeName(name)) with { Type = ContainerNodeTypes.Type, Nodes = [.. members] };
 
-    /// <summary>执行节点，默认由开始入口触发。</summary>
+    /// <summary>执行节点定义条目，默认由开始入口触发。</summary>
     private static NodeSpec Text(string name, string model) =>
         Exec(name, model, new ExecutableSpec());
 
-    /// <summary>执行节点，带完整执行配置，默认由开始入口触发。</summary>
+    /// <summary>执行节点定义条目，带完整执行配置，默认由开始入口触发。</summary>
     private static NodeSpec Exec(string name, string model, ExecutableSpec execution) =>
-        new()
+        NodeSpec.Define(new NodeName(name)) with
         {
-            Name = new NodeName(name),
             Type = TestNodeTypes.Executable,
             Model = new ModelRef(model),
             Execution = execution,
+            From = [StartRef()],
+        };
+
+    /// <summary>被使用的节点，标签是它在图里的标识段，类型与执行配置取展开后的形态。</summary>
+    private static NodeSpec Reference(string label, string use, string model) =>
+        NodeSpec.Reference(new NodeLabel(label), new NodeName(use)) with
+        {
+            Type = TestNodeTypes.Executable,
+            Model = new ModelRef(model),
+            Execution = new ExecutableSpec(),
             From = [StartRef()],
         };
 
@@ -536,20 +557,20 @@ public sealed class FlowRuleTests
 
     /// <summary>一条连接构成的启动组。</summary>
     private static FromGroup One(string input, string source, string port) =>
-        new([new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port)))]);
+        new([new FromLink(new PortName(input), PortRef.Named(new NodeLabel(source), new PortName(port)))]);
 
     /// <summary>同一输入名两条连接的启动组，用于组内重复判定。</summary>
     private static FromGroup Twice(string input, string source, string port) =>
         new([
-            new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port))),
-            new FromLink(new PortName(input), PortRef.Named(new NodeName(source), new PortName(port))),
+            new FromLink(new PortName(input), PortRef.Named(new NodeLabel(source), new PortName(port))),
+            new FromLink(new PortName(input), PortRef.Named(new NodeLabel(source), new PortName(port))),
         ]);
 
     /// <summary>一组启动条件，输入名取来源名。</summary>
     private static FromGroup Group(params (string Source, string Port)[] links) =>
         new([.. links.Select(link => new FromLink(
             new PortName(link.Source),
-            PortRef.Named(new NodeName(link.Source), new PortName(link.Port))))]);
+            PortRef.Named(new NodeLabel(link.Source), new PortName(link.Port))))]);
 
     /// <summary>开始入口的输出端口名。</summary>
     private static PortName StartPort => new("目标");
@@ -558,7 +579,7 @@ public sealed class FlowRuleTests
     private static Port StartOutput => new(StartPort, PortType.Text);
 
     /// <summary>由开始入口触发的启动组。</summary>
-    private static FromGroup StartRef() => One("目标", StartNode.ReservedName.Value, "目标");
+    private static FromGroup StartRef() => One("目标", StartNode.ReservedLabel.Value, "目标");
 
     /// <summary>流程的模型选择表，只声明名字。</summary>
     private static ModelDefinition[] Models(params string[] names) =>

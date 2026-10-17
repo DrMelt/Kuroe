@@ -25,7 +25,7 @@ public sealed class ContainerAdvanceTests
         Assert.Single(parked.Executables[2].Runs);
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Empty(parked.Executables[4].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -79,8 +79,8 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("撰写组")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("撰写组")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -101,7 +101,7 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Name == new NodeName("交付")).State);
+        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
@@ -115,7 +115,7 @@ public sealed class ContainerAdvanceTests
     public void Nested_container_rebroadcasts_after_failed_rework()
     {
         using TestEnvironment environment = TestEnvironment.Create(NestedContainerReworkFlow);
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "撰写" && run.Context.ExecutionCount == 1;
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "撰写" && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);

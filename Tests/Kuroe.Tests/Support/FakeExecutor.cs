@@ -70,7 +70,7 @@ public sealed class FakeExecutor : IRunExecutor
     /// <summary>命中条件的 run 返回模拟失败，用于验证失败后的返工恢复。</summary>
     public Func<IRun, bool>? FailsWhen { get; set; }
 
-    /// <summary>非拆分执行节点的返回文本，缺省为节点名加产出。</summary>
+    /// <summary>非拆分执行节点的返回文本，缺省为节点路径加产出。</summary>
     public Func<IRun, string>? Output { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>

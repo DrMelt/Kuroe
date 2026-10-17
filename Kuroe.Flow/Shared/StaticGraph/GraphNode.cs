@@ -7,8 +7,8 @@ public abstract record GraphNode
     /// <summary>从根到本节点的路径，流程内唯一，是节点的标识。</summary>
     public required NodePath Path { get; init; }
 
-    /// <summary>节点名，路径的最后一段。</summary>
-    public NodeName Name => Path.Name;
+    /// <summary>节点标签，路径的最后一段。</summary>
+    public NodeLabel Label => Path.Label;
 
     /// <summary>以本节点为来源的边，编译期落定，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Outgoing { get; init; } = [];

@@ -1,11 +1,33 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
-/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。</summary>
+/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。
+/// 定义条目写节点名，标签取节点名文本；引用条目写标签，节点名留空。</summary>
 public sealed record NodeSpec
 {
-    /// <summary>节点名：库定义名或流程/容器内的实例名。</summary>
-    public required NodeName Name { get; init; }
+    /// <summary>定义条目的构造：标签取节点名的文本，名字是定义在库里的名字，标签是它在图里的标识段。</summary>
+    public static NodeSpec Define(NodeName name) => new()
+    {
+        Name = name,
+        Label = new NodeLabel(name.Value),
+    };
+
+    /// <summary>引用条目的构造：标识是使用处写下的标签，定义身份由被引用的定义给出。</summary>
+    public static NodeSpec Reference(NodeLabel label, NodeName use) => new()
+    {
+        Label = label,
+        Use = use,
+    };
+
+    /// <summary>节点名：定义条目的名字，节点库的注册名，也是 Use 引用的名字。引用条目为空。</summary>
+    public NodeName? Name { get; init; }
+
+    /// <summary>定义条目的名字。引用条目没有定义名。</summary>
+    public NodeName DefinitionName => Name
+        ?? throw new InvalidOperationException($"节点 {Label.Value} 没有节点名，只有定义条目才有定义名。");
+
+    /// <summary>节点标签：节点在图里的标识段，同一容器内唯一且恒非空。定义条目取节点名的文本，引用条目取使用处写下的标签。</summary>
+    public required NodeLabel Label { get; init; }
 
     /// <summary>节点类型的描述实例，类型专属声明封在它里面。引用节点自身不写类型，由被引用的库定义决定，此处为空。</summary>
     public INodeType? Type { get; init; }
@@ -15,7 +37,7 @@ public sealed record NodeSpec
 
     /// <summary>生效的节点类型名：展开后由定义的类型填入，只有展开前的引用节点为空。</summary>
     public NodeKind EffectiveKind => Type?.Kind
-        ?? throw new InvalidOperationException($"节点 {Name.Value} 没有类型名，只有展开后的节点树可取生效类型。");
+        ?? throw new InvalidOperationException($"节点 {Label.Value} 没有类型名，只有展开后的节点树可取生效类型。");
 
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
@@ -24,7 +46,7 @@ public sealed record NodeSpec
     /// 成员用 @端口 引用容器传入端口。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员名@端口 精确取成员命名段。
+    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员标签@端口 精确取成员命名段。
     /// 属于容器定义与装配层内联容器，引用处不能修改；下游执行节点经 From 按端口消费。
     /// 文件里与 <see cref="Outputs"/> 同写在一个 Outputs 数组，条目形状由节点类型决定。容器没有整份产出，一切对外内容都经声明的命名端口。</summary>
     public IReadOnlyDictionary<PortName, ContainerOutput>? ContainerOutputs { get; init; }

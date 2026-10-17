@@ -8,7 +8,7 @@ public sealed record ContainerNode : GraphNode
     /// <summary>节点类型的描述实例。</summary>
     public required INodeType Type { get; init; }
 
-    /// <summary>直接子节点：成员执行节点与子容器，先根序。层级关系由它给出，节点名前缀不承载层级。</summary>
+    /// <summary>直接子节点：成员执行节点与子容器，先根序。层级关系由它给出，标签前缀不承载层级。</summary>
     public required IReadOnlyList<GraphNode> Children { get; init; }
 
     /// <summary>命名输出端口到子树内成员端口的映射，编译期解析成成员路径。未声明时为空。</summary>

@@ -34,14 +34,15 @@ static class FlowReader
         List<FlowDefinition> flows = [];
         foreach (FlowDto dto in file.Flows)
         {
-            if (string.IsNullOrWhiteSpace(dto.Name))
+            ErrorOr<FlowName> flowName = FlowName.Create(dto.Name ?? string.Empty);
+            if (flowName.IsError)
             {
-                errors.Add(FlowErrors.MissingName());
+                errors.AddRange(flowName.ErrorsOrEmptyList);
 
                 continue;
             }
 
-            ErrorOr<FlowDefinition> flow = ToFlowDefinition(dto, files);
+            ErrorOr<FlowDefinition> flow = ToFlowDefinition(flowName.Value, dto, files);
             if (flow.IsError)
             {
                 errors.AddRange(flow.ErrorsOrEmptyList);
@@ -60,7 +61,7 @@ static class FlowReader
         return (nodes, flows);
     }
 
-    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowDto dto, NodeTypeFileRegistry files)
+    private static ErrorOr<FlowDefinition> ToFlowDefinition(FlowName name, FlowDto dto, NodeTypeFileRegistry files)
     {
         List<ModelDefinition> models = [];
         foreach (ModelDto model in dto.Models)
@@ -74,33 +75,27 @@ static class FlowReader
 
         if (dto.Nodes.Count == 0)
         {
-            return FlowErrors.Body(dto.Name ?? string.Empty, "流程缺少根节点。");
+            return FlowErrors.Body(name.Value, "流程缺少根节点。");
         }
 
         if (dto.Nodes.Count > 1)
         {
-            return FlowErrors.Body(dto.Name ?? string.Empty, "流程只能有一个根节点。");
+            return FlowErrors.Body(name.Value, "流程只能有一个根节点。");
         }
 
-        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(dto.Start?.Outputs, NodeScope.Flow(dto.Name!), StartNode.ReservedName.Value, allowValue: true);
+        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(dto.Start?.Outputs, NodeScope.Flow(name.Value), StartNode.ReservedLabel.Value, allowValue: true);
         if (startOutputs.IsError)
         {
             return startOutputs.ErrorsOrEmptyList;
         }
 
-        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(dto.Name!), files);
+        ErrorOr<NodeSpec> root = ToNode(dto.Nodes[0], NodeScope.Flow(name.Value), files);
         if (root.IsError)
         {
             return root.ErrorsOrEmptyList;
         }
 
-        ErrorOr<FlowName> flowName = FlowName.Create(dto.Name!);
-        if (flowName.IsError)
-        {
-            return flowName.ErrorsOrEmptyList;
-        }
-
-        return new FlowDefinition(flowName.Value, dto.Description, models, startOutputs.Value, root.Value);
+        return new FlowDefinition(name, dto.Description, models, startOutputs.Value, root.Value);
     }
 
     /// <summary>装配节点的列表转换，错误逐条收集。</summary>
@@ -126,41 +121,61 @@ static class FlowReader
     }
 
     /// <summary>把文件里的节点装配成模型：写有 Use 即引用库定义，否则按 Kind 分容器、执行节点与输入节点。
-    /// 省略的字段取安全默认值，合法性交校验。</summary>
+    /// 定义条目写节点名，引用条目写标签，标识各取条目写下的那一处；未写的字段取安全默认值，合法性交校验。</summary>
     private static ErrorOr<NodeSpec> ToNode(NodeDto dto, NodeScope scope, NodeTypeFileRegistry files)
     {
+        if (dto.Use is { Length: > 0 } use)
+        {
+            if (dto.Name is not null)
+            {
+                return scope.Node(dto.Name, "被使用的节点写 Label 区分，不写 Name。");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Label))
+            {
+                return scope.Node(use, "被使用的节点必须写 Label，它是节点在图里的标识段。");
+            }
+        }
+        else if (dto.Label is not null)
+        {
+            return scope.Node(dto.Label, "定义条目写节点名 Name，Label 只属于被使用的节点。");
+        }
+
+        // 条目的标识：定义条目取节点名文本，引用条目取使用处写下的标签
+        string label = (dto.Use is { Length: > 0 } ? dto.Label : dto.Name) ?? string.Empty;
+
         if (dto.Use is { Length: > 0 })
         {
             List<Error> useErrors = [];
             if (dto.Kind is not null)
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点的类型由被引用的库定义决定，不写 Kind。"));
+                useErrors.Add(scope.Node(label, "引用节点的类型由被引用的库定义决定，不写 Kind。"));
             }
 
             if (dto.Mode is not null || dto.Branch is not null || dto.Nodes is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用成员不能同时声明执行方式或子节点。"));
+                useErrors.Add(scope.Node(label, "引用成员不能同时声明执行方式或子节点。"));
             }
 
             if (dto.Parameters is { Count: > 0 } declaredParameters)
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty,
+                useErrors.Add(scope.Node(label,
                     $"引用节点不能声明类型参数 {string.Join("、", declaredParameters.Keys)}。"));
             }
 
             if (dto.Model is not null && HasModels(dto.Models))
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能同时声明模型与模型绑定。"));
+                useErrors.Add(scope.Node(label, "引用节点不能同时声明模型与模型绑定。"));
             }
 
             if (dto.Inputs is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输入端口，端口声明属于被引用的定义。"));
+                useErrors.Add(scope.Node(label, "引用节点不能声明输入端口，端口声明属于被引用的定义。"));
             }
 
             if (dto.Outputs is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(dto.Name ?? string.Empty, "引用节点不能声明输出端口。"));
+                useErrors.Add(scope.Node(label, "引用节点不能声明输出端口。"));
             }
 
             if (useErrors.Count > 0)
@@ -174,7 +189,7 @@ static class FlowReader
                 ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(validateDeclared.Predicate);
                 if (parsedPredicate.IsError)
                 {
-                    useErrors.Add(scope.Node(dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+                    useErrors.Add(scope.Node(label, parsedPredicate.FirstError.Description));
                     return useErrors;
                 }
 
@@ -188,23 +203,21 @@ static class FlowReader
                 return useErrors;
             }
 
-            ErrorOr<Dictionary<ModelRef, ModelRef>?> resolvedModels = ToModelBindings(dto.Models, scope, dto.Name ?? string.Empty);
+            ErrorOr<Dictionary<ModelRef, ModelRef>?> resolvedModels = ToModelBindings(dto.Models, scope, label);
             if (resolvedModels.IsError)
             {
                 useErrors.AddRange(resolvedModels.ErrorsOrEmptyList);
                 return useErrors;
             }
 
-            ErrorOr<IReadOnlyList<FromGroup>> resolvedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+            ErrorOr<IReadOnlyList<FromGroup>> resolvedFrom = ToFrom(dto.From, scope, label);
             if (resolvedFrom.IsError)
             {
                 return resolvedFrom.ErrorsOrEmptyList;
             }
 
-            return new NodeSpec
+            return NodeSpec.Reference(new NodeLabel(label), new NodeName(dto.Use)) with
             {
-                Name = new NodeName(dto.Name ?? string.Empty),
-                Use = new NodeName(dto.Use),
                 From = resolvedFrom.Value,
                 Validate = declareValidation,
                 MaxRuns = dto.MaxRuns,
@@ -216,13 +229,13 @@ static class FlowReader
 
         if (dto.Kind is not { } kind)
         {
-            return scope.Node(dto.Name ?? string.Empty,
+            return scope.Node(label,
                 $"节点必须声明 Kind，可用类型名：{string.Join("、", files.Kinds.Select(item => item.Value))}。");
         }
 
         if (files.Find(kind) is not { } declaration)
         {
-            return scope.Node(dto.Name ?? string.Empty,
+            return scope.Node(label,
                 $"节点类型名 {kind} 未注册，可用类型名：{string.Join("、", files.Kinds.Select(item => item.Value))}。");
         }
 
@@ -232,17 +245,17 @@ static class FlowReader
             List<Error> containerErrors = [];
             if (dto.Mode is not null)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, $"容器不支持 Mode，收到 {dto.Mode}。"));
+                containerErrors.Add(scope.Node(label, $"容器不支持 Mode，收到 {dto.Mode}。"));
             }
 
             if (dto.From is { Count: > 0 })
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 From。"));
+                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持 From。"));
             }
 
             if (dto.Model is not null || dto.Branch is not null)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持模型选择与分支。"));
+                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持模型选择与分支。"));
             }
 
             IReadOnlyList<ModelRef>? declaredSlots = null;
@@ -250,15 +263,15 @@ static class FlowReader
             {
                 if (!scope.IsLibrary)
                 {
-                    containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "内联容器不声明模型槽位与模型绑定，槽位声明只属于节点库容器定义。"));
+                    containerErrors.Add(scope.Node(label, "内联容器不声明模型槽位与模型绑定，槽位声明只属于节点库容器定义。"));
                 }
                 else if (declaredModels.ValueKind != JsonValueKind.Array)
                 {
-                    containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器定义的模型槽位写槽位名数组。"));
+                    containerErrors.Add(scope.Node(label, "容器定义的模型槽位写槽位名数组。"));
                 }
                 else
                 {
-                    ErrorOr<IReadOnlyList<ModelRef>> slots = ToModelSlots(declaredModels, scope, dto.Name ?? string.Empty);
+                    ErrorOr<IReadOnlyList<ModelRef>> slots = ToModelSlots(declaredModels, scope, label);
                     if (slots.IsError)
                     {
                         containerErrors.AddRange(slots.ErrorsOrEmptyList);
@@ -272,17 +285,17 @@ static class FlowReader
 
             if (dto.In is { Count: > 0 })
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持输入端口绑定。"));
+                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持输入端口绑定。"));
             }
 
             if (dto.Inputs is { Count: > 0 } && !scope.IsLibrary)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
+                containerErrors.Add(scope.Node(label, "容器节点不能声明输入端口，端口声明属于节点库容器定义。"));
             }
 
             if (dto.Validate is not null)
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点不是执行节点，不支持 Validate。"));
+                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持 Validate。"));
             }
 
             IReadOnlyList<NodeSpec> children = [];
@@ -300,31 +313,30 @@ static class FlowReader
             }
             else
             {
-                containerErrors.Add(scope.Node(dto.Name ?? string.Empty, "容器节点必须声明子节点。"));
+                containerErrors.Add(scope.Node(label, "容器节点必须声明子节点。"));
             }
 
-            ErrorOr<IReadOnlyList<InputPort>> inputs = ToInputs(dto.Inputs, scope, dto.Name ?? string.Empty);
+            ErrorOr<IReadOnlyList<InputPort>> inputs = ToInputs(dto.Inputs, scope, label);
             if (inputs.IsError)
             {
                 containerErrors.AddRange(inputs.ErrorsOrEmptyList);
             }
 
-            ErrorOr<Dictionary<PortName, ContainerOutput>?> outputPorts = ToContainerOutputs(dto.Outputs, scope, dto.Name ?? string.Empty);
+            ErrorOr<Dictionary<PortName, ContainerOutput>?> outputPorts = ToContainerOutputs(dto.Outputs, scope, label);
             if (outputPorts.IsError)
             {
                 containerErrors.AddRange(outputPorts.ErrorsOrEmptyList);
             }
 
-            INodeType containerType = ReadParameters(declaration, dto, scope, containerErrors);
+            INodeType containerType = ReadParameters(declaration, dto, new NodeLabel(label), scope, containerErrors);
 
             if (containerErrors.Count > 0)
             {
                 return containerErrors;
             }
 
-            return new NodeSpec
+            return NodeSpec.Define(new NodeName(dto.Name ?? string.Empty)) with
             {
-                Name = new NodeName(dto.Name ?? string.Empty),
                 Type = containerType,
                 Inputs = inputs.Value,
                 ContainerOutputs = outputPorts.Value,
@@ -337,16 +349,16 @@ static class FlowReader
         List<Error> leafErrors = [];
         if (dto.Nodes is { Count: > 0 })
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, $"{kind} 节点不能声明子节点，子节点只属于容器。"));
+            leafErrors.Add(scope.Node(label, $"{kind} 节点不能声明子节点，子节点只属于容器。"));
         }
 
         if (dto.In is { Count: > 0 })
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty,
+            leafErrors.Add(scope.Node(label,
                 "执行节点不写输入端口绑定，接线一律经 From。"));
         }
 
-        ErrorOr<IReadOnlyList<InputPort>> leafInputs = ToInputs(dto.Inputs, scope, dto.Name ?? string.Empty);
+        ErrorOr<IReadOnlyList<InputPort>> leafInputs = ToInputs(dto.Inputs, scope, label);
         if (leafInputs.IsError)
         {
             leafErrors.AddRange(leafInputs.ErrorsOrEmptyList);
@@ -354,15 +366,15 @@ static class FlowReader
 
         if (HasModels(dto.Models))
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, "执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。"));
+            leafErrors.Add(scope.Node(label, "执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。"));
         }
 
-        INodeType leafType = ReadParameters(declaration, dto, scope, leafErrors);
+        INodeType leafType = ReadParameters(declaration, dto, new NodeLabel(label), scope, leafErrors);
 
         ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
         if (leafMode.IsError)
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty, leafMode.FirstError.Description));
+            leafErrors.Add(scope.Node(label, leafMode.FirstError.Description));
         }
 
         OutputValidation? declaredValidation = null;
@@ -371,7 +383,7 @@ static class FlowReader
             ErrorOr<ValidationPredicate> parsedPredicate = ParseValidationPredicate(leafValidate.Predicate);
             if (parsedPredicate.IsError)
             {
-                leafErrors.Add(scope.Node(dto.Name ?? string.Empty, parsedPredicate.FirstError.Description));
+                leafErrors.Add(scope.Node(label, parsedPredicate.FirstError.Description));
             }
             else
             {
@@ -379,7 +391,7 @@ static class FlowReader
             }
         }
 
-        ErrorOr<IReadOnlyList<Port>> outputs = ToPorts(dto.Outputs, scope, dto.Name ?? string.Empty, allowValue: false);
+        ErrorOr<IReadOnlyList<Port>> outputs = ToPorts(dto.Outputs, scope, label, allowValue: false);
         if (outputs.IsError)
         {
             leafErrors.AddRange(outputs.ErrorsOrEmptyList);
@@ -387,7 +399,7 @@ static class FlowReader
 
         if (declared.DerivesOutputsFromInputs && dto.Outputs is { Count: > 0 })
         {
-            leafErrors.Add(scope.Node(dto.Name ?? string.Empty,
+            leafErrors.Add(scope.Node(label,
                 $"{declaration.Kind.Value}节点不声明输出端口，对外端口取自身输入端口。"));
         }
 
@@ -396,15 +408,14 @@ static class FlowReader
             return leafErrors;
         }
 
-        ErrorOr<IReadOnlyList<FromGroup>> parsedFrom = ToFrom(dto.From, scope, dto.Name ?? string.Empty);
+        ErrorOr<IReadOnlyList<FromGroup>> parsedFrom = ToFrom(dto.From, scope, label);
         if (parsedFrom.IsError)
         {
             return parsedFrom.ErrorsOrEmptyList;
         }
 
-        return new NodeSpec
+        return NodeSpec.Define(new NodeName(dto.Name ?? string.Empty)) with
         {
-            Name = new NodeName(dto.Name ?? string.Empty),
             Type = leafType,
             Inputs = leafInputs.Value,
             From = parsedFrom.Value,
@@ -430,9 +441,10 @@ static class FlowReader
     private static INodeType ReadParameters(
         INodeTypeFile declaration,
         NodeDto dto,
+        NodeLabel label,
         NodeScope scope,
         List<Error> errors) =>
-        NodeParameterJson.Read(declaration, scope, new NodeName(dto.Name ?? string.Empty), dto.Parameters, errors.Add);
+        NodeParameterJson.Read(declaration, scope, label, dto.Parameters, errors.Add);
 
     /// <summary>解析容器输入输出绑定表：键是端口名，值是端口引用，形状一致走同一个装配。</summary>
     private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(Dictionary<string, string>? bindings)
@@ -485,7 +497,7 @@ static class FlowReader
                 return port.ErrorsOrEmptyList;
             }
 
-            NodeName source = new(text[..at]);
+            NodeLabel source = new(text[..at]);
             return PortRef.Named(source, port.Value);
         }
 
@@ -495,7 +507,7 @@ static class FlowReader
 
     /// <summary>解析输出端口表：条目写 Name 与 Type，Type 必填，说明可写 Description。
     /// allowValue 为真时接受开始端口的固定值 Value。</summary>
-    private static ErrorOr<IReadOnlyList<Port>> ToPorts(List<JsonElement>? entries, NodeScope scope, string nodeName, bool allowValue)
+    private static ErrorOr<IReadOnlyList<Port>> ToPorts(List<JsonElement>? entries, NodeScope scope, string nodeLabel, bool allowValue)
     {
         if (entries is not { Count: > 0 })
         {
@@ -508,7 +520,7 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "输出端口条目必须是带 Name 与 Type 的对象，说明写 Description。"));
+                errors.Add(scope.Node(nodeLabel, "输出端口条目必须是带 Name 与 Type 的对象，说明写 Description。"));
                 continue;
             }
 
@@ -524,7 +536,7 @@ static class FlowReader
                     case "name":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "输出端口的 Name 键必须是端口名。"));
+                            errors.Add(scope.Node(nodeLabel, "输出端口的 Name 键必须是端口名。"));
                             invalid = true;
                         }
                         else
@@ -538,7 +550,7 @@ static class FlowReader
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
                             || parsedType is not (PortType.Text or PortType.WorkItems or PortType.Context))
                         {
-                            errors.Add(scope.Node(nodeName, "输出端口的 Type 应为 Text、WorkItems 或 Context。"));
+                            errors.Add(scope.Node(nodeLabel, "输出端口的 Type 应为 Text、WorkItems 或 Context。"));
                             invalid = true;
                         }
                         else
@@ -550,7 +562,7 @@ static class FlowReader
                     case "description":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "输出端口的 Description 键必须是说明文本。"));
+                            errors.Add(scope.Node(nodeLabel, "输出端口的 Description 键必须是说明文本。"));
                             invalid = true;
                         }
                         else
@@ -560,14 +572,14 @@ static class FlowReader
                         break;
 
                     case "ref":
-                        errors.Add(scope.Node(nodeName, "执行节点的输出端口条目写 Name 与 Type，不写 Ref。"));
+                        errors.Add(scope.Node(nodeLabel, "执行节点的输出端口条目写 Name 与 Type，不写 Ref。"));
                         invalid = true;
                         break;
 
                     case "value" when allowValue:
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "开始端口的 Value 键必须是文本。"));
+                            errors.Add(scope.Node(nodeLabel, "开始端口的 Value 键必须是文本。"));
                             invalid = true;
                         }
                         else
@@ -577,12 +589,12 @@ static class FlowReader
                         break;
 
                     case "value":
-                        errors.Add(scope.Node(nodeName, "输出端口不认识键 Value，Value 只属于开始端口。"));
+                        errors.Add(scope.Node(nodeLabel, "输出端口不认识键 Value，Value 只属于开始端口。"));
                         invalid = true;
                         break;
 
                     default:
-                        errors.Add(scope.Node(nodeName, allowValue
+                        errors.Add(scope.Node(nodeLabel, allowValue
                             ? $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Value。"
                             : $"输出端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
                         invalid = true;
@@ -604,7 +616,7 @@ static class FlowReader
 
             if (declaredType is null)
             {
-                errors.Add(scope.Node(nodeName, "输出端口的 Type 不能省略，必须是 Text、WorkItems 或 Context。"));
+                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text、WorkItems 或 Context。"));
                 continue;
             }
 
@@ -618,7 +630,7 @@ static class FlowReader
     private static ErrorOr<IReadOnlyList<InputPort>> ToInputs(
         List<JsonElement>? entries,
         NodeScope scope,
-        string nodeName)
+        string nodeLabel)
     {
         if (entries is not { Count: > 0 })
         {
@@ -631,7 +643,7 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "输入端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
+                errors.Add(scope.Node(nodeLabel, "输入端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
                 continue;
             }
 
@@ -646,7 +658,7 @@ static class FlowReader
                     case "name":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "输入端口的 Name 键必须是端口名。"));
+                            errors.Add(scope.Node(nodeLabel, "输入端口的 Name 键必须是端口名。"));
                             invalid = true;
                         }
                         else
@@ -660,7 +672,7 @@ static class FlowReader
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
                             || parsedType is not (PortType.Text or PortType.Context or PortType.Signal))
                         {
-                            errors.Add(scope.Node(nodeName, "输入端口的 Type 应为 Text、Context 或 Signal。"));
+                            errors.Add(scope.Node(nodeLabel, "输入端口的 Type 应为 Text、Context 或 Signal。"));
                             invalid = true;
                         }
                         else
@@ -672,7 +684,7 @@ static class FlowReader
                     case "description":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "输入端口的 Description 键必须是说明文本。"));
+                            errors.Add(scope.Node(nodeLabel, "输入端口的 Description 键必须是说明文本。"));
                             invalid = true;
                         }
                         else
@@ -682,7 +694,7 @@ static class FlowReader
                         break;
 
                     default:
-                        errors.Add(scope.Node(nodeName, $"输入端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
+                        errors.Add(scope.Node(nodeLabel, $"输入端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
                         invalid = true;
                         break;
                 }
@@ -714,7 +726,7 @@ static class FlowReader
     private static ErrorOr<Dictionary<PortName, ContainerOutput>?> ToContainerOutputs(
         List<JsonElement>? entries,
         NodeScope scope,
-        string nodeName)
+        string nodeLabel)
     {
         if (entries is not { Count: > 0 })
         {
@@ -727,7 +739,7 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "容器输出端口条目必须是带 Name 与 Ref 的对象，说明写 Description。"));
+                errors.Add(scope.Node(nodeLabel, "容器输出端口条目必须是带 Name 与 Ref 的对象，说明写 Description。"));
                 continue;
             }
 
@@ -742,7 +754,7 @@ static class FlowReader
                     case "name":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "容器输出端口的 Name 键必须是端口名。"));
+                            errors.Add(scope.Node(nodeLabel, "容器输出端口的 Name 键必须是端口名。"));
                             invalid = true;
                         }
                         else
@@ -754,7 +766,7 @@ static class FlowReader
                     case "ref":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "容器输出端口的 Ref 键必须是 成员@端口 引用。"));
+                            errors.Add(scope.Node(nodeLabel, "容器输出端口的 Ref 键必须是 成员@端口 引用。"));
                             invalid = true;
                         }
                         else
@@ -766,7 +778,7 @@ static class FlowReader
                     case "description":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(nodeName, "容器输出端口的 Description 键必须是说明文本。"));
+                            errors.Add(scope.Node(nodeLabel, "容器输出端口的 Description 键必须是说明文本。"));
                             invalid = true;
                         }
                         else
@@ -776,7 +788,7 @@ static class FlowReader
                         break;
 
                     default:
-                        errors.Add(scope.Node(nodeName, $"容器输出端口不认识键 {property.Name}，条目写 Name、Ref 与 Description。"));
+                        errors.Add(scope.Node(nodeLabel, $"容器输出端口不认识键 {property.Name}，条目写 Name、Ref 与 Description。"));
                         invalid = true;
                         break;
                 }
@@ -796,7 +808,7 @@ static class FlowReader
 
             if (declaredRef is null)
             {
-                errors.Add(scope.Node(nodeName, "容器输出端口的 Ref 不能省略，写 成员@端口。"));
+                errors.Add(scope.Node(nodeLabel, "容器输出端口的 Ref 不能省略，写 成员@端口。"));
                 continue;
             }
 
@@ -809,7 +821,7 @@ static class FlowReader
 
             if (!result.TryAdd(parsedName.Value, new ContainerOutput(parsedRef.Value, ToDescription(declaredDescription))))
             {
-                errors.Add(scope.Node(nodeName, $"容器输出端口 {parsedName.Value.Value} 重复。"));
+                errors.Add(scope.Node(nodeLabel, $"容器输出端口 {parsedName.Value.Value} 重复。"));
             }
         }
 
@@ -819,12 +831,12 @@ static class FlowReader
     private static ModelRef? ToModel(string? model) =>
         string.IsNullOrWhiteSpace(model) ? null : new ModelRef(model);
 
-    /// <summary>是否写了 Models 键。JSON 缺键时 JsonElement 为 Undefined。</summary>
+    /// <summary>是否写了 Models 键。缺键与 JSON null 都读成空，只有带值的元素才算写了。</summary>
     private static bool HasModels(JsonElement? models) =>
         models is { ValueKind: not JsonValueKind.Undefined };
 
     /// <summary>容器定义的模型槽位声明：字符串数组，名字不能为空且不重复。</summary>
-    private static ErrorOr<IReadOnlyList<ModelRef>> ToModelSlots(JsonElement models, NodeScope scope, string nodeName)
+    private static ErrorOr<IReadOnlyList<ModelRef>> ToModelSlots(JsonElement models, NodeScope scope, string nodeLabel)
     {
         List<ModelRef> slots = [];
         List<Error> errors = [];
@@ -832,7 +844,7 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.GetString()))
             {
-                errors.Add(scope.Node(nodeName, "模型槽位名不能为空。"));
+                errors.Add(scope.Node(nodeLabel, "模型槽位名不能为空。"));
                 continue;
             }
 
@@ -841,14 +853,14 @@ static class FlowReader
 
         foreach (ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
         {
-            errors.Add(scope.Node(nodeName, $"模型槽位 {duplicated} 重复。"));
+            errors.Add(scope.Node(nodeLabel, $"模型槽位 {duplicated} 重复。"));
         }
 
         return errors.Count > 0 ? errors : slots;
     }
 
     /// <summary>引用节点组的模型绑定：对象形状，键是槽位名，值是流程模型选择名。</summary>
-    private static ErrorOr<Dictionary<ModelRef, ModelRef>?> ToModelBindings(JsonElement? models, NodeScope scope, string nodeName)
+    private static ErrorOr<Dictionary<ModelRef, ModelRef>?> ToModelBindings(JsonElement? models, NodeScope scope, string nodeLabel)
     {
         if (!HasModels(models))
         {
@@ -857,7 +869,7 @@ static class FlowReader
 
         if (models!.Value.ValueKind != JsonValueKind.Object)
         {
-            return scope.Node(nodeName, "引用节点组的 Models 写槽位绑定对象，槽位声明只写容器定义。");
+            return scope.Node(nodeLabel, "引用节点组的 Models 写槽位绑定对象，槽位声明只写容器定义。");
         }
 
         Dictionary<ModelRef, ModelRef> bindings = [];
@@ -868,7 +880,7 @@ static class FlowReader
                 || property.Value.ValueKind != JsonValueKind.String
                 || string.IsNullOrWhiteSpace(property.Value.GetString()))
             {
-                errors.Add(scope.Node(nodeName, "模型绑定键与值都不能为空。"));
+                errors.Add(scope.Node(nodeLabel, "模型绑定键与值都不能为空。"));
                 continue;
             }
 
@@ -880,7 +892,7 @@ static class FlowReader
 
     /// <summary>把上游启动组装配成模型：数组元素是一个组，组内是输入端口名到来源端口引用的映射。
     /// 值必须是引用文本，字段类型不符记入错误，不抛异常。</summary>
-    private static ErrorOr<IReadOnlyList<FromGroup>> ToFrom(List<JsonElement>? entries, NodeScope scope, string nodeName)
+    private static ErrorOr<IReadOnlyList<FromGroup>> ToFrom(List<JsonElement>? entries, NodeScope scope, string nodeLabel)
     {
         if (entries is not { Count: > 0 })
         {
@@ -893,7 +905,7 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeName, "From 的每个组必须是对象，键写输入端口名，值写来源端口引用。"));
+                errors.Add(scope.Node(nodeLabel, "From 的每个组必须是对象，键写输入端口名，值写来源端口引用。"));
                 continue;
             }
 
@@ -909,7 +921,7 @@ static class FlowReader
 
                 if (property.Value.ValueKind != JsonValueKind.String)
                 {
-                    errors.Add(scope.Node(nodeName, $"From 连接 {property.Name} 的来源必须是引用文本，写 @端口 或 来源@端口。"));
+                    errors.Add(scope.Node(nodeLabel, $"From 连接 {property.Name} 的来源必须是引用文本，写 @端口 或 来源@端口。"));
                     continue;
                 }
 
@@ -925,7 +937,7 @@ static class FlowReader
 
             if (links.Count == 0)
             {
-                errors.Add(scope.Node(nodeName, "From 的组至少要有一条连接。"));
+                errors.Add(scope.Node(nodeLabel, "From 的组至少要有一条连接。"));
                 continue;
             }
 

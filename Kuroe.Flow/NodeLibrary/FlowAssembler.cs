@@ -9,7 +9,7 @@ namespace Kuroe.Flow.NodeLibrary;
 static class FlowAssembler
 {
     /// <summary>校验并展开模型内容：文件节点并入节点库副本后逐流程展开，错误一次给全，流程名重复一并报出。
-    /// 文件内节点重名直接报错，结果里的节点库是叠加文件定义后的生效库。</summary>
+    /// 文件内节点名重复直接报错，结果里的节点库是叠加文件定义后的生效库。</summary>
     public static ErrorOr<AssembledFlows> Assemble(
         IReadOnlyList<NodeSpec> fileNodes,
         IReadOnlyList<FlowDefinition> flows,

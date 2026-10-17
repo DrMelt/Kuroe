@@ -8,7 +8,7 @@ using Flow = Shared.StaticGraph;
 /// <summary>把流程树编译成执行视图：开始是唯一来源，节点以从根到本节点的路径标识，容器登记直接子节点，
 /// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
 /// 引用按作用域链解析成路径：从引用者所在容器逐层向外，先看该层的直接子节点，再看该层子树，定义内引用因此可以指向子树的成员。
-/// 要求已通过 FlowRules 校验，模型选择引用与节点名字都可解析。传入的树必须是展开后的节点树。</summary>
+/// 要求已通过 FlowRules 校验，模型选择引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
 internal sealed class FlowCompiler
 {
     /// <summary>模型选择按名字解析。</summary>
@@ -37,7 +37,7 @@ internal sealed class FlowCompiler
     }
 
     /// <summary>开始节点的路径，流程编译视图里唯一且固定。</summary>
-    private static NodePath StartPath => new([StartNode.ReservedName]);
+    private static NodePath StartPath => new([StartNode.ReservedLabel]);
 
     /// <summary>编译流程树：把流程树展开成执行视图。引用无法按作用域解析与绑定端口引用等结构问题记入错误结果，其余情况给出执行视图。</summary>
     public static ErrorOr<NodeGraph> Compile(FlowDefinition flow) =>
@@ -64,10 +64,10 @@ internal sealed class FlowCompiler
         public GraphNode? Node { get; set; }
     }
 
-    /// <summary>按先根序建出编译期的节点树：路径是父路径加本节点名，层级由树给出，不靠名字前缀。</summary>
+    /// <summary>按先根序建出编译期的节点树：路径是父路径加本节点标签，层级由树给出，不靠标签前缀。</summary>
     private static Pending Build(NodeSpec spec, Pending? parent)
     {
-        var pending = new Pending(spec, parent is null ? new NodePath([spec.Name]) : parent.Path.Append(spec.Name), parent);
+        var pending = new Pending(spec, parent is null ? new NodePath([spec.Label]) : parent.Path.Append(spec.Label), parent);
         parent?.Children.Add(pending);
 
         foreach (NodeSpec child in spec.Nodes ?? [])
@@ -117,14 +117,14 @@ internal sealed class FlowCompiler
         {
             foreach (FromLink link in group.Links)
             {
-                if (link.Ref.Source is not { } name)
+                if (link.Ref.Source is not { } label)
                 {
                     _errors.Add(_scope.Node(pending.Path.Value,
                         $"From 连接 {link.Ref.Display} 是对绑定端口的引用，请写明来源节点。"));
                     continue;
                 }
 
-                (NodePath? source, NodeMode sourceMode, PortType sourceType) = SourceOf(name, link.Ref.Port, pending);
+                (NodePath? source, NodeMode sourceMode, PortType sourceType) = SourceOf(label, link.Ref.Port, pending);
                 if (source is not { } from)
                 {
                     continue;
@@ -145,14 +145,14 @@ internal sealed class FlowCompiler
     }
 
     /// <summary>解析一条 From 连接的来源：开始是流程级来源，其余按作用域链解析。解析失败时给空来源。</summary>
-    private (NodePath? Source, NodeMode Mode, PortType PortType) SourceOf(NodeName name, PortName port, Pending referrer)
+    private (NodePath? Source, NodeMode Mode, PortType PortType) SourceOf(NodeLabel label, PortName port, Pending referrer)
     {
-        if (name == StartNode.ReservedName)
+        if (label == StartNode.ReservedLabel)
         {
             return (StartPath, NodeMode.Single, _startOutputs.Find(port)?.Type ?? Flow.PortType.Text);
         }
 
-        return Resolve(name, referrer) is { } source
+        return Resolve(label, referrer) is { } source
             ? (source.Path, source.Spec.Execution?.Mode ?? NodeMode.Single,
                 source.Spec.Outputs.Find(port)?.Type ?? Flow.PortType.Text)
             : (null, NodeMode.Single, Flow.PortType.Text);
@@ -168,17 +168,17 @@ internal sealed class FlowCompiler
 
         foreach ((PortName port, ContainerOutput output) in outputs)
         {
-            if (output.Ref.Source is not { } name)
+            if (output.Ref.Source is not { } label)
             {
                 _errors.Add(_scope.Node(pending.Path.Value,
-                    $"容器输出端口 {port} 的绑定是对绑定端口的引用，绑定目标写成目标成员名。"));
+                    $"容器输出端口 {port} 的绑定是对绑定端口的引用，绑定目标写成目标成员标签。"));
                 continue;
             }
 
-            if (ResolveIn(pending.Children, name) is not { } member)
+            if (ResolveIn(pending.Children, label) is not { } member)
             {
                 _errors.Add(_scope.Node(pending.Path.Value,
-                    $"容器输出端口 {port} 的绑定目标 {name} 不在容器 {pending.Path} 的子树里。"));
+                    $"容器输出端口 {port} 的绑定目标 {label} 不在容器 {pending.Path} 的子树里。"));
                 continue;
             }
 
@@ -199,20 +199,20 @@ internal sealed class FlowCompiler
         int group) =>
         _edges.Add(new FlowEdge(source, target, kind, scope, recurrence, sourcePort, targetInput, type, group));
 
-    /// <summary>按名字在作用域子树里解析节点：从引用者所在容器逐层向外，每层先看直接子节点再看子树。找不到时记错误给空。</summary>
-    private Pending? Resolve(NodeName name, Pending referrer)
+    /// <summary>按标签在作用域子树里解析节点：从引用者所在容器逐层向外，每层先看直接子节点再看子树。找不到时记错误给空。</summary>
+    private Pending? Resolve(NodeLabel label, Pending referrer)
     {
         Pending? scope = referrer.Parent;
         while (true)
         {
-            if (ResolveIn(scope?.Children ?? _roots, name) is { } found)
+            if (ResolveIn(scope?.Children ?? _roots, label) is { } found)
             {
                 return found;
             }
 
             if (scope is null)
             {
-                _errors.Add(_scope.Node(referrer.Path.Value, $"From 引用的节点 {name} 不在流程里。"));
+                _errors.Add(_scope.Node(referrer.Path.Value, $"From 引用的节点 {label} 不在流程里。"));
                 return null;
             }
 
@@ -220,18 +220,18 @@ internal sealed class FlowCompiler
         }
     }
 
-    /// <summary>按名字在一层子节点及其子树里解析节点：直接子节点优先，子树里命中多个或没有命中时给空。</summary>
-    private Pending? ResolveIn(IReadOnlyList<Pending> children, NodeName name)
+    /// <summary>按标签在一层子节点及其子树里解析节点：直接子节点优先，子树里命中多个或没有命中时给空。</summary>
+    private Pending? ResolveIn(IReadOnlyList<Pending> children, NodeLabel label)
     {
-        if (children.FirstOrDefault(child => child.Spec.Name == name) is { } direct)
+        if (children.FirstOrDefault(child => child.Spec.Label == label) is { } direct)
         {
             return direct;
         }
 
-        List<Pending> deeper = [.. children.SelectMany(Descendants).Where(node => node.Spec.Name == name)];
+        List<Pending> deeper = [.. children.SelectMany(Descendants).Where(node => node.Spec.Label == label)];
         if (deeper.Count > 1)
         {
-            _errors.Add(_scope.Node(name.Value, $"引用 {name} 在作用域里命中多个节点，同层节点名不能重复。"));
+            _errors.Add(_scope.Node(label.Value, $"引用 {label} 在作用域里命中多个节点，同层标签不能重复。"));
             return null;
         }
 
@@ -285,5 +285,5 @@ internal sealed class FlowCompiler
 
     /// <summary>节点的类型描述。编译只接受已通过校验的节点树，类型缺失在此防御性报出。</summary>
     private static INodeType TypeOf(NodeSpec node) =>
-        node.Type ?? throw new InvalidOperationException($"节点 {node.Name} 没有类型，编译只接受已校验的节点树。");
+        node.Type ?? throw new InvalidOperationException($"节点 {node.Label} 没有类型，编译只接受已校验的节点树。");
 }

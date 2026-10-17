@@ -56,19 +56,19 @@ public sealed class SnapshotTests
         [new Port(new PortName("目标"), PortType.Text)],
         new NodeSpec
         {
-            Name = new NodeName("整体"),
+            Label = new NodeLabel("整体"),
             Type = ContainerNodeTypes.Type,
             Nodes =
             [
-                new NodeSpec { Name = new NodeName("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Name = new NodeName("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
             ],
         });
 
     private static readonly NodeGraph Graph = new([
         new StartNode
         {
-            Path = new NodePath([StartNode.ReservedName]),
+            Path = new NodePath([StartNode.ReservedLabel]),
             Outputs = [new Port(new PortName("目标"), PortType.Text)],
         },
         new ExecutableNode

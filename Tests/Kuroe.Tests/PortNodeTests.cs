@@ -21,7 +21,7 @@ public sealed class PortNodeTests
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Single(entry => entry.Executable.Label.Value == "实施")
             .Runs.Single();
         Assert.Contains(implement.Context.Seed,
             message => message.Text.Contains("节点「整体/分析」的端口「结论」产出")
@@ -51,7 +51,7 @@ public sealed class PortNodeTests
 
         // 复盘不带端口引用在解析层拒绝；若按端口引用则出处带端口标签
         RunSnapshot review = environment.Executor.Started
-            .Single(run => run.Context.Node.Name.Value == "复盘" && run.Context.ItemIndex is null)
+            .Single(run => run.Context.Node.Label.Value == "复盘" && run.Context.ItemIndex is null)
             .Snapshot();
         Assert.Contains(review.Context.Seed, message => message.Text.Contains("端口「理由」产出"));
     }
@@ -65,13 +65,13 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot report = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "汇报")
+            .Single(entry => entry.Executable.Label.Value == "汇报")
             .Runs.Single();
 
         // 上游 run 的指令单列，出处标记为上下文帧
         Assert.Contains(report.Context.Seed, message =>
             message.Source is ContextFrameSource frame
-            && frame.Node.Name.Value == "实施"
+            && frame.Node.Label.Value == "实施"
             && frame.FromRun is not null
             && message.Text.Contains("节点「整体/实施」的指令"));
 
@@ -88,7 +88,7 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Single(entry => entry.Executable.Label.Value == "实施")
             .Runs.Single();
 
         // 上下文输入边与普通 From 各注入一次命名端口产出，上下文输入那条位于上下文开头
@@ -118,7 +118,7 @@ public sealed class PortNodeTests
 
         Assert.Equal(TaskState.Done, done.State);
         RunSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Single(entry => entry.Executable.Label.Value == "实施")
             .Runs.Single();
         Assert.Contains("端口「结论」产出", implement.Context.Seed[0].Text);
     }
@@ -192,10 +192,10 @@ public sealed class PortNodeTests
             ]
             """;
         environment.Executor.FailsWhen = run =>
-            run.Context.Node.Name.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
+            run.Context.Node.Label.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
         environment.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.Node.Name.Value != "实施")
+            if (run.Context.Node.Label.Value != "实施")
             {
                 return null;
             }
@@ -250,7 +250,7 @@ public sealed class PortNodeTests
         // 甲的第一轮提交空端口表，端口与声明不一一对应，视为未交回
         environment.Executor.PortValuesJsonFor = run =>
         {
-            if (run.Context.Node.Name.Value != "实施")
+            if (run.Context.Node.Label.Value != "实施")
             {
                 return null;
             }

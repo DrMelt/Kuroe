@@ -45,13 +45,13 @@ public sealed class LimitsTests
 
         using TestEnvironment environment = TestEnvironment.Create(flow);
         environment.Executor.Output = _ => new string('长', 3000);
-        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value == "来源"
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Label.Value == "来源"
             ? $$"""{"结论": "{{new string('长', 3000)}}"}"""
             : null;
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         RunSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "接收")
+            .Single(entry => entry.Executable.Label.Value == "接收")
             .Runs.Single();
         ContextMessage upstream = Assert.Single(implement.Context.Seed,
             message => message.Source is RunSource);

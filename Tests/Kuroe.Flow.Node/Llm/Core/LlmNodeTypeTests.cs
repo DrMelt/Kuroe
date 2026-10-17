@@ -47,7 +47,7 @@ public sealed class LlmNodeTypeTests
 
     private static NodeSpec Node(ExecutableSpec execution) => new()
     {
-        Name = new NodeName("干活"),
+        Label = new NodeLabel("干活"),
         Type = LlmNodeTypes.Create(null),
         Outputs = [new Port(new PortName("结论"), PortType.Text)],
         Execution = execution,

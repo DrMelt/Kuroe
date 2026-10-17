@@ -24,9 +24,8 @@ internal static class BuiltinNodes
     internal static PortName PlanPort { get; } = new("计划");
 
     /// <summary>执行节点：把目标拆成条目。</summary>
-    private static readonly NodeSpec PlanNodeDefinition = new()
+    private static readonly NodeSpec PlanNodeDefinition = NodeSpec.Define(new NodeName("规划")) with
     {
-        Name = new NodeName("规划"),
         Type = LlmNodeTypes.Create(new LlmParameters
         {
             Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
@@ -37,9 +36,8 @@ internal static class BuiltinNodes
     };
 
     /// <summary>执行节点：按条目实施。</summary>
-    private static readonly NodeSpec ExecuteNodeDefinition = new()
+    private static readonly NodeSpec ExecuteNodeDefinition = NodeSpec.Define(new NodeName("执行")) with
     {
-        Name = new NodeName("执行"),
         Type = LlmNodeTypes.Create(new LlmParameters
         {
             Tools = [new ToolPath("GetLocalTime")],
@@ -52,18 +50,15 @@ internal static class BuiltinNodes
     };
 
     /// <summary>交付容器：出一条计划，按条目实施。实施节点的模型是槽位名，由引用处的模型绑定提供。</summary>
-    private static readonly NodeSpec DeliveryContainerDefinition = new()
+    private static readonly NodeSpec DeliveryContainerDefinition = NodeSpec.Define(new NodeName("交付")) with
     {
-        Name = new NodeName("交付"),
         Type = ContainerNodeTypes.Type,
         Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =
         [
-            new NodeSpec
+            NodeSpec.Reference(new NodeLabel("实施"), new NodeName("执行")) with
             {
-                Name = new NodeName("实施"),
-                Use = new NodeName("执行"),
                 Model = ExecutorSlot,
                 From = [new FromGroup([new FromLink(TaskPort, PortRef.Bound(PlanPort))])],
             },

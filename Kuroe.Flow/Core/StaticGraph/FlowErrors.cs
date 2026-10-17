@@ -6,9 +6,6 @@ namespace Kuroe.Flow.StaticGraph;
 /// <summary>流程装配域的错误构造。</summary>
 public static class FlowErrors
 {
-    /// <summary>有流程没写名字。</summary>
-    public static Error MissingName() => Error.Validation(FlowErrorCodes.FlowName, "有流程缺少名称。");
-
     /// <summary>一条流程里某个模型选择的错误。</summary>
     public static Error Model(string flow, string model, string message) =>
         Error.Validation(FlowErrorCodes.FlowNode, $"流程 {flow} 的模型选择 {model}：{message}");

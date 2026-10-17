@@ -25,26 +25,26 @@ public sealed class LlmNodeType(LlmParameters? parameters) : INodeType
         ExecutableSpec execution = node.Execution!;
         if (execution.MaxRuns is { } limit && limit < 1)
         {
-            fail(scope.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
+            fail(scope.Node(node.Label.Value, "MaxRuns 必须是正整数。"));
         }
 
         if (execution.Validate is not null)
         {
             if (!node.Outputs.Any(port => port.Type == PortType.Text))
             {
-                fail(scope.Node(node.Name.Value, "声明 Validate 的节点必须声明 Text 输出端口，校验对象是端口产出。"));
+                fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明 Text 输出端口，校验对象是端口产出。"));
             }
 
             if (execution.Mode == NodeMode.PerItem)
             {
-                fail(scope.Node(node.Name.Value, "声明 Validate 的执行节点不能按条目展开，必须是整节点执行。"));
+                fail(scope.Node(node.Label.Value, "声明 Validate 的执行节点不能按条目展开，必须是整节点执行。"));
             }
         }
 
         // Signal 输入只作驱动、不承载实例内容，按条目展开时仍成立；Context 输入没有实例映射
         if (execution.Mode == NodeMode.PerItem && node.Inputs.Any(port => port.Type == PortType.Context))
         {
-            fail(scope.Node(node.Name.Value, "声明 Context 输入端口的执行节点不能按条目展开，必须是整节点执行。"));
+            fail(scope.Node(node.Label.Value, "声明 Context 输入端口的执行节点不能按条目展开，必须是整节点执行。"));
         }
     }
 

@@ -86,7 +86,9 @@ static class FlowWriter
     {
         NodeDto dto = new()
         {
-            Name = node.Name.Value,
+            // 定义条目写节点名，被使用的节点写标签，未写的一侧留空由写出条件省略
+            Name = node.Use is null ? node.Name?.Value : null,
+            Label = node.Use is null ? null : node.Label.Value,
             Kind = node.Kind?.Value,
             Use = node.Use?.Value,
             From = node.From.Count == 0 ? null : [.. node.From.Select(ToFromDto)],

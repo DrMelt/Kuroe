@@ -31,11 +31,11 @@ public static class WaitErrors
     /// <summary>回答内容为空，不构成输入。</summary>
     public static Error EmptyAnswer() => Error.Validation("Task.Answer", "回答内容不能为空。");
 
-    /// <summary>多个节点等待回答，必须指定节点名。</summary>
+    /// <summary>多个节点等待回答，必须指定节点路径。</summary>
     public static Error AmbiguousInput(TaskId task, int count) => Error.Validation(
-        "Task.Answer", $"{task} 有 {count} 个输入节点等待回答，请指定节点名。");
+        "Task.Answer", $"{task} 有 {count} 个输入节点等待回答，请指定节点路径。");
 
     /// <summary>该节点没有等待回答的输入。</summary>
-    public static Error NoAwaitingNode(string nodeName) => Error.Validation(
-        "Task.Answer", $"节点「{nodeName}」没有等待回答的输入。");
+    public static Error NoAwaitingNode(string nodePath) => Error.Validation(
+        "Task.Answer", $"节点「{nodePath}」没有等待回答的输入。");
 }

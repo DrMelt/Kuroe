@@ -14,7 +14,7 @@ sealed class NodeModelResolver(IModelAccess access, IModelSettings settings) : I
     {
         if (executable.Model is not { } definition)
         {
-            return [ModelErrors.ModelMissing(executable.Name.Value)];
+            return [ModelErrors.ModelMissing(executable.Label.Value)];
         }
 
         if (definition.Runtime)

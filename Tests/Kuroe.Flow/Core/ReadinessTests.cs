@@ -230,7 +230,7 @@ public sealed class ReadinessTests
 
     private static StartNode StartDefinition() => new()
     {
-        Path = new NodePath([StartNode.ReservedName]),
+        Path = new NodePath([StartNode.ReservedLabel]),
         Outputs = [new Port(OutputPort, PortType.Text)],
     };
 
@@ -264,7 +264,7 @@ public sealed class ReadinessTests
             return source;
         }
 
-        /// <summary>按节点名取一个来源的状态。</summary>
+        /// <summary>按节点路径取一个来源的状态。</summary>
         public Source Of(string node) => Of(NodePath.Of(node));
     }
 

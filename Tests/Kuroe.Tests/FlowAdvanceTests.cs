@@ -75,7 +75,7 @@ public sealed class FlowAdvanceTests
     public void Rework_with_unknown_item_keeps_task_blocked()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "分配执行" && run.Context.ItemIndex == 0;
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "分配执行" && run.Context.ItemIndex == 0;
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
@@ -111,7 +111,7 @@ public sealed class FlowAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create();
         int failures = 0;
         environment.Executor.FailsWhen = run =>
-            run.Context.Node.Name.Value == "分配执行" && Interlocked.Increment(ref failures) <= 2;
+            run.Context.Node.Label.Value == "分配执行" && Interlocked.Increment(ref failures) <= 2;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -128,7 +128,7 @@ public sealed class FlowAdvanceTests
     public void Cancel_after_block_settles_the_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "分配执行";
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "分配执行";
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);

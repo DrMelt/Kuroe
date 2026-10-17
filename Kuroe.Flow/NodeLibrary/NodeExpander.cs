@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph;
 namespace Kuroe.Flow.NodeLibrary;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，端口绑定沿作用域链透传。
-/// 节点名按作者写下的原文保留，层级由树给出，重名只需同一容器内避免；引用由编译期按作用域链解析。</summary>
+/// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
 internal static class NodeExpander
 {
     /// <summary>展开作用域的一层：容器实例的端口绑定与模型槽位绑定。
@@ -37,7 +37,7 @@ internal static class NodeExpander
         return expanded!;
     }
 
-    /// <summary>展开一个节点：引用按库定义实例化，实例根采用引用处写下的名字，库定义内成员沿用定义里的名字。</summary>
+    /// <summary>展开一个节点：引用按库定义实例化，实例根采用引用处写下的标签，库定义内成员沿用定义里的标签。</summary>
     private static NodeSpec? ExpandNode(
         NodeLibrary library,
         NodeSpec node,
@@ -51,26 +51,25 @@ internal static class NodeExpander
         {
             if (!library.TryFind(use, out NodeSpec? definition))
             {
-                errors.Add(scope.Node(node.Name.Value, $"引用的节点 {use} 不在节点库。"));
+                errors.Add(scope.Node(node.Label.Value, $"引用的节点 {use} 不在节点库。"));
                 return null;
             }
 
-            NodeName invocation = node.Name.Value.Length > 0 ? node.Name : definition.Name;
             if (definition.Nodes is { Count: > 0 })
             {
                 if (node.From.Count > 0)
                 {
-                    errors.Add(scope.Node(node.Name.Value, "引用容器不能声明 From，容器自身不接线。"));
+                    errors.Add(scope.Node(node.Label.Value, "引用容器不能声明 From，容器自身不接线。"));
                 }
 
                 if (node.Model is not null)
                 {
-                    errors.Add(scope.Node(node.Name.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
+                    errors.Add(scope.Node(node.Label.Value, "引用节点组不能声明模型，用 Models 绑定组内成员的模型。"));
                 }
 
                 if (node.Validate is not null)
                 {
-                    errors.Add(scope.Node(node.Name.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
+                    errors.Add(scope.Node(node.Label.Value, "引用节点组不能声明 Validate，输出校验只属于执行节点。"));
                 }
 
                 CheckBindings(node, definition, scope, errors);
@@ -79,7 +78,7 @@ internal static class NodeExpander
                 List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors, memberLimit);
                 return new NodeSpec
                 {
-                    Name = invocation,
+                    Label = node.Label,
                     Type = definition.Type,
                     Inputs = definition.Inputs,
                     Nodes = members,
@@ -89,19 +88,19 @@ internal static class NodeExpander
 
             if (node.Models is not null)
             {
-                errors.Add(scope.Node(node.Name.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型选择。"));
+                errors.Add(scope.Node(node.Label.Value, "引用执行节点不能声明模型绑定，用 Model 指定模型选择。"));
             }
 
             if (node.In is { Count: > 0 })
             {
-                errors.Add(scope.Node(node.Name.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
+                errors.Add(scope.Node(node.Label.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
             }
 
             ExecutableSpec libraryExecution = definition.Execution!;
 
             return new NodeSpec
             {
-                Name = invocation,
+                Label = node.Label,
                 Type = definition.Type,
                 Inputs = definition.Inputs,
                 Execution = libraryExecution with
@@ -109,7 +108,7 @@ internal static class NodeExpander
                     Validate = node.Validate ?? libraryExecution.Validate,
                     MaxRuns = ResolveMaxRuns(node.MaxRuns, libraryExecution.MaxRuns, currentLimit),
                 },
-                Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
+                Model = ResolveModel(node.Model, env, inInstance, scope, node.Label.Value, errors),
                 From = ResolveAll(node.From, env, scope, errors),
                 Outputs = definition.Outputs,
             };
@@ -121,6 +120,7 @@ internal static class NodeExpander
             return new NodeSpec
             {
                 Name = node.Name,
+                Label = node.Label,
                 Type = node.Type,
                 Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
@@ -134,6 +134,7 @@ internal static class NodeExpander
         return new NodeSpec
         {
             Name = node.Name,
+            Label = node.Label,
             Type = node.Type,
             Inputs = node.Inputs,
             Execution = execution with
@@ -141,7 +142,7 @@ internal static class NodeExpander
                 Validate = execution.Validate,
                 MaxRuns = ResolveMaxRuns(execution.MaxRuns, null, currentLimit),
             },
-            Model = ResolveModel(node.Model, env, inInstance, scope, node.Name.Value, errors),
+            Model = ResolveModel(node.Model, env, inInstance, scope, node.Label.Value, errors),
             From = ResolveAll(node.From, env, scope, errors),
             Outputs = node.Outputs,
         };
@@ -185,7 +186,7 @@ internal static class NodeExpander
             var declared = new HashSet<PortName>([.. definition.Inputs.Select(port => port.Name)]);
             foreach (PortName port in bindings.Keys.Where(port => !declared.Contains(port)))
             {
-                errors.Add(scope.Node(node.Name.Value, $"端口 {port} 不在容器 {definition.Name} 上。"));
+                errors.Add(scope.Node(node.Label.Value, $"端口 {port} 不在容器 {definition.Label} 上。"));
             }
         }
 
@@ -194,7 +195,7 @@ internal static class NodeExpander
             var slots = new HashSet<ModelRef>(definition.ModelSlots ?? []);
             foreach (ModelRef slot in modelBindings.Keys.Where(slot => !slots.Contains(slot)))
             {
-                errors.Add(scope.Node(node.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
+                errors.Add(scope.Node(node.Label.Value, $"模型槽位 {slot} 不在容器 {definition.Label} 上。"));
             }
         }
     }
@@ -207,7 +208,7 @@ internal static class NodeExpander
         IReadOnlyDictionary<ModelRef, ModelRef>? modelSlots) =>
         new(parent, bindings ?? new Dictionary<PortName, PortRef>(), modelSlots);
 
-    /// <summary>逐个解析上游启动组：来源名沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
+    /// <summary>逐个解析上游启动组：来源标签沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
     private static IReadOnlyList<FromGroup> ResolveAll(
         IReadOnlyList<FromGroup> from,
         Env? env,
@@ -229,7 +230,7 @@ internal static class NodeExpander
             return reference;
         }
 
-        // @端口：沿绑定链找到绑定来源，绑定值沿更外层作用域透传，来源名保持作者写下的原文
+        // @端口：沿绑定链找到绑定来源，绑定值沿更外层作用域透传，来源标签保持作者写下的原文
         Env? chain = env;
         while (chain is not null)
         {
@@ -271,7 +272,7 @@ internal static class NodeExpander
         Env? env,
         bool inInstance,
         NodeScope scope,
-        string nodeName,
+        string nodeLabel,
         List<Error> errors)
     {
         if (model is null || !inInstance)
@@ -279,7 +280,7 @@ internal static class NodeExpander
             return model;
         }
 
-        return ResolveSlot(model.Value, env, mustBind: true, scope, nodeName, errors);
+        return ResolveSlot(model.Value, env, mustBind: true, scope, nodeLabel, errors);
     }
 
     /// <summary>沿模型绑定链解析槽位：当前层命中取绑定值继续向更外层解析，直到装配层拿到流程模型选择名。
@@ -289,14 +290,14 @@ internal static class NodeExpander
         Env? env,
         bool mustBind,
         NodeScope scope,
-        string nodeName,
+        string nodeLabel,
         List<Error> errors)
     {
         if (env is null || env.ModelSlots is null)
         {
             if (mustBind)
             {
-                errors.Add(scope.Node(nodeName, $"模型槽位 {name} 没有外部绑定，引用节点组时用 Models 提供。"));
+                errors.Add(scope.Node(nodeLabel, $"模型槽位 {name} 没有外部绑定，引用节点组时用 Models 提供。"));
                 return null;
             }
 
@@ -305,9 +306,9 @@ internal static class NodeExpander
 
         if (env.ModelSlots.TryGetValue(name, out ModelRef bound))
         {
-            return ResolveSlot(bound, env.Parent, mustBind: false, scope, nodeName, errors);
+            return ResolveSlot(bound, env.Parent, mustBind: false, scope, nodeLabel, errors);
         }
 
-        return ResolveSlot(name, env.Parent, mustBind, scope, nodeName, errors);
+        return ResolveSlot(name, env.Parent, mustBind, scope, nodeLabel, errors);
     }
 }

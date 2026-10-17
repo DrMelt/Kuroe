@@ -9,7 +9,7 @@ using Flow = Shared.StaticGraph;
 /// <summary>节点库定义的校验：结构合法、端口声明、子树自包含。展开在 NodeExpander 里进行。</summary>
 internal static class NodeLibraryRules
 {
-    /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复名报告在注册处完成，
+    /// <summary>校验节点库：定义结构与子树自包含。各流程随后按节点库展开。同名覆盖与重复节点名报告在注册处完成，
     /// 这里看到的是去重后的定义表。类型的形状由节点持有的类型描述给出，判定分派到哪一支。</summary>
     public static ErrorOr<Success> Validate(NodeLibrary library)
     {
@@ -51,91 +51,91 @@ internal static class NodeLibraryRules
         {
             if (node.Use is not null)
             {
-                errors.Add(NodeScope.Library.Node(node.Name.Value, "节点库定义不能是引用。"));
+                errors.Add(NodeScope.Library.Node(node.Label.Value, "节点库定义不能是引用。"));
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(node.Name.Value))
+            if (node.Name is not { } name || string.IsNullOrWhiteSpace(name.Value))
             {
                 errors.Add(NodeScope.Library.Node("(未命名)", "节点名不能为空。"));
                 continue;
             }
 
-            if (node.Name.Value.Contains('@'))
+            if (name.Value.Contains('@'))
             {
-                errors.Add(NodeScope.Library.Node(node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
+                errors.Add(NodeScope.Library.Node(name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
                 continue;
             }
 
-            if (node.Name == StartNode.ReservedName)
+            if (name == StartNode.ReservedName)
             {
-                errors.Add(NodeScope.Library.Node(node.Name.Value, $"节点名 {StartNode.ReservedName} 是流程起点的保留名。"));
+                errors.Add(NodeScope.Library.Node(name.Value, $"节点名 {StartNode.ReservedName} 是流程起点的保留名。"));
                 continue;
             }
 
-            byName[node.Name] = node;
+            byName[name] = node;
 
             if (ShapeOf(node) is { Organizes: true })
             {
                 if (node.Nodes is not { Count: > 0 })
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "容器节点必须声明子节点。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "容器节点必须声明子节点。"));
                 }
 
                 if (node.Execution is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "容器不能同时声明执行配置。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "容器不能同时声明执行配置。"));
                 }
 
                 if (node.From.Count > 0)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不接线，不能声明 From。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不接线，不能声明 From。"));
                 }
 
                 if (node.In is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不接线，不能声明输入端口绑定。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不接线，不能声明输入端口绑定。"));
                 }
 
                 if (node.Model is not null || node.Models is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明模型选择与模型绑定，绑定由引用处提供。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不声明模型选择与模型绑定，绑定由引用处提供。"));
                 }
 
                 ValidateModelSlots(node, errors);
 
                 if (node.Outputs.Count > 0)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。"));
                 }
 
                 if (node.Validate is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "库容器定义不声明 Validate，输出校验只属于执行节点。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不声明 Validate，输出校验只属于执行节点。"));
                 }
             }
             else
             {
                 if (node.Nodes is { Count: > 0 })
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点与输入节点不能声明子节点，子节点只属于容器。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点与输入节点不能声明子节点，子节点只属于容器。"));
                 }
 
                 if (node.ModelSlots is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点不声明模型槽位，槽位声明只属于容器。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点不声明模型槽位，槽位声明只属于容器。"));
                 }
 
                 if (node.Execution is null)
                 {
-                    errors.Add(NodeScope.Library.Node(node.Name.Value, "节点必须声明执行配置。"));
+                    errors.Add(NodeScope.Library.Node(node.Label.Value, "节点必须声明执行配置。"));
                 }
 
                 if (ShapeOf(node) is { DispatchesRuns: false })
                 {
                     if (node.Model is not null)
                     {
-                        errors.Add(NodeScope.Library.Node(node.Name.Value,
+                        errors.Add(NodeScope.Library.Node(node.Label.Value,
                             $"{KindName(node)}成员不启动 run，不声明模型槽位。"));
                     }
                 }
@@ -143,12 +143,12 @@ internal static class NodeLibraryRules
                 {
                     if (node.Model is not null)
                     {
-                        errors.Add(NodeScope.Library.Node(node.Name.Value, "库执行定义不声明模型，模型由使用处输入。"));
+                        errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不声明模型，模型由使用处输入。"));
                     }
 
                     if (node.Models is not null)
                     {
-                        errors.Add(NodeScope.Library.Node(node.Name.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
+                        errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
                     }
                 }
             }
@@ -167,12 +167,12 @@ internal static class NodeLibraryRules
 
         foreach (ModelRef slot in slots.Where(slot => string.IsNullOrWhiteSpace(slot.Value)))
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "模型槽位名不能为空。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "模型槽位名不能为空。"));
         }
 
         foreach (ModelRef duplicated in slots.GroupBy(slot => slot).Where(group => group.Count() > 1).Select(group => group.Key))
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, $"模型槽位 {duplicated} 重复。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, $"模型槽位 {duplicated} 重复。"));
         }
     }
 
@@ -181,22 +181,22 @@ internal static class NodeLibraryRules
     {
         if (node.From.Count > 0)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点库定义的接线由引用处提供，不能写 From。"));
         }
 
         if (node.In is not null)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "执行节点库定义不绑定输入端口，接线从引用处提供。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点库定义不绑定输入端口，接线从引用处提供。"));
         }
 
         if (node.ContainerOutputs is { Count: > 0 })
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Type。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Type。"));
         }
 
         if (node.Execution?.MaxRuns is { } limit && limit < 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "MaxRuns 必须是正整数。"));
         }
 
         ValidateInterface(node, errors);
@@ -205,15 +205,15 @@ internal static class NodeLibraryRules
     /// <summary>节点接口的库规则：端口名与端口类型与流程校验共用一份，非执行节点的输出与指令另有库层限制。</summary>
     private static void ValidateInterface(NodeSpec node, List<Error> errors)
     {
-        NodeInterfaceRules.Check(node, ShapeOf(node), message => errors.Add(NodeScope.Library.Node(node.Name.Value, message)));
+        NodeInterfaceRules.Check(node, ShapeOf(node), message => errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
 
         if ((node.Execution is null || ShapeOf(node) is { DispatchesRuns: false }) && node.Outputs.Count > 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Name.Value, "非执行节点最多一个输出端口。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "非执行节点最多一个输出端口。"));
         }
     }
 
-    /// <summary>校验容器子树：整棵子树名字扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。
+    /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。
     /// checkSlots 只在节点库容器定义层为真，槽位声明与使用一致按定义整棵子树核对一次，内联子容器沿外层声明。</summary>
     private static void CheckContainer(
         NodeSpec container,
@@ -224,25 +224,25 @@ internal static class NodeLibraryRules
     {
         if (container.MaxRuns is { } limit && limit < 1)
         {
-            errors.Add(NodeScope.Library.Node(container.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(container.Label.Value, "MaxRuns 必须是正整数。"));
         }
 
-        var subtreeNames = new HashSet<NodeName>();
-        CollectSubtreeNames(members, byName, subtreeNames);
+        var subtreeLabels = new HashSet<NodeLabel>();
+        CollectSubtreeLabels(members, byName, subtreeLabels);
 
-        var subtreeOutputs = new Dictionary<NodeName, IReadOnlyList<Port>>();
+        var subtreeOutputs = new Dictionary<NodeLabel, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
-        var contextless = new HashSet<NodeName>();
+        var contextless = new HashSet<NodeLabel>();
         CollectContextless(members, byName, contextless);
 
         if (container.ContainerOutputs is { } outs)
         {
-            CheckContainerOutputs(container, outs, subtreeNames, subtreeOutputs, contextless, errors);
+            CheckContainerOutputs(container, outs, subtreeLabels, subtreeOutputs, contextless, errors);
         }
 
-        var literalNames = new HashSet<NodeName>();
-        CheckLiteralNames(members, literalNames, container, errors);
+        var literalLabels = new HashSet<NodeLabel>();
+        CheckLiteralLabels(members, literalLabels, container, errors);
 
         var ports = new HashSet<PortName>([.. container.Inputs.Select(port => port.Name)]);
         if (checkSlots)
@@ -252,7 +252,7 @@ internal static class NodeLibraryRules
 
         foreach (NodeSpec member in members)
         {
-            CheckMember(member, ports, subtreeNames, byName, errors);
+            CheckMember(member, ports, subtreeLabels, byName, errors);
             CheckMemberModel(member, byName, errors);
             ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
@@ -276,12 +276,12 @@ internal static class NodeLibraryRules
 
         foreach (ModelRef slot in used.Where(slot => !declared.Contains(slot)))
         {
-            errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员使用的模型槽位 {slot} 未在容器上声明。"));
+            errors.Add(NodeScope.Library.Node(container.Label.Value, $"成员使用的模型槽位 {slot} 未在容器上声明。"));
         }
 
         foreach (ModelRef slot in declared.Where(slot => !used.Contains(slot)))
         {
-            errors.Add(NodeScope.Library.Node(container.Name.Value, $"声明的模型槽位 {slot} 未被成员使用。"));
+            errors.Add(NodeScope.Library.Node(container.Label.Value, $"声明的模型槽位 {slot} 未被成员使用。"));
         }
 
         foreach (NodeSpec member in members)
@@ -335,12 +335,12 @@ internal static class NodeLibraryRules
         var bound = new HashSet<ModelRef>(member.Models?.Keys ?? []);
         foreach (ModelRef slot in slots.Where(slot => !bound.Contains(slot)))
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, $"引用节点组未绑定模型槽位 {slot}。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, $"引用节点组未绑定模型槽位 {slot}。"));
         }
 
         foreach (ModelRef slot in bound.Where(slot => !slots.Contains(slot)))
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, $"模型槽位 {slot} 不在容器 {definition.Name} 上。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, $"模型槽位 {slot} 不在容器 {definition.Label} 上。"));
         }
     }
 
@@ -348,17 +348,17 @@ internal static class NodeLibraryRules
     private static void CollectSubtreeOutputs(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
-        Dictionary<NodeName, IReadOnlyList<Port>> outputs)
+        Dictionary<NodeLabel, IReadOnlyList<Port>> outputs)
     {
         foreach (NodeSpec node in nodes)
         {
             if (node.Execution is not null)
             {
-                outputs[node.Name] = node.Outputs;
+                outputs[node.Label] = node.Outputs;
             }
             else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) && definition.Execution is not null)
             {
-                outputs[node.Name] = definition.Outputs;
+                outputs[node.Label] = definition.Outputs;
             }
 
             if (node.Nodes is { Count: > 0 })
@@ -368,12 +368,12 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内不产出上下文端口的节点名，上下文端口绑定不允许落在这些节点上。
+    /// <summary>收集子树内不产出上下文端口的节点标签，上下文端口绑定不允许落在这些节点上。
     /// 判断按类型的输出端口值域，组织子节点的类型不在此列。</summary>
     private static void CollectContextless(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeName> contextless)
+        HashSet<NodeLabel> contextless)
     {
         foreach (NodeSpec node in nodes)
         {
@@ -381,7 +381,7 @@ internal static class NodeLibraryRules
             if (ShapeOf(declared) is { Organizes: false } shape
                 && !shape.OutputTypes.Contains(Flow.PortType.Context))
             {
-                contextless.Add(node.Name);
+                contextless.Add(node.Label);
             }
 
             if (node.Nodes is { Count: > 0 })
@@ -396,106 +396,100 @@ internal static class NodeLibraryRules
     private static void CheckContainerOutputs(
         NodeSpec container,
         IReadOnlyDictionary<PortName, ContainerOutput> outs,
-        HashSet<NodeName> subtreeNames,
-        Dictionary<NodeName, IReadOnlyList<Port>> subtreeOutputs,
-        HashSet<NodeName> contextless,
+        HashSet<NodeLabel> subtreeLabels,
+        Dictionary<NodeLabel, IReadOnlyList<Port>> subtreeOutputs,
+        HashSet<NodeLabel> contextless,
         List<Error> errors)
     {
         foreach ((PortName port, ContainerOutput output) in outs)
         {
             PortRef target = output.Ref;
-            if (target.Source is not { } sourceName)
+            if (target.Source is not { } sourceLabel)
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标不能是对绑定端口的引用。"));
                 continue;
             }
 
             // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，Text 端口透出命名段
-            if (!subtreeNames.Contains(sourceName))
+            if (!subtreeLabels.Contains(sourceLabel))
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不在容器 {container.Name} 的子树里。"));
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
+                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不在容器 {container.Label} 的子树里。"));
                 continue;
             }
 
-            if (!subtreeOutputs.TryGetValue(sourceName, out IReadOnlyList<Port>? memberPorts))
+            if (!subtreeOutputs.TryGetValue(sourceLabel, out IReadOnlyList<Port>? memberPorts))
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不是执行节点，无法取产出。"));
                 continue;
             }
 
             if (memberPorts.Find(target.Port) is not { } memberPort)
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 无法取用，目标必须是执行节点且声明了端口 {target.Port.Value}。"));
                 continue;
             }
 
-            if (memberPort.Type == Flow.PortType.Context && contextless.Contains(sourceName))
+            if (memberPort.Type == Flow.PortType.Context && contextless.Contains(sourceLabel))
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不产出上下文端口，不能作为上下文端口来源。"));
                 continue;
             }
 
             if (memberPort.Type == Flow.PortType.WorkItems)
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value,
+                errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
             }
         }
     }
 
-    /// <summary>字面子树全部成员名唯一。实例化时成员名映射进同一个作用域，重名会折叠歧义。</summary>
-    private static void CheckLiteralNames(
+    /// <summary>字面子树全部成员标签唯一。实例化时成员标签映射进同一个作用域，重复会折叠歧义。</summary>
+    private static void CheckLiteralLabels(
         IReadOnlyList<NodeSpec> nodes,
-        HashSet<NodeName> seen,
+        HashSet<NodeLabel> seen,
         NodeSpec container,
         List<Error> errors)
     {
         foreach (NodeSpec node in nodes)
         {
-            NodeName name = node.Name.Value.Length > 0
-                ? node.Name
-                : new NodeName(node.Use?.Value ?? string.Empty);
-            if (name.Value.Contains('@'))
+            if (node.Label.Value.Contains('@'))
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员名 {name} 不能含 @，@ 是端口引用的分隔符。"));
+                errors.Add(NodeScope.Library.Node(container.Label.Value, $"成员标签 {node.Label} 不能含 @，@ 是端口引用的分隔符。"));
             }
-            else if (!seen.Add(name))
+            else if (!seen.Add(node.Label))
             {
-                errors.Add(NodeScope.Library.Node(container.Name.Value, $"成员名 {name} 在容器子树内重复。"));
+                errors.Add(NodeScope.Library.Node(container.Label.Value, $"成员标签 {node.Label} 在容器子树内重复。"));
             }
 
             if (node.Nodes is { Count: > 0 })
             {
-                CheckLiteralNames(node.Nodes, seen, container, errors);
+                CheckLiteralLabels(node.Nodes, seen, container, errors);
             }
         }
     }
 
-    /// <summary>收集容器整棵子树（含被引用容器定义）的全部成员名。</summary>
-    private static void CollectSubtreeNames(
+    /// <summary>收集容器整棵子树（含被引用容器定义）的全部成员标签。</summary>
+    private static void CollectSubtreeLabels(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeName> names)
+        HashSet<NodeLabel> labels)
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node.Name.Value.Length > 0)
-            {
-                names.Add(node.Name);
-            }
+            labels.Add(node.Label);
 
             if (node.Nodes is { Count: > 0 })
             {
-                CollectSubtreeNames(node.Nodes, byName, names);
+                CollectSubtreeLabels(node.Nodes, byName, labels);
             }
             else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
             {
-                CollectSubtreeNames(referenced.Nodes, byName, names);
+                CollectSubtreeLabels(referenced.Nodes, byName, labels);
             }
         }
     }
@@ -503,7 +497,7 @@ internal static class NodeLibraryRules
     private static void CheckMember(
         NodeSpec member,
         HashSet<PortName> ports,
-        HashSet<NodeName> subtreeNames,
+        HashSet<NodeLabel> subtreeLabels,
         Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors)
     {
@@ -511,44 +505,44 @@ internal static class NodeLibraryRules
         {
             if (!byName.ContainsKey(use))
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, $"引用的节点 {use} 不在节点库。"));
+                errors.Add(NodeScope.Library.Node(member.Label.Value, $"引用的节点 {use} 不在节点库。"));
             }
 
             if (member.Execution is not null || member.Nodes is not null)
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, "引用成员不能同时声明执行配置或子节点。"));
+                errors.Add(NodeScope.Library.Node(member.Label.Value, "引用成员不能同时声明执行配置或子节点。"));
             }
         }
         else if (member.Execution is not null && member.Nodes is { Count: > 0 })
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "成员不能同时声明执行配置与子节点。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "成员不能同时声明执行配置与子节点。"));
         }
         else if (member.Execution is null && member.Nodes is not { Count: > 0 })
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "成员必须声明执行配置或子节点或引用。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "成员必须声明执行配置或子节点或引用。"));
         }
 
         if (member.Use is not null && member.MaxRuns is { } referenceLimit && referenceLimit < 1)
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxRuns 必须是正整数。"));
         }
 
         if (member.Use is null && member.Execution is { MaxRuns: { } executionLimit } && executionLimit < 1)
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxRuns 必须是正整数。"));
         }
 
         foreach (PortRef reference in member.From.SelectMany(group => group.Links).Select(link => link.Ref))
         {
             bool inScope = reference.Source is { } source
-                ? subtreeNames.Contains(source)
+                ? subtreeLabels.Contains(source)
                 : ports.Contains(reference.Port);
             if (!inScope)
             {
                 string message = reference.Source is null
                     ? $"端口 @{reference.Port.Value} 没有在此容器上声明。"
-                    : $"From 引用的节点 {reference.Source.Value} 不在容器 {member.Name} 的作用域里。";
-                errors.Add(NodeScope.Library.Node(member.Name.Value, message));
+                    : $"From 引用的节点 {reference.Source.Value} 不在容器 {member.Label} 的作用域里。";
+                errors.Add(NodeScope.Library.Node(member.Label.Value, message));
             }
         }
     }
@@ -564,7 +558,7 @@ internal static class NodeLibraryRules
         {
             if (member.Model is not null || member.Models is not null || member.ModelSlots is not null)
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value, "内联容器成员不声明模型、模型槽位与模型绑定。"));
+                errors.Add(NodeScope.Library.Node(member.Label.Value, "内联容器成员不声明模型、模型槽位与模型绑定。"));
             }
 
             return;
@@ -581,7 +575,7 @@ internal static class NodeLibraryRules
             {
                 if (member.Model is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(member.Name.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
+                    errors.Add(NodeScope.Library.Node(member.Label.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
                 }
 
                 return;
@@ -591,7 +585,7 @@ internal static class NodeLibraryRules
             {
                 if (member.Model is not null)
                 {
-                    errors.Add(NodeScope.Library.Node(member.Name.Value,
+                    errors.Add(NodeScope.Library.Node(member.Label.Value,
                         $"引用{KindName(referenced)}成员的节点不声明模型槽位。"));
                 }
 
@@ -602,7 +596,7 @@ internal static class NodeLibraryRules
         {
             if (member.Model is not null)
             {
-                errors.Add(NodeScope.Library.Node(member.Name.Value,
+                errors.Add(NodeScope.Library.Node(member.Label.Value,
                     $"{KindName(member)}成员不启动 run，不声明模型槽位。"));
             }
 
@@ -611,12 +605,12 @@ internal static class NodeLibraryRules
 
         if (member.Model is null)
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
         }
 
         if (member.Models is not null)
         {
-            errors.Add(NodeScope.Library.Node(member.Name.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
         }
     }
 }

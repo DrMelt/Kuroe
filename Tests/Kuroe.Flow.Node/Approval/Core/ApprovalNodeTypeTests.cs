@@ -92,7 +92,7 @@ public sealed class ApprovalNodeTypeTests
 
     private static NodeSpec Node(IReadOnlyList<InputPort>? inputs = null) => new()
     {
-        Name = new NodeName("把关"),
+        Label = new NodeLabel("把关"),
         Type = ApprovalNodeTypes.Create(null),
         Inputs = inputs ?? [],
         Execution = new ExecutableSpec(),

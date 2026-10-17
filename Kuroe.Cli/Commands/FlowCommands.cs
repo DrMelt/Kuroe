@@ -70,7 +70,7 @@ internal sealed class FlowCommands(
             bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
                 new Text(standard ? $">{flow.Name}" : flow.Name.Value, standard ? Styles.Success : Styles.Key),
-                new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Name.Value))),
+                new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Label.Value))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
@@ -114,7 +114,7 @@ internal sealed class FlowCommands(
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
-                    new Text(new string(' ', depth * 2) + node.Name.Value),
+                    new Text(new string(' ', depth * 2) + node.Label.Value),
                     new Text(node.Model?.Value ?? "—"),
                     new Text(node.EffectiveKind.Value),
                     new Text(ViewLabels.Of(executable.Mode)),
@@ -125,7 +125,7 @@ internal sealed class FlowCommands(
             {
                 grid.AddRow(
                     new Text(string.Empty),
-                    new Text(new string(' ', depth * 2) + node.Name),
+                    new Text(new string(' ', depth * 2) + node.Label),
                     new Text("容器", Styles.Hint),
                     new Text(string.Empty),
                     new Text(string.Empty),

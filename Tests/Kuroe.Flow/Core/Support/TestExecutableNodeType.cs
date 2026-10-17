@@ -23,7 +23,7 @@ internal sealed class TestExecutableNodeType : INodeType
     {
         if (node.Execution?.MaxRuns is { } limit && limit < 1)
         {
-            fail(scope.Node(node.Name.Value, "MaxRuns 必须是正整数。"));
+            fail(scope.Node(node.Label.Value, "MaxRuns 必须是正整数。"));
         }
     }
 }

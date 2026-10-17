@@ -94,13 +94,13 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_answer_requires_node_name_when_multiple_inputs_wait()
+    public void Task_answer_requires_node_path_when_multiple_inputs_wait()
     {
         using CliSession cli = new(flowsJson: TestFlows.TwoInputFlow);
         cli.Tasks.Run(["/task", "new", "目标"]);
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
 
-        // 文本首词命中节点名不会隐式点名，未点名回答仍被拒
+        // 文本首词命中节点标签不会隐式点名，未点名回答仍被拒
         cli.Tasks.Run(["/task", "answer", "1", "输入二", "内容"]);
         Assert.Contains("有 2 个输入节点等待回答", cli.ErrorsOut.Output);
 
@@ -112,7 +112,7 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_answer_with_single_waiting_keeps_leading_node_name_in_text()
+    public void Task_answer_with_single_waiting_keeps_leading_node_label_in_text()
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
@@ -122,7 +122,7 @@ public sealed class TaskAndReplTests
         cli.Environment.Settle(new TaskId(1));
 
         Assert.Contains(cli.Environment.Snapshot(new TaskId(1)).Executables
-            .Single(entry => entry.Executable.Name.Value == "实施")
+            .Single(entry => entry.Executable.Label.Value == "实施")
             .Runs.Single().Context.Seed,
             message => message.Text.Contains("用户输入 需要 补充多语言"));
     }

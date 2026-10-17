@@ -92,7 +92,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>两个并行输入节点：不带节点名回答时要求点名。</summary>
+    /// <summary>两个并行输入节点：不带节点路径回答时要求点名。</summary>
     public const string TwoInputFlow = """
         {
           "Flows": [
@@ -269,7 +269,7 @@ public static class TestFlows
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }, { "Name": "理由", "Ref": "实施@理由" }],
               "Nodes": [
                 {
-                  "Name": "实施",
+                  "Label": "实施",
                   "Use": "允许工具",
                   "Model": "执行者",
                   "From": [ { "计划": "@计划" } ]
@@ -289,7 +289,7 @@ public static class TestFlows
                   "Nodes": [
                     { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
                     {
-                      "Name": "交付",
+                      "Label": "交付",
                       "Use": "交付",
                       "In": { "计划": "制定计划@拆分" },
                       "Models": { "执行者": "执行者" }

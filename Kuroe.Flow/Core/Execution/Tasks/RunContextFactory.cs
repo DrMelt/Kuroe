@@ -142,7 +142,7 @@ internal static class RunContextFactory
     /// <summary>一条入边的输入端口说明：来源、端口与取用方式，信号输入标明不进上下文。</summary>
     private static string InputLine(WorkTask task, FlowEdge edge)
     {
-        string source = task.Graph[edge.Source] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.Source].Name}」";
+        string source = task.Graph[edge.Source] is StartNode ? "流程起点" : $"节点「{task.Graph[edge.Source].Label}」";
         string port = $"端口「{edge.SourcePort}」";
         if (edge.Type == PortType.Signal)
         {

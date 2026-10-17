@@ -15,7 +15,7 @@ public sealed class ExecutionCountTests
     public void Rework_of_one_item_leaves_blocked_siblings_waiting()
     {
         using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "实施" && run.Context.ExecutionCount == 1;
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "实施" && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -24,10 +24,10 @@ public sealed class ExecutionCountTests
         environment.Tasks.Rework(id, 0).ThrowIfError();
         TaskSnapshot still = environment.Wait(id, snapshot =>
             snapshot.State == TaskState.Blocked
-            && snapshot.Executables.Single(node => node.Executable.Name == new NodeName("实施"))
+            && snapshot.Executables.Single(node => node.Executable.Label == new NodeLabel("实施"))
                 .Runs.Any(run => run.Context.ItemIndex == 0 && run.State == RunState.Succeeded));
 
-        ExecutableStateSnapshot node = Assert.Single(still.ExecutableStates, state => state.Node.Name == new NodeName("实施"));
+        ExecutableStateSnapshot node = Assert.Single(still.ExecutableStates, state => state.Node.Label == new NodeLabel("实施"));
         Assert.Equal(NodeState.Blocked, node.State);
         Assert.Equal([1], node.BlockedItems);
         Assert.Equal(1, node.CompletedItems);
@@ -41,7 +41,7 @@ public sealed class ExecutionCountTests
     {
         using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
         environment.Executor.FailsWhen = run =>
-            run.Context.Node.Name.Value == "实施" && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
+            run.Context.Node.Label.Value == "实施" && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -59,7 +59,7 @@ public sealed class ExecutionCountTests
     public void Single_node_rework_increments_max()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "干活" && run.Context.ExecutionCount == 1;
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "干活" && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -75,7 +75,7 @@ public sealed class ExecutionCountTests
     public void Blocked_upstream_leaves_downstream_on_zero()
     {
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "上游";
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "上游";
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
@@ -91,7 +91,7 @@ public sealed class ExecutionCountTests
     public void Executions_agree_with_run_records()
     {
         using TestEnvironment environment = TestEnvironment.Create(SplitFlow);
-        environment.Executor.FailsWhen = run => run.Context.Node.Name.Value == "实施" && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
+        environment.Executor.FailsWhen = run => run.Context.Node.Label.Value == "实施" && run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);

@@ -67,8 +67,8 @@ public sealed class ExecutionLimitTests
     public void Loop_stops_restarting_at_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(LoopWithLimitFlow);
-        environment.Executor.Output = run => run.Context.Node.Name.Value == "审查" ? "审查通过" : "产出";
-        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
+        environment.Executor.Output = run => run.Context.Node.Label.Value == "审查" ? "审查通过" : "产出";
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Label.Value switch
         {
             "审查" => """{"结论": "审查通过"}""",
             _ => null,
@@ -78,8 +78,8 @@ public sealed class ExecutionLimitTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(node => node.Executable.Name == new NodeName("修订")).Runs);
-        Assert.Single(done.Executables.Single(node => node.Executable.Name == new NodeName("交付")).Runs);
+        Assert.Single(done.Executables.Single(node => node.Executable.Label == new NodeLabel("修订")).Runs);
+        Assert.Single(done.Executables.Single(node => node.Executable.Label == new NodeLabel("交付")).Runs);
     }
 
     /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证账本环受 MaxRuns 约束。</summary>
@@ -87,8 +87,8 @@ public sealed class ExecutionLimitTests
     public void Loop_iterates_to_max_runs()
     {
         using TestEnvironment environment = TestEnvironment.Create(LoopWithoutLimitFlow);
-        environment.Executor.Output = run => run.Context.Node.Name.Value == "审查" ? "审查通过" : "产出";
-        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
+        environment.Executor.Output = run => run.Context.Node.Label.Value == "审查" ? "审查通过" : "产出";
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Label.Value switch
         {
             "审查" => """{"结论": "审查通过"}""",
             _ => null,
@@ -98,9 +98,9 @@ public sealed class ExecutionLimitTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(5, done.Executables.Single(node => node.Executable.Name == new NodeName("修订")).Runs.Count);
-        Assert.Equal(5, done.Executables.Single(node => node.Executable.Name == new NodeName("审查")).Runs.Count);
-        Assert.Equal(5, done.Executables.Single(node => node.Executable.Name == new NodeName("交付")).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Executable.Label == new NodeLabel("修订")).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Executable.Label == new NodeLabel("审查")).Runs.Count);
+        Assert.Equal(5, done.Executables.Single(node => node.Executable.Label == new NodeLabel("交付")).Runs.Count);
     }
 
     /// <summary>PerItem 展开后各条目独立计数，一条到上限不影响另一条。</summary>
@@ -109,7 +109,7 @@ public sealed class ExecutionLimitTests
     {
         using TestEnvironment environment = TestEnvironment.Create(SplitFlowWithLimit);
         environment.Executor.FailsWhen = run =>
-            run.Context.Node.Name.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
+            run.Context.Node.Label.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
@@ -224,8 +224,8 @@ public sealed class ExecutionLimitTests
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5, "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "继承干活", "Use": "干活库", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+              { "Label": "覆盖干活", "Use": "干活库", "Model": "执行者", "MaxRuns": 5, "From": [ { "目标": "Start@目标" } ] },
+              { "Label": "继承干活", "Use": "干活库", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ]
         }
@@ -239,7 +239,7 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(100, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "干活").MaxRuns);
+        Assert.Equal(100, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxRuns);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "干活").MaxRuns);
+        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxRuns);
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "覆盖干活").MaxRuns);
-        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "继承干活").MaxRuns);
+        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "覆盖干活").MaxRuns);
+        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "继承干活").MaxRuns);
     }
 }

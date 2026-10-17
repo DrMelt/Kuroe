@@ -20,7 +20,7 @@ public sealed class ContainerOutputsTests
 
         // 容器内实施成员放行命名段产出后，下游按容器输出端口取到对应命名段，出处指向容器
         RunSnapshot retrospective = done.Executables
-            .Single(entry => entry.Executable.Name.Value == "复盘")
+            .Single(entry => entry.Executable.Label.Value == "复盘")
             .Runs.Single();
         Assert.Contains(retrospective.Context.Seed,
             message => message.Text.Contains("节点「整体/交付」的端口「结论」产出")

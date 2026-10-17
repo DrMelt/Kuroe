@@ -117,13 +117,13 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        string[] waiting = [.. pending.Value.Where(node => node.Kind == AwaitKind.Answer).Select(node => node.Name)];
+        string[] waiting = [.. pending.Value.Where(node => node.Kind == AwaitKind.Answer).Select(node => node.Node.Value)];
 
         if (waiting.Length != 1)
         {
             terminal.Hint(waiting.Length == 0
                 ? "该任务没有等待输入的节点。"
-                : $"该任务有 {waiting.Length} 个等待输入的节点，请用 /task answer <任务号> <节点名> 回答。");
+                : $"该任务有 {waiting.Length} 个等待输入的节点，请用 /task answer <任务号> <@节点路径> 回答。");
             return;
         }
 

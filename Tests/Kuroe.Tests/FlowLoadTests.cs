@@ -134,6 +134,7 @@ public sealed class FlowLoadTests
 
             Assert.Contains("\"Prompt\": \"拆一下\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
+            Assert.DoesNotContain("\": null", once);
 
             var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry()).ThrowIfError();
             store.Save(FlowFile.Write(Nodes, Flows, TestTypeFiles.Registry())).ThrowIfError();
@@ -267,6 +268,67 @@ public sealed class FlowLoadTests
     public void Value_on_node_output_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 干活：输出端口不认识键 Value，Value 只属于开始端口。"], Errors(NodeOutputWithValue));
 
+    /// <summary>定义条目写了标签，节点名与标签的写位置互斥。</summary>
+    [Fact]
+    public void Definition_entry_writing_label_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 实施：定义条目写节点名 Name，Label 只属于被使用的节点。"], Errors(DefinitionWithLabel));
+
+    /// <summary>被使用的节点写了节点名，实例用标签区分。</summary>
+    [Fact]
+    public void Reference_entry_writing_name_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 副本：被使用的节点写 Label 区分，不写 Name。"], Errors(ReferenceWithName));
+
+    /// <summary>库定义的节点名不能用流程起点的保留名。</summary>
+    [Fact]
+    public void Library_definition_named_like_start_is_rejected() =>
+        Assert.Equal(["节点库定义 Start：节点名 Start 是流程起点的保留名。"], Errors(DefinitionNamedStart));
+
+    /// <summary>同一容器内两次引用同一个定义给相同标签，标签的唯一性被破坏。</summary>
+    [Fact]
+    public void Same_label_twice_in_one_container_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 副本：同一容器内的节点标签重复。"], Errors(SameLabelTwice));
+
+    /// <summary>被使用的节点必须写标签，缺标签时节点在图里没有标识段。</summary>
+    [Fact]
+    public void Reference_entry_without_label_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 执行：被使用的节点必须写 Label，它是节点在图里的标识段。"], Errors(LabelLessReferenceFlow));
+
+    private const string DefinitionWithLabel = """
+        { "Flows": [ { "Name": "默认", "Models": [], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Label": "实施", "Kind": "Llm" }
+        ] } ] }
+        """;
+
+    private const string ReferenceWithName = """
+        { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+            { "Name": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+          ] } ] }
+        """;
+
+    private const string DefinitionNamedStart = """
+        { "Nodes": [ { "Name": "Start", "Kind": "Llm" } ] }
+        """;
+
+    private const string SameLabelTwice = """
+        { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] },
+              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+            ] }
+          ] } ] }
+        """;
+
+    private const string LabelLessReferenceFlow = """
+        { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
+          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Nodes": [
+              { "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+            ] }
+          ] } ] }
+        """;
+
     /// <summary>开始端口除目标外再声明一个带固定值的端口。</summary>
     private const string StartWithValueFlow = """
         {
@@ -388,7 +450,7 @@ public sealed class FlowLoadTests
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "实施", "Kind": "Llm", "Use": "执行", "Model": "执行者" }
+              { "Label": "实施", "Kind": "Llm", "Use": "执行", "Model": "执行者" }
             ] }
           ] } ] }
         """;
@@ -437,7 +499,7 @@ public sealed class FlowLoadTests
         { "Nodes": [ { "Name": "分析库", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "分析", "Use": "分析库", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] }
+              { "Label": "分析", "Use": "分析库", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }] }
             ] }
           ] } ] }
         """;
@@ -468,12 +530,12 @@ public sealed class FlowLoadTests
               "Kind": "Container",
               "Models": ["执行者"],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }],
-              "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
+              "Nodes": [ { "Label": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
+              { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
               { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "不存在": "交付@不存在" } ] }
             ] }
           ] } ]
@@ -488,12 +550,12 @@ public sealed class FlowLoadTests
               "Kind": "Container",
               "Models": ["执行者"],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }],
-              "Nodes": [ { "Name": "实施", "Use": "允许工具", "Model": "执行者" } ]
+              "Nodes": [ { "Label": "实施", "Use": "允许工具", "Model": "执行者" } ]
             }
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
+              { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
               { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "交付.实施@结论" } ] }
             ] }
           ] } ]
@@ -505,7 +567,7 @@ public sealed class FlowLoadTests
           "Nodes": [ { "Name": "组", "Kind": "Container", "Models": ["执行者"], "Nodes": [ { "Name": "做", "Kind": "Llm", "Model": "执行者" } ] } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "组实例", "Use": "组", "Models": { "执行者": "执行者" }, "From": [ { "做": "做@结论" } ] }
+              { "Label": "组实例", "Use": "组", "Models": { "执行者": "执行者" }, "From": [ { "做": "做@结论" } ] }
             ] }
           ] } ]
         }
@@ -592,7 +654,7 @@ public sealed class FlowLoadTests
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "端口组", "Use": "端口组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
+                  { "Label": "端口组", "Use": "端口组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
                 ] }
               ]
             }

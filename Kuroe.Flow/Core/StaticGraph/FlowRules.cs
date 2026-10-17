@@ -91,17 +91,45 @@ public static class FlowRules
         }
     }
 
-    /// <summary>同一容器内的直接子节点名唯一：重名会让按名解析的引用落点不定。</summary>
+    /// <summary>同一容器内的直接子节点标识唯一：重复会让按标识解析的引用落点不定。</summary>
     private static void CheckSiblings(IReadOnlyList<NodeSpec> children, NodeScope scope, List<Error> errors)
     {
-        var seen = new HashSet<NodeName>();
-        foreach (NodeSpec child in children.Where(child => !seen.Add(child.Name)))
+        var seen = new HashSet<NodeLabel>();
+        foreach (NodeSpec child in children.Where(child => !seen.Add(child.Label)))
         {
-            errors.Add(scope.Node(child.Name.Value, "同一容器内的节点名重复。"));
+            errors.Add(scope.Node(child.Label.Value, "同一容器内的节点标签重复。"));
         }
     }
 
-    /// <summary>递归校验名字、容器形状、模型选择与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
+    /// <summary>节点标识的规则：非空、不含 @ 与 /、不是流程起点的保留标识。
+    /// 定义条目按节点名判定，引用条目按标签判定，两者共用一份判断。</summary>
+    private static void CheckIdentity(
+        string value,
+        string kind,
+        string reserved,
+        string reservedKind,
+        NodeScope scope,
+        List<Error> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add(scope.Node("(未命名)", $"{kind}不能为空。"));
+        }
+        else if (value == reserved)
+        {
+            errors.Add(scope.Node(value, $"{kind} {value} 是流程起点的保留{reservedKind}。"));
+        }
+        else if (value.Contains('@'))
+        {
+            errors.Add(scope.Node(value, $"{kind}不能含 @，@ 是端口引用的分隔符。"));
+        }
+        else if (value.Contains('/'))
+        {
+            errors.Add(scope.Node(value, $"{kind}不能含 /，/ 是节点路径的分隔符。"));
+        }
+    }
+
+    /// <summary>递归校验标识、容器形状、模型选择与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
     private static void CheckTree(
         NodeSpec node,
         HashSet<ModelRef> modelNames,
@@ -110,21 +138,20 @@ public static class FlowRules
     {
         CheckValidation(node, scope, errors);
 
-        if (string.IsNullOrWhiteSpace(node.Name.Value))
+        // 定义条目以节点名为准，引用条目以标签为准，两者都落成节点在图里的标识段
+        if (node.Name is { } name)
         {
-            errors.Add(scope.Node("(未命名)", "节点名不能为空。"));
+            CheckIdentity(name.Value, "节点名", StartNode.ReservedName.Value, "名", scope, errors);
+
+            if (name.Value != node.Label.Value)
+            {
+                errors.Add(scope.Node(node.Label.Value,
+                    $"定义条目的标签取节点名 {name.Value} 的文本，不能另写标识。"));
+            }
         }
-        else if (node.Name == StartNode.ReservedName)
+        else
         {
-            errors.Add(scope.Node(node.Name.Value, $"节点名 {StartNode.ReservedName} 是流程起点的保留名。"));
-        }
-        else if (node.Name.Value.Contains('@'))
-        {
-            errors.Add(scope.Node(node.Name.Value, "节点名不能含 @，@ 是端口引用的分隔符。"));
-        }
-        else if (node.Name.Value.Contains('/'))
-        {
-            errors.Add(scope.Node(node.Name.Value, "节点名不能含 /，/ 是节点路径的分隔符。"));
+            CheckIdentity(node.Label.Value, "节点标签", StartNode.ReservedLabel.Value, "标签", scope, errors);
         }
 
         if (node.Nodes is { Count: > 0 } children)
@@ -134,12 +161,12 @@ public static class FlowRules
 
             if (node.Model is not null || node.Models is not null)
             {
-                errors.Add(scope.Node(node.Name.Value, "容器节点不是执行节点，不声明模型。"));
+                errors.Add(scope.Node(node.Label.Value, "容器节点不是执行节点，不声明模型。"));
             }
 
             if (!HasExecutable(children))
             {
-                errors.Add(scope.Node(node.Name.Value, "容器里至少要有一个执行节点。"));
+                errors.Add(scope.Node(node.Label.Value, "容器里至少要有一个执行节点。"));
             }
             else
             {
@@ -151,7 +178,7 @@ public static class FlowRules
 
             if (node.From.Count > 0)
             {
-                errors.Add(scope.Node(node.Name.Value, "容器节点不是执行节点，不支持 From。"));
+                errors.Add(scope.Node(node.Label.Value, "容器节点不是执行节点，不支持 From。"));
             }
         }
         else if (node.Execution is not null)
@@ -163,7 +190,7 @@ public static class FlowRules
 
             if (shape is null)
             {
-                errors.Add(scope.Node(node.Name.Value, "执行节点必须写类型。"));
+                errors.Add(scope.Node(node.Label.Value, "执行节点必须写类型。"));
             }
             else
             {
@@ -172,11 +199,11 @@ public static class FlowRules
                 {
                     if (node.Model is not { } model)
                     {
-                        errors.Add(scope.Node(node.Name.Value, "执行节点必须声明模型选择。"));
+                        errors.Add(scope.Node(node.Label.Value, "执行节点必须声明模型选择。"));
                     }
                     else if (!modelNames.Contains(model))
                     {
-                        errors.Add(scope.Node(node.Name.Value, $"引用的模型选择 {model.Value} 不存在。"));
+                        errors.Add(scope.Node(node.Label.Value, $"引用的模型选择 {model.Value} 不存在。"));
                     }
                 }
 
@@ -186,7 +213,7 @@ public static class FlowRules
         }
         else if (node.Use is null)
         {
-            errors.Add(scope.Node(node.Name.Value, "节点必须声明执行配置或子节点。"));
+            errors.Add(scope.Node(node.Label.Value, "节点必须声明执行配置或子节点。"));
         }
     }
 
@@ -201,7 +228,7 @@ public static class FlowRules
         var declared = new HashSet<PortName>([.. node.Inputs.Select(port => port.Name)]);
         if (declared.Count > 0 && node.From.Count == 0)
         {
-            errors.Add(scope.Node(node.Name.Value, "声明输入端口的节点必须至少给出一组 From 启动条件。"));
+            errors.Add(scope.Node(node.Label.Value, "声明输入端口的节点必须至少给出一组 From 启动条件。"));
         }
 
         foreach (FromGroup group in node.From)
@@ -211,13 +238,13 @@ public static class FlowRules
             {
                 if (declared.Count > 0 && !declared.Contains(input))
                 {
-                    errors.Add(scope.Node(node.Name.Value,
+                    errors.Add(scope.Node(node.Label.Value,
                         $"From 连接的目标输入端口 {input} 没有在节点上声明。"));
                 }
 
                 if (!covered.Add(input))
                 {
-                    errors.Add(scope.Node(node.Name.Value, $"From 组内的目标输入端口 {input} 出现多次。"));
+                    errors.Add(scope.Node(node.Label.Value, $"From 组内的目标输入端口 {input} 出现多次。"));
                 }
             }
 
@@ -225,7 +252,7 @@ public static class FlowRules
             {
                 foreach (PortName missing in declared.Where(port => !covered.Contains(port)))
                 {
-                    errors.Add(scope.Node(node.Name.Value, $"From 组没有覆盖输入端口 {missing.Value}。"));
+                    errors.Add(scope.Node(node.Label.Value, $"From 组没有覆盖输入端口 {missing.Value}。"));
                 }
             }
         }
@@ -283,7 +310,7 @@ public static class FlowRules
         {
             if (start.FindPort(edge.SourcePort) is null)
             {
-                errors.Add(scope.Node(target.Path.Value, $"节点 {StartNode.ReservedName} 没有输出端口 {edge.SourcePort.Value}。"));
+                errors.Add(scope.Node(target.Path.Value, $"节点 {StartNode.ReservedLabel} 没有输出端口 {edge.SourcePort.Value}。"));
             }
 
             return;
@@ -376,7 +403,7 @@ public static class FlowRules
 
     /// <summary>节点接口的静态规则：端口名与端口类型，端口值域与 Question 归属按类型形状判定。</summary>
     private static void ValidateInterface(NodeSpec node, NodeTypeShape shape, NodeScope scope, List<Error> errors) =>
-        NodeInterfaceRules.Check(node, shape, message => errors.Add(scope.Node(node.Name.Value, message)));
+        NodeInterfaceRules.Check(node, shape, message => errors.Add(scope.Node(node.Label.Value, message)));
 
     /// <summary>输出校验的取值边界：参数必要性、正则合法性。</summary>
     private static void CheckValidation(NodeSpec node, NodeScope scope, List<Error> errors)
@@ -392,7 +419,7 @@ public static class FlowRules
             case Flow.ValidationPredicate.NonEmpty:
                 if (validation.Argument is not null)
                 {
-                    errors.Add(scope.Node(node.Name.Value, "NonEmpty 校验不接受参数。"));
+                    errors.Add(scope.Node(node.Label.Value, "NonEmpty 校验不接受参数。"));
                 }
 
                 break;
@@ -400,7 +427,7 @@ public static class FlowRules
             case Flow.ValidationPredicate.Pattern:
                 if (string.IsNullOrEmpty(validation.Argument))
                 {
-                    errors.Add(scope.Node(node.Name.Value, "Pattern 校验需要正则参数。"));
+                    errors.Add(scope.Node(node.Label.Value, "Pattern 校验需要正则参数。"));
                 }
                 else
                 {
@@ -411,7 +438,7 @@ public static class FlowRules
                     }
                     catch (System.Text.RegularExpressions.RegexParseException)
                     {
-                        errors.Add(scope.Node(node.Name.Value, $"Pattern 校验的正则不合法：{validation.Argument}。"));
+                        errors.Add(scope.Node(node.Label.Value, $"Pattern 校验的正则不合法：{validation.Argument}。"));
                     }
                 }
 
@@ -420,7 +447,7 @@ public static class FlowRules
             default:
                 if (string.IsNullOrEmpty(validation.Argument))
                 {
-                    errors.Add(scope.Node(node.Name.Value, $"{validation.Predicate} 校验需要指定文本参数。"));
+                    errors.Add(scope.Node(node.Label.Value, $"{validation.Predicate} 校验需要指定文本参数。"));
                 }
 
                 break;
@@ -450,14 +477,14 @@ public static class FlowRules
                 && source is ExecutableNode { Execution.Mode: Flow.NodeMode.PerItem }
                 && target.HasWorkItemsPort)
             {
-                errors.Add(scope.Node(target.Name.Value, "声明 WorkItems 端口的执行节点不能从按条目展开的执行节点取输入。"));
+                errors.Add(scope.Node(target.Label.Value, "声明 WorkItems 端口的执行节点不能从按条目展开的执行节点取输入。"));
             }
 
             if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems
                 && edge.Role != EdgeKind.Split
                 && edge.Type != Flow.PortType.Signal)
             {
-                errors.Add(scope.Node(target.Name.Value, "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"));
+                errors.Add(scope.Node(target.Label.Value, "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"));
             }
 
             if (edge.Scope == FeedScope.Item
@@ -465,7 +492,7 @@ public static class FlowRules
                 && graph.ItemSpace(edge.Target) is { } toSpace
                 && fromSpace != toSpace)
             {
-                errors.Add(scope.Node(target.Name.Value, "逐条对齐的两端必须来自同一个拆分。"));
+                errors.Add(scope.Node(target.Label.Value, "逐条对齐的两端必须来自同一个拆分。"));
             }
 
             if (target.Execution.Branch is { } branch
@@ -556,7 +583,7 @@ public static class FlowRules
 
         string entry = graph.Start.Outputs
             .Where(port => port.Value is null)
-            .Select(port => $" {StartNode.ReservedName}@{port.Name}")
+            .Select(port => $" {StartNode.ReservedLabel}@{port.Name}")
             .FirstOrDefault() ?? " 开始入口";
         foreach (ExecutableNode executable in graph.ExecutableNodes.Where(node => !reached.Contains(node.Path)))
         {

@@ -18,7 +18,7 @@ public static class FlowErrorCodes
     /// <summary>流程名为空或重复。</summary>
     public const string FlowName = "Flow.Name";
 
-    /// <summary>节点名不合法。</summary>
+    /// <summary>节点条目不合法：节点名与标签的写位置、形状与取值。</summary>
     public const string FlowNode = "Flow.Node";
 
     /// <summary>流程的节点组合不满足推进依赖的不变量。</summary>

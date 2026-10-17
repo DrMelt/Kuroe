@@ -38,13 +38,13 @@ public sealed class NodePathTests
           "Nodes": [
             { "Name": "干", "Kind": "Llm" },
             { "Name": "组", "Kind": "Container", "Models": ["执行者"], "Inputs": [{ "Name": "计划" }], "Nodes": [
-              { "Name": "实施", "Use": "干", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+              { "Label": "实施", "Use": "干", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
             ] }
           ],
           "Flows": [ { "Name": "双线", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "甲", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } },
-              { "Name": "乙", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
+              { "Label": "甲", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } },
+              { "Label": "乙", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ] } ]
         }
@@ -58,7 +58,7 @@ public sealed class NodePathTests
         TaskId id = environment.Submit("补齐 README");
         NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
 
-        Assert.Equal([StartNode.ReservedName.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
+        Assert.Equal([StartNode.ReservedLabel.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["整体"], graph[NodePath.Of("整体")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["整体", "制定计划"], graph[NodePath.Of("整体", "制定计划")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["整体", "文档组"], graph[NodePath.Of("整体", "文档组")].Path.Levels.Select(level => level.Value));
@@ -75,7 +75,7 @@ public sealed class NodePathTests
         TaskId id = environment.Submit("补齐 README");
         NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
 
-        Assert.Equal([StartNode.ReservedName.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
+        Assert.Equal([StartNode.ReservedLabel.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["直接执行"], graph[NodePath.Of("直接执行")].Path.Levels.Select(level => level.Value));
         Assert.Equal("直接执行", graph[NodePath.Of("直接执行")].Path.Value);
     }
@@ -98,7 +98,7 @@ public sealed class NodePathTests
 
         Assert.Equal("整体/甲/实施", repeatedGraph.ExecutableNodes[0].Path.Value);
         Assert.Equal("整体/乙/实施", repeatedGraph.ExecutableNodes[1].Path.Value);
-        Assert.Equal("实施", repeatedGraph.ExecutableNodes[0].Path.Name.Value);
+        Assert.Equal("实施", repeatedGraph.ExecutableNodes[0].Path.Label.Value);
         Assert.True(repeatedGraph[NodePath.Of("整体", "甲", "实施")].Path.IsUnder(NodePath.Of("整体", "甲")));
         Assert.False(repeatedGraph[NodePath.Of("整体", "甲", "实施")].Path.IsUnder(NodePath.Of("整体", "乙")));
     }

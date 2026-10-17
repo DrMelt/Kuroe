@@ -18,7 +18,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
     /// <summary>回答待输入的节点并等待本轮产出 run 收口，返回本轮回复文本。过程增量写给 observer。</summary>
     public async Task<ErrorOr<string>> AskAsync(
         TaskId id,
-        string? nodeName,
+        string? nodePath,
         string input,
         ITurnSink? observer,
         CancellationToken cancellationToken)
@@ -114,7 +114,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
         });
         try
         {
-            ErrorOr<Success> answered = waits.Answer(id, nodeName, input);
+            ErrorOr<Success> answered = waits.Answer(id, nodePath, input);
             if (answered.IsError)
             {
                 return answered.ErrorsOrEmptyList;

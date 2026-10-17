@@ -9,7 +9,7 @@ public sealed class NodeGraph : INodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
 
-    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点名必须唯一，边两端必须落在节点表里。
+    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，边两端必须落在节点表里。
     /// 与节点相关的边在构造时挂到节点上：出边落在来源，入边落在执行节点。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
@@ -47,7 +47,7 @@ public sealed class NodeGraph : INodeGraph
 
     /// <summary>按路径取节点：从根级按段逐层下钻，中间段必须是容器，不存在时抛出异常。</summary>
     public GraphNode this[NodePath path] =>
-        ChildrenOf(path.Parent).FirstOrDefault(node => node.Name == path.Name)
+        ChildrenOf(path.Parent).FirstOrDefault(node => node.Label == path.Label)
         ?? throw new ArgumentException($"流程里没有节点 {path}。");
 
     /// <summary>直接子节点：容器给成员执行节点与子容器，路径为空给根级节点，按先根序。</summary>
@@ -130,7 +130,7 @@ public sealed class NodeGraph : INodeGraph
             ? [node, .. container.Children.SelectMany(Flattened)]
             : [node];
 
-    /// <summary>树的形状检查：同层节点名唯一、子节点路径与父一致，且节点表里的节点在树上各出现一次，边两端都能下钻到。</summary>
+    /// <summary>树的形状检查：同层节点标签唯一、子节点路径与父一致，且节点表里的节点在树上各出现一次，边两端都能下钻到。</summary>
     private void CheckTree(int supplied)
     {
         CheckLevel(_roots, parent: null);
@@ -155,16 +155,16 @@ public sealed class NodeGraph : INodeGraph
     private static int TreeCount(IReadOnlyList<GraphNode> level) =>
         level.Sum(child => 1 + (child is ContainerNode container ? TreeCount(container.Children) : 0));
 
-    /// <summary>一层子节点：同层节点名唯一，子节点路径必须是父路径加本段。</summary>
+    /// <summary>一层子节点：同层节点标签唯一，子节点路径必须是父路径加本段。</summary>
     private static void CheckLevel(IReadOnlyList<GraphNode> children, NodePath? parent)
     {
         string where = parent is { } container ? $"容器 {container}" : "根级";
-        HashSet<NodeName> seen = [];
+        HashSet<NodeLabel> seen = [];
         foreach (GraphNode child in children)
         {
-            if (!seen.Add(child.Name))
+            if (!seen.Add(child.Label))
             {
-                throw new ArgumentException($"{where}的节点名 {child.Name} 重复，节点名只需同一容器内唯一。");
+                throw new ArgumentException($"{where}的节点标签 {child.Label} 重复，节点标签只需同一容器内唯一。");
             }
 
             if (child.Path.Parent != parent)

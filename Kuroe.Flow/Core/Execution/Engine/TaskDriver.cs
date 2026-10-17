@@ -233,7 +233,7 @@ internal sealed class TaskDriver(
                     node.ReleaseActive();
                     node.EnterBlocked(starter.Instance.ItemIndex, [(node.Path, starter.Instance.ItemIndex)]);
                     task.Journal.Append(new ErrorEntry(declaration.FirstError.Description));
-                    registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Name}"));
+                    registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
                     return;
                 }
 
@@ -260,7 +260,7 @@ internal sealed class TaskDriver(
                     task.Journal.Append(new ErrorEntry(message));
                 }
 
-                registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Name}，{message}"));
+                registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
             }
 
             TaskRuntime.SettlePlan plan;

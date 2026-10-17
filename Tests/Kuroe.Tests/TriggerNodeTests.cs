@@ -21,8 +21,8 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "来源").Runs);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "来源").Runs);
+        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
         Assert.Empty(triggered.Context.Instruction);
         Assert.Empty(triggered.Context.Seed);
     }
@@ -39,15 +39,15 @@ public sealed class TriggerNodeTests
         environment.Waits.Answer(id, null, "第一问").ThrowIfError();
         environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
         RunSnapshot first = environment.Executor.Started
-            .Single(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 1)
+            .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
 
         environment.Waits.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
-        Assert.Equal(2, done.Executables.Single(node => node.Executable.Name.Value == "回话").Runs.Count);
+        Assert.Equal(2, done.Executables.Single(node => node.Executable.Label.Value == "回话").Runs.Count);
         RunSnapshot second = environment.Executor.Started
-            .Single(run => run.Context.Node.Name.Value == "回话" && run.Context.ExecutionCount == 2)
+            .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 2)
             .Snapshot();
         Assert.DoesNotContain(second.Context.Seed, message => message.Text.Contains("第二问"));
     }
@@ -61,7 +61,7 @@ public sealed class TriggerNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot merged = done.Executables.Single(entry => entry.Executable.Name.Value == "合并").Runs.Single();
+        RunSnapshot merged = done.Executables.Single(entry => entry.Executable.Label.Value == "合并").Runs.Single();
         Assert.Contains(merged.Context.Seed, message => message.Text.Contains("节点「整体/数据」的端口「结论」产出"));
         Assert.DoesNotContain(merged.Context.Seed, message => message.Text.Contains("节点「整体/信号」的端口「信号」产出"));
     }
@@ -76,7 +76,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
+        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
         Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「准备」的产出"));
     }
 
@@ -91,7 +91,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Single();
+        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
         Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」"));
         Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("信号产出"));
     }
@@ -113,7 +113,7 @@ public sealed class TriggerNodeTests
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Name.Value == "回话").Runs.Count);
+        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "回话").Runs.Count);
         Assert.Equal([1, 2], [.. environment.Executor.Started.Select(run => run.Context.ExecutionCount)]);
     }
 
@@ -127,7 +127,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Name.Value == "触发实例").Runs.Single();
+        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发实例").Runs.Single();
         Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」的产出"));
     }
 
@@ -142,13 +142,13 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
+        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
     }
 
     /// <summary>触发启动的 run 走输出校验通道：首次不通过停在阻塞，返工重跑通过后放行。</summary>
@@ -158,14 +158,14 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerValidateFlow);
         environment.Executor.Output = run =>
         {
-            if (run.Context.Node.Name.Value == "来源")
+            if (run.Context.Node.Label.Value == "来源")
             {
                 return "来源产出";
             }
 
             return run.Context.ExecutionCount == 1 ? "初稿不够好" : "修订通过";
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Name.Value switch
+        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Label.Value switch
         {
             "来源" => """{"结论": "来源产出"}""",
             "触发" => run.Context.ExecutionCount == 1
@@ -178,13 +178,13 @@ public sealed class TriggerNodeTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Name == new NodeName("触发")).State);
+        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("触发")).State);
 
         environment.Tasks.Rework(id, null).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs.Count);
+        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Count);
     }
     /// <summary>Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动。</summary>
     [Fact]
@@ -197,13 +197,13 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
+        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
 
         environment.Waits.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Name.Value == "触发").Runs);
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
     }
 
     /// <summary>来源先发布再触发下游，触发节点无数据输入。</summary>
@@ -286,7 +286,7 @@ public sealed class TriggerNodeTests
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "触发实例", "Use": "信号工", "Model": "执行者", "From": [ { "结论": "来源@结论" } ] }
+              { "Label": "触发实例", "Use": "信号工", "Model": "执行者", "From": [ { "结论": "来源@结论" } ] }
             ] }
           ] } ]
         }

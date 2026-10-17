@@ -30,8 +30,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "重点").MaxRuns);
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "普通").MaxRuns);
+        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "重点").MaxRuns);
+        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "普通").MaxRuns);
     }
 
     /// <summary>嵌套容器的统一上限覆盖外层容器，同层其余成员保留外层的值。</summary>
@@ -43,8 +43,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "内层干活").MaxRuns);
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Name.Value == "外层干活").MaxRuns);
+        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "内层干活").MaxRuns);
+        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "外层干活").MaxRuns);
     }
 
     /// <summary>引用容器时装配层可覆盖库定义统一上限，未覆盖时继承库定义。</summary>
@@ -121,8 +121,8 @@ public sealed class ContainerLimitTests
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "较重", "Use": "干活组", "MaxRuns": 5, "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } },
-              { "Name": "较轻", "Use": "干活组", "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } }
+              { "Label": "较重", "Use": "干活组", "MaxRuns": 5, "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } },
+              { "Label": "较轻", "Use": "干活组", "In": { "入口": "Start@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ] } ]
         }

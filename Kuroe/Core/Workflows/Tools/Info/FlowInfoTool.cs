@@ -89,7 +89,7 @@ internal sealed class FlowInfoTool : ITool
             if (node.Execution is { } executable)
             {
                 NodeKind kind = node.EffectiveKind;
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{kind.Value}节点）");
+                text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{kind.Value}节点）");
 
                 List<string> attributes = [];
                 if (node.Type is { Shape.DispatchesRuns: true })
@@ -111,7 +111,7 @@ internal sealed class FlowInfoTool : ITool
             }
             else if (node.Nodes is { Count: > 0 })
             {
-                text.AppendLine($"  {Indent(depth)}{node.Name.Value}（{node.EffectiveKind.Value}节点）");
+                text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{node.EffectiveKind.Value}节点）");
                 if (node.Inputs.Count > 0)
                 {
                     text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
@@ -183,14 +183,14 @@ internal sealed class FlowInfoTool : ITool
             ? $"{port.Value} ← {output.Ref.Display}：{description}"
             : $"{port.Value} ← {output.Ref.Display}";
 
-    /// <summary>递归收集流程里的全部执行节点名。</summary>
-    private static IEnumerable<NodeName> Flatten(NodeSpec node)
+    /// <summary>递归收集流程里的全部执行节点标签。</summary>
+    private static IEnumerable<NodeLabel> Flatten(NodeSpec node)
     {
         if (node.Nodes is { Count: > 0 } children)
         {
             foreach (NodeSpec child in children)
             {
-                foreach (NodeName descendant in Flatten(child))
+                foreach (NodeLabel descendant in Flatten(child))
                 {
                     yield return descendant;
                 }
@@ -198,7 +198,7 @@ internal sealed class FlowInfoTool : ITool
         }
         else
         {
-            yield return node.Name;
+            yield return node.Label;
         }
     }
 

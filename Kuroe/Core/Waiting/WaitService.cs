@@ -8,7 +8,7 @@ using Kuroe.Flow.Shared.Waiting;
 namespace Kuroe.Waiting;
 
 /// <summary>一个待处理节点：节点路径与等待种类。</summary>
-public readonly record struct PendingNode(NodePath Node, string Name, AwaitKind Kind);
+public readonly record struct PendingNode(NodePath Node, AwaitKind Kind);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进下游。
 /// 接收外部输入是扩展实现，引擎只提供节点上下文与推进信号。</summary>
@@ -35,21 +35,21 @@ public sealed class WaitService
         WorkTask task = found.Value;
 
         return task.UnderLock(() =>
-            Awaiting(task, null).Select(entry => new PendingNode(entry.Node, entry.Label, entry.Wait.Kind)).ToList());
+            Awaiting(task, null).Select(entry => new PendingNode(entry.Node, entry.Wait.Kind)).ToList());
     }
 
-    /// <summary>回答待输入的节点：nodeName 为空时回答唯一待输入节点，多个时必须点名。回答即产出并放行下游。</summary>
-    public ErrorOr<Success> Answer(TaskId id, string? nodeName, string input)
+    /// <summary>回答待输入的节点：nodePath 为空时回答唯一待输入节点，多个时必须点名。回答即产出并放行下游。</summary>
+    public ErrorOr<Success> Answer(TaskId id, string? nodePath, string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
             return [WaitErrors.EmptyAnswer()];
         }
 
-        return Accept(id, AwaitKind.Answer, nodeName, input, null);
+        return Accept(id, AwaitKind.Answer, nodePath, input, null);
     }
 
-    /// <summary>批准待批准的节点：nodes 为空时批准全部待批准节点，给出节点名时只批准其中的节点。</summary>
+    /// <summary>批准待批准的节点：nodes 为空时批准全部待批准节点，给出节点路径时只批准其中的节点。</summary>
     public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<NodePath>? nodes = null) =>
         Accept(id, AwaitKind.Approve, null, string.Empty, nodes);
 
@@ -57,7 +57,7 @@ public sealed class WaitService
     private ErrorOr<Success> Accept(
         TaskId id,
         AwaitKind kind,
-        string? nodeName,
+        string? nodePath,
         string input,
         IReadOnlyList<NodePath>? nodes)
     {
@@ -70,17 +70,17 @@ public sealed class WaitService
         WorkTask task = found.Value;
         ErrorOr<List<NodePath>> accepted = task.UnderLock<ErrorOr<List<NodePath>>>(() =>
         {
-            List<(NodePath Node, string Label, IWaitNode Wait)> awaiting = [.. Awaiting(task, kind)];
+            List<(NodePath Node, IWaitNode Wait)> awaiting = [.. Awaiting(task, kind)];
             if (nodes is { Count: > 0 })
             {
                 awaiting = [.. awaiting.Where(entry => nodes.Contains(entry.Node))];
             }
 
-            if (nodeName is { } name)
+            if (nodePath is { } path)
             {
-                foreach ((NodePath node, string label, IWaitNode wait) in awaiting)
+                foreach ((NodePath node, IWaitNode wait) in awaiting)
                 {
-                    if (label == name)
+                    if (node.Value == path)
                     {
                         wait.Receive(input);
 
@@ -88,7 +88,7 @@ public sealed class WaitService
                     }
                 }
 
-                return [WaitErrors.NoAwaitingNode(name)];
+                return [WaitErrors.NoAwaitingNode(path)];
             }
 
             if (awaiting.Count == 0)
@@ -101,7 +101,7 @@ public sealed class WaitService
                 return [WaitErrors.AmbiguousInput(id, awaiting.Count)];
             }
 
-            foreach ((NodePath _, string _, IWaitNode wait) in awaiting)
+            foreach ((NodePath _, IWaitNode wait) in awaiting)
             {
                 wait.Receive(input);
             }
@@ -120,7 +120,7 @@ public sealed class WaitService
     }
 
     /// <summary>任务里停在给定等待种类的节点，按先根序。kind 为空时取全部等待型节点。随任务取消的节点不再接受输入。</summary>
-    private static List<(NodePath Node, string Label, IWaitNode Wait)> Awaiting(WorkTask task, AwaitKind? kind)
+    private static List<(NodePath Node, IWaitNode Wait)> Awaiting(WorkTask task, AwaitKind? kind)
     {
         INodeTask access = task;
 
@@ -130,7 +130,7 @@ public sealed class WaitService
                 .Select(node => node.Path)
                 .Select(path => (Node: path, Wait: Waiting(access, path, kind)))
                 .Where(entry => entry.Wait is not null)
-                .Select(entry => (entry.Node, entry.Node.Value, Wait: entry.Wait!)),
+                .Select(entry => (entry.Node, Wait: entry.Wait!)),
         ];
     }
 

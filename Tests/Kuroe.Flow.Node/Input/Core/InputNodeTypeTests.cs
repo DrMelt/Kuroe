@@ -90,7 +90,7 @@ public sealed class InputNodeTypeTests
 
     private static NodeSpec Node(ExecutableSpec? execution = null) => new()
     {
-        Name = new NodeName("收话"),
+        Label = new NodeLabel("收话"),
         Type = InputNodeTypes.Create(null),
         Execution = execution ?? new ExecutableSpec(),
     };

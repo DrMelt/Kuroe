@@ -47,7 +47,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>任务的流程编译视图，节点实现经它定位成员与读端口类型。</summary>
     INodeGraph INodeTask.Graph => Graph;
 
-    /// <summary>任务的节点上下文，宿主扩展按节点名取节点运行期对象时使用。</summary>
+    /// <summary>任务的节点上下文，宿主扩展按节点路径取节点运行期对象时使用。</summary>
     public INodeContext Context => Runtime;
 
     /// <summary>在任务状态锁下执行一段操作。状态改动都要经它串行。</summary>

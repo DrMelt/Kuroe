@@ -2,7 +2,7 @@ using ErrorOr;
 
 namespace Kuroe.Flow.Shared;
 
-/// <summary>节点错误的作用域：节点库定义或某条流程。节点名与说明在此拼成统一错误文本。</summary>
+/// <summary>节点错误的作用域：节点库定义或某条流程。条目写下的标识与说明在此拼成统一错误文本。</summary>
 public readonly record struct NodeScope
 {
     private NodeScope(string name, bool isLibrary)

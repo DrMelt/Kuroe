@@ -129,7 +129,7 @@ public sealed class DialogueTests
     {
         Task = new TaskId(1),
         Run = new RunId(1),
-        Node = NodePath.Of(DialogueFlow.ReplyNodeName.Value),
+        Node = NodePath.Of(DialogueFlow.ReplyNodeLabel.Value),
         ItemIndex = null,
         Journal = new TurnJournal(),
         Sink = new NullSink(),

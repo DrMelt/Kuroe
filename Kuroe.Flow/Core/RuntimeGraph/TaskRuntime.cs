@@ -77,7 +77,7 @@ internal sealed class TaskRuntime : INodeContext
         for (int depth = 1; depth <= path.Depth; depth++)
         {
             NodePath prefix = new([.. path.Levels.Take(depth)]);
-            current = level.FirstOrDefault(node => node.Path.Name == prefix.Name);
+            current = level.FirstOrDefault(node => node.Path.Label == prefix.Label);
             if (current is null)
             {
                 if (!materialize)

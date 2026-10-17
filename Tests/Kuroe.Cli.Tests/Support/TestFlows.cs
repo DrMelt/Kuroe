@@ -92,7 +92,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>两个并行输入节点：不带节点名回答时要求点名。</summary>
+    /// <summary>两个并行输入节点：不带节点路径回答时要求点名。</summary>
     public const string TwoInputFlow = """
         {
           "Flows": [

@@ -27,7 +27,7 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters) : INodeType
         {
             if (condition)
             {
-                fail(scope.Node(node.Name.Value, message));
+                fail(scope.Node(node.Label.Value, message));
             }
         }
 

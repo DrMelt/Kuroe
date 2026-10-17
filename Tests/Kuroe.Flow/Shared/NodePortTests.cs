@@ -29,12 +29,12 @@ public sealed class NodePortTests
     public void Port_ref_displays_bound_and_named_forms()
     {
         PortRef bound = PortRef.Bound(new PortName("目标"));
-        PortRef named = PortRef.Named(new NodeName("分析"), new PortName("结论"));
+        PortRef named = PortRef.Named(new NodeLabel("分析"), new PortName("结论"));
 
         Assert.Equal("@目标", bound.Display);
         Assert.Null(bound.Source);
         Assert.Equal("分析@结论", named.Display);
-        Assert.Equal(new NodeName("分析"), named.Source);
+        Assert.Equal(new NodeLabel("分析"), named.Source);
     }
 
     [Fact]
@@ -59,15 +59,15 @@ public sealed class NodePortTests
     }
 
     [Fact]
-    public void Start_node_reserves_its_name_and_exposes_outputs()
+    public void Start_node_reserves_its_label_and_exposes_outputs()
     {
         StartNode start = new()
         {
-            Path = new NodePath([StartNode.ReservedName]),
+            Path = new NodePath([StartNode.ReservedLabel]),
             Outputs = [new Port(new PortName("目标"), PortType.Text)],
         };
 
-        Assert.Equal("Start", StartNode.ReservedName.Value);
+        Assert.Equal("Start", StartNode.ReservedLabel.Value);
         Assert.Equal(PortType.Text, start.FindPort(new PortName("目标"))!.Value.Type);
         Assert.Null(start.FindPort(new PortName("任务")));
     }

@@ -54,7 +54,7 @@ public sealed class RunContractTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        IRun follow = environment.Executor.Started.Single(run => run.Context.Node.Name.Value == "实施");
+        IRun follow = environment.Executor.Started.Single(run => run.Context.Node.Label.Value == "实施");
 
         Assert.Contains("节点「分析」端口「结论」", follow.Context.Briefing, StringComparison.Ordinal);
     }

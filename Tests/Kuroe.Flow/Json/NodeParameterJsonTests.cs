@@ -82,7 +82,7 @@ public sealed class NodeParameterJsonTests
         NodeParameterJson.Read(
             File,
             NodeScope.Flow("测试"),
-            new NodeName("干活"),
+            new NodeLabel("干活"),
             Values(entries),
             error => errors.Add(error.Description));
 
