@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
+        <!-- 导出资料的仓库根，Link 据此保留仓库相对路径 -->
+        <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</RepoRoot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -26,51 +28,12 @@
 
     <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
     <ItemGroup>
-        <None Include="..\Kuroe.Tool\**\*.cs"
-            Exclude="..\Kuroe.Tool\**\bin\**;..\Kuroe.Tool\**\obj\**"
-            Link="source\Kuroe.Tool\%(RecursiveDir)%(Filename)%(Extension)"
+        <None Include="$(RepoRoot)\Kuroe\**\*.cs;$(RepoRoot)\Kuroe.Cli\**\*.cs;$(RepoRoot)\Kuroe.Flow\**\*.cs;$(RepoRoot)\Kuroe.Flow.Node\**\*.cs;$(RepoRoot)\Kuroe.Tool\**\*.cs;$(RepoRoot)\Tests\**\*.cs;$(RepoRoot)\docs\**\*.md"
+            Exclude="$(RepoRoot)\**\bin\**;$(RepoRoot)\**\obj\**;$(RepoRoot)\**\TestResults\**"
+            Link="source\$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))"
             CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe\Core\**\*.cs"
-            Exclude="..\Kuroe\Core\**\bin\**;..\Kuroe\Core\**\obj\**"
-            Link="source\Kuroe\Core\%(RecursiveDir)%(Filename)%(Extension)"
+        <None Include="$(RepoRoot)\README.md;$(RepoRoot)\LICENSE;$(RepoRoot)\Kuroe.slnx;$(RepoRoot)\Directory.Build.props;$(RepoRoot)\Directory.Packages.props;$(RepoRoot)\nuget.config;$(RepoRoot)\.editorconfig"
+            Link="source\$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))"
             CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe\Shared\**\*.cs"
-            Exclude="..\Kuroe\Shared\**\bin\**;..\Kuroe\Shared\**\obj\**"
-            Link="source\Kuroe\Shared\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Flow\Core\**\*.cs"
-            Exclude="..\Kuroe.Flow\Core\**\bin\**;..\Kuroe.Flow\Core\**\obj\**"
-            Link="source\Kuroe.Flow\Core\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Flow\Shared\**\*.cs"
-            Exclude="..\Kuroe.Flow\Shared\**\bin\**;..\Kuroe.Flow\Shared\**\obj\**"
-            Link="source\Kuroe.Flow\Shared\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Flow\Json\**\*.cs"
-            Exclude="..\Kuroe.Flow\Json\**\bin\**;..\Kuroe.Flow\Json\**\obj\**"
-            Link="source\Kuroe.Flow\Json\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Flow\NodeLibrary\**\*.cs"
-            Exclude="..\Kuroe.Flow\NodeLibrary\**\bin\**;..\Kuroe.Flow\NodeLibrary\**\obj\**"
-            Link="source\Kuroe.Flow\NodeLibrary\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Flow.Node\Llm\**\*.cs"
-            Exclude="..\Kuroe.Flow.Node\Llm\**\bin\**;..\Kuroe.Flow.Node\Llm\**\obj\**"
-            Link="source\Kuroe.Flow.Node\Llm\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Kuroe.Cli\**\*.cs"
-            Exclude="..\Kuroe.Cli\**\bin\**;..\Kuroe.Cli\**\obj\**"
-            Link="source\Kuroe.Cli\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\Tests\**\*.cs"
-            Exclude="..\Tests\**\bin\**;..\Tests\**\obj\**;..\Tests\**\TestResults\**"
-            Link="source\Tests\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\docs\**\*.md"
-            Link="source\docs\%(RecursiveDir)%(Filename)%(Extension)"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None
-            Include="..\README.md;..\LICENSE;..\Kuroe.slnx;..\Directory.Build.props;..\Directory.Packages.props;..\nuget.config;..\.editorconfig"
-            Link="source\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

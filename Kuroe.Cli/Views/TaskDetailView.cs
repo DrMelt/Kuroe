@@ -2,13 +2,13 @@ using Kuroe.Presentation;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;
 
 /// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与过程记录。</summary>
-internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
+internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
 {
     private readonly Terminal _terminal = terminal;
 
@@ -76,7 +76,7 @@ internal sealed class TaskDetailView(Terminal terminal, WaitService waits)
             return;
         }
 
-        List<PendingNode> waiting = waits.Pending(task.Id) is { IsError: false } found ? found.Value : [];
+        List<PendingNode> waiting = pendings.Pending(task.Id) is { IsError: false } found ? found.Value : [];
         HashSet<NodePath> pending = [.. waiting.Select(node => node.Node)];
 
         _terminal.NewLine();

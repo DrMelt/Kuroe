@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -6,8 +7,9 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
 namespace Kuroe.Flow.Node.Approval;
 
-/// <summary>审批节点类型：不启动 run，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。</summary>
-public sealed class ApprovalNodeType(ApprovalParameters? parameters) : INodeType
+/// <summary>审批节点类型：不启动 run，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。取消后不再接收外部输入。
+/// 外部输入协议是建运行期对象所需的运行期依赖，随类型实例带到运行期对象，节点的执行经它声明接收与接受交付。</summary>
+public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChannel channel) : INodeType
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public ApprovalParameters? Parameters { get; } = parameters;
@@ -42,5 +44,5 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters) : INodeType
 
     /// <summary>审批节点的运行期对象。</summary>
     public NodeRuntime Create(GraphNode node, INodeContext context) =>
-        new ApprovalRuntime((ExecutableNode)node, context);
+        new ApprovalRuntime((ExecutableNode)node, channel, context);
 }

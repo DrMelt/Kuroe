@@ -7,7 +7,8 @@ namespace Kuroe.Flow.Node.Input.Json.Tests;
 /// <summary>输入节点的文件形状：字段表与提问文本的读写。</summary>
 public sealed class InputTypeFileTests
 {
-    private static readonly InputTypeFile File = new();
+    private static readonly StubInputChannel Channel = new();
+    private static readonly InputTypeFile File = new(Channel);
 
     [Fact]
     public void Kind_is_the_input_node_type() =>
@@ -40,10 +41,10 @@ public sealed class InputTypeFileTests
     [Fact]
     public void Write_keeps_only_the_written_fields()
     {
-        Assert.Empty(File.Write(InputNodeTypes.Create(new InputParameters())).Values);
+        Assert.Empty(File.Write(InputNodeTypes.Create(new InputParameters(), Channel)).Values);
         Assert.Empty(File.Write(null).Values);
 
-        ParameterValues values = File.Write(InputNodeTypes.Create(new InputParameters { Question = "要做什么" }));
+        ParameterValues values = File.Write(InputNodeTypes.Create(new InputParameters { Question = "要做什么" }, Channel));
 
         Assert.Equal(
             [("Question", ParameterValueKind.Text)],

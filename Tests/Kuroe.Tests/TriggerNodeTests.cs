@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -34,17 +34,17 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopFlow);
 
         TaskId id = environment.Submit("对话");
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
         RunSnapshot first = environment.Executor.Started
             .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
 
-        environment.Waits.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
+        TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
         Assert.Equal(2, done.Executables.Single(node => node.Executable.Label.Value == "回话").Runs.Count);
         RunSnapshot second = environment.Executor.Started
             .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 2)
@@ -103,13 +103,13 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopWithLimitFlow);
 
         TaskId id = environment.Submit("对话");
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, _ => environment.Executor.Started.Count == 1 && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
-        environment.Waits.Answer(id, null, "第二问").ThrowIfError();
-        environment.Wait(id, _ => environment.Executor.Started.Count == 2 && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
-        environment.Waits.Answer(id, null, "第三问").ThrowIfError();
+        environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
+        environment.Wait(id, _ => environment.Executor.Started.Count == 1 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
+        environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
+        environment.Wait(id, _ => environment.Executor.Started.Count == 2 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
+        environment.Pendings.Answer(id, null, "第三问").ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
@@ -141,10 +141,10 @@ public sealed class TriggerNodeTests
         TaskSnapshot parked = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -196,10 +196,10 @@ public sealed class TriggerNodeTests
         TaskSnapshot parked = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);

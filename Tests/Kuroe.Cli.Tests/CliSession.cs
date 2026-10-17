@@ -66,11 +66,11 @@ internal sealed class CliSession : IDisposable
         get
         {
             TaskListView list = new(Terminal);
-            TaskDetailView detail = new(Terminal, Environment.Waits);
+            TaskDetailView detail = new(Terminal, Environment.Pendings);
             RunDetailView runView = new(Terminal);
-            TaskBrowser browser = new(Environment.Registry, Environment.Tasks, Environment.Waits, list, detail, runView, Terminal, Results);
+            TaskBrowser browser = new(Environment.Registry, Environment.Tasks, Environment.Pendings, list, detail, runView, Terminal, Results);
 
-            return new TaskCommands(Environment.Registry, Environment.Tasks, Environment.Waits, list, detail, runView, browser, Terminal, Results);
+            return new TaskCommands(Environment.Registry, Environment.Tasks, Environment.Pendings, list, detail, runView, browser, Terminal, Results);
         }
     }
 

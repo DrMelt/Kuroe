@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -85,7 +85,7 @@ public sealed class TaskAndReplTests
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
         TaskSnapshot parked = cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(cli.Environment.Awaiting(new TaskId(1), AwaitKind.Approve));
+        Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve));
 
         cli.Tasks.Run(["/task", "approve", "1", "@整体/审阅"]);
         TaskSnapshot done = cli.Environment.Settle(new TaskId(1));
@@ -98,7 +98,7 @@ public sealed class TaskAndReplTests
     {
         using CliSession cli = new(flowsJson: TestFlows.TwoInputFlow);
         cli.Tasks.Run(["/task", "new", "目标"]);
-        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         // 文本首词命中节点标签不会隐式点名，未点名回答仍被拒
         cli.Tasks.Run(["/task", "answer", "1", "输入二", "内容"]);
@@ -112,11 +112,24 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
+    public void Task_answer_without_text_shows_usage_and_keeps_waiting()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.InputFlow);
+        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
+
+        cli.Tasks.Run(["/task", "answer", "1"]);
+
+        Assert.Contains("用法：/task", cli.Output.Output);
+        Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer));
+    }
+
+    [Fact]
     public void Task_answer_with_single_waiting_keeps_leading_node_label_in_text()
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
-        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         cli.Tasks.Run(["/task", "answer", "1", "用户输入", "需要", "补充多语言"]);
         cli.Environment.Settle(new TaskId(1));
@@ -133,12 +146,12 @@ public sealed class TaskAndReplTests
         using CliSession cli = new(flowsJson: TestFlows.ParallelInputAndReviewFlow);
         cli.Tasks.Run(["/task", "new", "目标"]);
         cli.Environment.Wait(new TaskId(1), _ =>
-            cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0
-            && cli.Environment.Awaiting(new TaskId(1), AwaitKind.Approve).Count > 0);
+            cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0
+            && cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count > 0);
 
         cli.Tasks.Run(["/task", "approve", "1"]);
-        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0
-            && cli.Environment.Awaiting(new TaskId(1), AwaitKind.Approve).Count == 0);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0
+            && cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 0);
 
         cli.Tasks.Run(["/task", "answer", "1", "用户输入", "补充背景"]);
         cli.Environment.Settle(new TaskId(1));
@@ -151,7 +164,7 @@ public sealed class TaskAndReplTests
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
-        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), AwaitKind.Answer).Count > 0);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         cli.Tasks.Run(["/task", "answer", "1", "需要", "补充多语言"]);
 

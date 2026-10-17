@@ -5,9 +5,8 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Flow.Execution.Tasks;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 
 namespace Kuroe.Cli.Commands;
 
@@ -15,7 +14,7 @@ namespace Kuroe.Cli.Commands;
 internal sealed class TaskCommands(
     TaskRegistry registry,
     TaskService tasks,
-    WaitService waits,
+    PendingService pendings,
     TaskListView list,
     TaskDetailView detail,
     RunDetailView runView,
@@ -144,7 +143,7 @@ internal sealed class TaskCommands(
     private void Answer(int number, string[] inputParts)
     {
         TaskId id = new(number);
-        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        ErrorOr<List<PendingNode>> pending = pendings.Pending(id);
         if (pending.IsError)
         {
             results.Reject(pending.ErrorsOrEmptyList);
@@ -152,7 +151,7 @@ internal sealed class TaskCommands(
         }
 
         HashSet<string> waiting = [.. pending.Value
-            .Where(node => node.Kind == AwaitKind.Answer)
+            .Where(node => node.Kind == PendingKind.Answer)
             .Select(node => node.Node.Value)];
 
         string? nodePath;
@@ -171,7 +170,7 @@ internal sealed class TaskCommands(
             input = string.Join(' ', inputParts);
         }
 
-        results.Report(waits.Answer(id, nodePath, input), $"{id} 已收到回答，继续下一步。");
+        results.Report(pendings.Answer(id, nodePath, input), $"{id} 已收到回答，继续下一步。");
     }
 
     /// <summary>批准审批节点。参数以 @ 开头且命中待批准节点路径时按点名批准，未点名时批准全部待批准节点。</summary>
@@ -180,11 +179,11 @@ internal sealed class TaskCommands(
         TaskId id = new(number);
         if (marker.Length <= 1 || marker[0] != '@')
         {
-            results.Report(waits.Approve(id), $"{id} 已批准，继续下一步。");
+            results.Report(pendings.Approve(id), $"{id} 已批准，继续下一步。");
             return;
         }
 
-        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        ErrorOr<List<PendingNode>> pending = pendings.Pending(id);
         if (pending.IsError)
         {
             results.Reject(pending.ErrorsOrEmptyList);
@@ -194,9 +193,9 @@ internal sealed class TaskCommands(
         string path = marker[1..];
         foreach (PendingNode node in pending.Value)
         {
-            if (node.Kind == AwaitKind.Approve && node.Node.Value == path)
+            if (node.Kind == PendingKind.Approve && node.Node.Value == path)
             {
-                results.Report(waits.Approve(id, [node.Node]), $"{id} 已批准，继续下一步。");
+                results.Report(pendings.Approve(id, [node.Node]), $"{id} 已批准，继续下一步。");
 
                 return;
             }

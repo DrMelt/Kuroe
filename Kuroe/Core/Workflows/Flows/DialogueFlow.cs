@@ -3,6 +3,7 @@ using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Node.Llm;
 using Kuroe.Tool;
+using Kuroe.Flow.InputChannel;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -48,8 +49,8 @@ internal static class DialogueFlow
     /// <summary>回话节点的恒定系统指令块。</summary>
     internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"];
 
-    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。</summary>
-    internal static FlowDefinition Build() => new(
+    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入。</summary>
+    internal static FlowDefinition Build(IInputChannel inputs) => new(
         Name,
         "内置对话：回答用户的每轮输入",
         [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
@@ -64,7 +65,7 @@ internal static class DialogueFlow
                     Type = InputNodeTypes.Create(new InputParameters
                     {
                         Question = "请输入",
-                    }),
+                    }, inputs),
                     Inputs =
                     [
                         new InputPort(StartPort, PortType.Text),

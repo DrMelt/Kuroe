@@ -25,10 +25,11 @@ using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Engine;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Node.Input.Json;
 using Kuroe.Flow.Node.Approval.Json;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,10 +60,11 @@ public static class ServiceCollectionExtensions
         }
 
         NodeTypeFileRegistry typeFiles = new();
+        InputRegistry inputs = new();
         ContainerTypeFiles.RegisterInto(typeFiles);
         LlmTypeFiles.RegisterInto(typeFiles);
-        InputTypeFiles.RegisterInto(typeFiles);
-        ApprovalTypeFiles.RegisterInto(typeFiles);
+        InputTypeFiles.RegisterInto(typeFiles, inputs);
+        ApprovalTypeFiles.RegisterInto(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
@@ -82,6 +84,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
+        services.AddSingleton<IInputChannel>(inputs);
+        services.AddSingleton<IInputDelivery>(inputs);
         services.AddSingleton<IModelSettings>(settings.Value);
         services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(flows.Value);
@@ -123,17 +127,19 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IFlowCatalog>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
-        services.AddSingleton(sp => new WaitService(
+        services.AddSingleton(sp => new PendingService(
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<FlowEngine>()));
+            sp.GetRequiredService<FlowEngine>(),
+            sp.GetRequiredService<IInputDelivery>()));
         services.AddSingleton(sp => new DialogueRound(
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<WaitService>()));
+            sp.GetRequiredService<PendingService>()));
         services.AddSingleton(sp => new DialogueHost(
             sp.GetRequiredService<TaskService>(),
             sp.GetRequiredService<DialogueRound>(),
             sp.GetRequiredService<ModelService>(),
-            sp.GetRequiredService<TaskRegistry>()));
+            sp.GetRequiredService<TaskRegistry>(),
+            sp.GetRequiredService<IInputChannel>()));
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ClientProvider>(),

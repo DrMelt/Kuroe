@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -45,11 +45,11 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Single(parked.Executables[0].Runs);
         Assert.Empty(parked.Executables[2].Runs);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -195,9 +195,9 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -215,9 +215,9 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -269,15 +269,15 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Equal(2, environment.Awaiting(id, AwaitKind.Approve).Count);
+        Assert.Equal(2, environment.Awaiting(id, PendingKind.Approve).Count);
 
         NodePath review = NodePath.Of("整体", "审阅甲");
-        environment.Waits.Approve(id, [review]).ThrowIfError();
+        environment.Pendings.Approve(id, [review]).ThrowIfError();
 
         // 只放行甲分支的审批节点，乙分支仍停在待批准，汇总不启动
         TaskSnapshot partial = environment.Settle(id);
         Assert.Equal(TaskState.Running, partial.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
     }
 
     private const string BranchedItemsJson = """

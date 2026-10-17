@@ -1,17 +1,17 @@
+using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
 namespace Kuroe.Flow.Node.Input;
 
-/// <summary>输入节点在任务内的运行期对象：不启动 run，停在等待时由外部回答放行，回答即产出。
+/// <summary>输入节点在任务内的运行期对象：不启动 run，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class InputRuntime(ExecutableNode executable) : NodeRuntime(executable), IWaitNode
+internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
+    : NodeRuntime(executable)
 {
     private string? _answer;
-    private bool _awaiting;
     private bool _canceled;
     private long _revision;
 
@@ -24,31 +24,28 @@ internal sealed class InputRuntime(ExecutableNode executable) : NodeRuntime(exec
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>随任务进入取消态。</summary>
-    public override void Cancel() => _canceled = true;
-
-    /// <summary>等待种类：等用户回答。</summary>
-    public AwaitKind Kind => AwaitKind.Answer;
-
-    /// <summary>停在等待用户回答。</summary>
-    public bool Awaiting => _awaiting;
-
-    /// <summary>被激活时清掉上一轮回答并重新挂起等待回答。</summary>
-    public override void Activate(INodeContext context)
+    /// <summary>随任务进入取消态并撤销接收声明。</summary>
+    public override void Cancel()
     {
-        _answer = null;
-        _awaiting = true;
+        _canceled = true;
+        channel.Decline(context, Path);
     }
 
-    /// <summary>交付一次外部输入：撤等待并记下回答，放行代数随之推进。</summary>
-    public void Receive(string text)
+    /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。</summary>
+    public override void Activate(INodeContext context)
     {
-        if (!_awaiting)
+        if (_canceled)
         {
             return;
         }
 
-        _awaiting = false;
+        _answer = null;
+        channel.Accept(context, Path, Deliver);
+    }
+
+    /// <summary>收下一次外部输入：记下回答并推进放行代数，声明由交付方随交付撤销。</summary>
+    private void Deliver(string text)
+    {
         _answer = text;
         _revision++;
     }

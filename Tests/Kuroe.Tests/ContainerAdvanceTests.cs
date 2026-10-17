@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -19,7 +19,7 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         // 两条分支各一个 run，审批节点停在待批准，汇总还没有 run
         Assert.Single(parked.Executables[1].Runs);
         Assert.Single(parked.Executables[2].Runs);
@@ -27,7 +27,7 @@ public sealed class ContainerAdvanceTests
         Assert.Empty(parked.Executables[4].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -77,12 +77,12 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("撰写组")).State);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -99,11 +99,11 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Settle(id);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables[3].Runs);
         Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);

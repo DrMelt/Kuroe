@@ -8,7 +8,8 @@ namespace Kuroe.Flow.Node.Approval.Tests;
 /// <summary>审批节点类型的形状与类型规则：不启动 run，对外端口由输入端口派生，批准后转发产出。</summary>
 public sealed class ApprovalNodeTypeTests
 {
-    private static readonly ApprovalNodeType NodeType = new(null);
+    private static readonly StubInputChannel Channel = new();
+    private static readonly ApprovalNodeType NodeType = new(null, Channel);
 
     [Fact]
     public void Name_is_the_kind_written_in_files()
@@ -20,7 +21,7 @@ public sealed class ApprovalNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" });
+        INodeType type = ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }, Channel);
 
         Assert.Equal(ApprovalNodeTypes.Name, type.Kind);
         Assert.Equal("确认计划", Assert.IsType<ApprovalNodeType>(type).Parameters?.Question);
@@ -93,7 +94,7 @@ public sealed class ApprovalNodeTypeTests
     private static NodeSpec Node(IReadOnlyList<InputPort>? inputs = null) => new()
     {
         Label = new NodeLabel("把关"),
-        Type = ApprovalNodeTypes.Create(null),
+        Type = ApprovalNodeTypes.Create(null, Channel),
         Inputs = inputs ?? [],
         Execution = new ExecutableSpec(),
     };

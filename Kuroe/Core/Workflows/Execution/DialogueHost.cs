@@ -5,11 +5,12 @@ using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Shared.Workflows;
 using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.InputChannel;
 
 namespace Kuroe.Workflows.Execution;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等待回复，无模型时返回固定引导。</summary>
-public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelService models, TaskRegistry registry)
+public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelService models, TaskRegistry registry, IInputChannel inputs)
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
@@ -62,7 +63,7 @@ public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelS
             }
         }
 
-        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow("对话", Kuroe.Workflows.Flows.DialogueFlow.Build(), "对话");
+        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow("对话", Kuroe.Workflows.Flows.DialogueFlow.Build(inputs), "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

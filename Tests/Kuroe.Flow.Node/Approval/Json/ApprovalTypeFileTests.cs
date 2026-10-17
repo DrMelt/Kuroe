@@ -7,7 +7,8 @@ namespace Kuroe.Flow.Node.Approval.Json.Tests;
 /// <summary>审批节点的文件形状：字段表与提问文本的读写。</summary>
 public sealed class ApprovalTypeFileTests
 {
-    private static readonly ApprovalTypeFile File = new();
+    private static readonly StubInputChannel Channel = new();
+    private static readonly ApprovalTypeFile File = new(Channel);
 
     [Fact]
     public void Kind_is_the_approval_node_type() =>
@@ -40,10 +41,10 @@ public sealed class ApprovalTypeFileTests
     [Fact]
     public void Write_keeps_only_the_written_fields()
     {
-        Assert.Empty(File.Write(ApprovalNodeTypes.Create(new ApprovalParameters())).Values);
+        Assert.Empty(File.Write(ApprovalNodeTypes.Create(new ApprovalParameters(), Channel)).Values);
         Assert.Empty(File.Write(null).Values);
 
-        ParameterValues values = File.Write(ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }));
+        ParameterValues values = File.Write(ApprovalNodeTypes.Create(new ApprovalParameters { Question = "确认计划" }, Channel));
 
         Assert.Equal(
             [("Question", ParameterValueKind.Text)],

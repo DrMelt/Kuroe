@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -13,7 +13,7 @@ public sealed class InputNodeTests
 {
     /// <summary>等待全部输入节点停驻后返回快照。</summary>
     private static TaskSnapshot WaitForInputs(TestEnvironment environment, TaskId id, int count) =>
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count == count);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count == count);
 
     [Fact]
     public void Input_node_parks_until_answered_then_releases_downstream()
@@ -24,13 +24,13 @@ public sealed class InputNodeTests
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
 
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Answer));
+        Assert.Single(environment.Awaiting(id, PendingKind.Answer));
 
-        environment.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
+        environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Empty(environment.Awaiting(id, AwaitKind.Answer));
+        Assert.Empty(environment.Awaiting(id, PendingKind.Answer));
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
 
-        environment.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
+        environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         RunSnapshot implement = done.Executables
@@ -60,14 +60,15 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
 
-        environment.Waits.Answer(id, null, "x").ThrowIfError();
+        environment.Pendings.Answer(id, null, "x").ThrowIfError();
         environment.Settle(id);
 
-        ErrorOr<Success> answered = environment.Waits.Answer(id, null, "又");
+        ErrorOr<Success> answered = environment.Pendings.Answer(id, null, "又");
         Assert.True(answered.IsError);
         Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
     }
 
+    /// <summary>两个待输入节点按图先根序列出，回答必须点名；逐个回答后任务收口。</summary>
     [Fact]
     public void Two_input_nodes_require_node_path()
     {
@@ -76,15 +77,19 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("目标");
         WaitForInputs(environment, id, 2);
 
-        ErrorOr<Success> ambiguous = environment.Waits.Answer(id, null, "x");
+        List<PendingNode> pending = environment.Pendings.Pending(id).ThrowIfError();
+        Assert.Equal(["整体/输入一", "整体/输入二"], [.. pending.Select(node => node.Node.Value)]);
+        Assert.All(pending, node => Assert.Equal(PendingKind.Answer, node.Kind));
+
+        ErrorOr<Success> ambiguous = environment.Pendings.Answer(id, null, "x");
         Assert.True(ambiguous.IsError);
         Assert.Contains(ambiguous.ErrorsOrEmptyList, error => error.Description.Contains("有 2 个输入节点等待回答"));
 
-        environment.Waits.Answer(id, "整体/输入一", "甲").ThrowIfError();
+        environment.Pendings.Answer(id, "整体/输入一", "甲").ThrowIfError();
         TaskSnapshot stepped = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, stepped.State);
 
-        environment.Waits.Answer(id, "整体/输入二", "乙").ThrowIfError();
+        environment.Pendings.Answer(id, "整体/输入二", "乙").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -98,12 +103,12 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("目标");
         _ = environment.Wait(id, snapshot =>
             environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "准备" && run.State == RunState.Succeeded)
-            && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+            && environment.Awaiting(id, PendingKind.Answer).Count > 0);
         TaskSnapshot parked = environment.Snapshot(id);
 
         Assert.Equal(TaskState.Running, parked.State);
 
-        environment.Waits.Answer(id, "整体/用户输入", "回答").ThrowIfError();
+        environment.Pendings.Answer(id, "整体/用户输入", "回答").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
     }
@@ -116,14 +121,14 @@ public sealed class InputNodeTests
         environment.Executor.Output = run => $"回复{run.Context.ExecutionCount}";
 
         TaskId id = environment.Submit("目标");
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, "整体/收话", "第一问").ThrowIfError();
+        environment.Pendings.Answer(id, "整体/收话", "第一问").ThrowIfError();
         _ = environment.Wait(id, snapshot =>
             environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
-            && environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+            && environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
-        environment.Waits.Answer(id, "整体/收话", "第二问").ThrowIfError();
+        environment.Pendings.Answer(id, "整体/收话", "第二问").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, done.State);
@@ -140,13 +145,13 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
 
-        ErrorOr<Success> empty = environment.Waits.Answer(id, null, "   ");
+        ErrorOr<Success> empty = environment.Pendings.Answer(id, null, "   ");
         Assert.True(empty.IsError);
         Assert.Contains(empty.ErrorsOrEmptyList, error => error.Description.Contains("回答内容不能为空"));
 
         TaskSnapshot still = environment.Snapshot(id);
         Assert.Equal(TaskState.Running, still.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Answer));
+        Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 
     [Fact]
@@ -172,7 +177,7 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
 
-        environment.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
+        environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
@@ -188,18 +193,18 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
 
-        environment.Waits.Answer(id, null, "需要支持多语言").ThrowIfError();
+        environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
 
         TaskSnapshot awaiting = environment.Settle(id);
         Assert.Equal(TaskState.Running, awaiting.State);
         Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Label == new NodeLabel("审查容器")).State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
-        environment.Waits.Approve(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Empty(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Empty(environment.Awaiting(id, PendingKind.Approve));
     }
 
     [Fact]
@@ -227,9 +232,9 @@ public sealed class InputNodeTests
         environment.Tasks.StopTask(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
-        ErrorOr<Success> answered = environment.Waits.Answer(id, null, "甲");
+        ErrorOr<Success> answered = environment.Pendings.Answer(id, null, "甲");
         Assert.True(answered.IsError);
-        Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
+        Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("已取消，无法回答"));
     }
 
     [Fact]
@@ -242,7 +247,7 @@ public sealed class InputNodeTests
 
         // 容器不表达成员的等待，只按成员活动给状态；等待由节点的待处理报告给出
         Assert.All(parked.Containers, container => Assert.Equal(NodeState.Pending, container.State));
-        Assert.Single(environment.Awaiting(id, AwaitKind.Answer));
+        Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 
     [Fact]
@@ -252,13 +257,13 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot parked = environment.Wait(id, _ =>
-            environment.Awaiting(id, AwaitKind.Answer).Count > 0
-            && environment.Awaiting(id, AwaitKind.Approve).Count > 0);
+            environment.Awaiting(id, PendingKind.Answer).Count > 0
+            && environment.Awaiting(id, PendingKind.Approve).Count > 0);
 
         // 两种等待在待处理报告里各自可见
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Single(environment.Awaiting(id, AwaitKind.Answer));
-        Assert.Single(environment.Awaiting(id, AwaitKind.Approve));
+        Assert.Single(environment.Awaiting(id, PendingKind.Answer));
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
     }
 
     /// <summary>环内输入节点每轮回答驱动一轮迭代：回话随来源新版本重跑，反馈复位后重新挂起。</summary>
@@ -272,7 +277,7 @@ public sealed class InputNodeTests
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, parked.State);
 
-        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
+        environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
         TaskSnapshot first = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, first.State);
         ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
@@ -280,9 +285,9 @@ public sealed class InputNodeTests
         Assert.Contains(firstRun.Context.Seed, message => message.Text.Contains("第一问"));
         Assert.Equal("回复第1轮", firstRun.Result);
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
-        Assert.Single(environment.Awaiting(id, AwaitKind.Answer));
+        Assert.Single(environment.Awaiting(id, PendingKind.Answer));
 
-        environment.Waits.Answer(id, null, "第二问").ThrowIfError();
+        environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot second = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, second.State);
         ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Label.Value == "回话");
@@ -302,10 +307,10 @@ public sealed class InputNodeTests
         TaskId id = environment.Submit("对话");
         WaitForInputs(environment, id, 1);
 
-        environment.Waits.Answer(id, null, "第一问").ThrowIfError();
+        environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
         environment.Wait(id, snapshot => snapshot.LiveRuns == 1);
 
-        ErrorOr<Success> busy = environment.Waits.Answer(id, null, "挤进来");
+        ErrorOr<Success> busy = environment.Pendings.Answer(id, null, "挤进来");
         Assert.True(busy.IsError);
         Assert.Contains(busy.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
 

@@ -11,6 +11,7 @@ using Kuroe.Workflows.Tools.Builtin;
 using Kuroe.Workflows.Tools.Info;
 using Kuroe.Workflows.Flows;
 using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.InputChannel;
 using Microsoft.Extensions.AI;
 using Xunit;
 
@@ -19,10 +20,13 @@ namespace Kuroe.Tests;
 /// <summary>内置对话流程的节点配置与工具白名单在工具面上的应用。</summary>
 public sealed class DialogueTests
 {
+    /// <summary>外部输入协议的宿主实现，只为建出流程。</summary>
+    private static readonly InputRegistry Inputs = new();
+
     [Fact]
     public void Dialogue_flow_builds_input_and_text_reply_nodes()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs).RootNode.Nodes!;
 
         Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
         Assert.Equal(LlmNodeTypes.Name, nodes[1].Kind);
@@ -31,7 +35,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_flow_marks_reply_back_edge_as_signal()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build().RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs).RootNode.Nodes!;
 
         Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
         Assert.Equal(PortType.Text, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
@@ -40,7 +44,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
-        NodeSpec reply = DialogueFlow.Build().RootNode.Nodes![1];
+        NodeSpec reply = DialogueFlow.Build(Inputs).RootNode.Nodes![1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
         Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], parameters.SystemPrompt);

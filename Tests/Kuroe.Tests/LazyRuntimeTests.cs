@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
+using Kuroe.Pending;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.RuntimeNodes;
 using Xunit;
@@ -83,7 +83,7 @@ public sealed class LazyRuntimeTests
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        environment.Wait(id, _ => environment.Awaiting(id, AwaitKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Tasks.StopTask(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
@@ -92,5 +92,6 @@ public sealed class LazyRuntimeTests
         RuntimeExecutable late = task.Runtime.Executable(task.Graph.PathOf("实施"));
         Assert.True(late.Canceled);
         Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[1].State);
+        Assert.Empty(environment.Pendings.Pending(id).ThrowIfError());
     }
 }

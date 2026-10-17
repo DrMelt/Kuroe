@@ -6,14 +6,13 @@ using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 
 namespace Kuroe.Workflows.Execution;
 
 /// <summary>对话任务的一轮问答：把输入交给停在等待的输入节点，等本轮 run 收口并把回复交回。
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>
-public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
+public sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
 {
     /// <summary>回答待输入的节点并等待本轮产出 run 收口，返回本轮回复文本。过程增量写给 observer。</summary>
     public async Task<ErrorOr<string>> AskAsync(
@@ -23,11 +22,6 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
         ITurnSink? observer,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return [WaitErrors.EmptyAnswer()];
-        }
-
         ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
         {
@@ -49,7 +43,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
 
         if (Output is not { } target)
         {
-            return [WaitErrors.NoDialogueTarget()];
+            return [PendingErrors.NoDialogueTarget()];
         }
 
         ErrorOr<Success> waited = await WaitForAnsweringAsync(task, cancellationToken);
@@ -110,11 +104,11 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
                 return;
             }
 
-            reply.TrySetResult(WaitErrors.RoundFailed([.. run.Snapshot().Failures]));
+            reply.TrySetResult(PendingErrors.RoundFailed([.. run.Snapshot().Failures]));
         });
         try
         {
-            ErrorOr<Success> answered = waits.Answer(id, nodePath, input);
+            ErrorOr<Success> answered = pendings.Answer(id, nodePath, input);
             if (answered.IsError)
             {
                 return answered.ErrorsOrEmptyList;
@@ -144,7 +138,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
                     // 本轮 run 已挂上时结果由它的收口给出，未挂上才按任务状态判定收口
                     if (!started && state is (TaskState.Blocked or TaskState.Canceled or TaskState.Done))
                     {
-                        return [WaitErrors.Settled(id, state)];
+                        return [PendingErrors.Settled(id, state)];
                     }
                 }
 
@@ -164,7 +158,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
                 return true;
             });
 
-            return WaitErrors.RoundCanceled();
+            return PendingErrors.RoundCanceled();
         }
         finally
         {
@@ -187,7 +181,7 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
             TaskState state = task.State;
             if (state is TaskState.Blocked or TaskState.Canceled)
             {
-                return [WaitErrors.Settled(task.Id, state)];
+                return [PendingErrors.Settled(task.Id, state)];
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -197,6 +191,6 @@ public sealed class DialogueRound(TaskRegistry registry, WaitService waits)
 
     /// <summary>任务里是否有停在等待回答的节点。</summary>
     private bool Answering(TaskId id) =>
-        waits.Pending(id) is { IsError: false } pending
-        && pending.Value.Any(node => node.Kind == AwaitKind.Answer);
+        pendings.Pending(id) is { IsError: false } pending
+        && pending.Value.Any(node => node.Kind == PendingKind.Answer);
 }

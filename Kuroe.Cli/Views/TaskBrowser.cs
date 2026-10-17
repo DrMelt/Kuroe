@@ -2,9 +2,8 @@ using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Flow.Execution.Tasks;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
@@ -13,7 +12,7 @@ namespace Kuroe.Cli.Views;
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
-    WaitService waits,
+    PendingService pendings,
     TaskListView list,
     TaskDetailView detail,
     RunDetailView runView,
@@ -87,7 +86,7 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "approve":
-                    Act(waits.Approve(id));
+                    Act(pendings.Approve(id));
                     break;
 
                 case "answer":
@@ -111,13 +110,13 @@ internal sealed class TaskBrowser(
 
     private void PromptAnswer(TaskId id)
     {
-        ErrorOr<List<PendingNode>> pending = waits.Pending(id);
+        ErrorOr<List<PendingNode>> pending = pendings.Pending(id);
         if (pending.IsError)
         {
             return;
         }
 
-        string[] waiting = [.. pending.Value.Where(node => node.Kind == AwaitKind.Answer).Select(node => node.Node.Value)];
+        string[] waiting = [.. pending.Value.Where(node => node.Kind == PendingKind.Answer).Select(node => node.Node.Value)];
 
         if (waiting.Length != 1)
         {
@@ -128,13 +127,8 @@ internal sealed class TaskBrowser(
         }
 
         TextPrompt<string> prompt = new($"回答「{waiting[0]}」：");
-        string input = terminal.Prompt(prompt);
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return;
-        }
 
-        Act(waits.Answer(id, waiting[0], input));
+        Act(pendings.Answer(id, waiting[0], terminal.Prompt(prompt)));
     }
 
     private void ShowRun(RunId runId)
@@ -194,15 +188,15 @@ internal sealed class TaskBrowser(
         }
 
         // 等待与阻塞可以并存，任务级状态只表达阻塞，入口按节点的实际停留各自给出
-        List<PendingNode> waiting = waits.Pending(task.Id) is { IsError: false } found ? found.Value : [];
+        List<PendingNode> waiting = pendings.Pending(task.Id) is { IsError: false } found ? found.Value : [];
         bool blocked = task.ExecutableStates.Any(state => state.State == NodeState.Blocked);
 
-        if (waiting.Any(node => node.Kind == AwaitKind.Approve))
+        if (waiting.Any(node => node.Kind == PendingKind.Approve))
         {
             items.Add(new Item("✓ 批准待批准的节点，开下一步", "approve", Task: task.Id));
         }
 
-        if (waiting.Any(node => node.Kind == AwaitKind.Answer))
+        if (waiting.Any(node => node.Kind == PendingKind.Answer))
         {
             items.Add(new Item("✎ 回答等待输入的节点", "answer", Task: task.Id));
         }

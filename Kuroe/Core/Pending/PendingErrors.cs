@@ -2,12 +2,11 @@ using ErrorOr;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.Waiting;
 
-namespace Kuroe.Waiting;
+namespace Kuroe.Pending;
 
 /// <summary>等待型节点的错误构造。</summary>
-public static class WaitErrors
+public static class PendingErrors
 {
     /// <summary>对话任务里没有可回话的执行节点，一问一答无从收口。</summary>
     public static Error NoDialogueTarget() => Error.Validation("Task.Ask", "任务里没有可回话的执行节点。");
@@ -23,13 +22,18 @@ public static class WaitErrors
     /// <summary>回答等待期间被取消。</summary>
     public static Error RoundCanceled() => Error.Failure("Task.Ask", "已取消。");
 
+    /// <summary>回答内容为空，不构成输入。</summary>
+    public static Error EmptyAnswer() => Error.Validation("Task.Answer", "回答内容不能为空。");
+
     /// <summary>该任务没有停在给定等待种类的节点。</summary>
-    public static Error NoAwaiting(TaskId task, AwaitKind kind) => kind == AwaitKind.Approve
+    public static Error NoAwaiting(TaskId task, PendingKind kind) => kind == PendingKind.Approve
         ? Error.Validation("Task.Approve", $"{task} 没有等待批准的审批节点。")
         : Error.Validation("Task.Answer", $"{task} 没有等待回答的输入节点。");
 
-    /// <summary>回答内容为空，不构成输入。</summary>
-    public static Error EmptyAnswer() => Error.Validation("Task.Answer", "回答内容不能为空。");
+    /// <summary>任务已取消，外部输入无处交付。</summary>
+    public static Error Canceled(TaskId task, PendingKind kind) => kind == PendingKind.Approve
+        ? Error.Conflict("Task.Approve", $"{task} 已取消，无法批准。")
+        : Error.Conflict("Task.Answer", $"{task} 已取消，无法回答。");
 
     /// <summary>多个节点等待回答，必须指定节点路径。</summary>
     public static Error AmbiguousInput(TaskId task, int count) => Error.Validation(

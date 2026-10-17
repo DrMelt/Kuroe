@@ -8,10 +8,9 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Shared.Waiting;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Tasks;
-using Kuroe.Waiting;
+using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,7 +28,7 @@ public sealed class TestEnvironment : IDisposable
         Executor = executor;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
-        Waits = provider.GetRequiredService<WaitService>();
+        Pendings = provider.GetRequiredService<PendingService>();
         executor.Submitter = provider.GetRequiredService<WorkItemSubmitter>();
         executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
         executor.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
@@ -45,7 +44,7 @@ public sealed class TestEnvironment : IDisposable
     public TaskService Tasks { get; }
 
     /// <summary>等待型节点的宿主功能，回答与批准经它交付外部输入。</summary>
-    public WaitService Waits { get; }
+    public PendingService Pendings { get; }
 
     /// <summary>常驻对话任务的管理层宿主。</summary>
     public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
@@ -202,11 +201,11 @@ public sealed class TestEnvironment : IDisposable
 
     /// <summary>任务里是否有停在等待的节点。</summary>
     public bool Awaiting(TaskId id) =>
-        Waits.Pending(id) is { IsError: false } pending && pending.Value.Count > 0;
+        Pendings.Pending(id) is { IsError: false } pending && pending.Value.Count > 0;
 
     /// <summary>任务里停在给定等待种类的节点路径。</summary>
-    public IReadOnlyList<NodePath> Awaiting(TaskId id, AwaitKind kind) =>
-        Waits.Pending(id) is { IsError: false } pending
+    public IReadOnlyList<NodePath> Awaiting(TaskId id, PendingKind kind) =>
+        Pendings.Pending(id) is { IsError: false } pending
             ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => node.Node)]
             : [];
 
