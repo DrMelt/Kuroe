@@ -2,7 +2,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <!-- 导出资料的仓库根，Link 据此保留仓库相对路径 -->
-        <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</RepoRoot>
+        <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..'))</RepoRoot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,7 +28,7 @@
 
     <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
     <ItemGroup>
-        <None Include="$(RepoRoot)\Kuroe\**\*.cs;$(RepoRoot)\Kuroe.Cli\**\*.cs;$(RepoRoot)\Kuroe.Flow\**\*.cs;$(RepoRoot)\Kuroe.Flow.Node\**\*.cs;$(RepoRoot)\Kuroe.Tool\**\*.cs;$(RepoRoot)\Tests\**\*.cs;$(RepoRoot)\docs\**\*.md"
+        <None Include="$(RepoRoot)\Source\**\*.cs;$(RepoRoot)\Tests\**\*.cs;$(RepoRoot)\docs\**\*.md"
             Exclude="$(RepoRoot)\**\bin\**;$(RepoRoot)\**\obj\**;$(RepoRoot)\**\TestResults\**"
             Link="source\$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))"
             CopyToOutputDirectory="PreserveNewest" />

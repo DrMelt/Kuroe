@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Kuroe.Flow.Node\Llm\Core\Kuroe.Flow.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow.Node\Llm\Core\Kuroe.Flow.Node.Llm.csproj" />
     </ItemGroup>
 
 </Project>

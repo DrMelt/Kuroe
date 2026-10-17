@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe.Tool\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Tool\Kuroe.Tool.csproj" />
     </ItemGroup>
 
 </Project>

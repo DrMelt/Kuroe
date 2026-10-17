@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Kuroe.Flow.Node\Input\Json\Kuroe.Flow.Node.Input.Json.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow.Node\Input\Json\Kuroe.Flow.Node.Input.Json.csproj" />
     </ItemGroup>
 
 </Project>

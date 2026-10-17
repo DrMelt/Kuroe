@@ -10,6 +10,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
     </ItemGroup>
 </Project>
