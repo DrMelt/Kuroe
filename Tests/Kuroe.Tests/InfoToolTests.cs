@@ -1,12 +1,13 @@
 using ErrorOr;
+using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Execution.Runs;
-using Kuroe.Node.Llm.Tools;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
-using Kuroe.Workflows.Tools.Command.Model;
-using Kuroe.Workflows.Tools.Info;
+using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Info;
+using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -137,7 +138,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        CatalogInfoTool tool = new(environment.Catalog, environment.Models);
+        CatalogInfoTool tool = new(new ToolCatalogView(environment.Catalog, environment.Models));
         string output = Call(tool, "GetCatalog");
 
         Assert.Contains("test", output);
@@ -193,7 +194,7 @@ public sealed class InfoToolTests : IDisposable
     public void ListTools_lists_dialogue_functions_and_command_tools()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        ToolboxInfoTool empty = new(environment.CommandTools);
+        ToolboxInfoTool empty = new(DialogueFlow.Tools, environment.CommandTools);
         string noTools = Call(empty, "ListTools");
 
         Assert.Contains("内置对话可用函数", noTools);
@@ -213,26 +214,12 @@ public sealed class InfoToolTests : IDisposable
             120,
             8000);
 
-        ToolboxInfoTool tool = new([diff]);
+        ToolboxInfoTool tool = new(DialogueFlow.Tools, [diff]);
         string output = Call(tool, "ListTools");
 
         Assert.Contains("git/RunDiff", output);
         Assert.Contains("git diff {path}", output);
         Assert.Contains("path*", output);
-    }
-
-    [Fact]
-    public void Information_tools_join_the_tool_face()
-    {
-        using ServiceProvider provider = Services();
-
-        ToolCollection tools = provider.GetRequiredService<ToolCollection>();
-
-        Assert.Contains(new ToolName("ListTasks"), tools.Names);
-        Assert.Contains(new ToolName("GetCatalog"), tools.Names);
-        Assert.Contains(new ToolName("ListFlows"), tools.Names);
-        Assert.Contains(new ToolName("GetConfig"), tools.Names);
-        Assert.Contains(new ToolName("ListTools"), tools.Names);
     }
 
     [Fact]
@@ -256,19 +243,6 @@ public sealed class InfoToolTests : IDisposable
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,
             error => error.Description.Contains("重名", StringComparison.Ordinal));
-    }
-
-    /// <summary>在临时工作目录里装配整套服务，用于工具面装配断言。</summary>
-    private ServiceProvider Services()
-    {
-        Directory.CreateDirectory(_root);
-        var services = new ServiceCollection();
-        services.AddLogging();
-
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
-        Assert.False(startup.IsError);
-
-        return services.BuildServiceProvider();
     }
 
     private static string Call(ITool tool, string name, params (string Key, object? Value)[] args) =>

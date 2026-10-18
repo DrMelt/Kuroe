@@ -4,7 +4,7 @@ using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Workflows.Flows;
+using Kuroe.Node.Approval;
 
 namespace Kuroe.Pending;
 
@@ -131,7 +131,7 @@ public sealed class PendingService
         [
             .. access.Graph.ExecutableNodes
                 .Where(node => accepting.Contains(node.Path))
-                .Select(node => new PendingNode(node.Path, NodeParameterView.PendingKindOf(node.Type))),
+                .Select(node => new PendingNode(node.Path, node.Type is ApprovalNodeType ? PendingKind.Approve : PendingKind.Answer)),
         ];
     }
 }

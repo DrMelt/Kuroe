@@ -6,11 +6,12 @@ using Kuroe.Configuration.Files;
 using Kuroe.Configuration.Model;
 using Kuroe.Node.Llm;
 using Kuroe.Shared.Configuration;
+using Kuroe.Tool.Info;
 
 namespace Kuroe.Configuration;
 
 /// <summary>偏好配置的唯一生效点：绑定用户层节点树、校验改动、替换当前快照。凭据不在这里，见 <see cref="Catalogs.CatalogService"/>。</summary>
-public sealed class SettingsProvider : IModelSettings
+public sealed class SettingsProvider : IModelSettings, ISettingsView
 {
     private readonly KuroePaths _paths;
     private readonly UserSettingsStore _store;
@@ -84,7 +85,7 @@ public sealed class SettingsProvider : IModelSettings
         WithResolved(path, (root, resolved) => UserSettingsStore.RemoveValue(root, resolved));
 
     /// <summary>各配置节各设置项的生效值与来源，供宿主直接列出。</summary>
-    public IReadOnlyList<SettingSection> Sections() => Current.Sections(_store);
+    public IReadOnlyList<SettingSection> Sections => Current.Sections(_store);
 
     /// <summary>读取用户层中该路径的设置，未设置时返回 null。路径须是 <see cref="ResolvePath"/> 给出的规范路径。</summary>
     public string? TryGetUserValue(string path) => _store.TryGetValue(path);

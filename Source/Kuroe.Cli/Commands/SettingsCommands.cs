@@ -66,7 +66,7 @@ internal sealed class SettingsCommands(
     {
         _terminal.Hint($"用户层文件：{_settings.UserSettingsFile}");
 
-        foreach (SettingSection section in _settings.Sections())
+        foreach (SettingSection section in _settings.Sections)
         {
             _terminal.Line($"{section.Name}:");
 

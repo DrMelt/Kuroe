@@ -1,7 +1,7 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Tool;
-using Kuroe.Workflows.Tools.Command.Model;
+using Kuroe.Tool.Command.Model;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;

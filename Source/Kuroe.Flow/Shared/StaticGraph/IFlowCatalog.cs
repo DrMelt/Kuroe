@@ -8,6 +8,9 @@ public interface IFlowCatalog
     /// <summary>提交任务未指定流程时用的流程名，未设置时没有默认流程。</summary>
     FlowName? DefaultName { get; }
 
+    /// <summary>全部流程，按文件顺序。</summary>
+    IReadOnlyList<FlowDefinition> All();
+
     /// <summary>按名取展开后的流程，不存在时返回错误。</summary>
     ErrorOr<FlowDefinition> Find(FlowName name);
 

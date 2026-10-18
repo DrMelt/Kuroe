@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Workflows.Tools.Builtin;
+using Kuroe.Tool.Contract;
 using Xunit;
 
 namespace Kuroe.Tests;

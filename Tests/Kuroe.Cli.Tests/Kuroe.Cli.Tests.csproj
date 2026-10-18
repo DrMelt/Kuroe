@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Source\Kuroe.Cli\Kuroe.Cli.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Tool\Kuroe.Tool.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe\Tool\Command\Kuroe.Tool.Command.csproj" />
   </ItemGroup>
 
 </Project>

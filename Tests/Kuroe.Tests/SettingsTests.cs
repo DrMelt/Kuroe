@@ -33,7 +33,7 @@ public sealed class SettingsTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        SettingSection section = Assert.Single(environment.Settings.Sections());
+        SettingSection section = Assert.Single(environment.Settings.Sections);
 
         Assert.Equal("Runtime", section.Name);
         Assert.Contains(section.Entries, entry => entry.Path == "Runtime:Temperature");
@@ -49,7 +49,7 @@ public sealed class SettingsTests
 
         IEnumerable<string> section = Properties(library, "Kuroe.Configuration.Model.RuntimeSettings");
         IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.Model.RuntimeSectionDto");
-        IEnumerable<string> declared = environment.Settings.Sections().Single().Entries
+        IEnumerable<string> declared = environment.Settings.Sections.Single().Entries
             .Select(entry => entry.Name)
             .Order();
 
@@ -63,7 +63,7 @@ public sealed class SettingsTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        IReadOnlyList<SettingEntry> entries = environment.Settings.Sections().Single().Entries;
+        IReadOnlyList<SettingEntry> entries = environment.Settings.Sections.Single().Entries;
 
         Assert.Equal("未设置", Value(entries, "Temperature"));
         Assert.Equal("Warning", Value(entries, "LogLevel"));

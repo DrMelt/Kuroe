@@ -60,8 +60,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ToolCollection Tools => _provider.GetRequiredService<ToolCollection>();
 
-    public IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition> CommandTools =>
-        _provider.GetRequiredService<IReadOnlyList<Kuroe.Workflows.Tools.Command.Model.CommandToolDefinition>>();
+    public IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition> CommandTools =>
+        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition>>();
 
     /// <summary>测试用默认流程文件，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
     private const string TestDefaultFlow = """

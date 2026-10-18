@@ -1,6 +1,14 @@
 <Solution>
     <Project Path="Source/Kuroe/Shared/Kuroe.Shared.csproj" />
     <Project Path="Source/Kuroe.Tool/Kuroe.Tool.csproj" />
+    <Project Path="Source/Kuroe/Presentation/Kuroe.Presentation.csproj" />
+    <Project Path="Source/Kuroe/Tool/Time/Kuroe.Tool.Time.csproj" />
+    <Project Path="Source/Kuroe/Tool/FileAccess/Kuroe.Tool.FileAccess.csproj" />
+    <Project Path="Source/Kuroe/Tool/Files/Kuroe.Tool.Files.csproj" />
+    <Project Path="Source/Kuroe/Tool/Source/Kuroe.Tool.Source.csproj" />
+    <Project Path="Source/Kuroe/Tool/Command/Kuroe.Tool.Command.csproj" />
+    <Project Path="Source/Kuroe/Tool/Contract/Kuroe.Tool.Contract.csproj" />
+    <Project Path="Source/Kuroe/Tool/Info/Kuroe.Tool.Info.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Json/Kuroe.Node.Llm.Json.csproj" />
     <Project Path="Source/Kuroe/Node/Input/Core/Kuroe.Node.Input.csproj" />
@@ -17,6 +25,10 @@
     <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
     <Project Path="Tests/Kuroe.Shared.Tests/Kuroe.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Tool.Tests/Kuroe.Tool.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/Time/Kuroe.Tool.Time.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/Files/Kuroe.Tool.Files.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/Source/Kuroe.Tool.Source.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/Command/Kuroe.Tool.Command.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Core/Kuroe.Flow.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Json/Kuroe.Flow.Json.Tests.csproj" />

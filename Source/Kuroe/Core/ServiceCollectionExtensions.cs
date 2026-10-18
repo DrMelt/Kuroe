@@ -13,14 +13,15 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Tool;
+using Kuroe.Tool.Command;
+using Kuroe.Tool.Command.Files;
+using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Contract;
+using Kuroe.Tool.Files;
+using Kuroe.Tool.Info;
+using Kuroe.Tool.Source;
+using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
-using Kuroe.Workflows.Tools.Builtin;
-using Kuroe.Workflows.Tools.Command;
-using Kuroe.Workflows.Tools.Command.Files;
-using Kuroe.Workflows.Tools.Command.Model;
-using Kuroe.Workflows.Tools.Files;
-using Kuroe.Workflows.Tools.Info;
-using Kuroe.Workflows.Tools.Source;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Engine;
 using Kuroe.Flow.Execution.Tasks;
@@ -180,10 +181,10 @@ public static class ServiceCollectionExtensions
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),
-            new CatalogInfoTool(catalog, models),
+            new CatalogInfoTool(new ToolCatalogView(catalog, models)),
             new FlowInfoTool(flows),
             new SettingsInfoTool(settings),
-            new ToolboxInfoTool(definitions),
+            new ToolboxInfoTool(DialogueFlow.Tools, definitions),
             .. definitions.Select(definition => (ITool)new CommandTool(definition, workingDirectory)),
         ];
 
