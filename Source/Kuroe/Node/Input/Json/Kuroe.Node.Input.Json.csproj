@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Core\Kuroe.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Node.Input.Json.Tests" />
+    </ItemGroup>
+</Project>

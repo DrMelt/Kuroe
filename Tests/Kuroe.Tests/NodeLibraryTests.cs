@@ -7,7 +7,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.Json;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;

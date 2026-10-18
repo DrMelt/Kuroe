@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Node.Llm.Json;
-using Kuroe.Flow.Node.Llm.Tools;
+using Kuroe.Node.Llm.Json;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;

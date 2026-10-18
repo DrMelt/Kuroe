@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Node.Llm.Tools;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Shared;
 using Kuroe.Tool;
 using Kuroe.Workflows.Tools.Source;

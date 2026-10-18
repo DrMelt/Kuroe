@@ -1,8 +1,8 @@
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Json.Parameters;
-using Kuroe.Flow.Node.Approval.Json;
-using Kuroe.Flow.Node.Input.Json;
-using Kuroe.Flow.Node.Llm.Json;
+using Kuroe.Node.Approval.Json;
+using Kuroe.Node.Input.Json;
+using Kuroe.Node.Llm.Json;
 
 namespace Kuroe.Tests.Support;
 

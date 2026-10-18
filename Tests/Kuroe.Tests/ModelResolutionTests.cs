@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;

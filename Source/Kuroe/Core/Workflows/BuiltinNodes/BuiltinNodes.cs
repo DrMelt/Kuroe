@@ -1,6 +1,6 @@
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Tool;
 
 namespace Kuroe.Workflows.BuiltinNodes;

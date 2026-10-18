@@ -8,7 +8,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Node.Llm.Tools;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Workflows.Execution;
 using Kuroe.Flow.Execution.Tasks;
 using Kuroe.Pending;

@@ -3,7 +3,7 @@ using ApiHub.Shared.Catalogs;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs.Files;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Shared.Catalogs;
 
 namespace Kuroe.Catalogs;

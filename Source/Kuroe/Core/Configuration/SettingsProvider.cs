@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Configuration.Files;
 using Kuroe.Configuration.Model;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Shared.Configuration;
 
 namespace Kuroe.Configuration;

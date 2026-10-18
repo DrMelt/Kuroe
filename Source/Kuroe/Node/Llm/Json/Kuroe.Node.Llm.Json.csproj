@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.AI" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Tool\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Node.Llm.Json.Tests" />
+    </ItemGroup>
+</Project>

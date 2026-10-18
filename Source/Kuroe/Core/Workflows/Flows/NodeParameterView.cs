@@ -1,7 +1,7 @@
-using Kuroe.Flow.Node.Approval;
-using Kuroe.Flow.Node.Input;
+using Kuroe.Node.Approval;
+using Kuroe.Node.Input;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Pending;
 
 namespace Kuroe.Workflows.Flows;

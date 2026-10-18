@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Cli.Views;
 using Kuroe.Configuration;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 using Spectre.Console;

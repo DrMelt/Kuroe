@@ -1,5 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Flow.Node.Llm.Tools;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Workflows.Flows;
 

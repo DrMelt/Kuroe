@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Execution.Runs;
-using Kuroe.Flow.Node.Llm.Sessions;
-using Kuroe.Flow.Node.Llm.Tools;
+using Kuroe.Node.Llm.Sessions;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;

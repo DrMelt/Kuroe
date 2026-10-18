@@ -1,6 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Flow.Execution.Runs;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Runs;

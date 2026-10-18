@@ -1,7 +1,7 @@
-using Kuroe.Flow.Node.Input;
+using Kuroe.Node.Input;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Node.Llm;
+using Kuroe.Node.Llm;
 using Kuroe.Tool;
 using Kuroe.Flow.InputChannel;
 

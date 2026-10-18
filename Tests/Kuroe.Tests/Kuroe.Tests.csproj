@@ -18,10 +18,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Kuroe\Core\Kuroe.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Flow.Node\Llm\Core\Kuroe.Flow.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Flow.Node\Llm\Json\Kuroe.Flow.Node.Llm.Json.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Flow.Node\Input\Json\Kuroe.Flow.Node.Input.Json.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Flow.Node\Approval\Json\Kuroe.Flow.Node.Approval.Json.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Node\Llm\Json\Kuroe.Node.Llm.Json.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Node\Input\Json\Kuroe.Node.Input.Json.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Node\Approval\Json\Kuroe.Node.Approval.Json.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Tool\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\InputChannel\Kuroe.Flow.InputChannel.csproj" />
