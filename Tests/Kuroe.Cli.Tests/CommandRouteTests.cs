@@ -317,10 +317,9 @@ public sealed class CommandRouteTests
         using CliSession cli = new();
         CommandToolDefinition diff = new(
             new ToolDefinition(
-                new ToolName("RunDiff"),
+                new ToolPath("git/RunDiff"),
                 "查看指定文件相对 HEAD 的改动。",
-                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)],
-                new ToolPath("git")),
+                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)]),
             [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
             null,
             120,

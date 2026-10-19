@@ -154,7 +154,7 @@ public static class ServiceCollectionExtensions
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 
-    /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前重名校验。
+    /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前按路径校验重复。
     /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
@@ -190,14 +190,14 @@ public static class ServiceCollectionExtensions
             .. definitions.Select(definition => (ITool)new CommandTool(definition, workingDirectory)),
         ];
 
-        IReadOnlyList<ToolName> duplicates = [.. tools
+        IReadOnlyList<ToolPath> duplicates = [.. tools
             .SelectMany(tool => tool.Functions)
-            .GroupBy(function => function.Definition.Name)
+            .GroupBy(function => function.Definition.Path)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)];
         if (duplicates.Count > 0)
         {
-            return duplicates.Select(name => CommandToolErrors.Duplicate(name.Value)).ToList();
+            return duplicates.Select(path => CommandToolErrors.Duplicate(path.Value)).ToList();
         }
 
         services.AddSingleton(taskRegistry);

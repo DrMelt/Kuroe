@@ -51,7 +51,7 @@ public sealed class WiringTests : IDisposable
     }
 
     [Fact]
-    public void Command_tool_duplicating_builtin_name_fails_startup()
+    public void Command_tool_duplicating_builtin_path_fails_startup()
     {
         Directory.CreateDirectory(_root);
         Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
@@ -69,7 +69,7 @@ public sealed class WiringTests : IDisposable
         ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
 
         Assert.True(startup.IsError);
-        Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重名", StringComparison.Ordinal));
+        Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重复", StringComparison.Ordinal));
     }
 
     [Fact]

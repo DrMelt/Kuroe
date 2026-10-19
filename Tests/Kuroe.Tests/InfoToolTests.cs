@@ -190,10 +190,9 @@ public sealed class InfoToolTests : IDisposable
 
         CommandToolDefinition diff = new(
             new ToolDefinition(
-                new ToolName("RunDiff"),
+                new ToolPath("git/RunDiff"),
                 "查看指定文件相对 HEAD 的改动。",
-                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)],
-                new ToolPath("git")),
+                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)]),
             [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
             null,
             120,
@@ -208,14 +207,14 @@ public sealed class InfoToolTests : IDisposable
     }
 
     [Fact]
-    public void Command_tool_duplicating_information_tool_name_fails_startup()
+    public void Command_tool_duplicating_information_tool_path_fails_startup()
     {
         Directory.CreateDirectory(_root);
         Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
         File.WriteAllText(Path.Combine(_root, ".kuroe", "tools.json"), """
             {
               "Tools": [
-                { "Name": "ListTasks", "Template": ["cmd", "/c", "echo", "x"] }
+                { "Name": "ListTasks", "Group": "info", "Template": ["cmd", "/c", "echo", "x"] }
               ]
             }
             """);
@@ -227,11 +226,11 @@ public sealed class InfoToolTests : IDisposable
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,
-            error => error.Description.Contains("重名", StringComparison.Ordinal));
+            error => error.Description.Contains("重复", StringComparison.Ordinal));
     }
 
     private static string Call(ITool tool, string name, params (string Key, object? Value)[] args) =>
-        ToolResult.Render(tool.Functions.Single(function => function.Definition.Name.Value == name)
+        ToolResult.Render(tool.Functions.Single(function => function.Definition.Path.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()

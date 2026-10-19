@@ -13,14 +13,13 @@ public sealed class WriteFileTool : ITool
 
     /// <summary>覆盖写入文件。</summary>
     private static readonly ToolDefinition WriteFile = new(
-        new ToolName("WriteFile"),
+        new ToolPath("file/write/WriteFile"),
         "把文本覆盖写入工作目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
         [
             new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
             new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-        ],
-        FileTools.WriteGroup);
+        ]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

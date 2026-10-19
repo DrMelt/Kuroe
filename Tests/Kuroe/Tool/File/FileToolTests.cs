@@ -680,7 +680,7 @@ public sealed class FileToolTests : IDisposable
     public void Face_functions_split_into_read_and_write_groups()
     {
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
-            .ToDictionary(function => function.Definition.Name.Value, function => function.Definition.Path.Value);
+            .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
         string[] readFunctions = ["ReadFile", "ReadFiles", "ListDirectory", "GetFileInfo"];
         string[] writeFunctions = ["WriteFile", "PatchFile"];
@@ -708,7 +708,7 @@ public sealed class FileToolTests : IDisposable
 
     private string Call(string name, params (string Key, object? Value)[] args) =>
         ToolResult.Render(Face().SelectMany(tool => tool.Functions)
-            .Single(function => function.Definition.Name.Value == name)
+            .Single(function => function.Definition.Path.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()

@@ -53,7 +53,7 @@ internal sealed class ToolCommands(
         {
             grid.AddRow(
                 new Text(tool.Definition.Path.Value, Styles.Hint),
-                new Text(tool.Definition.Name.Value, Styles.Key),
+                new Text(tool.Definition.Path.Name.Value, Styles.Key),
                 new Text(tool.Definition.Description),
                 new Text(CommandToolPresentation.Template(tool.Template), Styles.Hint),
                 new Text(CommandToolPresentation.Parameters(tool.Definition.Parameters), Styles.Hint));

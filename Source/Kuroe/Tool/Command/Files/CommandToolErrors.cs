@@ -17,7 +17,7 @@ public static class CommandToolErrors
     public static Error Invalid(string tool, string message) =>
         Error.Validation(ErrorCodes.ToolInvalid, $"命令工具 {tool}：{message}");
 
-    /// <summary>命令工具与其他已注册工具重名。</summary>
+    /// <summary>命令工具路径与其他已注册工具重复。</summary>
     public static Error Duplicate(string tool) =>
-        Error.Validation(ErrorCodes.ToolDuplicate, $"命令工具 {tool} 与已注册工具重名。");
+        Error.Validation(ErrorCodes.ToolDuplicate, $"命令工具 {tool} 与已注册工具的路径重复。");
 }

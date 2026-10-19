@@ -48,7 +48,7 @@ public static class CommandToolStore
     {
         List<Error> errors = [];
         List<CommandToolDefinition> definitions = [];
-        HashSet<string> names = [];
+        HashSet<string> paths = [];
 
         foreach (CommandToolDto dto in file.Tools ?? [])
         {
@@ -66,9 +66,9 @@ public static class CommandToolStore
             }
 
             CommandToolDefinition definition = converted.Value;
-            if (!names.Add(definition.Definition.Name.Value))
+            if (!paths.Add(definition.Definition.Path.Value))
             {
-                errors.Add(CommandToolErrors.Invalid(definition.Definition.Name.Value, "名字重复。"));
+                errors.Add(CommandToolErrors.Invalid(definition.Definition.Path.Value, "路径重复。"));
                 continue;
             }
 
@@ -143,15 +143,14 @@ public static class CommandToolStore
             return errors;
         }
 
-        ToolName name = new(dto.Name!);
+        ToolPath path = dto.Group is { Length: > 0 } group ? new ToolPath($"{group}/{dto.Name}") : new ToolPath(dto.Name!);
         List<ToolParameter> list = [.. parameters.Value];
 
         return new CommandToolDefinition(
             new ToolDefinition(
-                name,
+                path,
                 dto.Description ?? $"执行命令 {dto.Name}",
-                list,
-                dto.Group is { Length: > 0 } group ? new ToolPath(group) : null),
+                list),
             template.Value,
             dto.Directory,
             dto.TimeoutSeconds ?? CommandToolRunner.DefaultTimeoutSeconds,
@@ -289,7 +288,7 @@ public static class CommandToolStore
     private static void CheckTemplate(CommandToolDefinition definition, List<Error> errors)
     {
         IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
-        string tool = definition.Definition.Name.Value;
+        string tool = definition.Definition.Path.Value;
         List<string> placeholders = [.. CommandToolRunner.PlaceholdersOf(definition.Template)];
 
         foreach (CommandToolTemplateItem item in definition.Template)

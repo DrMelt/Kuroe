@@ -77,7 +77,7 @@ public sealed class DialogueTests
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), DialogueFlow.Tools);
 
         Assert.Equal(
-            ["GetLocalTime", "ListTasks", "GetTask", "GetExecution"],
+            ["GetLocalTime", "info/ListTasks", "info/GetTask", "info/GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -94,7 +94,7 @@ public sealed class DialogueTests
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info")]);
 
         Assert.Equal(
-            ["ListTasks", "GetTask", "GetExecution"],
+            ["info/ListTasks", "info/GetTask", "info/GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -109,7 +109,7 @@ public sealed class DialogueTests
         new ToolJson());
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info/GetTask")]);
 
-        Assert.Equal(["GetTask"], built.Select(tool => tool.Name));
+        Assert.Equal(["info/GetTask"], built.Select(tool => tool.Name));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class DialogueTests
     {
         public IReadOnlyList<ToolFunction> Functions { get; } =
         [
-            new ToolDefinition(new ToolName("RunDiff"), "样例工具", []).Bind(_ => string.Empty),
+            new ToolDefinition(new ToolPath("RunDiff"), "样例工具", []).Bind(_ => string.Empty),
         ];
     }
 

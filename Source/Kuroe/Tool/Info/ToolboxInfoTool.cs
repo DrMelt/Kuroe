@@ -13,10 +13,9 @@ public sealed class ToolboxInfoTool : ITool
 
     /// <summary>列出工具面的函数定义。</summary>
     private static readonly ToolDefinition ListTools = new(
-        new ToolName("ListTools"),
+        new ToolPath("info/ListTools"),
         "列出内置对话可用的函数与配置的命令工具及其路径。",
-        [],
-        InfoTools.Group);
+        []);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

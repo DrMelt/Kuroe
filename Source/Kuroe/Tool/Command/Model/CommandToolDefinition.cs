@@ -5,7 +5,7 @@ namespace Kuroe.Tool.Command.Model;
 public sealed record CommandToolTemplateItem(string Text, string? OmitWhenMissing);
 
 /// <summary>命令工具的配置定义：函数定义、命令模板与执行参数。模板的每一项是一个参数项，里面的 {参数名} 是占位符，运行时由模型实参填充。</summary>
-/// <param name="Definition">函数定义：名字、说明、参数与所属分组。</param>
+/// <param name="Definition">函数定义：路径、说明与参数。</param>
 /// <param name="Template">命令行模板，数组每一项是一个参数项。</param>
 /// <param name="Directory">命令执行目录，相对工作目录；未给时用工作目录根。</param>
 /// <param name="TimeoutSeconds">命令超时秒数。</param>

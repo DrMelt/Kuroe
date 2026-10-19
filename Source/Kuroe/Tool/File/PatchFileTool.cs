@@ -13,7 +13,7 @@ public sealed class PatchFileTool : ITool
 
     /// <summary>按行号范围替换文件内容。</summary>
     private static readonly ToolDefinition PatchFile = new(
-        new ToolName("PatchFile"),
+        new ToolPath("file/write/PatchFile"),
         "按行号范围替换工作目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
         [
             new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
@@ -22,8 +22,7 @@ public sealed class PatchFileTool : ITool
             new ToolParameter(new ToolName("original"), "该范围现在的原文，逐行与文件比对", Required: true),
             new ToolParameter(new ToolName("replacement"), "替换后的新内容，为空时删除该范围", Required: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-        ],
-        FileTools.WriteGroup);
+        ]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

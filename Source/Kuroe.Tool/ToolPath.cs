@@ -1,15 +1,14 @@
 namespace Kuroe.Tool;
 
-/// <summary>工具路径：函数在工具层级里的位置，按 / 分段。白名单条目按路径前缀放行，写上级路径即包含整棵子树；
-/// 工具定义的路径是要被放行的一侧，由函数名与分组拼出。条目只按文本比较。</summary>
+/// <summary>工具路径：函数在工具层级里的位置，按 / 分段，同时是模型调用名。白名单条目按路径前缀放行，写上级路径即包含整棵子树；
+/// 条目只按文本比较。末段是函数名。</summary>
 public readonly record struct ToolPath(string Value)
 {
     /// <summary>路径的文本形式。</summary>
     public override string ToString() => Value;
 
-    /// <summary>按函数名与可选分组拼出完整路径：有分组时是 分组/函数名，空分组与未给分组同等。</summary>
-    public static ToolPath Of(ToolName name, ToolPath? group = null) =>
-        group is { Value.Length: > 0 } parent ? new ToolPath($"{parent.Value}/{name.Value}") : new ToolPath(name.Value);
+    /// <summary>路径末段的函数名，供宿主展示。</summary>
+    public ToolName Name => new(Value[(Value.LastIndexOf('/') + 1)..]);
 
     /// <summary>本条目是否放行给定路径：路径落在本条目之下或与之相等。空条目不匹配任何路径。</summary>
     public bool Allows(string path) =>

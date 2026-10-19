@@ -14,26 +14,21 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>文件清单的条目上限，超出截断并提示。</summary>
     private const int MaxEntries = 400;
 
-    /// <summary>导出资料工具的分组。</summary>
-    private static readonly ToolPath Group = new("source");
-
     /// <summary>列出导出目录内的文件。</summary>
     private static readonly ToolDefinition ListSourceFiles = new(
-        new ToolName("ListSourceFiles"),
+        new ToolPath("source/ListSourceFiles"),
         "列出随程序导出的源码与文档路径，路径相对导出目录。内容是程序自身实现，用于分析实现方法。",
-        [],
-        Group);
+        []);
 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
-        new ToolName("ReadSourceFile"),
+        new ToolPath("source/ReadSourceFile"),
         "读取导出目录内源码或文档指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
-        ],
-        Group);
+        ]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; } = Declare(new FileScope(sourceDirectory, "导出目录"));

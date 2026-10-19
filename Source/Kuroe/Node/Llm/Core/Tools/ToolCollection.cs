@@ -21,10 +21,10 @@ public sealed class ToolCollection
     {
         _carriers = [.. carriers];
         _json = json;
-        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Definition.Name)];
+        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Definition.Path.Name)];
     }
 
-    /// <summary>工具名，供宿主展示可用性。</summary>
+    /// <summary>函数名，取工具路径的末段，供宿主展示可用性。</summary>
     public IReadOnlyList<ToolName> Names { get; }
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
@@ -48,7 +48,7 @@ public sealed class ToolCollection
     {
         private readonly JsonElement _schema = json.Schema(declaration.Definition.Parameters);
 
-        public override string Name => declaration.Definition.Name.Value;
+        public override string Name => declaration.Definition.Path.Value;
 
         public override string Description => declaration.Definition.Description;
 
@@ -65,12 +65,12 @@ public sealed class ToolCollection
             }
             catch (Exception ex)
             {
-                Record(new ToolCallRecord(declaration.Definition.Name.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
                 throw;
             }
 
             string result = ToolResult.Render(outcome);
-            Record(new ToolCallRecord(declaration.Definition.Name.Value, parameters, result, outcome.IsError));
+            Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, result, outcome.IsError));
 
             return new ValueTask<object?>(result);
         }

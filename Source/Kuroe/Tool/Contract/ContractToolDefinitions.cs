@@ -3,18 +3,18 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Tool.Contract;
 
-/// <summary>契约工具的定义：名字、说明与参数。引擎按名字放行，说明末尾附上本轮需交回的端口清单。</summary>
+/// <summary>契约工具的定义：路径、说明与参数。引擎按路径放行，说明末尾附上本轮需交回的端口清单。</summary>
 static class ContractToolDefinitions
 {
     /// <summary>交回命名端口内容的工具定义，有端口清单时写进说明。</summary>
     public static ToolDefinition Port(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
-        new ToolName(ContractTools.Port),
+        new ToolPath(ContractTools.Port),
         "提交本执行节点命名输出端口的内容。valuesJson 是端口名到文本的 JSON 对象，端口必须与声明一一对应。",
         [new ToolParameter(new ToolName("valuesJson"), "端口名到文本的 JSON 对象，端口必须与声明一一对应", Required: true)]), ports);
 
     /// <summary>声明本轮状态的工具定义，有端口清单时写进说明。</summary>
     public static ToolDefinition Status(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
-        new ToolName(ContractTools.Status),
+        new ToolPath(ContractTools.Status),
         "声明本执行节点这一轮的状态。status 取 completed 交付完毕或 blocked 无法完成，blocked 时必须给出 reason。",
         [
             new ToolParameter(new ToolName("status"), "completed 或 blocked", Required: true),

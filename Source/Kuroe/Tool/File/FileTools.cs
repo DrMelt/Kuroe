@@ -4,17 +4,11 @@ using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>文件访问工具面共用的分组、写入上限、工作目录边界与写回编码解析。</summary>
+/// <summary>文件访问工具面共用的写入上限、工作目录边界与写回编码解析。</summary>
 internal static class FileTools
 {
     /// <summary>一次写入的字符上限，超出整段拒绝。</summary>
     internal const int ContentLimit = 40000;
-
-    /// <summary>只读函数的工具路径分组。</summary>
-    internal static ToolPath ReadGroup { get; } = new("file/read");
-
-    /// <summary>改动文件的函数的工具路径分组。</summary>
-    internal static ToolPath WriteGroup { get; } = new("file/write");
 
     /// <summary>按工作目录建立路径解析的根边界。</summary>
     internal static FileScope Scope(string baseDirectory) => new(baseDirectory, "工作目录");

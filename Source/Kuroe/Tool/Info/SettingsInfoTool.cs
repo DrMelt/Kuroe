@@ -11,10 +11,9 @@ public sealed class SettingsInfoTool : ITool
 
     /// <summary>查看生效配置的函数定义。</summary>
     private static readonly ToolDefinition GetConfig = new(
-        new ToolName("GetConfig"),
+        new ToolPath("info/GetConfig"),
         "查看生效配置：各节设置项的生效值与来源标记。",
-        [],
-        InfoTools.Group);
+        []);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

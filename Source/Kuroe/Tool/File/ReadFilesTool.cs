@@ -14,10 +14,9 @@ public sealed class ReadFilesTool : ITool
 
     /// <summary>一次读取多个文件。</summary>
     private static readonly ToolDefinition ReadFiles = new(
-        new ToolName("ReadFiles"),
+        new ToolPath("file/read/ReadFiles"),
         "一次读取工作目录内的多个文本文件。paths 是相对工作目录的文件路径列表，结果按列表顺序分段交回。",
-        [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true)],
-        FileTools.ReadGroup);
+        [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true)]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

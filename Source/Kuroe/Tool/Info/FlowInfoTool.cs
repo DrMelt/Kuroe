@@ -16,17 +16,15 @@ public sealed class FlowInfoTool : ITool
 
     /// <summary>列出流程模板的函数定义。</summary>
     private static readonly ToolDefinition ListFlows = new(
-        new ToolName("ListFlows"),
+        new ToolPath("info/ListFlows"),
         "列出流程模板：流程名、执行节点路径与说明。",
-        [],
-        InfoTools.Group);
+        []);
 
     /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
-        new ToolName("GetFlow"),
+        new ToolPath("info/GetFlow"),
         "查看指定流程的展开节点表：模型、节点类型名与要求。",
-        [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
-        InfoTools.Group);
+        [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)]);
 
     /// <summary>用流程模板查询建立载体。</summary>
     public FlowInfoTool(IFlowCatalog flows)

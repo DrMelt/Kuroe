@@ -10,10 +10,9 @@ public sealed class CatalogInfoTool : ITool
 
     /// <summary>查看模型目录的函数定义。</summary>
     private static readonly ToolDefinition GetCatalog = new(
-        new ToolName("GetCatalog"),
+        new ToolPath("info/GetCatalog"),
         "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型与当前选中模型。",
-        [],
-        InfoTools.Group);
+        []);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

@@ -13,14 +13,13 @@ public sealed class ReadFileTool : ITool
 
     /// <summary>读取单个文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadFile = new(
-        new ToolName("ReadFile"),
+        new ToolPath("file/read/ReadFile"),
         "读取工作目录内文本文件指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
         [
             new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
-        ],
-        FileTools.ReadGroup);
+        ]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }

@@ -49,7 +49,7 @@ public sealed class CommandToolTests
         Assert.False(loaded.IsError);
 
         CommandToolDefinition diff = loaded.Value[0];
-        Assert.Equal("RunDiff", diff.Definition.Name.Value);
+        Assert.Equal(new ToolPath("RunDiff"), diff.Definition.Path);
         Assert.Equal(["git", "diff", "{path}"], diff.Template.Select(item => item.Text));
         Assert.Null(diff.Template[2].OmitWhenMissing);
         Assert.Single(diff.Definition.Parameters);
@@ -65,7 +65,7 @@ public sealed class CommandToolTests
     {
         CommandToolDefinition tool = new(
             new ToolDefinition(
-                new ToolName("RunDiff"),
+                new ToolPath("RunDiff"),
                 "说明",
                 [new ToolParameter(new ToolName("path"), "路径", Required: true)]),
             [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
@@ -82,7 +82,7 @@ public sealed class CommandToolTests
     {
         CommandToolDefinition tool = new(
             new ToolDefinition(
-                new ToolName("RunDeploy"),
+                new ToolPath("RunDeploy"),
                 "说明",
                 [new ToolParameter(new ToolName("env"), "环境"), new ToolParameter(new ToolName("files"), "文件", List: true, Required: true)]),
             [new CommandToolTemplateItem("--env={env}", "env"), new CommandToolTemplateItem("--noop", null)],
@@ -114,12 +114,23 @@ public sealed class CommandToolTests
     }
 
     [Fact]
-    public void Load_defaults_path_to_function_name()
+    public void Load_accepts_the_same_name_in_different_groups()
     {
-        CommandToolDefinition tool = new(new ToolDefinition(new ToolName("RunDiff"), "说明", []), Items(["x"]), null, 5, 200);
+        string file = Write("""
+            {
+              "Tools": [
+                { "Name": "RunDiff", "Group": "git", "Template": ["git", "diff"] },
+                { "Name": "RunDiff", "Group": "hg", "Template": ["hg", "diff"] }
+              ]
+            }
+            """);
 
-        Assert.Equal(new ToolPath("RunDiff"), tool.Definition.Path);
-        Assert.Equal(new ToolPath("RunDiff"), new CommandTool(tool, Path.GetTempPath()).Functions[0].Definition.Path);
+        ErrorOr<IReadOnlyList<CommandToolDefinition>> loaded = CommandToolStore.Load(file, Path.GetTempPath());
+
+        Assert.False(loaded.IsError);
+        Assert.Equal(
+            [new ToolPath("git/RunDiff"), new ToolPath("hg/RunDiff")],
+            loaded.Value.Select(tool => tool.Definition.Path));
     }
 
     [Theory]
@@ -134,7 +145,7 @@ public sealed class CommandToolTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["  "] } ] }""", "模板项不能为空字符串")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "  "] } ] }""", "模板项不能为空字符串")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Directory": "bad\u0000dir" } ] }""", "Directory bad\u0000dir 无法解析")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"] }, { "Name": "A", "Template": ["y"] } ] }""", "名字重复")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"] }, { "Name": "A", "Template": ["y"] } ] }""", "路径重复")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", null] } ] }""", "模板项不能是 null")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [null] } ] }""", "参数条目是 null")]
     [InlineData("""{ "Tools": [ null ] }""", "工具条目是 null")]
@@ -228,7 +239,7 @@ public sealed class CommandToolTests
 
         // 数组项含空格且无占位符时整体是一个参数项，不做拆分
         string result = Invoke(new CommandTool(
-            new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
             Path.GetTempPath()), []);
 
         Assert.Contains("开始 结束", result);
@@ -290,7 +301,7 @@ public sealed class CommandToolTests
         }
 
         CommandTool tool = new(
-            new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
             Path.GetTempPath());
 
         Assert.Contains("未结束，已终止", Invoke(tool, []));
@@ -479,11 +490,11 @@ public sealed class CommandToolTests
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
     private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", parameters), Items(template), null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), Items(template), null, 5, 200),
             Path.GetTempPath());
 
     private static CommandTool ConfiguredTool(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", parameters), template, null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), template, null, 5, 200),
             Path.GetTempPath());
 
     private static IReadOnlyList<CommandToolTemplateItem> Items(IEnumerable<string> texts) =>

@@ -2,29 +2,16 @@ using Xunit;
 
 namespace Kuroe.Tool.Tests;
 
-/// <summary>工具路径：按函数名与可选分组派生出完整路径，白名单条目按前缀放行，路径格式在入口校验。</summary>
+/// <summary>工具路径：既是模型调用名，也是白名单匹配的原文，末段是函数名；格式在入口校验。</summary>
 public sealed class ToolPathTests
 {
     [Fact]
-    public void Path_without_group_is_the_function_name()
+    public void Name_is_the_last_segment()
     {
-        ToolPath path = ToolPath.Of(new ToolName("GetTime"));
-
-        Assert.Equal(new ToolPath("GetTime"), path);
-        Assert.Equal("GetTime", path.ToString());
+        Assert.Equal(new ToolName("GetTime"), new ToolPath("GetTime").Name);
+        Assert.Equal(new ToolName("ReadFile"), new ToolPath("file/read/ReadFile").Name);
+        Assert.Equal(new ToolName(string.Empty), new ToolPath(string.Empty).Name);
     }
-
-    [Fact]
-    public void Path_with_group_prefixes_the_function_name()
-    {
-        ToolPath path = ToolPath.Of(new ToolName("ReadFile"), new ToolPath("file"));
-
-        Assert.Equal(new ToolPath("file/ReadFile"), path);
-    }
-
-    [Fact]
-    public void Blank_group_is_the_same_as_no_group() =>
-        Assert.Equal(new ToolPath("GetTime"), ToolPath.Of(new ToolName("GetTime"), new ToolPath(string.Empty)));
 
     [Theory]
     [InlineData("info", "info")]
