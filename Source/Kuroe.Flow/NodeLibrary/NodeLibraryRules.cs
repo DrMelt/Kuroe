@@ -82,7 +82,7 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Label.Value, "容器节点必须声明子节点。"));
                 }
 
-                if (node.Execution is not null)
+                if (node.Spec is not null)
                 {
                     errors.Add(NodeScope.Library.Node(node.Label.Value, "容器不能同时声明执行配置。"));
                 }
@@ -126,17 +126,17 @@ internal static class NodeLibraryRules
                     errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点不声明模型槽位，槽位声明只属于容器。"));
                 }
 
-                if (node.Execution is null)
+                if (node.Spec is null)
                 {
                     errors.Add(NodeScope.Library.Node(node.Label.Value, "节点必须声明执行配置。"));
                 }
 
-                if (ShapeOf(node) is { DispatchesRuns: false })
+                if (ShapeOf(node) is { DispatchesExecutions: false })
                 {
                     if (node.Model is not null)
                     {
                         errors.Add(NodeScope.Library.Node(node.Label.Value,
-                            $"{KindName(node)}成员不启动 run，不声明模型槽位。"));
+                            $"{KindName(node)}成员不启动执行，不声明模型槽位。"));
                     }
                 }
                 else
@@ -194,9 +194,9 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Type。"));
         }
 
-        if (node.Execution?.MaxRuns is { } limit && limit < 1)
+        if (node.Spec?.MaxExecutions is { } limit && limit < 1)
         {
-            errors.Add(NodeScope.Library.Node(node.Label.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
         ValidateInterface(node, errors);
@@ -207,7 +207,7 @@ internal static class NodeLibraryRules
     {
         NodeInterfaceRules.Check(node, ShapeOf(node), message => errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
 
-        if ((node.Execution is null || ShapeOf(node) is { DispatchesRuns: false }) && node.Outputs.Count > 1)
+        if ((node.Spec is null || ShapeOf(node) is { DispatchesExecutions: false }) && node.Outputs.Count > 1)
         {
             errors.Add(NodeScope.Library.Node(node.Label.Value, "非执行节点最多一个输出端口。"));
         }
@@ -222,9 +222,9 @@ internal static class NodeLibraryRules
         List<Error> errors,
         bool checkSlots)
     {
-        if (container.MaxRuns is { } limit && limit < 1)
+        if (container.MaxExecutions is { } limit && limit < 1)
         {
-            errors.Add(NodeScope.Library.Node(container.Label.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(container.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
         var subtreeLabels = new HashSet<NodeLabel>();
@@ -352,11 +352,11 @@ internal static class NodeLibraryRules
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node.Execution is not null)
+            if (node.Spec is not null)
             {
                 outputs[node.Label] = node.Outputs;
             }
-            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) && definition.Execution is not null)
+            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) && definition.Spec is not null)
             {
                 outputs[node.Label] = definition.Outputs;
             }
@@ -392,7 +392,7 @@ internal static class NodeLibraryRules
     }
 
     /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
-    /// 上下文端口不落在不产出上下文端口的节点上，WorkItems 端口不透出。</summary>
+    /// 上下文端口不落在不产出上下文端口的节点上。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
         IReadOnlyDictionary<PortName, ContainerOutput> outs,
@@ -411,7 +411,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配帧，Text 端口透出命名段
+            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配上下文，Text 端口透出命名段
             if (!subtreeLabels.Contains(sourceLabel))
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
@@ -437,13 +437,6 @@ internal static class NodeLibraryRules
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不产出上下文端口，不能作为上下文端口来源。"));
-                continue;
-            }
-
-            if (memberPort.Type == Flow.PortType.WorkItems)
-            {
-                errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
             }
         }
     }
@@ -508,28 +501,28 @@ internal static class NodeLibraryRules
                 errors.Add(NodeScope.Library.Node(member.Label.Value, $"引用的节点 {use} 不在节点库。"));
             }
 
-            if (member.Execution is not null || member.Nodes is not null)
+            if (member.Spec is not null || member.Nodes is not null)
             {
                 errors.Add(NodeScope.Library.Node(member.Label.Value, "引用成员不能同时声明执行配置或子节点。"));
             }
         }
-        else if (member.Execution is not null && member.Nodes is { Count: > 0 })
+        else if (member.Spec is not null && member.Nodes is { Count: > 0 })
         {
             errors.Add(NodeScope.Library.Node(member.Label.Value, "成员不能同时声明执行配置与子节点。"));
         }
-        else if (member.Execution is null && member.Nodes is not { Count: > 0 })
+        else if (member.Spec is null && member.Nodes is not { Count: > 0 })
         {
             errors.Add(NodeScope.Library.Node(member.Label.Value, "成员必须声明执行配置或子节点或引用。"));
         }
 
-        if (member.Use is not null && member.MaxRuns is { } referenceLimit && referenceLimit < 1)
+        if (member.Use is not null && member.MaxExecutions is { } referenceLimit && referenceLimit < 1)
         {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
-        if (member.Use is null && member.Execution is { MaxRuns: { } executionLimit } && executionLimit < 1)
+        if (member.Use is null && member.Spec is { MaxExecutions: { } executionLimit } && executionLimit < 1)
         {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxRuns 必须是正整数。"));
+            errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
         foreach (PortRef reference in member.From.SelectMany(group => group.Links).Select(link => link.Ref))
@@ -581,7 +574,7 @@ internal static class NodeLibraryRules
                 return;
             }
 
-            if (ShapeOf(referenced) is { DispatchesRuns: false })
+            if (ShapeOf(referenced) is { DispatchesExecutions: false })
             {
                 if (member.Model is not null)
                 {
@@ -592,12 +585,12 @@ internal static class NodeLibraryRules
                 return;
             }
         }
-        else if (ShapeOf(member) is { DispatchesRuns: false })
+        else if (ShapeOf(member) is { DispatchesExecutions: false })
         {
             if (member.Model is not null)
             {
                 errors.Add(NodeScope.Library.Node(member.Label.Value,
-                    $"{KindName(member)}成员不启动 run，不声明模型槽位。"));
+                    $"{KindName(member)}成员不启动执行，不声明模型槽位。"));
             }
 
             return;

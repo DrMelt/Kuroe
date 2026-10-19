@@ -39,13 +39,12 @@ public sealed class SnapshotTests
         Assert.Equal(3, snapshot.OrdinalOf(NodePath.Of("Start")));
     }
 
-    private static ExecutableStateSnapshot State(NodePath node, NodeState state) =>
-        new(node, state, [], 0, []);
+    private static ExecutableStateSnapshot State(NodePath node, NodeState state) => new(node, state);
 
     private static class TaskBuilder
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
-            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0, new Dictionary<NodePath, WorkItemList>(),
+            new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0,
             [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
@@ -60,8 +59,8 @@ public sealed class SnapshotTests
             Type = ContainerNodeTypes.Type,
             Nodes =
             [
-                new NodeSpec { Label = new NodeLabel("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
-                new NodeSpec { Label = new NodeLabel("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Execution = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Spec = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Spec = new ExecutableSpec() },
             ],
         });
 
@@ -75,19 +74,19 @@ public sealed class SnapshotTests
         {
             Path = NodePath.Of("制定计划"),
             Type = TestNodeTypes.Executable,
-            Execution = new ExecutableSpec { Mode = NodeMode.Single },
+            Spec = new ExecutableSpec(),
             Model = Planner,
             Outputs = [],
-            MaxRuns = 100,
+            MaxExecutions = 100,
         },
         new ExecutableNode
         {
             Path = NodePath.Of("实施"),
             Type = TestNodeTypes.Executable,
-            Execution = new ExecutableSpec { Mode = NodeMode.Single },
+            Spec = new ExecutableSpec(),
             Model = Planner,
             Outputs = [],
-            MaxRuns = 100,
+            MaxExecutions = 100,
         },
     ], []);
 }

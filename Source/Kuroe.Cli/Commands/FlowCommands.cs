@@ -98,27 +98,25 @@ internal sealed class FlowCommands(
             return;
         }
 
-        Grid grid = Terminal.Columns(6, wrapColumns: 6);
+        Grid grid = Terminal.Columns(5, wrapColumns: 5);
         grid.AddRow(
             new Text("序号", Styles.Hint),
             new Text("执行节点", Styles.Hint),
             new Text("模型", Styles.Hint),
             new Text("类型", Styles.Hint),
-            new Text("展开", Styles.Hint),
             new Text("上游与要求", Styles.Hint));
 
         int index = 0;
         foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.RootNode))
         {
-            if (node.Execution is { } executable)
+            if (node.Spec is not null)
             {
                 grid.AddRow(
                     new Text($"{index + 1}", Styles.Key),
                     new Text(new string(' ', depth * 2) + node.Label.Value),
                     new Text(node.Model?.Value ?? "—"),
                     new Text(node.EffectiveKind.Value),
-                    new Text(ViewLabels.Of(executable.Mode)),
-                    new Text(Requirement(node, executable), Styles.Hint));
+                    new Text(Requirement(node), Styles.Hint));
                 index++;
             }
             else if (node.Nodes is { Count: > 0 })
@@ -127,7 +125,6 @@ internal sealed class FlowCommands(
                     new Text(string.Empty),
                     new Text(new string(' ', depth * 2) + node.Label),
                     new Text("容器", Styles.Hint),
-                    new Text(string.Empty),
                     new Text(string.Empty),
                     new Text(string.Empty));
             }
@@ -177,15 +174,10 @@ internal sealed class FlowCommands(
     private static string StartPort(Port port) =>
         port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
 
-    private static string Requirement(NodeSpec node, ExecutableSpec executable)
+    private static string Requirement(NodeSpec node)
     {
         LlmParameters? parameters = NodeParameterView.Llm(node.Type);
         List<string> parts = [];
-        if (executable.Branch is { } branch)
-        {
-            parts.Add($"分支 {branch}");
-        }
-
         if (parameters?.Tools is { Count: > 0 } tools)
         {
             parts.Add($"工具 {string.Join("、", tools)}");

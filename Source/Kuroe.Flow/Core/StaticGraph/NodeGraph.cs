@@ -92,18 +92,9 @@ public sealed class NodeGraph : INodeGraph
     public PortType TypeOf(NodePath node, PortName port) =>
         this[node] switch
         {
-            ExecutableNode executable => FeedRules.TypeOf(executable, port),
+            ExecutableNode executable => executable.FindPort(port)?.Type ?? PortType.Text,
             StartNode start => start.FindPort(port)?.Type ?? PortType.Text,
             _ => PortType.Text,
-        };
-
-    /// <summary>执行节点的条目空间：实例条目归属的拆分来源。自身取方案的拆分来源，按条目对齐的沿对齐来源递推到源拆分。</summary>
-    public NodePath? ItemSpace(NodePath executable) =>
-        PlanOf(executable) switch
-        {
-            { SplitSource: { } split } => split,
-            { } plan => plan.AlignedSources.Select(ItemSpace).FirstOrDefault(space => space is not null),
-            _ => null,
         };
 
     /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。

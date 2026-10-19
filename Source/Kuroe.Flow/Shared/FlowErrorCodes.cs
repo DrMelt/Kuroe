@@ -6,8 +6,8 @@ public static class FlowErrorCodes
     /// <summary>任务号不存在。</summary>
     public const string TaskNotFound = "Task.NotFound";
 
-    /// <summary>run 号不存在。</summary>
-    public const string RunNotFound = "Run.NotFound";
+    /// <summary>执行号不存在。</summary>
+    public const string ExecutionNotFound = "Execution.NotFound";
 
     /// <summary>流程名不存在。</summary>
     public const string FlowNotFound = "Flow.NotFound";

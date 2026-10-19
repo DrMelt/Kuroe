@@ -40,17 +40,16 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_show_lists_every_split_source_in_node_table_order()
+    public void Task_show_prints_the_node_table()
     {
-        using CliSession cli = new(flowsJson: TestFlows.TwoSplitFlow);
+        using CliSession cli = new();
         cli.Tasks.Run(["/task", "new", "目标"]);
         Assert.Equal(TaskState.Done, cli.Environment.Settle(new TaskId(1)).State);
 
         cli.Tasks.Run(["/task", "show", "1"]);
 
-        int first = cli.Output.Output.IndexOf("在节点「整体/计划甲」交回", StringComparison.Ordinal);
-        int second = cli.Output.Output.IndexOf("在节点「整体/计划乙」交回", StringComparison.Ordinal);
-        Assert.True(first >= 0 && second > first, cli.Output.Output);
+        Assert.Contains("制定计划", cli.Output.Output);
+        Assert.Contains("分配执行", cli.Output.Output);
     }
 
     [Fact]
@@ -81,7 +80,7 @@ public sealed class TaskAndReplTests
     [Fact]
     public void Task_approve_targets_a_named_approval_node()
     {
-        using CliSession cli = new(flowsJson: TestFlows.ReviewPerItemFlow);
+        using CliSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
         TaskSnapshot parked = cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Running, parked.State);
@@ -136,8 +135,8 @@ public sealed class TaskAndReplTests
 
         Assert.Contains(cli.Environment.Snapshot(new TaskId(1)).Executables
             .Single(entry => entry.Executable.Label.Value == "实施")
-            .Runs.Single().Context.Seed,
-            message => message.Text.Contains("用户输入 需要 补充多语言"));
+            .Executions.Single().Input.Inputs,
+            value => value.Text.Contains("用户输入 需要 补充多语言"));
     }
 
     [Fact]
@@ -229,17 +228,16 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_run_prints_the_context_and_process()
+    public void Task_execution_prints_the_context_and_process()
     {
         using CliSession cli = new();
         cli.Tasks.Run(["/task", "new", "补齐 README"]);
         cli.Environment.Settle(new TaskId(1));
 
-        cli.Tasks.Run(["/task", "run", "1"]);
+        cli.Tasks.Run(["/task", "execution", "1"]);
 
-        Assert.Contains("run #1", cli.Output.Output);
-        Assert.Contains("指令：", cli.Output.Output);
-        Assert.Contains("上下文来源", cli.Output.Output);
+        Assert.Contains("执行 #1", cli.Output.Output);
+        Assert.Contains("输入取值", cli.Output.Output);
         Assert.Contains("过程：", cli.Output.Output);
     }
 
@@ -272,9 +270,9 @@ public sealed class TaskAndReplTests
     public void Task_stop_cancels_the_task()
     {
         using CliSession cli = new();
-        cli.Environment.Executor.DelayMs = 20000;
+        cli.Environment.Runner.DelayMs = 20000;
         cli.Tasks.Run(["/task", "new", "长任务"]);
-        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveRuns > 0);
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
         cli.Tasks.Run(["/task", "stop", "1"]);
 
@@ -283,16 +281,16 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_stop_run_cancels_a_single_run()
+    public void Task_stop_execution_cancels_a_single_execution()
     {
         using CliSession cli = new();
-        cli.Environment.Executor.DelayMs = 20000;
+        cli.Environment.Runner.DelayMs = 20000;
         cli.Tasks.Run(["/task", "new", "长任务"]);
-        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveRuns > 0);
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
-        cli.Tasks.Run(["/task", "stop", "run", "1"]);
+        cli.Tasks.Run(["/task", "stop", "execution", "1"]);
 
-        Assert.Contains("run #1 已取消。", cli.Output.Output);
+        Assert.Contains("执行 #1 已取消。", cli.Output.Output);
     }
 
     [Fact]

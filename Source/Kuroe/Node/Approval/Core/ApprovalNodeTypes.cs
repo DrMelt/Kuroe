@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Node.Approval;
 
-/// <summary>审批节点类型的对外入口：类型名、静态形状与实例建立。审批节点不启动 run，批准后按输入端口转发产出。</summary>
+/// <summary>审批节点类型的对外入口：类型名、静态形状与实例建立。审批节点不启动执行，批准后按输入端口转发产出。</summary>
 public static class ApprovalNodeTypes
 {
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>

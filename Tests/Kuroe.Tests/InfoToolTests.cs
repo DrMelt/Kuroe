@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Execution.Runs;
+using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
@@ -55,21 +55,6 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("目标：", output);
     }
 
-    [Fact]
-    public void GetTask_lists_every_split_source_in_node_table_order()
-    {
-        using TestEnvironment environment = TestEnvironment.Create(TestFlows.TwoSplitFlow);
-        TaskId id = environment.Submit("目标");
-        environment.Settle(id);
-
-        TaskInfoTool tool = new(environment.Registry);
-        string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
-
-        int first = output.IndexOf("在节点「整体/计划甲」交回", StringComparison.Ordinal);
-        int second = output.IndexOf("在节点「整体/计划乙」交回", StringComparison.Ordinal);
-        Assert.True(first >= 0 && second > first, output);
-    }
-
     [Theory]
     [InlineData("x", "任务号要写成数字")]
     [InlineData("99", "没有任务 #99")]
@@ -83,52 +68,52 @@ public sealed class InfoToolTests : IDisposable
     }
 
     [Fact]
-    public void GetRun_describes_run_and_result()
+    public void GetExecution_describes_execution_and_process()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("做一个测试任务");
         environment.Settle(id);
 
-        RunId runId = environment.Snapshot(id).Executables.SelectMany(node => node.Runs).First().Id;
+        ExecutionId executionId = environment.Snapshot(id).Executables.SelectMany(node => node.Executions).First().Id;
         TaskInfoTool tool = new(environment.Registry);
-        string output = Call(tool, "GetRun", ("runId", runId.Value.ToString()));
+        string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));
 
-        Assert.Contains(runId.ToString(), output);
-        Assert.Contains("结论：", output);
+        Assert.Contains(executionId.ToString(), output);
+        Assert.Contains("过程：", output);
     }
 
     [Fact]
-    public void GetRun_rejects_bad_arguments()
+    public void GetExecution_rejects_bad_arguments()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskInfoTool tool = new(environment.Registry);
 
-        Assert.Contains("run号要写成数字", Call(tool, "GetRun", ("runId", "x")));
-        Assert.Contains("没有 run", Call(tool, "GetRun", ("runId", "99")));
+        Assert.Contains("执行号要写成数字", Call(tool, "GetExecution", ("executionId", "x")));
+        Assert.Contains("没有执行", Call(tool, "GetExecution", ("executionId", "99")));
     }
 
     [Fact]
-    public void Run_state_attaches_ongoing_tool_call_progress()
+    public void Execution_state_attaches_ongoing_tool_call_progress()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.DelayMs = 60_000;
+        environment.Runner.DelayMs = 60_000;
 
         TaskId id = environment.Submit("做一个测试任务");
-        environment.Wait(id, snapshot => snapshot.LiveRuns > 0);
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
 
-        RunId runId = environment.Snapshot(id).Executables
-            .SelectMany(node => node.Runs)
-            .First(run => !run.IsSettled)
+        ExecutionId executionId = environment.Snapshot(id).Executables
+            .SelectMany(node => node.Executions)
+            .First(execution => !execution.State.IsSettled())
             .Id;
-        Run run = environment.Registry.FindRun(runId).Value;
-        run.MarkRunning();
-        run.Report("调用工具 files/ReadFile");
+        Execution execution = environment.Registry.FindExecution(executionId).Value;
+        execution.MarkRunning();
+        execution.Report("调用工具 files/ReadFile");
 
         TaskInfoTool tool = new(environment.Registry);
 
         Assert.Contains("执行中（调用工具 files/ReadFile）",
-            Call(tool, "GetRun", ("runId", runId.Value.ToString())));
+            Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
         Assert.Contains("执行中（调用工具 files/ReadFile）",
             Call(tool, "GetTask", ("taskId", id.Value.ToString())));
     }

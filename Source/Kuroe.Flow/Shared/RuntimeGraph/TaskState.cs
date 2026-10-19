@@ -1,15 +1,15 @@
 namespace Kuroe.Flow.Shared.RuntimeGraph;
 
-/// <summary>任务的整体状态，由取消标记、各工作单元与在跑的 run 汇总得出，不单独维护。</summary>
+/// <summary>任务的整体状态，由取消标记、各执行节点与在跑的执行汇总得出，不单独维护。</summary>
 public enum TaskState
 {
-    /// <summary>有 run 在跑或排队。</summary>
+    /// <summary>有执行在跑或排队。</summary>
     Running,
 
-    /// <summary>有单元被阻塞，任务不再自动推进。</summary>
+    /// <summary>有执行节点被阻塞，任务不再自动推进。</summary>
     Blocked,
 
-    /// <summary>全部单元走完流程。</summary>
+    /// <summary>全部执行节点走完流程。</summary>
     Done,
 
     /// <summary>已取消。</summary>

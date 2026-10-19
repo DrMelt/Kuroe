@@ -1,16 +1,16 @@
 using Kuroe.Node.Input;
 using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Tool;
-using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Node.Llm;
+using Kuroe.Node.Llm.Executions;
 using Kuroe.Tool.Info;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.Flows;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.InputChannel;
 using Microsoft.Extensions.AI;
 using Xunit;
@@ -47,7 +47,7 @@ public sealed class DialogueTests
         NodeSpec reply = DialogueFlow.Build(Inputs).RootNode.Nodes![1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
-        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"], parameters.SystemPrompt);
+        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按工具说明执行。"], parameters.SystemPrompt);
         Assert.Null(parameters.Prompt);
     }
 
@@ -74,12 +74,10 @@ public sealed class DialogueTests
             new SampleTool(),
         ],
         new ToolJson());
-        TurnScope scope = Scope();
-
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), DialogueFlow.Tools);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), DialogueFlow.Tools);
 
         Assert.Equal(
-            ["GetLocalTime", "ListTasks", "GetTask", "GetRun"],
+            ["GetLocalTime", "ListTasks", "GetTask", "GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -93,12 +91,10 @@ public sealed class DialogueTests
             new SampleTool(),
         ],
         new ToolJson());
-        TurnScope scope = Scope();
-
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info")]);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info")]);
 
         Assert.Equal(
-            ["ListTasks", "GetTask", "GetRun"],
+            ["ListTasks", "GetTask", "GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -111,9 +107,7 @@ public sealed class DialogueTests
             new TaskInfoTool(new TaskRegistry()),
         ],
         new ToolJson());
-        TurnScope scope = Scope();
-
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("info/GetTask")]);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info/GetTask")]);
 
         Assert.Equal(["GetTask"], built.Select(tool => tool.Name));
     }
@@ -122,22 +116,13 @@ public sealed class DialogueTests
     public void Whitelist_with_similar_prefix_does_not_match_group()
     {
         ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())], new ToolJson());
-        TurnScope scope = Scope();
-
-        IReadOnlyList<AITool> built = tools.Build(scope, new NullSink(), [new ToolPath("infoX")]);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("infoX")]);
 
         Assert.Empty(built);
     }
 
-    private static TurnScope Scope() => new()
-    {
-        Task = new TaskId(1),
-        Run = new RunId(1),
-        Node = NodePath.Of(DialogueFlow.ReplyNodeLabel.Value),
-        ItemIndex = null,
-        Journal = new TurnJournal(),
-        Sink = new NullSink(),
-    };
+    /// <summary>工具面构造只取身份、播发出口与记录，本组测试不看过程内容。</summary>
+    private static readonly NullSink NoSink = new();
 
     private sealed class SampleTool : ITool
     {
@@ -147,7 +132,7 @@ public sealed class DialogueTests
         ];
     }
 
-    private sealed class NullSink : ITurnSink
+    private sealed class NullSink : IProcessSink
     {
         public void OnText(string delta)
         {

@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.StaticGraph;
 namespace Kuroe.Flow.Shared.RuntimeGraph;
 
 /// <summary>引擎给节点实现的机制入口：读图与来源、取输入侧方案、记消费账、通知下游。读写要求持有任务 Gate。</summary>
-public interface INodeContext : IExecutionSources
+public interface INodeContext : IReadinessSources
 {
     /// <summary>任务的流程编译视图。</summary>
     INodeGraph Graph { get; }

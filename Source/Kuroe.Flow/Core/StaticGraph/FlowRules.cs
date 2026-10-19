@@ -181,7 +181,7 @@ public static class FlowRules
                 errors.Add(scope.Node(node.Label.Value, "容器节点不是执行节点，不支持 From。"));
             }
         }
-        else if (node.Execution is not null)
+        else if (node.Spec is not null)
         {
             INodeType? definition = node.Type;
             NodeTypeShape? shape = definition?.Shape;
@@ -194,8 +194,8 @@ public static class FlowRules
             }
             else
             {
-                // 不派发 run 的类型不需要模型选择
-                if (shape.DispatchesRuns)
+                // 不派发执行的类型不需要模型选择
+                if (shape.DispatchesExecutions)
                 {
                     if (node.Model is not { } model)
                     {
@@ -258,7 +258,7 @@ public static class FlowRules
         }
     }
 
-    /// <summary>容器输出端口绑定与来源端口在展平后的图上校验：绑定目标必须是容器子树内声明该端口的执行节点，容器不透出 WorkItems 端口。</summary>
+    /// <summary>容器输出端口绑定与来源端口在展平后的图上校验：绑定目标必须是容器子树内声明该端口的执行节点。</summary>
     private static void CheckContainerBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (ContainerNode container in graph.Containers)
@@ -284,23 +284,16 @@ public static class FlowRules
                     continue;
                 }
 
-                if (member.FindPort(target.Port) is not { } memberPort)
+                if (member.FindPort(target.Port) is null)
                 {
                     errors.Add(scope.Node(container.Path.Value,
                         $"容器输出端口 {port.Value} 的绑定目标节点 {target.Node} 没有输出端口 {target.Port.Value}。"));
-                    continue;
-                }
-
-                if (memberPort.Type == Flow.PortType.WorkItems)
-                {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标是 WorkItems 端口，容器不透出 WorkItems 端口。"));
                 }
             }
         }
     }
 
-    /// <summary>一条边的来源侧校验：来源端口必须声明存在，容器成员不能被容器外直接引用，Context 输入来源必须是产出上下文的非按条目执行节点。</summary>
+    /// <summary>一条边的来源侧校验：来源端口必须声明存在，容器成员不能被容器外直接引用，Context 输入来源必须产出上下文端口。</summary>
     private static void CheckEdgeSource(NodeGraph graph, FlowEdge edge, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
         GraphNode source = graph[edge.Source];
@@ -354,18 +347,12 @@ public static class FlowRules
         }
     }
 
-    /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口，且不按条目展开。</summary>
+    /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口。</summary>
     private static void CheckContextSource(NodeGraph graph, ExecutableNode source, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
         if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(Flow.PortType.Context))
         {
             errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不产出上下文端口。"));
-            return;
-        }
-
-        if (source.Execution.Mode == Flow.NodeMode.PerItem)
-        {
-            errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不能是按条目展开的节点。"));
         }
     }
 
@@ -387,7 +374,7 @@ public static class FlowRules
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node.Execution is not null)
+            if (node.Spec is not null)
             {
                 return true;
             }
@@ -408,7 +395,7 @@ public static class FlowRules
     /// <summary>输出校验的取值边界：参数必要性、正则合法性。</summary>
     private static void CheckValidation(NodeSpec node, NodeScope scope, List<Error> errors)
     {
-        OutputValidation? validation = node.Execution?.Validate;
+        OutputValidation? validation = node.Spec?.Validate;
         if (validation is null)
         {
             return;
@@ -454,11 +441,10 @@ public static class FlowRules
         }
     }
 
-    /// <summary>展平后的图规则：见环合法性、从开始的可达性、逐条对齐的形态与组间来源端口不重复。执行直接按边推进。</summary>
+    /// <summary>展平后的图规则：见环合法性、从开始的可达性与组间来源端口不重复。执行直接按边推进。</summary>
     private static void CheckShape(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         CheckLoops(graph, scope, errors);
-        CheckAlignment(graph, scope, errors);
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
         CheckContainerBindings(graph, scope, errors);
@@ -470,75 +456,14 @@ public static class FlowRules
                 continue;
             }
 
-            GraphNode source = graph[edge.Source];
             CheckEdgeSource(graph, edge, target, scope, errors);
-
-            if (target.Execution.Mode == Flow.NodeMode.Single
-                && source is ExecutableNode { Execution.Mode: Flow.NodeMode.PerItem }
-                && target.HasWorkItemsPort)
-            {
-                errors.Add(scope.Node(target.Label.Value, "声明 WorkItems 端口的执行节点不能从按条目展开的执行节点取输入。"));
-            }
-
-            if (graph.TypeOf(edge.Source, edge.SourcePort) == Flow.PortType.WorkItems
-                && edge.Role != EdgeKind.Split
-                && edge.Type != Flow.PortType.Signal)
-            {
-                errors.Add(scope.Node(target.Label.Value, "WorkItems 端口只能被按条目展开的执行节点消费，或作 Signal 驱动。"));
-            }
-
-            if (edge.Scope == FeedScope.Item
-                && graph.ItemSpace(edge.Source) is { } fromSpace
-                && graph.ItemSpace(edge.Target) is { } toSpace
-                && fromSpace != toSpace)
-            {
-                errors.Add(scope.Node(target.Label.Value, "逐条对齐的两端必须来自同一个拆分。"));
-            }
-
-            if (target.Execution.Branch is { } branch
-                && (target.Execution.Mode != Flow.NodeMode.PerItem || graph.PlanOf(target.Path)?.SplitSource is null))
-            {
-                errors.Add(scope.Node(target.Path.Value, $"声明分支 {branch} 的执行节点必须按条目展开并从声明 WorkItems 端口的执行节点取拆分。"));
-            }
-        }
-
-        // 按条目展开必须能确定实例集：从声明 WorkItems 端口的执行节点取拆分，或从其它展开执行节点取对齐
-        foreach (ExecutableNode executable in graph.ExecutableNodes)
-        {
-            if (executable.Execution.Mode != Flow.NodeMode.PerItem)
-            {
-                continue;
-            }
-
-            int splitSources = graph.Incoming(executable.Path)
-                .Where(edge => edge.Role == EdgeKind.Split)
-                .Select(edge => edge.Source)
-                .Distinct()
-                .Count();
-            if (splitSources > 1)
-            {
-                errors.Add(scope.Node(executable.Path.Value, "按条目展开的执行节点只能有一个拆分来源，多个来源的条目无法归属同一个实例空间。"));
-            }
-
-            bool expandable = executable.Incoming.Any(edge =>
-                edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item);
-            if (!expandable)
-            {
-                // 容器来源只供整份上下文，不提供实例集，单独出现时节点永远无法展开
-                string reason = executable.Incoming.Any(edge => graph[edge.Source] is ContainerNode)
-                    ? "按条目展开的执行节点不能从容器取实例集，请引用声明 WorkItems 端口的执行节点或其它展开执行节点。"
-                    : "按条目展开的执行节点必须从声明 WorkItems 端口的执行节点或其它展开执行节点取输入。";
-                errors.Add(scope.Node(executable.Path.Value, reason));
-            }
         }
     }
 
-    /// <summary>组间来源端口不重复：同一来源端口作为启动条件只能落在一个组里，跨组出现即多组同时齐备。
-    /// 为按条目目标提供实例空间的连接不驱动启动，每个组都要写它，不受此限。</summary>
+    /// <summary>组间来源端口不重复：同一来源端口作为启动条件只能落在一个组里，跨组出现即多组同时齐备。</summary>
     private static void CheckGroupSources(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (IGrouping<(NodePath Target, NodePath Source, PortName SourcePort), FlowEdge> group in graph.Edges
-            .Where(edge => edge.Role != EdgeKind.Split)
             .GroupBy(edge => (edge.Target, edge.Source, edge.SourcePort)))
         {
             if (group.Select(edge => edge.Group).Distinct().Count() < 2
@@ -592,7 +517,7 @@ public static class FlowRules
     }
 
     /// <summary>引用环的启动不变量：环必须有环外来源或环内输入节点，否则环内节点永远等不到启动条件，任务无法推进。
-    /// 开始是流程级来源，输入节点每轮从外部接收回答，两者都构成周期性外源。整节点依赖构成的迭代环若可启动则合法。</summary>
+    /// 开始是流程级来源，输入节点每轮从外部接收回答，两者都构成周期性外源。节点依赖构成的迭代环若可启动则合法。</summary>
     private static void CheckLoops(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (FlowEdge edge in graph.Edges)
@@ -624,47 +549,6 @@ public static class FlowRules
                 errors.Add(scope.Node(representative.Path.Value,
                     "引用环没有环外来源且环内没有输入节点，任务无法启动。"));
             }
-        }
-    }
-
-    /// <summary>逐条对齐的引用必须无环：按条目展开的实例空间沿对齐来源递推，环里的对齐会让它递归不止。
-    /// 整节点依赖构成的环由运行时自然迭代，不在此拒绝。</summary>
-    private static void CheckAlignment(NodeGraph graph, NodeScope scope, List<Error> errors)
-    {
-        var indegree = new Dictionary<NodePath, int>();
-        var outgoing = new Dictionary<NodePath, List<NodePath>>();
-        foreach (NodePath path in graph.ExecutableNodes.Select(node => node.Path))
-        {
-            indegree[path] = 0;
-            outgoing[path] = [];
-        }
-
-        foreach (FlowEdge edge in graph.Edges.Where(edge => edge.Role == EdgeKind.Split || edge.Scope == FeedScope.Item))
-        {
-            foreach (NodePath source in graph.ExecutablesIn(edge.Source))
-            {
-                indegree[edge.Target]++;
-                outgoing[source].Add(edge.Target);
-            }
-        }
-
-        var ready = new Queue<NodePath>(indegree.Where(entry => entry.Value == 0).Select(entry => entry.Key));
-        int visited = 0;
-        while (ready.TryDequeue(out NodePath current))
-        {
-            visited++;
-            foreach (NodePath to in outgoing[current])
-            {
-                if (--indegree[to] == 0)
-                {
-                    ready.Enqueue(to);
-                }
-            }
-        }
-
-        if (visited < graph.ExecutableNodes.Count)
-        {
-            errors.Add(FlowErrors.Body(scope.Name, "逐条对齐的引用关系存在环，请检查 From。"));
         }
     }
 

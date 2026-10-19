@@ -1,10 +1,10 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>对话回合的终端呈现：文本增量直接写出，工具调用行由终端保证另起一行。</summary>
-internal sealed class DialogueSink(Terminal terminal) : ITurnSink
+/// <summary>对话过程的终端呈现：文本增量直接写出，工具调用行由终端保证另起一行。</summary>
+internal sealed class DialogueSink(Terminal terminal) : IProcessSink
 {
     public void OnText(string delta) => terminal.Append(delta);
 

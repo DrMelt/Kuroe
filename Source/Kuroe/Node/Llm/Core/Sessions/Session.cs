@@ -1,8 +1,9 @@
-using System.Text;
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -45,13 +46,14 @@ public sealed class Session
         }
     }
 
-    /// <summary>一轮请求。scope 决定过程写到哪条记录、工具绑到哪个归属。返回值是完整回复或错误。</summary>
-    public async Task<ErrorOr<string>> AskAsync(
+    /// <summary>一轮请求。execution 给出工具绑定的身份与过程播发出口，journal 收本次执行的过程记录。只报成功或失败，回复文本经过程记录与过程播发送出。</summary>
+    internal async Task<ErrorOr<Success>> AskAsync(
         string input,
-        TurnScope scope,
+        IExecution execution,
+        ProcessJournal journal,
         CancellationToken cancellationToken = default)
     {
-        scope.Journal.Append(new PromptEntry(input));
+        journal.Append(new PromptEntry(input));
 
         if (_history.Model is not { } model)
         {
@@ -73,29 +75,28 @@ public sealed class Session
 
         int historyStart = HistoryCount;
         var updates = new List<AgentResponseUpdate>();
-        var reply = new StringBuilder();
         try
         {
             await foreach (var update in agent.RunStreamingAsync(
                 [new ChatMessage(ChatRole.User, input)],
                 _session,
-                Options(scope),
+                Options(execution, journal),
                 cancellationToken))
             {
                 updates.Add(update);
                 if (update.Text is { Length: > 0 } text)
                 {
-                    reply.Append(text);
-                    scope.Sink.OnText(text);
+                    journal.AppendText(text);
+                    execution.Sink.OnText(text);
                 }
             }
         }
         finally
         {
-            CompleteTurn(updates, scope.Journal, historyStart);
+            CompleteReply(updates, journal, historyStart);
         }
 
-        return reply.ToString();
+        return Result.Success;
     }
 
     /// <summary>首次使用时创建框架会话并按来源布局历史。</summary>
@@ -122,24 +123,24 @@ public sealed class Session
     private int HistoryCount =>
         _session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) ? history.Count : 0;
 
-    /// <summary>本轮消息由框架写回历史。工具调用缺少结果或没有任何产出时整轮退回，本轮新增全部撤销。</summary>
-    private void CompleteTurn(List<AgentResponseUpdate> updates, ITurnJournal journal, int historyStart)
+    /// <summary>本轮回复的消息由框架写回历史。工具调用缺少结果或没有任何产出时整轮退回，本轮新增全部撤销。</summary>
+    private void CompleteReply(List<AgentResponseUpdate> updates, ProcessJournal journal, int historyStart)
     {
         if (updates.Count == 0)
         {
-            DiscardTurn(journal, historyStart);
+            DiscardReply(journal, historyStart);
             return;
         }
 
         IList<ChatMessage> produced = updates.ToAgentResponse().Messages;
         if (HasPendingFunctionCall(produced))
         {
-            DiscardTurn(journal, historyStart);
+            DiscardReply(journal, historyStart);
         }
     }
 
     /// <summary>撤掉本轮期间写入历史的消息，该轮输出保留在记录里。</summary>
-    private void DiscardTurn(ITurnJournal journal, int historyStart)
+    private void DiscardReply(ProcessJournal journal, int historyStart)
     {
         if (_session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
         {
@@ -175,12 +176,12 @@ public sealed class Session
         return !calls.IsSubsetOf(results);
     }
 
-    /// <summary>请求选项逐轮取自当前设置，工具按本轮归属与工具面构造。</summary>
-    private ChatClientAgentRunOptions Options(TurnScope scope)
+    /// <summary>请求选项逐轮取自当前设置，工具按本次执行的身份、播发出口与记录构造。</summary>
+    private ChatClientAgentRunOptions Options(IExecution execution, ProcessJournal journal)
     {
         return new ChatClientAgentRunOptions(new ChatOptions
         {
-            Tools = [.. _tools.Build(scope, scope.Sink, _history.ToolPaths)],
+            Tools = [.. _tools.Build(execution.Id, execution.Sink, journal, _history.ToolPaths)],
             Temperature = _settings.Temperature,
             MaxOutputTokens = _settings.MaxOutputTokens,
             Instructions = _history.SystemPrompt,

@@ -16,9 +16,9 @@ internal sealed class ContainerNodeType : INodeType
     /// <summary>容器的类型规则：统一执行上限与输出端口绑定。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
-        if (node.MaxRuns is { } limit && limit < 1)
+        if (node.MaxExecutions is { } limit && limit < 1)
         {
-            fail(scope.Node(node.Label.Value, "MaxRuns 必须是正整数。"));
+            fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
     }
 }

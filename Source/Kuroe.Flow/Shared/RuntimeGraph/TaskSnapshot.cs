@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph;
@@ -12,8 +12,7 @@ public sealed record TaskSnapshot(
     FlowDefinition Flow,
     INodeGraph Graph,
     TaskState State,
-    int LiveRuns,
-    IReadOnlyDictionary<NodePath, WorkItemList> Splits,
+    int LiveExecutions,
     IReadOnlyList<ExecutableSnapshot> Executables,
     IReadOnlyList<ExecutableStateSnapshot> ExecutableStates,
     IReadOnlyList<ContainerSnapshot> Containers,

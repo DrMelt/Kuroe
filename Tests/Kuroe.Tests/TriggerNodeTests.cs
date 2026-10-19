@@ -1,5 +1,4 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Pending;
@@ -21,15 +20,14 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "来源").Runs);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
-        Assert.Empty(triggered.Context.Instruction);
-        Assert.Empty(triggered.Context.Seed);
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "来源").Executions);
+        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        Assert.Empty(triggered.Input.Inputs);
     }
 
     /// <summary>来源每次回答发布新版本触发一次：两轮回答两次触发，触发目标始终收不到内容。</summary>
     [Fact]
-    public void Every_trigger_version_starts_one_run_without_data()
+    public void Every_trigger_version_starts_one_execution_without_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopFlow);
 
@@ -38,18 +36,18 @@ public sealed class TriggerNodeTests
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
-        RunSnapshot first = environment.Executor.Started
-            .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1)
+        ExecutionSnapshot first = environment.Runner.Started
+            .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 1)
             .Snapshot();
-        Assert.DoesNotContain(first.Context.Seed, message => message.Text.Contains("第一问"));
+        Assert.DoesNotContain(first.Input.Inputs, value => value.Text.Contains("第一问"));
 
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
-        Assert.Equal(2, done.Executables.Single(node => node.Executable.Label.Value == "回话").Runs.Count);
-        RunSnapshot second = environment.Executor.Started
-            .Single(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 2)
+        Assert.Equal(2, done.Executables.Single(node => node.Executable.Label.Value == "回话").Executions.Count);
+        ExecutionSnapshot second = environment.Runner.Started
+            .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 2)
             .Snapshot();
-        Assert.DoesNotContain(second.Context.Seed, message => message.Text.Contains("第二问"));
+        Assert.DoesNotContain(second.Input.Inputs, value => value.Text.Contains("第二问"));
     }
 
     /// <summary>触发与数据 From 并存：数据源产出照常注入，触发源内容不进上下文。</summary>
@@ -61,9 +59,13 @@ public sealed class TriggerNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot merged = done.Executables.Single(entry => entry.Executable.Label.Value == "合并").Runs.Single();
-        Assert.Contains(merged.Context.Seed, message => message.Text.Contains("节点「整体/数据」的端口「结论」产出"));
-        Assert.DoesNotContain(merged.Context.Seed, message => message.Text.Contains("节点「整体/信号」的端口「信号」产出"));
+        ExecutionSnapshot merged = done.Executables.Single(entry => entry.Executable.Label.Value == "合并").Executions.Single();
+        Assert.Contains(merged.Input.Inputs, value =>
+            value.Origin is ExecutionSource { Node: var node, Port: var port }
+                && node == NodePath.Of("整体", "数据")
+                && port.Value == "结论");
+        Assert.DoesNotContain(merged.Input.Inputs, value =>
+            value.Origin is ExecutionSource { Node: var node } && node == NodePath.Of("整体", "信号"));
     }
 
     /// <summary>容器作触发源：成员齐备放行后目标被触发，容器产出不进目标上下文。</summary>
@@ -76,8 +78,8 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
-        Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「准备」的产出"));
+        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("准备产出"));
     }
 
     /// <summary>触发引用可带命名端口：来源放行该端口即触发，端口内容同样不进目标上下文。</summary>
@@ -85,20 +87,19 @@ public sealed class TriggerNodeTests
     public void Named_port_trigger_fires_without_injecting_port_content()
     {
         using TestEnvironment environment = TestEnvironment.Create(NamedPortTriggerFlow);
-        environment.Executor.PortValuesJson = """{ "信号": "信号产出" }""";
+        environment.Runner.PortValuesJson = """{ "信号": "信号产出" }""";
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Single();
-        Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」"));
-        Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("信号产出"));
+        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("信号产出"));
     }
 
-    /// <summary>触发循环受 MaxRuns 约束：到达上限后来源再发布新版本也不再启动。</summary>
+    /// <summary>触发循环受 MaxExecutions 约束：到达上限后来源再发布新版本也不再启动。</summary>
     [Fact]
-    public void Trigger_loop_stops_restarting_at_max_runs()
+    public void Trigger_loop_stops_restarting_at_max_executions()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerLoopWithLimitFlow);
 
@@ -106,15 +107,15 @@ public sealed class TriggerNodeTests
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, _ => environment.Executor.Started.Count == 1 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Runner.Started.Count == 1 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
-        environment.Wait(id, _ => environment.Executor.Started.Count == 2 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
+        environment.Wait(id, _ => environment.Runner.Started.Count == 2 && environment.Awaiting(id, PendingKind.Answer).Count > 0);
         environment.Pendings.Answer(id, null, "第三问").ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "回话").Runs.Count);
-        Assert.Equal([1, 2], [.. environment.Executor.Started.Select(run => run.Context.ExecutionCount)]);
+        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "回话").Executions.Count);
+        Assert.Equal([1, 2], [.. environment.Runner.Started.Select(execution => execution.Input.ExecutionCount)]);
     }
 
     /// <summary>装配层引用库执行节点注入信号条目：引用处的信号接线随实例生效，且库定义本身不写接线。</summary>
@@ -127,8 +128,8 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发实例").Runs.Single();
-        Assert.DoesNotContain(triggered.Context.Seed, message => message.Text.Contains("节点「来源」的产出"));
+        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发实例").Executions.Single();
+        Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("来源产出"));
     }
 
     /// <summary>审批节点挡住信号驱动的触发节点：来源发布后停在待批准，批准后触发放行。</summary>
@@ -142,33 +143,33 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
+        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
     }
 
-    /// <summary>触发启动的 run 走输出校验通道：首次不通过停在阻塞，返工重跑通过后放行。</summary>
+    /// <summary>触发启动的执行走输出校验通道：首次不通过停在阻塞，返工重跑通过后放行。</summary>
     [Fact]
-    public void Trigger_run_honors_validate_and_rework()
+    public void Trigger_execution_honors_validate_and_rework()
     {
         using TestEnvironment environment = TestEnvironment.Create(TriggerValidateFlow);
-        environment.Executor.Output = run =>
+        environment.Runner.Reply = execution =>
         {
-            if (run.Context.Node.Label.Value == "来源")
+            if (execution.Input.Node.Label.Value == "来源")
             {
                 return "来源产出";
             }
 
-            return run.Context.ExecutionCount == 1 ? "初稿不够好" : "修订通过";
+            return execution.Input.ExecutionCount == 1 ? "初稿不够好" : "修订通过";
         };
-        environment.Executor.PortValuesJsonFor = run => run.Context.Node.Label.Value switch
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value switch
         {
             "来源" => """{"结论": "来源产出"}""",
-            "触发" => run.Context.ExecutionCount == 1
+            "触发" => execution.Input.ExecutionCount == 1
                 ? """{"结论": "初稿不够好"}"""
                 : """{"结论": "修订通过"}""",
             _ => null,
@@ -180,11 +181,11 @@ public sealed class TriggerNodeTests
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("触发")).State);
 
-        environment.Tasks.Rework(id, null).ThrowIfError();
+        environment.Tasks.Rework(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs.Count);
+        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Count);
     }
     /// <summary>Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动。</summary>
     [Fact]
@@ -197,13 +198,13 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
+        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Runs);
+        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
     }
 
     /// <summary>来源先发布再触发下游，触发节点无数据输入。</summary>
@@ -267,13 +268,13 @@ public sealed class TriggerNodeTests
         }
         """;
 
-    /// <summary>挂点触发环给出 MaxRuns 上限：三轮回答只启动两轮，第三问起不再有新 run。</summary>
+    /// <summary>挂点触发环给出 MaxExecutions 上限：三轮回答只启动两轮，第三问起不再有新执行。</summary>
     private const string TriggerLoopWithLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
               { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
-              { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "回答", "Type": "Signal" }], "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ], "MaxRuns": 2 }
+              { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "回答", "Type": "Signal" }], "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ], "MaxExecutions": 2 }
             ] }
           ] } ]
         }
@@ -305,7 +306,7 @@ public sealed class TriggerNodeTests
         }
         """;
 
-    /// <summary>触发节点声明输出校验，run 首轮不通过停在阻塞，返工重跑通过后放行。</summary>
+    /// <summary>触发节点声明输出校验，执行首轮不通过停在阻塞，返工重跑通过后放行。</summary>
     private const string TriggerValidateFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [

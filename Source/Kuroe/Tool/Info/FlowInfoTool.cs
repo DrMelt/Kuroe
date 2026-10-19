@@ -24,7 +24,7 @@ public sealed class FlowInfoTool : ITool
     /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
         new ToolName("GetFlow"),
-        "查看指定流程的展开节点表：模型、节点类型名、展开方式与要求。",
+        "查看指定流程的展开节点表：模型、节点类型名与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)],
         InfoTools.Group);
 
@@ -85,16 +85,15 @@ public sealed class FlowInfoTool : ITool
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {
-            if (node.Execution is { } executable)
+            if (node.Spec is not null)
             {
                 NodeKind kind = node.EffectiveKind;
                 text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{kind.Value}节点）");
 
                 List<string> attributes = [];
-                if (node.Type is { Shape.DispatchesRuns: true })
+                if (node.Type is { Shape.DispatchesExecutions: true })
                 {
                     attributes.Add($"模型 {NodeModel(node)}");
-                    attributes.Add($"展开 {InfoLabels.Of(executable.Mode)}");
                 }
 
                 if (attributes.Count > 0)
@@ -102,7 +101,7 @@ public sealed class FlowInfoTool : ITool
                     text.AppendLine($"    {string.Join(" · ", attributes)}");
                 }
 
-                string requirement = Requirement(node, executable);
+                string requirement = Requirement(node);
                 if (requirement.Length > 0)
                 {
                     text.AppendLine($"    {requirement}");
@@ -133,16 +132,11 @@ public sealed class FlowInfoTool : ITool
     private static string StartPort(Port port) =>
         port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
 
-    /// <summary>节点要求：分支、工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
-    private static string Requirement(NodeSpec node, ExecutableSpec executable)
+    /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
+    private static string Requirement(NodeSpec node)
     {
         LlmParameters? parameters = NodeParameterView.Llm(node.Type);
         List<string> parts = [];
-        if (executable.Branch is { } branch)
-        {
-            parts.Add($"分支 {branch}");
-        }
-
         if (parameters?.Tools is { Count: > 0 } tools)
         {
             parts.Add($"工具 {string.Join("、", tools)}");

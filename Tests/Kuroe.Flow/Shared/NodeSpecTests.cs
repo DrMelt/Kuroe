@@ -33,7 +33,7 @@ public sealed class NodeSpecTests
         Assert.Empty(node.From);
         Assert.Empty(node.Outputs);
         Assert.Null(node.Use);
-        Assert.Null(node.Execution);
+        Assert.Null(node.Spec);
         Assert.Null(node.Nodes);
     }
 
@@ -42,14 +42,12 @@ public sealed class NodeSpecTests
         Assert.Equal(new NodeKind("Executable"), new NodeSpec { Label = new NodeLabel("实施"), Type = Typed("Executable") }.Kind);
 
     [Fact]
-    public void Executable_defaults_to_single_without_branch_or_validation()
+    public void Executable_defaults_without_validation_or_limit()
     {
         ExecutableSpec execution = new();
 
-        Assert.Equal(NodeMode.Single, execution.Mode);
-        Assert.Null(execution.Branch);
         Assert.Null(execution.Validate);
-        Assert.Null(execution.MaxRuns);
+        Assert.Null(execution.MaxExecutions);
     }
 
     private static StubNodeType Typed(string kind) => new(new NodeKind(kind));

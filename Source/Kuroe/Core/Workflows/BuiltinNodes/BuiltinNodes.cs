@@ -11,49 +11,43 @@ internal static class BuiltinNodes
     /// <summary>内置容器成员「实施」的模型槽位名，绑定由引用处的模型绑定提供。</summary>
     internal static ModelRef ExecutorSlot { get; } = new("执行者");
 
-    /// <summary>规划节点的条目拆分端口名。</summary>
-    internal static PortName SplitPort { get; } = new("拆分");
+    /// <summary>规划节点的计划输出端口名，也是容器承接计划的输入端口名。</summary>
+    internal static PortName PlanPort { get; } = new("计划");
 
     /// <summary>规划节点承接任务目标的输入端口名。</summary>
     internal static PortName GoalPort { get; } = new("目标");
 
-    /// <summary>执行节点承接待实施条目的输入端口名。</summary>
+    /// <summary>执行节点承接计划的输入端口名。</summary>
     internal static PortName TaskPort { get; } = new("任务");
 
-    /// <summary>交付容器的传入端口名。</summary>
-    internal static PortName PlanPort { get; } = new("计划");
-
-    /// <summary>执行节点：把目标拆成条目。</summary>
+    /// <summary>执行节点：把目标写成一份计划。</summary>
     private static readonly NodeSpec PlanNodeDefinition = NodeSpec.Define(new NodeName("规划")) with
     {
         Type = LlmNodeTypes.Create(new LlmParameters
         {
-            Prompt = "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。",
+            Prompt = "把目标写成可实施的计划，逐项给出要做什么与验收标准。",
         }),
-        Inputs = [new InputPort(GoalPort, PortType.Text, "要拆分的任务目标。")],
-        Outputs = [new Port(SplitPort, PortType.WorkItems, "目标拆成的条目清单。")],
-        Execution = new ExecutableSpec(),
+        Inputs = [new InputPort(GoalPort, PortType.Text, "要规划的任务目标。")],
+        Outputs = [new Port(PlanPort, PortType.Text, "目标对应的实施计划。")],
+        Spec = new ExecutableSpec(),
     };
 
-    /// <summary>执行节点：按条目实施。</summary>
+    /// <summary>执行节点：按计划实施。</summary>
     private static readonly NodeSpec ExecuteNodeDefinition = NodeSpec.Define(new NodeName("执行")) with
     {
         Type = LlmNodeTypes.Create(new LlmParameters
         {
             Tools = [new ToolPath("GetLocalTime")],
         }),
-        Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的条目，来自拆分来源。")],
-        Execution = new ExecutableSpec
-        {
-            Mode = NodeMode.PerItem,
-        },
+        Inputs = [new InputPort(TaskPort, PortType.Text, "待实施的计划，来自规划节点。")],
+        Spec = new ExecutableSpec(),
     };
 
-    /// <summary>交付容器：出一条计划，按条目实施。实施节点的模型是槽位名，由引用处的模型绑定提供。</summary>
+    /// <summary>交付容器：接一份计划，由成员按计划实施。实施节点的模型是槽位名，由引用处的模型绑定提供。</summary>
     private static readonly NodeSpec DeliveryContainerDefinition = NodeSpec.Define(new NodeName("交付")) with
     {
         Type = ContainerNodeTypes.Type,
-        Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的条目拆分，来自规划节点。")],
+        Inputs = [new InputPort(PlanPort, PortType.Text, "待实施的计划，来自规划节点。")],
         ModelSlots = [ExecutorSlot],
         Nodes =
         [

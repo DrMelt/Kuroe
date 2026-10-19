@@ -1,14 +1,14 @@
 using ErrorOr;
-using Kuroe.Flow.Execution.Runs;
+using Kuroe.Flow.Runtime;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
-using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -16,17 +16,17 @@ using Xunit;
 namespace Kuroe.Tests;
 
 /// <summary>不接模型地解析整张服务图：推进、执行与会话装配都建得起来。
-/// 其余测试把 IRunExecutor 换成假的，走不到真实执行链。</summary>
+/// 其余测试把 IExecutionRunner 换成假的，走不到真实执行链。</summary>
 public sealed class WiringTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Real_run_executor_resolves()
+    public void Real_execution_runner_resolves()
     {
         using ServiceProvider provider = Services();
 
-        Assert.NotNull(provider.GetRequiredService<IRunExecutor>());
+        Assert.NotNull(provider.GetRequiredService<IExecutionRunner>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
@@ -83,9 +83,9 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<ModelService>());
         Assert.NotNull(provider.GetRequiredService<ToolCollection>());
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
-        Assert.NotNull(provider.GetRequiredService<WorkItemSubmitter>());
-        Assert.NotNull(provider.GetRequiredService<RunDispatcher>());
-        Assert.NotNull(provider.GetRequiredService<IRunContract>());
+        Assert.NotNull(provider.GetRequiredService<PortSubmitter>());
+        Assert.NotNull(provider.GetRequiredService<ExecutionDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<IExecutionContract>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
         Assert.NotEmpty(provider.GetServices<ITool>());
     }

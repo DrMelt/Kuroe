@@ -4,80 +4,63 @@ using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests;
 
-/// <summary>上下文模型：run 的叫法、条目序号与出处的可读文本。</summary>
+/// <summary>执行输入与取值：出处的可读文本与取值本身的形状。</summary>
 public sealed class ContextModelTests
 {
     [Fact]
-    public void RunContext_label_merges_step_and_item()
+    public void ExecutionInput_defaults_execution_count_and_inputs()
     {
-        RunContext stepLevel = Context() with { ItemIndex = null };
-        RunContext itemLevel = Context() with { ItemIndex = 2 };
-
-        Assert.Equal("实施", stepLevel.Label);
-        Assert.Equal("实施·条目 3", itemLevel.Label);
-    }
-
-    [Fact]
-    public void RunContext_defaults_execution_count_and_seed()
-    {
-        RunContext context = Context();
+        ExecutionInput context = Input();
 
         Assert.Equal(1, context.ExecutionCount);
-        Assert.Empty(context.Seed);
+        Assert.Empty(context.Inputs);
     }
 
     [Fact]
-    public void RunSource_points_back_to_its_run()
+    public void ExecutionSource_points_back_to_its_execution()
     {
-        RunId run = new(7);
-        RunSource source = new(run, NodePath.Of("实施"));
+        ExecutionId execution = new(7);
+        ExecutionSource source = new(execution, NodePath.Of("实施"), new PortName("结论"));
 
-        Assert.Equal("run #7 · 实施 产出", source.Label);
-        Assert.Equal(run, source.FromRun);
-    }
-
-    [Fact]
-    public void ItemSource_points_back_to_origin()
-    {
-        RunId plan = new(1);
-        ItemSource source = new(plan, 0, "甲");
-
-        Assert.Equal("run #1 · 条目 1：甲", source.Label);
-        Assert.Equal(plan, source.FromRun);
+        Assert.Equal("执行 #7 · 实施 产出", source.Label);
+        Assert.Equal(execution, source.FromExecution);
+        Assert.Equal(new PortName("结论"), source.Port);
     }
 
     [Fact]
     public void Input_and_start_sources_name_their_origin()
     {
-        InputSource input = new(NodePath.Of("取舍"));
+        InputSource input = new(NodePath.Of("取舍"), new PortName("回答"));
         StartSource start = new(new PortName("目标"));
 
         Assert.Equal("节点「取舍」的输入", input.Label);
         Assert.Equal("流程起点端口「目标」", start.Label);
-        Assert.Null(input.FromRun);
-        Assert.Null(start.FromRun);
+        Assert.Null(input.FromExecution);
+        Assert.Null(start.FromExecution);
     }
 
     [Fact]
-    public void Container_and_frame_sources_point_back_to_their_run()
+    public void Context_value_keeps_origin_and_text()
     {
-        RunId run = new(4);
-        ContainerPortSource container = new(NodePath.Of("文档组"), new PortName("结论"));
-        ContextFrameSource step = new(run, NodePath.Of("实施"), null);
-        ContextFrameSource item = new(run, NodePath.Of("实施"), 1);
+        ContextValue value = new(new StartSource(new PortName("目标")), "做出一个示例");
 
-        Assert.Equal("容器「文档组」端口「结论」", container.Label);
-        Assert.Null(container.FromRun);
-        Assert.Equal("run #4 · 实施 的上下文", step.Label);
-        Assert.Equal("run #4 · 实施 条目 2 的上下文", item.Label);
-        Assert.Equal(run, item.FromRun);
+        Assert.Equal("做出一个示例", value.Text);
+        Assert.Equal("流程起点端口「目标」", value.Origin.Label);
     }
 
-    private static RunContext Context() => new()
+    [Fact]
+    public void Container_port_source_names_its_container()
+    {
+        ContainerPortSource container = new(NodePath.Of("文档组"), new PortName("结论"));
+
+        Assert.Equal("容器「文档组」端口「结论」", container.Label);
+        Assert.Null(container.FromExecution);
+    }
+
+    private static ExecutionInput Input() => new()
     {
         Task = new TaskId(1),
         Node = NodePath.Of("实施"),
-        Instruction = "做事",
         Type = new StubNodeType(new NodeKind("Executable")),
     };
 }

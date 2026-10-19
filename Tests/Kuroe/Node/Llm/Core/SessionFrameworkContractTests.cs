@@ -10,7 +10,7 @@ namespace Kuroe.Node.Llm.Tests;
 public sealed class SessionFrameworkContractTests
 {
     [Fact]
-    public async Task History_accumulates_across_runs_when_input_carries_only_the_latest_message()
+    public async Task History_accumulates_across_executions_when_input_carries_only_the_latest_message()
     {
         var client = new RecordingChatClient();
         ChatClientAgent agent = client.AsAIAgent();
@@ -73,7 +73,7 @@ public sealed class SessionFrameworkContractTests
     {
         await foreach (var _ in stream)
         {
-            // 只消费事件流以完成回合
+            // 只消费事件流以完成一次请求
         }
     }
 }

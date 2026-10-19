@@ -47,7 +47,7 @@ internal static class DialogueFlow
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
-    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按本轮接口说明执行。"];
+    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按工具说明执行。"];
 
     /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入。</summary>
     internal static FlowDefinition Build(IInputChannel inputs) => new(
@@ -69,10 +69,10 @@ internal static class DialogueFlow
                     Inputs =
                     [
                         new InputPort(StartPort, PortType.Text),
-                        // 回复输入只作回边的触发，不消费回话产出，回复内容由 run 结果交给调用方
+                        // 回复输入只作回边的触发，不消费回话产出，回复内容随回话执行的过程播发写出
                         new InputPort(ReplyPort, PortType.Signal),
                     ],
-                    Execution = new ExecutableSpec(),
+                    Spec = new ExecutableSpec(),
                     Outputs = [new Port(InputPort, PortType.Text)],
                     From =
                     [
@@ -91,7 +91,7 @@ internal static class DialogueFlow
                         SystemPrompt = SystemPrompt,
                     }),
                     Inputs = [new InputPort(InputPort, PortType.Text)],
-                    Execution = new ExecutableSpec(),
+                    Spec = new ExecutableSpec(),
                     Model = RuntimeModel,
                     Outputs = [new Port(ReplyPort, PortType.Text)],
                     From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeLabel, InputPort))])],

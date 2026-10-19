@@ -31,7 +31,7 @@ internal sealed class StartupView(
             terminal.Hint("当前没有可用工具，检查是否注册了工具载体、载体是否声明了函数。");
         }
 
-        terminal.Hint("普通输入与常驻对话任务对话；/task new <目标> 提交任务，按流程启动 run。");
-        terminal.Hint("/task 打开任务浏览器，任务 → run → 详情逐级进入；/exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
+        terminal.Hint("普通输入与常驻对话任务对话；/task new <目标> 提交任务，按流程启动执行。");
+        terminal.Hint("/task 打开任务浏览器，任务 → 执行 → 详情逐级进入；/exit 退出，/help 查看命令，Ctrl+C 中断当前回复。");
     }
 }

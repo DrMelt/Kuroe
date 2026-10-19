@@ -10,7 +10,7 @@ internal static class SettingDefinitions
         Runtime(nameof(RuntimeSettings.LogLevel), settings => settings.Runtime.LogLevel),
         Runtime(nameof(RuntimeSettings.Temperature), settings => settings.Runtime.Temperature),
         Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
-        Runtime(nameof(RuntimeSettings.MaxConcurrentRuns), settings => settings.Runtime.MaxConcurrentRuns),
+        Runtime(nameof(RuntimeSettings.MaxConcurrentExecutions), settings => settings.Runtime.MaxConcurrentExecutions),
         Runtime(nameof(RuntimeSettings.DefaultFlow), settings => settings.Runtime.DefaultFlow),
     ];
 

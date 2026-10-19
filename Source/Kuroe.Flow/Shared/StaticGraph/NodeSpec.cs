@@ -1,7 +1,7 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
-/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Execution"/> 是执行节点或输入节点。
+/// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Spec"/> 是执行节点或输入节点。
 /// 定义条目写节点名，标签取节点名文本；引用条目写标签，节点名留空。</summary>
 public sealed record NodeSpec
 {
@@ -60,14 +60,14 @@ public sealed record NodeSpec
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 模型逐 run 交回 Text 端口值，引用处不能修改声明。</summary>
+    /// 模型逐执行交回 Text 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
     public OutputValidation? Validate { get; init; }
 
     /// <summary>执行次数上限：执行节点为自身或引用覆盖，容器为组内执行节点的统一默认。未写时由展开解析。</summary>
-    public int? MaxRuns { get; init; }
+    public int? MaxExecutions { get; init; }
 
     /// <summary>有序子节点，非空即容器。容器自身不执行，成员产出齐备时作汇合点。</summary>
     public IReadOnlyList<NodeSpec>? Nodes { get; init; }
@@ -81,6 +81,6 @@ public sealed record NodeSpec
     /// <summary>容器定义声明的模型槽位：成员用 <see cref="Model"/> 写槽位名，引用处用 <see cref="Models"/> 绑定到流程模型选择名，按声明序。只有节点库容器定义声明，装配层内联容器与引用节点为空。</summary>
     public IReadOnlyList<ModelRef>? ModelSlots { get; init; }
 
-    /// <summary>执行配置，非空即执行节点或输入节点，只有派发 run 的类型会用到其中的执行方式。</summary>
-    public ExecutableSpec? Execution { get; init; }
+    /// <summary>执行配置，非空即执行节点或输入节点，只有派发执行的类型会用到其中的执行方式。</summary>
+    public ExecutableSpec? Spec { get; init; }
 }

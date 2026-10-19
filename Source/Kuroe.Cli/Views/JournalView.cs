@@ -1,8 +1,8 @@
-using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>过程记录的逐行呈现，任务与 run 详情共用。</summary>
+/// <summary>过程记录的逐行呈现，任务与执行详情共用。</summary>
 internal static class JournalView
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>

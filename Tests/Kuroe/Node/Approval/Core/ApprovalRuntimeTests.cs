@@ -29,9 +29,9 @@ public sealed class ApprovalRuntimeTests
     {
         Path = Path,
         Type = new ApprovalNodeType(null, channel),
-        Execution = new ExecutableSpec(),
+        Spec = new ExecutableSpec(),
         Model = null,
         Outputs = [],
-        MaxRuns = ExecutableNode.DefaultMaxRuns,
+        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
     };
 }

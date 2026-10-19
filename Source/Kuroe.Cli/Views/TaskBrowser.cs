@@ -1,26 +1,26 @@
 using ErrorOr;
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
 using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务 → 执行节点内 run → run 详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
+/// <summary>任务 → 节点内的执行 → 执行详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
     PendingService pendings,
     TaskListView list,
     TaskDetailView detail,
-    RunDetailView runView,
+    ExecutionDetailView executionView,
     Terminal terminal,
     ResultView results)
 {
     /// <summary>一个菜单项：进下一级、执行动作或返回。</summary>
-    private sealed record Item(string Label, string Action, TaskId? Task = null, RunId? Run = null);
+    private sealed record Item(string Label, string Action, TaskId? Task = null, ExecutionId? Execution = null);
 
     private static readonly Item Back = new("← 返回上一级", "back");
     private static readonly Item Exit = new("✕ 退出浏览", "exit");
@@ -50,12 +50,12 @@ internal sealed class TaskBrowser(
 
             if (picked.Task is { } id)
             {
-                PickRun(id);
+                PickExecution(id);
             }
         }
     }
 
-    private void PickRun(TaskId id)
+    private void PickExecution(TaskId id)
     {
         while (true)
         {
@@ -68,9 +68,9 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
             detail.Print(task);
 
-            List<Item> items = [.. task.Executables.SelectMany(node => node.Runs)
-                .OrderBy(run => run.Id.Value)
-                .Select(run => new Item("  " + TaskDetailView.RunLabel(run), "run", Task: id, Run: run.Id))];
+            List<Item> items = [.. task.Executables.SelectMany(node => node.Executions)
+                .OrderBy(execution => execution.Id.Value)
+                .Select(execution => new Item("  " + TaskDetailView.ExecutionLabel(execution), "execution", Task: id, Execution: execution.Id))];
             AddTaskActions(items, task);
             items.Add(Refresh);
             items.Add(Back);
@@ -81,8 +81,8 @@ internal sealed class TaskBrowser(
                 case "back":
                     return;
 
-                case "run" when picked.Run is { } runId:
-                    ShowRun(runId);
+                case "execution" when picked.Execution is { } executionId:
+                    ShowExecution(executionId);
                     break;
 
                 case "approve":
@@ -94,15 +94,15 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "rework":
-                    Act(tasks.Rework(id, null));
+                    Act(tasks.Rework(id));
                     break;
 
                 case "stopTask":
                     Act(tasks.StopTask(id));
                     break;
 
-                case "stopRun" when picked.Run is { } target:
-                    Act(tasks.StopRun(target));
+                case "stopExecution" when picked.Execution is { } target:
+                    Act(tasks.StopExecution(target));
                     break;
             }
         }
@@ -131,50 +131,50 @@ internal sealed class TaskBrowser(
         Act(pendings.Answer(id, waiting[0], terminal.Prompt(prompt)));
     }
 
-    private void ShowRun(RunId runId)
+    private void ShowExecution(ExecutionId executionId)
     {
         while (true)
         {
-            if (registry.FindRun(runId) is not { IsError: false } foundRun)
+            if (registry.FindExecution(executionId) is not { IsError: false } foundExecution)
             {
                 return;
             }
 
-            RunSnapshot snapshot = foundRun.Value.Snapshot();
-            if (registry.Find(snapshot.Context.Task) is not { IsError: false } foundTask)
+            ExecutionSnapshot snapshot = foundExecution.Value.Snapshot();
+            if (registry.Find(snapshot.Input.Task) is not { IsError: false } foundTask)
             {
                 return;
             }
 
             TaskSnapshot task = foundTask.Value.Snapshot();
             terminal.NewLine();
-            runView.Print(task, snapshot);
+            executionView.Print(task, snapshot);
 
-            List<Item> items = [.. snapshot.Context.Seed
-                .Where(message => message.Source.FromRun is not null)
-                .Select(message => new Item($"↑ {message.Source.Label}", "run", Run: message.Source.FromRun))
-                .DistinctBy(item => item.Run)];
+            List<Item> items = [.. snapshot.Input.Inputs
+                .Where(value => value.Origin.FromExecution is not null)
+                .Select(value => new Item($"↑ {value.Origin.Label}", "execution", Execution: value.Origin.FromExecution))
+                .DistinctBy(item => item.Execution)];
 
-            if (!snapshot.IsSettled)
+            if (!snapshot.State.IsSettled())
             {
-                items.Add(new Item("✕ 取消该 run", "stopRun", Run: runId));
+                items.Add(new Item("✕ 取消该执行", "stopExecution", Execution: executionId));
             }
 
             items.Add(Refresh);
             items.Add(Back);
 
-            Item picked = Choose("run 详情", items);
+            Item picked = Choose("执行详情", items);
             switch (picked.Action)
             {
                 case "back":
                     return;
 
-                case "run" when picked.Run is { } upstream:
-                    runId = upstream;
+                case "execution" when picked.Execution is { } upstream:
+                    executionId = upstream;
                     break;
 
-                case "stopRun":
-                    Act(tasks.StopRun(runId));
+                case "stopExecution":
+                    Act(tasks.StopExecution(executionId));
                     break;
             }
         }
@@ -203,7 +203,7 @@ internal sealed class TaskBrowser(
 
         if (blocked)
         {
-            items.Add(new Item("↺ 返工被阻塞的单元", "rework", Task: task.Id));
+            items.Add(new Item("↺ 返工被阻塞的节点", "rework", Task: task.Id));
         }
 
         items.Add(new Item("✕ 取消整个任务", "stopTask", Task: task.Id));
@@ -232,6 +232,6 @@ internal sealed class TaskBrowser(
 
     private static string TaskLabel(TaskSnapshot task) =>
         $"#{task.Id.Value} {task.Title} · {ViewLabels.Of(task.State)} · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
-        + $" · {task.LiveRuns} 在跑";
+        + $" · {task.LiveExecutions} 在跑";
 }
 

@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
 namespace Kuroe.Node.Input;
 
-/// <summary>输入节点类型：不启动 run，依赖齐备后停在待输入，用户回答即产出放行下游。
+/// <summary>输入节点类型：不启动执行，依赖齐备后停在待输入，用户回答即产出放行下游。
 /// 外部输入协议是建运行期对象所需的运行期依赖，随类型实例带到运行期对象，节点的执行经它声明接收与接受交付。</summary>
 public sealed class InputNodeType(InputParameters? parameters, IInputChannel channel) : INodeType
 {
@@ -23,7 +23,7 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
     /// <summary>输入节点的类型规则：只以用户输入为产出，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
-        ExecutableSpec execution = node.Execution!;
+        ExecutableSpec spec = node.Spec!;
 
         void Reject(bool condition, string message)
         {
@@ -33,10 +33,8 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
             }
         }
 
-        Reject(node.Model is not null, "输入节点不启动 run，不能声明模型选择。");
-        Reject(execution.Validate is not null, "输入节点不启动 run，不能声明 Validate。");
-        Reject(execution.Mode != NodeMode.Single, "输入节点只能整节点等待用户输入。");
-        Reject(execution.Branch is not null, "输入节点不启动 run，不能声明 Branch。");
+        Reject(node.Model is not null, "输入节点不启动执行，不能声明模型选择。");
+        Reject(spec.Validate is not null, "输入节点不启动执行，不能声明 Validate。");
         Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
     }
 

@@ -17,17 +17,17 @@ internal sealed class TaskListView(Terminal terminal)
         }
 
         Grid grid = Terminal.Columns(7);
-        grid.AddRow(Header("#"), Header("标题"), Header("流程"), Header("节点"), Header("状态"), Header("run"), Header("最近"));
+        grid.AddRow(Header("#"), Header("标题"), Header("流程"), Header("节点"), Header("状态"), Header("执行"), Header("最近"));
         foreach (TaskSnapshot task in tasks)
         {
-            int total = task.Executables.Sum(node => node.Runs.Count);
+            int total = task.Executables.Sum(node => node.Executions.Count);
             grid.AddRow(
                 new Text($"#{task.Id.Value}", Styles.Key),
                 new Text(task.Title),
                 new Text(task.Flow.Name.Value),
                 new Text($"{task.FrontierNodes}/{task.TotalExecutableNodes}"),
                 new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State)),
-                new Text($"{task.LiveRuns} 在跑 / {total} 已启动"),
+                new Text($"{task.LiveExecutions} 在跑 / {total} 已启动"),
                 new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint));
         }
 

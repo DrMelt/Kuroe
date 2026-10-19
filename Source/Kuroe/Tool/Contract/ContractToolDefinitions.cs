@@ -6,12 +6,6 @@ namespace Kuroe.Tool.Contract;
 /// <summary>契约工具的定义：名字、说明与参数。引擎按名字放行，说明末尾附上本轮需交回的端口清单。</summary>
 static class ContractToolDefinitions
 {
-    /// <summary>交回条目拆分的工具定义。</summary>
-    public static ToolDefinition WorkItems { get; } = new(
-        new ToolName(ContractTools.WorkItems),
-        "提交本执行节点的条目拆分。itemsJson 是对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance。",
-        [new ToolParameter(new ToolName("itemsJson"), "对象数组的 JSON 文本，每项含 Title、Instruction、Acceptance", Required: true)]);
-
     /// <summary>交回命名端口内容的工具定义，有端口清单时写进说明。</summary>
     public static ToolDefinition Port(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
         new ToolName(ContractTools.Port),

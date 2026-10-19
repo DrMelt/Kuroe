@@ -128,11 +128,5 @@ public sealed class InputChannelTests
         public NodeRuntime? Materialized(NodePath node) => throw new NotSupportedException();
 
         public ISourceState Source(NodePath node) => throw new NotSupportedException();
-
-        public bool HasSplit(NodePath node) => throw new NotSupportedException();
-
-        public IReadOnlyList<int>? SplitItems(NodePath node, BranchName? branch) => throw new NotSupportedException();
-
-        public IReadOnlyList<int>? Items(NodePath node) => throw new NotSupportedException();
     }
 }

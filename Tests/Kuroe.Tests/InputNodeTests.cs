@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Pending;
@@ -34,7 +34,7 @@ public sealed class InputNodeTests
     }
 
     [Fact]
-    public void Answer_feeds_downstream_run_context()
+    public void Answer_feeds_downstream_execution_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
 
@@ -44,12 +44,12 @@ public sealed class InputNodeTests
         environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot implement = done.Executables
+        ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "实施")
-            .Runs.Single();
-        Assert.Contains(implement.Context.Seed,
-            message => message.Text.Contains("需要支持多语言")
-                && message.Text.Contains("用户输入"));
+            .Executions.Single();
+        Assert.Contains(implement.Input.Inputs,
+            value => value.Text.Contains("需要支持多语言")
+                && value.Origin is InputSource);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("目标");
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "准备" && run.State == RunState.Succeeded)
+            environment.Runner.Started.Any(execution => execution.Input.Node.Label.Value == "准备" && execution.State == ExecutionState.Succeeded)
             && environment.Awaiting(id, PendingKind.Answer).Count > 0);
         TaskSnapshot parked = environment.Snapshot(id);
 
@@ -118,23 +118,23 @@ public sealed class InputNodeTests
     public void Input_node_in_loop_resets_and_reparks_each_round()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputLoopFlow);
-        environment.Executor.Output = run => $"回复{run.Context.ExecutionCount}";
+        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, "整体/收话", "第一问").ThrowIfError();
         _ = environment.Wait(id, snapshot =>
-            environment.Executor.Started.Any(run => run.Context.Node.Label.Value == "回话" && run.Context.ExecutionCount == 1 && run.State == RunState.Succeeded)
+            environment.Runner.Started.Any(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 1 && execution.State == ExecutionState.Succeeded)
             && environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, "整体/收话", "第二问").ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Running, done.State);
-        Assert.Equal([1, 2], [.. environment.Executor.Started
-            .Where(run => run.Context.Node.Label.Value == "回话")
-            .Select(run => run.Context.ExecutionCount)]);
+        Assert.Equal([1, 2], [.. environment.Runner.Started
+            .Where(execution => execution.Input.Node.Label.Value == "回话")
+            .Select(execution => execution.Input.ExecutionCount)]);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class InputNodeTests
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
         ExecutableSnapshot implement = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "实施");
-        Assert.Single(implement.Runs);
+        Assert.Single(implement.Executions);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public sealed class InputNodeTests
     public void Loop_input_node_repeats_rounds_until_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);
-        environment.Executor.Output = run => $"回复第{run.Context.ExecutionCount}轮";
+        environment.Runner.Reply = execution => $"回复第{execution.Input.ExecutionCount}轮";
 
         TaskId id = environment.Submit("对话");
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
@@ -281,9 +281,9 @@ public sealed class InputNodeTests
         TaskSnapshot first = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, first.State);
         ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
-        RunSnapshot firstRun = Assert.Single(replyNode.Runs);
-        Assert.Contains(firstRun.Context.Seed, message => message.Text.Contains("第一问"));
-        Assert.Equal("回复第1轮", firstRun.Result);
+        ExecutionSnapshot firstExecution = Assert.Single(replyNode.Executions);
+        Assert.Contains(firstExecution.Input.Inputs, value => value.Text.Contains("第一问"));
+        Assert.Contains(firstExecution.Journal, entry => entry is TextEntry text && text.Text == "回复第1轮");
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
 
@@ -291,24 +291,24 @@ public sealed class InputNodeTests
         TaskSnapshot second = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, second.State);
         ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Label.Value == "回话");
-        Assert.Equal(2, replyNodeSecond.Runs.Count);
-        RunSnapshot secondRun = replyNodeSecond.Runs[^1];
-        Assert.Contains(secondRun.Context.Seed, message => message.Text.Contains("第二问"));
-        Assert.Equal("回复第2轮", secondRun.Result);
+        Assert.Equal(2, replyNodeSecond.Executions.Count);
+        ExecutionSnapshot secondExecution = replyNodeSecond.Executions[^1];
+        Assert.Contains(secondExecution.Input.Inputs, value => value.Text.Contains("第二问"));
+        Assert.Contains(secondExecution.Journal, entry => entry is TextEntry text && text.Text == "回复第2轮");
     }
 
-    /// <summary>回话 run 在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起。</summary>
+    /// <summary>回话执行在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起。</summary>
     [Fact]
     public void Answer_while_loop_replying_fails_as_no_awaiting_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);
-        environment.Executor.DelayMs = 300;
+        environment.Runner.DelayMs = 300;
 
         TaskId id = environment.Submit("对话");
         WaitForInputs(environment, id, 1);
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, snapshot => snapshot.LiveRuns == 1);
+        environment.Wait(id, snapshot => snapshot.LiveExecutions == 1);
 
         ErrorOr<Success> busy = environment.Pendings.Answer(id, null, "挤进来");
         Assert.True(busy.IsError);

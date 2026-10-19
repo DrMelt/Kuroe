@@ -25,7 +25,7 @@ public sealed class FrameworkWiringTests
     }
 
     [Fact]
-    public void Run_options_carry_tools_and_sampling()
+    public void Execution_options_carry_tools_and_sampling()
     {
         var options = new ChatClientAgentRunOptions(new ChatOptions
         {

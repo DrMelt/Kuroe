@@ -1,12 +1,12 @@
-using Kuroe.Flow.Execution.Runs;
-using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Presentation;
 
-/// <summary>库与宿主共用的状态、展开方式与时间展示名。</summary>
+/// <summary>库与宿主共用的状态与时间展示名。</summary>
 public static class InfoLabels
 {
     /// <summary>任务状态的展示名。</summary>
@@ -23,21 +23,11 @@ public static class InfoLabels
         _ => state.ToString(),
     };
 
-    /// <summary>执行节点展开方式的展示名。</summary>
-    public static string Of(NodeMode mode) => mode switch
-    {
-        NodeMode.PerItem => "按条目",
-        _ => "整节点",
-    };
-
-    /// <summary>run 状态的展示名，有正在进行的工具调用时附在其后。</summary>
-    public static string State(RunSnapshot run) =>
-        run.IsSettled || run.Progress.Length == 0
-            ? run.State.Label()
-            : $"{run.State.Label()}（{run.Progress}）";
-
-    /// <summary>按条目序号或整体展开的展示名。</summary>
-    public static string Item(int? itemIndex) => itemIndex is { } index ? $"条目 {index + 1}" : "整体";
+    /// <summary>执行状态的展示名，未收口时附上过程摘要。</summary>
+    public static string State(ExecutionSnapshot execution) =>
+        execution.State.IsSettled() || execution.Progress.Length == 0
+            ? execution.State.Label()
+            : $"{execution.State.Label()}（{execution.Progress}）";
 
     /// <summary>耗时的展示名。</summary>
     public static string Elapsed(TimeSpan span) => span.TotalMinutes < 1

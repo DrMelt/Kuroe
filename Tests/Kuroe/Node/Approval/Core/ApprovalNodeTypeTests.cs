@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
 
-/// <summary>审批节点类型的形状与类型规则：不启动 run，对外端口由输入端口派生，批准后转发产出。</summary>
+/// <summary>审批节点类型的形状与类型规则：不启动执行，对外端口由输入端口派生，批准后转发产出。</summary>
 public sealed class ApprovalNodeTypeTests
 {
     private static readonly StubInputChannel Channel = new();
@@ -28,11 +28,11 @@ public sealed class ApprovalNodeTypeTests
     }
 
     [Fact]
-    public void Shape_derives_its_ports_without_dispatching_runs()
+    public void Shape_derives_its_ports_without_dispatching_executions()
     {
         NodeTypeShape shape = NodeType.Shape;
 
-        Assert.False(shape.DispatchesRuns);
+        Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.True(shape.DerivesOutputsFromInputs);
@@ -64,23 +64,19 @@ public sealed class ApprovalNodeTypeTests
         NodeSpec node = Node([new InputPort(new PortName("计划"), PortType.Text)]) with
         {
             Model = new ModelRef("规划者"),
-            MaxRuns = 3,
-            Execution = new ExecutableSpec
+            MaxExecutions = 3,
+            Spec = new ExecutableSpec
             {
-                Mode = NodeMode.PerItem,
-                Branch = new BranchName("甲"),
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
             },
         };
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(5, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点只能整节点等待批准。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Branch。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 Validate。"));
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动 run，不能声明 MaxRuns。"));
+        Assert.Equal(3, errors.Length);
+        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明模型选择。"));
+        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 Validate。"));
+        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 MaxExecutions。"));
     }
 
     private static IReadOnlyList<string> Failures(NodeSpec node)
@@ -96,6 +92,6 @@ public sealed class ApprovalNodeTypeTests
         Label = new NodeLabel("把关"),
         Type = ApprovalNodeTypes.Create(null, Channel),
         Inputs = inputs ?? [],
-        Execution = new ExecutableSpec(),
+        Spec = new ExecutableSpec(),
     };
 }

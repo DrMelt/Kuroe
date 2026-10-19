@@ -3,8 +3,8 @@ namespace Kuroe.Tests.Support;
 /// <summary>测试共享的流程模板 JSON。</summary>
 public static class TestFlows
 {
-    /// <summary>审批节点把计划放行给按条目展开的执行节点。</summary>
-    public const string ReviewPerItemFlow = """
+    /// <summary>审批节点把计划放行给执行节点。</summary>
+    public const string ReviewFlow = """
         {
           "Flows": [
             {
@@ -19,9 +19,9 @@ public static class TestFlows
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
-                { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] }
+                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
+                { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -30,7 +30,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>根输入节点后接一个实施节点：回答后下游 run 消费回答。</summary>
+    /// <summary>根输入节点后接一个实施节点：回答后下游执行消费回答。</summary>
     public const string InputFlow = """
         {
           "Flows": [
@@ -207,7 +207,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>下游消费上游声明的 Context 类型端口：上游 run 的上下文按统一结构整体注入，角色与出处保留，指令单列。</summary>
+    /// <summary>下游消费上游声明的 Context 类型端口：上游执行的输入取值按统一结构整体注入。</summary>
     public const string ContextPortFlow = """
         {
           "Flows": [
@@ -223,8 +223,8 @@ public static class TestFlows
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定", "Kind": "Llm", "Model": "规划者", "Prompt": "拆分目标", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "拆分": "制定@拆分" } ] },
+                    { "Name": "制定", "Kind": "Llm", "Model": "规划者", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "计划": "制定@计划" } ] },
                     { "Name": "汇报", "Kind": "Llm", "Model": "执行者", "From": [ { "上下文": "实施@上下文" } ] }
                   ]
                 }
@@ -234,7 +234,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>声明恒定系统指令的文本节点：指令随 run 装配进请求最前的系统指令通道。</summary>
+    /// <summary>声明恒定系统指令的文本节点：指令随执行装配进请求最前的系统指令通道。</summary>
     public const string SystemPromptFlow = """
         {
           "Flows": [
@@ -260,7 +260,7 @@ public static class TestFlows
     public const string ContainerOutputsFlow = """
         {
           "Nodes": [
-            { "Name": "允许工具", "Kind": "Llm", "Tools": ["GetLocalTime"], "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }] },
+            { "Name": "允许工具", "Kind": "Llm", "Tools": ["GetLocalTime"], "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }] },
             {
               "Name": "交付",
               "Kind": "Container",
@@ -287,39 +287,14 @@ public static class TestFlows
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
                     {
                       "Label": "交付",
                       "Use": "交付",
-                      "In": { "计划": "制定计划@拆分" },
+                      "In": { "计划": "制定计划@计划" },
                       "Models": { "执行者": "执行者" }
                     },
                     { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "交付@结论" } ] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
-
-    /// <summary>两个并行拆分来源：各自的按条目下游消费各自交回的条目清单。</summary>
-    public const string TwoSplitFlow = """
-        {
-          "Flows": [
-            {
-              "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "计划甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "计划乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "实施甲", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划甲@拆分" } ] },
-                    { "Name": "实施乙", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "计划乙@拆分" } ] }
                   ]
                 }
               ]

@@ -32,7 +32,7 @@ public sealed class NodeDto
     public ValidationDto? Validate { get; set; }
 
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
-    public int? MaxRuns { get; set; }
+    public int? MaxExecutions { get; set; }
 
     /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Description。
     /// 容器的输入端口由引用处 In 绑定，执行节点的由自身 From 绑定。</summary>
@@ -46,12 +46,6 @@ public sealed class NodeDto
 
     /// <summary>模型槽位：容器定义写槽位名数组声明，引用节点组写槽位名到本流程模型选择名的对象绑定。</summary>
     public JsonElement? Models { get; set; }
-
-    /// <summary>执行节点模式的名字：Single、PerItem。</summary>
-    public string? Mode { get; set; }
-
-    /// <summary>本执行节点只处理拆分中归属该分支的条目，未写时处理全部条目。</summary>
-    public string? Branch { get; set; }
 
     /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
     [JsonExtensionData]

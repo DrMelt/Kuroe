@@ -1,48 +1,51 @@
 using ApiHub.Shared.Models;
 using Kuroe.Node.Llm;
+using Kuroe.Node.Llm.Sessions;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>上下文只由上游装配：每个 run 看到的内容与出处都可追溯。</summary>
+/// <summary>输入取值只由上游装配：每个执行看到的内容与出处都可追溯。</summary>
 public sealed class ContextTests
 {
     [Fact]
-    public void First_step_gets_goal_from_start_port_and_no_other_upstream_seed()
+    public void First_step_gets_goal_from_start_port_and_nothing_else()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
+        ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
 
-        ContextMessage goal = Assert.Single(plan.Context.Seed);
+        ContextValue goal = Assert.Single(plan.Input.Inputs);
         Assert.Equal("补齐 README", goal.Text);
-        Assert.IsType<StartSource>(goal.Source);
-        Assert.Equal(ModelName.Create("fake").Value, (plan.Context.Declaration as KuroeNodeDeclaration)!.Model);
+        Assert.IsType<StartSource>(goal.Origin);
+        Assert.Equal(ModelName.Create("fake").Value, (plan.Input.Declaration as KuroeNodeDeclaration)!.Model);
     }
 
     [Fact]
-    public void Implement_item_context_carries_plan_output_and_its_own_item()
+    public void Implement_context_carries_the_plan_output_and_its_origin()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(done.Executables[0].Runs);
-        RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
+        ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
+        ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
 
-        Assert.Contains(implement.Context.Seed, message =>
-            message.Source is ItemSource { Index: 0 } source && source.FromRun == plan.Id);
-        Assert.Contains("条目 1", implement.Context.Instruction);
-        // 拆分边只驱动实例展开，不把规划文本注入实例上下文
-        Assert.DoesNotContain(implement.Context.Seed, message => message.Text.Contains("节点「制定计划」"));
+        ContextValue value = Assert.Single(implement.Input.Inputs);
+        Assert.Equal("节点「整体/制定计划」的端口「计划」产出：\n计划产出", LlmHistoryValue(implement));
+        Assert.Equal(plan.Id, Assert.IsType<ExecutionSource>(value.Origin).FromExecution);
+    }
 
-        string visible = implement.Context.Instruction
-            + string.Concat(implement.Context.Seed.Select(message => message.Text));
-        Assert.DoesNotContain("做乙", visible);
+    /// <summary>本轮请求历史里的一条取值：由 Llm 侧按取值与出处渲染。</summary>
+    private static string LlmHistoryValue(ExecutionSnapshot execution)
+    {
+        List<Microsoft.Extensions.AI.ChatMessage> messages = [];
+        new ExecutionHistory(execution.Input).LayOut(messages);
+
+        return Assert.Single(messages).Text;
     }
 
     [Fact]
@@ -51,11 +54,11 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        RunSnapshot run = Assert.Single(done.Executables[0].Runs);
+        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
 
-        ContextMessage seed = Assert.Single(run.Context.Seed);
+        ContextValue seed = Assert.Single(execution.Input.Inputs);
         Assert.Equal("固定背景", seed.Text);
-        Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Source).Port);
+        Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Origin).Port);
     }
 
     /// <summary>开始除目标外声明一个带固定值的端口，下游取固定值端口。</summary>

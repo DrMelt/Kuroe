@@ -9,10 +9,10 @@ public sealed class NodePortTests
     [Fact]
     public void Port_table_finds_declarations_by_name()
     {
-        IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortType.Text), new Port(new PortName("任务"), PortType.WorkItems)];
+        IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortType.Text), new Port(new PortName("上下文"), PortType.Context)];
         IReadOnlyList<InputPort> inputs = [new InputPort(new PortName("目标")), new InputPort(new PortName("催办"), PortType.Signal)];
 
-        Assert.Equal(PortType.WorkItems, outputs.Find(new PortName("任务"))!.Value.Type);
+        Assert.Equal(PortType.Context, outputs.Find(new PortName("上下文"))!.Value.Type);
         Assert.Equal(PortType.Signal, inputs.Find(new PortName("催办"))!.Value.Type);
         Assert.Null(outputs.Find(new PortName("检查")));
         Assert.Null(inputs.Find(new PortName("检查")));
@@ -43,19 +43,17 @@ public sealed class NodePortTests
         ExecutableNode executable = Executable([new Port(new PortName("结论"), PortType.Text)]);
 
         Assert.True(executable.HasTextPorts);
-        Assert.False(executable.HasWorkItemsPort);
         Assert.Equal(PortType.Text, executable.FindPort(new PortName("结论"))!.Value.Type);
         Assert.Null(executable.FindPort(new PortName("任务")));
-        Assert.Equal(100, ExecutableNode.DefaultMaxRuns);
+        Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
     }
 
     [Fact]
     public void Executable_without_text_ports_has_no_model_output()
     {
-        ExecutableNode executable = Executable([new Port(new PortName("任务"), PortType.WorkItems)]);
+        ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortType.Context)]);
 
         Assert.False(executable.HasTextPorts);
-        Assert.True(executable.HasWorkItemsPort);
     }
 
     [Fact]
@@ -76,9 +74,9 @@ public sealed class NodePortTests
     {
         Path = NodePath.Of("实施"),
         Type = new StubNodeType(new NodeKind("Executable")),
-        Execution = new ExecutableSpec(),
+        Spec = new ExecutableSpec(),
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
         Outputs = outputs,
-        MaxRuns = ExecutableNode.DefaultMaxRuns,
+        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
     };
 }

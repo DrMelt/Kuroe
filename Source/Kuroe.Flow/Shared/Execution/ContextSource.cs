@@ -2,38 +2,28 @@ using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Flow.Shared.Execution;
 
-/// <summary>上下文中一条内容的出处，详情视图据此回跳上游。</summary>
+/// <summary>一段内容的出处：内容从哪个节点的哪个端口来，详情视图据此回跳上游。</summary>
 public abstract record ContextSource
 {
     /// <summary>一行可读出处文本。</summary>
     public abstract string Label { get; }
 
-    /// <summary>可跳转到的 run，出处不是执行产出时为空。</summary>
-    public virtual RunId? FromRun => null;
+    /// <summary>可跳转到的执行，出处不是执行产出时为空。</summary>
+    public virtual ExecutionId? FromExecution => null;
 }
 
-/// <summary>某个 run 在某执行节点上的产出。</summary>
-public sealed record RunSource(RunId Run, NodePath Node) : ContextSource
+/// <summary>某个执行在某执行节点某个输出端口上的产出。</summary>
+public sealed record ExecutionSource(ExecutionId Execution, NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"{Run} · {Node} 产出";
+    public override string Label => $"{Execution} · {Node} 产出";
 
     /// <inheritdoc/>
-    public override RunId? FromRun => Run;
+    public override ExecutionId? FromExecution => Execution;
 }
 
-/// <summary>声明 WorkItems 端口的执行节点交回的某个条目。</summary>
-public sealed record ItemSource(RunId Origin, int Index, string Title) : ContextSource
-{
-    /// <inheritdoc/>
-    public override string Label => $"{Origin} · 条目 {Index + 1}：{Title}";
-
-    /// <inheritdoc/>
-    public override RunId? FromRun => Origin;
-}
-
-/// <summary>输入节点收到的一段用户回答。</summary>
-public sealed record InputSource(NodePath Node) : ContextSource
+/// <summary>输入节点在某个输出端口上收到的用户回答。</summary>
+public sealed record InputSource(NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
     public override string Label => $"节点「{Node}」的输入";
@@ -46,21 +36,11 @@ public sealed record StartSource(PortName Port) : ContextSource
     public override string Label => $"流程起点端口「{Port}」";
 }
 
-/// <summary>容器命名输出端口的产出，出处指向容器而不落到具体成员 run。</summary>
+/// <summary>容器命名输出端口的产出，出处指向容器而不落到具体成员执行。</summary>
 public sealed record ContainerPortSource(NodePath Container, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
     public override string Label => $"容器「{Container}」端口「{Port}」";
 }
 
-/// <summary>某个 run 的上下文帧，供统一结构传输后的出处标记与详情回跳。</summary>
-public sealed record ContextFrameSource(RunId Run, NodePath Node, int? Item) : ContextSource
-{
-    /// <inheritdoc/>
-    public override string Label => Item is { } index
-        ? $"{Run} · {Node} 条目 {index + 1} 的上下文"
-        : $"{Run} · {Node} 的上下文";
 
-    /// <inheritdoc/>
-    public override RunId? FromRun => Run;
-}

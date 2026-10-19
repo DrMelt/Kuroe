@@ -27,8 +27,8 @@ internal sealed record RuntimeSettings
 
     public int? MaxOutputTokens { get; init; }
 
-    /// <summary>同时在跑的 run 数上限，超出的排队等待。改动即时生效。</summary>
-    public int MaxConcurrentRuns { get; init; } = 4;
+    /// <summary>同时在跑的执行数上限，超出的排队等待。改动即时生效。</summary>
+    public int MaxConcurrentExecutions { get; init; } = 4;
 
     /// <summary>提交任务时未指定流程则用该流程，未设置时没有默认流程。</summary>
     public FlowName? DefaultFlow { get; init; }
@@ -89,7 +89,7 @@ internal sealed record RuntimeSettings
             LogLevel = file.LogLevel ?? defaults.LogLevel,
             Temperature = file.Temperature,
             MaxOutputTokens = file.MaxOutputTokens,
-            MaxConcurrentRuns = file.MaxConcurrentRuns ?? defaults.MaxConcurrentRuns,
+            MaxConcurrentExecutions = file.MaxConcurrentExecutions ?? defaults.MaxConcurrentExecutions,
             DefaultFlow = defaultFlow,
         };
     }
@@ -106,7 +106,7 @@ internal sealed class RuntimeSectionDto
 
     public int? MaxOutputTokens { get; set; }
 
-    public int? MaxConcurrentRuns { get; set; }
+    public int? MaxConcurrentExecutions { get; set; }
 
     public string? DefaultFlow { get; set; }
 }

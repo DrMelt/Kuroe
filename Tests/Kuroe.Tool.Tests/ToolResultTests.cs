@@ -24,7 +24,7 @@ public sealed class ToolResultTests
 
     [Fact]
     public void Render_prefixes_unexpected_as_internal() =>
-        Assert.Equal("内部错误：该 run 没有归属任务。", ToolResult.Render(Error.Unexpected("Tool.Internal", "该 run 没有归属任务。")));
+        Assert.Equal("内部错误：该执行没有归属任务。", ToolResult.Render(Error.Unexpected("Tool.Internal", "该执行没有归属任务。")));
 
     [Fact]
     public void Render_joins_errors_each_with_own_prefix()

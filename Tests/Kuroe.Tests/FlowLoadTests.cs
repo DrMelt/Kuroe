@@ -24,8 +24,8 @@ public sealed class FlowLoadTests
         Assert.Equal(["流程 默认：流程只能有一个根节点。"], Errors(MultipleRootNodes));
 
     [Fact]
-    public void Bad_node_mode_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 制定计划：Mode 应为 Single 或 PerItem，收到 PerItemm。"], Errors(BadNodeMode));
+    public void Unknown_node_field_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 制定计划：字段 Mode 不属于 Llm 节点。"], Errors(BadNodeMode));
 
     [Fact]
     public void Container_prompt_is_rejected() =>
@@ -54,10 +54,6 @@ public sealed class FlowLoadTests
     [Fact]
     public void Llm_system_prompt_block_must_not_be_blank() =>
         Assert.Equal(["流程 默认 的节点 规划：系统指令块不能为空。"], Errors(BlankSystemPromptBlock));
-
-    [Fact]
-    public void Container_mode_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：容器不支持 Mode，收到 Parallel。"], Errors(ContainerModeRejected));
 
     [Fact]
     public void Node_without_kind_is_rejected() =>
@@ -101,7 +97,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Output_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为 Text、WorkItems 或 Context。"], Errors(OutputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为 Text 或 Context。"], Errors(OutputTypeOutOfDomain));
 
     [Fact]
     public void Referenced_container_port_missing_is_rejected() =>
@@ -136,7 +132,7 @@ public sealed class FlowLoadTests
             store.Save(FlowFile.Write(nodes, flows, TestTypeFiles.Registry(Inputs))).ThrowIfError();
             string once = File.ReadAllText(file);
 
-            Assert.Contains("\"Prompt\": \"拆一下\"", once);
+            Assert.Contains("\"Prompt\": \"写出计划\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
             Assert.DoesNotContain("\": null", once);
 
@@ -158,7 +154,7 @@ public sealed class FlowLoadTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-params-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
         string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, TestFlows.ReviewPerItemFlow);
+        File.WriteAllText(file, TestFlows.ReviewFlow);
         try
         {
             FlowStore store = new(file, root);
@@ -427,13 +423,6 @@ public sealed class FlowLoadTests
         ] } ] }
         """;
 
-    private const string ContainerModeRejected = """
-        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "实施", "Kind": "Container", "Mode": "Parallel",
-            "Nodes": [ { "Name": "撰写", "Kind": "Llm", "Model": "执行者" } ] }
-        ] } ] }
-        """;
-
     private const string NodeWithoutKind = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
@@ -592,8 +581,8 @@ public sealed class FlowLoadTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "拆分条目。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "写出计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "制定计划@计划" } ] }
                   ]
                 }
               ]
@@ -617,8 +606,8 @@ public sealed class FlowLoadTests
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "制定计划@计划" } ] }
                   ]
                 }
               ]
@@ -673,9 +662,9 @@ public sealed class FlowLoadTests
             { "Name": "默认", "Description": "结构覆盖", "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [ { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [
-                { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxRuns": 2, "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "规划", "Kind": "Llm", "Model": "执行者", "Prompt": "拆一下", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "From": [ { "拆分": "规划@拆分" } ] },
+                { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxExecutions": 2, "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "规划", "Kind": "Llm", "Model": "执行者", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "规划@计划" } ] },
                 { "Name": "收尾", "Kind": "Llm", "Model": "执行者",
                   "Inputs": [{ "Name": "结论" }, { "Name": "信号", "Type": "Signal" }],
                   "From": [ { "结论": "准备@结论", "信号": "准备@结论" } ] }

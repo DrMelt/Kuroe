@@ -1,9 +1,8 @@
 using ErrorOr;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Views;
-using Kuroe.Shared.Workflows;
-using Kuroe.Workflows.Execution;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Workflows.Dialogue;
+using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Cli;
 
@@ -13,7 +12,7 @@ internal sealed class Repl(
     TaskService tasks,
     ReplCommands commands,
     DialogueSink sink,
-    RunNotifier notifier,
+    ExecutionNotifier notifier,
     StartupView startup,
     Terminal terminal,
     ErrorView errors,
@@ -21,7 +20,7 @@ internal sealed class Repl(
 {
     public async Task RunAsync()
     {
-        using var cancellation = new TurnCancellation(registry, terminal);
+        using var cancellation = new CancellationScope(registry, terminal);
         Terminal.OnInterrupt(cancellation.Cancel);
 
         notifier.Attach();
@@ -60,15 +59,15 @@ internal sealed class Repl(
     /// <summary>提示符固定在根层，常驻对话任务随时可答。提示符来源行独立，输入从下一行开始。</summary>
     private static string Prompt => "root >";
 
-    private async Task AskAsync(string input, TurnCancellation cancellation)
+    private async Task AskAsync(string input, CancellationScope cancellation)
     {
-        ErrorOr<DialogueReply> reply;
+        ErrorOr<Success> outcome;
         using (terminal.Exclusive())
         {
             terminal.Line("对话 > ");
             try
             {
-                reply = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
+                outcome = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
             }
             catch (OperationCanceledException)
             {
@@ -84,17 +83,14 @@ internal sealed class Repl(
             }
         }
 
-        if (reply.IsError)
+        if (outcome.IsError)
         {
-            errors.Report(reply.ErrorsOrEmptyList);
+            errors.Report(outcome.ErrorsOrEmptyList);
             commands.GuideCurrentModel();
             return;
         }
 
-        if (!reply.Value.Text.EndsWith('\n'))
-        {
-            terminal.NewLine();
-        }
+        terminal.CloseLine();
     }
 }
 

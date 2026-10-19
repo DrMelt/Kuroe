@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Cli.Tests;
 
-/// <summary>对话回合终端的工具调用行与失败行呈现。</summary>
+/// <summary>对话终端的工具调用行与失败行呈现。</summary>
 public sealed class DialogueSinkTests
 {
     [Fact]

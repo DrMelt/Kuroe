@@ -6,7 +6,7 @@ public enum NodeState
     /// <summary>尚未激活或输入未齐备。</summary>
     Pending,
 
-    /// <summary>有 run 在跑。</summary>
+    /// <summary>有执行在跑。</summary>
     Running,
 
     /// <summary>停在执行错误或未收口，等待返工或放行。</summary>

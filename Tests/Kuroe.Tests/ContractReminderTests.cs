@@ -1,12 +1,11 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>产出契约的补交提示：声明了输出端口或条目拆分而模型未交回时，点名缺项与对应的契约工具；产出齐备时不给提示。</summary>
+/// <summary>产出契约的补交提示：声明了输出端口而模型未交回时，点名缺项与对应的契约工具；产出齐备时不给提示。</summary>
 public sealed class ContractReminderTests
 {
     /// <summary>只声明一个 Text 端口的执行节点，用于验证端口未交回的提示。</summary>
@@ -35,31 +34,16 @@ public sealed class ContractReminderTests
     public void Missing_port_values_remind_the_port_and_the_contract_tool()
     {
         using TestEnvironment environment = TestEnvironment.Create(PortFlow);
-        environment.Executor.SubmitsPorts = false;
+        environment.Runner.SubmitsPorts = false;
 
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        string reminder = Reminder(environment, Assert.Single(blocked.Executables[0].Runs).Id);
+        string reminder = Reminder(environment, Assert.Single(blocked.Executables[0].Executions).Id);
 
         Assert.Contains("「结论」", reminder, StringComparison.Ordinal);
         Assert.Contains("SubmitPortValues", reminder, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Missing_items_remind_the_contract_tool()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.SubmitsPlan = false;
-
-        TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot blocked = environment.Settle(id);
-
-        Assert.Equal(TaskState.Blocked, blocked.State);
-        string reminder = Reminder(environment, Assert.Single(blocked.Executables[0].Runs).Id);
-
-        Assert.Contains("SubmitWorkItems", reminder, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -71,13 +55,13 @@ public sealed class ContractReminderTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunReminder reminder = new(environment.Registry);
-        foreach (RunSnapshot run in done.Executables.SelectMany(executable => executable.Runs))
+        ExecutionReminder reminder = new(environment.Registry);
+        foreach (ExecutionSnapshot execution in done.Executables.SelectMany(executable => executable.Executions))
         {
-            Assert.Null(reminder.Reminder(environment.Registry.FindRun(run.Id).ThrowIfError()));
+            Assert.Null(reminder.Reminder(environment.Registry.FindExecution(execution.Id).ThrowIfError()));
         }
     }
 
-    private static string Reminder(TestEnvironment environment, RunId id) =>
-        Assert.IsType<string>(new RunReminder(environment.Registry).Reminder(environment.Registry.FindRun(id).ThrowIfError()));
+    private static string Reminder(TestEnvironment environment, ExecutionId id) =>
+        Assert.IsType<string>(new ExecutionReminder(environment.Registry).Reminder(environment.Registry.FindExecution(id).ThrowIfError()));
 }

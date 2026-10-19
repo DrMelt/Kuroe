@@ -1,7 +1,5 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
-using Kuroe.Flow.Shared.Execution.Turns;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Xunit;
 
@@ -25,28 +23,28 @@ public sealed class DriverApiTests
     }
 
     [Fact]
-    public void Submission_must_come_from_a_live_run_of_the_right_role()
+    public void Submission_must_come_from_a_live_execution_of_the_right_role()
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        RunSnapshot implement = Assert.Single(done.Executables[1].Runs, run => run.Context.ItemIndex == 0);
-        RunId implementRun = implement.Id;
+        ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
+        ExecutionId implementExecution = implement.Id;
 
-        Assert.Contains("被拒绝", ToolResult.Render(environment.Submitter.SubmitItems(implementRun, """[{"Title":"甲"}]""")));
+        Assert.Contains("被拒绝", ToolResult.Render(environment.PortSubmitter.SubmitValues(implementExecution, """{ "计划": "改一下" }""")));
     }
 
     [Fact]
-    public void Empty_plan_is_refused_and_leaves_the_step_unclosed()
+    public void Unknown_port_name_is_refused_and_leaves_the_step_unclosed()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Executor.ItemsJson = "[]";
+        environment.Runner.PortValuesJson = """{ "别的端口": "值" }""";
 
         TaskSnapshot blocked = environment.Settle(environment.Submit("补齐 README"));
-        RunSnapshot plan = Assert.Single(blocked.Executables[0].Runs);
+        ExecutionSnapshot plan = Assert.Single(blocked.Executables[0].Executions);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Contains(environment.Executor.Submissions, text => text.Contains("被拒绝") && text.Contains("Title"));
-        Assert.Contains(plan.Journal, entry => entry is ErrorEntry);
+        Assert.Contains(environment.Runner.Submissions, text => text.Contains("被拒绝"));
+        Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
     }
 }

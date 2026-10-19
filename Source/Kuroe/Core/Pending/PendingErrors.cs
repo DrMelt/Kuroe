@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 
@@ -15,7 +15,7 @@ public static class PendingErrors
     public static Error Settled(TaskId task, TaskState state) =>
         Error.Conflict("Task.Ask", $"{task} {state.Label()}，无法继续对话。");
 
-    /// <summary>本轮对话的 run 没有成功收口，失败原因随错误带回。</summary>
+    /// <summary>本轮对话的执行没有成功收口，失败原因随错误带回。</summary>
     public static Error RoundFailed(IReadOnlyList<string> failures) => Error.Failure("Task.Ask",
         failures.Count > 0 ? string.Join("；", failures) : "本轮对话没有收口。");
 

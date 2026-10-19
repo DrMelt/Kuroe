@@ -93,7 +93,7 @@ static class FlowWriter
             Use = node.Use?.Value,
             From = node.From.Count == 0 ? null : [.. node.From.Select(ToFromDto)],
             Validate = ToValidationDto(node.Validate),
-            MaxRuns = node.MaxRuns,
+            MaxExecutions = node.MaxExecutions,
             Inputs = node.Inputs.Count == 0 ? null : ToInputDtos(node.Inputs),
             Outputs = OutputsFor(node),
             Parameters = ParametersFor(node, files),
@@ -109,12 +109,10 @@ static class FlowWriter
             dto.Nodes = [.. node.Nodes.Select(child => ToNodeDto(child, files))];
         }
 
-        if (node.Execution is { } execution && node.Type is { Shape.DispatchesRuns: true })
+        if (node.Spec is { } spec && node.Type is { Shape.DispatchesExecutions: true })
         {
-            dto.Mode = execution.Mode.ToString();
-            dto.Branch = execution.Branch?.Value;
-            dto.Validate = ToValidationDto(execution.Validate);
-            dto.MaxRuns = execution.MaxRuns;
+            dto.Validate = ToValidationDto(spec.Validate);
+            dto.MaxExecutions = spec.MaxExecutions;
         }
 
         return dto;

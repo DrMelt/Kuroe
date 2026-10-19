@@ -19,7 +19,7 @@ public sealed class SessionFactory
         _tools = tools;
     }
 
-    /// <summary>一次执行的会话，历史由上游装配的上下文给出。</summary>
-    internal Session ForRun(RunContext context) =>
-        new(_clients, _settings, _access, _tools, new RunHistory(context));
+    /// <summary>一次执行的会话，历史由上游装配的执行输入给出。</summary>
+    internal Session ForExecution(ExecutionInput context) =>
+        new(_clients, _settings, _access, _tools, new ExecutionHistory(context));
 }

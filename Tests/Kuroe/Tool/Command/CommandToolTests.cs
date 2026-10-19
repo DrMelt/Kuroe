@@ -1,10 +1,9 @@
 using ErrorOr;
+using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Execution.Turns;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Turns;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Files;
 using Kuroe.Tool.Command.Model;
@@ -175,7 +174,7 @@ public sealed class CommandToolTests
     {
         AIFunction function = BuiltAIFunction(["echo", "{files}"], [FileParameter]);
 
-        Assert.Equal("Run", function.Name);
+        Assert.Equal("Execution", function.Name);
         Assert.Equal("array", function.JsonSchema.GetProperty("properties").GetProperty("files")
             .GetProperty("type").GetString());
     }
@@ -229,7 +228,7 @@ public sealed class CommandToolTests
 
         // 数组项含空格且无占位符时整体是一个参数项，不做拆分
         string result = Invoke(new CommandTool(
-            new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
             Path.GetTempPath()), []);
 
         Assert.Contains("开始 结束", result);
@@ -291,7 +290,7 @@ public sealed class CommandToolTests
         }
 
         CommandTool tool = new(
-            new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
             Path.GetTempPath());
 
         Assert.Contains("未结束，已终止", Invoke(tool, []));
@@ -470,9 +469,8 @@ public sealed class CommandToolTests
     private static AIFunction BuiltAIFunction(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters)
     {
         CommandTool tool = Tool(template, parameters);
-        TurnScope scope = Scope();
         AITool built = Assert.Single(new ToolCollection([tool], new ToolJson())
-            .Build(scope, scope.Sink, [.. tool.Functions.Select(function => function.Definition.Path)]));
+            .Build(new ExecutionId(1), new NullSink(), new ProcessJournal(), [.. tool.Functions.Select(function => function.Definition.Path)]));
 
         return (AIFunction)built;
     }
@@ -481,11 +479,11 @@ public sealed class CommandToolTests
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
     private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", parameters), Items(template), null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", parameters), Items(template), null, 5, 200),
             Path.GetTempPath());
 
     private static CommandTool ConfiguredTool(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Run"), "说明", parameters), template, null, 5, 200),
+        new(new CommandToolDefinition(new ToolDefinition(new ToolName("Execution"), "说明", parameters), template, null, 5, 200),
             Path.GetTempPath());
 
     private static IReadOnlyList<CommandToolTemplateItem> Items(IEnumerable<string> texts) =>
@@ -496,17 +494,7 @@ public sealed class CommandToolTests
     private static readonly ToolParameter RequiredFileParameter = new(new ToolName("files"), "文件列表", Required: true, List: true);
     private static readonly string[] stringArray = ["甲", "乙"];
 
-    private static TurnScope Scope() => new()
-    {
-        Task = new TaskId(1),
-        Run = new RunId(1),
-        Node = NodePath.Of("对话"),
-        ItemIndex = null,
-        Journal = new TurnJournal(),
-        Sink = new NullSink(),
-    };
-
-    private sealed class NullSink : ITurnSink
+    private sealed class NullSink : IProcessSink
     {
         public void OnText(string delta)
         {

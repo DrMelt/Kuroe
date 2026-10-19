@@ -1,11 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Execution.Runs;
+using Kuroe.Flow.Runtime;
 using Kuroe.Cli.Views;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
 
 namespace Kuroe.Cli.Commands;
@@ -17,7 +16,7 @@ internal sealed class TaskCommands(
     PendingService pendings,
     TaskListView list,
     TaskDetailView detail,
-    RunDetailView runView,
+    ExecutionDetailView executionView,
     TaskBrowser browser,
     Terminal terminal,
     ResultView results)
@@ -25,19 +24,19 @@ internal sealed class TaskCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/task", "打开任务浏览器，逐级进入 run 详情"),
+        ("/task", "打开任务浏览器，逐级进入执行详情"),
         ("/task list", "列出任务"),
-        ("/task new <目标>", "提交任务，按默认流程启动 run"),
+        ("/task new <目标>", "提交任务，按默认流程启动执行"),
         ("/task new --flow <流程> <目标>", "用指定流程提交任务"),
-        ("/task show <任务号>", "打印该任务的节点与 run"),
-        ("/task run <run号>", "打印该 run 的上下文来源与过程"),
+        ("/task show <任务号>", "打印该任务的节点与执行"),
+        ("/task execution <执行号>", "打印该执行的上下文来源与过程"),
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准全部待批准的审批节点"),
         ("/task approve <任务号> <@节点路径>", "批准指定审批节点，多个待批准时用 @节点路径 点名"),
         ("/task answer <任务号> [<@节点路径>] <文本>", "回答等待输入的节点，多个待输入时用 @节点路径 点名"),
-        ("/task rework <任务号>", "返工被阻塞的单元"),
+        ("/task rework <任务号>", "返工被阻塞的节点"),
         ("/task stop <任务号>", "取消任务"),
-        ("/task stop run <run号>", "取消单个 run"),
+        ("/task stop execution <执行号>", "取消单个执行"),
         ("/task clear", "丢掉已完成或已取消的任务"),
     ];
 
@@ -45,7 +44,7 @@ internal sealed class TaskCommands(
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task run <run号>，/help 看全部";
+        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task execution <执行号>，/help 看全部";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -66,8 +65,8 @@ internal sealed class TaskCommands(
                 Show(task);
                 break;
 
-            case ("run", 3) when Number(parts[2], "run号") is { } run:
-                ShowRun(run);
+            case ("execution", 3) when Number(parts[2], "执行号") is { } execution:
+                ShowExecution(execution);
                 break;
 
             case ("title", >= 4) when Number(parts[2], "任务号") is { } task:
@@ -87,16 +86,16 @@ internal sealed class TaskCommands(
                 break;
 
             case ("rework", 3) when Number(parts[2], "任务号") is { } task:
-                results.Report(tasks.Rework(new TaskId(task), null), $"{new TaskId(task)} 已返工。");
+                results.Report(tasks.Rework(new TaskId(task)), $"{new TaskId(task)} 已返工。");
                 break;
 
             case ("stop", 3) when Number(parts[2], "任务号") is { } task:
                 results.Report(tasks.StopTask(new TaskId(task)), $"{new TaskId(task)} 已取消。");
                 break;
 
-            case ("stop", 4) when parts[2].Equals("run", StringComparison.OrdinalIgnoreCase)
-                && Number(parts[3], "run号") is { } runId:
-                results.Report(tasks.StopRun(new RunId(runId)), $"{new RunId(runId)} 已取消。");
+            case ("stop", 4) when parts[2].Equals("execution", StringComparison.OrdinalIgnoreCase)
+                && Number(parts[3], "执行号") is { } executionId:
+                results.Report(tasks.StopExecution(new ExecutionId(executionId)), $"{new ExecutionId(executionId)} 已取消。");
                 break;
 
             case ("clear", 2):
@@ -135,7 +134,7 @@ internal sealed class TaskCommands(
         }
 
         TaskSnapshot task = submitted.Value;
-        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveRuns} 个 run 已启动。");
+        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveExecutions} 个执行已启动。");
         list.Print([task]);
     }
 
@@ -216,27 +215,27 @@ internal sealed class TaskCommands(
         detail.Print(found.Value.Snapshot());
     }
 
-    private void ShowRun(int number)
+    private void ShowExecution(int number)
     {
-        ErrorOr<Run> run = registry.FindRun(new RunId(number));
-        if (run.IsError)
+        ErrorOr<Execution> execution = registry.FindExecution(new ExecutionId(number));
+        if (execution.IsError)
         {
-            results.Reject(run.ErrorsOrEmptyList);
+            results.Reject(execution.ErrorsOrEmptyList);
             return;
         }
 
-        RunSnapshot snapshot = run.Value.Snapshot();
-        ErrorOr<WorkTask> owner = registry.Find(snapshot.Context.Task);
+        ExecutionSnapshot snapshot = execution.Value.Snapshot();
+        ErrorOr<WorkTask> owner = registry.Find(snapshot.Input.Task);
         if (owner.IsError)
         {
             results.Reject(owner.ErrorsOrEmptyList);
             return;
         }
 
-        runView.Print(owner.Value.Snapshot(), snapshot);
+        executionView.Print(owner.Value.Snapshot(), snapshot);
     }
 
-    /// <summary>标识只写数字，任务号与 run 号各自唯一。</summary>
+    /// <summary>标识只写数字，任务号与执行号各自唯一。</summary>
     private int? Number(string text, string label)
     {
         if (int.TryParse(text, out int value) && value > 0)

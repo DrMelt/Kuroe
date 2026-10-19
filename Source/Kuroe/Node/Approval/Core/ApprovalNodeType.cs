@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
 namespace Kuroe.Node.Approval;
 
-/// <summary>审批节点类型：不启动 run，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。取消后不再接收外部输入。
+/// <summary>审批节点类型：不启动执行，启动条件齐备即停在待批准，批准后按输入端口转发上游产出。取消后不再接收外部输入。
 /// 外部输入协议是建运行期对象所需的运行期依赖，随类型实例带到运行期对象，节点的执行经它声明接收与接受交付。</summary>
 public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChannel channel) : INodeType
 {
@@ -23,7 +23,7 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChann
     /// <summary>审批节点的类型规则：对外端口取自身输入端口，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
-        ExecutableSpec execution = node.Execution!;
+        ExecutableSpec spec = node.Spec!;
 
         void Reject(bool condition, string message)
         {
@@ -35,11 +35,9 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChann
 
         Reject(node.Inputs.Count == 0, "审批节点必须声明输入端口，对外端口取自身输入端口。");
         Reject(node.Inputs.Count(port => port.Type == PortType.Context) > 1, "审批节点至多声明一个 Context 输入端口。");
-        Reject(node.Model is not null, "审批节点不启动 run，不能声明模型选择。");
-        Reject(execution.Mode != NodeMode.Single, "审批节点只能整节点等待批准。");
-        Reject(execution.Branch is not null, "审批节点不启动 run，不能声明 Branch。");
-        Reject(execution.Validate is not null, "审批节点不启动 run，不能声明 Validate。");
-        Reject(node.MaxRuns is not null, "审批节点不启动 run，不能声明 MaxRuns。");
+        Reject(node.Model is not null, "审批节点不启动执行，不能声明模型选择。");
+        Reject(spec.Validate is not null, "审批节点不启动执行，不能声明 Validate。");
+        Reject(node.MaxExecutions is not null, "审批节点不启动执行，不能声明 MaxExecutions。");
     }
 
     /// <summary>审批节点的运行期对象。</summary>

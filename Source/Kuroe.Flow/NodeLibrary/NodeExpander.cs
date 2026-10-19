@@ -74,7 +74,7 @@ internal static class NodeExpander
 
                 CheckBindings(node, definition, scope, errors);
                 Env childEnv = BuildContainerEnv(env, node.In, node.Models);
-                int? memberLimit = node.MaxRuns ?? definition.MaxRuns ?? currentLimit;
+                int? memberLimit = node.MaxExecutions ?? definition.MaxExecutions ?? currentLimit;
                 List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors, memberLimit);
                 return new NodeSpec
                 {
@@ -96,17 +96,17 @@ internal static class NodeExpander
                 errors.Add(scope.Node(node.Label.Value, "引用执行节点不写输入端口绑定，接线一律经 From。"));
             }
 
-            ExecutableSpec libraryExecution = definition.Execution!;
+            ExecutableSpec librarySpec = definition.Spec!;
 
             return new NodeSpec
             {
                 Label = node.Label,
                 Type = definition.Type,
                 Inputs = definition.Inputs,
-                Execution = libraryExecution with
+                Spec = librarySpec with
                 {
-                    Validate = node.Validate ?? libraryExecution.Validate,
-                    MaxRuns = ResolveMaxRuns(node.MaxRuns, libraryExecution.MaxRuns, currentLimit),
+                    Validate = node.Validate ?? librarySpec.Validate,
+                    MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions, currentLimit),
                 },
                 Model = ResolveModel(node.Model, env, inInstance, scope, node.Label.Value, errors),
                 From = ResolveAll(node.From, env, scope, errors),
@@ -116,7 +116,7 @@ internal static class NodeExpander
 
         if (node.Nodes is { Count: > 0 } children)
         {
-            List<NodeSpec> expanded = ExpandMembers(library, children, env, inInstance, scope, errors, node.MaxRuns ?? currentLimit);
+            List<NodeSpec> expanded = ExpandMembers(library, children, env, inInstance, scope, errors, node.MaxExecutions ?? currentLimit);
             return new NodeSpec
             {
                 Name = node.Name,
@@ -129,7 +129,7 @@ internal static class NodeExpander
             };
         }
 
-        ExecutableSpec execution = node.Execution!;
+        ExecutableSpec spec = node.Spec!;
 
         return new NodeSpec
         {
@@ -137,10 +137,10 @@ internal static class NodeExpander
             Label = node.Label,
             Type = node.Type,
             Inputs = node.Inputs,
-            Execution = execution with
+            Spec = spec with
             {
-                Validate = execution.Validate,
-                MaxRuns = ResolveMaxRuns(execution.MaxRuns, null, currentLimit),
+                Validate = spec.Validate,
+                MaxExecutions = ResolveMaxExecutions(spec.MaxExecutions, null, currentLimit),
             },
             Model = ResolveModel(node.Model, env, inInstance, scope, node.Label.Value, errors),
             From = ResolveAll(node.From, env, scope, errors),
@@ -149,8 +149,8 @@ internal static class NodeExpander
     }
 
     /// <summary>执行节点的生效执行上限：自身显式、库定义、外层容器统一值依次取先，都没有时落到默认值。</summary>
-    private static int ResolveMaxRuns(int? own, int? library, int? currentLimit) =>
-        own ?? library ?? currentLimit ?? ExecutableNode.DefaultMaxRuns;
+    private static int ResolveMaxExecutions(int? own, int? library, int? currentLimit) =>
+        own ?? library ?? currentLimit ?? ExecutableNode.DefaultMaxExecutions;
 
     private static List<NodeSpec> ExpandMembers(
         NodeLibrary library,

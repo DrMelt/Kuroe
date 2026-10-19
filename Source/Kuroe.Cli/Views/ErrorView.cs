@@ -52,8 +52,8 @@ internal sealed class ErrorView(Terminal terminal)
                     terminal.Hint("用 /task list 查看任务号。");
                     break;
 
-                case FlowErrorCodes.RunNotFound:
-                    terminal.Hint("run 号全局递增，用 /task list 或 /task show <任务号> 查看。");
+                case FlowErrorCodes.ExecutionNotFound:
+                    terminal.Hint("执行号全局递增，用 /task list 或 /task show <任务号> 查看。");
                     break;
 
                 case FlowErrorCodes.FlowNotFound:

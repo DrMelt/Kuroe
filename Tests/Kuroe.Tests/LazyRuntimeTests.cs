@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Pending;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.RuntimeNodes;
 using Xunit;
 
@@ -11,14 +11,14 @@ namespace Kuroe.Tests;
 /// <summary>运行时节点按激活懒实例化：只有触达的节点才从图定义创建对象。</summary>
 public sealed class LazyRuntimeTests
 {
-    /// <summary>计划完成后停在审批节点等待批准，按条目实施与下游收尾永不触达。</summary>
+    /// <summary>计划完成后停在审批节点等待批准，实施与下游收尾永不触达。</summary>
     private const string ReviewQueueFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@拆分" } ] },
-              { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Mode": "PerItem", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@拆分", "批准": "审阅@计划" } ] },
+              { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
+              { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] },
               { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "分配执行@结论" } ] }
             ] }
           ] } ]
@@ -35,20 +35,17 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
-        // 触达的是开始、根容器、制定计划、审批节点与它顺带评估的按条目实施；收尾从未被激活
-        Assert.Equal(5, task.Runtime.MaterializedCount);
         Assert.Null(task.Runtime.Materialized(task.Graph.PathOf("收尾")));
-        Assert.Equal(0, snapshot.ExecutableStates[2].CompletedItems);
         Assert.Equal(4, snapshot.ExecutableStates.Count);
     }
 
     /// <summary>容器成员里尚未放行的成员不因状态查询被实例化：查询只读已实例化节点，未实例化成员视为没有产出。
-    /// 库容器内按条目实施的成员在跑时，容器自身与它的下游都还未触达。</summary>
+    /// 库容器内实施的成员在跑时，容器自身与它的下游都还未触达。</summary>
     [Fact]
     public void Unreleased_container_member_stays_unmaterialized()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
-        environment.Executor.DelayMs = 200;
+        environment.Runner.DelayMs = 200;
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
@@ -63,7 +60,7 @@ public sealed class LazyRuntimeTests
     [Fact]
     public void Snapshot_never_materializes_nodes()
     {
-        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ReviewPerItemFlow);
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.ReviewFlow);
 
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);

@@ -1,8 +1,8 @@
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Tool;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Tool.Contract;
 using Xunit;
 
@@ -20,20 +20,21 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot implement = done.Executables
+        ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "实施")
-            .Runs.Single();
-        Assert.Contains(implement.Context.Seed,
-            message => message.Text.Contains("节点「整体/分析」的端口「结论」产出")
-                && message.Text.Contains("结论产出"));
-        Assert.DoesNotContain(implement.Context.Seed, message => message.Text.Contains("理由产出"));
+            .Executions.Single();
+        Assert.Contains(implement.Input.Inputs, value =>
+            value.Origin is ExecutionSource { Port: var port }
+                && port.Value == "结论"
+                && value.Text.Contains("结论产出"));
+        Assert.DoesNotContain(implement.Input.Inputs, value => value.Text.Contains("理由产出"));
     }
 
     [Fact]
     public void Port_output_without_submitted_values_blocks()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Executor.SubmitsPorts = false;
+        environment.Runner.SubmitsPorts = false;
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
@@ -49,34 +50,31 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        // 复盘不带端口引用在解析层拒绝；若按端口引用则出处带端口标签
-        RunSnapshot review = environment.Executor.Started
-            .Single(run => run.Context.Node.Label.Value == "复盘" && run.Context.ItemIndex is null)
+        // 复盘按端口引用取值，出处带端口名
+        ExecutionSnapshot review = environment.Runner.Started
+            .Single(execution => execution.Input.Node.Label.Value == "复盘")
             .Snapshot();
-        Assert.Contains(review.Context.Seed, message => message.Text.Contains("端口「理由」产出"));
+        Assert.Contains(review.Input.Inputs, value =>
+            value.Origin is ExecutionSource { Port: var port } && port.Value == "理由");
     }
 
     [Fact]
-    public void Context_port_injects_upstream_frame_keeping_sources()
+    public void Context_port_injects_upstream_context_keeping_sources()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContextPortFlow);
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot report = done.Executables
+        ExecutionSnapshot report = done.Executables
             .Single(entry => entry.Executable.Label.Value == "汇报")
-            .Runs.Single();
+            .Executions.Single();
 
-        // 上游 run 的指令单列，出处标记为上下文帧
-        Assert.Contains(report.Context.Seed, message =>
-            message.Source is ContextFrameSource frame
-            && frame.Node.Label.Value == "实施"
-            && frame.FromRun is not null
-            && message.Text.Contains("节点「整体/实施」的指令"));
-
-        // 上游 Seed 里的条目消息原样保留，出处仍可回跳；拆分边不注入规划文本
-        Assert.Contains(report.Context.Seed, message => message.Source is ItemSource);
+        // 上游执行的输入取值按原出处透传进下游
+        Assert.Contains(report.Input.Inputs, value =>
+            value.Origin is ExecutionSource source
+                && source.Node == NodePath.Of("整体", "制定")
+                && value.Text.Contains("计划产出"));
     }
 
     [Fact]
@@ -87,16 +85,16 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot implement = done.Executables
+        ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "实施")
-            .Runs.Single();
+            .Executions.Single();
 
-        // 上下文输入边与普通 From 各注入一次命名端口产出，上下文输入那条位于上下文开头
-        Assert.Equal(2, implement.Context.Seed.Count(message => message.Text.Contains("端口「结论」产出")));
-        Assert.Contains("端口「结论」产出", implement.Context.Seed[0].Text);
+        // 上下文输入边与普通 From 各注入一次来源产出，两条取值来源相同
+        Assert.Equal(2, implement.Input.Inputs.Count);
+        Assert.All(implement.Input.Inputs, value => Assert.Equal("结论产出", value.Text));
     }
 
-    /// <summary>只写 Context 条目、无数据 From 的节点也能启动：来源放行后启动，前缀置于上下文开头。</summary>
+    /// <summary>只写 Context 条目、无数据 From 的节点也能启动：来源放行后启动，取值按原出处注入。</summary>
     [Fact]
     public void Context_only_node_starts_after_source_releases()
     {
@@ -117,26 +115,24 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot implement = done.Executables
+        ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "实施")
-            .Runs.Single();
-        Assert.Contains("端口「结论」产出", implement.Context.Seed[0].Text);
+            .Executions.Single();
+        Assert.Contains(implement.Input.Inputs, value => value.Text.Contains("结论产出"));
     }
 
     [Fact]
-    public void System_prompt_is_assembled_into_run_context()
+    public void System_prompt_comes_from_the_declared_blocks()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.SystemPromptFlow);
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        RunSnapshot run = done.Executables.Single().Runs.Single();
+        ExecutionSnapshot execution = done.Executables.Single().Executions.Single();
 
-        // 节点声明的恒定块在前，引擎生成的本轮接口说明在后
-        string prompt = Assert.IsType<LlmNodeType>(run.Context.Type).Instructions(run.Context.Briefing) ?? string.Empty;
-        Assert.StartsWith("固定背景一\n固定背景二", prompt);
-        Assert.Contains("SubmitStatus", prompt, StringComparison.Ordinal);
+        // 系统指令只由节点声明的恒定块组成
+        Assert.Equal("固定背景一\n固定背景二", Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt());
     }
 
     [Fact]
@@ -147,12 +143,12 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        PortTool tool = new(environment.Executor.PortSubmitter!, environment.Registry);
+        PortTool tool = new(environment.Runner.PortSubmitter!, environment.Registry);
 
-        // 未绑定回合的载体不写端口名，绑定回合后按该 run 的声明列出
+        // 未绑定执行的载体不写端口名，绑定执行后按该执行的声明列出
         Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);
-        IRun ported = environment.Executor.Started.Single(run => run.Context.OutputPorts.Count > 0);
-        ToolFunction declared = Assert.Single(tool.ForTurn(ported.Scope).Functions);
+        IExecution ported = environment.Runner.Started.Single(execution => execution.Input.OutputPorts.Count > 0);
+        ToolFunction declared = Assert.Single(tool.ForExecution(ported.Id).Functions);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
 
@@ -160,122 +156,11 @@ public sealed class PortNodeTests
     public void Port_submission_with_at_in_key_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Executor.PortValuesJson = """{ "结论@甲": "结论产出", "理由": "理由产出" }""";
+        environment.Runner.PortValuesJson = """{ "结论@甲": "结论产出", "理由": "理由产出" }""";
 
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        Assert.Contains(environment.Executor.Submissions, text => text.Contains("端口名不能为空或含 @"));
-    }
-
-    /// <summary>PerItem 节点的单条目返工只作废该条目，其余实例的端口值保留，下游再次消费不缺内容。</summary>
-    [Fact]
-    public void Per_item_port_values_survive_single_item_rework()
-    {
-        using TestEnvironment environment = TestEnvironment.Create("""
-            {
-              "Flows": [ { "Name": "默认", "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                  { "Name": "实施", "Kind": "Llm", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "拆分": "制定计划@拆分" } ] },
-                  { "Name": "汇总", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
-                ] }
-              ] } ]
-            }
-            """);
-        environment.Executor.ItemsJson = """
-            [
-              { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
-              { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" }
-            ]
-            """;
-        environment.Executor.FailsWhen = run =>
-            run.Context.Node.Label.Value == "实施" && run.Context.ItemIndex == 1 && run.Context.ExecutionCount == 1;
-        environment.Executor.PortValuesJsonFor = run =>
-        {
-            if (run.Context.Node.Label.Value != "实施")
-            {
-                return null;
-            }
-
-            if (run.Context.ItemIndex == 0)
-            {
-                return """{"结论": "甲产出通过"}""";
-            }
-
-            return run.Context.ExecutionCount == 1
-                ? """{"结论": "乙产出不合格"}"""
-                : """{"结论": "乙产出通过"}""";
-        };
-
-        TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot blocked = environment.Settle(id);
-        Assert.Equal(TaskState.Blocked, blocked.State);
-
-        // 单条目返工只作废乙，甲的交回值保留，汇总上下文不缺甲的产出
-        environment.Tasks.Rework(id, 1).ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot collect = Assert.Single(done.Executables[2].Runs);
-        Assert.Contains(collect.Context.Seed, message => message.Text.Contains("甲产出通过"));
-        Assert.Contains(collect.Context.Seed, message => message.Text.Contains("乙产出通过"));
-    }
-
-    /// <summary>PerItem 实例收口成功但端口内容未交回时阻塞只落到该实例，指定条目返工重跑该条目不牵连其它实例的端口值。</summary>
-    [Fact]
-    public void Per_item_missing_port_values_rework_only_that_item()
-    {
-        using TestEnvironment environment = TestEnvironment.Create("""
-            {
-              "Flows": [ { "Name": "默认", "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" } ], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
-                  { "Name": "实施", "Kind": "Llm", "Mode": "PerItem", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "拆分": "制定计划@拆分" } ] },
-                  { "Name": "汇总", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
-                ] }
-              ] } ]
-            }
-            """);
-        environment.Executor.ItemsJson = """
-            [
-              { "Title": "甲", "Instruction": "做甲", "Acceptance": "甲可见" },
-              { "Title": "乙", "Instruction": "做乙", "Acceptance": "乙可见" }
-            ]
-            """;
-        // 甲的第一轮提交空端口表，端口与声明不一一对应，视为未交回
-        environment.Executor.PortValuesJsonFor = run =>
-        {
-            if (run.Context.Node.Label.Value != "实施")
-            {
-                return null;
-            }
-
-            if (run.Context.ItemIndex == 0 && run.Context.ExecutionCount == 1)
-            {
-                return "{ }";
-            }
-
-            return run.Context.ItemIndex == 0
-                ? """{"结论": "甲产出通过"}"""
-                : """{"结论": "乙产出通过"}""";
-        };
-
-        TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot blocked = environment.Settle(id);
-        Assert.Equal(TaskState.Blocked, blocked.State);
-
-        // 指定条目返工只重跑甲，乙的交回值保留，汇总上下文同时取到两端口产出
-        environment.Tasks.Rework(id, 0).ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        RunSnapshot collect = Assert.Single(done.Executables[2].Runs);
-        Assert.Contains(collect.Context.Seed, message => message.Text.Contains("甲产出通过"));
-        Assert.Contains(collect.Context.Seed, message => message.Text.Contains("乙产出通过"));
+        Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口名不能为空或含 @"));
     }
 }

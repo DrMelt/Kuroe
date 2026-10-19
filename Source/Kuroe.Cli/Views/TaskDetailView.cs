@@ -1,5 +1,5 @@
 using Kuroe.Presentation;
-using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Pending;
@@ -7,7 +7,7 @@ using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>任务详情：按执行节点列出已执行与在执行的 run，再列出条目与过程记录。</summary>
+/// <summary>任务详情：按执行节点列出已完成与在跑的执行，再列出执行节点状态与过程记录。</summary>
 internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
 {
     private readonly Terminal _terminal = terminal;
@@ -18,20 +18,6 @@ internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
         _terminal.Line($"目标：{task.Goal}");
         _terminal.Line($"流程：{task.Flow.Name}（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
             + $"\u3000节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");
-
-        if (task.Splits.Count > 0)
-        {
-            _terminal.NewLine();
-            foreach ((NodePath executable, WorkItemList plan) in task.Splits)
-            {
-                _terminal.Line($"拆分由 {plan.Origin} 在节点「{executable}」交回：");
-                foreach (WorkItem item in plan.Items)
-                {
-                    string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
-                    _terminal.Line($"  {item.Index + 1}. {item.Title}{branch}");
-                }
-            }
-        }
 
         PrintUnits(task);
 
@@ -49,17 +35,17 @@ internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
         foreach (ExecutableSnapshot node in task.Executables)
         {
             _terminal.ToolCall($"执行节点 {task.OrdinalOf(node.Executable.Path)} · {node.Executable.Path}"
-                + $"（{node.Executable.Kind.Value} · {ViewLabels.Of(node.Executable.Execution.Mode)}）");
+                + $"（{node.Executable.Kind.Value}）");
 
-            if (node.Runs.Count == 0)
+            if (node.Executions.Count == 0)
             {
-                _terminal.Hint("  还没有 run。");
+                _terminal.Hint("  还没有执行。");
                 continue;
             }
 
-            foreach (RunSnapshot run in node.Runs)
+            foreach (ExecutionSnapshot execution in node.Executions)
             {
-                _terminal.Line($"  {RunLabel(run)}");
+                _terminal.Line($"  {ExecutionLabel(execution)}");
             }
         }
 
@@ -68,7 +54,7 @@ internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
         JournalView.Print(_terminal, task.Journal, task.DroppedJournal);
     }
 
-    /// <summary>各执行节点的执行状态与条目结论。</summary>
+    /// <summary>各执行节点的执行状态与等待与端口。</summary>
     private void PrintUnits(TaskSnapshot task)
     {
         if (task.ExecutableStates.Count == 0)
@@ -84,10 +70,6 @@ internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
         foreach (ExecutableStateSnapshot node in task.ExecutableStates)
         {
             ExecutableNode? asked = task.Graph[node.Node] as ExecutableNode;
-            string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
-            string blocked = node.BlockedItems.Count == 0
-                ? string.Empty
-                : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => ViewLabels.Item(item)))}";
             string question = pending.Contains(node.Node) && NodeParameterView.Question(asked?.Type) is { Length: > 0 } questionText
                     ? $" · {questionText}"
                     : string.Empty;
@@ -96,20 +78,19 @@ internal sealed class TaskDetailView(Terminal terminal, PendingService pendings)
                 : string.Empty;
             int blocks = NodeParameterView.Llm(asked?.Type)?.SystemPrompt.Count ?? 0;
             string systemPrompt = blocks > 0 ? $" · 系统指令：{blocks} 块" : string.Empty;
-            _terminal.Line($"  {task.Graph[node.Node].Path} · {ViewLabels.Of(node.State)}{items}{blocked}{question}{ports}{systemPrompt}");
+            _terminal.Line($"  {task.Graph[node.Node].Path} · {ViewLabels.Of(node.State)}{question}{ports}{systemPrompt}");
         }
     }
 
-    /// <summary>列表里一行的 run 概况。</summary>
-    internal static string RunLabel(RunSnapshot run)
+    /// <summary>列表里一行的执行概况。</summary>
+    internal static string ExecutionLabel(ExecutionSnapshot execution)
     {
         List<string> parts =
         [
-            run.Id.ToString(),
-            ViewLabels.Item(run.Context.ItemIndex),
-            $"第 {run.Context.ExecutionCount} 轮",
-            ViewLabels.State(run),
-            ViewLabels.Elapsed(run.Elapsed),
+            execution.Id.ToString(),
+            $"第 {execution.Input.ExecutionCount} 轮",
+            ViewLabels.State(execution),
+            ViewLabels.Elapsed(execution.Elapsed),
         ];
 
         return string.Join(" · ", parts);

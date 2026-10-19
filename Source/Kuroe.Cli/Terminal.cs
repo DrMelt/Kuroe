@@ -4,7 +4,7 @@ using Spectre.Console.Rendering;
 namespace Kuroe.Cli;
 
 /// <summary>终端输出的写出口与样式表。动态文本一律按纯文本写出，不进入 markup 解析。
-/// 全部写入串行，避免并发 run 的通知插进正在输出的行。</summary>
+/// 全部写入串行，避免并发执行的通知插进正在输出的行。</summary>
 internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
 {
     private readonly Lock _gate = new();
@@ -177,8 +177,8 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
         }
     }
 
-    /// <summary>停在一行中间时先换行，行式输出总从新行开始。</summary>
-    private void CloseLine()
+    /// <summary>停在一行中间时换行：行式输出前先闭合它，流式输出后也由调用方收尾。</summary>
+    public void CloseLine()
     {
         if (_lineOpen)
         {

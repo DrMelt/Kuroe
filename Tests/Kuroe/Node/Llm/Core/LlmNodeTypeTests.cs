@@ -26,30 +26,30 @@ public sealed class LlmNodeTypeTests
     }
 
     [Fact]
-    public void Shape_dispatches_runs()
+    public void Shape_dispatches_executions()
     {
         NodeTypeShape shape = NodeType.Shape;
 
-        Assert.True(shape.DispatchesRuns);
+        Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text, PortType.WorkItems, PortType.Context], shape.OutputTypes);
+        Assert.Equal([PortType.Text, PortType.Context], shape.OutputTypes);
     }
 
     [Fact]
-    public void Max_runs_below_one_is_rejected()
+    public void Max_executions_below_one_is_rejected()
     {
         List<string> errors = [];
-        NodeType.Validate(Node(new ExecutableSpec { MaxRuns = 0 }), NodeScope.Flow("测试"), error => errors.Add(error.Description));
+        NodeType.Validate(Node(new ExecutableSpec { MaxExecutions = 0 }), NodeScope.Flow("测试"), error => errors.Add(error.Description));
 
-        Assert.Equal(["流程 测试 的节点 干活：MaxRuns 必须是正整数。"], errors);
+        Assert.Equal(["流程 测试 的节点 干活：MaxExecutions 必须是正整数。"], errors);
     }
 
-    private static NodeSpec Node(ExecutableSpec execution) => new()
+    private static NodeSpec Node(ExecutableSpec spec) => new()
     {
         Label = new NodeLabel("干活"),
         Type = LlmNodeTypes.Create(null),
         Outputs = [new Port(new PortName("结论"), PortType.Text)],
-        Execution = execution,
+        Spec = spec,
     };
 }

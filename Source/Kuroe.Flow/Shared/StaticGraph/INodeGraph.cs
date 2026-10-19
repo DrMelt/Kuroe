@@ -51,7 +51,4 @@ public interface INodeGraph
 
     /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。</summary>
     PortType TypeOf(NodePath node, PortName port);
-
-    /// <summary>来源节点提供实例空间的拆分标识，没有时为空。</summary>
-    NodePath? ItemSpace(NodePath executable);
 }

@@ -22,19 +22,19 @@ public sealed class NodeGraphTests
             {
                 Path = NodePath.Of("规划"),
                 Type = TestNodeTypes.Executable,
-                Execution = new ExecutableSpec { Mode = NodeMode.Single },
+                Spec = new ExecutableSpec(),
                 Model = Planner,
                 Outputs = [],
-                MaxRuns = 100,
+                MaxExecutions = 100,
             },
             new ExecutableNode
             {
                 Path = NodePath.Of("实施"),
                 Type = TestNodeTypes.Executable,
-                Execution = new ExecutableSpec { Mode = NodeMode.Single },
+                Spec = new ExecutableSpec(),
                 Model = Planner,
                 Outputs = [],
-                MaxRuns = 100,
+                MaxExecutions = 100,
             },
         ], []);
 

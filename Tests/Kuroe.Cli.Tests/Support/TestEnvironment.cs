@@ -5,12 +5,11 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Workflows.Execution;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Workflows.Dialogue;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,23 +21,22 @@ public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
 
-    private TestEnvironment(string root, ServiceProvider provider, FakeExecutor executor)
+    private TestEnvironment(string root, ServiceProvider provider, FakeRunner runner)
     {
         Root = root;
         _provider = provider;
-        Executor = executor;
+        Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
-        executor.Submitter = provider.GetRequiredService<WorkItemSubmitter>();
-        executor.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
-        executor.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
+        runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
+        runner.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
     public string Root { get; }
 
-    public FakeExecutor Executor { get; }
+    public FakeRunner Runner { get; }
 
     public TaskRegistry Registry { get; }
 
@@ -79,9 +77,9 @@ public sealed class TestEnvironment : IDisposable
                   "Name": "整体",
                   "Kind": "Container",
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标拆成可独立实施的条目，逐项给出标题、要做什么和验收标准。", "Outputs": [{ "Name": "拆分", "Type": "WorkItems" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
                     { "Name": "交付", "Kind": "Container", "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "Mode": "PerItem", "From": [ { "拆分": "制定计划@拆分" } ] }
+                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "制定计划@计划" } ] }
                     ] }
                   ]
                 }
@@ -108,7 +106,7 @@ public sealed class TestEnvironment : IDisposable
 
         var services = new ServiceCollection();
         services.AddLogging();
-        var executor = new FakeExecutor();
+        var runner = new FakeRunner();
 
         ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, Path.Combine(root, "source"));
         if (startup.IsError)
@@ -117,7 +115,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<IRunExecutor>(executor);
+        services.AddSingleton<IExecutionRunner>(runner);
         ServiceProvider provider = services.BuildServiceProvider();
 
         if (seedCatalog)
@@ -133,7 +131,7 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<SettingsProvider>().SetText("Runtime:DefaultFlow", defaultFlow).ThrowIfError();
         }
 
-        return new TestEnvironment(root, provider, executor);
+        return new TestEnvironment(root, provider, runner);
     }
 
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
@@ -146,8 +144,7 @@ public sealed class TestEnvironment : IDisposable
 
     /// <summary>执行节点状态摘要，用于超时信息里的定位。</summary>
     private static string NodeStates(TaskSnapshot snapshot) =>
-        string.Join("、", snapshot.ExecutableStates.Select(state =>
-            $"{state.Node} {state.State}" + (state.Items.Count > 0 ? $" {state.CompletedItems}/{state.Items.Count}" : string.Empty)));
+        string.Join("、", snapshot.ExecutableStates.Select(state => $"{state.Node} {state.State}"));
 
     /// <summary>等到任务满足条件为止，超时即失败。</summary>
     public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 5000)
@@ -170,7 +167,7 @@ public sealed class TestEnvironment : IDisposable
         }
     }
 
-    /// <summary>等执行侧不再有任何在跑或待推进的 run。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
+    /// <summary>等执行侧不再有任何在跑或待推进的执行。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
     public TaskSnapshot Settle(TaskId id)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);
@@ -178,13 +175,13 @@ public sealed class TestEnvironment : IDisposable
         while (true)
         {
             TaskSnapshot snapshot = Snapshot(id);
-            if (snapshot.LiveRuns == 0
+            if (snapshot.LiveExecutions == 0
                 && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled)
             {
                 return snapshot;
             }
 
-            bool waiting = snapshot.LiveRuns == 0 && Awaiting(id);
+            bool waiting = snapshot.LiveExecutions == 0 && Awaiting(id);
             if (waiting && previous)
             {
                 return snapshot;
@@ -192,7 +189,7 @@ public sealed class TestEnvironment : IDisposable
 
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException($"任务 {id} 未在超时内稳定，状态 {snapshot.State}、LiveRuns {snapshot.LiveRuns}、执行节点 [{NodeStates(snapshot)}]。");
+                throw new TimeoutException($"任务 {id} 未在超时内稳定，状态 {snapshot.State}、LiveExecutions {snapshot.LiveExecutions}、执行节点 [{NodeStates(snapshot)}]。");
             }
 
             previous = waiting;

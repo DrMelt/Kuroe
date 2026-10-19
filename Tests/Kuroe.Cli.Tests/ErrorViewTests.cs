@@ -26,7 +26,7 @@ public sealed class ErrorViewTests
     [InlineData(ErrorCodes.SettingsModelPath, "模型选择用 /model <模型> 切换，/model none 取消选择。")]
     [InlineData(ErrorCodes.SettingsNullValue, "清除设置用 /unset <路径>。")]
     [InlineData(FlowErrorCodes.TaskNotFound, "用 /task list 查看任务号。")]
-    [InlineData(FlowErrorCodes.RunNotFound, "run 号全局递增，用 /task list 或 /task show <任务号> 查看。")]
+    [InlineData(FlowErrorCodes.ExecutionNotFound, "执行号全局递增，用 /task list 或 /task show <任务号> 查看。")]
     [InlineData(FlowErrorCodes.FlowNotFound, "用 /flow list 查看流程名。")]
     [InlineData(FlowErrorCodes.FlowInvalidPath, "/flow add 的文件参数相对工作目录解析，路径非法时换一个写法。")]
     [InlineData(FlowErrorCodes.FlowNode, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。")]

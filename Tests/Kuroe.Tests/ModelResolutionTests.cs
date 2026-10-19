@@ -90,9 +90,9 @@ public sealed class ModelResolutionTests
     {
         Path = NodePath.Of("干活"),
         Type = LlmNodeTypes.Create(null),
-        Execution = new ExecutableSpec(),
+        Spec = new ExecutableSpec(),
         Model = model,
         Outputs = [],
-        MaxRuns = ExecutableNode.DefaultMaxRuns,
+        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
     };
 }

@@ -5,12 +5,12 @@ using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Json;
-using Kuroe.Node.Llm.Runs;
+using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Execution.Runs;
+using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
-using Kuroe.Flow.Shared.Execution.Runs;
+using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command;
@@ -22,9 +22,9 @@ using Kuroe.Tool.Info;
 using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
-using Kuroe.Workflows.Execution;
-using Kuroe.Flow.Execution.Engine;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Workflows.Dialogue;
+using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Json.Parameters;
@@ -112,8 +112,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IToolJson, ToolJson>();
         services.AddSingleton<ToolCollection>();
-        services.AddSingleton<IRunPolicy>(sp => new SettingsRunPolicy(sp.GetRequiredService<SettingsProvider>()));
-        services.AddSingleton<RunDispatcher>();
+        services.AddSingleton<IExecutionPolicy>(sp => new SettingsExecutionPolicy(sp.GetRequiredService<SettingsProvider>()));
+        services.AddSingleton<ExecutionDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
@@ -121,7 +121,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IModelSettings>()));
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<RunDispatcher>(),
+            sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
@@ -147,16 +147,16 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IModelSettings>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
-        services.AddSingleton<IRunContract>(sp => new RunReminder(sp.GetRequiredService<TaskRegistry>()));
-        services.AddSingleton<IRunExecutor>(sp => new RunExecutor(
+        services.AddSingleton<IExecutionContract>(sp => new ExecutionReminder(sp.GetRequiredService<TaskRegistry>()));
+        services.AddSingleton<IExecutionRunner>(sp => new ExecutionRunner(
             sp.GetRequiredService<SessionFactory>(),
-            sp.GetRequiredService<IRunContract>()));
+            sp.GetRequiredService<IExecutionContract>()));
 
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 
     /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前重名校验。
-    /// TaskRegistry 与 WorkItemSubmitter 在此建实例并注册，SubmitWorkItemsTool 的提交链与其它消费者共享。</summary>
+    /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         IReadOnlyList<CommandToolDefinition> definitions,
@@ -168,7 +168,6 @@ public static class ServiceCollectionExtensions
         string sourceDirectory)
     {
         TaskRegistry taskRegistry = new();
-        WorkItemSubmitter workItemSubmitter = new(taskRegistry);
         PortSubmitter portSubmitter = new(taskRegistry);
         StatusSubmitter statusSubmitter = new(taskRegistry);
 
@@ -177,7 +176,6 @@ public static class ServiceCollectionExtensions
             new TimeTool(),
             new FileTool(workingDirectory),
             new SourceTool(sourceDirectory),
-            new SubmitWorkItemsTool(workItemSubmitter),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
             new TaskInfoTool(taskRegistry),
@@ -199,7 +197,6 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton(taskRegistry);
-        services.AddSingleton(workItemSubmitter);
         services.AddSingleton(portSubmitter);
         services.AddSingleton(statusSubmitter);
         foreach (ITool tool in tools)

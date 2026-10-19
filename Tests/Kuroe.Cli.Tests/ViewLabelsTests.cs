@@ -1,13 +1,12 @@
 using Kuroe.Cli.Views;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
 
-/// <summary>宿主侧的状态、条目与时间呈现文本。</summary>
+/// <summary>宿主侧的状态与时间呈现文本。</summary>
 public sealed class ViewLabelsTests
 {
     [Fact]
@@ -20,19 +19,11 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
-    public void Mode_labels_cover_the_scope()
+    public void Node_state_labels_cover_the_scope()
     {
         Assert.Equal("执行中", ViewLabels.Of(NodeState.Running));
-        Assert.Equal("按条目", ViewLabels.Of(NodeMode.PerItem));
-        Assert.Equal("整节点", ViewLabels.Of(NodeMode.Single));
-    }
-
-    [Fact]
-    public void Item_labels_number_from_one()
-    {
-        Assert.Equal("整体", ViewLabels.Item(null));
-        Assert.Equal("条目 1", ViewLabels.Item(0));
-        Assert.Equal("条目 3", ViewLabels.Item(2));
+        Assert.Equal("待执行", ViewLabels.Of(NodeState.Pending));
+        Assert.Equal("已完成", ViewLabels.Of(NodeState.Done));
     }
 
     [Fact]
@@ -50,11 +41,11 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
-    public void Run_state_appends_progress_when_present()
+    public void Execution_state_appends_progress_when_present()
     {
-        Assert.Equal("执行中", ViewLabels.State(Run("")));
-        Assert.Equal("执行中（调用工具 GetTime）", ViewLabels.State(Run("调用工具 GetTime")));
-        Assert.Equal("已完成", ViewLabels.State(Run("调用工具 GetTime") with { State = RunState.Succeeded }));
+        Assert.Equal("执行中", ViewLabels.State(Execution("")));
+        Assert.Equal("执行中（调用工具 GetTime）", ViewLabels.State(Execution("调用工具 GetTime")));
+        Assert.Equal("已完成", ViewLabels.State(Execution("调用工具 GetTime") with { State = ExecutionState.Succeeded }));
     }
 
     [Fact]
@@ -66,15 +57,14 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Canceled));
     }
 
-    private static RunSnapshot Run(string progress) => new(
-        new RunId(1), Context(), RunState.Running, progress,
-        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, null, [], [], 0);
+    private static ExecutionSnapshot Execution(string progress) => new(
+        new ExecutionId(1), Input(), ExecutionState.Running, progress,
+        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], 0);
 
-    private static RunContext Context() => new()
+    private static ExecutionInput Input() => new()
     {
         Task = new TaskId(1),
         Node = NodePath.Of("制定计划"),
-        Instruction = "做",
         Type = new StubNodeType(new NodeKind("Executable")),
     };
 }

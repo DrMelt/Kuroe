@@ -1,18 +1,17 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.Execution.Runs;
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Runs;
-using Kuroe.Flow.Shared.Execution.Turns;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Execution.Tasks;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Presentation;
 
 namespace Kuroe.Tool.Info;
 
-/// <summary>任务与 run 的信息查询工具。只读，不产生状态改动。</summary>
+/// <summary>任务与执行的信息查询工具。只读，不产生状态改动。</summary>
 public sealed class TaskInfoTool : ITool
 {
     private readonly TaskRegistry _registry;
@@ -20,8 +19,8 @@ public sealed class TaskInfoTool : ITool
     /// <summary>详情里最近呈现的记录数。</summary>
     private const int JournalLimit = 10;
 
-    /// <summary>上下文来源一行能看到的文本长度。</summary>
-    private const int SeedLimit = 70;
+    /// <summary>输入取值一行能看到的文本长度。</summary>
+    private const int ValueLimit = 70;
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
@@ -29,25 +28,25 @@ public sealed class TaskInfoTool : ITool
     /// <summary>列出全部任务的函数定义。</summary>
     private static readonly ToolDefinition ListTasks = new(
         new ToolName("ListTasks"),
-        "列出全部任务：编号、标题、状态、节点进度与 run 数。",
+        "列出全部任务：编号、标题、状态、节点进度与执行数。",
         [],
         InfoTools.Group);
 
     /// <summary>查看任务详情的函数定义。</summary>
     private static readonly ToolDefinition GetTask = new(
         new ToolName("GetTask"),
-        "查看指定任务的详情：目标、流程、执行节点状态、run 列表与拆分条目。",
+        "查看指定任务的详情：目标、流程、执行节点状态与执行列表。",
         [new ToolParameter(new ToolName("taskId"), "要查看的任务号", Required: true)],
         InfoTools.Group);
 
-    /// <summary>查看 run 详情的函数定义。</summary>
-    private static readonly ToolDefinition GetRun = new(
-        new ToolName("GetRun"),
-        "查看指定 run 的详情：上下文来源、执行过程与结论。",
-        [new ToolParameter(new ToolName("runId"), "要查看的 run 号", Required: true)],
+    /// <summary>查看执行详情的函数定义。</summary>
+    private static readonly ToolDefinition GetExecution = new(
+        new ToolName("GetExecution"),
+        "查看指定执行的详情：输入取值与执行过程。",
+        [new ToolParameter(new ToolName("executionId"), "要查看的执行号", Required: true)],
         InfoTools.Group);
 
-    /// <summary>用任务与 run 的索引建立载体。</summary>
+    /// <summary>用任务与执行的索引建立载体。</summary>
     public TaskInfoTool(TaskRegistry registry)
     {
         _registry = registry;
@@ -55,7 +54,7 @@ public sealed class TaskInfoTool : ITool
         [
             ListTasks.Bind(_ => List()),
             GetTask.Bind(arguments => ShowTask(arguments)),
-            GetRun.Bind(arguments => ShowRun(arguments)),
+            GetExecution.Bind(arguments => ShowExecution(arguments)),
         ];
     }
 
@@ -71,10 +70,10 @@ public sealed class TaskInfoTool : ITool
         var text = new StringBuilder();
         foreach (TaskSnapshot task in tasks)
         {
-            int total = task.Executables.Sum(node => node.Runs.Count);
+            int total = task.Executables.Sum(node => node.Executions.Count);
             text.AppendLine($"#{task.Id.Value} · {task.Title} · {InfoLabels.Of(task.State)}"
                 + $" · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
-                + $" · run {task.LiveRuns} 在跑 / {total} 已派"
+                + $" · {task.LiveExecutions} 个执行在跑 / {total} 已派"
                 + $" · 最近 {InfoLabels.Clock(task.LastActivityAt)}");
         }
 
@@ -99,29 +98,29 @@ public sealed class TaskInfoTool : ITool
         return DescribeTask(found.Value.Snapshot());
     }
 
-    /// <summary>按 run 号查看详情，run 号非法或不存在时返回拒绝错误。</summary>
-    private ErrorOr<string> ShowRun(ToolArguments arguments)
+    /// <summary>按执行号查看详情，执行号非法或不存在时返回拒绝错误。</summary>
+    private ErrorOr<string> ShowExecution(ToolArguments arguments)
     {
-        string? text = arguments.Text(new ToolName("runId"));
+        string? text = arguments.Text(new ToolName("executionId"));
         if (text is null || !int.TryParse(text, out int id) || id <= 0)
         {
-            return ToolErrors.Argument($"run号要写成数字，收到 {text ?? "空"}。");
+            return ToolErrors.Argument($"执行号要写成数字，收到 {text ?? "空"}。");
         }
 
-        ErrorOr<Run> found = _registry.FindRun(new RunId(id));
+        ErrorOr<Execution> found = _registry.FindExecution(new ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        RunSnapshot run = found.Value.Snapshot();
-        ErrorOr<WorkTask> owner = _registry.Find(run.Context.Task);
+        ExecutionSnapshot execution = found.Value.Snapshot();
+        ErrorOr<WorkTask> owner = _registry.Find(execution.Input.Task);
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;
         }
 
-        return DescribeRun(owner.Value.Snapshot(), run);
+        return DescribeExecution(owner.Value.Snapshot(), execution);
     }
 
     /// <summary>任务的完整详情文本。</summary>
@@ -134,34 +133,28 @@ public sealed class TaskInfoTool : ITool
             + $"（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
             + $" · 节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");
 
-        AppendSplits(text, task);
-
         if (task.ExecutableStates.Count > 0)
         {
             text.AppendLine("执行节点状态：");
             foreach (ExecutableStateSnapshot node in task.ExecutableStates)
             {
-                string items = node.Items.Count == 0 ? string.Empty : $" · {node.CompletedItems}/{node.Items.Count} 条";
-                string blocked = node.BlockedItems.Count == 0
-                    ? string.Empty
-                    : $" · 阻塞 {string.Join('、', node.BlockedItems.Select(item => InfoLabels.Item(item)))}";
-                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node.State)}{items}{blocked}");
+                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node.State)}");
             }
         }
 
-        text.AppendLine("run：");
+        text.AppendLine("execution：");
         foreach (ExecutableSnapshot node in task.Executables)
         {
-            if (node.Runs.Count == 0)
+            if (node.Executions.Count == 0)
             {
                 continue;
             }
 
             text.AppendLine($"  {task.OrdinalOf(node.Executable.Path)}. {node.Executable.Path}"
-                + $"（{node.Executable.Kind.Value} · {InfoLabels.Of(node.Executable.Execution.Mode)}）");
-            foreach (RunSnapshot run in node.Runs)
+                + $"（{node.Executable.Kind.Value}）");
+            foreach (ExecutionSnapshot execution in node.Executions)
             {
-                text.AppendLine($"    {RunLine(run)}");
+                text.AppendLine($"    {ExecutionLine(execution)}");
             }
         }
 
@@ -174,60 +167,39 @@ public sealed class TaskInfoTool : ITool
 
         return text.ToString().TrimEnd();
     }
-    /// <summary>run 的完整详情文本。</summary>
-    private static string DescribeRun(TaskSnapshot task, RunSnapshot run)
+    /// <summary>执行的完整详情文本。</summary>
+    private static string DescribeExecution(TaskSnapshot task, ExecutionSnapshot execution)
     {
-        RunContext context = run.Context;
+        ExecutionInput input = execution.Input;
         var text = new StringBuilder();
-        text.AppendLine($"{run.Id} · {context.Node} · {InfoLabels.Item(context.ItemIndex)}"
-            + $" · 第 {context.ExecutionCount} 轮");
-        text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(context.Node)}/{task.TotalExecutableNodes}"
-            + $" · 模型 {(context.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
-        text.AppendLine($"状态 {InfoLabels.State(run)}"
-            + $" · {InfoLabels.Clock(run.StartedAt)} → {InfoLabels.Clock(run.FinishedAt)}"
-            + $" · 耗时 {InfoLabels.Elapsed(run.Elapsed)}");
+        text.AppendLine($"{execution.Id} · {input.Node} · 第 {input.ExecutionCount} 轮");
+        text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}"
+            + $" · 模型 {(input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
+        text.AppendLine($"状态 {InfoLabels.State(execution)}"
+            + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
+            + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
 
-        foreach (string failure in run.Failures)
+        foreach (string failure in execution.Failures)
         {
             text.AppendLine($"失败：{failure}");
         }
 
-        text.AppendLine($"指令：{context.Instruction}");
-        text.AppendLine($"上下文来源（{context.Seed.Count} 条）：");
-        if (context.Seed.Count == 0)
+        text.AppendLine($"输入取值（{input.Inputs.Count} 条）：");
+        if (input.Inputs.Count == 0)
         {
-            text.AppendLine("  没有装配任何已有内容。");
+            text.AppendLine("  没有取到任何来源内容。");
         }
 
-        foreach (ContextMessage message in context.Seed)
+        foreach (ContextValue value in input.Inputs)
         {
-            text.AppendLine($"  {message.Source.Label}");
-            text.AppendLine($"    {OneLine(message.Text)}");
+            text.AppendLine($"  {value.Origin.Label}");
+            text.AppendLine($"    {OneLine(value.Text)}");
         }
 
         text.AppendLine("过程：");
-        AppendJournal(text, run.Journal, run.DroppedEntries);
-
-        if (run.Result is { Length: > 0 } result)
-        {
-            text.AppendLine($"结论：{result}");
-        }
+        AppendJournal(text, execution.Journal, execution.DroppedEntries);
 
         return text.ToString().TrimEnd();
-    }
-
-    /// <summary>拆分的条目清单。</summary>
-    private static void AppendSplits(StringBuilder text, TaskSnapshot task)
-    {
-        foreach ((NodePath executable, WorkItemList list) in task.Splits)
-        {
-            text.AppendLine($"拆分 {list.Items.Count} 条，由 {list.Origin} 在节点「{task.Graph[executable].Path}」交回：");
-            foreach (WorkItem item in list.Items)
-            {
-                string branch = item.Branch is { } name ? $"（{name}）" : string.Empty;
-                text.AppendLine($"  {item.Index + 1}. {item.Title}{branch}");
-            }
-        }
     }
 
     /// <summary>过程记录的最近条目。<paramref name="dropped"/> 是更早已丢弃的条数。</summary>
@@ -275,16 +247,15 @@ public sealed class TaskInfoTool : ITool
         }
     }
 
-    /// <summary>列表里一行的 run 概况。</summary>
-    private static string RunLine(RunSnapshot run)
+    /// <summary>列表里一行的执行概况。</summary>
+    private static string ExecutionLine(ExecutionSnapshot execution)
     {
         List<string> parts =
         [
-            run.Id.ToString(),
-            InfoLabels.Item(run.Context.ItemIndex),
-            $"第 {run.Context.ExecutionCount} 轮",
-            InfoLabels.State(run),
-            InfoLabels.Elapsed(run.Elapsed),
+            execution.Id.ToString(),
+            $"第 {execution.Input.ExecutionCount} 轮",
+            InfoLabels.State(execution),
+            InfoLabels.Elapsed(execution.Elapsed),
         ];
 
         return string.Join(" · ", parts);
@@ -295,6 +266,6 @@ public sealed class TaskInfoTool : ITool
     {
         string flat = text.Replace('\n', ' ').Replace('\r', ' ');
 
-        return flat.Length <= SeedLimit ? flat : string.Concat(flat.AsSpan(0, SeedLimit), "…");
+        return flat.Length <= ValueLimit ? flat : string.Concat(flat.AsSpan(0, ValueLimit), "…");
     }
 }

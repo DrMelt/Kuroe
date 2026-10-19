@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Node.Input.Tests;
 
-/// <summary>输入节点类型的形状与类型规则：不启动 run，只以用户回答为产出。</summary>
+/// <summary>输入节点类型的形状与类型规则：不启动执行，只以用户回答为产出。</summary>
 public sealed class InputNodeTypeTests
 {
     private static readonly StubInputChannel Channel = new();
@@ -28,11 +28,11 @@ public sealed class InputNodeTypeTests
     }
 
     [Fact]
-    public void Shape_waits_without_dispatching_runs()
+    public void Shape_waits_without_dispatching_executions()
     {
         NodeTypeShape shape = NodeType.Shape;
 
-        Assert.False(shape.DispatchesRuns);
+        Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.DerivesOutputsFromInputs);
         Assert.True(shape.StartsUnaided);
@@ -49,8 +49,6 @@ public sealed class InputNodeTypeTests
     {
         NodeSpec node = Node(new ExecutableSpec
         {
-            Mode = NodeMode.PerItem,
-            Branch = new BranchName("甲"),
             Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
         }) with
         {
@@ -59,11 +57,9 @@ public sealed class InputNodeTypeTests
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(4, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Validate。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点只能整节点等待用户输入。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动 run，不能声明 Branch。"));
+        Assert.Equal(2, errors.Length);
+        Assert.Contains(errors, error => error.EndsWith("输入节点不启动执行，不能声明模型选择。"));
+        Assert.Contains(errors, error => error.EndsWith("输入节点不启动执行，不能声明 Validate。"));
     }
 
     [Fact]
@@ -89,10 +85,10 @@ public sealed class InputNodeTypeTests
         return [.. errors.Select(error => error.Description)];
     }
 
-    private static NodeSpec Node(ExecutableSpec? execution = null) => new()
+    private static NodeSpec Node(ExecutableSpec? spec = null) => new()
     {
         Label = new NodeLabel("收话"),
         Type = InputNodeTypes.Create(null, Channel),
-        Execution = execution ?? new ExecutableSpec(),
+        Spec = spec ?? new ExecutableSpec(),
     };
 }

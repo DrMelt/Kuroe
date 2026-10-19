@@ -1,7 +1,7 @@
 namespace Kuroe.Flow.Shared.StaticGraph;
 
 /// <summary>流程图上的节点实体：开始、执行节点或容器。以从根到本节点的路径标识，路径唯一性来自树位置。
-/// 开始是流程的唯一来源，执行节点会启动 run 并交回产出，容器是成员的组织与汇合点。</summary>
+/// 开始是流程的唯一来源，执行节点会启动执行并交回产出，容器是成员的组织与汇合点。</summary>
 public abstract record GraphNode
 {
     /// <summary>从根到本节点的路径，流程内唯一，是节点的标识。</summary>

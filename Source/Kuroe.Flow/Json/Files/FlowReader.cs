@@ -152,9 +152,9 @@ static class FlowReader
                 useErrors.Add(scope.Node(label, "引用节点的类型由被引用的库定义决定，不写 Kind。"));
             }
 
-            if (dto.Mode is not null || dto.Branch is not null || dto.Nodes is { Count: > 0 })
+            if (dto.Nodes is { Count: > 0 })
             {
-                useErrors.Add(scope.Node(label, "引用成员不能同时声明执行方式或子节点。"));
+                useErrors.Add(scope.Node(label, "引用成员不能同时声明子节点。"));
             }
 
             if (dto.Parameters is { Count: > 0 } declaredParameters)
@@ -220,7 +220,7 @@ static class FlowReader
             {
                 From = resolvedFrom.Value,
                 Validate = declareValidation,
-                MaxRuns = dto.MaxRuns,
+                MaxExecutions = dto.MaxExecutions,
                 In = resolvedIn.Value,
                 Model = ToModel(dto.Model),
                 Models = resolvedModels.Value,
@@ -243,19 +243,14 @@ static class FlowReader
         if (declared.Organizes)
         {
             List<Error> containerErrors = [];
-            if (dto.Mode is not null)
-            {
-                containerErrors.Add(scope.Node(label, $"容器不支持 Mode，收到 {dto.Mode}。"));
-            }
-
             if (dto.From is { Count: > 0 })
             {
                 containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持 From。"));
             }
 
-            if (dto.Model is not null || dto.Branch is not null)
+            if (dto.Model is not null)
             {
-                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持模型选择与分支。"));
+                containerErrors.Add(scope.Node(label, "容器节点不是执行节点，不支持模型选择。"));
             }
 
             IReadOnlyList<ModelRef>? declaredSlots = null;
@@ -340,7 +335,7 @@ static class FlowReader
                 Type = containerType,
                 Inputs = inputs.Value,
                 ContainerOutputs = outputPorts.Value,
-                MaxRuns = dto.MaxRuns,
+                MaxExecutions = dto.MaxExecutions,
                 ModelSlots = declaredSlots,
                 Nodes = children,
             };
@@ -370,12 +365,6 @@ static class FlowReader
         }
 
         INodeType leafType = ReadParameters(declaration, dto, new NodeLabel(label), scope, leafErrors);
-
-        ErrorOr<NodeMode> leafMode = ParseNodeMode(dto.Mode);
-        if (leafMode.IsError)
-        {
-            leafErrors.Add(scope.Node(label, leafMode.FirstError.Description));
-        }
 
         OutputValidation? declaredValidation = null;
         if (dto.Validate is { } leafValidate)
@@ -421,12 +410,10 @@ static class FlowReader
             From = parsedFrom.Value,
             Model = ToModel(dto.Model),
             Outputs = declared.DerivesOutputsFromInputs ? ForwardedPorts(leafInputs.Value) : outputs.Value,
-            Execution = new ExecutableSpec
+            Spec = new ExecutableSpec
             {
-                Mode = leafMode.Value,
-                Branch = dto.Branch is { Length: > 0 } branch ? new BranchName(branch) : null,
                 Validate = declaredValidation,
-                MaxRuns = dto.MaxRuns,
+                MaxExecutions = dto.MaxExecutions,
             },
         };
     }
@@ -548,9 +535,9 @@ static class FlowReader
                     case "type":
                         if (property.Value.ValueKind != JsonValueKind.String
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
-                            || parsedType is not (PortType.Text or PortType.WorkItems or PortType.Context))
+                            || parsedType is not (PortType.Text or PortType.Context))
                         {
-                            errors.Add(scope.Node(nodeLabel, "输出端口的 Type 应为 Text、WorkItems 或 Context。"));
+                            errors.Add(scope.Node(nodeLabel, "输出端口的 Type 应为 Text 或 Context。"));
                             invalid = true;
                         }
                         else
@@ -616,7 +603,7 @@ static class FlowReader
 
             if (declaredType is null)
             {
-                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text、WorkItems 或 Context。"));
+                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text 或 Context。"));
                 continue;
             }
 
@@ -962,18 +949,5 @@ static class FlowReader
             ? Enum.Parse<Kuroe.Flow.Shared.StaticGraph.ValidationPredicate>(matched)
             : Error.Validation(FlowErrorCodes.FlowNode,
                 $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {predicate}。");
-    }
-
-    /// <summary>执行节点模式的名字按枚举解析，未写时回退 `Single` 模式。</summary>
-    private static ErrorOr<NodeMode> ParseNodeMode(string? mode)
-    {
-        if (mode is null)
-        {
-            return NodeMode.Single;
-        }
-
-        return Enum.TryParse(mode, ignoreCase: true, out NodeMode parsed)
-            ? parsed
-            : Error.Validation(FlowErrorCodes.FlowNode, $"Mode 应为 Single 或 PerItem，收到 {mode}。");
     }
 }

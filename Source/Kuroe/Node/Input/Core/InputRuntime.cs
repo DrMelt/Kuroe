@@ -6,7 +6,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 
 namespace Kuroe.Node.Input;
 
-/// <summary>输入节点在任务内的运行期对象：不启动 run，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
+/// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
 internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
     : NodeRuntime(executable)
@@ -54,10 +54,10 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     public override string? PortText(INodeTask task, PortName port) =>
         executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer ? answer : null;
 
-    /// <summary>按输出端口取可注入的回答消息，出处指向用户输入。</summary>
-    public override IReadOnlyList<ContextMessage> OutputMessages(INodeTask task, PortName port, int? item) =>
-        item is null && Released && executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer
-            ? [new ContextMessage(MessageRole.User, $"节点「{Path}」的输入：\n{answer}", new InputSource(Path))]
+    /// <summary>按输出端口取回答：端口不是 Text 或尚未回答时为空。</summary>
+    public override IReadOnlyList<ContextValue> OutputValues(INodeTask task, PortName port) =>
+        Released && executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer
+            ? [new ContextValue(new InputSource(Path, port), answer)]
             : [];
 
     /// <summary>输入节点在快照里的一刻状态。</summary>
@@ -73,6 +73,6 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
             state = NodeState.Done;
         }
 
-        return new ExecutableStateSnapshot(Path, state, [], 0, []);
+        return new ExecutableStateSnapshot(Path, state);
     }
 }

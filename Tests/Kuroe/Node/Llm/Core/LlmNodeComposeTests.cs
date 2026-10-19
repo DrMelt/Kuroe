@@ -9,30 +9,25 @@ namespace Kuroe.Node.Llm.Tests;
 public sealed class LlmNodeComposeTests
 {
     [Fact]
-    public void Prompt_leads_the_instruction()
-    {
-        string instruction = Typed(new LlmParameters { Prompt = "围绕目标展开" }).Compose(Materials());
-
-        Assert.Equal("围绕目标展开\n本次只负责条目 1：甲\n这是第 2 轮实施。", instruction);
-    }
+    public void Prompt_leads_the_instruction() =>
+        Assert.Equal("围绕目标展开\n这是第 2 轮实施。",
+            Typed(new LlmParameters { Prompt = "围绕目标展开" }).Instruction(Round()));
 
     [Fact]
-    public void Without_a_declaration_the_materials_become_the_instruction() =>
-        Assert.Equal("本次只负责条目 1：甲\n这是第 2 轮实施。", LlmNodeTypes.Create(null).Compose(Materials()));
+    public void Without_a_declaration_the_round_remains() =>
+        Assert.Equal("这是第 2 轮实施。", Typed(new LlmParameters()).Instruction(Round()));
 
     [Fact]
-    public void Blocks_lead_the_system_instruction_and_the_briefing_follows() =>
-        Assert.Equal(
-            "恒定块一\n恒定块二\n\n本轮接口",
-            Typed(new LlmParameters { SystemPrompt = ["恒定块一", "恒定块二"] }).Instructions("本轮接口"));
+    public void A_whole_node_first_round_has_no_instruction() =>
+        Assert.Empty(Typed(new LlmParameters()).Instruction(WholeNode()));
 
     [Fact]
-    public void Blocks_without_briefing_leave_no_trailing_blank_line() =>
-        Assert.Equal("恒定块", Typed(new LlmParameters { SystemPrompt = ["恒定块"] }).Instructions(string.Empty));
+    public void Blocks_become_the_system_instruction() =>
+        Assert.Equal("恒定块一\n恒定块二", Typed(new LlmParameters { SystemPrompt = ["恒定块一", "恒定块二"] }).SystemPrompt());
 
     [Fact]
-    public void Without_blocks_or_briefing_there_is_no_system_instruction() =>
-        Assert.Null(Typed(new LlmParameters()).Instructions(string.Empty));
+    public void Without_blocks_there_is_no_system_instruction() =>
+        Assert.Null(Typed(new LlmParameters()).SystemPrompt());
 
     [Fact]
     public void Declaration_leads_the_capability_paths_and_contract_tools_follow() =>
@@ -43,14 +38,11 @@ public sealed class LlmNodeComposeTests
                 .Select(path => path.Value));
 
     [Fact]
-    public void Work_items_and_text_ports_each_grant_their_contract_tool() =>
+    public void Text_ports_grant_the_port_contract_tool() =>
         Assert.Equal(
-            ["SubmitWorkItems", "SubmitPortValues", "SubmitStatus"],
+            ["SubmitPortValues", "SubmitStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([
-                    new Port(new PortName("拆分"), PortType.WorkItems),
-                    new Port(new PortName("结论"), PortType.Text),
-                ])
+                .ToolPaths([new Port(new PortName("结论"), PortType.Text)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -59,9 +51,20 @@ public sealed class LlmNodeComposeTests
 
     private static LlmNodeType Typed(LlmParameters parameters) => Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(parameters));
 
-    private static RunMaterials Materials() => new()
+    /// <summary>第 2 轮执行的输入。</summary>
+    private static ExecutionInput Round() => new()
     {
-        Steps = ["本次只负责条目 1：甲", "这是第 2 轮实施。"],
-        Briefing = "本轮接口",
+        Task = new TaskId(1),
+        Node = NodePath.Of("实施"),
+        Type = LlmNodeTypes.Create(null),
+        ExecutionCount = 2,
+    };
+
+    /// <summary>节点首次执行的输入。</summary>
+    private static ExecutionInput WholeNode() => new()
+    {
+        Task = new TaskId(1),
+        Node = NodePath.Of("实施"),
+        Type = LlmNodeTypes.Create(null),
     };
 }
