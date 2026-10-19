@@ -3,17 +3,17 @@ using ErrorOr;
 using Kuroe.Presentation;
 using Kuroe.Tool.Json;
 
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>工具面的信息查询工具。列出内置对话可用的函数与配置的命令工具及其路径。</summary>
-public sealed class ToolboxInfoTool : ITool
+/// <summary>工具面的状态查询工具。列出内置对话可用的函数与配置的命令工具及其路径。</summary>
+public sealed class ToolboxKuroeInfoTool : ITool
 {
     private readonly IReadOnlyList<ToolPath> _dialogueTools;
     private readonly IReadOnlyList<ConfiguredTool> _configuredTools;
 
     /// <summary>列出工具面的函数定义。</summary>
     private static readonly ToolDefinition ListTools = new(
-        new ToolPath("info/ListTools"),
+        new ToolPath("KuroeInfo/ListTools"),
         "列出内置对话可用的函数与配置的命令工具及其路径。",
         []);
 
@@ -21,7 +21,7 @@ public sealed class ToolboxInfoTool : ITool
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用内置对话的能力白名单与配置的工具建立载体。</summary>
-    public ToolboxInfoTool(IReadOnlyList<ToolPath> dialogueTools, IReadOnlyList<ConfiguredTool> configuredTools)
+    public ToolboxKuroeInfoTool(IReadOnlyList<ToolPath> dialogueTools, IReadOnlyList<ConfiguredTool> configuredTools)
     {
         _dialogueTools = dialogueTools;
         _configuredTools = configuredTools;

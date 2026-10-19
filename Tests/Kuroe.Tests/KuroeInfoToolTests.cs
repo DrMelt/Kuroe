@@ -6,7 +6,7 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
-using Kuroe.Tool.Info;
+using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Json;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,8 +14,8 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>内置对话的信息查询工具：输出文本供模型回答，值来自各服务的只读快照。</summary>
-public sealed class InfoToolTests : IDisposable
+/// <summary>内置对话的状态查询工具：输出文本供模型回答，值来自各服务的只读快照。</summary>
+public sealed class KuroeInfoToolTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
@@ -25,7 +25,7 @@ public sealed class InfoToolTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
         string output = Call(tool, "ListTasks");
 
         Assert.Contains($"#{id.Value}", output);
@@ -37,7 +37,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
 
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
     }
@@ -48,7 +48,7 @@ public sealed class InfoToolTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
         string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
 
         Assert.Contains($"#{id.Value}", output);
@@ -63,7 +63,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
 
         Assert.Contains(expected, Call(tool, "GetTask", ("taskId", taskId)));
     }
@@ -76,7 +76,7 @@ public sealed class InfoToolTests : IDisposable
         environment.Settle(id);
 
         ExecutionId executionId = environment.Snapshot(id).Executables.SelectMany(node => node.Executions).First().Id;
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));
 
         Assert.Contains(executionId.ToString(), output);
@@ -88,7 +88,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
 
         Assert.Contains("执行号要写成数字", Call(tool, "GetExecution", ("executionId", "x")));
         Assert.Contains("没有执行", Call(tool, "GetExecution", ("executionId", "99")));
@@ -111,7 +111,7 @@ public sealed class InfoToolTests : IDisposable
         execution.MarkRunning();
         execution.Report("调用工具 file/ReadFile");
 
-        TaskInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.Registry);
 
         Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
@@ -124,7 +124,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        CatalogInfoTool tool = new(new ToolCatalogView(environment.Catalog, environment.Models));
+        CatalogKuroeInfoTool tool = new(new ToolCatalogView(environment.Catalog, environment.Models));
         string output = Call(tool, "GetCatalog");
 
         Assert.Contains("test", output);
@@ -137,7 +137,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows);
         string output = Call(tool, "ListFlows");
 
         Assert.Contains("默认", output);
@@ -148,7 +148,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
@@ -160,7 +160,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows);
 
         Assert.Contains("没有名为 missing 的流程", Call(tool, "GetFlow", ("flowName", "missing")));
     }
@@ -170,7 +170,7 @@ public sealed class InfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        SettingsInfoTool tool = new(environment.Settings);
+        SettingsKuroeInfoTool tool = new(environment.Settings);
         string output = Call(tool, "GetConfig");
 
         Assert.Contains("用户层文件：", output);
@@ -180,18 +180,18 @@ public sealed class InfoToolTests : IDisposable
     public void ListTools_lists_dialogue_functions_and_command_tools()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        ToolboxInfoTool empty = new(DialogueFlow.Tools, environment.ConfiguredTools);
+        ToolboxKuroeInfoTool empty = new(DialogueFlow.Tools, environment.ConfiguredTools);
         string noTools = Call(empty, "ListTools");
 
         Assert.Contains("内置对话可用函数", noTools);
         Assert.Contains("GetLocalTime", noTools);
-        Assert.Contains("info", noTools);
+        Assert.Contains("KuroeInfo", noTools);
         Assert.Contains("file", noTools);
         Assert.Contains("没有配置命令工具", noTools);
 
         ConfiguredTool diff = Configured();
 
-        ToolboxInfoTool tool = new(DialogueFlow.Tools, [diff]);
+        ToolboxKuroeInfoTool tool = new(DialogueFlow.Tools, [diff]);
         string output = Call(tool, "ListTools");
 
         Assert.Contains("git/RunDiff", output);
@@ -222,14 +222,14 @@ public sealed class InfoToolTests : IDisposable
     }
 
     [Fact]
-    public void Command_tool_duplicating_information_tool_path_fails_startup()
+    public void Command_tool_duplicating_kuroe_info_tool_path_fails_startup()
     {
         Directory.CreateDirectory(_root);
         Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
         File.WriteAllText(Path.Combine(_root, ".kuroe", "tools.json"), """
             {
               "Tools": [
-                { "Name": "ListTasks", "Group": "info", "Template": ["cmd", "/c", "echo", "x"] }
+                { "Name": "ListTasks", "Group": "KuroeInfo", "Template": ["cmd", "/c", "echo", "x"] }
               ]
             }
             """);

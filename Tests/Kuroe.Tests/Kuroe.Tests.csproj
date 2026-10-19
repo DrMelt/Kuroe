@@ -27,7 +27,7 @@
         <ProjectReference Include="..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Tool\Implementation\Contract\Core\Kuroe.Tool.Contract.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe\Tool\Implementation\Info\Core\Kuroe.Tool.Info.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\InputChannel\Kuroe.Flow.InputChannel.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />

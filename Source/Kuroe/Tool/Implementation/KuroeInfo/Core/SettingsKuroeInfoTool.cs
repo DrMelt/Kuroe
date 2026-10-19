@@ -2,16 +2,16 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared.Configuration;
 
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>生效配置的信息查询工具。只读，不产生状态改动。</summary>
-public sealed class SettingsInfoTool : ITool
+/// <summary>生效配置的状态查询工具。只读，不产生状态改动。</summary>
+public sealed class SettingsKuroeInfoTool : ITool
 {
     private readonly ISettingsView _settings;
 
     /// <summary>查看生效配置的函数定义。</summary>
     private static readonly ToolDefinition GetConfig = new(
-        new ToolPath("info/GetConfig"),
+        new ToolPath("KuroeInfo/GetConfig"),
         "查看生效配置：各节设置项的生效值与来源标记。",
         []);
 
@@ -19,7 +19,7 @@ public sealed class SettingsInfoTool : ITool
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用生效配置的只读视图建立载体。</summary>
-    public SettingsInfoTool(ISettingsView settings)
+    public SettingsKuroeInfoTool(ISettingsView settings)
     {
         _settings = settings;
         Functions = [GetConfig.Bind(_ => Describe())];

@@ -10,7 +10,7 @@
     <Project Path="Source/Kuroe/Tool/Implementation/Command/Core/Kuroe.Tool.Command.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/Command/Json/Kuroe.Tool.Command.Json.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/Contract/Core/Kuroe.Tool.Contract.csproj" />
-    <Project Path="Source/Kuroe/Tool/Implementation/Info/Core/Kuroe.Tool.Info.csproj" />
+    <Project Path="Source/Kuroe/Tool/Implementation/KuroeInfo/Core/Kuroe.Tool.KuroeInfo.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Json/Kuroe.Node.Llm.Json.csproj" />
     <Project Path="Source/Kuroe/Node/Input/Core/Kuroe.Node.Input.csproj" />

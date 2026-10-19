@@ -16,7 +16,7 @@ using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
 using Kuroe.Tool.File;
-using Kuroe.Tool.Info;
+using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Json;
 using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
@@ -157,7 +157,7 @@ public static class ServiceCollectionExtensions
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 
-    /// <summary>装配工具载体并注册：内置工具、信息查询工具、命令工具与契约工具一次创建，注册前按路径校验重复。
+    /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径校验重复。
     /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
@@ -185,11 +185,11 @@ public static class ServiceCollectionExtensions
             new SourceTool(sourceDirectory),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
-            new TaskInfoTool(taskRegistry),
-            new CatalogInfoTool(new ToolCatalogView(catalog, models)),
-            new FlowInfoTool(flows),
-            new SettingsInfoTool(settings),
-            new ToolboxInfoTool(DialogueFlow.Tools, configured),
+            new TaskKuroeInfoTool(taskRegistry),
+            new CatalogKuroeInfoTool(new ToolCatalogView(catalog, models)),
+            new FlowKuroeInfoTool(flows),
+            new SettingsKuroeInfoTool(settings),
+            new ToolboxKuroeInfoTool(DialogueFlow.Tools, configured),
             .. configured.Select(entry => entry.Tool),
         ];
 

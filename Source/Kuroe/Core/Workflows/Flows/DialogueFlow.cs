@@ -41,7 +41,7 @@ internal static class DialogueFlow
     internal static IReadOnlyList<ToolPath> Tools { get; } =
     [
         new ToolPath("GetLocalTime"),
-        new ToolPath("info"),
+        new ToolPath("KuroeInfo"),
         new ToolPath("file"),
         new ToolPath("source"),
     ];

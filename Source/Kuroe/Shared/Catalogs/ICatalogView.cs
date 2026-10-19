@@ -1,4 +1,4 @@
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Shared.Catalogs;
 
 /// <summary>模型目录的只读视图：一次读取给出提供商、模型清单与当前选中模型。由宿主提供，凭据只报是否已设置。</summary>
 public interface ICatalogView

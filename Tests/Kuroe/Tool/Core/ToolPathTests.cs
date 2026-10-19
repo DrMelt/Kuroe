@@ -14,17 +14,17 @@ public sealed class ToolPathTests
     }
 
     [Theory]
-    [InlineData("info", "info")]
-    [InlineData("info", "info/GetTask")]
-    [InlineData("info/GetTask", "info/GetTask")]
+    [InlineData("KuroeInfo", "KuroeInfo")]
+    [InlineData("KuroeInfo", "KuroeInfo/GetTask")]
+    [InlineData("KuroeInfo/GetTask", "KuroeInfo/GetTask")]
     [InlineData("file", "file/read/ReadFile")]
     public void Allows_accepts_the_entry_and_its_subtree(string entry, string path) =>
         Assert.True(new ToolPath(entry).Allows(path));
 
     [Theory]
-    [InlineData("info", "infoX")]
-    [InlineData("info/GetTask", "info")]
-    [InlineData("Info", "info")]
+    [InlineData("KuroeInfo", "KuroeInfoX")]
+    [InlineData("KuroeInfo/GetTask", "KuroeInfo")]
+    [InlineData("Kuroeinfo", "KuroeInfo")]
     public void Allows_rejects_paths_outside_the_entry(string entry, string path) =>
         Assert.False(new ToolPath(entry).Allows(path));
 
@@ -34,7 +34,7 @@ public sealed class ToolPathTests
         ToolPath entry = new(string.Empty);
 
         Assert.False(entry.Allows(string.Empty));
-        Assert.False(entry.Allows("info"));
+        Assert.False(entry.Allows("KuroeInfo"));
     }
 
     [Theory]
@@ -54,7 +54,7 @@ public sealed class ToolPathTests
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
-    [InlineData("info/GetTask")]
+    [InlineData("KuroeInfo/GetTask")]
     public void Invalid_reason_accepts_blank_or_well_formed_paths(string value) =>
         Assert.Null(ToolPath.InvalidReason(value));
 }

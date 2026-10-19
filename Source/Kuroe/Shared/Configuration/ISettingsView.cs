@@ -1,6 +1,4 @@
-using Kuroe.Shared.Configuration;
-
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Shared.Configuration;
 
 /// <summary>生效配置的只读视图。由宿主提供。</summary>
 public interface ISettingsView

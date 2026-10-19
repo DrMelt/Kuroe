@@ -6,7 +6,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Configuration.Model;
 using Kuroe.Node.Llm;
 using Kuroe.Shared.Configuration;
-using Kuroe.Tool.Info;
 
 namespace Kuroe.Configuration;
 

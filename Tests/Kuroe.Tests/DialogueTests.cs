@@ -7,7 +7,7 @@ using Kuroe.Tool;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Executions;
-using Kuroe.Tool.Info;
+using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.Flows;
 using Kuroe.Flow.Runtime.Tasks;
@@ -57,7 +57,7 @@ public sealed class DialogueTests
         Assert.Equal(
             [
                 new ToolPath("GetLocalTime"),
-                new ToolPath("info"),
+                new ToolPath("KuroeInfo"),
                 new ToolPath("file"),
                 new ToolPath("source"),
             ],
@@ -70,14 +70,14 @@ public sealed class DialogueTests
         ToolCollection tools = new(
         [
             new TimeTool(),
-            new TaskInfoTool(new TaskRegistry()),
+            new TaskKuroeInfoTool(new TaskRegistry()),
             new SampleTool(),
         ],
         new ToolJson());
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), DialogueFlow.Tools);
 
         Assert.Equal(
-            ["GetLocalTime", "info/ListTasks", "info/GetTask", "info/GetExecution"],
+            ["GetLocalTime", "KuroeInfo/ListTasks", "KuroeInfo/GetTask", "KuroeInfo/GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -87,14 +87,14 @@ public sealed class DialogueTests
         ToolCollection tools = new(
         [
             new TimeTool(),
-            new TaskInfoTool(new TaskRegistry()),
+            new TaskKuroeInfoTool(new TaskRegistry()),
             new SampleTool(),
         ],
         new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info")]);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo")]);
 
         Assert.Equal(
-            ["info/ListTasks", "info/GetTask", "info/GetExecution"],
+            ["KuroeInfo/ListTasks", "KuroeInfo/GetTask", "KuroeInfo/GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -104,19 +104,19 @@ public sealed class DialogueTests
         ToolCollection tools = new(
         [
             new TimeTool(),
-            new TaskInfoTool(new TaskRegistry()),
+            new TaskKuroeInfoTool(new TaskRegistry()),
         ],
         new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("info/GetTask")]);
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo/GetTask")]);
 
-        Assert.Equal(["info/GetTask"], built.Select(tool => tool.Name));
+        Assert.Equal(["KuroeInfo/GetTask"], built.Select(tool => tool.Name));
     }
 
     [Fact]
     public void Whitelist_with_similar_prefix_does_not_match_group()
     {
-        ToolCollection tools = new([new TaskInfoTool(new TaskRegistry())], new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("infoX")]);
+        ToolCollection tools = new([new TaskKuroeInfoTool(new TaskRegistry())], new ToolJson());
+        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfoX")]);
 
         Assert.Empty(built);
     }

@@ -4,10 +4,10 @@ using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Node.Llm;
 using Kuroe.Presentation;
 
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>流程模板的信息查询工具。只读，不产生状态改动。</summary>
-public sealed class FlowInfoTool : ITool
+/// <summary>流程模板的状态查询工具。只读，不产生状态改动。</summary>
+public sealed class FlowKuroeInfoTool : ITool
 {
     private readonly IFlowCatalog _flows;
 
@@ -16,18 +16,18 @@ public sealed class FlowInfoTool : ITool
 
     /// <summary>列出流程模板的函数定义。</summary>
     private static readonly ToolDefinition ListFlows = new(
-        new ToolPath("info/ListFlows"),
+        new ToolPath("KuroeInfo/ListFlows"),
         "列出流程模板：流程名、执行节点路径与说明。",
         []);
 
     /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
-        new ToolPath("info/GetFlow"),
+        new ToolPath("KuroeInfo/GetFlow"),
         "查看指定流程的展开节点表：模型、节点类型名与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)]);
 
     /// <summary>用流程模板查询建立载体。</summary>
-    public FlowInfoTool(IFlowCatalog flows)
+    public FlowKuroeInfoTool(IFlowCatalog flows)
     {
         _flows = flows;
         Functions =

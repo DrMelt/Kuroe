@@ -1,16 +1,17 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Shared.Catalogs;
 
-namespace Kuroe.Tool.Info;
+namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>模型目录的信息查询工具。只读，凭据不交给模型。</summary>
-public sealed class CatalogInfoTool : ITool
+/// <summary>模型目录的状态查询工具。只读，凭据不交给模型。</summary>
+public sealed class CatalogKuroeInfoTool : ITool
 {
     private readonly ICatalogView _catalog;
 
     /// <summary>查看模型目录的函数定义。</summary>
     private static readonly ToolDefinition GetCatalog = new(
-        new ToolPath("info/GetCatalog"),
+        new ToolPath("KuroeInfo/GetCatalog"),
         "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型与当前选中模型。",
         []);
 
@@ -18,7 +19,7 @@ public sealed class CatalogInfoTool : ITool
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用模型目录的只读视图建立载体。</summary>
-    public CatalogInfoTool(ICatalogView catalog)
+    public CatalogKuroeInfoTool(ICatalogView catalog)
     {
         _catalog = catalog;
         Functions = [GetCatalog.Bind(_ => Describe())];
