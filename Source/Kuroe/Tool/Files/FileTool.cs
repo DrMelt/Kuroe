@@ -72,6 +72,13 @@ public sealed class FileTool(string baseDirectory) : ITool
         ],
         Group);
 
+    /// <summary>取一个文件的文件系统信息。</summary>
+    private static readonly ToolDefinition GetFileInfo = new(
+        new ToolName("GetFileInfo"),
+        "取工作目录内一个文件的文件系统信息：字节大小、创建/修改/访问时间、只读隐藏系统归档属性。只报文件系统事实，不判断内容；目录用 ListDirectory 列出条目。",
+        [new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true)],
+        Group);
+
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; } = Declare(new FileScope(baseDirectory, "工作目录"));
 
@@ -83,6 +90,7 @@ public sealed class FileTool(string baseDirectory) : ITool
         ReadFiles.Bind(arguments => ReadMany(scope, arguments)),
         WriteFile.Bind(arguments => Write(scope, arguments)),
         PatchFile.Bind(arguments => Patch(scope, arguments)),
+        GetFileInfo.Bind(arguments => Info(scope, arguments)),
     ];
 
     /// <summary>读取指定文本文件指定行号范围的内容，按行截取并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
@@ -286,6 +294,57 @@ public sealed class FileTool(string baseDirectory) : ITool
         }
 
         return $"已替换 {path} 的第 {range.Value.From} 到 {range.Value.To} 行（{current.Length} 行 → {replacementLines.Length} 行）。";
+    }
+
+    /// <summary>取一个文件的文件系统事实并渲染成文本，错误与拒绝以 ErrorOr 表达。目录不受理，提示改用 ListDirectory。</summary>
+    private static ErrorOr<string> Info(FileScope scope, ToolArguments arguments)
+    {
+        string? path = arguments.Text(new ToolName("path"));
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return ToolErrors.Argument("缺少参数 path。");
+        }
+
+        ErrorOr<FileDetails> details = scope.Inspect(path, "ListDirectory");
+        if (details.IsError)
+        {
+            return details.ErrorsOrEmptyList;
+        }
+
+        return string.Join('\n',
+            path,
+            $"大小：{details.Value.Size} 字节",
+            $"创建时间：{details.Value.Created:yyyy-MM-dd HH:mm:ss}",
+            $"修改时间：{details.Value.LastWrite:yyyy-MM-dd HH:mm:ss}",
+            $"访问时间：{details.Value.LastAccess:yyyy-MM-dd HH:mm:ss}",
+            $"属性：{Describe(details.Value.Attributes)}");
+    }
+
+    /// <summary>属性位里的四项映射成中文名并以顿号连接，四项都为假时为「无」。</summary>
+    private static string Describe(FileAttributes attributes)
+    {
+        List<string> names = [];
+        if (attributes.HasFlag(FileAttributes.ReadOnly))
+        {
+            names.Add("只读");
+        }
+
+        if (attributes.HasFlag(FileAttributes.Hidden))
+        {
+            names.Add("隐藏");
+        }
+
+        if (attributes.HasFlag(FileAttributes.System))
+        {
+            names.Add("系统");
+        }
+
+        if (attributes.HasFlag(FileAttributes.Archive))
+        {
+            names.Add("归档");
+        }
+
+        return names.Count == 0 ? "无" : string.Join('、', names);
     }
 
     /// <summary>解析写回编码。缺省或空白为 UTF-8 无 BOM，只支持 UTF 族编码，未知值给出带实参的详细错误。</summary>

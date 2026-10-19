@@ -59,6 +59,32 @@ public sealed class FileScope(string root, string name)
         return file.IsError ? file.ErrorsOrEmptyList : ReadAll(file.Value, path);
     }
 
+    /// <summary>取根目录内文件的文件系统事实，只受理文件。listFunction 是提示里指出的列目录函数名。</summary>
+    public ErrorOr<FileDetails> Inspect(string path, string listFunction)
+    {
+        ErrorOr<string> file = ExistingFile(path, listFunction);
+        if (file.IsError)
+        {
+            return file.ErrorsOrEmptyList;
+        }
+
+        try
+        {
+            FileInfo info = new(file.Value);
+
+            return new FileDetails(
+                info.Length,
+                new DateTimeOffset(info.CreationTime),
+                new DateTimeOffset(info.LastWriteTime),
+                new DateTimeOffset(info.LastAccessTime),
+                info.Attributes);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ToolErrors.ReadFailed($"读取 {path} 信息失败：{ex.Message}");
+        }
+    }
+
     /// <summary>解析到根目录内已存在的文件。目标是目录或不存在时给出拒绝错误。</summary>
     private ErrorOr<string> ExistingFile(string path, string listFunction)
     {

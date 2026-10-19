@@ -602,6 +602,78 @@ public sealed class FileToolTests : IDisposable
         Assert.Equal("一", File.ReadAllText(Path.Combine(_root, "code.txt")));
     }
 
+    [Fact]
+    public void GetFileInfo_reports_size_and_times()
+    {
+        Directory.CreateDirectory(_root);
+        string target = Path.Combine(_root, "notes.txt");
+        File.WriteAllText(target, "记下要点\n第二行");
+
+        string output = Call(new FileTool(_root), "GetFileInfo", ("path", "notes.txt"));
+
+        Assert.StartsWith("notes.txt\n", output);
+        Assert.Contains($"大小：{new FileInfo(target).Length} 字节", output);
+        Assert.Matches(@"创建时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", output);
+        Assert.Matches(@"修改时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", output);
+        Assert.Matches(@"访问时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", output);
+        Assert.Contains("属性：", output);
+    }
+
+    [Fact]
+    public void GetFileInfo_reports_read_only_attribute()
+    {
+        Directory.CreateDirectory(_root);
+        string target = Path.Combine(_root, "notes.txt");
+        File.WriteAllText(target, "x");
+        File.SetAttributes(target, FileAttributes.ReadOnly);
+        try
+        {
+            string output = Call(new FileTool(_root), "GetFileInfo", ("path", "notes.txt"));
+
+            Assert.Contains("属性：", output);
+            Assert.Contains("只读", output);
+        }
+        finally
+        {
+            File.SetAttributes(target, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
+    public void GetFileInfo_rejects_missing_path_argument()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("缺少参数 path", Call(new FileTool(_root), "GetFileInfo"));
+    }
+
+    [Fact]
+    public void GetFileInfo_rejects_missing_file()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("不存在", Call(new FileTool(_root), "GetFileInfo", ("path", "nope.txt")));
+    }
+
+    [Fact]
+    public void GetFileInfo_rejects_directory()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "dir"));
+
+        string output = Call(new FileTool(_root), "GetFileInfo", ("path", "dir"));
+
+        Assert.Contains("是目录", output);
+        Assert.Contains("ListDirectory", output);
+    }
+
+    [Fact]
+    public void GetFileInfo_rejects_path_escaping_working_directory()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("不在工作目录内", Call(new FileTool(_root), "GetFileInfo", ("path", "..")));
+    }
+
     private static string Call(FileTool tool, string name, params (string Key, object? Value)[] args) =>
         ToolResult.Render(tool.Functions.Single(function => function.Definition.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
