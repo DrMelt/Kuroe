@@ -153,7 +153,7 @@ public sealed class CommandToolFile : IToolFile
             }
         }
 
-        ErrorOr<IReadOnlyList<ToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters);
+        ErrorOr<IReadOnlyList<CommandToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters);
         if (parameters.IsError)
         {
             errors.AddRange(parameters.ErrorsOrEmptyList);
@@ -165,13 +165,11 @@ public sealed class CommandToolFile : IToolFile
         }
 
         ToolPath path = dto.Group is { Length: > 0 } group ? new ToolPath($"{group}/{dto.Name}") : new ToolPath(dto.Name!);
-        List<ToolParameter> list = [.. parameters.Value];
 
         return new CommandToolDefinition(
-            new ToolDefinition(
-                path,
-                dto.Description ?? $"执行命令 {dto.Name}",
-                list),
+            path,
+            dto.Description ?? $"执行命令 {dto.Name}",
+            parameters.Value,
             template.Value,
             dto.Directory,
             dto.TimeoutSeconds ?? CommandToolTemplate.DefaultTimeoutSeconds,
@@ -190,10 +188,10 @@ public sealed class CommandToolFile : IToolFile
     }
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。</summary>
-    private static ErrorOr<IReadOnlyList<ToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos)
+    private static ErrorOr<IReadOnlyList<CommandToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos)
     {
         List<Error> errors = [];
-        List<ToolParameter> parameters = [];
+        List<CommandToolParameter> parameters = [];
         HashSet<string> names = [];
 
         foreach (CommandParameterDto dto in dtos ?? [])
@@ -234,8 +232,8 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
-            parameters.Add(new ToolParameter(
-                new ToolName(dto.Name),
+            parameters.Add(new CommandToolParameter(
+                dto.Name,
                 dto.Description ?? $"参数 {dto.Name}",
                 Flag: dto.Flag,
                 Required: dto.Required,

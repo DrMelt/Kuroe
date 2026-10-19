@@ -13,13 +13,12 @@ internal static class Run
 
     /// <summary>函数定义与模板：dotnet run {project} [-- {arguments}]。</summary>
     internal static readonly CommandToolDefinition Definition = new(
-        new ToolDefinition(
-            new ToolPath("dotnet/write/Run"),
-            "运行项目，project 是项目或目录，arguments 是传给应用的参数；应用在超时前不结束会被终止。",
-            [
-                new ToolParameter(new ToolName(Project), "项目或目录路径，缺省在项目工作目录里查找"),
-                new ToolParameter(new ToolName(Arguments), "传给应用的参数列表，缺省不给参数", List: true),
-            ]),
+        new ToolPath("dotnet/write/Run"),
+        "运行项目，project 是项目或目录，arguments 是传给应用的参数；应用在超时前不结束会被终止。",
+        [
+            new CommandToolParameter(Project, "项目或目录路径，缺省在项目工作目录里查找"),
+            new CommandToolParameter(Arguments, "传给应用的参数列表，缺省不给参数", List: true),
+        ],
         [
             new("dotnet", null),
             new("run", null),
@@ -27,7 +26,6 @@ internal static class Run
             new("--", Arguments),
             new("{arguments}", null),
         ],
-        Directory: null,
         TimeoutSeconds: 600,
         OutputLimit: 20000);
 }

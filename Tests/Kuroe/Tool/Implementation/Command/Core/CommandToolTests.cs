@@ -105,7 +105,7 @@ public sealed class CommandToolTests
         }
 
         CommandTool tool = new(
-            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Texts(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
+            new CommandToolDefinition(new ToolPath("Execution"), "说明", [], Texts(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
             Path.GetTempPath());
 
         Assert.Contains("未结束，已终止", Invoke(tool, Given()));
@@ -197,7 +197,7 @@ public sealed class CommandToolTests
     }
 
     /// <summary>经 ToolCollection 构建成模型可调用的函数，schema 在此生成。</summary>
-    private static AIFunction BuiltAIFunction(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters)
+    private static AIFunction BuiltAIFunction(IReadOnlyList<string> template, IReadOnlyList<CommandToolParameter> parameters)
     {
         CommandTool tool = Tool(template, parameters);
         AITool built = Assert.Single(new ToolCollection([tool], new ToolJson())
@@ -211,11 +211,11 @@ public sealed class CommandToolTests
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
     /// <summary>在临时目录执行的命令载体。</summary>
-    private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
+    private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<CommandToolParameter> parameters) =>
         new(Definition(Texts(template), parameters), Path.GetTempPath());
 
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
-    private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
+    private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
     {
         ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
 
@@ -225,7 +225,7 @@ public sealed class CommandToolTests
     }
 
     /// <summary>展开被拒的错误文本，未拒绝时用例失败。</summary>
-    private static string Rejected(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
+    private static string Rejected(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
     {
         ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
 
@@ -235,12 +235,12 @@ public sealed class CommandToolTests
     }
 
     /// <summary>调用命令面的展开，只组装命令行，不起进程。</summary>
-    private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values) =>
+    private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values) =>
         CommandToolRunner.Expand(Definition(template, parameters), new ToolArguments(values));
 
     /// <summary>测试用的命令定义，执行目录、超时与输出上限取固定值。</summary>
-    private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), template, null, 5, 200);
+    private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters) =>
+        new(new ToolPath("Execution"), "说明", parameters, template, null, 5, 200);
 
     /// <summary>模板项：文字，无关联参数。</summary>
     private static IReadOnlyList<CommandToolTemplateItem> Texts(IEnumerable<string> texts) =>
@@ -254,14 +254,14 @@ public sealed class CommandToolTests
     private static Dictionary<string, object?> Given(params (string Name, object? Value)[] values) =>
         values.ToDictionary(value => value.Name, value => value.Value);
 
-    private static readonly ToolParameter FileParameter = new(new ToolName("files"), "文件列表", List: true);
-    private static readonly ToolParameter RequiredFileParameter = new(new ToolName("files"), "文件列表", Required: true, List: true);
-    private static readonly ToolParameter TextParameter = new(new ToolName("text"), "文本", Required: true);
-    private static readonly ToolParameter TokenParameter = new(new ToolName("token"), "令牌");
-    private static readonly ToolParameter RequiredTokenParameter = new(new ToolName("token"), "令牌", Required: true);
-    private static readonly ToolParameter UserParameter = new(new ToolName("user"), "用户");
-    private static readonly ToolParameter PasswordParameter = new(new ToolName("pass"), "口令");
-    private static readonly ToolParameter StagedParameter = new(new ToolName("staged"), "开关", Flag: true);
+    private static readonly CommandToolParameter FileParameter = new("files", "文件列表", List: true);
+    private static readonly CommandToolParameter RequiredFileParameter = new("files", "文件列表", Required: true, List: true);
+    private static readonly CommandToolParameter TextParameter = new("text", "文本", Required: true);
+    private static readonly CommandToolParameter TokenParameter = new("token", "令牌");
+    private static readonly CommandToolParameter RequiredTokenParameter = new("token", "令牌", Required: true);
+    private static readonly CommandToolParameter UserParameter = new("user", "用户");
+    private static readonly CommandToolParameter PasswordParameter = new("pass", "口令");
+    private static readonly CommandToolParameter StagedParameter = new("staged", "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
 
     private sealed class NullSink : IProcessSink

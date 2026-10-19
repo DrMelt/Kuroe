@@ -13,15 +13,11 @@ internal static class Commit
 
     /// <summary>函数定义与模板：git commit -m {message} [-- paths]。</summary>
     internal static readonly CommandToolDefinition Definition = new(
-        new ToolDefinition(
-            new ToolPath("git/write/Commit"),
-            "把暂存区的改动提交，message 是提交说明。给 paths 时只提交这些路径的改动。",
-            [
-                new ToolParameter(new ToolName(Message), "提交说明", Required: true),
-                new ToolParameter(new ToolName(Paths), "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true),
-            ]),
-        [new("git", null), new("commit", null), new("-m", null), new("{message}", null), new("--", Paths), new("{paths}", null)],
-        null,
-        CommandToolTemplate.DefaultTimeoutSeconds,
-        CommandToolTemplate.DefaultOutputLimit);
+        new ToolPath("git/write/Commit"),
+        "把暂存区的改动提交，message 是提交说明。给 paths 时只提交这些路径的改动。",
+        [
+            new CommandToolParameter(Message, "提交说明", Required: true),
+            new CommandToolParameter(Paths, "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true),
+        ],
+        [new("git", null), new("commit", null), new("-m", null), new("{message}", null), new("--", Paths), new("{paths}", null)]);
 }

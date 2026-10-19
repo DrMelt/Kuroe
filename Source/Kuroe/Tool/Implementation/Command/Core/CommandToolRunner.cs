@@ -24,11 +24,12 @@ internal static class CommandToolRunner
     /// <summary>按定义展开模板得到命令行，第一项是程序本身。返回非空表示中断调用。</summary>
     internal static ErrorOr<IReadOnlyList<string>> Expand(CommandToolDefinition definition, ToolArguments arguments)
     {
+        IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
         var argv = new List<string>();
 
         foreach (CommandToolTemplateItem item in definition.Template)
         {
-            Error? rejected = ExpandItem(definition, arguments, item, argv);
+            Error? rejected = ExpandItem(parameters, arguments, item, argv);
             if (rejected is not null)
             {
                 return rejected.Value;
@@ -44,11 +45,11 @@ internal static class CommandToolRunner
     }
 
     /// <summary>展开一个参数项。对象项的关联参数缺省时整项消失，必填仍拒绝；其余参数项按占位符展开。返回非空表示中断调用。</summary>
-    private static Error? ExpandItem(CommandToolDefinition definition, ToolArguments arguments, CommandToolTemplateItem item, List<string> argv)
+    private static Error? ExpandItem(IReadOnlyList<ToolParameter> parameters, ToolArguments arguments, CommandToolTemplateItem item, List<string> argv)
     {
         if (item.OmitWhenMissing is { } linkedName)
         {
-            ToolParameter? linked = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
+            ToolParameter? linked = parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
             if (linked is not null && IsMissing(arguments, linked))
             {
                 return linked.Required ? ToolErrors.Argument($"缺少参数 {linkedName}。") : null;
@@ -62,7 +63,7 @@ internal static class CommandToolRunner
             return null;
         }
 
-        return ExpandToken(definition, arguments, item.Text, argv);
+        return ExpandToken(parameters, arguments, item.Text, argv);
     }
 
     /// <summary>关联参数是否缺省：布尔参数为真才算给出，列表参数为空算缺省，文本参数未给算缺省。</summary>
@@ -74,14 +75,14 @@ internal static class CommandToolRunner
     };
 
     /// <summary>展开一个含占位符的参数项。展开后追加参数项，返回非空表示中断调用。</summary>
-    private static Error? ExpandToken(CommandToolDefinition definition, ToolArguments arguments, string token, List<string> argv)
+    private static Error? ExpandToken(IReadOnlyList<ToolParameter> parameters, ToolArguments arguments, string token, List<string> argv)
     {
         // 独立占位符：整个参数项就是 {name}。列表参数只允许这种写法。
         MatchCollection matches = CommandToolTemplate.Matches(token);
         if (matches.Count == 1 && token.StartsWith('{') && token.EndsWith('}'))
         {
             string name = matches[0].Groups[1].Value;
-            ToolParameter? parameter = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
+            ToolParameter? parameter = parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
                 return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");
@@ -116,7 +117,7 @@ internal static class CommandToolRunner
         foreach (Match match in matches)
         {
             string name = match.Groups[1].Value;
-            ToolParameter? parameter = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
+            ToolParameter? parameter = parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
                 return ToolErrors.Internal($"模板占位符 {{{name}}} 没有对应参数声明。");
