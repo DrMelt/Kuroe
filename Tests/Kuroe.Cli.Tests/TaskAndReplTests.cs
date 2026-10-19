@@ -12,27 +12,27 @@ public sealed class TaskAndReplTests
     public void Task_new_submits_and_reports()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
 
         Assert.Contains("已提交 任务 #1", cli.Output.Output);
         Assert.Single(cli.Environment.Registry.Snapshots());
     }
 
     [Fact]
-    public void Task_new_with_blank_flow_falls_back_to_default()
+    public void Task_new_with_blank_flow_rejects()
     {
         using CliSession cli = new();
         cli.Tasks.Run(["/task", "new", "--flow", "", "补齐 README"]);
 
-        Assert.Contains("已提交 任务 #1", cli.Output.Output);
-        Assert.Single(cli.Environment.Registry.Snapshots());
+        Assert.Contains("流程名不能为空。", cli.ErrorsOut.Output);
+        Assert.Empty(cli.Environment.Registry.Snapshots());
     }
 
     [Fact]
     public void Task_show_prints_the_detail()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Tasks.Run(["/task", "show", "1"]);
 
         Assert.Contains("任务 #1", cli.Output.Output);
@@ -43,7 +43,7 @@ public sealed class TaskAndReplTests
     public void Task_show_prints_the_node_table()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "目标"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
         Assert.Equal(TaskState.Done, cli.Environment.Settle(new TaskId(1)).State);
 
         cli.Tasks.Run(["/task", "show", "1"]);
@@ -56,7 +56,7 @@ public sealed class TaskAndReplTests
     public void Task_approve_without_awaiting_approval_rejects()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
 
         cli.Tasks.Run(["/task", "approve", "1"]);
 
@@ -68,7 +68,7 @@ public sealed class TaskAndReplTests
     public void Task_commands_shape_completes_the_task()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Environment.Settle(new TaskId(1));
 
         cli.Tasks.Run(["/task", "clear"]);
@@ -81,7 +81,7 @@ public sealed class TaskAndReplTests
     public void Task_approve_targets_a_named_approval_node()
     {
         using CliSession cli = new(flowsJson: TestFlows.ReviewFlow);
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         TaskSnapshot parked = cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve));
@@ -96,7 +96,7 @@ public sealed class TaskAndReplTests
     public void Task_answer_requires_node_path_when_multiple_inputs_wait()
     {
         using CliSession cli = new(flowsJson: TestFlows.TwoInputFlow);
-        cli.Tasks.Run(["/task", "new", "目标"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         // 文本首词命中节点标签不会隐式点名，未点名回答仍被拒
@@ -114,7 +114,7 @@ public sealed class TaskAndReplTests
     public void Task_answer_without_text_shows_usage_and_keeps_waiting()
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         cli.Tasks.Run(["/task", "answer", "1"]);
@@ -127,7 +127,7 @@ public sealed class TaskAndReplTests
     public void Task_answer_with_single_waiting_keeps_leading_node_label_in_text()
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         cli.Tasks.Run(["/task", "answer", "1", "用户输入", "需要", "补充多语言"]);
@@ -143,7 +143,7 @@ public sealed class TaskAndReplTests
     public void Task_approve_and_answer_work_side_by_side_on_parallel_waits()
     {
         using CliSession cli = new(flowsJson: TestFlows.ParallelInputAndReviewFlow);
-        cli.Tasks.Run(["/task", "new", "目标"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
         cli.Environment.Wait(new TaskId(1), _ =>
             cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0
             && cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count > 0);
@@ -162,7 +162,7 @@ public sealed class TaskAndReplTests
     public void Task_answer_reports_the_receipt()
     {
         using CliSession cli = new(flowsJson: TestFlows.InputFlow);
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count > 0);
 
         cli.Tasks.Run(["/task", "answer", "1", "需要", "补充多语言"]);
@@ -220,7 +220,7 @@ public sealed class TaskAndReplTests
         cli.Tasks.Run(["/task", "list"]);
         Assert.Contains("还没有任务", cli.Output.Output);
 
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
 
         cli.Tasks.Run(["/task", "list"]);
         Assert.Contains("#1", cli.Output.Output);
@@ -231,7 +231,7 @@ public sealed class TaskAndReplTests
     public void Task_execution_prints_the_context_and_process()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
         cli.Environment.Settle(new TaskId(1));
 
         cli.Tasks.Run(["/task", "execution", "1"]);
@@ -245,7 +245,7 @@ public sealed class TaskAndReplTests
     public void Task_title_renames_the_task()
     {
         using CliSession cli = new();
-        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
 
         cli.Tasks.Run(["/task", "title", "1", "文档", "补齐"]);
 
@@ -257,7 +257,7 @@ public sealed class TaskAndReplTests
     public void Task_rework_resumes_a_blocked_task()
     {
         using CliSession cli = new(flowsJson: TestFlows.BlockingFlow);
-        cli.Tasks.Run(["/task", "new", "目标"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
         cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Blocked, cli.Environment.Snapshot(new TaskId(1)).State);
 
@@ -271,7 +271,7 @@ public sealed class TaskAndReplTests
     {
         using CliSession cli = new();
         cli.Environment.Runner.DelayMs = 20000;
-        cli.Tasks.Run(["/task", "new", "长任务"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "长任务"]);
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
         cli.Tasks.Run(["/task", "stop", "1"]);
@@ -285,7 +285,7 @@ public sealed class TaskAndReplTests
     {
         using CliSession cli = new();
         cli.Environment.Runner.DelayMs = 20000;
-        cli.Tasks.Run(["/task", "new", "长任务"]);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "长任务"]);
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
         cli.Tasks.Run(["/task", "stop", "execution", "1"]);
@@ -302,6 +302,16 @@ public sealed class TaskAndReplTests
 
         Assert.Contains("任务号要写成数字，收到 abc。", cli.Output.Output);
         Assert.Contains("用法：/task", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_new_without_the_flow_option_shows_usage()
+    {
+        using CliSession cli = new();
+
+        cli.Tasks.Run(["/task", "new", "补齐 README"]);
+
+        Assert.Contains("用法：/task new --flow <流程> <目标>", cli.Output.Output);
     }
 
     [Fact]

@@ -11,7 +11,6 @@ internal static class SettingDefinitions
         Runtime(nameof(RuntimeSettings.Temperature), settings => settings.Runtime.Temperature),
         Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
         Runtime(nameof(RuntimeSettings.MaxConcurrentExecutions), settings => settings.Runtime.MaxConcurrentExecutions),
-        Runtime(nameof(RuntimeSettings.DefaultFlow), settings => settings.Runtime.DefaultFlow),
     ];
 
     /// <summary>按输入取规范节名，大小写不敏感，未定义的节返回 null。</summary>

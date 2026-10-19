@@ -10,11 +10,10 @@ using Kuroe.Workflows.Flows.Files;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>运行期的流程模板集合。文件形状的读写交给 Json 扩展，装配交给 FlowAssembler，落盘交给 FlowStore，
-/// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。默认流程名由宿主给出。</summary>
+/// 这里持有基线节点库与已装配的模板并提供查询；导入合并后落盘。</summary>
 public sealed class FlowService : IFlowCatalog
 {
     private readonly FlowStore _store;
-    private readonly Func<FlowName?> _defaultName;
     private readonly NodeLibrary _builtins;
     private readonly NodeTypeFileRegistry _typeFiles;
     private readonly Lock _gate = new();
@@ -25,13 +24,11 @@ public sealed class FlowService : IFlowCatalog
 
     private FlowService(
         FlowStore store,
-        Func<FlowName?> defaultName,
         NodeLibrary builtins,
         NodeTypeFileRegistry typeFiles,
         AssembledFlows assembled)
     {
         _store = store;
-        _defaultName = defaultName;
         _builtins = builtins;
         _typeFiles = typeFiles;
         _library = assembled.Library;
@@ -44,8 +41,7 @@ public sealed class FlowService : IFlowCatalog
     internal static ErrorOr<FlowService> Create(
         FlowStore store,
         IReadOnlyList<NodeSpec> builtinNodes,
-        NodeTypeFileRegistry typeFiles,
-        Func<FlowName?> defaultName)
+        NodeTypeFileRegistry typeFiles)
     {
         NodeLibrary builtins = new();
         builtins.Register(builtinNodes);
@@ -62,11 +58,8 @@ public sealed class FlowService : IFlowCatalog
             return assembled.ErrorsOrEmptyList;
         }
 
-        return new FlowService(store, defaultName, builtins, typeFiles, assembled.Value);
+        return new FlowService(store, builtins, typeFiles, assembled.Value);
     }
-
-    /// <summary>提交任务未指定流程时用的流程名，取自用户层，未设置时没有默认流程。</summary>
-    public FlowName? DefaultName => _defaultName();
 
     /// <summary>全部流程，按文件顺序。</summary>
     public IReadOnlyList<FlowDefinition> All()
@@ -87,10 +80,6 @@ public sealed class FlowService : IFlowCatalog
             return flow is null ? [FlowErrors.FlowNotFound(name.Value)] : flow;
         }
     }
-
-    /// <summary>提交任务未指定流程时用的那条流程，未设置默认流程时返回错误。</summary>
-    public ErrorOr<FlowDefinition> Default() =>
-        DefaultName is { } name ? Find(name) : [FlowErrors.DefaultUnset()];
 
     /// <summary>从文件导入流程：导入的文件要能独立装配；节点定义按名合并，任一条不合法整体不生效；同名整条覆盖，成功后落盘。</summary>
     public ErrorOr<FlowImport> Import(string source)

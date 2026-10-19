@@ -7,19 +7,19 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>图驱动推进：放行、汇拢、返工、未收口与取消。默认流程即计划后实施。</summary>
+/// <summary>图驱动推进：放行、汇拢、返工、未收口与取消。测试流程即计划后实施。</summary>
 public sealed class FlowAdvanceTests
 {
     [Fact]
-    public void Empty_flow_library_rejects_submit_without_flow()
+    public void Empty_flow_library_rejects_submit_by_name()
     {
-        using TestEnvironment environment = TestEnvironment.Create(flowsJson: "{}", defaultFlow: null);
+        using TestEnvironment environment = TestEnvironment.Create(flowsJson: "{}");
 
-        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit("补齐 README", null, null);
+        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit("补齐 README", new FlowName("默认"), null);
 
         Assert.True(submitted.IsError);
         Assert.Contains(submitted.ErrorsOrEmptyList,
-            error => error.Description.Contains("未设置默认流程"));
+            error => error.Description.Contains("没有名为 默认 的流程"));
     }
 
     [Fact]

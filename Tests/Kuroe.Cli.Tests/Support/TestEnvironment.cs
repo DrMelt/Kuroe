@@ -61,8 +61,8 @@ public sealed class TestEnvironment : IDisposable
     public IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition> CommandTools =>
         _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition>>();
 
-    /// <summary>测试用默认流程文件，模型选择显式指向 fake，供无参数装配的执行测试使用。</summary>
-    private const string TestDefaultFlow = """
+    /// <summary>测试默认写入的流程文件，模型选择显式指向 fake，供按名提交的执行测试使用。</summary>
+    private const string TestFlowFile = """
         {
           "Flows": [
             {
@@ -89,15 +89,14 @@ public sealed class TestEnvironment : IDisposable
         }
         """;
 
-    /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试默认流程，flowsJson 传空对象即空流程库，
-    /// defaultFlow 为 null 时不写入用户层默认流程。</summary>
-    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认")
+    /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
+    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true)
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
 
         KuroePaths paths = KuroePaths.At(root);
-        string? flowsText = flowsJson ?? TestDefaultFlow;
+        string? flowsText = flowsJson ?? TestFlowFile;
         if (flowsText is not null)
         {
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
@@ -126,19 +125,15 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
-        if (defaultFlow is not null)
-        {
-            provider.GetRequiredService<SettingsProvider>().SetText("Runtime:DefaultFlow", defaultFlow).ThrowIfError();
-        }
-
         return new TestEnvironment(root, provider, runner);
     }
 
-    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true, string? defaultFlow = "默认") =>
-        TryCreate(flowsJson, seedCatalog, defaultFlow).ThrowIfError();
+    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
+        TryCreate(flowsJson, seedCatalog).ThrowIfError();
 
-    public TaskId Submit(string goal, Kuroe.Flow.Shared.StaticGraph.FlowName? flow = null) =>
-        Tasks.Submit(goal, flow, null).ThrowIfError().Id;
+    /// <summary>按流程名提交任务，未点名时用测试默认写入的那条流程。</summary>
+    public TaskId Submit(string goal, FlowName? flow = null) =>
+        Tasks.Submit(goal, flow ?? new FlowName("默认"), null).ThrowIfError().Id;
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();
 

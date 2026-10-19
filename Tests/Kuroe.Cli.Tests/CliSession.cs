@@ -57,7 +57,7 @@ internal sealed class CliSession : IDisposable
 
     public CatalogCommands Catalogs => new(Environment.Catalog, Printer, Terminal, Results);
 
-    public FlowCommands Flows => new(Environment.Flows, Environment.Settings, Terminal, Results);
+    public FlowCommands Flows => new(Environment.Flows, Terminal, Results);
 
     public SettingsCommands Settings => new(Environment.Settings, Terminal, Results);
 

@@ -1,32 +1,13 @@
 using System.Reflection;
 using Kuroe.Configuration;
 using Kuroe.Shared.Configuration;
-using Kuroe.Flow.Shared.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>偏好写入的两条通道：按 JSON 字面量解析的值，与命令认定的名称一类文本。</summary>
+/// <summary>偏好路径、声明表与用户层形状的一致性。</summary>
 public sealed class SettingsTests
 {
-    [Fact]
-    public void Literal_write_refuses_a_name_that_looks_like_json()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-
-        Assert.True(environment.Settings.Set("Runtime:DefaultFlow", "3").IsError);
-    }
-
-    [Fact]
-    public void Text_write_accepts_a_name_that_looks_like_json()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-
-        environment.Settings.SetText("Runtime:DefaultFlow", "3").ThrowIfError();
-
-        Assert.Equal(new FlowName("3"), environment.Flows.DefaultName);
-    }
-
     /// <summary>列出的节与项来自声明表，路径与设置项同源。</summary>
     [Fact]
     public void Listing_comes_from_the_declared_items()

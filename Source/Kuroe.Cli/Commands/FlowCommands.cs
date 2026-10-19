@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Configuration;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Node.Llm;
 using Kuroe.Workflows.Flows;
@@ -9,10 +8,9 @@ using Spectre.Console;
 
 namespace Kuroe.Cli.Commands;
 
-/// <summary>/flow 子命令的解析与执行。流程模板的查看、导入与默认流程选择。</summary>
+/// <summary>/flow 子命令的解析与执行。流程模板的查看与导入。</summary>
 internal sealed class FlowCommands(
     FlowService flows,
-    SettingsProvider settings,
     Terminal terminal,
     ResultView results)
 {
@@ -22,15 +20,11 @@ internal sealed class FlowCommands(
         ("/flow list", "列出流程与节点库"),
         ("/flow show <流程>", "打印流程的节点"),
         ("/flow add <文件>", "导入流程与节点库，同名覆盖"),
-        ("/flow default <流程>", "设为提交任务的默认流程"),
     ];
-
-    /// <summary>默认流程名在用户层中的路径。</summary>
-    private const string DefaultFlowPath = "Runtime:DefaultFlow";
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/flow list | show <流程> | add <文件> | default <流程>";
+        const string usage = "用法：/flow list | show <流程> | add <文件>";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -45,10 +39,6 @@ internal sealed class FlowCommands(
 
             case ("add", 3):
                 Add(parts[2]);
-                break;
-
-            case ("default", 3):
-                SetDefault(parts[2]);
                 break;
 
             default:
@@ -67,19 +57,14 @@ internal sealed class FlowCommands(
 
         foreach (FlowDefinition flow in flows.All())
         {
-            bool standard = flow.Name == flows.DefaultName;
             grid.AddRow(
-                new Text(standard ? $">{flow.Name}" : flow.Name.Value, standard ? Styles.Success : Styles.Key),
+                new Text(flow.Name.Value, Styles.Key),
                 new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Label.Value))),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
         terminal.NewLine();
         terminal.Write(grid);
-        if (flows.DefaultName is { } defaultName)
-        {
-            terminal.Hint($"默认流程 {defaultName}，用 /flow default <流程> 改。");
-        }
     }
 
     private void Show(string name)
@@ -149,25 +134,6 @@ internal sealed class FlowCommands(
         {
             terminal.Hint($"  {note}");
         }
-    }
-
-    private void SetDefault(string name)
-    {
-        ErrorOr<FlowName> flowName = FlowName.Create(name);
-        if (flowName.IsError)
-        {
-            results.Reject(flowName.ErrorsOrEmptyList);
-            return;
-        }
-
-        ErrorOr<FlowDefinition> found = flows.Find(flowName.Value);
-        if (found.IsError)
-        {
-            results.Reject(found.ErrorsOrEmptyList);
-            return;
-        }
-
-        results.Apply(settings.SetText(DefaultFlowPath, flowName.Value.Value));
     }
 
     /// <summary>开始端口的展示：带固定值的端口写出值。</summary>

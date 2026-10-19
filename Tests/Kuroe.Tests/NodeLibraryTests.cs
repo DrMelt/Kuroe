@@ -908,7 +908,7 @@ public sealed class NodeLibraryTests
         ] }
         """;
 
-    /// <summary>一条与默认流程同名的流程，可独立装配。</summary>
+    /// <summary>一条与测试自带流程同名的流程，可独立装配。</summary>
     private const string OverwritingFlow = """
         { "Flows": [
           { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [

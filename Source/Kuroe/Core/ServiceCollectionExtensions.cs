@@ -70,8 +70,7 @@ public static class ServiceCollectionExtensions
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
             BuiltinNodes.Nodes,
-            typeFiles,
-            () => settings.Value.Current.Runtime.DefaultFlow);
+            typeFiles);
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;

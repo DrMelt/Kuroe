@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Kuroe.Cli.Tests;
 
-/// <summary>启动横幅：目录规模、默认流程与缺项指引。</summary>
+/// <summary>启动横幅：目录规模与缺项指引。</summary>
 public sealed class StartupViewTests
 {
     [Fact]
@@ -15,8 +15,8 @@ public sealed class StartupViewTests
         startup.Print();
 
         Assert.Contains("Kuroe 已启动，当前模型 fake", cli.Output.Output);
-        Assert.Contains("流程模板 1 条（默认 默认）", cli.Output.Output);
-        Assert.Contains("/task new <目标>", cli.Output.Output);
+        Assert.Contains("流程模板 1 条。", cli.Output.Output);
+        Assert.Contains("/task new --flow <流程> <目标>", cli.Output.Output);
         Assert.DoesNotContain("先 /provider add", cli.Output.Output);
     }
 

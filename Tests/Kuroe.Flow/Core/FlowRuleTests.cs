@@ -493,7 +493,7 @@ public sealed class FlowRuleTests
     private static FlowDefinition Flow(NodeSpec root, params ModelDefinition[] models) =>
         new(new FlowName("默认"), null, models, [StartOutput], root);
 
-    /// <summary>一条默认流程，开始端口按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
+    /// <summary>一条名为默认的流程，开始端口按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
     private static FlowDefinition StartFlow(IReadOnlyList<Port> startOutputs) =>
         new(new FlowName("默认"), null, Models("执行者"), startOutputs,
             Container("整体", Exec("干活", "执行者", new ExecutableSpec())));

@@ -26,8 +26,7 @@ internal sealed class TaskCommands(
     [
         ("/task", "打开任务浏览器，逐级进入执行详情"),
         ("/task list", "列出任务"),
-        ("/task new <目标>", "提交任务，按默认流程启动执行"),
-        ("/task new --flow <流程> <目标>", "用指定流程提交任务"),
+        ("/task new --flow <流程> <目标>", "按给定流程提交任务"),
         ("/task show <任务号>", "打印该任务的节点与执行"),
         ("/task execution <执行号>", "打印该执行的上下文来源与过程"),
         ("/task title <任务号> <文本>", "改任务标题"),
@@ -44,7 +43,7 @@ internal sealed class TaskCommands(
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/task 浏览，/task new <目标>，/task show <任务号>，/task execution <执行号>，/help 看全部";
+        const string usage = "用法：/task 浏览，/task new --flow <流程> <目标>，/task show <任务号>，/task execution <执行号>，/help 看全部";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -110,23 +109,21 @@ internal sealed class TaskCommands(
 
     private void Submit(string[] parts)
     {
-        FlowName? flow = null;
-        int from = 2;
-        if (parts[2].Equals(FlowOption, StringComparison.OrdinalIgnoreCase))
+        if (!parts[2].Equals(FlowOption, StringComparison.OrdinalIgnoreCase) || parts.Length < 5)
         {
-            if (parts.Length < 5)
-            {
-                terminal.Hint($"用法：/task new {FlowOption} <流程> <目标>");
-                return;
-            }
-
-            // 空白流程名视为未指定，回退默认流程
-            flow = FlowName.Create(parts[3]) is { IsError: false } parsed ? parsed.Value : null;
-            from = 4;
+            terminal.Hint($"用法：/task new {FlowOption} <流程> <目标>");
+            return;
         }
 
-        string goal = string.Join(' ', parts[from..]);
-        ErrorOr<TaskSnapshot> submitted = tasks.Submit(goal, flow, null);
+        ErrorOr<FlowName> flow = FlowName.Create(parts[3]);
+        if (flow.IsError)
+        {
+            results.Reject(flow.ErrorsOrEmptyList);
+            return;
+        }
+
+        string goal = string.Join(' ', parts[4..]);
+        ErrorOr<TaskSnapshot> submitted = tasks.Submit(goal, flow.Value, null);
         if (submitted.IsError)
         {
             results.Reject(submitted.ErrorsOrEmptyList);

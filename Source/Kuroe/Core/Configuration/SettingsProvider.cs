@@ -76,10 +76,6 @@ public sealed class SettingsProvider : IModelSettings, ISettingsView
             : WithResolved(path, (root, resolved) => UserSettingsStore.SetValue(root, resolved, parsed));
     }
 
-    /// <summary>按文本写入该设置，不按 JSON 字面量解析。写入由命令认定的名称一类文本，值的类型由设置项自身决定。</summary>
-    public ErrorOr<SettingsEffect> SetText(string path, string value) =>
-        WithResolved(path, (root, resolved) => UserSettingsStore.SetValue(root, resolved, JsonValue.Create(value)));
-
     /// <summary>删除用户层中该路径的项。路径无效或校验失败时返回错误，文件不变。</summary>
     public ErrorOr<SettingsEffect> Clear(string path) =>
         WithResolved(path, (root, resolved) => UserSettingsStore.RemoveValue(root, resolved));

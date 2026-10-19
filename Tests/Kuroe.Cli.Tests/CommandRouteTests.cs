@@ -135,16 +135,6 @@ public sealed class CommandRouteTests
     }
 
     [Fact]
-    public void Flow_default_writes_the_user_layer()
-    {
-        using CliSession cli = new();
-        cli.Flows.Run(["/flow", "default", "默认"]);
-
-        Assert.Contains("已保存并生效。", cli.Output.Output);
-        Assert.Equal(new FlowName("默认"), cli.Environment.Flows.DefaultName);
-    }
-
-    [Fact]
     public void Tool_list_reports_no_configured_command_tools_by_default()
     {
         using CliSession cli = new();

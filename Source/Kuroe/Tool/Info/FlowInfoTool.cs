@@ -17,7 +17,7 @@ public sealed class FlowInfoTool : ITool
     /// <summary>列出流程模板的函数定义。</summary>
     private static readonly ToolDefinition ListFlows = new(
         new ToolName("ListFlows"),
-        "列出流程模板：流程名、执行节点路径与说明，标出默认流程。",
+        "列出流程模板：流程名、执行节点路径与说明。",
         [],
         InfoTools.Group);
 
@@ -45,14 +45,8 @@ public sealed class FlowInfoTool : ITool
         var text = new StringBuilder();
         foreach (FlowDefinition flow in _flows.All())
         {
-            string standard = flow.Name == _flows.DefaultName ? "默认 " : string.Empty;
-            text.AppendLine($"{standard}{flow.Name} · {string.Join(" → ", Flatten(flow.RootNode))}"
+            text.AppendLine($"{flow.Name} · {string.Join(" → ", Flatten(flow.RootNode))}"
                 + $" · {flow.Description ?? string.Empty}");
-        }
-
-        if (_flows.DefaultName is { } defaultName)
-        {
-            text.Append($"默认流程：{defaultName}");
         }
 
         return text.ToString().TrimEnd();

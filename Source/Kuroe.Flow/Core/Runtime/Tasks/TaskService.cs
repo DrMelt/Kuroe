@@ -31,14 +31,14 @@ public sealed class TaskService
     }
 
     /// <summary>提交任务：按流程建任务并启动执行。</summary>
-    public ErrorOr<TaskSnapshot> Submit(string goal, FlowName? flowName, string? title)
+    public ErrorOr<TaskSnapshot> Submit(string goal, FlowName flowName, string? title)
     {
         if (string.IsNullOrWhiteSpace(goal))
         {
             return [TaskErrors.EmptyGoal()];
         }
 
-        ErrorOr<FlowDefinition> flow = flowName is null ? _flows.Default() : _flows.Find(flowName.Value);
+        ErrorOr<FlowDefinition> flow = _flows.Find(flowName);
         if (flow.IsError)
         {
             return flow.ErrorsOrEmptyList;

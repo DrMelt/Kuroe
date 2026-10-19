@@ -4,7 +4,6 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Shared.StaticGraph;
 
 namespace Kuroe.Configuration.Model;
 
@@ -29,9 +28,6 @@ internal sealed record RuntimeSettings
 
     /// <summary>同时在跑的执行数上限，超出的排队等待。改动即时生效。</summary>
     public int MaxConcurrentExecutions { get; init; } = 4;
-
-    /// <summary>提交任务时未指定流程则用该流程，未设置时没有默认流程。</summary>
-    public FlowName? DefaultFlow { get; init; }
 
     /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端按模型接入信息重建。</summary>
     public bool InvalidatesHistory(RuntimeSettings other) => Model != other.Model;
@@ -69,18 +65,6 @@ internal sealed record RuntimeSettings
             model = parsed.Value;
         }
 
-        FlowName? defaultFlow = null;
-        if (!string.IsNullOrWhiteSpace(file.DefaultFlow))
-        {
-            ErrorOr<FlowName> parsed = FlowName.Create(file.DefaultFlow);
-            if (parsed.IsError)
-            {
-                return parsed.ErrorsOrEmptyList;
-            }
-
-            defaultFlow = parsed.Value;
-        }
-
         RuntimeSettings defaults = new();
 
         return defaults with
@@ -90,7 +74,6 @@ internal sealed record RuntimeSettings
             Temperature = file.Temperature,
             MaxOutputTokens = file.MaxOutputTokens,
             MaxConcurrentExecutions = file.MaxConcurrentExecutions ?? defaults.MaxConcurrentExecutions,
-            DefaultFlow = defaultFlow,
         };
     }
 }
@@ -107,6 +90,4 @@ internal sealed class RuntimeSectionDto
     public int? MaxOutputTokens { get; set; }
 
     public int? MaxConcurrentExecutions { get; set; }
-
-    public string? DefaultFlow { get; set; }
 }
