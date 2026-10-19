@@ -42,7 +42,7 @@ internal static class DialogueFlow
     [
         new ToolPath("GetLocalTime"),
         new ToolPath("info"),
-        new ToolPath("files"),
+        new ToolPath("file"),
         new ToolPath("source"),
     ];
 

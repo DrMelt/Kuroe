@@ -17,9 +17,9 @@ public sealed class ToolPathTests
     [Fact]
     public void Path_with_group_prefixes_the_function_name()
     {
-        ToolPath path = ToolPath.Of(new ToolName("ReadFile"), new ToolPath("files"));
+        ToolPath path = ToolPath.Of(new ToolName("ReadFile"), new ToolPath("file"));
 
-        Assert.Equal(new ToolPath("files/ReadFile"), path);
+        Assert.Equal(new ToolPath("file/ReadFile"), path);
     }
 
     [Fact]
@@ -30,6 +30,7 @@ public sealed class ToolPathTests
     [InlineData("info", "info")]
     [InlineData("info", "info/GetTask")]
     [InlineData("info/GetTask", "info/GetTask")]
+    [InlineData("file", "file/read/ReadFile")]
     public void Allows_accepts_the_entry_and_its_subtree(string entry, string path) =>
         Assert.True(new ToolPath(entry).Allows(path));
 

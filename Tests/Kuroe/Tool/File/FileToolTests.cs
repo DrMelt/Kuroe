@@ -1,8 +1,10 @@
 using System.Text;
-using Kuroe.Tool.Files;
+using Kuroe.Tool.File;
 using Xunit;
 
-namespace Kuroe.Tool.Files.Tests;
+namespace Kuroe.Tool.File.Tests;
+
+using File = System.IO.File;
 
 /// <summary>工作目录文件访问工具：读写文本文件与列出目录条目，路径限制在工作目录内。</summary>
 public sealed class FileToolTests : IDisposable
@@ -24,7 +26,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "hello.txt"), "你好，工作目录！\n第二行");
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "hello.txt"));
+        string output = Call("ReadFile", ("path", "hello.txt"));
 
         Assert.Equal("你好，工作目录！\n第二行（已到文件结尾，实际返回 2 行）", output);
     }
@@ -34,7 +36,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ReadFile");
+        string output = Call("ReadFile");
 
         Assert.Contains("缺少参数 path", output);
     }
@@ -44,7 +46,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "nope.txt"));
+        string output = Call("ReadFile", ("path", "nope.txt"));
 
         Assert.Contains("不存在", output);
     }
@@ -54,7 +56,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "dir"));
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "dir"));
+        string output = Call("ReadFile", ("path", "dir"));
 
         Assert.Contains("是目录", output);
         Assert.Contains("ListDirectory", output);
@@ -70,7 +72,7 @@ public sealed class FileToolTests : IDisposable
             Directory.CreateDirectory(_root);
             string relative = Path.Combine(_root, "..", "..", Path.GetFileName(outside));
 
-            string output = Call(new FileTool(_root), "ReadFile", ("path", relative));
+            string output = Call("ReadFile", ("path", relative));
 
             Assert.Contains("不在工作目录内", output);
         }
@@ -86,7 +88,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "long.txt"), new string('a', 9000));
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "long.txt"));
+        string output = Call("ReadFile", ("path", "long.txt"));
 
         Assert.StartsWith(new string('a', 10), output);
         Assert.EndsWith("…内容已截断", output);
@@ -100,7 +102,7 @@ public sealed class FileToolTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
         File.WriteAllText(Path.Combine(_root, "b.txt"), "B内容");
 
-        string output = Call(new FileTool(_root), "ReadFiles", ("paths", _twoFiles));
+        string output = Call("ReadFiles", ("paths", _twoFiles));
 
         Assert.Contains("=== a.txt ===", output);
         Assert.Contains("A内容", output);
@@ -114,8 +116,8 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("至少给一个文件路径", Call(new FileTool(_root), "ReadFiles"));
-        Assert.Contains("至少给一个文件路径", Call(new FileTool(_root), "ReadFiles", ("paths", Array.Empty<string>())));
+        Assert.Contains("至少给一个文件路径", Call("ReadFiles"));
+        Assert.Contains("至少给一个文件路径", Call("ReadFiles", ("paths", Array.Empty<string>())));
     }
 
     [Fact]
@@ -124,7 +126,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
 
-        string output = Call(new FileTool(_root), "ReadFiles", ("paths", _missingFile));
+        string output = Call("ReadFiles", ("paths", _missingFile));
 
         Assert.Contains("A内容", output);
         Assert.Contains("missing.txt 不存在", output);
@@ -136,7 +138,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
 
-        string output = Call(new FileTool(_root), "ReadFiles", ("paths", _escapingPath));
+        string output = Call("ReadFiles", ("paths", _escapingPath));
 
         Assert.Contains("A内容", output);
         Assert.Contains("不在工作目录内", output);
@@ -148,7 +150,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "lines.txt"), "一\n二\n三\n四\n五\n");
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "lines.txt"), ("from", "2"), ("to", "4"));
+        string output = Call("ReadFile", ("path", "lines.txt"), ("from", "2"), ("to", "4"));
 
         Assert.Equal("二\n三\n四", output);
     }
@@ -159,7 +161,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "many.txt"), string.Concat(Enumerable.Range(1, 60).Select(i => $"L{i}\n")));
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "many.txt"));
+        string output = Call("ReadFile", ("path", "many.txt"));
 
         Assert.StartsWith("L1\nL2\n", output);
         Assert.Contains("L50", output);
@@ -172,7 +174,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "few.txt"), "一\n二\n");
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "few.txt"), ("to", "100"));
+        string output = Call("ReadFile", ("path", "few.txt"), ("to", "100"));
 
         Assert.Equal("一\n二（已到文件结尾，实际返回 2 行）", output);
     }
@@ -183,7 +185,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "few.txt"), "一\n二\n");
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "few.txt"), ("from", "10"), ("to", "20"));
+        string output = Call("ReadFile", ("path", "few.txt"), ("from", "10"), ("to", "20"));
 
         Assert.Contains("超出文件长度", output);
     }
@@ -193,7 +195,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "a.txt"), ("from", "5"), ("to", "3"));
+        string output = Call("ReadFile", ("path", "a.txt"), ("from", "5"), ("to", "3"));
 
         Assert.Contains("to 不能小于", output);
     }
@@ -203,8 +205,8 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("from 要写成数字", Call(new FileTool(_root), "ReadFile", ("path", "a.txt"), ("from", "x")));
-        Assert.Contains("to 要写成数字", Call(new FileTool(_root), "ReadFile", ("path", "a.txt"), ("to", "x")));
+        Assert.Contains("from 要写成数字", Call("ReadFile", ("path", "a.txt"), ("from", "x")));
+        Assert.Contains("to 要写成数字", Call("ReadFile", ("path", "a.txt"), ("to", "x")));
     }
 
     [Fact]
@@ -212,7 +214,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ReadFile", ("path", "a.txt"), ("from", "0"));
+        string output = Call("ReadFile", ("path", "a.txt"), ("from", "0"));
 
         Assert.Contains("from 从 1 起", output);
     }
@@ -224,7 +226,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_root, "sub"));
         File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
 
-        string output = Call(new FileTool(_root), "ListDirectory");
+        string output = Call("ListDirectory");
 
         Assert.Contains("条目（2）", output);
         Assert.Contains("  sub/", output);
@@ -237,7 +239,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_root, "sub"));
         File.WriteAllText(Path.Combine(_root, "sub", "inner.txt"), "x");
 
-        string output = Call(new FileTool(_root), "ListDirectory", ("path", "sub"));
+        string output = Call("ListDirectory", ("path", "sub"));
 
         Assert.Contains("sub 的条目（1）", output);
         Assert.Contains("  inner.txt", output);
@@ -248,7 +250,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ListDirectory", ("path", "nope"));
+        string output = Call("ListDirectory", ("path", "nope"));
 
         Assert.Contains("不存在", output);
     }
@@ -259,7 +261,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
 
-        string output = Call(new FileTool(_root), "ListDirectory", ("path", "a.txt"));
+        string output = Call("ListDirectory", ("path", "a.txt"));
 
         Assert.Contains("是文件", output);
         Assert.Contains("ReadFile", output);
@@ -270,7 +272,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "ListDirectory", ("path", ".."));
+        string output = Call("ListDirectory", ("path", ".."));
 
         Assert.Contains("不在工作目录内", output);
     }
@@ -280,7 +282,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "notes.txt"), ("content", "记下要点\n第二行"));
+        string output = Call("WriteFile", ("path", "notes.txt"), ("content", "记下要点\n第二行"));
 
         Assert.Equal("已写入 8 字符到 notes.txt。", output);
         Assert.Equal("记下要点\n第二行", File.ReadAllText(Path.Combine(_root, "notes.txt")));
@@ -292,7 +294,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "notes.txt"), "旧内容");
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "notes.txt"), ("content", "新内容"));
+        string output = Call("WriteFile", ("path", "notes.txt"), ("content", "新内容"));
 
         Assert.Equal("已写入 3 字符到 notes.txt。", output);
         Assert.Equal("新内容", File.ReadAllText(Path.Combine(_root, "notes.txt")));
@@ -303,7 +305,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "a/b/c.txt"), ("content", "x"));
+        string output = Call("WriteFile", ("path", "a/b/c.txt"), ("content", "x"));
 
         Assert.Equal("已写入 1 字符到 a/b/c.txt。", output);
         Assert.True(File.Exists(Path.Combine(_root, "a", "b", "c.txt")));
@@ -314,7 +316,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "empty.txt"), ("content", ""));
+        string output = Call("WriteFile", ("path", "empty.txt"), ("content", ""));
 
         Assert.Equal("已写入 0 字符到 empty.txt。", output);
         Assert.True(File.Exists(Path.Combine(_root, "empty.txt")));
@@ -324,8 +326,8 @@ public sealed class FileToolTests : IDisposable
     [Fact]
     public void WriteFile_rejects_missing_arguments()
     {
-        Assert.Contains("缺少参数 path", Call(new FileTool(_root), "WriteFile", ("content", "x")));
-        Assert.Contains("缺少参数 content", Call(new FileTool(_root), "WriteFile", ("path", "a.txt")));
+        Assert.Contains("缺少参数 path", Call("WriteFile", ("content", "x")));
+        Assert.Contains("缺少参数 content", Call("WriteFile", ("path", "a.txt")));
     }
 
     [Fact]
@@ -333,7 +335,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", ".."), ("content", "x"));
+        string output = Call("WriteFile", ("path", ".."), ("content", "x"));
 
         Assert.Contains("不在工作目录内", output);
     }
@@ -343,7 +345,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "dir"));
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "dir"), ("content", "x"));
+        string output = Call("WriteFile", ("path", "dir"), ("content", "x"));
 
         Assert.Contains("是目录", output);
     }
@@ -353,7 +355,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile", ("path", "big.txt"), ("content", new string('a', 40001)));
+        string output = Call("WriteFile", ("path", "big.txt"), ("content", new string('a', 40001)));
 
         Assert.Contains("超过上限", output);
         Assert.False(File.Exists(Path.Combine(_root, "big.txt")));
@@ -364,7 +366,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile",
+        string output = Call("WriteFile",
             ("path", "utf16.txt"), ("content", "内容"), ("encoding", "utf-16"));
 
         Assert.Equal("已写入 2 字符到 utf16.txt。", output);
@@ -379,7 +381,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "WriteFile",
+        string output = Call("WriteFile",
             ("path", "bad.txt"), ("content", "x"), ("encoding", "gbk"));
 
         Assert.Contains("encoding 只支持", output);
@@ -396,7 +398,7 @@ public sealed class FileToolTests : IDisposable
         }
 
         string[] paths = [.. Enumerable.Range(0, 5).Select(i => $"{i}.txt")];
-        string output = Call(new FileTool(_root), "ReadFiles", ("paths", paths));
+        string output = Call("ReadFiles", ("paths", paths));
 
         Assert.Contains("批量读取已截断", output);
         Assert.Contains("=== 0.txt ===", output);
@@ -409,7 +411,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n要被换掉\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "2"),
             ("original", "要被换掉"), ("replacement", "新的二\n新增行"));
 
@@ -423,7 +425,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "win.txt"), "一\r\n二\r\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "win.txt"), ("from", "2"), ("to", "2"),
             ("original", "二"), ("replacement", "改二"));
 
@@ -437,7 +439,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "2"),
             ("original", "二"), ("replacement", "改二"), ("encoding", "utf-8-bom"));
 
@@ -454,7 +456,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "2"),
             ("original", "二"), ("replacement", "改二"), ("encoding", "utf-16"));
 
@@ -471,7 +473,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "2"),
             ("original", "二"), ("replacement", "改二"), ("encoding", "gbk"));
 
@@ -485,7 +487,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "3"),
             ("original", "写错了"), ("replacement", "新"));
 
@@ -500,7 +502,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三\n四");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "2"), ("to", "3"),
             ("original", "二\n三"), ("replacement", ""));
 
@@ -514,7 +516,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "1"), ("to", "9"),
             ("original", "一\n二"), ("replacement", "x"));
 
@@ -528,7 +530,7 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二");
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "code.txt"), ("from", "3"), ("to", "5"),
             ("original", "x"), ("replacement", "y"));
 
@@ -540,7 +542,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call(new FileTool(_root), "PatchFile",
+        string output = Call("PatchFile",
             ("path", "a.txt"), ("from", "5"), ("to", "3"),
             ("original", "x"), ("replacement", "y"));
 
@@ -550,24 +552,24 @@ public sealed class FileToolTests : IDisposable
     [Fact]
     public void PatchFile_rejects_non_numeric_line_numbers()
     {
-        Assert.Contains("参数 from 要写成数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("参数 from 要写成数字", Call("PatchFile",
             ("path", "a.txt"), ("from", "x"), ("to", "3"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("参数 to 要写成数字", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("参数 to 要写成数字", Call("PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "x"), ("original", "x"), ("replacement", "y")));
     }
 
     [Fact]
     public void PatchFile_rejects_missing_arguments()
     {
-        Assert.Contains("缺少参数 path", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("缺少参数 path", Call("PatchFile",
             ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("缺少参数 original", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("缺少参数 original", Call("PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "1"), ("replacement", "y")));
-        Assert.Contains("缺少参数 replacement", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("缺少参数 replacement", Call("PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "1"), ("original", "x")));
-        Assert.Contains("from 从 1 起", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("from 从 1 起", Call("PatchFile",
             ("path", "a.txt"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("to 从 1 起", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("to 从 1 起", Call("PatchFile",
             ("path", "a.txt"), ("from", "1"), ("original", "x"), ("replacement", "y")));
     }
 
@@ -576,14 +578,14 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("不在工作目录内", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("不在工作目录内", Call("PatchFile",
             ("path", ".."), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
 
         Directory.CreateDirectory(Path.Combine(_root, "dir"));
-        Assert.Contains("是目录", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("是目录", Call("PatchFile",
             ("path", "dir"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
 
-        Assert.Contains("不存在", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("不存在", Call("PatchFile",
             ("path", "nope.txt"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
     }
 
@@ -594,9 +596,9 @@ public sealed class FileToolTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一");
 
         string tooLong = new('a', 40001);
-        Assert.Contains("original 超过上限", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("original 超过上限", Call("PatchFile",
             ("path", "code.txt"), ("from", "1"), ("to", "1"), ("original", tooLong), ("replacement", "y")));
-        Assert.Contains("replacement 超过上限", Call(new FileTool(_root), "PatchFile",
+        Assert.Contains("replacement 超过上限", Call("PatchFile",
             ("path", "code.txt"), ("from", "1"), ("to", "1"), ("original", "一"), ("replacement", tooLong)));
 
         Assert.Equal("一", File.ReadAllText(Path.Combine(_root, "code.txt")));
@@ -609,7 +611,7 @@ public sealed class FileToolTests : IDisposable
         string target = Path.Combine(_root, "notes.txt");
         File.WriteAllText(target, "记下要点\n第二行");
 
-        string output = Call(new FileTool(_root), "GetFileInfo", ("path", "notes.txt"));
+        string output = Call("GetFileInfo", ("path", "notes.txt"));
 
         Assert.StartsWith("notes.txt\n", output);
         Assert.Contains($"大小：{new FileInfo(target).Length} 字节", output);
@@ -628,7 +630,7 @@ public sealed class FileToolTests : IDisposable
         File.SetAttributes(target, FileAttributes.ReadOnly);
         try
         {
-            string output = Call(new FileTool(_root), "GetFileInfo", ("path", "notes.txt"));
+            string output = Call("GetFileInfo", ("path", "notes.txt"));
 
             Assert.Contains("属性：", output);
             Assert.Contains("只读", output);
@@ -644,7 +646,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("缺少参数 path", Call(new FileTool(_root), "GetFileInfo"));
+        Assert.Contains("缺少参数 path", Call("GetFileInfo"));
     }
 
     [Fact]
@@ -652,7 +654,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("不存在", Call(new FileTool(_root), "GetFileInfo", ("path", "nope.txt")));
+        Assert.Contains("不存在", Call("GetFileInfo", ("path", "nope.txt")));
     }
 
     [Fact]
@@ -660,7 +662,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "dir"));
 
-        string output = Call(new FileTool(_root), "GetFileInfo", ("path", "dir"));
+        string output = Call("GetFileInfo", ("path", "dir"));
 
         Assert.Contains("是目录", output);
         Assert.Contains("ListDirectory", output);
@@ -671,11 +673,42 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("不在工作目录内", Call(new FileTool(_root), "GetFileInfo", ("path", "..")));
+        Assert.Contains("不在工作目录内", Call("GetFileInfo", ("path", "..")));
     }
 
-    private static string Call(FileTool tool, string name, params (string Key, object? Value)[] args) =>
-        ToolResult.Render(tool.Functions.Single(function => function.Definition.Name.Value == name)
+    [Fact]
+    public void Face_functions_split_into_read_and_write_groups()
+    {
+        Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
+            .ToDictionary(function => function.Definition.Name.Value, function => function.Definition.Path.Value);
+
+        string[] readFunctions = ["ReadFile", "ReadFiles", "ListDirectory", "GetFileInfo"];
+        string[] writeFunctions = ["WriteFile", "PatchFile"];
+        foreach (string name in readFunctions)
+        {
+            Assert.Equal($"file/read/{name}", paths[name]);
+        }
+
+        foreach (string name in writeFunctions)
+        {
+            Assert.Equal($"file/write/{name}", paths[name]);
+        }
+    }
+
+    /// <summary>文件工具面的全部载体，按函数名取用其中的函数。</summary>
+    private IReadOnlyList<ITool> Face() =>
+    [
+        new ReadFileTool(_root),
+        new ListDirectoryTool(_root),
+        new ReadFilesTool(_root),
+        new WriteFileTool(_root),
+        new PatchFileTool(_root),
+        new GetFileInfoTool(_root),
+    ];
+
+    private string Call(string name, params (string Key, object? Value)[] args) =>
+        ToolResult.Render(Face().SelectMany(tool => tool.Functions)
+            .Single(function => function.Definition.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
 
     public void Dispose()

@@ -21,23 +21,23 @@ public sealed class ToolDeclarationTests
     public void ToolDefinition_path_is_built_from_name_and_group()
     {
         ToolDefinition plain = new(new ToolName("GetTime"), "取时间", []);
-        ToolDefinition grouped = new(new ToolName("ReadFile"), "读文件", [], new ToolPath("files"));
+        ToolDefinition grouped = new(new ToolName("ReadFile"), "读文件", [], new ToolPath("file"));
         ToolDefinition blank = new(new ToolName("GetTime"), "取时间", [], new ToolPath(string.Empty));
 
         Assert.Equal(new ToolPath("GetTime"), plain.Path);
-        Assert.Equal(new ToolPath("files/ReadFile"), grouped.Path);
+        Assert.Equal(new ToolPath("file/ReadFile"), grouped.Path);
         Assert.Equal(new ToolPath("GetTime"), blank.Path);
     }
 
     [Fact]
     public void ToolDefinition_path_follows_derived_values()
     {
-        ToolDefinition grouped = new(new ToolName("ReadFile"), "读文件", [], new ToolPath("files"));
+        ToolDefinition grouped = new(new ToolName("ReadFile"), "读文件", [], new ToolPath("file"));
 
         ToolDefinition renamed = grouped with { Name = new ToolName("WriteFile") };
         ToolDefinition regrouped = grouped with { Group = new ToolPath("source") };
 
-        Assert.Equal(new ToolPath("files/WriteFile"), renamed.Path);
+        Assert.Equal(new ToolPath("file/WriteFile"), renamed.Path);
         Assert.Equal(new ToolPath("source/ReadFile"), regrouped.Path);
     }
 }

@@ -17,7 +17,7 @@ using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Files;
 using Kuroe.Tool.Command.Model;
 using Kuroe.Tool.Contract;
-using Kuroe.Tool.Files;
+using Kuroe.Tool.File;
 using Kuroe.Tool.Info;
 using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
@@ -173,7 +173,12 @@ public static class ServiceCollectionExtensions
         List<ITool> tools =
         [
             new TimeTool(),
-            new FileTool(workingDirectory),
+            new ReadFileTool(workingDirectory),
+            new ListDirectoryTool(workingDirectory),
+            new ReadFilesTool(workingDirectory),
+            new WriteFileTool(workingDirectory),
+            new PatchFileTool(workingDirectory),
+            new GetFileInfoTool(workingDirectory),
             new SourceTool(sourceDirectory),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),

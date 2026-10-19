@@ -36,11 +36,11 @@ public sealed class LlmTypeFileTests
     public void Read_builds_the_type_from_the_values()
     {
         LlmParameters parameters = Declared(File.Read(
-            new Reader("围绕目标展开", ["ReadFile", "files/WriteFile"], ["恒定块"]),
+            new Reader("围绕目标展开", ["ReadFile", "file/WriteFile"], ["恒定块"]),
             _ => { }));
 
         Assert.Equal("围绕目标展开", parameters.Prompt);
-        Assert.Equal(["ReadFile", "files/WriteFile"], parameters.Tools.Select(tool => tool.Value));
+        Assert.Equal(["ReadFile", "file/WriteFile"], parameters.Tools.Select(tool => tool.Value));
         Assert.Equal(["恒定块"], parameters.SystemPrompt);
     }
 
@@ -58,9 +58,9 @@ public sealed class LlmTypeFileTests
     public void Read_reports_an_illegal_capability_path()
     {
         List<string> errors = [];
-        File.Read(new Reader(tools: ["files/写入 文件"]), errors.Add);
+        File.Read(new Reader(tools: ["file/写入 文件"]), errors.Add);
 
-        Assert.Equal(["路径 files/写入 文件 的段 写入 文件 不能为空或含空白与花括号。"], errors);
+        Assert.Equal(["路径 file/写入 文件 的段 写入 文件 不能为空或含空白与花括号。"], errors);
     }
 
     [Fact]

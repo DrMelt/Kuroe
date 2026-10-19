@@ -19,7 +19,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Kuroe.Tool\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Tool\Time\Kuroe.Tool.Time.csproj" />
-        <ProjectReference Include="..\Tool\Files\Kuroe.Tool.Files.csproj" />
+        <ProjectReference Include="..\Tool\File\Kuroe.Tool.File.csproj" />
         <ProjectReference Include="..\Tool\Source\Kuroe.Tool.Source.csproj" />
         <ProjectReference Include="..\Tool\Command\Kuroe.Tool.Command.csproj" />
         <ProjectReference Include="..\Tool\Contract\Kuroe.Tool.Contract.csproj" />

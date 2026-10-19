@@ -108,13 +108,13 @@ public sealed class InfoToolTests : IDisposable
             .Id;
         Execution execution = environment.Registry.FindExecution(executionId).Value;
         execution.MarkRunning();
-        execution.Report("调用工具 files/ReadFile");
+        execution.Report("调用工具 file/ReadFile");
 
         TaskInfoTool tool = new(environment.Registry);
 
-        Assert.Contains("执行中（调用工具 files/ReadFile）",
+        Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
-        Assert.Contains("执行中（调用工具 files/ReadFile）",
+        Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetTask", ("taskId", id.Value.ToString())));
     }
 
@@ -185,7 +185,7 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("内置对话可用函数", noTools);
         Assert.Contains("GetLocalTime", noTools);
         Assert.Contains("info", noTools);
-        Assert.Contains("files", noTools);
+        Assert.Contains("file", noTools);
         Assert.Contains("没有配置命令工具", noTools);
 
         CommandToolDefinition diff = new(

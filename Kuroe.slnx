@@ -4,7 +4,7 @@
     <Project Path="Source/Kuroe/Presentation/Kuroe.Presentation.csproj" />
     <Project Path="Source/Kuroe/Tool/Time/Kuroe.Tool.Time.csproj" />
     <Project Path="Source/Kuroe/Tool/FileAccess/Kuroe.Tool.FileAccess.csproj" />
-    <Project Path="Source/Kuroe/Tool/Files/Kuroe.Tool.Files.csproj" />
+    <Project Path="Source/Kuroe/Tool/File/Kuroe.Tool.File.csproj" />
     <Project Path="Source/Kuroe/Tool/Source/Kuroe.Tool.Source.csproj" />
     <Project Path="Source/Kuroe/Tool/Command/Kuroe.Tool.Command.csproj" />
     <Project Path="Source/Kuroe/Tool/Contract/Kuroe.Tool.Contract.csproj" />
@@ -26,7 +26,7 @@
     <Project Path="Tests/Kuroe.Shared.Tests/Kuroe.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Tool.Tests/Kuroe.Tool.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Time/Kuroe.Tool.Time.Tests.csproj" />
-    <Project Path="Tests/Kuroe/Tool/Files/Kuroe.Tool.Files.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/File/Kuroe.Tool.File.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Source/Kuroe.Tool.Source.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Command/Kuroe.Tool.Command.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
