@@ -44,6 +44,7 @@ internal static class DialogueFlow
         new ToolPath("KuroeInfo"),
         new ToolPath("file"),
         new ToolPath("source"),
+        new ToolPath("git/read"),
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>

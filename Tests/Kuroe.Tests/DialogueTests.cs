@@ -60,6 +60,7 @@ public sealed class DialogueTests
                 new ToolPath("KuroeInfo"),
                 new ToolPath("file"),
                 new ToolPath("source"),
+                new ToolPath("git/read"),
             ],
             DialogueFlow.Tools);
     }

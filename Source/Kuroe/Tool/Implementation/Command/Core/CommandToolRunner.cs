@@ -12,6 +12,18 @@ internal static class CommandToolRunner
     /// <summary>按定义展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。工作目录缺省为项目工作目录根。</summary>
     public static ErrorOr<string> Execute(CommandToolDefinition definition, string baseDirectory, ToolArguments arguments)
     {
+        ErrorOr<IReadOnlyList<string>> argv = Expand(definition, arguments);
+        if (argv.IsError)
+        {
+            return argv.ErrorsOrEmptyList;
+        }
+
+        return RunProcess(definition, baseDirectory, argv.Value);
+    }
+
+    /// <summary>按定义展开模板得到命令行，第一项是程序本身。返回非空表示中断调用。</summary>
+    internal static ErrorOr<IReadOnlyList<string>> Expand(CommandToolDefinition definition, ToolArguments arguments)
+    {
         var argv = new List<string>();
 
         foreach (CommandToolTemplateItem item in definition.Template)
@@ -28,7 +40,7 @@ internal static class CommandToolRunner
             return ToolErrors.Argument("模板展开后没有任何可执行的程序。");
         }
 
-        return RunProcess(definition, baseDirectory, argv);
+        return argv;
     }
 
     /// <summary>展开一个参数项。对象项的关联参数缺省时整项消失，必填仍拒绝；其余参数项按占位符展开。返回非空表示中断调用。</summary>
@@ -37,16 +49,9 @@ internal static class CommandToolRunner
         if (item.OmitWhenMissing is { } linkedName)
         {
             ToolParameter? linked = definition.Definition.Parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
-            if (linked is not null)
+            if (linked is not null && IsMissing(arguments, linked))
             {
-                bool missing = linked.List
-                    ? (arguments.List(linked.Name) ?? []).Count == 0
-                    : arguments.Text(linked.Name) is null;
-
-                if (missing)
-                {
-                    return linked.Required ? ToolErrors.Argument($"缺少参数 {linkedName}。") : null;
-                }
+                return linked.Required ? ToolErrors.Argument($"缺少参数 {linkedName}。") : null;
             }
         }
 
@@ -59,6 +64,14 @@ internal static class CommandToolRunner
 
         return ExpandToken(definition, arguments, item.Text, argv);
     }
+
+    /// <summary>关联参数是否缺省：布尔参数为真才算给出，列表参数为空算缺省，文本参数未给算缺省。</summary>
+    private static bool IsMissing(ToolArguments arguments, ToolParameter parameter) => parameter switch
+    {
+        { Flag: true } => arguments.Flag(parameter.Name) != true,
+        { List: true } => (arguments.List(parameter.Name) ?? []).Count == 0,
+        _ => arguments.Text(parameter.Name) is null,
+    };
 
     /// <summary>展开一个含占位符的参数项。展开后追加参数项，返回非空表示中断调用。</summary>
     private static Error? ExpandToken(CommandToolDefinition definition, ToolArguments arguments, string token, List<string> argv)
@@ -137,7 +150,7 @@ internal static class CommandToolRunner
     }
 
     /// <summary>启动进程并等待结果，stdout 与 stderr 合并成文本交回，附退出码；超时或启动失败以 ErrorOr 表达。</summary>
-    private static ErrorOr<string> RunProcess(CommandToolDefinition definition, string baseDirectory, List<string> argv)
+    private static ErrorOr<string> RunProcess(CommandToolDefinition definition, string baseDirectory, IReadOnlyList<string> argv)
     {
         string working = definition.Directory is { Length: > 0 } directory
             ? Path.GetFullPath(directory, baseDirectory)

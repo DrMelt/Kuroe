@@ -128,6 +128,30 @@ public sealed class CommandToolFileTests
         Assert.Equal("--{p}?", loaded.Value[0].Configuration);
     }
 
+    [Fact]
+    public void Load_accepts_fixed_text_items_linked_to_flag_and_list_parameters()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "RunDiff",
+                  "Template": ["git", "diff", { "Text": "--staged", "OmitWhenMissing": "staged" }, "--", { "Text": "--", "OmitWhenMissing": "files" }, "{files}"],
+                  "Parameters": [
+                    { "Name": "staged", "Flag": true },
+                    { "Name": "files", "List": true }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.Equal("git diff --staged? -- --? {files}", loaded.Value[0].Configuration);
+        Assert.True(loaded.Value[0].Definition.Parameters[0].Flag);
+        Assert.True(loaded.Value[0].Definition.Parameters[1].List);
+    }
+
     [Theory]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{missing}"] } ] }""", "没有对应的参数声明")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
@@ -148,7 +172,10 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "OmitWhenMissing": "p" } ], "Parameters": [ { "Name": "p" } ] } ] }""", "Text")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "x", "OmitWhenMissing": "p", "Extra": "y" } ], "Parameters": [ { "Name": "p" } ] } ] }""", "未知字段")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "x", "OmitWhenMissing": "missing" } ] } ] }""", "没有对应声明")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "x", "OmitWhenMissing": "p" } ], "Parameters": [ { "Name": "p" } ] } ] }""", "必须出现")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "{staged}", "OmitWhenMissing": "staged" } ], "Parameters": [ { "Name": "staged", "Flag": true } ] } ] }""", "不能出现在参数项的文字里")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{staged}"], "Parameters": [ { "Name": "staged", "Flag": true } ] } ] }""", "只能关联参数项")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--staged", "OmitWhenMissing": "staged" }], "Parameters": [ { "Name": "staged", "Flag": true, "List": true } ] } ] }""", "不能同时是布尔与列表")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--staged", "OmitWhenMissing": "staged" }], "Parameters": [ { "Name": "staged", "Flag": true, "Required": true } ] } ] }""", "不能是必填参数")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ "x", { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ 3 ] } ] }""", "必须是字符串或")]

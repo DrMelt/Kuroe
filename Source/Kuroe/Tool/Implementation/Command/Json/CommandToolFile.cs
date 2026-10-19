@@ -189,7 +189,7 @@ public sealed class CommandToolFile : IToolFile
         errors.Add(CommandToolErrors.Invalid(tool, reason));
     }
 
-    /// <summary>装配参数声明：名字不能为空、不能含空白与花括号，同一工具内不能重复。</summary>
+    /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。</summary>
     private static ErrorOr<IReadOnlyList<ToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos)
     {
         List<Error> errors = [];
@@ -222,7 +222,24 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
-            parameters.Add(new ToolParameter(new ToolName(dto.Name), dto.Description ?? $"参数 {dto.Name}", Required: dto.Required, List: dto.List));
+            if (dto.Flag && dto.List)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 不能同时是布尔与列表。"));
+                continue;
+            }
+
+            if (dto.Flag && dto.Required)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 是布尔开关，不能是必填参数。"));
+                continue;
+            }
+
+            parameters.Add(new ToolParameter(
+                new ToolName(dto.Name),
+                dto.Description ?? $"参数 {dto.Name}",
+                Flag: dto.Flag,
+                Required: dto.Required,
+                List: dto.List));
         }
 
         return errors.Count > 0 ? errors : parameters;
@@ -305,7 +322,8 @@ public sealed class CommandToolFile : IToolFile
         return errors.Count > 0 ? errors : items;
     }
 
-    /// <summary>模板与参数声明的对应关系：占位符必须有声明，声明必须出现在模板里，列表参数只能独立成参数项。</summary>
+    /// <summary>模板与参数声明的对应关系：占位符必须有声明，文本与列表参数必须出现在模板里，列表参数只能独立成参数项。
+    /// 布尔参数只作参数项的关联参数，不出现在命令行文字里。</summary>
     private static void CheckTemplate(CommandToolDefinition definition, List<Error> errors)
     {
         IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
@@ -324,9 +342,9 @@ public sealed class CommandToolFile : IToolFile
             {
                 errors.Add(CommandToolErrors.Invalid(tool, $"模板参数项关联的参数 {linkedName} 没有对应声明。"));
             }
-            else if (!item.Text.Contains($"{{{linkedName}}}"))
+            else if (linked.Flag && item.Text.Contains($"{{{linkedName}}}", StringComparison.Ordinal))
             {
-                errors.Add(CommandToolErrors.Invalid(tool, $"模板参数项的 Text 里必须出现 {{{linkedName}}} 占位符。"));
+                errors.Add(CommandToolErrors.Invalid(tool, $"布尔参数 {linkedName} 不能出现在参数项的文字里。"));
             }
         }
 
@@ -335,8 +353,12 @@ public sealed class CommandToolFile : IToolFile
             .Select(placeholder => CommandToolErrors.Invalid(tool, $"模板占位符 {{{placeholder}}} 没有对应的参数声明。")));
 
         errors.AddRange(parameters
-            .Where(parameter => !placeholders.Contains(parameter.Name.Value))
+            .Where(parameter => !parameter.Flag && !placeholders.Contains(parameter.Name.Value))
             .Select(parameter => CommandToolErrors.Invalid(tool, $"参数 {parameter.Name.Value} 已声明但没有出现在模板里。")));
+
+        errors.AddRange(parameters
+            .Where(parameter => parameter.Flag && placeholders.Contains(parameter.Name.Value))
+            .Select(parameter => CommandToolErrors.Invalid(tool, $"布尔参数 {parameter.Name.Value} 只能关联参数项，不能写成占位符。")));
 
         // 列表参数混在别的文字里时在 ExpandToken 会拒绝整项，装载期先给出配置错误
         List<ToolParameter> listParameters = [.. parameters.Where(parameter => parameter.List)];

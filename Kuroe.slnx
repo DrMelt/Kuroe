@@ -9,6 +9,7 @@
     <Project Path="Source/Kuroe/Tool/Implementation/Source/Core/Kuroe.Tool.Source.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/Command/Core/Kuroe.Tool.Command.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/Command/Json/Kuroe.Tool.Command.Json.csproj" />
+    <Project Path="Source/Kuroe/Tool/Implementation/Git/Core/Kuroe.Tool.Git.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/Contract/Core/Kuroe.Tool.Contract.csproj" />
     <Project Path="Source/Kuroe/Tool/Implementation/KuroeInfo/Core/Kuroe.Tool.KuroeInfo.csproj" />
     <Project Path="Source/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.csproj" />
@@ -33,6 +34,7 @@
     <Project Path="Tests/Kuroe/Tool/Implementation/Source/Core/Kuroe.Tool.Source.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Implementation/Command/Core/Kuroe.Tool.Command.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Implementation/Command/Json/Kuroe.Tool.Command.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Tool/Implementation/Git/Core/Kuroe.Tool.Git.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Core/Kuroe.Flow.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Json/Kuroe.Flow.Json.Tests.csproj" />

@@ -46,6 +46,9 @@ internal sealed class CommandParameterDto
     /// <summary>给模型的说明。</summary>
     public string? Description { get; set; }
 
+    /// <summary>该参数是布尔值，模型以真假给出。</summary>
+    public bool Flag { get; set; }
+
     /// <summary>模型是否必须给出该参数。</summary>
     public bool Required { get; set; }
 

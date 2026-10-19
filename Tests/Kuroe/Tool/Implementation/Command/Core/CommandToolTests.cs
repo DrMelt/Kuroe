@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Tools;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Command.Tests;
 
-/// <summary>命令工具：模板展开与进程执行，进程执行只在 Windows 上冒烟。</summary>
+/// <summary>命令工具：模板展开按命令行断言，不起进程；进程执行只在 Windows 上冒烟。</summary>
 public sealed class CommandToolTests
 {
     [Fact]
@@ -24,91 +25,63 @@ public sealed class CommandToolTests
     }
 
     [Fact]
-    public void Execute_spreads_list_values_and_skips_empty_missing()
+    public void Expand_rejects_required_missing_and_omits_empty_optional_list()
     {
         // 缺参与空列表在必填时都在展开期拒绝，不启动进程
-        CommandTool required = Tool(["cmd", "/c", "echo", "{files}"], [RequiredFileParameter]);
+        Assert.Equal("缺少参数 files。", Rejected(Texts(["cmd", "/c", "echo", "{files}"]), [RequiredFileParameter], Given()));
+        Assert.Equal("缺少参数 files。",
+            Rejected(Texts(["cmd", "/c", "echo", "{files}"]), [RequiredFileParameter], Given(("files", Array.Empty<string>()))));
 
-        Assert.Equal("被拒绝：缺少参数 files。", Invoke(required, []));
-        Assert.Equal("被拒绝：缺少参数 files。",
-            Invoke(required, new Dictionary<string, object?> { ["files"] = Array.Empty<string>() }));
-
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        // 非必填空列表：占位参数项消失，命令只带周围文字启动
-        CommandTool optional = Tool(["cmd", "/c", "echo", "开始", "{files}", "结束"], [FileParameter]);
-        string result = Invoke(optional, new Dictionary<string, object?> { ["files"] = Array.Empty<string>() });
-
-        Assert.DoesNotContain("{files}", result);
-        Assert.Contains("开始", result);
-        Assert.Contains("结束", result);
+        // 非必填空列表：占位参数项消失，命令只带周围文字
+        Assert.Equal(
+            ["cmd", "/c", "echo", "开始", "结束"],
+            Argv(Texts(["cmd", "/c", "echo", "开始", "{files}", "结束"]), [FileParameter], Given(("files", Array.Empty<string>()))));
     }
 
     [Fact]
-    public void Execute_with_list_arguments_spawns_separate_argv_entries()
+    public void Expand_spawns_one_argument_per_list_value()
+    {
+        Assert.Equal(
+            ["cmd", "/c", "echo", "甲", "乙"],
+            Argv(Texts(["cmd", "/c", "echo", "{files}"]), [FileParameter], Given(("files", stringArray))));
+    }
+
+    [Fact]
+    public void Expand_keeps_item_without_placeholder_as_single_argument()
+    {
+        // 无占位符的项整体是一个参数项，不做拆分
+        Assert.Equal(
+            ["cmd", "/c", "echo", "开始 结束"],
+            Argv(Texts(["cmd", "/c", "echo", "开始 结束"]), [], Given()));
+    }
+
+    [Fact]
+    public void Expand_carries_scalar_and_list_values()
+    {
+        Assert.Equal(
+            ["cmd", "/c", "echo", "开始", "你好", "甲", "乙"],
+            Argv(Texts(["cmd", "/c", "echo", "开始", "{text}", "{files}"]), [TextParameter, FileParameter], Given(("text", "你好"), ("files", stringArray))));
+    }
+
+    [Fact]
+    public void Expand_treats_scalar_empty_string_as_given_value()
+    {
+        Assert.Equal(
+            ["cmd", "/c", "echo", ""],
+            Argv(Texts(["cmd", "/c", "echo", "{text}"]), [TextParameter], Given(("text", ""))));
+    }
+
+    [Fact]
+    public void Execute_returns_output_with_exit_code()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
 
-        CommandTool tool = Tool(["cmd", "/c", "echo", "{files}"], [FileParameter]);
-
-        string result = Invoke(tool, new Dictionary<string, object?> { ["files"] = stringArray });
-
-        Assert.Contains("甲 乙", result);
-    }
-
-    [Fact]
-    public void Execute_treats_array_item_with_spaces_as_single_argument()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        // 数组项含空格且无占位符时整体是一个参数项，不做拆分
-        string result = Invoke(new CommandTool(
-            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Items(["cmd", "/c", "echo", "开始 结束"]), null, 5, 200),
-            Path.GetTempPath()), []);
-
-        Assert.Contains("开始 结束", result);
-        Assert.DoesNotContain("[", result);
-        Assert.DoesNotContain("]", result);
-    }
-
-    [Fact]
-    public void Execute_with_scalar_and_list_arguments_reaches_process()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        CommandTool tool = Tool(["cmd", "/c", "echo", "{text}"], [new ToolParameter(new ToolName("text"), "文本", Required: true)]);
-
-        string result = Invoke(tool, new Dictionary<string, object?> { ["text"] = "你好" });
+        string result = Invoke(Tool(["cmd", "/c", "echo", "你好"], []), Given());
 
         Assert.Contains("你好", result);
-        Assert.Contains("退出码 0", result);
-    }
-
-    [Fact]
-    public void Execute_treats_scalar_empty_string_as_given_value()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        CommandTool tool = Tool(["cmd", "/c", "echo", "{text}"], [new ToolParameter(new ToolName("text"), "文本", Required: true)]);
-
-        string result = Invoke(tool, new Dictionary<string, object?> { ["text"] = "" });
-
-        Assert.DoesNotContain("被拒绝", result);
         Assert.Contains("退出码 0", result);
     }
 
@@ -120,9 +93,7 @@ public sealed class CommandToolTests
             return;
         }
 
-        CommandTool tool = Tool(["definitely-not-a-program", "x"], []);
-
-        Assert.Contains("无法启动", Invoke(tool, []));
+        Assert.Contains("无法启动", Invoke(Tool(["definitely-not-a-program", "x"], []), Given()));
     }
 
     [Fact]
@@ -134,10 +105,10 @@ public sealed class CommandToolTests
         }
 
         CommandTool tool = new(
-            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Items(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
+            new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", []), Texts(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
             Path.GetTempPath());
 
-        Assert.Contains("未结束，已终止", Invoke(tool, []));
+        Assert.Contains("未结束，已终止", Invoke(tool, Given()));
     }
 
     [Fact]
@@ -148,119 +119,81 @@ public sealed class CommandToolTests
             return;
         }
 
-        CommandTool tool = Tool(["cmd", "/c", "echo", new string('A', 300)], []);
-
-        string result = Invoke(tool, []);
-
-        Assert.Contains("输出已截断", result);
+        Assert.Contains("输出已截断", Invoke(Tool(["cmd", "/c", "echo", new string('A', 300)], []), Given()));
     }
 
     [Fact]
-    public void Execute_omits_configured_item_when_linked_missing()
+    public void Expand_omits_configured_item_when_linked_missing()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("开始", null), ("--app={token}", "token"), ("结束", null));
 
-        CommandTool tool = ConfiguredTool(
-        [
-            new CommandToolTemplateItem("cmd", null),
-            new CommandToolTemplateItem("/c", null),
-            new CommandToolTemplateItem("echo", null),
-            new CommandToolTemplateItem("开始", null),
-            new CommandToolTemplateItem("--app={token}", "token"),
-            new CommandToolTemplateItem("结束", null),
-        ], [new ToolParameter(new ToolName("token"), "令牌")]);
-
-        string missing = Invoke(tool, []);
-        Assert.DoesNotContain("app", missing);
-        Assert.Contains("开始", missing);
-        Assert.Contains("结束", missing);
-
-        string given = Invoke(tool, new Dictionary<string, object?> { ["token"] = "x" });
-        Assert.Contains("开始 --app=x 结束", given);
+        Assert.Equal(["cmd", "/c", "echo", "开始", "结束"], Argv(template, [TokenParameter], Given()));
+        Assert.Equal(["cmd", "/c", "echo", "开始", "--app=x", "结束"], Argv(template, [TokenParameter], Given(("token", "x"))));
     }
 
     [Fact]
-    public void Execute_rejects_configured_item_when_linked_required_missing()
+    public void Expand_adds_fixed_text_item_when_linked_flag_is_true()
     {
-        CommandTool tool = ConfiguredTool(
-        [
-            new CommandToolTemplateItem("cmd", null),
-            new CommandToolTemplateItem("/c", null),
-            new CommandToolTemplateItem("echo", null),
-            new CommandToolTemplateItem("--app={token}", "token"),
-        ], [new ToolParameter(new ToolName("token"), "令牌", Required: true)]);
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("开始", null), ("--staged", "staged"), ("结束", null));
 
-        Assert.Equal("被拒绝：缺少参数 token。", Invoke(tool, []));
+        Assert.Equal(["cmd", "/c", "echo", "开始", "--staged", "结束"], Argv(template, [StagedParameter], Given(("staged", true))));
+        Assert.Equal(["cmd", "/c", "echo", "开始", "结束"], Argv(template, [StagedParameter], Given(("staged", false))));
+        Assert.Equal(["cmd", "/c", "echo", "开始", "结束"], Argv(template, [StagedParameter], Given()));
     }
 
     [Fact]
-    public void Execute_keeps_literal_placeholder_when_optional_inline_missing()
+    public void Expand_omits_fixed_text_item_with_its_list_parameter()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("开始", null), ("--", "files"), ("{files}", null));
 
-        CommandTool tool = ConfiguredTool(
-        [
-            new CommandToolTemplateItem("cmd", null),
-            new CommandToolTemplateItem("/c", null),
-            new CommandToolTemplateItem("echo", null),
-            new CommandToolTemplateItem("--app={token}", null),
-        ], [new ToolParameter(new ToolName("token"), "令牌")]);
-
-        string result = Invoke(tool, []);
-
-        Assert.DoesNotContain("被拒绝", result);
-        Assert.Contains("--app={token}", result);
+        Assert.Equal(["cmd", "/c", "echo", "开始", "--", "甲", "乙"], Argv(template, [FileParameter], Given(("files", stringArray))));
+        Assert.Equal(["cmd", "/c", "echo", "开始"], Argv(template, [FileParameter], Given(("files", Array.Empty<string>()))));
     }
 
     [Fact]
-    public void Execute_keeps_missing_optional_placeholder_alongside_given_ones()
+    public void Expand_rejects_configured_item_when_linked_required_missing()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("--app={token}", "token"));
 
-        CommandTool tool = ConfiguredTool(
-        [
-            new CommandToolTemplateItem("cmd", null),
-            new CommandToolTemplateItem("/c", null),
-            new CommandToolTemplateItem("echo", null),
-            new CommandToolTemplateItem("--user={user}:{pass}", null),
-        ], [new ToolParameter(new ToolName("user"), "用户"), new ToolParameter(new ToolName("pass"), "口令")]);
-
-        string result = Invoke(tool, new Dictionary<string, object?> { ["user"] = "alice" });
-
-        Assert.Contains("--user=alice:{pass}", result);
+        Assert.Equal("缺少参数 token。", Rejected(template, [RequiredTokenParameter], Given()));
     }
 
     [Fact]
-    public void Execute_spreads_configured_list_item_and_omits_when_empty()
+    public void Expand_keeps_literal_placeholder_when_optional_inline_missing()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("--app={token}", null));
 
-        CommandTool tool = ConfiguredTool(
-        [
-            new CommandToolTemplateItem("cmd", null),
-            new CommandToolTemplateItem("/c", null),
-            new CommandToolTemplateItem("echo", null),
-            new CommandToolTemplateItem("{files}", "files"),
-        ], [new ToolParameter(new ToolName("files"), "文件列表", List: true)]);
+        Assert.Equal(["cmd", "/c", "echo", "--app={token}"], Argv(template, [TokenParameter], Given()));
+    }
 
-        string missing = Invoke(tool, new Dictionary<string, object?> { ["files"] = Array.Empty<string>() });
-        Assert.DoesNotContain("甲", missing);
-        Assert.Contains("退出码 0", missing);
+    [Fact]
+    public void Expand_keeps_missing_optional_placeholder_alongside_given_ones()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("--user={user}:{pass}", null));
 
-        string given = Invoke(tool, new Dictionary<string, object?> { ["files"] = stringArray });
-        Assert.Contains("甲 乙", given);
+        Assert.Equal(["cmd", "/c", "echo", "--user=alice:{pass}"], Argv(template, [UserParameter, PasswordParameter], Given(("user", "alice"))));
+    }
+
+    [Fact]
+    public void Expand_spreads_configured_list_item_and_omits_when_empty()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("/c", null), ("echo", null), ("{files}", "files"));
+
+        Assert.Equal(["cmd", "/c", "echo"], Argv(template, [FileParameter], Given(("files", Array.Empty<string>()))));
+        Assert.Equal(["cmd", "/c", "echo", "甲", "乙"], Argv(template, [FileParameter], Given(("files", stringArray))));
+    }
+
+    [Fact]
+    public void Expand_rejects_definition_without_program()
+    {
+        Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
     /// <summary>经 ToolCollection 构建成模型可调用的函数，schema 在此生成。</summary>
@@ -273,23 +206,62 @@ public sealed class CommandToolTests
         return (AIFunction)built;
     }
 
+    /// <summary>起进程执行命令，结果渲染成文本。</summary>
     private static string Invoke(CommandTool tool, Dictionary<string, object?> values) =>
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
 
+    /// <summary>在临时目录执行的命令载体。</summary>
     private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), Items(template), null, 5, 200),
-            Path.GetTempPath());
+        new(Definition(Texts(template), parameters), Path.GetTempPath());
 
-    private static CommandTool ConfiguredTool(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
-        new(new CommandToolDefinition(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), template, null, 5, 200),
-            Path.GetTempPath());
+    /// <summary>展开得到命令行，被拒时用例失败。</summary>
+    private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
+    {
+        ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
 
-    private static IReadOnlyList<CommandToolTemplateItem> Items(IEnumerable<string> texts) =>
+        Assert.False(argv.IsError);
+
+        return argv.Value;
+    }
+
+    /// <summary>展开被拒的错误文本，未拒绝时用例失败。</summary>
+    private static string Rejected(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
+    {
+        ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
+
+        Assert.True(argv.IsError);
+
+        return argv.FirstError.Description;
+    }
+
+    /// <summary>调用命令面的展开，只组装命令行，不起进程。</summary>
+    private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values) =>
+        CommandToolRunner.Expand(Definition(template, parameters), new ToolArguments(values));
+
+    /// <summary>测试用的命令定义，执行目录、超时与输出上限取固定值。</summary>
+    private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
+        new(new ToolDefinition(new ToolPath("Execution"), "说明", parameters), template, null, 5, 200);
+
+    /// <summary>模板项：文字，无关联参数。</summary>
+    private static IReadOnlyList<CommandToolTemplateItem> Texts(IEnumerable<string> texts) =>
         [.. texts.Select(text => new CommandToolTemplateItem(text, null))];
 
-    private static readonly ToolParameter FileParameter = new(new ToolName("files"), "文件列表", List: true);
+    /// <summary>模板项：文字与关联参数名。</summary>
+    private static IReadOnlyList<CommandToolTemplateItem> Linked(params (string Text, string? Link)[] items) =>
+        [.. items.Select(item => new CommandToolTemplateItem(item.Text, item.Link))];
 
+    /// <summary>一次调用的实参。</summary>
+    private static Dictionary<string, object?> Given(params (string Name, object? Value)[] values) =>
+        values.ToDictionary(value => value.Name, value => value.Value);
+
+    private static readonly ToolParameter FileParameter = new(new ToolName("files"), "文件列表", List: true);
     private static readonly ToolParameter RequiredFileParameter = new(new ToolName("files"), "文件列表", Required: true, List: true);
+    private static readonly ToolParameter TextParameter = new(new ToolName("text"), "文本", Required: true);
+    private static readonly ToolParameter TokenParameter = new(new ToolName("token"), "令牌");
+    private static readonly ToolParameter RequiredTokenParameter = new(new ToolName("token"), "令牌", Required: true);
+    private static readonly ToolParameter UserParameter = new(new ToolName("user"), "用户");
+    private static readonly ToolParameter PasswordParameter = new(new ToolName("pass"), "口令");
+    private static readonly ToolParameter StagedParameter = new(new ToolName("staged"), "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
 
     private sealed class NullSink : IProcessSink

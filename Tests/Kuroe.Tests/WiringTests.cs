@@ -73,6 +73,18 @@ public sealed class WiringTests : IDisposable
     }
 
     [Fact]
+    public void Builtin_git_tools_join_the_tool_face()
+    {
+        using ServiceProvider provider = Services();
+
+        IReadOnlyList<string> paths =
+            [.. provider.GetServices<ITool>().SelectMany(tool => tool.Functions).Select(function => function.Definition.Path.Value)];
+
+        Assert.Contains("git/read/Status", paths);
+        Assert.Contains("git/write/Restore", paths);
+    }
+
+    [Fact]
     public void Every_service_the_host_needs_resolves()
     {
         using ServiceProvider provider = Services();

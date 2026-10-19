@@ -16,6 +16,7 @@ using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
 using Kuroe.Tool.File;
+using Kuroe.Tool.Git;
 using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Json;
 using Kuroe.Tool.Source;
@@ -183,6 +184,7 @@ public static class ServiceCollectionExtensions
             new PatchFileTool(workingDirectory),
             new GetFileInfoTool(workingDirectory),
             new SourceTool(sourceDirectory),
+            .. GitTools.Tools(workingDirectory),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
             new TaskKuroeInfoTool(taskRegistry),
