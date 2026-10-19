@@ -85,6 +85,18 @@ public sealed class WiringTests : IDisposable
     }
 
     [Fact]
+    public void Builtin_dotnet_tools_join_the_tool_face()
+    {
+        using ServiceProvider provider = Services();
+
+        IReadOnlyList<string> paths =
+            [.. provider.GetServices<ITool>().SelectMany(tool => tool.Functions).Select(function => function.Definition.Path.Value)];
+
+        Assert.Contains("dotnet/read/Info", paths);
+        Assert.Contains("dotnet/write/Build", paths);
+    }
+
+    [Fact]
     public void Every_service_the_host_needs_resolves()
     {
         using ServiceProvider provider = Services();

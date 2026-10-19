@@ -61,6 +61,7 @@ public sealed class DialogueTests
                 new ToolPath("file"),
                 new ToolPath("source"),
                 new ToolPath("git/read"),
+                new ToolPath("dotnet/read"),
             ],
             DialogueFlow.Tools);
     }

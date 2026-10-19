@@ -15,6 +15,7 @@ using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
+using Kuroe.Tool.Dotnet;
 using Kuroe.Tool.File;
 using Kuroe.Tool.Git;
 using Kuroe.Tool.KuroeInfo;
@@ -185,6 +186,7 @@ public static class ServiceCollectionExtensions
             new GetFileInfoTool(workingDirectory),
             new SourceTool(sourceDirectory),
             .. GitTools.Tools(workingDirectory),
+            .. DotnetTools.Tools(workingDirectory),
             new PortTool(portSubmitter, taskRegistry),
             new StatusTool(statusSubmitter, taskRegistry),
             new TaskKuroeInfoTool(taskRegistry),

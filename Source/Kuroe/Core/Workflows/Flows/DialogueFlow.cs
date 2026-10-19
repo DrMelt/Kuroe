@@ -45,6 +45,7 @@ internal static class DialogueFlow
         new ToolPath("file"),
         new ToolPath("source"),
         new ToolPath("git/read"),
+        new ToolPath("dotnet/read"),
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
