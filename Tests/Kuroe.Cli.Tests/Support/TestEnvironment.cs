@@ -58,8 +58,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ToolCollection Tools => _provider.GetRequiredService<ToolCollection>();
 
-    public IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition> CommandTools =>
-        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Command.Model.CommandToolDefinition>>();
+    public IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool> ConfiguredTools =>
+        _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool>>();
 
     /// <summary>测试默认写入的流程文件，模型选择显式指向 fake，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """

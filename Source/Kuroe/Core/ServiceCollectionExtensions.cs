@@ -13,12 +13,11 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Tool;
-using Kuroe.Tool.Command;
-using Kuroe.Tool.Command.Files;
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
 using Kuroe.Tool.File;
 using Kuroe.Tool.Info;
+using Kuroe.Tool.Json;
 using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
@@ -76,7 +75,11 @@ public static class ServiceCollectionExtensions
             return flows.ErrorsOrEmptyList;
         }
 
-        ErrorOr<IReadOnlyList<CommandToolDefinition>> configuredTools = CommandToolStore.Load(paths.CommandToolsFile, paths.WorkingDirectory);
+        ToolFileRegistry toolFiles = new();
+        CommandToolFiles.RegisterInto(toolFiles);
+
+        ErrorOr<IReadOnlyList<ConfiguredTool>> configuredTools =
+            ToolFiles.Load(toolFiles, paths.ConfigDirectory, paths.WorkingDirectory);
         if (configuredTools.IsError)
         {
             return configuredTools.ErrorsOrEmptyList;
@@ -158,7 +161,7 @@ public static class ServiceCollectionExtensions
     /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
-        IReadOnlyList<CommandToolDefinition> definitions,
+        IReadOnlyList<ConfiguredTool> configured,
         SettingsProvider settings,
         CatalogService catalog,
         FlowService flows,
@@ -186,8 +189,8 @@ public static class ServiceCollectionExtensions
             new CatalogInfoTool(new ToolCatalogView(catalog, models)),
             new FlowInfoTool(flows),
             new SettingsInfoTool(settings),
-            new ToolboxInfoTool(DialogueFlow.Tools, definitions),
-            .. definitions.Select(definition => (ITool)new CommandTool(definition, workingDirectory)),
+            new ToolboxInfoTool(DialogueFlow.Tools, configured),
+            .. configured.Select(entry => entry.Tool),
         ];
 
         IReadOnlyList<ToolPath> duplicates = [.. tools
@@ -197,7 +200,7 @@ public static class ServiceCollectionExtensions
             .Select(group => group.Key)];
         if (duplicates.Count > 0)
         {
-            return duplicates.Select(path => CommandToolErrors.Duplicate(path.Value)).ToList();
+            return duplicates.Select(path => ToolFileErrors.Duplicate(path.Value)).ToList();
         }
 
         services.AddSingleton(taskRegistry);

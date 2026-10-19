@@ -84,7 +84,7 @@ internal sealed class CliSession : IDisposable
             SettingsCommands settings = Settings;
             TaskCommands tasks = Tasks;
             FlowCommands flows = Flows;
-            ToolCommands tools = new(Environment.CommandTools, Terminal);
+            ToolCommands tools = new(Environment.ConfiguredTools, Terminal);
 
             return new ReplCommands(Environment.Dialogue, Environment.Models, providers, models, catalogs,
                 settings, tasks, flows, tools, Terminal, Errors);

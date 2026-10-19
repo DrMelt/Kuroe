@@ -10,7 +10,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\..\Kuroe.Tool\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
     </ItemGroup>
 

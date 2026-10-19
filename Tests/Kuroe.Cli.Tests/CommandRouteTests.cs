@@ -1,7 +1,8 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Tool;
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Json;
+using Kuroe.Tool.Json;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -138,7 +139,7 @@ public sealed class CommandRouteTests
     public void Tool_list_reports_no_configured_command_tools_by_default()
     {
         using CliSession cli = new();
-        new ToolCommands(cli.Environment.CommandTools, cli.Terminal).Run(["/tool", "list"]);
+        new ToolCommands(cli.Environment.ConfiguredTools, cli.Terminal).Run(["/tool", "list"]);
 
         Assert.Contains("没有配置命令工具", cli.Output.Output);
     }
@@ -147,7 +148,7 @@ public sealed class CommandRouteTests
     public void Tool_list_with_wrong_argument_count_shows_usage()
     {
         using CliSession cli = new();
-        new ToolCommands(cli.Environment.CommandTools, cli.Terminal).Run(["/tool"]);
+        new ToolCommands(cli.Environment.ConfiguredTools, cli.Terminal).Run(["/tool"]);
 
         Assert.Contains("用法：/tool", cli.Output.Output);
     }
@@ -315,21 +316,35 @@ public sealed class CommandRouteTests
     public void Tool_list_renders_the_configured_command_tools()
     {
         using CliSession cli = new();
-        CommandToolDefinition diff = new(
-            new ToolDefinition(
-                new ToolPath("git/RunDiff"),
-                "查看指定文件相对 HEAD 的改动。",
-                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)]),
-            [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
-            null,
-            120,
-            8000);
 
-        new ToolCommands([diff], cli.Terminal).Run(["/tool", "list"]);
+        new ToolCommands([Configured()], cli.Terminal).Run(["/tool", "list"]);
 
         Assert.Contains("命令工具：", cli.Output.Output);
         Assert.Contains("RunDiff", cli.Output.Output);
         Assert.Contains("git diff {path}", cli.Output.Output);
+        Assert.Contains("path*", cli.Output.Output);
+    }
+
+    /// <summary>经命令工具文件层装载一条 RunDiff，取回配置工具的载体。</summary>
+    private static ConfiguredTool Configured()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "tools.json"), """
+            {
+              "Tools": [
+                {
+                  "Name": "RunDiff",
+                  "Group": "git",
+                  "Description": "查看指定文件相对 HEAD 的改动。",
+                  "Template": ["git", "diff", "{path}"],
+                  "Parameters": [ { "Name": "path", "Required": true } ]
+                }
+              ]
+            }
+            """);
+
+        return new CommandToolFile().Load(directory, Path.GetTempPath()).Value[0];
     }
 
     /// <summary>导入用的流程文件：与基线库无交叉，可独立装配。</summary>

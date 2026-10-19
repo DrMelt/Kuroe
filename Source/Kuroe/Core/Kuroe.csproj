@@ -17,13 +17,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Kuroe.Tool\Kuroe.Tool.csproj" />
-        <ProjectReference Include="..\Tool\Time\Kuroe.Tool.Time.csproj" />
-        <ProjectReference Include="..\Tool\File\Kuroe.Tool.File.csproj" />
-        <ProjectReference Include="..\Tool\Source\Kuroe.Tool.Source.csproj" />
-        <ProjectReference Include="..\Tool\Command\Kuroe.Tool.Command.csproj" />
-        <ProjectReference Include="..\Tool\Contract\Kuroe.Tool.Contract.csproj" />
-        <ProjectReference Include="..\Tool\Info\Kuroe.Tool.Info.csproj" />
+        <ProjectReference Include="..\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\Time\Core\Kuroe.Tool.Time.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\File\Core\Kuroe.Tool.File.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\Source\Core\Kuroe.Tool.Source.csproj" />
+        <ProjectReference Include="..\Tool\Json\Kuroe.Tool.Json.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\Contract\Core\Kuroe.Tool.Contract.csproj" />
+        <ProjectReference Include="..\Tool\Implementation\Info\Core\Kuroe.Tool.Info.csproj" />
         <ProjectReference Include="..\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\InputChannel\Kuroe.Flow.InputChannel.csproj" />

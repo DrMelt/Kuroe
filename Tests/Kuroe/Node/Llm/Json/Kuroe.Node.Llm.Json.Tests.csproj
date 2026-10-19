@@ -16,7 +16,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Node\Llm\Json\Kuroe.Node.Llm.Json.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Tool\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
     </ItemGroup>
 
 </Project>

@@ -5,8 +5,9 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Info;
+using Kuroe.Tool.Json;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -179,7 +180,7 @@ public sealed class InfoToolTests : IDisposable
     public void ListTools_lists_dialogue_functions_and_command_tools()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        ToolboxInfoTool empty = new(DialogueFlow.Tools, environment.CommandTools);
+        ToolboxInfoTool empty = new(DialogueFlow.Tools, environment.ConfiguredTools);
         string noTools = Call(empty, "ListTools");
 
         Assert.Contains("内置对话可用函数", noTools);
@@ -188,15 +189,7 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("file", noTools);
         Assert.Contains("没有配置命令工具", noTools);
 
-        CommandToolDefinition diff = new(
-            new ToolDefinition(
-                new ToolPath("git/RunDiff"),
-                "查看指定文件相对 HEAD 的改动。",
-                [new ToolParameter(new ToolName("path"), "要查看的文件路径", Required: true)]),
-            [new CommandToolTemplateItem("git", null), new CommandToolTemplateItem("diff", null), new CommandToolTemplateItem("{path}", null)],
-            null,
-            120,
-            8000);
+        ConfiguredTool diff = Configured();
 
         ToolboxInfoTool tool = new(DialogueFlow.Tools, [diff]);
         string output = Call(tool, "ListTools");
@@ -204,6 +197,28 @@ public sealed class InfoToolTests : IDisposable
         Assert.Contains("git/RunDiff", output);
         Assert.Contains("git diff {path}", output);
         Assert.Contains("path*", output);
+    }
+
+    /// <summary>把一份命令工具文件读成配置工具的载体，配置目录为临时新建。</summary>
+    private static ConfiguredTool Configured()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "tools.json"), """
+            {
+              "Tools": [
+                {
+                  "Name": "RunDiff",
+                  "Group": "git",
+                  "Description": "查看指定文件相对 HEAD 的改动。",
+                  "Template": ["git", "diff", "{path}"],
+                  "Parameters": [ { "Name": "path", "Description": "要查看的文件路径", "Required": true } ]
+                }
+              ]
+            }
+            """);
+
+        return new CommandToolFile().Load(directory, directory).Value[0];
     }
 
     [Fact]

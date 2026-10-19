@@ -9,6 +9,7 @@
         <ProjectReference Include="..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\Node\Input\Core\Kuroe.Node.Input.csproj" />
+        <ProjectReference Include="..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
     </ItemGroup>
 
