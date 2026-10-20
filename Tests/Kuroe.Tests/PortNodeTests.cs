@@ -153,6 +153,18 @@ public sealed class PortNodeTests
     }
 
     [Fact]
+    public void Submitted_port_values_cannot_be_submitted_twice()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Runner.DoubleSubmitPorts = true;
+
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
+
+        Assert.Contains(environment.Runner.Submissions, text => text.Contains("无需重复提交", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Port_submission_with_at_in_key_is_rejected()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);

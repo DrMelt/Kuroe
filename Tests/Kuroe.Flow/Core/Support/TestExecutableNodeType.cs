@@ -15,7 +15,7 @@ internal sealed class TestExecutableNodeType : INodeType
     {
         DispatchesExecutions = true,
         InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context],
+        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
     };
 
     /// <summary>替身的类型规则：执行上限必须是正整数，覆盖类型规则经节点作用域报出的路径。</summary>

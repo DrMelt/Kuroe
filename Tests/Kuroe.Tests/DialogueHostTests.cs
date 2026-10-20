@@ -4,7 +4,6 @@ using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Pending;
-using Kuroe.Workflows.Flows;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -51,18 +50,19 @@ public sealed class DialogueHostTests
         Assert.Equal(["回复1", "回复2"], observer.Texts);
     }
 
+    /// <summary>回话节点只声明 Signal 输出端口，一轮回答不要求交回端口产出。</summary>
     [Fact]
-    public async Task Uncollected_round_reports_the_failure()
+    public async Task A_round_needs_no_port_submission()
     {
         using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
         environment.Runner.SubmitsPorts = false;
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
 
-        Assert.True(reply.IsError);
-        string text = ErrorText(reply);
-        Assert.Contains("未收口", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Blocked", text, StringComparison.Ordinal);
+        Assert.False(first.IsError, ErrorText(first));
+        Assert.False(second.IsError, ErrorText(second));
     }
 
     [Fact]
@@ -77,38 +77,6 @@ public sealed class DialogueHostTests
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Empty(notices);
-    }
-
-    [Fact]
-    public async Task Each_round_submits_its_own_port_output()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
-        environment.Runner.PortValuesJsonFor =
-            execution => $"{{ \"{DialogueFlow.ReplyPort.Value}\": \"第{execution.Input.ExecutionCount}轮产出\" }}";
-
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
-
-        Assert.False(first.IsError, ErrorText(first));
-        Assert.False(second.IsError, ErrorText(second));
-        Assert.DoesNotContain(environment.Runner.Submissions, text => text.Contains("无需重复提交", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task A_round_without_its_own_submission_does_not_settle()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
-
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
-        Assert.False(first.IsError, ErrorText(first));
-
-        environment.Runner.SubmitsPorts = false;
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
-
-        Assert.True(second.IsError);
-        Assert.Contains("未收口", ErrorText(second), StringComparison.Ordinal);
     }
 
     [Fact]

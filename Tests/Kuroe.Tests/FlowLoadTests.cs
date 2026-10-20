@@ -97,7 +97,7 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Output_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为 Text 或 Context。"], Errors(OutputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为 Text、Context 或 Signal。"], Errors(OutputTypeOutOfDomain));
 
     [Fact]
     public void Referenced_container_port_missing_is_rejected() =>
@@ -195,12 +195,22 @@ public sealed class FlowLoadTests
         }
     }
 
+    /// <summary>输入节点挂点的环：回复回边两侧都声明 Signal，载入后类型保持，写回文件仍写 Signal。</summary>
     [Fact]
     public void Loop_with_input_node_loads()
     {
-        using TestEnvironment environment = TestEnvironment.Create(LoopWithInputNode);
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "loop.json"), LoopWithInputNode);
 
-        Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("默认"));
+        environment.Flows.Import("loop.json").ThrowIfError();
+
+        IReadOnlyList<NodeSpec> members = environment.Flows.Find(new FlowName("默认")).ThrowIfError().RootNode.Nodes!;
+
+        Assert.Equal(PortType.Signal, members[0].Inputs.Find(new PortName("回复"))?.Type);
+        Assert.Equal(PortType.Signal, members[1].Outputs.Find(new PortName("回复"))?.Type);
+
+        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
+        Assert.Contains("\"Type\": \"Signal\"", text);
     }
 
     /// <summary>流程名两侧空白在加载时去掉，按去空白后的名字可查到。</summary>
@@ -619,8 +629,8 @@ public sealed class FlowLoadTests
     private const string LoopWithInputNode = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
           { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
-            { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
+            { "Name": "收话", "Kind": "Input", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "回复", "Type": "Signal" }], "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
+            { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Signal" }], "From": [ { "回答": "收话@回答" } ] }
           ] }
         ] } ] }
         """;

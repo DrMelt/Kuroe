@@ -46,6 +46,14 @@ public sealed class LlmNodeComposeTests
                 .Select(path => path.Value));
 
     [Fact]
+    public void Signal_ports_carry_no_output_and_keep_only_the_status_channel() =>
+        Assert.Equal(
+            ["SubmitStatus"],
+            Typed(new LlmParameters())
+                .ToolPaths([new Port(new PortName("完成"), PortType.Signal)])
+                .Select(path => path.Value));
+
+    [Fact]
     public void A_node_without_output_ports_keeps_the_status_channel() =>
         Assert.Equal(["SubmitStatus"], Typed(new LlmParameters()).ToolPaths([]).Select(path => path.Value));
 

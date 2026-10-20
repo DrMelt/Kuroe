@@ -34,7 +34,7 @@ internal static class DialogueFlow
     /// <summary>收话节点回答写入的输出端口名。</summary>
     internal static PortName InputPort { get; } = new("回答");
 
-    /// <summary>回复端口名：回话节点的输出端口，也是收话节点取用它的输入端口。</summary>
+    /// <summary>回复端口名：回话节点的输出端口，只作环的回边驱动，也是收话节点取用它的输入端口。</summary>
     internal static PortName ReplyPort { get; } = new("完成");
 
     /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。</summary>
@@ -49,7 +49,7 @@ internal static class DialogueFlow
     ];
 
     /// <summary>回话节点的恒定系统指令块。</summary>
-    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按工具说明执行。"];
+    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。"];
 
     /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入。</summary>
     internal static FlowDefinition Build(IInputChannel inputs) => new(
@@ -95,7 +95,8 @@ internal static class DialogueFlow
                     Inputs = [new InputPort(InputPort, PortType.Text)],
                     Spec = new ExecutableSpec(),
                     Model = RuntimeModel,
-                    Outputs = [new Port(ReplyPort, PortType.Text)],
+                    // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
+                    Outputs = [new Port(ReplyPort, PortType.Signal)],
                     From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeLabel, InputPort))])],
                 },
             ],

@@ -153,15 +153,6 @@ public sealed class FlowRuleTests
                     Exec("收尾", "执行者", new ExecutableSpec()) with { From = [] }),
                 Models("执行者"))));
 
-    /// <summary>Signal 只作审批节点的驱动端口，执行节点不能声明 Signal 输出端口。</summary>
-    [Fact]
-    public void Executable_with_signal_output_is_rejected() =>
-        Assert.Equal(
-            [NodeError("干活", "输出端口 信号 的类型只能是 Text 或 Context。")],
-            Errors(Flow(
-                Container("整体", Text("干活", "执行者") with { Outputs = [new Port(new PortName("信号"), PortType.Signal)] }),
-                Models("执行者"))));
-
     [Fact]
     public void Two_context_ports_are_rejected() =>
         Assert.Equal(

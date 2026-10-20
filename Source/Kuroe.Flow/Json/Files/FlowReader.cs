@@ -535,9 +535,9 @@ static class FlowReader
                     case "type":
                         if (property.Value.ValueKind != JsonValueKind.String
                             || !Enum.TryParse(property.Value.GetString(), ignoreCase: true, out PortType parsedType)
-                            || parsedType is not (PortType.Text or PortType.Context))
+                            || parsedType is not (PortType.Text or PortType.Context or PortType.Signal))
                         {
-                            errors.Add(scope.Node(nodeLabel, "输出端口的 Type 应为 Text 或 Context。"));
+                            errors.Add(scope.Node(nodeLabel, "输出端口的 Type 应为 Text、Context 或 Signal。"));
                             invalid = true;
                         }
                         else
@@ -603,7 +603,7 @@ static class FlowReader
 
             if (declaredType is null)
             {
-                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text 或 Context。"));
+                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text、Context 或 Signal。"));
                 continue;
             }
 

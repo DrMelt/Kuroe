@@ -33,12 +33,12 @@ public sealed class DialogueTests
     }
 
     [Fact]
-    public void Dialogue_flow_marks_reply_back_edge_as_signal()
+    public void Dialogue_flow_marks_the_reply_port_as_signal_on_both_sides()
     {
         IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs).RootNode.Nodes!;
 
         Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
-        Assert.Equal(PortType.Text, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
+        Assert.Equal(PortType.Signal, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class DialogueTests
         NodeSpec reply = DialogueFlow.Build(Inputs).RootNode.Nodes![1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
-        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里，端口交回按工具说明执行。"], parameters.SystemPrompt);
+        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。"], parameters.SystemPrompt);
         Assert.Null(parameters.Prompt);
     }
 

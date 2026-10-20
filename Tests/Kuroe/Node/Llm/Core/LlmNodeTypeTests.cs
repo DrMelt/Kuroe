@@ -33,7 +33,7 @@ public sealed class LlmNodeTypeTests
         Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text, PortType.Context], shape.OutputTypes);
+        Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.OutputTypes);
     }
 
     [Fact]
