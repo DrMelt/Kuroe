@@ -9,11 +9,11 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>模型侧交回结构化产出的入口：输出端口交命名段。
-/// 提交者身份在此认定，结果以文本交回模型，让它在同一轮里改正。</summary>
+/// 提交者身份在此认定，结果以提交后的本轮契约状态交回，回执措辞由工具实现层给出。</summary>
 public sealed class PortSubmitter(TaskRegistry registry)
 {
-    /// <summary>声明输出端口的执行节点交回命名端口产出，端口必须与声明一一对应。错误以 ErrorOr 表达。</summary>
-    public ErrorOr<string> SubmitValues(ExecutionId id, string valuesJson)
+    /// <summary>声明输出端口的执行节点交回命名端口产出，端口必须与声明一一对应。成功时给出提交后的本轮契约状态，错误以 ErrorOr 表达。</summary>
+    public ErrorOr<ExecutionStatus> SubmitValues(ExecutionId id, string valuesJson)
     {
         ErrorOr<(Execution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(registry, id, "提交端口产出");
         if (owner.IsError)
@@ -50,7 +50,7 @@ public sealed class PortSubmitter(TaskRegistry registry)
 
             node.CollectPorts(execution.Id, parsed.Value);
 
-            return $"已记录 {declared.Count} 个端口的产出。{ContractText.Outstanding(task, execution)}";
+            return ExecutionStatusReader.Of(task, execution);
         }
     }
 }

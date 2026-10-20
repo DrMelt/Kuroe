@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Node.Llm.Executions;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -55,13 +56,13 @@ public sealed class ContractReminderTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionReminder reminder = new(environment.Registry);
+        ContractReminder reminder = new(new ExecutionStatusReader(environment.Registry));
         foreach (ExecutionSnapshot execution in done.Executables.SelectMany(executable => executable.Executions))
         {
-            Assert.Null(reminder.Reminder(environment.Registry.FindExecution(execution.Id).ThrowIfError()));
+            Assert.Null(reminder.Text(environment.Registry.FindExecution(execution.Id).ThrowIfError()));
         }
     }
 
     private static string Reminder(TestEnvironment environment, ExecutionId id) =>
-        Assert.IsType<string>(new ExecutionReminder(environment.Registry).Reminder(environment.Registry.FindExecution(id).ThrowIfError()));
+        Assert.IsType<string>(new ContractReminder(new ExecutionStatusReader(environment.Registry)).Text(environment.Registry.FindExecution(id).ThrowIfError()));
 }

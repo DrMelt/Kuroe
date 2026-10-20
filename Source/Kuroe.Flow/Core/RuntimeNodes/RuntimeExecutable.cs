@@ -71,17 +71,17 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
     public IReadOnlyDictionary<PortName, string>? Ports(ExecutionId execution) =>
         _submissions.GetValueOrDefault(execution)?.Ports;
 
-    /// <summary>某次执行声明的本轮结论，未声明时为空。</summary>
-    public ExecutionVerdict? Verdict(ExecutionId execution) =>
-        _submissions.GetValueOrDefault(execution)?.Verdict;
+    /// <summary>某次执行上报的无法完成原因，未上报时为空。</summary>
+    public string? CannotCompleteReason(ExecutionId execution) =>
+        _submissions.GetValueOrDefault(execution)?.CannotCompleteReason;
 
     /// <summary>记下一次执行交回的命名端口值。</summary>
     public void CollectPorts(ExecutionId execution, IReadOnlyDictionary<PortName, string> values) =>
         _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { Ports = values };
 
-    /// <summary>记下一次执行声明的本轮结论，同一执行重复声明覆盖。</summary>
-    public void CollectVerdict(ExecutionId execution, ExecutionVerdict verdict) =>
-        _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { Verdict = verdict };
+    /// <summary>记下一次执行上报的无法完成原因，同一执行重复上报覆盖。</summary>
+    public void CollectCannotComplete(ExecutionId execution, string reason) =>
+        _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { CannotCompleteReason = reason };
 
     /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
     public void EnterBlocked(IReadOnlyList<NodePath> targets)
@@ -211,5 +211,5 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
     /// <summary>一次执行交回的内容。</summary>
     private sealed record Submission(
         IReadOnlyDictionary<PortName, string>? Ports = null,
-        ExecutionVerdict? Verdict = null);
+        string? CannotCompleteReason = null);
 }

@@ -272,11 +272,7 @@ internal sealed class TaskRuntime : INodeContext
     public sealed record SettlePlan(IReadOnlyList<NodePath> Notify);
 
     /// <summary>本轮该交回但尚未交回的产出：缺哪些命名端口。</summary>
-    public sealed record ExecutionShortfall(IReadOnlyList<PortName> Ports)
-    {
-        /// <summary>没有缺项。</summary>
-        public bool None => Ports.Count == 0;
-    }
+    public sealed record ExecutionShortfall(IReadOnlyList<PortName> Ports);
 
     /// <summary>本轮该交回但尚未交回的产出，按节点声明的端口判定。</summary>
     public static ExecutionShortfall Shortfall(RuntimeExecutable node, ExecutionId execution)
@@ -303,12 +299,10 @@ internal sealed class TaskRuntime : INodeContext
             return Block(node, execution);
         }
 
-        // 声明无法完成的当轮不产出，直接停驻并把原因留给返工
-        if (node.Verdict(execution.Id) is { Blocked: true } verdict)
+        // 上报无法完成的当轮不产出，直接停驻并把原因留给返工
+        if (node.CannotCompleteReason(execution.Id) is { } cannotComplete)
         {
-            execution.MarkUncollected(verdict.Reason is { Length: > 0 } reason
-                ? $"模型报告无法完成：{reason}"
-                : "模型报告无法完成。");
+            execution.MarkUncollected($"模型报告无法完成：{cannotComplete}");
 
             return Block(node, execution);
         }
@@ -323,6 +317,8 @@ internal sealed class TaskRuntime : INodeContext
         // 输出校验不通过即不发布，节点停驻等返工
         if (!PassesValidation(executable.Spec.Validate, executable, node.Ports(execution.Id)))
         {
+            execution.MarkUncollected("输出校验不通过，本步未收口。");
+
             return Block(node, execution);
         }
 

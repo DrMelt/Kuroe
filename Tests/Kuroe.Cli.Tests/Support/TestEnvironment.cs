@@ -30,7 +30,6 @@ public sealed class TestEnvironment : IDisposable
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
         runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
-        runner.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>

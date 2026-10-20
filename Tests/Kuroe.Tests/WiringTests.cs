@@ -145,7 +145,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
         Assert.NotNull(provider.GetRequiredService<PortSubmitter>());
         Assert.NotNull(provider.GetRequiredService<ExecutionDispatcher>());
-        Assert.NotNull(provider.GetRequiredService<IExecutionContract>());
+        Assert.NotNull(provider.GetRequiredService<IExecutionStatusReader>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
         Assert.NotEmpty(provider.GetServices<ITool>());
     }

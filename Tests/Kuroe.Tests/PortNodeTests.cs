@@ -143,7 +143,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        PortTool tool = new(environment.Runner.PortSubmitter!, environment.Registry);
+        PortTool tool = environment.PortTool;
 
         // 未绑定执行的载体不写端口名，绑定执行后按该执行的声明列出
         Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);

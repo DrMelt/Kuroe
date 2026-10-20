@@ -151,10 +151,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IModelSettings>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
-        services.AddSingleton<IExecutionContract>(sp => new ExecutionReminder(sp.GetRequiredService<TaskRegistry>()));
         services.AddSingleton<IExecutionRunner>(sp => new ExecutionRunner(
             sp.GetRequiredService<SessionFactory>(),
-            sp.GetRequiredService<IExecutionContract>()));
+            new ContractReminder(sp.GetRequiredService<IExecutionStatusReader>())));
 
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
@@ -173,7 +172,8 @@ public static class ServiceCollectionExtensions
     {
         TaskRegistry taskRegistry = new();
         PortSubmitter portSubmitter = new(taskRegistry);
-        StatusSubmitter statusSubmitter = new(taskRegistry);
+        CannotCompleteSubmitter cannotCompleteSubmitter = new(taskRegistry);
+        ExecutionStatusReader statusReader = new(taskRegistry);
 
         List<ITool> tools =
         [
@@ -188,7 +188,8 @@ public static class ServiceCollectionExtensions
             .. GitTools.Tools(workingDirectory),
             .. DotnetTools.Tools(workingDirectory),
             new PortTool(portSubmitter, taskRegistry),
-            new StatusTool(statusSubmitter, taskRegistry),
+            new CannotCompleteTool(cannotCompleteSubmitter),
+            new StatusTool(statusReader),
             new TaskKuroeInfoTool(taskRegistry),
             new CatalogKuroeInfoTool(new ToolCatalogView(catalog, models)),
             new FlowKuroeInfoTool(flows),
@@ -220,7 +221,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(taskRegistry);
         services.AddSingleton(portSubmitter);
-        services.AddSingleton(statusSubmitter);
+        services.AddSingleton(cannotCompleteSubmitter);
+        services.AddSingleton(statusReader);
+        services.AddSingleton<IExecutionStatusReader>(statusReader);
         foreach (ITool tool in tools)
         {
             services.AddSingleton(tool);

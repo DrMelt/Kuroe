@@ -32,7 +32,7 @@ public sealed class LlmNodeComposeTests
     [Fact]
     public void Declaration_leads_the_capability_paths_and_contract_tools_follow() =>
         Assert.Equal(
-            ["ReadFile", "SubmitPortValues", "SubmitStatus"],
+            ["ReadFile", "SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters { Tools = [new ToolPath("ReadFile")] })
                 .ToolPaths([new Port(new PortName("结论"), PortType.Text)])
                 .Select(path => path.Value));
@@ -40,22 +40,24 @@ public sealed class LlmNodeComposeTests
     [Fact]
     public void Text_ports_grant_the_port_contract_tool() =>
         Assert.Equal(
-            ["SubmitPortValues", "SubmitStatus"],
+            ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
                 .ToolPaths([new Port(new PortName("结论"), PortType.Text)])
                 .Select(path => path.Value));
 
     [Fact]
-    public void Signal_ports_carry_no_output_and_keep_only_the_status_channel() =>
+    public void Signal_ports_carry_no_output_and_keep_the_execution_channels() =>
         Assert.Equal(
-            ["SubmitStatus"],
+            ["ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
                 .ToolPaths([new Port(new PortName("完成"), PortType.Signal)])
                 .Select(path => path.Value));
 
     [Fact]
-    public void A_node_without_output_ports_keeps_the_status_channel() =>
-        Assert.Equal(["SubmitStatus"], Typed(new LlmParameters()).ToolPaths([]).Select(path => path.Value));
+    public void A_node_without_output_ports_keeps_the_execution_channels() =>
+        Assert.Equal(
+            ["ReportCannotComplete", "GetStatus"],
+            Typed(new LlmParameters()).ToolPaths([]).Select(path => path.Value));
 
     private static LlmNodeType Typed(LlmParameters parameters) => Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(parameters));
 

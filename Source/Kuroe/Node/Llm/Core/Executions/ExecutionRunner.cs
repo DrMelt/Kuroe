@@ -7,7 +7,7 @@ namespace Kuroe.Node.Llm.Executions;
 
 /// <summary>按上下文装配会话并创建本次执行的过程记录。产出契约未满足时在同一会话里补发要求再请求，模型因此能看到自己上一轮的回复。
 /// 请求的模型侧内容全部取自节点类型自身给出的指令、系统指令与工具面，因此只适用于 Llm 类型的执行节点。</summary>
-sealed class ExecutionRunner(SessionFactory sessions, IExecutionContract contract) : IExecutionRunner
+sealed class ExecutionRunner(SessionFactory sessions, ContractReminder reminder) : IExecutionRunner
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
@@ -23,7 +23,7 @@ sealed class ExecutionRunner(SessionFactory sessions, IExecutionContract contrac
         return AskWithReminders(
             text => current.Session.AskAsync(text, execution, current.Journal, cancellationToken),
             (execution.Input.Type as LlmNodeType)?.Instruction(execution.Input) ?? string.Empty,
-            () => contract.Reminder(execution));
+            () => reminder.Text(execution));
     }
 
     /// <summary>先发本轮指令，随后按产出契约在同一会话里补发要求，最多补发 ReminderLimit 次。</summary>

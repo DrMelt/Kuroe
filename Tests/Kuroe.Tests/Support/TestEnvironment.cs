@@ -10,6 +10,7 @@ using Kuroe.Flow.Shared.StaticGraph;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
+using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,8 +29,10 @@ public sealed class TestEnvironment : IDisposable
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
-        runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
-        runner.StatusSubmitter = provider.GetRequiredService<StatusSubmitter>();
+        PortTool = new PortTool(provider.GetRequiredService<PortSubmitter>(), Registry);
+        CannotCompleteTool = new CannotCompleteTool(provider.GetRequiredService<CannotCompleteSubmitter>());
+        runner.PortTool = PortTool;
+        runner.CannotCompleteTool = CannotCompleteTool;
     }
 
     /// <summary>临时工作目录。</summary>
@@ -53,6 +56,12 @@ public sealed class TestEnvironment : IDisposable
 
     /// <summary>端口产出的交回通道，测试直接调用它验证提交校验。</summary>
     public PortSubmitter PortSubmitter => _provider.GetRequiredService<PortSubmitter>();
+
+    /// <summary>交回端口产出的契约工具载体，假执行器按模型调用方式经它提交。</summary>
+    public PortTool PortTool { get; }
+
+    /// <summary>上报无法完成的契约工具载体，假执行器按模型调用方式经它上报。</summary>
+    public CannotCompleteTool CannotCompleteTool { get; }
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 

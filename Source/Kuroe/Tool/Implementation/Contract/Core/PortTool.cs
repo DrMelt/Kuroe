@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph;
@@ -35,7 +36,18 @@ public sealed class PortTool : IScopedTool
     /// <summary>把契约定义绑上提交该执行端口内容的调用体，有端口清单时写进说明。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, ExecutionId? execution, IReadOnlyList<Port>? ports) =>
     [
-        ContractToolDefinitions.Port(ports).Bind(arguments =>
-            intake.SubmitValues(execution ?? default, arguments.Text(new ToolName("valuesJson")) ?? string.Empty)),
+        ContractToolDefinitions.Port(ports).Bind(arguments => Submit(intake, execution ?? default, ports, arguments)),
     ];
+
+    /// <summary>提交端口内容并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>
+    private static ErrorOr<string> Submit(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports, ToolArguments arguments)
+    {
+        ErrorOr<ExecutionStatus> outcome = intake.SubmitValues(execution, arguments.Text(new ToolName("valuesJson")) ?? string.Empty);
+        if (outcome.IsError)
+        {
+            return outcome.ErrorsOrEmptyList;
+        }
+
+        return $"已记录 {ports?.Count ?? 0} 个端口的产出。{ContractReceipts.Needs(outcome.Value)}";
+    }
 }

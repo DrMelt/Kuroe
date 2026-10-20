@@ -12,9 +12,6 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
 
-    /// <summary>本轮状态的声明通道，所有执行节点都有这个工具。</summary>
-    public StatusSubmitter? StatusSubmitter { get; set; }
-
     /// <summary>单个执行的人为耗时，用于取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
@@ -36,8 +33,6 @@ public sealed class FakeRunner : IExecutionRunner
         {
             _ = PortSubmitter!.SubmitValues(execution.Id, PortValuesFor(ports));
         }
-
-        _ = StatusSubmitter!.SubmitVerdict(execution.Id, "completed", null);
 
         execution.Sink.OnText($"{execution.Input.Node}产出");
 

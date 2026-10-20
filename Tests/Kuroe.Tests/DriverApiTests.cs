@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
+using Kuroe.Tool.Contract;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Xunit;
 
@@ -31,7 +32,11 @@ public sealed class DriverApiTests
         ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
         ExecutionId implementExecution = implement.Id;
 
-        Assert.Contains("被拒绝", ToolResult.Render(environment.PortSubmitter.SubmitValues(implementExecution, """{ "计划": "改一下" }""")));
+        ToolFunction submit = Assert.Single(environment.PortTool.ForExecution(implementExecution).Functions);
+        string receipt = ToolResult.Render(submit.Invoke(
+            new ToolArguments(new Dictionary<string, object?> { ["valuesJson"] = """{ "计划": "改一下" }""" })));
+
+        Assert.Contains("被拒绝", receipt);
     }
 
     [Fact]

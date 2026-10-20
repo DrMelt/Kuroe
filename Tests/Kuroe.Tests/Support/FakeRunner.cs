@@ -2,9 +2,10 @@ using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Node.Llm.Executions;
+using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
+using Kuroe.Tool.Contract;
 using Kuroe.Flow.Shared.StaticGraph;
-using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Tests.Support;
 
@@ -16,11 +17,11 @@ public sealed class FakeRunner : IExecutionRunner
     private int _live;
     private int _peak;
 
-    /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
-    public PortSubmitter? PortSubmitter { get; set; }
+    /// <summary>交回端口产出的契约工具载体，按执行换一份。</summary>
+    public PortTool? PortTool { get; set; }
 
-    /// <summary>本轮状态的声明通道，所有执行节点都有这个工具。</summary>
-    public StatusSubmitter? StatusSubmitter { get; set; }
+    /// <summary>上报无法完成的契约工具载体，按执行换一份。</summary>
+    public CannotCompleteTool? CannotCompleteTool { get; set; }
 
     /// <summary>声明输出端口的执行节点交回的命名段。空时按执行声明的端口名逐个生成同名校验文本。</summary>
     public string PortValuesJson { get; set; } = string.Empty;
@@ -31,14 +32,11 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>输出端口节点是否交回命名段，关掉用于验证未收口。</summary>
     public bool SubmitsPorts { get; set; } = true;
 
-    /// <summary>是否声明本轮状态，关掉用于验证未声明时的表现。</summary>
-    public bool SubmitsVerdict { get; set; } = true;
+    /// <summary>是否上报本轮无法完成，默认不上报，即按本轮交回的内容收口。</summary>
+    public bool CannotComplete { get; set; }
 
-    /// <summary>声明的本轮状态文本，默认交付完毕。</summary>
-    public string VerdictStatus { get; set; } = "completed";
-
-    /// <summary>声明 blocked 时给出的原因。</summary>
-    public string VerdictReason { get; set; } = string.Empty;
+    /// <summary>上报无法完成时给出的原因。</summary>
+    public string CannotCompleteReason { get; set; } = "缺少输入资料";
 
     /// <summary>端口节点连续提交两次取值，第二次用于验证重复提交被拒。</summary>
     public bool DoubleSubmitPorts { get; set; }
@@ -110,19 +108,16 @@ public sealed class FakeRunner : IExecutionRunner
             {
                 string json = PortValuesJsonFor?.Invoke(execution)
                     ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(textPorts));
-                _submissions.Enqueue(ToolResult.Render(PortSubmitter!.SubmitValues(execution.Id, json)));
+                _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 if (DoubleSubmitPorts)
                 {
-                    _submissions.Enqueue(ToolResult.Render(PortSubmitter.SubmitValues(execution.Id, json)));
+                    _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 }
             }
 
-            if (SubmitsVerdict)
+            if (CannotComplete)
             {
-                _submissions.Enqueue(ToolResult.Render(StatusSubmitter!.SubmitVerdict(
-                    execution.Id,
-                    VerdictStatus,
-                    VerdictReason.Length > 0 ? VerdictReason : null)));
+                _submissions.Enqueue(Call(CannotCompleteTool!, execution, new Dictionary<string, object?> { ["reason"] = CannotCompleteReason }));
             }
 
             if (FailsWhen?.Invoke(execution) == true)
@@ -141,6 +136,10 @@ public sealed class FakeRunner : IExecutionRunner
             Interlocked.Decrement(ref _live);
         }
     }
+
+    /// <summary>按模型调用工具的方式取回执文本：换一份绑定该执行的载体，实参按参数名给出。</summary>
+    private static string Call(IScopedTool tool, IExecution execution, Dictionary<string, object?> arguments) =>
+        ToolResult.Render(tool.ForExecution(execution.Id).Functions.Single().Invoke(new ToolArguments(arguments)));
 
     /// <summary>测试用的执行体：只带过程记录，由假执行器自己写。</summary>
     private sealed class FakeBody : IExecutionBody
