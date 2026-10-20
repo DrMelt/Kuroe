@@ -73,6 +73,42 @@ public sealed class WiringTests : IDisposable
     }
 
     [Fact]
+    public void Command_tool_colliding_with_a_builtin_call_name_fails_startup()
+    {
+        Directory.CreateDirectory(_root);
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "tools.json"), """
+            {
+              "Tools": [
+                { "Name": "ReadFile", "Group": "file_read", "Template": ["cmd", "/c", "echo", "x"] }
+              ]
+            }
+            """);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
+
+        Assert.True(startup.IsError);
+        Assert.Contains(startup.ErrorsOrEmptyList,
+            error => error.Description.Contains("模型调用名", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Every_registered_tool_has_a_name_the_model_interface_accepts()
+    {
+        using ServiceProvider provider = Services();
+
+        IReadOnlyList<string> names = [.. provider.GetServices<ITool>()
+            .SelectMany(tool => tool.Functions)
+            .Select(function => function.Definition.Path.CallName.Value)];
+
+        Assert.Contains("file_read_ReadFile", names);
+        Assert.All(names, name => Assert.Matches("^[a-zA-Z0-9_-]+$", name));
+    }
+
+    [Fact]
     public void Builtin_git_tools_join_the_tool_face()
     {
         using ServiceProvider provider = Services();

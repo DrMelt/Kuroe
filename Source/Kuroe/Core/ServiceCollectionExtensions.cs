@@ -159,7 +159,7 @@ public static class ServiceCollectionExtensions
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }
 
-    /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径校验重复。
+    /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
     /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
@@ -197,14 +197,25 @@ public static class ServiceCollectionExtensions
             .. configured.Select(entry => entry.Tool),
         ];
 
-        IReadOnlyList<ToolPath> duplicates = [.. tools
-            .SelectMany(tool => tool.Functions)
+        IReadOnlyList<ToolFunction> functions = [.. tools.SelectMany(tool => tool.Functions)];
+
+        IReadOnlyList<ToolPath> duplicates = [.. functions
             .GroupBy(function => function.Definition.Path)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)];
         if (duplicates.Count > 0)
         {
             return duplicates.Select(path => ToolFileErrors.Duplicate(path.Value)).ToList();
+        }
+
+        IReadOnlyList<Error> conflicts = [.. functions
+            .GroupBy(function => function.Definition.Path.CallName.Value)
+            .Where(group => group.Select(function => function.Definition.Path.Value).Distinct().Count() > 1)
+            .Select(group => ToolFileErrors.CallNameConflict(
+                group.Key, [.. group.Select(function => function.Definition.Path.Value).Distinct()]))];
+        if (conflicts.Count > 0)
+        {
+            return conflicts.ToList();
         }
 
         services.AddSingleton(taskRegistry);

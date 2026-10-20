@@ -105,7 +105,7 @@ public sealed class CommandToolFile : IToolFile
         return definitions;
     }
 
-    /// <summary>把文件形状装配成定义，参数的非法项在这层先给出，模板合法性单独校验。</summary>
+    /// <summary>把文件形状装配成定义，名字与分组拼出的路径和参数的非法项在这层先给出，模板合法性单独校验。</summary>
     private static ErrorOr<CommandToolDefinition> ToDefinition(CommandToolDto dto, string workDirectory)
     {
         List<Error> errors = [];
@@ -114,10 +114,6 @@ public sealed class CommandToolFile : IToolFile
         {
             errors.Add(CommandToolErrors.Invalid("(未命名)", "工具名不能为空。"));
         }
-        else if (dto.Name.Any(char.IsWhiteSpace) || dto.Name.Contains('{') || dto.Name.Contains('}'))
-        {
-            errors.Add(CommandToolErrors.Invalid(dto.Name, "工具名不能含空白与花括号。"));
-        }
 
         ErrorOr<IReadOnlyList<CommandToolTemplateItem>> template = ToTemplateItems(dto.Name ?? "(未命名)", dto.Template);
         if (template.IsError)
@@ -125,7 +121,11 @@ public sealed class CommandToolFile : IToolFile
             errors.AddRange(template.ErrorsOrEmptyList);
         }
 
-        CheckPath(dto.Name ?? "(未命名)", dto.Group, errors);
+        string? path = PathOf(dto);
+        if (path is { } value && ToolPath.InvalidReason(value) is { } reason)
+        {
+            errors.Add(CommandToolErrors.Invalid(dto.Name!, reason));
+        }
 
         if (dto.OutputLimit is { } outputLimit && outputLimit < 1)
         {
@@ -164,10 +164,8 @@ public sealed class CommandToolFile : IToolFile
             return errors;
         }
 
-        ToolPath path = dto.Group is { Length: > 0 } group ? new ToolPath($"{group}/{dto.Name}") : new ToolPath(dto.Name!);
-
         return new CommandToolDefinition(
-            path,
+            new ToolPath(path!),
             dto.Description ?? $"执行命令 {dto.Name}",
             parameters.Value,
             template.Value,
@@ -176,15 +174,15 @@ public sealed class CommandToolFile : IToolFile
             dto.OutputLimit ?? CommandToolTemplate.DefaultOutputLimit);
     }
 
-    /// <summary>校验工具路径分组：未写或空合法，格式非法时给出配置错误。</summary>
-    private static void CheckPath(string tool, string? raw, List<Error> errors)
+    /// <summary>名字与可选分组拼出的工具路径，名字未给时为空。</summary>
+    private static string? PathOf(CommandToolDto dto)
     {
-        if (raw is null || ToolPath.InvalidReason(raw) is not { } reason)
+        if (dto.Name is not { Length: > 0 } name)
         {
-            return;
+            return null;
         }
 
-        errors.Add(CommandToolErrors.Invalid(tool, reason));
+        return dto.Group is { Length: > 0 } group ? $"{group}/{name}" : name;
     }
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。</summary>

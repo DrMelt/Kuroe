@@ -16,4 +16,9 @@ public static class ToolFileErrors
     /// <summary>配置工具的路径与已注册工具重复。</summary>
     public static Error Duplicate(string path) =>
         Error.Validation(ErrorCodes.ToolDuplicate, $"配置工具 {path} 与已注册工具的路径重复。");
+
+    /// <summary>两条路径的模型调用名相同，模型无法区分。</summary>
+    public static Error CallNameConflict(string callName, IReadOnlyList<string> paths) =>
+        Error.Validation(ErrorCodes.ToolDuplicate,
+            $"路径 {string.Join(" 与 ", paths)} 的模型调用名都是 {callName}，模型无法区分。");
 }

@@ -79,7 +79,7 @@ public sealed class DialogueTests
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), DialogueFlow.Tools);
 
         Assert.Equal(
-            ["GetLocalTime", "KuroeInfo/ListTasks", "KuroeInfo/GetTask", "KuroeInfo/GetExecution"],
+            ["GetLocalTime", "KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -96,7 +96,7 @@ public sealed class DialogueTests
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo")]);
 
         Assert.Equal(
-            ["KuroeInfo/ListTasks", "KuroeInfo/GetTask", "KuroeInfo/GetExecution"],
+            ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
             built.Select(tool => tool.Name));
     }
 
@@ -111,7 +111,27 @@ public sealed class DialogueTests
         new ToolJson());
         IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo/GetTask")]);
 
-        Assert.Equal(["KuroeInfo/GetTask"], built.Select(tool => tool.Name));
+        Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
+    }
+
+    /// <summary>模型接口只接受字母、数字、下划线与连字符，路径含层级时交给模型的名字必须已扁平化。</summary>
+    [Fact]
+    public void Model_facing_names_fit_the_model_interface_character_set()
+    {
+        ToolCollection tools = new(
+        [
+            new TimeTool(),
+            new TaskKuroeInfoTool(new TaskRegistry()),
+            new NestedTool(),
+        ],
+        new ToolJson());
+        IReadOnlyList<AITool> built = tools.Build(
+            new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo"), new ToolPath("file")]);
+
+        Assert.Equal(
+            ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution", "file_read_ReadFile"],
+            built.Select(tool => tool.Name));
+        Assert.All(built, tool => Assert.Matches("^[a-zA-Z0-9_-]+$", tool.Name));
     }
 
     [Fact]
@@ -131,6 +151,15 @@ public sealed class DialogueTests
         public IReadOnlyList<ToolFunction> Functions { get; } =
         [
             new ToolDefinition(new ToolPath("RunDiff"), "样例工具", []).Bind(_ => string.Empty),
+        ];
+    }
+
+    /// <summary>带层级的样例载体，用于确认模型侧名字不含路径分隔符。</summary>
+    private sealed class NestedTool : ITool
+    {
+        public IReadOnlyList<ToolFunction> Functions { get; } =
+        [
+            new ToolDefinition(new ToolPath("file/read/ReadFile"), "样例文件工具", []).Bind(_ => string.Empty),
         ];
     }
 

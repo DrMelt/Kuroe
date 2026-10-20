@@ -43,12 +43,13 @@ public sealed class ToolCollection
         return result;
     }
 
-    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，同时播发给观察者。</summary>
+    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，同时播发给观察者。
+    /// 模型侧的名字取路径的调用名，过程记录与展示仍用路径。</summary>
     private sealed class DeclaredFunction(ToolFunction declaration, IProcessSink sink, ProcessJournal journal, IToolJson json) : AIFunction
     {
         private readonly JsonElement _schema = json.Schema(declaration.Definition.Parameters);
 
-        public override string Name => declaration.Definition.Path.Value;
+        public override string Name => declaration.Definition.Path.CallName.Value;
 
         public override string Description => declaration.Definition.Description;
 

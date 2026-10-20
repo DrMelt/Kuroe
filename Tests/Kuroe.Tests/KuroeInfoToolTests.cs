@@ -183,7 +183,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         ToolboxKuroeInfoTool empty = new(DialogueFlow.Tools, environment.ConfiguredTools);
         string noTools = Call(empty, "ListTools");
 
-        Assert.Contains("内置对话可用函数", noTools);
+        Assert.Contains("内置对话放行的路径前缀", noTools);
         Assert.Contains("GetLocalTime", noTools);
         Assert.Contains("KuroeInfo", noTools);
         Assert.Contains("file", noTools);
@@ -194,7 +194,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         ToolboxKuroeInfoTool tool = new(DialogueFlow.Tools, [diff]);
         string output = Call(tool, "ListTools");
 
-        Assert.Contains("git/RunDiff", output);
+        Assert.Contains("RunDiff · 路径 git/RunDiff", output);
         Assert.Contains("git diff {path}", output);
         Assert.Contains("path*", output);
     }

@@ -180,10 +180,12 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ 3 ] } ] }""", "必须是字符串或")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Group": "/git", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git/", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git//x", "Template": ["x"] } ] }""", "不能为空或含空白与花括号")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "gi t", "Template": ["x"] } ] }""", "含空白与花括号")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "a{b}", "Template": ["x"] } ] }""", "含空白与花括号")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git/", "Template": ["x"] } ] }""", "段不能为空")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git//x", "Template": ["x"] } ] }""", "段不能为空")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "gi t", "Template": ["x"] } ] }""", "只能写字母、数字、下划线与连字符")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": "a{b}", "Template": ["x"] } ] }""", "只能写字母、数字、下划线与连字符")]
+    [InlineData("""{ "Tools": [ { "Name": "运行", "Template": ["x"] } ] }""", "只能写字母、数字、下划线与连字符")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Group": " ", "Template": ["x"] } ] }""", "只能写字母、数字、下划线与连字符")]
     public void Load_rejects_invalid_definitions(string json, string expected)
     {
         ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load(json);

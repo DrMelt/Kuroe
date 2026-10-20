@@ -60,7 +60,7 @@ public sealed class LlmTypeFileTests
         List<string> errors = [];
         File.Read(new Reader(tools: ["file/写入 文件"]), errors.Add);
 
-        Assert.Equal(["路径 file/写入 文件 的段 写入 文件 不能为空或含空白与花括号。"], errors);
+        Assert.Equal(["路径 file/写入 文件 的段 写入 文件 只能写字母、数字、下划线与连字符。"], errors);
     }
 
     [Fact]

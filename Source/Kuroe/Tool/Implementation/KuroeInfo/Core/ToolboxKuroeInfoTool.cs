@@ -5,7 +5,7 @@ using Kuroe.Tool.Json;
 
 namespace Kuroe.Tool.KuroeInfo;
 
-/// <summary>工具面的状态查询工具。列出内置对话可用的函数与配置的命令工具及其路径。</summary>
+/// <summary>工具面的状态查询工具。列出内置对话放行的路径前缀与配置的命令工具及其调用名与路径。</summary>
 public sealed class ToolboxKuroeInfoTool : ITool
 {
     private readonly IReadOnlyList<ToolPath> _dialogueTools;
@@ -14,7 +14,7 @@ public sealed class ToolboxKuroeInfoTool : ITool
     /// <summary>列出工具面的函数定义。</summary>
     private static readonly ToolDefinition ListTools = new(
         new ToolPath("KuroeInfo/ListTools"),
-        "列出内置对话可用的函数与配置的命令工具及其路径。",
+        "列出内置对话放行的路径前缀与配置的命令工具及其调用名与路径。",
         []);
 
     /// <summary>本载体的函数声明。</summary>
@@ -32,8 +32,9 @@ public sealed class ToolboxKuroeInfoTool : ITool
     private ErrorOr<string> Describe()
     {
         var text = new StringBuilder();
-        text.AppendLine("内置对话可用函数与分组：");
+        text.AppendLine("内置对话放行的路径前缀：");
         text.AppendLine($"  {string.Join("、", _dialogueTools.OrderBy(path => path.Value))}");
+        text.AppendLine("调用名是路径的分隔符换成下划线，调用按调用名写。");
 
         if (_configuredTools.Count == 0)
         {
@@ -45,7 +46,7 @@ public sealed class ToolboxKuroeInfoTool : ITool
         text.AppendLine("命令工具：");
         foreach (ConfiguredTool tool in _configuredTools)
         {
-            text.AppendLine($"  {tool.Definition.Path.Value} · {tool.Definition.Description}"
+            text.AppendLine($"  {tool.Definition.Path.CallName} · 路径 {tool.Definition.Path.Value} · {tool.Definition.Description}"
                 + $" · 模板 {tool.Configuration}"
                 + $" · 参数 {tool.Definition.Parameters.Labels()}");
         }

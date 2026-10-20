@@ -2,7 +2,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Tests;
 
-/// <summary>工具路径：既是模型调用名，也是白名单匹配的原文，末段是函数名；格式在入口校验。</summary>
+/// <summary>工具路径：白名单匹配的原文，末段是函数名，模型调用名由路径派生；格式在入口校验。</summary>
 public sealed class ToolPathTests
 {
     [Fact]
@@ -11,6 +11,14 @@ public sealed class ToolPathTests
         Assert.Equal(new ToolName("GetTime"), new ToolPath("GetTime").Name);
         Assert.Equal(new ToolName("ReadFile"), new ToolPath("file/read/ReadFile").Name);
         Assert.Equal(new ToolName(string.Empty), new ToolPath(string.Empty).Name);
+    }
+
+    [Fact]
+    public void Call_name_flattens_the_separators()
+    {
+        Assert.Equal(new ToolName("GetLocalTime"), new ToolPath("GetLocalTime").CallName);
+        Assert.Equal(new ToolName("file_read_ReadFile"), new ToolPath("file/read/ReadFile").CallName);
+        Assert.Equal(new ToolName("KuroeInfo_ListTasks"), new ToolPath("KuroeInfo/ListTasks").CallName);
     }
 
     [Theory]
@@ -46,9 +54,10 @@ public sealed class ToolPathTests
     [Fact]
     public void Invalid_reason_names_the_offending_segment()
     {
-        Assert.Equal("路径 gi t 的段 gi t 不能为空或含空白与花括号。", ToolPath.InvalidReason("gi t"));
-        Assert.Equal("路径 a{b} 的段 a{b} 不能为空或含空白与花括号。", ToolPath.InvalidReason("a{b}"));
-        Assert.Contains("不能为空或含空白与花括号", ToolPath.InvalidReason("git//x"));
+        Assert.Equal("路径 gi t 的段 gi t 只能写字母、数字、下划线与连字符。", ToolPath.InvalidReason("gi t"));
+        Assert.Equal("路径 a{b} 的段 a{b} 只能写字母、数字、下划线与连字符。", ToolPath.InvalidReason("a{b}"));
+        Assert.Equal("路径 git/状态 的段 状态 只能写字母、数字、下划线与连字符。", ToolPath.InvalidReason("git/状态"));
+        Assert.Equal("路径 git//x 的段不能为空。", ToolPath.InvalidReason("git//x"));
     }
 
     [Theory]
