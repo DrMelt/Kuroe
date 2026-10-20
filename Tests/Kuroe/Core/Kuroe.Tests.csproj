@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Source\Kuroe\Core\Kuroe.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Json\Kuroe.Node.Llm.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Input\Json\Kuroe.Node.Input.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Approval\Json\Kuroe.Node.Approval.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Time\Core\Kuroe.Tool.Time.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Contract\Core\Kuroe.Tool.Contract.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\InputChannel\Kuroe.Flow.InputChannel.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Kuroe.Flow.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeLibrary\Kuroe.Flow.NodeLibrary.csproj" />
+    </ItemGroup>
+
+</Project>

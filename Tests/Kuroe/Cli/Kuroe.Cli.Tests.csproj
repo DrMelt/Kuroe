@@ -15,10 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Source\Kuroe.Cli\Kuroe.Cli.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe.Cli\Kuroe.Cli.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
   </ItemGroup>
 
 </Project>

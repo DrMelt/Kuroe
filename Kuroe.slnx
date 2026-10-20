@@ -26,8 +26,8 @@
     <Project Path="Source/Kuroe/Node/Approval/Json/Kuroe.Node.Approval.Json.csproj" />
     <Project Path="Source/Kuroe/Core/Kuroe.csproj" />
     <Project Path="Source/Kuroe.Cli/Kuroe.Cli.csproj" />
-    <Project Path="Tests/Kuroe.Tests/Kuroe.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Shared.Tests/Kuroe.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Core/Kuroe.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Shared/Kuroe.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Core/Kuroe.Tool.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Json/Kuroe.Tool.Json.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Implementation/Time/Core/Kuroe.Tool.Time.Tests.csproj" />
@@ -47,5 +47,5 @@
     <Project Path="Tests/Kuroe/Node/Input/Json/Kuroe.Node.Input.Json.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Approval/Core/Kuroe.Node.Approval.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Approval/Json/Kuroe.Node.Approval.Json.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Cli.Tests/Kuroe.Cli.Tests.csproj" />
+    <Project Path="Tests/Kuroe/Cli/Kuroe.Cli.Tests.csproj" />
 </Solution>
