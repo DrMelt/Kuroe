@@ -57,14 +57,14 @@ internal sealed class Repl(
     }
 
     /// <summary>提示符固定在根层，常驻对话任务随时可答。提示符来源行独立，输入从下一行开始。</summary>
-    private static string Prompt => "root >";
+    private static string Prompt => "Kuroe >";
 
     private async Task AskAsync(string input, CancellationScope cancellation)
     {
         ErrorOr<Success> outcome;
         using (terminal.Exclusive())
         {
-            terminal.Line("对话 > ");
+            terminal.Line("Kuroe 助手> ");
             try
             {
                 outcome = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
