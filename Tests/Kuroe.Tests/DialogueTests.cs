@@ -1,3 +1,4 @@
+using Kuroe.Configuration.Model;
 using Kuroe.Node.Input;
 using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Tools;
@@ -26,7 +27,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_flow_builds_input_and_text_reply_nodes()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs).RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes!;
 
         Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
         Assert.Equal(LlmNodeTypes.Name, nodes[1].Kind);
@@ -35,7 +36,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_flow_marks_the_reply_port_as_signal_on_both_sides()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs).RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes!;
 
         Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
         Assert.Equal(PortType.Signal, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
@@ -44,18 +45,31 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
-        NodeSpec reply = DialogueFlow.Build(Inputs).RootNode.Nodes![1];
+        NodeSpec reply = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes![1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
-        Assert.Equal(["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。"], parameters.SystemPrompt);
+        Assert.Equal(
+            ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。", "使用「中文」语言母语者语言风格回答。"],
+            parameters.SystemPrompt);
         Assert.Null(parameters.Prompt);
+    }
+
+    [Fact]
+    public void Dialogue_reply_node_uses_the_configured_language()
+    {
+        NodeSpec reply = DialogueFlow.Build(Inputs, "English").RootNode.Nodes![1];
+        LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
+
+        Assert.Equal(
+            ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。", "使用「English」语言母语者语言风格回答。"],
+            parameters.SystemPrompt);
     }
 
     /// <summary>回话节点的 Signal 输出端口同样按需交回端口放行端口交回工具。</summary>
     [Fact]
     public void Dialogue_reply_node_grants_the_port_contract_tool()
     {
-        NodeSpec reply = DialogueFlow.Build(Inputs).RootNode.Nodes![1];
+        NodeSpec reply = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes![1];
         LlmNodeType type = Assert.IsType<LlmNodeType>(reply.Type);
         IReadOnlyList<string> paths = [.. type.ToolPaths(reply.Outputs).Select(path => path.Value)];
 

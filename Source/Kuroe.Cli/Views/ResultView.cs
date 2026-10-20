@@ -34,6 +34,11 @@ internal sealed class ResultView(Terminal terminal, ErrorView errors)
         {
             terminal.Hint("下一轮对话将清空上下文。");
         }
+
+        if (effect.RequiresDialogueRebuild)
+        {
+            terminal.Hint("内置助手语言已变更，已有对话任务需用 /reset 重建后生效。");
+        }
     }
 
     /// <summary>报告错误、给出可操作提示，并说明改动未生效，与错误同走 stderr。</summary>

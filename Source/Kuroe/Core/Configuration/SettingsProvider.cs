@@ -131,6 +131,7 @@ public sealed class SettingsProvider : IModelSettings, ISettingsView
     private ErrorOr<SettingsEffect> Apply(Action<JsonObject> mutate)
     {
         RuntimeSettings before = Current.Runtime;
+        AssistantSettings beforeAssistant = Current.Assistant;
 
         JsonObject candidate = _store.Snapshot();
         try
@@ -162,7 +163,11 @@ public sealed class SettingsProvider : IModelSettings, ISettingsView
 
         Current = next.Value;
         RuntimeSettings after = Current.Runtime;
+        AssistantSettings afterAssistant = Current.Assistant;
 
-        return new SettingsEffect(after.RequiresRestart(before), after.InvalidatesHistory(before));
+        return new SettingsEffect(
+            after.RequiresRestart(before),
+            after.InvalidatesHistory(before),
+            afterAssistant.RequiresDialogueRebuild(beforeAssistant));
     }
 }

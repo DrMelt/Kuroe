@@ -164,6 +164,15 @@ public sealed class CommandRouteTests
     }
 
     [Fact]
+    public void Settings_set_language_hints_dialogue_rebuild()
+    {
+        using CliSession cli = new();
+        cli.Settings.Set(["/set", "Assistant:Language", "English"]);
+
+        Assert.Contains("内置助手语言已变更，已有对话任务需用 /reset 重建后生效。", cli.Output.Output);
+    }
+
+    [Fact]
     public void Settings_set_with_wrong_argument_count_shows_usage()
     {
         using CliSession cli = new();

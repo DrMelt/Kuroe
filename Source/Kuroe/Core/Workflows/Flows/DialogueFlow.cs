@@ -48,11 +48,18 @@ internal static class DialogueFlow
         new ToolPath("dotnet/read"),
     ];
 
-    /// <summary>回话节点的恒定系统指令块。</summary>
-    internal static IReadOnlyList<string> SystemPrompt { get; } = ["你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。"];
+    /// <summary>回话节点的固定身份说明。</summary>
+    private const string Identity = "你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。";
 
-    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入。</summary>
-    internal static FlowDefinition Build(IInputChannel inputs) => new(
+    /// <summary>回话节点的恒定系统指令块：身份说明与回复语言。</summary>
+    internal static IReadOnlyList<string> SystemPrompt(string language) =>
+    [
+        Identity,
+        $"使用「{language}」语言母语者语言风格回答。",
+    ];
+
+    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入，语言由宿主的助手配置给出。</summary>
+    internal static FlowDefinition Build(IInputChannel inputs, string language) => new(
         Name,
         "内置对话：回答用户的每轮输入",
         [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
@@ -90,7 +97,7 @@ internal static class DialogueFlow
                     Type = LlmNodeTypes.Create(new LlmParameters
                     {
                         Tools = Tools,
-                        SystemPrompt = SystemPrompt,
+                        SystemPrompt = SystemPrompt(language),
                     }),
                     Inputs = [new InputPort(InputPort, PortType.Text)],
                     Spec = new ExecutableSpec(),

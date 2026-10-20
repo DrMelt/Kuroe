@@ -24,6 +24,9 @@ static class SettingsErrors
     /// <summary>改动后的配置无法绑定。</summary>
     public static Error Invalid() => Error.Validation("Settings.Invalid", "改动后的配置无效");
 
+    /// <summary>内置助手的回复语言为空。</summary>
+    public static Error Language() => Error.Validation("Settings.Language", "Assistant:Language 不能为空。");
+
     /// <summary>路径不对应已定义的设置项。</summary>
     public static Error Undefined(string path) =>
         Error.Validation("Settings.Undefined", $"{path} 不是已定义的设置项。");

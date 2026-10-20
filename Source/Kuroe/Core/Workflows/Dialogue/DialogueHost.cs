@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Catalogs;
+using Kuroe.Configuration;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
@@ -10,7 +11,13 @@ using Kuroe.Flow.InputChannel;
 namespace Kuroe.Workflows.Dialogue;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。</summary>
-public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelService models, TaskRegistry registry, IInputChannel inputs)
+public sealed class DialogueHost(
+    TaskService tasks,
+    DialogueRound rounds,
+    ModelService models,
+    SettingsProvider settings,
+    TaskRegistry registry,
+    IInputChannel inputs)
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
@@ -47,7 +54,7 @@ public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelS
         }
     }
 
-    /// <summary>当前对话任务，不存在、已被清理或已收口时新建。</summary>
+    /// <summary>当前对话任务，不存在、已被清理或已收口时新建。助手语言在创建时读取，配置变化后用 /reset 重建任务生效。</summary>
     private TaskId EnsureDialogue()
     {
         lock (_gate)
@@ -58,7 +65,8 @@ public sealed class DialogueHost(TaskService tasks, DialogueRound rounds, ModelS
             }
         }
 
-        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow("对话", Kuroe.Workflows.Flows.DialogueFlow.Build(inputs), "对话");
+        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow(
+            "对话", Kuroe.Workflows.Flows.DialogueFlow.Build(inputs, settings.Current.Assistant.Language), "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

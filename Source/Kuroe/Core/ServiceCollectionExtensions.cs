@@ -143,6 +143,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskService>(),
             sp.GetRequiredService<DialogueRound>(),
             sp.GetRequiredService<ModelService>(),
+            sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<IInputChannel>()));
         services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));

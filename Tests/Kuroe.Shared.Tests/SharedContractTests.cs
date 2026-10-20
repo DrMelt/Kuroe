@@ -11,5 +11,6 @@ public sealed class SharedContractTests
     {
         Assert.False(SettingsEffect.None.RequiresRestart);
         Assert.False(SettingsEffect.None.InvalidatesHistory);
+        Assert.False(SettingsEffect.None.RequiresDialogueRebuild);
     }
 }

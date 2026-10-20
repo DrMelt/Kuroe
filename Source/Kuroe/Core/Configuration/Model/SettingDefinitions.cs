@@ -11,6 +11,7 @@ internal static class SettingDefinitions
         Runtime(nameof(RuntimeSettings.Temperature), settings => settings.Runtime.Temperature),
         Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
         Runtime(nameof(RuntimeSettings.MaxConcurrentExecutions), settings => settings.Runtime.MaxConcurrentExecutions),
+        Assistant(nameof(AssistantSettings.Language), settings => settings.Assistant.Language),
     ];
 
     /// <summary>按输入取规范节名，大小写不敏感，未定义的节返回 null。</summary>
@@ -25,4 +26,7 @@ internal static class SettingDefinitions
 
     private static SettingDefinition Runtime(string name, Func<KuroeSettings, object?> value) =>
         new(RuntimeSettings.SectionName, name, value);
+
+    private static SettingDefinition Assistant(string name, Func<KuroeSettings, object?> value) =>
+        new(AssistantSettings.SectionName, name, value);
 }

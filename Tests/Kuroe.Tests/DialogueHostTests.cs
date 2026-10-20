@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -8,7 +9,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、回复文本经过程播发送给观察者。</summary>
+/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、语言变化后重置才按新系统指令重建、回复文本经过程播发送给观察者。</summary>
 public sealed class DialogueHostTests
 {
     [Fact]
@@ -48,6 +49,31 @@ public sealed class DialogueHostTests
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
         Assert.Equal(["回复1", "回复2"], observer.Texts);
+    }
+
+    [Fact]
+    public async Task Language_change_waits_for_reset_before_rebuilding()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        List<string> prompts = [];
+        environment.Runner.Reply = execution =>
+        {
+            prompts.Add(Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt()!);
+            return $"回复{execution.Input.ExecutionCount}";
+        };
+
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
+        environment.Settings.Set("Assistant:Language", "English").ThrowIfError();
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
+        environment.Dialogue.Reset();
+        ErrorOr<Success> third = await environment.Dialogue.ReplyAsync("第三问", null, CancellationToken.None);
+
+        Assert.False(first.IsError, ErrorText(first));
+        Assert.False(second.IsError, ErrorText(second));
+        Assert.False(third.IsError, ErrorText(third));
+        Assert.Equal(3, prompts.Count);
+        Assert.Contains("使用「中文」语言母语者语言风格回答。", prompts[1], StringComparison.Ordinal);
+        Assert.Contains("使用「English」语言母语者语言风格回答。", prompts[2], StringComparison.Ordinal);
     }
 
     /// <summary>回话节点只声明 Signal 输出端口，一轮回答仍要交回这个端口，未交回即不推进。</summary>

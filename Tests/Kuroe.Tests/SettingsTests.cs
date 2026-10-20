@@ -14,11 +14,13 @@ public sealed class SettingsTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        SettingSection section = Assert.Single(environment.Settings.Sections);
+        IReadOnlyList<SettingSection> sections = environment.Settings.Sections;
 
-        Assert.Equal("Runtime", section.Name);
-        Assert.Contains(section.Entries, entry => entry.Path == "Runtime:Temperature");
-        Assert.All(section.Entries, entry => Assert.Equal("Runtime", entry.Path.Split(':')[0]));
+        Assert.Equal(["Runtime", "Assistant"], sections.Select(section => section.Name));
+        Assert.Contains(Entries(sections, "Runtime"), entry => entry.Path == "Runtime:Temperature");
+        Assert.Contains(Entries(sections, "Assistant"), entry => entry.Path == "Assistant:Language");
+        Assert.All(sections, section =>
+            Assert.All(section.Entries, entry => Assert.Equal(section.Name, entry.Path.Split(':')[0])));
     }
 
     /// <summary>声明表、设置节的属性与用户层的形状三者一一对应，任一处漏写时失败。</summary>
@@ -28,14 +30,15 @@ public sealed class SettingsTests
         using TestEnvironment environment = TestEnvironment.Create();
         Assembly library = typeof(SettingsProvider).Assembly;
 
-        IEnumerable<string> section = Properties(library, "Kuroe.Configuration.Model.RuntimeSettings");
-        IEnumerable<string> shape = Properties(library, "Kuroe.Configuration.Model.RuntimeSectionDto");
-        IEnumerable<string> declared = environment.Settings.Sections.Single().Entries
-            .Select(entry => entry.Name)
-            .Order();
+        foreach (SettingSection section in environment.Settings.Sections)
+        {
+            IEnumerable<string> settings = Properties(library, $"Kuroe.Configuration.Model.{section.Name}Settings");
+            IEnumerable<string> shape = Properties(library, $"Kuroe.Configuration.Model.{section.Name}SectionDto");
+            IEnumerable<string> declared = section.Entries.Select(entry => entry.Name).Order();
 
-        Assert.Equal(section, declared);
-        Assert.Equal(section, shape);
+            Assert.Equal(settings, declared);
+            Assert.Equal(settings, shape);
+        }
     }
 
     /// <summary>用户层里缺的项取声明的默认值，不被写成空值。</summary>
@@ -44,12 +47,17 @@ public sealed class SettingsTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        IReadOnlyList<SettingEntry> entries = environment.Settings.Sections.Single().Entries;
+        IReadOnlyList<SettingEntry> runtime = Entries(environment.Settings.Sections, "Runtime");
+        IReadOnlyList<SettingEntry> assistant = Entries(environment.Settings.Sections, "Assistant");
 
-        Assert.Equal("未设置", Value(entries, "Temperature"));
-        Assert.Equal("Warning", Value(entries, "LogLevel"));
-        Assert.Equal("4", Value(entries, "MaxConcurrentExecutions"));
+        Assert.Equal("未设置", Value(runtime, "Temperature"));
+        Assert.Equal("Warning", Value(runtime, "LogLevel"));
+        Assert.Equal("4", Value(runtime, "MaxConcurrentExecutions"));
+        Assert.Equal("中文", Value(assistant, "Language"));
     }
+
+    private static IReadOnlyList<SettingEntry> Entries(IReadOnlyList<SettingSection> sections, string name) =>
+        sections.Single(section => section.Name == name).Entries;
 
     private static string Value(IReadOnlyList<SettingEntry> entries, string name) =>
         entries.Single(entry => entry.Name == name).Value;
@@ -66,6 +74,21 @@ public sealed class SettingsTests
     public void Path_resolution_keeps_defined_items_and_rejects_the_rest()
     {
         Assert.Equal("Runtime:Temperature", SettingsProvider.ResolvePath("runtime:temperature").ThrowIfError());
+        Assert.Equal("Assistant:Language", SettingsProvider.ResolvePath("assistant:language").ThrowIfError());
         Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Runtime:Nope").FirstError.Description);
+    }
+
+    [Fact]
+    public void Language_change_requires_dialogue_rebuild()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+
+        SettingsEffect language = environment.Settings.Set("Assistant:Language", "English").ThrowIfError();
+        SettingsEffect temperature = environment.Settings.Set("Runtime:Temperature", "0.5").ThrowIfError();
+
+        Assert.True(language.RequiresDialogueRebuild);
+        Assert.False(language.RequiresRestart);
+        Assert.False(language.InvalidatesHistory);
+        Assert.False(temperature.RequiresDialogueRebuild);
     }
 }

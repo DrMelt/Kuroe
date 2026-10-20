@@ -10,4 +10,5 @@ namespace Kuroe.Configuration.Files;
     NumberHandling = JsonNumberHandling.AllowReadingFromString,
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(RuntimeSectionDto))]
+[JsonSerializable(typeof(AssistantSectionDto))]
 internal sealed partial class SettingsJson : JsonSerializerContext;
