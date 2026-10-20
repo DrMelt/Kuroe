@@ -42,18 +42,26 @@ public sealed class NodePortTests
     {
         ExecutableNode executable = Executable([new Port(new PortName("结论"), PortType.Text)]);
 
-        Assert.True(executable.HasTextPorts);
+        Assert.Equal([new PortName("结论")], executable.RequiredPorts.Select(port => port.Name));
         Assert.Equal(PortType.Text, executable.FindPort(new PortName("结论"))!.Value.Type);
         Assert.Null(executable.FindPort(new PortName("任务")));
         Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
     }
 
     [Fact]
-    public void Executable_without_text_ports_has_no_model_output()
+    public void Executable_without_ports_to_submit_has_no_model_output()
     {
         ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortType.Context)]);
 
-        Assert.False(executable.HasTextPorts);
+        Assert.Empty(executable.RequiredPorts);
+    }
+
+    [Fact]
+    public void Signal_port_is_submitted_without_content()
+    {
+        ExecutableNode executable = Executable([new Port(new PortName("完成"), PortType.Signal)]);
+
+        Assert.Equal([new PortName("完成")], executable.RequiredPorts.Select(port => port.Name));
     }
 
     [Fact]

@@ -411,7 +411,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配上下文，Text 端口透出命名段
+            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配上下文，Text 与 Signal 端口透出交回段
             if (!subtreeLabels.Contains(sourceLabel))
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,

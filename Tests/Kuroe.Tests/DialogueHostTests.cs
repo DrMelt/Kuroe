@@ -50,19 +50,40 @@ public sealed class DialogueHostTests
         Assert.Equal(["回复1", "回复2"], observer.Texts);
     }
 
-    /// <summary>回话节点只声明 Signal 输出端口，一轮回答不要求交回端口产出。</summary>
+    /// <summary>回话节点只声明 Signal 输出端口，一轮回答仍要交回这个端口，未交回即不推进。</summary>
     [Fact]
-    public async Task A_round_needs_no_port_submission()
+    public async Task A_round_requires_its_port_submission()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
+
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
+
+        Assert.False(first.IsError, ErrorText(first));
+
         environment.Runner.SubmitsPorts = false;
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
+
+        Assert.True(second.IsError);
+        Assert.Contains("未收口", ErrorText(second), StringComparison.Ordinal);
+    }
+
+    /// <summary>回话节点每轮各自交回自己的「完成」，轮次之间不重复提交。</summary>
+    [Fact]
+    public async Task Each_round_submits_its_own_port_output()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
         ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
+        Assert.Contains(environment.Runner.Submissions,
+            text => text.Contains("已记录 1 个端口的产出。本轮产出已齐备。", StringComparison.Ordinal));
+        Assert.DoesNotContain(environment.Runner.Submissions,
+            text => text.Contains("无需重复提交", StringComparison.Ordinal));
     }
 
     [Fact]

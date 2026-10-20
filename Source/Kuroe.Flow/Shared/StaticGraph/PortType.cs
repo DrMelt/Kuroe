@@ -10,6 +10,6 @@ public enum PortType
     /// <summary>上下文：产出置于目标输入最前，与系统指令构成稳定前缀。</summary>
     Context,
 
-    /// <summary>触发信号：不承载内容，输出只以发布版本驱动下游，输入只以来源的新版本驱动启动。</summary>
+    /// <summary>触发信号：不承载内容，输出仍要经契约工具交回端口名，只以发布版本驱动下游；输入只以来源的新版本驱动启动。</summary>
     Signal,
 }

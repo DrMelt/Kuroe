@@ -175,4 +175,65 @@ public sealed class PortNodeTests
 
         Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口名不能为空或含 @"));
     }
+
+    /// <summary>Signal 端口交回端口名即收口，空值不算缺，本轮产出按声明齐备。</summary>
+    [Fact]
+    public void Signal_port_settles_the_round_on_its_name_alone()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Contains(environment.Runner.Submissions,
+            text => text.Contains("已记录 1 个端口的产出。本轮产出已齐备。", StringComparison.Ordinal));
+    }
+
+    /// <summary>Signal 端口的取值不承载内容，下游取不到它。</summary>
+    [Fact]
+    public void Signal_port_content_stays_out_of_downstream_inputs()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
+        environment.Runner.PortValuesJsonFor = execution =>
+            execution.Input.Node.Label.Value == "动手" ? """{ "完成": "本轮标记" }""" : null;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+
+        ExecutionSnapshot finish = done.Executables
+            .Single(entry => entry.Executable.Label.Value == "收尾")
+            .Executions.Single();
+        Assert.Empty(finish.Input.Inputs);
+    }
+
+    /// <summary>Signal 端口未交回时本轮不收口，节点停在阻塞。</summary>
+    [Fact]
+    public void Signal_port_without_its_submission_blocks()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
+        environment.Runner.SubmitsPorts = false;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+
+        Assert.Contains(blocked.ExecutableStates, state => state.State == NodeState.Blocked);
+    }
+
+    /// <summary>端口交回工具的说明按需交回端口列出 Signal 端口。</summary>
+    [Fact]
+    public void Contract_tool_description_lists_the_signal_port()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
+
+        TaskId id = environment.Submit("目标");
+        environment.Settle(id);
+
+        IExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
+        ToolFunction declared = Assert.Single(environment.PortTool.ForExecution(moved.Id).Functions);
+
+        Assert.Contains("本节点需要交回的端口：完成", declared.Definition.Description, StringComparison.Ordinal);
+    }
 }

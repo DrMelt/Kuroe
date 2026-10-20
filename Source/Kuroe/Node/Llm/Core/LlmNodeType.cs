@@ -55,11 +55,11 @@ public sealed class LlmNodeType(LlmParameters? parameters) : INodeType
     public string? SystemPrompt() =>
         Parameters?.SystemPrompt is { Count: > 0 } blocks ? string.Join('\n', blocks) : null;
 
-    /// <summary>本轮可用的工具路径：节点声明的白名单，加按输出端口附上的交回能力，以及所有执行节点都有的上报与查看通道。</summary>
+    /// <summary>本轮可用的工具路径：节点声明的白名单，加按需交回输出端口附上的交回能力，以及所有执行节点都有的上报与查看通道。</summary>
     public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<Port> outputs)
     {
         List<ToolPath> paths = [.. Parameters?.Tools ?? []];
-        if (outputs.Any(port => port.Type == PortType.Text))
+        if (outputs.Any(port => Ports.RequiresSubmission(port.Type)))
         {
             paths.Add(new ToolPath(ContractTools.Port));
         }

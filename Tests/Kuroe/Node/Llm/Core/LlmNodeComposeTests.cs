@@ -46,11 +46,19 @@ public sealed class LlmNodeComposeTests
                 .Select(path => path.Value));
 
     [Fact]
-    public void Signal_ports_carry_no_output_and_keep_the_execution_channels() =>
+    public void Signal_ports_grant_the_port_contract_tool() =>
+        Assert.Equal(
+            ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
+            Typed(new LlmParameters())
+                .ToolPaths([new Port(new PortName("完成"), PortType.Signal)])
+                .Select(path => path.Value));
+
+    [Fact]
+    public void Context_ports_keep_the_execution_channels() =>
         Assert.Equal(
             ["ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("完成"), PortType.Signal)])
+                .ToolPaths([new Port(new PortName("上下文"), PortType.Context)])
                 .Select(path => path.Value));
 
     [Fact]

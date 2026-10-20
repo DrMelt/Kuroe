@@ -27,6 +27,6 @@ public sealed record ExecutionInput
     /// <summary>节点声明的输出端口，未声明时为空。</summary>
     public IReadOnlyList<Port> OutputPorts { get; init; } = [];
 
-    /// <summary>本轮需交回的命名端口：声明为 Text 的输出端口，未声明时为空。</summary>
-    public IReadOnlyList<Port> TextPorts => [.. OutputPorts.Where(port => port.Type == PortType.Text)];
+    /// <summary>本轮需交回的命名端口：声明为 Text 或 Signal 的输出端口，未声明时为空。</summary>
+    public IReadOnlyList<Port> RequiredPorts => Ports.RequiringSubmission(OutputPorts);
 }

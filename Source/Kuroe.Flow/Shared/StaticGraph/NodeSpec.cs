@@ -60,7 +60,7 @@ public sealed record NodeSpec
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 模型逐执行交回 Text 端口值，引用处不能修改声明。</summary>
+    /// 模型逐执行交回 Text 与 Signal 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>

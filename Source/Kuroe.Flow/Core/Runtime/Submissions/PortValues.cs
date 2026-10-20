@@ -5,7 +5,8 @@ using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Flow.Runtime.Submissions;
 
-/// <summary>输出端口交回的命名段：把模型给的 JSON 对象解析成端口名到文本，不合法时给出一条可回给模型的原因。</summary>
+/// <summary>输出端口交回的命名段：把模型给的 JSON 对象解析成端口名到文本，不合法时给出一条可回给模型的原因。
+/// 取值是否够用按端口类型判定，不在这一层。</summary>
 static class PortValues
 {
     public static ErrorOr<IReadOnlyDictionary<PortName, string>> Parse(string valuesJson)
@@ -32,11 +33,6 @@ static class PortValues
             if (parsedPort.IsError)
             {
                 return parsedPort.ErrorsOrEmptyList;
-            }
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return [TaskErrors.Ports($"端口 {parsedPort.Value} 或它的产出为空")];
             }
 
             result[parsedPort.Value] = text;

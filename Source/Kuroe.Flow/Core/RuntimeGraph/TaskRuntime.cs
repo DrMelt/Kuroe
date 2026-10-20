@@ -274,18 +274,14 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>本轮该交回但尚未交回的产出：缺哪些命名端口。</summary>
     public sealed record ExecutionShortfall(IReadOnlyList<PortName> Ports);
 
-    /// <summary>本轮该交回但尚未交回的产出，按节点声明的端口判定。</summary>
+    /// <summary>本轮该交回但尚未交回的产出，按节点声明的需交回端口判定。</summary>
     public static ExecutionShortfall Shortfall(RuntimeExecutable node, ExecutionId execution)
     {
-        ExecutableNode executable = node.Executable;
         IReadOnlyDictionary<PortName, string>? values = node.Ports(execution);
 
-        IReadOnlyList<PortName> ports = executable.HasTextPorts
-            ? [.. executable.Outputs
-                .Where(port => port.Type == PortType.Text)
-                .Select(port => port.Name)
-                .Where(name => values?.ContainsKey(name) != true)]
-            : [];
+        IReadOnlyList<PortName> ports = [.. node.Executable.RequiredPorts
+            .Select(port => port.Name)
+            .Where(name => values?.ContainsKey(name) != true)];
 
         return new ExecutionShortfall(ports);
     }

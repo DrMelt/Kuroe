@@ -184,6 +184,29 @@ public static class TestFlows
         }
         """;
 
+    /// <summary>Signal 输出端口只交回端口名：下游的 Text 输入取它，取值不承载内容。</summary>
+    public const string SignalPortFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    { "Name": "动手", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "完成", "Type": "Signal" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "标记" }], "From": [ { "标记": "动手@完成" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
     /// <summary>执行节点用 Context 输入端口的声明绑定上下文输入：来源产出置于上下文开头，同时普通 Text 输入照常注入。</summary>
     public const string ContextInputFlow = """
         {

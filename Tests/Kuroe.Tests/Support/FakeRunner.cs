@@ -23,7 +23,7 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>上报无法完成的契约工具载体，按执行换一份。</summary>
     public CannotCompleteTool? CannotCompleteTool { get; set; }
 
-    /// <summary>声明输出端口的执行节点交回的命名段。空时按执行声明的端口名逐个生成同名校验文本。</summary>
+    /// <summary>声明需交回输出端口的执行节点交回的命名段。空时按执行声明的端口逐个生成：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
     public string PortValuesJson { get; set; } = string.Empty;
 
     /// <summary>按执行生成端口值 JSON，设置后优先于 <see cref="PortValuesJson"/> 与默认逐端口名生成；返回 null 时回退。用于按执行轮次区分端口内容的装配。</summary>
@@ -47,10 +47,11 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>按执行差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
     public Func<IExecution, int>? DelayFor { get; set; }
 
-    /// <summary>按声明的端口名逐个生成同名校验文本，提交与声明一一对应。</summary>
+    /// <summary>按声明的端口生成提交文本：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static string PortValuesFor(IReadOnlyList<Port> ports)
     {
-        string body = string.Join(", ", ports.Select(port => $"\"{port.Name.Value}\": \"{port.Name.Value}产出\""));
+        string body = string.Join(", ", ports.Select(port =>
+            $"\"{port.Name.Value}\": \"{(port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty)}\""));
         return "{ " + body + " }";
     }
 
@@ -103,11 +104,11 @@ public sealed class FakeRunner : IExecutionRunner
 
             await Task.Delay(DelayFor?.Invoke(execution) ?? DelayMs, cancellationToken);
 
-            IReadOnlyList<Port> textPorts = execution.Input.TextPorts;
-            if (textPorts.Count > 0 && SubmitsPorts)
+            IReadOnlyList<Port> requiredPorts = execution.Input.RequiredPorts;
+            if (requiredPorts.Count > 0 && SubmitsPorts)
             {
                 string json = PortValuesJsonFor?.Invoke(execution)
-                    ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(textPorts));
+                    ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(requiredPorts));
                 _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 if (DoubleSubmitPorts)
                 {

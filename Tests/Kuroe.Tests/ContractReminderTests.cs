@@ -63,6 +63,24 @@ public sealed class ContractReminderTests
         }
     }
 
+    /// <summary>Signal 端口未交回时同样点名追问，端口名与交回工具一起给出。</summary>
+    [Fact]
+    public void Missing_signal_port_reminds_the_port_and_the_contract_tool()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.SignalPortFlow);
+        environment.Runner.SubmitsPorts = false;
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot blocked = environment.Settle(id);
+
+        Assert.Equal(TaskState.Blocked, blocked.State);
+        IExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
+        string reminder = Reminder(environment, moved.Id);
+
+        Assert.Contains("「完成」", reminder, StringComparison.Ordinal);
+        Assert.Contains("SubmitPortValues", reminder, StringComparison.Ordinal);
+    }
+
     private static string Reminder(TestEnvironment environment, ExecutionId id) =>
         Assert.IsType<string>(new ContractReminder(new ExecutionStatusReader(environment.Registry)).Text(environment.Registry.FindExecution(id).ThrowIfError()));
 }

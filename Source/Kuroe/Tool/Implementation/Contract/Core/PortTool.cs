@@ -6,7 +6,7 @@ using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Tool.Contract;
 
-/// <summary>声明输出端口的执行节点交回命名端口产出的通道。载体按执行换一份，提交时才知道是哪个执行在交。</summary>
+/// <summary>需交回输出端口的执行节点交回命名端口产出的通道。载体按执行换一份，提交时才知道是哪个执行在交。</summary>
 public sealed class PortTool : IScopedTool
 {
     private readonly PortSubmitter _intake;
@@ -24,7 +24,7 @@ public sealed class PortTool : IScopedTool
     {
         _intake = intake;
         _registry = registry;
-        Functions = Declare(intake, execution, ContractPorts.DeclaredTextPorts(registry, execution));
+        Functions = Declare(intake, execution, ContractPorts.DeclaredPorts(registry, execution));
     }
 
     /// <summary>本载体的函数声明。</summary>
@@ -33,13 +33,13 @@ public sealed class PortTool : IScopedTool
     /// <summary>换一份绑定到该执行的载体。</summary>
     public ITool ForExecution(ExecutionId execution) => new PortTool(_intake, _registry, execution);
 
-    /// <summary>把契约定义绑上提交该执行端口内容的调用体，有端口清单时写进说明。</summary>
+    /// <summary>把契约定义绑上提交该执行端口产出的调用体，有端口清单时写进说明。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, ExecutionId? execution, IReadOnlyList<Port>? ports) =>
     [
         ContractToolDefinitions.Port(ports).Bind(arguments => Submit(intake, execution ?? default, ports, arguments)),
     ];
 
-    /// <summary>提交端口内容并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>
+    /// <summary>提交端口产出并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>
     private static ErrorOr<string> Submit(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports, ToolArguments arguments)
     {
         ErrorOr<ExecutionStatus> outcome = intake.SubmitValues(execution, arguments.Text(new ToolName("valuesJson")) ?? string.Empty);

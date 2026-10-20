@@ -6,10 +6,10 @@ namespace Kuroe.Tool.Contract;
 /// <summary>契约工具的定义：路径、说明与参数。引擎按路径放行，交回能力的说明末尾附上本轮需交回的端口清单。</summary>
 static class ContractToolDefinitions
 {
-    /// <summary>交回命名端口内容的工具定义，有端口清单时写进说明。</summary>
+    /// <summary>交回命名端口产出的工具定义，有端口清单时写进说明。</summary>
     public static ToolDefinition Port(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
         new ToolPath(ContractTools.Port),
-        "提交本执行节点命名输出端口的内容。valuesJson 是端口名到文本的 JSON 对象，端口必须与声明一一对应。",
+        "提交本执行节点命名输出端口的内容。valuesJson 是端口名到文本的 JSON 对象，端口必须与声明一一对应；Signal 端口不承载内容，给出端口名即可。",
         [new ToolParameter(new ToolName("valuesJson"), "端口名到文本的 JSON 对象，端口必须与声明一一对应", Required: true)]), ports);
 
     /// <summary>上报本轮无法完成的工具定义。</summary>

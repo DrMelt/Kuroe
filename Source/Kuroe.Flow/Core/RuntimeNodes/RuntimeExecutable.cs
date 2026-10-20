@@ -152,11 +152,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
     /// <summary>记下新启动的执行。</summary>
     public void AddActive() => Active++;
 
-    /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，其余端口取已发布那次交回的端口值。</summary>
+    /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，Text 端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override string? PortText(INodeTask task, PortName port) =>
         Executable.FindPort(port)?.Type == PortType.Context ? Join(ContextInputs()) : PortValue(port);
 
-    /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，其余端口给已发布那次交回的端口值。</summary>
+    /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，Text 端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeTask task, PortName port)
     {
         if (Executable.FindPort(port)?.Type == PortType.Context)
@@ -180,9 +180,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
         return parts.Length == 0 ? null : string.Join("\n\n", parts);
     }
 
-    /// <summary>按端口取已发布产出的一个返回值：命名端口取交回段。未发布或未交回时为空。</summary>
+    /// <summary>按端口取已发布产出的一个返回值：只有 Text 端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
     private string? PortValue(PortName port) =>
-        PublishedExecution is { } execution ? Ports(execution.Id)?.GetValueOrDefault(port) : null;
+        Executable.FindPort(port) is { Type: PortType.Text } && PublishedExecution is { } execution
+            ? Ports(execution.Id)?.GetValueOrDefault(port)
+            : null;
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot()

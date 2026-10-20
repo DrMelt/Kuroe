@@ -9,16 +9,17 @@ namespace Kuroe.Cli.Tests.Support;
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
 public sealed class FakeRunner : IExecutionRunner
 {
-    /// <summary>声明输出端口节点的交回通道，端口节点由此提交命名段。</summary>
+    /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
 
     /// <summary>单个执行的人为耗时，用于取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
-    /// <summary>按声明的端口名逐个生成同名校验文本，提交与声明一一对应。</summary>
+    /// <summary>按声明的端口生成提交文本：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static string PortValuesFor(IReadOnlyList<Port> ports)
     {
-        string body = string.Join(", ", ports.Select(port => $"\"{port.Name.Value}\": \"{port.Name.Value}产出\""));
+        string body = string.Join(", ", ports.Select(port =>
+            $"\"{port.Name.Value}\": \"{(port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty)}\""));
         return "{ " + body + " }";
     }
 
@@ -28,7 +29,7 @@ public sealed class FakeRunner : IExecutionRunner
     {
         await Task.Delay(DelayMs, cancellationToken);
 
-        IReadOnlyList<Port> ports = execution.Input.TextPorts;
+        IReadOnlyList<Port> ports = execution.Input.RequiredPorts;
         if (ports.Count > 0)
         {
             _ = PortSubmitter!.SubmitValues(execution.Id, PortValuesFor(ports));
