@@ -4,7 +4,7 @@ using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 
 namespace Kuroe.Workflows.Dialogue;

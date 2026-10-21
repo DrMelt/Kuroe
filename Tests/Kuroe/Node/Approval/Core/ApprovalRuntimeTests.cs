@@ -1,7 +1,8 @@
 using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Xunit;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Approval.Tests;
 

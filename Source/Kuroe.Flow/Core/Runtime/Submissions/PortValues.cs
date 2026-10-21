@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Flow.Runtime.Submissions;

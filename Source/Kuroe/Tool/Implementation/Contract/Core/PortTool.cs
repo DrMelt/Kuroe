@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Tool.Contract;

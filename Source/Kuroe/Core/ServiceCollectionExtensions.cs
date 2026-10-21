@@ -26,7 +26,7 @@ using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Node.Input.Json;

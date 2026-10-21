@@ -1,7 +1,7 @@
 using Kuroe.Presentation;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 

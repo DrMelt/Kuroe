@@ -5,7 +5,7 @@ using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 using Kuroe.Tool.Contract;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Tests.Support;
 

@@ -2,7 +2,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Llm;
 

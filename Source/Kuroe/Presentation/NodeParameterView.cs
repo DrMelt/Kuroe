@@ -1,6 +1,6 @@
 using Kuroe.Node.Approval;
 using Kuroe.Node.Input;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Presentation;

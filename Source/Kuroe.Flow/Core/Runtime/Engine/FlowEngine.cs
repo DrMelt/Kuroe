@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Engine;
 

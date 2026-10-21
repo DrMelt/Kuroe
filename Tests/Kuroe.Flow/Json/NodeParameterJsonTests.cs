@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Flow.Json.Files;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;

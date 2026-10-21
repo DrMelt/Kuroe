@@ -3,9 +3,10 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.StaticGraph;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 

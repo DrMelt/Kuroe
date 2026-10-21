@@ -1,9 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 namespace Kuroe.Flow.StaticGraph;
-
-using Flow = Shared.StaticGraph;
 
 /// <summary>流程模板的校验规则。任务推进依赖这些不变量成立，加载与导入时逐条校验。
 /// 一条流程内的错误一次给全。</summary>
@@ -68,7 +69,7 @@ public static class FlowRules
         var names = new HashSet<PortName>();
         foreach (Port port in flow.StartOutputs)
         {
-            if (port.Type != Flow.PortType.Text)
+            if (port.Type != PortType.Text)
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的类型只能是 Text。"));
             }
@@ -318,7 +319,7 @@ public static class FlowRules
                 errors.Add(scope.Node(target.Path.Value, $"容器 {container.Path} 没有输出端口 {edge.SourcePort.Value}。"));
             }
 
-            if (edge.Type == Flow.PortType.Context)
+            if (edge.Type == PortType.Context)
             {
                 errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {container.Path} 必须是非输入执行节点。"));
             }
@@ -342,7 +343,7 @@ public static class FlowRules
                 $"不能从容器外直接引用容器内成员或端口 {executable.Path}，容器对外只暴露输出端口。"));
         }
 
-        if (edge.Type == Flow.PortType.Context)
+        if (edge.Type == PortType.Context)
         {
             CheckContextSource(graph, executable, target, scope, errors);
         }
@@ -351,7 +352,7 @@ public static class FlowRules
     /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口。</summary>
     private static void CheckContextSource(NodeGraph graph, ExecutableNode source, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
-        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(Flow.PortType.Context))
+        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(PortType.Context))
         {
             errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不产出上下文端口。"));
         }
@@ -404,7 +405,7 @@ public static class FlowRules
 
         switch (validation.Predicate)
         {
-            case Flow.ValidationPredicate.NonEmpty:
+            case ValidationPredicate.NonEmpty:
                 if (validation.Argument is not null)
                 {
                     errors.Add(scope.Node(node.Label.Value, "NonEmpty 校验不接受参数。"));
@@ -412,7 +413,7 @@ public static class FlowRules
 
                 break;
 
-            case Flow.ValidationPredicate.Pattern:
+            case ValidationPredicate.Pattern:
                 if (string.IsNullOrEmpty(validation.Argument))
                 {
                     errors.Add(scope.Node(node.Label.Value, "Pattern 校验需要正则参数。"));

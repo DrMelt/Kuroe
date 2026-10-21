@@ -1,6 +1,6 @@
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Xunit;
 
 namespace Kuroe.Flow.InputChannel.Tests;

@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Submissions;
 using Kuroe.Flow.RuntimeNodes;
 

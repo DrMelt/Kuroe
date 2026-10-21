@@ -1,4 +1,5 @@
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.Execution;
 

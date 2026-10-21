@@ -1,6 +1,6 @@
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Json.Parameters;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 
 namespace Kuroe.Node.Input.Json;
 

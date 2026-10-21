@@ -1,9 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 namespace Kuroe.Flow.StaticGraph;
-
-using Flow = Shared.StaticGraph;
 
 /// <summary>把流程树编译成执行视图：开始是唯一来源，节点以从根到本节点的路径标识，容器登记直接子节点，
 /// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
@@ -129,7 +130,7 @@ internal sealed class FlowCompiler
                     continue;
                 }
 
-                PortType type = Flow.Ports.Find(pending.Entry.Inputs, link.Input)?.Type ?? Flow.PortType.Text;
+                PortType type = Ports.Find(pending.Entry.Inputs, link.Input)?.Type ?? PortType.Text;
 
                 AddEdge(from, pending.Path, link.Ref.Port, link.Input, type, groupIndex);
             }

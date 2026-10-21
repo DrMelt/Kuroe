@@ -1,14 +1,15 @@
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.StaticGraph;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
 namespace Kuroe.Flow.Tests;
-
-using Flow = Shared.StaticGraph;
 
 /// <summary>任务快照的派生属性：任务进度与执行节点顺位。</summary>
 public sealed class SnapshotTests
@@ -49,7 +50,7 @@ public sealed class SnapshotTests
             states, [], [], 0, DateTimeOffset.UtcNow);
     }
 
-    private static readonly Flow.ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
+    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
         [new Port(new PortName("目标"), PortType.Text)],

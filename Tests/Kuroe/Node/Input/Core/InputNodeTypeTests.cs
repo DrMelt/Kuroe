@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
 namespace Kuroe.Node.Input.Tests;

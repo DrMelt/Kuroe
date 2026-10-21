@@ -3,7 +3,7 @@ using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Node.Approval;
 
 namespace Kuroe.Pending;

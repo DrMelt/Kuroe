@@ -2,7 +2,7 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 
 namespace Kuroe.Flow.Json.Files;
 

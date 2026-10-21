@@ -1,6 +1,6 @@
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Tool.Contract;
 

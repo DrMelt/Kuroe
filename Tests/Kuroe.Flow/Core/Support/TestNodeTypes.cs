@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 
 namespace Kuroe.Flow.Tests.Support;
 

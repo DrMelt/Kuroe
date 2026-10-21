@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.InputChannel;
 

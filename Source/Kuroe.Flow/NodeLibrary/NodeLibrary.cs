@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 
 namespace Kuroe.Flow.NodeLibrary;
 

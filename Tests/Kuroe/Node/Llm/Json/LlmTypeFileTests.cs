@@ -1,5 +1,5 @@
 using Kuroe.Flow.Json.Parameters;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Tool;
 using Xunit;
 

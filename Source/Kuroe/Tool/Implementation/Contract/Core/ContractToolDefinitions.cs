@@ -1,5 +1,5 @@
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Tool.Contract;
 

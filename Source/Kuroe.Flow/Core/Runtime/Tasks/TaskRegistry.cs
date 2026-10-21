@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.StaticGraph;
 
 namespace Kuroe.Flow.Runtime.Tasks;

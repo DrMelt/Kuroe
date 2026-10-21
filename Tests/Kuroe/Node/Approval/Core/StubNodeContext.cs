@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Node.Approval.Tests;
 

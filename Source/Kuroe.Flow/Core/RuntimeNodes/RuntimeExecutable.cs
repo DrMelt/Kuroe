@@ -2,8 +2,9 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.RuntimeGraph;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.ExecutableNode;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.RuntimeNodes;
 

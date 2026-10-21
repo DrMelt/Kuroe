@@ -2,9 +2,12 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Json.Parameters;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.StaticGraph;
-using ModelDefinition = Kuroe.Flow.Shared.StaticGraph.ModelDefinition;
+using ModelDefinition = Kuroe.Flow.Shared.StaticGraph.Flow.ModelDefinition;
 
 namespace Kuroe.Flow.Json.Files;
 
@@ -963,7 +966,7 @@ static class FlowReader
             .FirstOrDefault(name => string.Equals(name, predicate, StringComparison.OrdinalIgnoreCase));
 
         return matched is not null
-            ? Enum.Parse<Kuroe.Flow.Shared.StaticGraph.ValidationPredicate>(matched)
+            ? Enum.Parse<Kuroe.Flow.Shared.StaticGraph.Node.ValidationPredicate>(matched)
             : Error.Validation(FlowErrorCodes.FlowNode,
                 $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {predicate}。");
     }
