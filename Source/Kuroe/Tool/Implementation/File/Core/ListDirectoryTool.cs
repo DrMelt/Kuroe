@@ -4,8 +4,6 @@ using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
-using File = System.IO.File;
-
 /// <summary>列出工作目录内目录条目的工具。路径解析后必须落回工作目录内。</summary>
 public sealed class ListDirectoryTool : ITool
 {
@@ -36,47 +34,25 @@ public sealed class ListDirectoryTool : ITool
         string? path = arguments.Text(new ToolName("path"));
         path ??= string.Empty;
 
-        ErrorOr<string> resolved = _scope.Resolve(path);
-        if (resolved.IsError)
+        ErrorOr<IReadOnlyList<DirectoryEntry>> entries = _scope.ListEntries(path, "ReadFile");
+        if (entries.IsError)
         {
-            return resolved.ErrorsOrEmptyList;
+            return entries.ErrorsOrEmptyList;
         }
 
-        if (File.Exists(resolved.Value))
-        {
-            return ToolErrors.Path($"{_scope.Display(path)} 是文件，用 ReadFile 读取它的内容。");
-        }
-
-        if (!Directory.Exists(resolved.Value))
-        {
-            return ToolErrors.Path($"{_scope.Display(path)} 不存在。");
-        }
-
-        IReadOnlyList<(string Name, bool IsDirectory)> items;
-        try
-        {
-            items = [.. Directory.GetFileSystemEntries(resolved.Value)
-                .Select(entry => (Path.GetFileName(entry), Directory.Exists(entry)))
-                .OrderBy(item => item.Item1, StringComparer.Ordinal)];
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return ToolErrors.ReadFailed($"列目录 {_scope.Display(path)} 失败：{ex.Message}");
-        }
-
-        if (items.Count == 0)
+        if (entries.Value.Count == 0)
         {
             return $"目录 {_scope.Display(path)} 为空。";
         }
 
         var text = new StringBuilder();
-        text.AppendLine($"{_scope.Display(path)} 的条目（{items.Count}）：");
-        foreach ((string name, bool isDirectory) in items.Take(MaxEntries))
+        text.AppendLine($"{_scope.Display(path)} 的条目（{entries.Value.Count}）：");
+        foreach (DirectoryEntry entry in entries.Value.Take(MaxEntries))
         {
-            text.AppendLine($"  {name}{(isDirectory ? "/" : string.Empty)}");
+            text.AppendLine($"  {entry.Name}{(entry.IsDirectory ? "/" : string.Empty)}");
         }
 
-        if (items.Count > MaxEntries)
+        if (entries.Value.Count > MaxEntries)
         {
             text.Append($"…仅列出前 {MaxEntries} 条");
         }

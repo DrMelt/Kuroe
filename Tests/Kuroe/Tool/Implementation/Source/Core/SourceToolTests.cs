@@ -9,51 +9,85 @@ public sealed class SourceToolTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ListSourceFiles_lists_relative_paths()
+    public void ListSourceDirectory_lists_root_entries()
     {
         Directory.CreateDirectory(Path.Combine(_root, "Kuroe", "Tools"));
         Directory.CreateDirectory(Path.Combine(_root, "docs", "usage"));
         File.WriteAllText(Path.Combine(_root, "Kuroe", "Tools", "FileTool.cs"), "class A");
         File.WriteAllText(Path.Combine(_root, "docs", "usage", "工具扩展.md"), "文档");
 
-        string output = Call(new SourceTool(_root), "ListSourceFiles");
+        string output = Call(new SourceTool(_root), "ListSourceDirectory");
 
-        Assert.Contains("文件 2 个", output);
-        Assert.Contains("  Kuroe/Tools/FileTool.cs", output);
-        Assert.Contains("  docs/usage/工具扩展.md", output);
+        Assert.Contains("导出目录根 的条目（2）", output);
+        Assert.Contains("  Kuroe/", output);
+        Assert.Contains("  docs/", output);
+        Assert.DoesNotContain("FileTool.cs", output);
         Assert.True(
-            output.IndexOf("Kuroe/Tools/FileTool.cs", StringComparison.Ordinal)
-            < output.IndexOf("docs/usage/工具扩展.md", StringComparison.Ordinal),
-            $"路径按序数排序，Kuroe 应排在 docs 之前：\n{output}");
+            output.IndexOf("Kuroe/", StringComparison.Ordinal) < output.IndexOf("docs/", StringComparison.Ordinal),
+            $"条目按名字序数排序，Kuroe 应排在 docs 之前：\n{output}");
     }
 
     [Fact]
-    public void ListSourceFiles_reports_empty_directory()
+    public void ListSourceDirectory_lists_subdirectory_entries()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Kuroe", "Core"));
+        File.WriteAllText(Path.Combine(_root, "Kuroe", "Core", "Kuroe.csproj"), "<Project />");
+        File.WriteAllText(Path.Combine(_root, "Kuroe", "Core", "Kuroe.cs"), "class A");
+
+        string output = Call(new SourceTool(_root), "ListSourceDirectory", ("path", "Kuroe/Core"));
+
+        Assert.Contains("Kuroe/Core 的条目（2）", output);
+        Assert.Contains("  Kuroe.csproj", output);
+        Assert.Contains("  Kuroe.cs", output);
+    }
+
+    [Fact]
+    public void ListSourceDirectory_reports_empty_directory()
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Equal("导出目录内没有文件。", Call(new SourceTool(_root), "ListSourceFiles"));
+        Assert.Equal("目录 导出目录根 为空。", Call(new SourceTool(_root), "ListSourceDirectory"));
     }
 
     [Fact]
-    public void ListSourceFiles_reports_missing_directory()
+    public void ListSourceDirectory_reports_missing_directory()
     {
-        Assert.Contains("导出目录不存在", Call(new SourceTool(_root), "ListSourceFiles"));
+        Assert.Contains("不存在", Call(new SourceTool(_root), "ListSourceDirectory"));
     }
 
     [Fact]
-    public void ListSourceFiles_truncates_beyond_limit()
+    public void ListSourceDirectory_rejects_file_path()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "Kuroe.cs"), "class A");
+
+        string output = Call(new SourceTool(_root), "ListSourceDirectory", ("path", "Kuroe.cs"));
+
+        Assert.Contains("是文件", output);
+        Assert.Contains("ReadSourceFile", output);
+    }
+
+    [Fact]
+    public void ListSourceDirectory_rejects_path_outside_source_directory()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("不在导出目录内", Call(new SourceTool(_root), "ListSourceDirectory", ("path", "..")));
+    }
+
+    [Fact]
+    public void ListSourceDirectory_truncates_beyond_limit()
     {
         Directory.CreateDirectory(Path.Combine(_root, "Kuroe"));
-        for (int index = 1; index <= 401; index++)
+        for (int index = 1; index <= 201; index++)
         {
             File.WriteAllText(Path.Combine(_root, "Kuroe", $"File{index:000}.cs"), "x");
         }
 
-        string output = Call(new SourceTool(_root), "ListSourceFiles");
+        string output = Call(new SourceTool(_root), "ListSourceDirectory", ("path", "Kuroe"));
 
-        Assert.Contains("仅列出前 400 条", output);
-        Assert.DoesNotContain("File401.cs", output);
+        Assert.Contains("仅列出前 200 条", output);
+        Assert.DoesNotContain("File201.cs", output);
     }
 
     [Fact]
@@ -145,7 +179,7 @@ public sealed class SourceToolTests : IDisposable
         string directory = Call(new SourceTool(_root), "ReadSourceFile", ("path", "Kuroe"));
 
         Assert.Contains("是目录", directory);
-        Assert.Contains("ListSourceFiles", directory);
+        Assert.Contains("ListSourceDirectory", directory);
         Assert.Contains("不存在", Call(new SourceTool(_root), "ReadSourceFile", ("path", "Kuroe/nope.cs")));
     }
 

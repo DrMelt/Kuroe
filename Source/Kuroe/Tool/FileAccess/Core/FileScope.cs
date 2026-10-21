@@ -44,6 +44,39 @@ public sealed class FileScope(string root, string name)
     private static bool IsOutside(string relative) =>
         relative == ".." || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
 
+    /// <summary>列出根目录内目录的直接子项，按名字序数排序。目标是文件或不存在时给出拒绝错误。
+    /// fileFunction 是提示里指出的读取函数名。</summary>
+    public ErrorOr<IReadOnlyList<DirectoryEntry>> ListEntries(string path, string fileFunction)
+    {
+        ErrorOr<string> resolved = Resolve(path);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        if (File.Exists(resolved.Value))
+        {
+            return ToolErrors.Path($"{Display(path)} 是文件，用 {fileFunction} 读取它的内容。");
+        }
+
+        if (!Directory.Exists(resolved.Value))
+        {
+            return ToolErrors.Path($"{Display(path)} 不存在。");
+        }
+
+        try
+        {
+            return Directory.GetFileSystemEntries(resolved.Value)
+                .Select(entry => new DirectoryEntry(Path.GetFileName(entry), Directory.Exists(entry)))
+                .OrderBy(entry => entry.Name, StringComparer.Ordinal)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ToolErrors.ReadFailed($"列目录 {Display(path)} 失败：{ex.Message}");
+        }
+    }
+
     /// <summary>读取根目录内文件指定行号范围的内容，按行截取并按字符上限截断。
     /// 行号从 1 起，结束行超出文件长度时读到文件尾并附实际行数。listFunction 是提示里指出的列目录函数名。</summary>
     public ErrorOr<string> ReadRange(string path, int from, int to, string listFunction)

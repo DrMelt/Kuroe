@@ -35,7 +35,7 @@ public sealed class ToolFaceTests : IDisposable
 
         ToolCollection tools = provider.GetRequiredService<ToolCollection>();
 
-        Assert.Contains(new ToolName("ListSourceFiles"), tools.Names);
+        Assert.Contains(new ToolName("ListSourceDirectory"), tools.Names);
         Assert.Contains(new ToolName("ReadSourceFile"), tools.Names);
     }
 

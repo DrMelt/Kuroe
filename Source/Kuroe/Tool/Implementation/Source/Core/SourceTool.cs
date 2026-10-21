@@ -4,21 +4,21 @@ using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.Source;
 
-/// <summary>导出资料的查阅工具：列出程序随附的源码与文档路径，按行号范围读取原文。
+/// <summary>导出资料的查阅工具：按目录列出程序随附的源码与文档路径，按行号范围读取原文。
 /// 只读，路径解析后必须落回导出目录内。</summary>
 public sealed class SourceTool(string sourceDirectory) : ITool
 {
     /// <summary>ReadSourceFile 缺省读取的行数，不传范围时只读文件开头这些行。</summary>
     private const int DefaultLines = 50;
 
-    /// <summary>文件清单的条目上限，超出截断并提示。</summary>
-    private const int MaxEntries = 400;
+    /// <summary>目录列表的条目上限，超出截断并提示。</summary>
+    private const int MaxEntries = 200;
 
-    /// <summary>列出导出目录内的文件。</summary>
-    private static readonly ToolDefinition ListSourceFiles = new(
-        new ToolPath("source/ListSourceFiles"),
-        "列出随程序导出的源码与文档路径，路径相对导出目录。内容是程序自身实现，用于分析实现方法。",
-        []);
+    /// <summary>列出导出目录内一个目录的直接子项。</summary>
+    private static readonly ToolDefinition ListSourceDirectory = new(
+        new ToolPath("source/ListSourceDirectory"),
+        "列出导出目录内一个目录的直接子项。path 缺省时列出导出目录根的条目。",
+        [new ToolParameter(new ToolName("path"), "相对导出目录的目录路径，缺省为导出目录根")]);
 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
@@ -36,43 +36,34 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>把各定义绑上导出目录的调用体。</summary>
     private static IReadOnlyList<ToolFunction> Declare(FileScope scope) =>
     [
-        ListSourceFiles.Bind(_ => List(scope)),
+        ListSourceDirectory.Bind(arguments => List(scope, arguments)),
         ReadSourceFile.Bind(arguments => Read(scope, arguments)),
     ];
 
-    /// <summary>导出目录内全部文件的相对路径，按序数排序，超上限截断。</summary>
-    private static ErrorOr<string> List(FileScope scope)
+    /// <summary>导出目录内一个目录的直接子项，按名字序数排序并标注目录，超上限截断。</summary>
+    private static ErrorOr<string> List(FileScope scope, ToolArguments arguments)
     {
-        if (!Directory.Exists(scope.Root))
+        string path = arguments.Text(new ToolName("path")) ?? string.Empty;
+
+        ErrorOr<IReadOnlyList<DirectoryEntry>> entries = scope.ListEntries(path, "ReadSourceFile");
+        if (entries.IsError)
         {
-            return ToolErrors.Path("导出目录不存在。");
+            return entries.ErrorsOrEmptyList;
         }
 
-        string[] files;
-        try
+        if (entries.Value.Count == 0)
         {
-            files = [.. Directory.EnumerateFiles(scope.Root, "*", SearchOption.AllDirectories)
-                .Select(file => Path.GetRelativePath(scope.Root, file).Replace('\\', '/'))
-                .OrderBy(path => path, StringComparer.Ordinal)];
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return ToolErrors.ReadFailed($"列出导出目录失败：{ex.Message}");
-        }
-
-        if (files.Length == 0)
-        {
-            return "导出目录内没有文件。";
+            return $"目录 {scope.Display(path)} 为空。";
         }
 
         var text = new StringBuilder();
-        text.AppendLine($"导出目录内文件 {files.Length} 个，路径相对导出目录：");
-        foreach (string file in files.Take(MaxEntries))
+        text.AppendLine($"{scope.Display(path)} 的条目（{entries.Value.Count}）：");
+        foreach (DirectoryEntry entry in entries.Value.Take(MaxEntries))
         {
-            text.AppendLine($"  {file}");
+            text.AppendLine($"  {entry.Name}{(entry.IsDirectory ? "/" : string.Empty)}");
         }
 
-        if (files.Length > MaxEntries)
+        if (entries.Value.Count > MaxEntries)
         {
             text.Append($"…仅列出前 {MaxEntries} 条");
         }
@@ -95,6 +86,6 @@ public sealed class SourceTool(string sourceDirectory) : ITool
             return range.ErrorsOrEmptyList;
         }
 
-        return scope.ReadRange(path, range.Value.From, range.Value.To, "ListSourceFiles");
+        return scope.ReadRange(path, range.Value.From, range.Value.To, "ListSourceDirectory");
     }
 }
