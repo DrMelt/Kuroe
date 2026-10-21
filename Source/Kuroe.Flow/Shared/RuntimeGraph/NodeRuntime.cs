@@ -36,8 +36,8 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     public virtual ExecutableStateSnapshot Snapshot() => new(Path, NodeState.Pending);
 
     /// <summary>按输出端口取单段文本，端口未交回或未放行时为空。容器按绑定解析成员取值。</summary>
-    public abstract string? PortText(INodeTask task, PortName port);
+    public abstract string? PortText(INodeContext context, PortName port);
 
     /// <summary>按输出端口取产出：每条给出出处与取值文本。未放行或端口未产出时为空。</summary>
-    public abstract IReadOnlyList<ContextValue> OutputValues(INodeTask task, PortName port);
+    public abstract IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port);
 }

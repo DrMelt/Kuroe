@@ -6,7 +6,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.Compiler.Shared;
 
 namespace Kuroe.Workflows.Dialogue;
 
@@ -17,7 +17,7 @@ public sealed class DialogueHost(
     ModelService models,
     SettingsProvider settings,
     TaskRegistry registry,
-    IInputChannel inputs)
+    IFlowDescriptionCompiler compiler)
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
@@ -65,8 +65,19 @@ public sealed class DialogueHost(
             }
         }
 
-        ErrorOr<TaskSnapshot> created = tasks.SubmitFlow(
-            "对话", Kuroe.Workflows.Flows.DialogueFlow.Build(inputs, settings.Current.Assistant.Language), "对话");
+        var document = Kuroe.Workflows.Flows.DialogueFlow.Build(settings.Current.Assistant.Language);
+        ErrorOr<CompiledDocument> compiled = compiler.Compile(document, []);
+        if (compiled.IsError)
+        {
+            throw new InvalidOperationException(string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+        }
+
+        if (compiled.Value.Flows.Count != 1)
+        {
+            throw new InvalidOperationException("提交的文档必须恰好包含一条流程。");
+        }
+
+        ErrorOr<TaskSnapshot> created = tasks.SubmitCompiled("对话", compiled.Value.Flows[0], "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -90,9 +101,6 @@ public sealed class DialogueHost(
             return false;
         }
 
-        lock (found.Value.Gate)
-        {
-            return found.Value.State is TaskState.Running;
-        }
+        return found.Value.UnderLock(() => found.Value.State is TaskState.Running);
     }
 }

@@ -1,20 +1,18 @@
 using Kuroe.Configuration.Model;
 using Kuroe.Node.Input;
-using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Tool;
+using Kuroe.Flow.Compiler;
+using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.NodeLibrary;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
-using Kuroe.Node.Llm.Executions;
-using Kuroe.Tool.KuroeInfo;
-using Kuroe.Tool.Time;
 using Kuroe.Workflows.Flows;
-using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.InputChannel;
-using Microsoft.Extensions.AI;
+using Kuroe.Tests.Support;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -28,7 +26,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_flow_builds_input_and_text_reply_nodes()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = Members(AssistantSettings.DefaultLanguage);
 
         Assert.Equal(InputNodeTypes.Name, nodes[0].Kind);
         Assert.Equal(LlmNodeTypes.Name, nodes[1].Kind);
@@ -37,7 +35,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_flow_marks_the_reply_port_as_signal_on_both_sides()
     {
-        IReadOnlyList<NodeSpec> nodes = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes!;
+        IReadOnlyList<NodeSpec> nodes = Members(AssistantSettings.DefaultLanguage);
 
         Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
         Assert.Equal(PortType.Signal, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
@@ -46,7 +44,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_node_declares_constant_rule_as_system_prompt()
     {
-        NodeSpec reply = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes![1];
+        NodeSpec reply = Members(AssistantSettings.DefaultLanguage)[1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
         Assert.Equal(
@@ -58,7 +56,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_node_uses_the_configured_language()
     {
-        NodeSpec reply = DialogueFlow.Build(Inputs, "English").RootNode.Nodes![1];
+        NodeSpec reply = Members("English")[1];
         LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
 
         Assert.Equal(
@@ -70,7 +68,7 @@ public sealed class DialogueTests
     [Fact]
     public void Dialogue_reply_node_grants_the_port_contract_tool()
     {
-        NodeSpec reply = DialogueFlow.Build(Inputs, AssistantSettings.DefaultLanguage).RootNode.Nodes![1];
+        NodeSpec reply = Members(AssistantSettings.DefaultLanguage)[1];
         LlmNodeType type = Assert.IsType<LlmNodeType>(reply.Type);
         IReadOnlyList<string> paths = [.. type.ToolPaths(reply.Outputs).Select(path => path.Value)];
 
@@ -95,111 +93,14 @@ public sealed class DialogueTests
             DialogueFlow.Tools);
     }
 
-    [Fact]
-    public void Tool_face_filters_to_whitelist()
+    private static FlowDefinition Build(string language)
     {
-        ToolCollection tools = new(
-        [
-            new TimeTool(),
-            new TaskKuroeInfoTool(new TaskRegistry()),
-            new SampleTool(),
-        ],
-        new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), DialogueFlow.Tools);
+        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(
+            TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());
 
-        Assert.Equal(
-            ["GetLocalTime", "KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
-            built.Select(tool => tool.Name));
+        return compiler.Compile(DialogueFlow.Build(language), []).ThrowIfError().Flows.Single().Model;
     }
 
-    [Fact]
-    public void Whitelist_parent_path_grants_all_descendants()
-    {
-        ToolCollection tools = new(
-        [
-            new TimeTool(),
-            new TaskKuroeInfoTool(new TaskRegistry()),
-            new SampleTool(),
-        ],
-        new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo")]);
-
-        Assert.Equal(
-            ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
-            built.Select(tool => tool.Name));
-    }
-
-    [Fact]
-    public void Whitelist_full_path_grants_only_that_function()
-    {
-        ToolCollection tools = new(
-        [
-            new TimeTool(),
-            new TaskKuroeInfoTool(new TaskRegistry()),
-        ],
-        new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo/GetTask")]);
-
-        Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
-    }
-
-    /// <summary>模型接口只接受字母、数字、下划线与连字符，路径含层级时交给模型的名字必须已扁平化。</summary>
-    [Fact]
-    public void Model_facing_names_fit_the_model_interface_character_set()
-    {
-        ToolCollection tools = new(
-        [
-            new TimeTool(),
-            new TaskKuroeInfoTool(new TaskRegistry()),
-            new NestedTool(),
-        ],
-        new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo"), new ToolPath("file")]);
-
-        Assert.Equal(
-            ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution", "file_read_ReadFile"],
-            built.Select(tool => tool.Name));
-        Assert.All(built, tool => Assert.Matches("^[a-zA-Z0-9_-]+$", tool.Name));
-    }
-
-    [Fact]
-    public void Whitelist_with_similar_prefix_does_not_match_group()
-    {
-        ToolCollection tools = new([new TaskKuroeInfoTool(new TaskRegistry())], new ToolJson());
-        IReadOnlyList<AITool> built = tools.Build(new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfoX")]);
-
-        Assert.Empty(built);
-    }
-
-    /// <summary>工具面构造只取身份、播发出口与记录，本组测试不看过程内容。</summary>
-    private static readonly NullSink NoSink = new();
-
-    private sealed class SampleTool : ITool
-    {
-        public IReadOnlyList<ToolFunction> Functions { get; } =
-        [
-            new ToolDefinition(new ToolPath("RunDiff"), "样例工具", []).Bind(_ => string.Empty),
-        ];
-    }
-
-    /// <summary>带层级的样例载体，用于确认模型侧名字不含路径分隔符。</summary>
-    private sealed class NestedTool : ITool
-    {
-        public IReadOnlyList<ToolFunction> Functions { get; } =
-        [
-            new ToolDefinition(new ToolPath("file/read/ReadFile"), "样例文件工具", []).Bind(_ => string.Empty),
-        ];
-    }
-
-    private sealed class NullSink : IProcessSink
-    {
-        public void OnText(string delta)
-        {
-        }
-
-        public void OnToolCall(ToolCallRecord record)
-        {
-        }
-    }
+    private static IReadOnlyList<NodeSpec> Members(string language) =>
+        Build(language).RootNode.Nodes ?? throw new InvalidOperationException("对话流程缺少根节点成员。");
 }

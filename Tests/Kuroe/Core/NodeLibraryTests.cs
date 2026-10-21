@@ -5,12 +5,13 @@ using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Json;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.InputChannel;
+
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
@@ -20,8 +21,7 @@ namespace Kuroe.Tests;
 /// <summary>节点库与装配引用：定义复用、端口绑定、实例命名与保存往返。</summary>
 public sealed class NodeLibraryTests
 {
-    /// <summary>解析与读写往返用的外部输入协议实例，这些用例不驱动节点执行。</summary>
-    private static readonly InputRegistry Inputs = new();
+
 
     [Fact]
     public void Flow_references_library_leaf_and_container_with_port_binding()
@@ -124,8 +124,9 @@ public sealed class NodeLibraryTests
         Assert.NotNull(implement.Spec);
         Assert.Equal(new NodeLabel("实施"), implement.Label);
 
-        var (Nodes, _) = FlowFile.Read(FlowStore.ReadDto(KuroePaths.At(environment.Root).FlowsFile).ThrowIfError(), TestTypeFiles.Registry(Inputs)).ThrowIfError();
-        IReadOnlyList<NodeLabel> savedNodes = [.. Nodes.Select(node => node.Label)];
+        FlowDocument document = new JsonFlowFormat()
+            .Read(File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile)).ThrowIfError();
+        IReadOnlyList<NodeLabel> savedNodes = [.. document.Nodes.Select(node => new NodeLabel(node.Name))];
         Assert.Equal([new NodeLabel("准备")], savedNodes);
     }
 
@@ -1447,14 +1448,6 @@ public sealed class NodeLibraryTests
         """;
 
     /// <summary>校验节点库，取错误说明。</summary>
-    private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library)
-    {
-        NodeLibrary nodeLibrary = new();
-        foreach (NodeSpec node in library)
-        {
-            nodeLibrary.Register(node);
-        }
-
-        return [.. NodeLibraryRules.Validate(nodeLibrary).ErrorsOrEmptyList.Select(error => error.Description)];
-    }
+    private static IReadOnlyList<string> LibraryErrors(params NodeSpec[] library) =>
+        [.. new NodeLibraryExpander().Expand([], [], library).ErrorsOrEmptyList.Select(error => error.Description)];
 }

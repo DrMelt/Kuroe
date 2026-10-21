@@ -1,12 +1,9 @@
-using Kuroe.Node.Input;
-using Kuroe.Flow.NodeType.Container;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Node.Llm;
 using Kuroe.Tool;
-using Kuroe.Flow.InputChannel;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -61,54 +58,67 @@ internal static class DialogueFlow
         $"使用「{language}」语言母语者语言风格回答。",
     ];
 
-    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议随收话节点带入，语言由宿主的助手配置给出。</summary>
-    internal static FlowDefinition Build(IInputChannel inputs, string language) => new(
-        Name,
-        "内置对话：回答用户的每轮输入",
-        [new ModelDefinition { Name = RuntimeModel, Runtime = true }],
-        [new Port(StartPort, PortType.Text, "任务的初始输入，提交时给出。")],
-        NodeSpec.Define(new NodeName("对话")) with
-        {
-            Type = ContainerNodeTypes.Type,
-            Nodes =
-            [
-                NodeSpec.Define(InputNodeName) with
+    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
+    internal static FlowDocument Build(string language) => new(
+        [],
+        [
+            new FlowDocumentFlow(
+                Name.Value,
+                "内置对话：回答用户的每轮输入",
+                [new ModelDocument(RuntimeModel.Value, null, Runtime: true)],
+                [new PortDocument(StartPort.Value, PortType.Text, "任务的初始输入，提交时给出。")],
+                new NodeDefinitionDocument
                 {
-                    Type = InputNodeTypes.Create(new InputParameters
-                    {
-                        Question = "请输入",
-                    }, inputs),
-                    Inputs =
+                    Name = "对话",
+                    Kind = "Container",
+                    Nodes =
                     [
-                        new InputPort(StartPort, PortType.Text),
-                        // 回复输入只作回边的触发，不消费回话产出，回复内容随回话执行的过程播发写出
-                        new InputPort(ReplyPort, PortType.Signal),
+                        new NodeDefinitionDocument
+                        {
+                            Name = InputNodeName.Value,
+                            Kind = "Input",
+                            Inputs =
+                            [
+                                new InputPortDocument(StartPort.Value, PortType.Text),
+                                // 回复输入只作回边的触发，不消费回话产出，回复内容随回话执行的过程播发写出
+                                new InputPortDocument(ReplyPort.Value, PortType.Signal),
+                            ],
+                            Outputs = [new PortDocument(InputPort.Value, PortType.Text)],
+                            Parameters = new Dictionary<string, FlowValue>
+                            {
+                                ["Question"] = new FlowValue.Text("请输入"),
+                            },
+                            From =
+                            [
+                                new FromGroupDocument(
+                                [
+                                    new FromLinkDocument(StartPort.Value, $"{StartNode.ReservedLabel.Value}@{StartPort.Value}"),
+                                    new FromLinkDocument(ReplyPort.Value, $"{ReplyNodeLabel.Value}@{ReplyPort.Value}"),
+                                ]),
+                            ],
+                        },
+                        new NodeDefinitionDocument
+                        {
+                            Name = ReplyNodeName.Value,
+                            Kind = "Llm",
+                            Inputs = [new InputPortDocument(InputPort.Value, PortType.Text)],
+                            Model = RuntimeModel.Value,
+                            // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
+                            Outputs = [new PortDocument(ReplyPort.Value, PortType.Signal)],
+                            Parameters = new Dictionary<string, FlowValue>
+                            {
+                                ["Tools"] = new FlowValue.Array([.. Tools.Select(tool => new FlowValue.Text(tool.Value))]),
+                                ["SystemPrompt"] = new FlowValue.Array([.. SystemPrompt(language).Select(text => new FlowValue.Text(text))]),
+                            },
+                            From =
+                            [
+                                new FromGroupDocument(
+                                [
+                                    new FromLinkDocument(InputPort.Value, $"{InputNodeLabel.Value}@{InputPort.Value}"),
+                                ]),
+                            ],
+                        },
                     ],
-                    Spec = new ExecutableSpec(),
-                    Outputs = [new Port(InputPort, PortType.Text)],
-                    From =
-                    [
-                        new FromGroup(
-                        [
-                            new FromLink(StartPort, PortRef.Named(StartNode.ReservedLabel, StartPort)),
-                            new FromLink(ReplyPort, PortRef.Named(ReplyNodeLabel, ReplyPort)),
-                        ]),
-                    ],
-                },
-                NodeSpec.Define(ReplyNodeName) with
-                {
-                    Type = LlmNodeTypes.Create(new LlmParameters
-                    {
-                        Tools = Tools,
-                        SystemPrompt = SystemPrompt(language),
-                    }),
-                    Inputs = [new InputPort(InputPort, PortType.Text)],
-                    Spec = new ExecutableSpec(),
-                    Model = RuntimeModel,
-                    // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
-                    Outputs = [new Port(ReplyPort, PortType.Signal)],
-                    From = [new FromGroup([new FromLink(InputPort, PortRef.Named(InputNodeLabel, InputPort))])],
-                },
-            ],
-        });
+                }),
+        ]);
 }

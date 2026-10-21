@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.KuroeInfo;
@@ -99,17 +99,19 @@ public sealed class KuroeInfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.DelayMs = 60_000;
+        environment.Runner.Emits = (execution, _) =>
+            execution.Sink.OnToolCall(new ToolCallRecord("file/ReadFile", "{}", "完成", false));
 
         TaskId id = environment.Submit("做一个测试任务");
-        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
-
-        ExecutionId executionId = environment.Snapshot(id).Executables
+        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables
             .SelectMany(node => node.Executions)
-            .First(execution => !execution.State.IsSettled())
+            .Any(execution => execution.State == ExecutionState.Running
+                && execution.Progress.Contains("调用工具 file/ReadFile", StringComparison.Ordinal)));
+
+        ExecutionId executionId = running.Executables
+            .SelectMany(node => node.Executions)
+            .First(execution => execution.State == ExecutionState.Running)
             .Id;
-        Execution execution = environment.Registry.FindExecution(executionId).Value;
-        execution.MarkRunning();
-        execution.Report("调用工具 file/ReadFile");
 
         TaskKuroeInfoTool tool = new(environment.Registry);
 

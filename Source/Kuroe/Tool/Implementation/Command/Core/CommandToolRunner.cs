@@ -12,7 +12,7 @@ internal static class CommandToolRunner
     /// <summary>按定义展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。工作目录缺省为项目工作目录根。</summary>
     public static ErrorOr<string> Execute(CommandToolDefinition definition, string baseDirectory, ToolArguments arguments)
     {
-        ErrorOr<IReadOnlyList<string>> argv = Expand(definition, arguments);
+        ErrorOr<IReadOnlyList<string>> argv = definition.CommandLine(arguments);
         if (argv.IsError)
         {
             return argv.ErrorsOrEmptyList;

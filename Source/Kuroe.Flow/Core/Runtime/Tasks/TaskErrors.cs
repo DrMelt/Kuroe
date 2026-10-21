@@ -15,8 +15,4 @@ static class TaskErrors
     /// <summary>该任务没有被阻塞的执行节点。</summary>
     public static Error NotBlocked(TaskId task) =>
         Error.Validation("Task.Rework", $"{task} 没有被阻塞的执行节点。");
-
-    /// <summary>端口产出的形状不合法，原因要能直接回给模型改正。</summary>
-    public static Error Ports(string reason) => Error.Validation(
-        "Task.Ports", $"{reason}。要提交端口名到文本的 JSON 对象。");
 }

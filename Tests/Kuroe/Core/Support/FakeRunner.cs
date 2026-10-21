@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
-using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 using Kuroe.Tool.Contract;
@@ -62,7 +61,7 @@ public sealed class FakeRunner : IExecutionRunner
     public Func<IExecution, string>? Reply { get; set; }
 
     /// <summary>本次执行期间写进过程记录与过程流的内容，用于断言记录与过程增量。</summary>
-    internal Action<IExecution, ProcessJournal>? Emits { get; set; }
+    internal Action<IExecution, RecordingJournal>? Emits { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
     public List<string> Submissions => [.. _submissions];
@@ -145,7 +144,7 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>测试用的执行体：只带过程记录，由假执行器自己写。</summary>
     private sealed class FakeBody : IExecutionBody
     {
-        public ProcessJournal Journal { get; } = new();
+        public RecordingJournal Journal { get; } = new();
 
         IProcessJournal IExecutionBody.Journal => Journal;
     }

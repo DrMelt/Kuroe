@@ -24,7 +24,7 @@ public sealed class ExecutionCountTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, task.Runtime.Executable(task.Graph.PathOf("干活")).Executions);
+        Assert.Equal(2, Executions(task, "干活"));
     }
 
     /// <summary>上游阻塞时下游不启动，统计保持 0。</summary>
@@ -38,8 +38,8 @@ public sealed class ExecutionCountTests
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(1, task.Runtime.Executable(task.Graph.PathOf("上游")).Executions);
-        Assert.Equal(0, task.Runtime.Executable(task.Graph.PathOf("下游")).Executions);
+        Assert.Equal(1, Executions(task, "上游"));
+        Assert.Equal(0, Executions(task, "下游"));
     }
 
     /// <summary>节点账与派发记录全等：派发即记账，节点账不会多于或少于执行记录。</summary>
@@ -57,7 +57,7 @@ public sealed class ExecutionCountTests
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         foreach (IGrouping<NodePath, Execution> node in task.Executions.GroupBy(execution => execution.Input.Node))
         {
-            Assert.Equal(node.Count(), task.Runtime.Executable(node.Key).Executions);
+            Assert.Equal(node.Count(), Executions(task, node.Key));
         }
     }
 
@@ -105,4 +105,14 @@ public sealed class ExecutionCountTests
           ]
         }
         """;
+
+    /// <summary>执行节点按启动的执行记录计数。</summary>
+    private static int Executions(WorkTask task, string label) =>
+        Executions(task, task.Context.Graph.PathOf(label));
+
+    /// <summary>执行节点按启动的执行记录计数。</summary>
+    private static int Executions(WorkTask task, NodePath path) =>
+        task.Snapshot().Executables
+            .Single(executable => executable.Executable.Path == path)
+            .Executions.Count;
 }

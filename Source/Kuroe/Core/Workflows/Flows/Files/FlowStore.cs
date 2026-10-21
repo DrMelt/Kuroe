@@ -1,13 +1,12 @@
-using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.Json;
-using Kuroe.Flow.Json.Files;
+using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.Json.Shared;
 using Kuroe.Storage;
 
 namespace Kuroe.Workflows.Flows.Files;
 
-/// <summary>flows.json 的文件存取：路径解析、读取与原子写入。文本与文件形状的转换由 Json 扩展承担。</summary>
-sealed class FlowStore(string file, string baseDirectory)
+/// <summary>flows.json 的文件存取：路径解析、读取与原子写入。文本与描述文档的转换由格式实现承担。</summary>
+sealed class FlowStore(string file, string baseDirectory, IFlowFormatReader reader, IFlowFormatWriter writer)
 {
     private readonly string _file = Path.GetFullPath(file);
     private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
@@ -28,15 +27,15 @@ sealed class FlowStore(string file, string baseDirectory)
         }
     }
 
-    /// <summary>读取流程文件为文件形状，文件不存在时为空。</summary>
-    public ErrorOr<FlowFileDto?> LoadDto()
+    /// <summary>读取流程文件为描述文档，文件不存在时为空。</summary>
+    public ErrorOr<FlowDocument?> Load()
     {
         if (!File.Exists(_file))
         {
-            return (FlowFileDto?)null;
+            return (FlowDocument?)null;
         }
 
-        ErrorOr<FlowFileDto> read = ReadDto(_file);
+        ErrorOr<FlowDocument> read = Read(_file);
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
@@ -45,12 +44,18 @@ sealed class FlowStore(string file, string baseDirectory)
         return read.Value;
     }
 
-    /// <summary>把文件形状写回流程文件。</summary>
-    public ErrorOr<Success> Save(FlowFileDto file)
+    /// <summary>把描述文档写回流程文件。</summary>
+    public ErrorOr<Success> Save(FlowDocument document)
     {
+        ErrorOr<string> text = writer.Write(document);
+        if (text.IsError)
+        {
+            return text.ErrorsOrEmptyList;
+        }
+
         try
         {
-            AtomicFile.WriteText(_file, FlowFileJson.Serialize(file));
+            AtomicFile.WriteText(_file, text.Value);
 
             return Result.Success;
         }
@@ -60,8 +65,8 @@ sealed class FlowStore(string file, string baseDirectory)
         }
     }
 
-    /// <summary>从指定文件读取文件形状，供导入使用。</summary>
-    public static ErrorOr<FlowFileDto> ReadDto(string path)
+    /// <summary>从指定文件读取描述文档，供导入使用。</summary>
+    public ErrorOr<FlowDocument> Read(string path)
     {
         string text;
         try
@@ -73,21 +78,12 @@ sealed class FlowStore(string file, string baseDirectory)
             return [FlowFileErrors.Read(path, ex.Message)];
         }
 
-        FlowFileDto? parsed;
-        try
+        ErrorOr<FlowDocument> document = reader.Read(text);
+        if (document.IsError)
         {
-            parsed = FlowFileJson.Parse(text);
-        }
-        catch (JsonException ex)
-        {
-            return [FlowFileErrors.Format($"{path}：{ex.Message}")];
+            return [.. document.ErrorsOrEmptyList.Select(error => FlowFileErrors.Format($"{path}：{error.Description}"))];
         }
 
-        if (parsed is null)
-        {
-            return [FlowFileErrors.Format($"{path} 是空文件。")];
-        }
-
-        return parsed;
+        return document.Value;
     }
 }

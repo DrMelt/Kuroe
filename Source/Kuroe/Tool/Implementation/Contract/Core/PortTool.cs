@@ -3,6 +3,7 @@ using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 
 namespace Kuroe.Tool.Contract;
 
@@ -42,7 +43,14 @@ public sealed class PortTool : IScopedTool
     /// <summary>提交端口产出并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>
     private static ErrorOr<string> Submit(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports, ToolArguments arguments)
     {
-        ErrorOr<ExecutionStatus> outcome = intake.SubmitValues(execution, arguments.Text(new ToolName("valuesJson")) ?? string.Empty);
+        ErrorOr<IReadOnlyDictionary<string, string>> parsed =
+            PortValues.Parse(arguments.Text(new ToolName("valuesJson")) ?? string.Empty);
+        if (parsed.IsError)
+        {
+            return parsed.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<ExecutionStatus> outcome = intake.SubmitValues(execution, parsed.Value);
         if (outcome.IsError)
         {
             return outcome.ErrorsOrEmptyList;

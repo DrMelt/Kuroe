@@ -1,1 +1,1 @@
-global using Kuroe.Flow.Tests.Support;
+global using Kuroe.Flow.TestSupport;

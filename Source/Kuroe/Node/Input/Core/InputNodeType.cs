@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;

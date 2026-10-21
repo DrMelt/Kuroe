@@ -4,9 +4,8 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Flow.RuntimeNodes;
-using Kuroe.Flow.StaticGraph;
-using Kuroe.Flow.Tests.Support;
+using Kuroe.Flow.Runtime.Nodes;
+using Kuroe.Flow.Compiler.Compilation;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
@@ -24,16 +23,16 @@ public sealed class ReadinessTests
     {
         (NodeInputPlan plan, FakeSources sources, RuntimeExecutable node) = Single();
 
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
 
         sources.Of("节点1").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
 
         node.Consume(plan, sources);
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
 
         sources.Of("节点1").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
     }
 
     /// <summary>组间任一齐备即启动：另一组的数据来源尚未放行也能启动。</summary>
@@ -44,7 +43,7 @@ public sealed class ReadinessTests
 
         sources.Of("节点2").Publish();
 
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
     }
 
     /// <summary>生效组取有驱动来源的齐备组，不是第一个齐备组。</summary>
@@ -58,7 +57,7 @@ public sealed class ReadinessTests
         node.Consume(plan, sources);
         sources.Of("节点2").Publish();
 
-        Assert.Equal(1, NodeReadiness.DrivenGroup(plan, node, sources));
+        Assert.Equal(1, plan.DrivenGroup(node, sources));
     }
 
     /// <summary>强制重跑在没有任何齐备组时也能启动。</summary>
@@ -68,8 +67,8 @@ public sealed class ReadinessTests
         (NodeInputPlan plan, FakeSources sources, RuntimeExecutable node) = TwoGroups();
         node.RequestRerun();
 
-        Assert.Null(NodeReadiness.DrivenGroup(plan, node, sources));
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.Null(plan.DrivenGroup(node, sources));
+        Assert.True(plan.Ready(node, sources));
     }
 
     /// <summary>组内必须全部齐备：缺一处时组不齐备，任何组都不成立即不启动。</summary>
@@ -79,10 +78,10 @@ public sealed class ReadinessTests
         (NodeInputPlan plan, FakeSources sources, RuntimeExecutable node) = OneGroupOfTwo();
 
         sources.Of("节点1").Publish();
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
 
         sources.Of("节点2").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
     }
 
     /// <summary>组内有信号绑定时只认信号来源的新版本：数据来源再发布也不触发。</summary>
@@ -93,15 +92,15 @@ public sealed class ReadinessTests
 
         sources.Of("节点1").Publish();
         sources.Of("节点2").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
 
         node.Consume(plan, sources);
 
         sources.Of("节点1").Publish();
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
 
         sources.Of("节点2").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
     }
 
     /// <summary>达到执行次数上限后不再启动。</summary>
@@ -115,12 +114,12 @@ public sealed class ReadinessTests
         RuntimeExecutable node = new(target);
 
         sources.Of("节点1").Publish();
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
 
         node.RecordExecution();
         node.Consume(plan, sources);
 
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
     }
 
     /// <summary>返工作废后的重跑意图越过版本比较直接启动。</summary>
@@ -131,11 +130,28 @@ public sealed class ReadinessTests
 
         sources.Of("节点1").Publish();
         node.Consume(plan, sources);
-        Assert.False(NodeReadiness.Ready(plan, node, sources));
+        Assert.False(plan.Ready(node, sources));
 
         node.RequestRerun();
 
-        Assert.True(NodeReadiness.Ready(plan, node, sources));
+        Assert.True(plan.Ready(node, sources));
+    }
+
+    /// <summary>消费账经接口注入，启动登记交给注入的实现。</summary>
+    [Fact]
+    public void Consume_uses_the_injected_ledger()
+    {
+        ExecutableNode target = Definition("节点2");
+        NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortType.Text)]);
+        NodeInputPlan plan = Plan(graph, "节点2");
+        FakeSources sources = new();
+        RecordingLedger ledger = new();
+        RuntimeExecutable node = new(target, ledger);
+
+        sources.Of("节点1").Publish();
+        node.Consume(plan, sources);
+
+        Assert.Same(plan, ledger.Recorded);
     }
 
     /// <summary>一个来源到目标的单组场景。</summary>
@@ -192,6 +208,16 @@ public sealed class ReadinessTests
         Path = new NodePath([StartNode.ReservedLabel]),
         Outputs = [new Port(OutputPort, PortType.Text)],
     };
+
+    /// <summary>记录启动登记的消费账替身。</summary>
+    private sealed class RecordingLedger : IConsumptionLedger
+    {
+        public NodeInputPlan? Recorded { get; private set; }
+
+        public long Revision(NodePath source) => 0;
+
+        public void Record(NodeInputPlan plan, IReadinessSources sources) => Recorded = plan;
+    }
 
     /// <summary>判定用的来源侧：按节点路径给出放行状态与版本，未登记时建一个未放行的。</summary>
     private sealed class FakeSources : IReadinessSources

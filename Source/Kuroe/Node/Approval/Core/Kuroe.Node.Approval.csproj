@@ -10,7 +10,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Kuroe.Flow\InputChannel\Kuroe.Flow.InputChannel.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>

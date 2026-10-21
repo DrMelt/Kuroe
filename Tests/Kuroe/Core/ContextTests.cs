@@ -1,6 +1,5 @@
 using ApiHub.Shared.Models;
 using Kuroe.Node.Llm;
-using Kuroe.Node.Llm.Sessions;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
@@ -35,17 +34,8 @@ public sealed class ContextTests
         ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
 
         ContextValue value = Assert.Single(implement.Input.Inputs);
-        Assert.Equal("节点「整体/制定计划」的端口「计划」产出：\n计划产出", LlmHistoryValue(implement));
+        Assert.Equal("计划产出", value.Text);
         Assert.Equal(plan.Id, Assert.IsType<ExecutionSource>(value.Origin).FromExecution);
-    }
-
-    /// <summary>本轮请求历史里的一条取值：由 Llm 侧按取值与出处渲染。</summary>
-    private static string LlmHistoryValue(ExecutionSnapshot execution)
-    {
-        List<Microsoft.Extensions.AI.ChatMessage> messages = [];
-        new ExecutionHistory(execution.Input).LayOut(messages);
-
-        return Assert.Single(messages).Text;
     }
 
     [Fact]

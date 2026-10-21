@@ -1,15 +1,14 @@
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.RuntimeGraph;
+using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
 /// <summary>任务推进的宿主：每次提交为任务建一个推进循环，返工与取消经信号恢复或终止。
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
-sealed class FlowEngine(
+public sealed class FlowEngine(
     TaskRegistry registry,
     ExecutionDispatcher dispatcher,
     IExecutionTargetResolver targetResolver) : IFlowRunner

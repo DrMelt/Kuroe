@@ -1,13 +1,12 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.RuntimeGraph;
-using Kuroe.Flow.RuntimeNodes;
+using Kuroe.Flow.Runtime.Graph;
+using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Engine;
@@ -233,7 +232,7 @@ internal sealed class TaskDriver(
                     return;
                 }
 
-                execution = registry.NewExecution(ExecutionInputFactory.Create(task, node, declaration.Value));
+                execution = registry.NewExecution(ExecutionInputBuilder.Build(task.Id, node, task.Context, declaration.Value));
                 task.Attach(execution);
             }
 

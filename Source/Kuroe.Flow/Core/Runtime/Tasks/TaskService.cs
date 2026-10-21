@@ -1,35 +1,28 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.StaticGraph;
+using Kuroe.Flow.Compiler.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>宿主对任务的动作：提交、返工、取消、改名。
 /// 前置条件与回执在这里判定，状态改动经推进器落地。</summary>
-public sealed class TaskService
+/// <remarks>装配任务动作所需的注册表、推进器、流程目录与执行目标解析。</remarks>
+public sealed class TaskService(
+    TaskRegistry registry,
+    IFlowRunner driver,
+    IFlowRuntimeCatalog flows,
+    IExecutionTargetResolver targets)
 {
-    private readonly TaskRegistry _registry;
-    private readonly IFlowRunner _driver;
-    private readonly IFlowCatalog _flows;
-    private readonly IExecutionTargetResolver _targets;
-
-    internal TaskService(
-        TaskRegistry registry,
-        IFlowRunner driver,
-        IFlowCatalog flows,
-        IExecutionTargetResolver targets)
-    {
-        _registry = registry;
-        _driver = driver;
-        _flows = flows;
-        _targets = targets;
-    }
+    private readonly TaskRegistry _registry = registry;
+    private readonly IFlowRunner _driver = driver;
+    private readonly IFlowRuntimeCatalog _flows = flows;
+    private readonly IExecutionTargetResolver _targets = targets;
 
     /// <summary>提交任务：按流程建任务并启动执行。</summary>
     public ErrorOr<TaskSnapshot> Submit(string goal, FlowName flowName, string? title)
@@ -39,27 +32,19 @@ public sealed class TaskService
             return [TaskErrors.EmptyGoal()];
         }
 
-        ErrorOr<FlowDefinition> flow = _flows.Find(flowName);
+        ErrorOr<CompiledFlow> flow = _flows.FindCompiled(flowName);
         if (flow.IsError)
         {
             return flow.ErrorsOrEmptyList;
         }
 
-        ErrorOr<TaskSnapshot> submitted = SubmitFlow(goal.Trim(), flow.Value, title);
-
-        return submitted.IsError ? submitted.ErrorsOrEmptyList : submitted.Value;
+        return SubmitCompiled(goal.Trim(), flow.Value, title);
     }
 
-    /// <summary>按流程定义提交：编译图、校验开始直连下游的宿主声明、建任务并启动推进。供宿主按自带流程提交。</summary>
-    public ErrorOr<TaskSnapshot> SubmitFlow(string goal, FlowDefinition flow, string? title)
+    /// <summary>按编译结果提交：校验开始直连下游的宿主声明、建任务并启动推进。</summary>
+    public ErrorOr<TaskSnapshot> SubmitCompiled(string goal, CompiledFlow flow, string? title)
     {
-        ErrorOr<NodeGraph> compiled = FlowCompiler.Compile(flow);
-        if (compiled.IsError)
-        {
-            return compiled.ErrorsOrEmptyList;
-        }
-
-        NodeGraph graph = compiled.Value;
+        INodeGraph graph = flow.Graph;
 
         // 不启动执行的节点不需要宿主声明；开始直连的派发节点要求声明可解析
         foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
@@ -77,7 +62,7 @@ public sealed class TaskService
             }
         }
 
-        WorkTask task = _registry.Create(goal, flow, graph, title);
+        WorkTask task = _registry.Create(goal, flow, title);
         lock (task.Gate)
         {
             _driver.Start(task);

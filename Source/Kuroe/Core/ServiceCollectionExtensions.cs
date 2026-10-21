@@ -4,14 +4,13 @@ using Kuroe.Catalogs.Files;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Node.Llm;
-using Kuroe.Node.Llm.Json;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
+using Kuroe.Flow.Compiler.Description;
 using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
@@ -26,11 +25,18 @@ using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Compiler;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.Json.Parameters;
-using Kuroe.Node.Input.Json;
-using Kuroe.Node.Approval.Json;
+using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Flow.Json;
+using Kuroe.Flow.NodeLibrary;
+using Kuroe.Flow.NodeType.Container;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Node.Input;
+using Kuroe.Node.Approval;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
@@ -61,17 +67,20 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
-        NodeTypeFileRegistry typeFiles = new();
+        NodeTypeDescriptionRegistry typeFiles = new();
         InputRegistry inputs = new();
-        ContainerTypeFiles.RegisterInto(typeFiles);
-        LlmTypeFiles.RegisterInto(typeFiles);
-        InputTypeFiles.RegisterInto(typeFiles, inputs);
-        ApprovalTypeFiles.RegisterInto(typeFiles, inputs);
+        JsonFlowFormat format = new();
+        IFlowExpander expander = new NodeLibraryExpander();
+        IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
+        ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
+        LlmNodeTypeDescriptions.RegisterInto(typeFiles);
+        InputNodeTypeDescriptions.RegisterInto(typeFiles, inputs);
+        ApprovalNodeTypeDescriptions.RegisterInto(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(
-            new FlowStore(paths.FlowsFile, paths.WorkingDirectory),
+            new FlowStore(paths.FlowsFile, paths.WorkingDirectory, format, format),
             BuiltinNodes.Nodes,
-            typeFiles);
+            descriptionCompiler);
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;
@@ -95,6 +104,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
+        services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
+        services.AddSingleton(descriptionCompiler);
         services.AddSingleton(configuredTools.Value);
 
         ModelService modelService = new(settings.Value, catalog.Value);
@@ -130,7 +141,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new TaskService(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
-            sp.GetRequiredService<IFlowCatalog>(),
+            sp.GetRequiredService<IFlowRuntimeCatalog>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton(sp => new PendingService(
             sp.GetRequiredService<TaskRegistry>(),
@@ -145,16 +156,15 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ModelService>(),
             sp.GetRequiredService<SettingsProvider>(),
             sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<IInputChannel>()));
-        services.AddSingleton(sp => new ClientProvider(sp.GetRequiredService<ILoggerFactory>()));
+            sp.GetRequiredService<IFlowDescriptionCompiler>()));
         services.AddSingleton(sp => new SessionFactory(
-            sp.GetRequiredService<ClientProvider>(),
+            sp.GetRequiredService<ILoggerFactory>(),
             sp.GetRequiredService<IModelSettings>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
         services.AddSingleton<IExecutionRunner>(sp => new ExecutionRunner(
             sp.GetRequiredService<SessionFactory>(),
-            new ContractReminder(sp.GetRequiredService<IExecutionStatusReader>())));
+            sp.GetRequiredService<IExecutionStatusReader>()));
 
         return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
     }

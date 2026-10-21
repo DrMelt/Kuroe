@@ -4,7 +4,7 @@ using Kuroe.Node.Llm.Tools;
 namespace Kuroe.Node.Llm.Executions;
 
 /// <summary>本轮产出契约的补交要求：声明了输出端口却未交回时，给出写给模型的补交要求。</summary>
-sealed class ContractReminder(IExecutionStatusReader status)
+internal sealed class ContractReminder(IExecutionStatusReader status)
 {
     /// <summary>还缺交回内容时给出补交要求，齐备时为空。</summary>
     public string? Text(IExecution execution)

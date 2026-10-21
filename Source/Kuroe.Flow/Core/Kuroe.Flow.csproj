@@ -10,11 +10,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\Compiler\Shared\Kuroe.Flow.Compiler.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Kuroe" />
-        <InternalsVisibleTo Include="Kuroe.Tests" />
         <InternalsVisibleTo Include="Kuroe.Flow.Tests" />
     </ItemGroup>
 

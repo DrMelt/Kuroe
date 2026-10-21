@@ -5,7 +5,7 @@ namespace Kuroe.Flow.Shared.StaticGraph.Node;
 /// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
 /// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Spec"/> 是执行节点或输入节点。
 /// 定义条目写节点名，标签取节点名文本；引用条目写标签，节点名留空。</summary>
-public sealed record NodeSpec
+public sealed partial record NodeSpec
 {
     /// <summary>定义条目的构造：标签取节点名的文本，名字是定义在库里的名字，标签是它在图里的标识段。</summary>
     public static NodeSpec Define(NodeName name) => new()
@@ -23,10 +23,6 @@ public sealed record NodeSpec
 
     /// <summary>节点名：定义条目的名字，节点库的注册名，也是 Use 引用的名字。引用条目为空。</summary>
     public NodeName? Name { get; init; }
-
-    /// <summary>定义条目的名字。引用条目没有定义名。</summary>
-    public NodeName DefinitionName => Name
-        ?? throw new InvalidOperationException($"节点 {Label.Value} 没有节点名，只有定义条目才有定义名。");
 
     /// <summary>节点标签：节点在图里的标识段，同一容器内唯一且恒非空。定义条目取节点名的文本，引用条目取使用处写下的标签。</summary>
     public required NodeLabel Label { get; init; }

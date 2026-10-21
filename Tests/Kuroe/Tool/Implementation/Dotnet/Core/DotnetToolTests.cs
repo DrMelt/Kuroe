@@ -234,7 +234,7 @@ public sealed class DotnetToolTests
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(string path, Dictionary<string, object?> values)
     {
-        ErrorOr<IReadOnlyList<string>> argv = CommandToolRunner.Expand(Definition(path), new ToolArguments(values));
+        ErrorOr<IReadOnlyList<string>> argv = Definition(path).CommandLine(new ToolArguments(values));
 
         Assert.False(argv.IsError);
 
@@ -244,7 +244,7 @@ public sealed class DotnetToolTests
     /// <summary>展开被拒的错误文本，未拒绝时用例失败。</summary>
     private static string Rejected(string path, Dictionary<string, object?> values)
     {
-        ErrorOr<IReadOnlyList<string>> argv = CommandToolRunner.Expand(Definition(path), new ToolArguments(values));
+        ErrorOr<IReadOnlyList<string>> argv = Definition(path).CommandLine(new ToolArguments(values));
 
         Assert.True(argv.IsError);
 

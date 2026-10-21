@@ -23,7 +23,7 @@ public sealed class ExecutionLimitTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, task.Runtime.Executable(task.Graph.PathOf("干活")).Executions);
+        Assert.Equal(2, Executions(task, "干活"));
         Assert.Contains(blocked.Journal, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
         Assert.True(environment.Tasks.Rework(id).IsError, "达到上限的节点不能再返工");
     }
@@ -42,7 +42,7 @@ public sealed class ExecutionLimitTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, task.Runtime.Executable(task.Graph.PathOf("干活")).Executions);
+        Assert.Equal(2, Executions(task, "干活"));
         Assert.True(environment.Tasks.Rework(id).IsError);
     }
 
@@ -59,7 +59,7 @@ public sealed class ExecutionLimitTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(2, task.Runtime.Executable(task.Graph.PathOf("干活")).Executions);
+        Assert.Equal(2, Executions(task, "干活"));
         Assert.True(environment.Tasks.Rework(id).IsError);
     }
 
@@ -199,7 +199,7 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(100, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxExecutions);
+        Assert.Equal(100, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxExecutions);
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxExecutions);
+        Assert.Equal(2, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "干活").MaxExecutions);
     }
 
     [Fact]
@@ -221,7 +221,13 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "覆盖干活").MaxExecutions);
-        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "继承干活").MaxExecutions);
+        Assert.Equal(5, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "覆盖干活").MaxExecutions);
+        Assert.Equal(3, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "继承干活").MaxExecutions);
     }
+
+    /// <summary>执行节点按启动的执行记录计数。</summary>
+    private static int Executions(WorkTask task, string label) =>
+        task.Snapshot().Executables
+            .Single(executable => executable.Executable.Path == task.Context.Graph.PathOf(label))
+            .Executions.Count;
 }

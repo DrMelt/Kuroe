@@ -2,7 +2,6 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Pending;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.RuntimeNodes;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -34,7 +33,7 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
-        Assert.Null(task.Runtime.Materialized(task.Graph.PathOf("收尾")));
+        Assert.Null(task.Context.Materialized(task.Context.Graph.PathOf("收尾")));
         Assert.Equal(4, snapshot.ExecutableStates.Count);
     }
 
@@ -52,7 +51,7 @@ public sealed class LazyRuntimeTests
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
         // 已实例化的是开始、根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
-        Assert.Equal(5, task.Runtime.MaterializedCount);
+        Assert.Equal(5, MaterializedCount(task));
         Assert.Equal(NodeState.Pending, environment.Snapshot(id).ExecutableStates[2].State);
     }
 
@@ -65,12 +64,12 @@ public sealed class LazyRuntimeTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        int before = task.Runtime.MaterializedCount;
+        int before = MaterializedCount(task);
 
         task.Snapshot();
         task.Snapshot();
 
-        Assert.Equal(before, task.Runtime.MaterializedCount);
+        Assert.Equal(before, MaterializedCount(task));
     }
 
     [Fact]
@@ -85,9 +84,13 @@ public sealed class LazyRuntimeTests
         environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        RuntimeExecutable late = task.Runtime.Executable(task.Graph.PathOf("实施"));
+        NodeRuntime late = task.Context.Runtime(task.Context.Graph.PathOf("实施"));
         Assert.True(late.Canceled);
         Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[1].State);
         Assert.Empty(environment.Pendings.Pending(id).ThrowIfError());
     }
+
+    /// <summary>已实例化的运行时节点数，未触达的节点不计。</summary>
+    private static int MaterializedCount(WorkTask task) =>
+        task.Context.Graph.Nodes.Count(node => task.Context.Materialized(node.Path) is not null);
 }

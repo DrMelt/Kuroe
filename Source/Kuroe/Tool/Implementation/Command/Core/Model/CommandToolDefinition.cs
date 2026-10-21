@@ -1,3 +1,5 @@
+using ErrorOr;
+
 namespace Kuroe.Tool.Command.Model;
 
 /// <summary>命令工具的配置定义：路径、说明、参数、命令模板与执行参数。模板的每一项是一个参数项，
@@ -21,6 +23,10 @@ public sealed record CommandToolDefinition(
     /// <summary>交给工具契约的函数定义：路径、说明与参数。</summary>
     public ToolDefinition Definition =>
         new(Path, Description, [.. Parameters.Select(ToContract)]);
+
+    /// <summary>按模板与实参展开命令行，第一项是程序本身。返回非空表示实参缺项或模板不合法。</summary>
+    public ErrorOr<IReadOnlyList<string>> CommandLine(ToolArguments arguments) =>
+        CommandToolRunner.Expand(this, arguments);
 
     /// <summary>命令侧的参数声明转成工具契约的声明。</summary>
     private static ToolParameter ToContract(CommandToolParameter parameter) =>

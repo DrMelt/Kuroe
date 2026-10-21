@@ -2,7 +2,6 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.StaticGraph;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -57,7 +56,7 @@ public sealed class NodePathTests
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
+        INodeGraph graph = environment.Registry.Find(id).ThrowIfError().Context.Graph;
 
         Assert.Equal([StartNode.ReservedLabel.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["整体"], graph[NodePath.Of("整体")].Path.Levels.Select(level => level.Value));
@@ -74,7 +73,7 @@ public sealed class NodePathTests
         using TestEnvironment environment = TestEnvironment.Create(RootExecutableFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
+        INodeGraph graph = environment.Registry.Find(id).ThrowIfError().Context.Graph;
 
         Assert.Equal([StartNode.ReservedLabel.Value], graph[NodePath.Of("Start")].Path.Levels.Select(level => level.Value));
         Assert.Equal(["直接执行"], graph[NodePath.Of("直接执行")].Path.Levels.Select(level => level.Value));
@@ -95,7 +94,7 @@ public sealed class NodePathTests
         // 同一节点组的两次引用各自拥有同名成员，路径由树位置区分
         using TestEnvironment repeated = TestEnvironment.Create(RepeatedInstanceFlow);
         TaskId repeatedId = repeated.Submit("补齐 README", new FlowName("双线"));
-        NodeGraph repeatedGraph = repeated.Registry.Find(repeatedId).ThrowIfError().Graph;
+        INodeGraph repeatedGraph = repeated.Registry.Find(repeatedId).ThrowIfError().Context.Graph;
 
         Assert.Equal("整体/甲/实施", repeatedGraph.ExecutableNodes[0].Path.Value);
         Assert.Equal("整体/乙/实施", repeatedGraph.ExecutableNodes[1].Path.Value);

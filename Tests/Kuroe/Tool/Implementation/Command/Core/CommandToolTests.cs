@@ -1,12 +1,6 @@
 using ErrorOr;
-using Kuroe.Node.Llm.Executions;
-using Kuroe.Node.Llm.Json;
-using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Model;
-using Microsoft.Extensions.AI;
 using Xunit;
 
 namespace Kuroe.Tool.Command.Tests;
@@ -14,16 +8,6 @@ namespace Kuroe.Tool.Command.Tests;
 /// <summary>命令工具：模板展开按命令行断言，不起进程；进程执行只在 Windows 上冒烟。</summary>
 public sealed class CommandToolTests
 {
-    [Fact]
-    public void Command_tool_declares_function_with_list_schema()
-    {
-        AIFunction function = BuiltAIFunction(["echo", "{files}"], [FileParameter]);
-
-        Assert.Equal("Execution", function.Name);
-        Assert.Equal("array", function.JsonSchema.GetProperty("properties").GetProperty("files")
-            .GetProperty("type").GetString());
-    }
-
     [Fact]
     public void Expand_rejects_required_missing_and_omits_empty_optional_list()
     {
@@ -196,16 +180,6 @@ public sealed class CommandToolTests
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
-    /// <summary>经 ToolCollection 构建成模型可调用的函数，schema 在此生成。</summary>
-    private static AIFunction BuiltAIFunction(IReadOnlyList<string> template, IReadOnlyList<CommandToolParameter> parameters)
-    {
-        CommandTool tool = Tool(template, parameters);
-        AITool built = Assert.Single(new ToolCollection([tool], new ToolJson())
-            .Build(new ExecutionId(1), new NullSink(), new ProcessJournal(), [.. tool.Functions.Select(function => function.Definition.Path)]));
-
-        return (AIFunction)built;
-    }
-
     /// <summary>起进程执行命令，结果渲染成文本。</summary>
     private static string Invoke(CommandTool tool, Dictionary<string, object?> values) =>
         ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
@@ -236,7 +210,7 @@ public sealed class CommandToolTests
 
     /// <summary>调用命令面的展开，只组装命令行，不起进程。</summary>
     private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values) =>
-        CommandToolRunner.Expand(Definition(template, parameters), new ToolArguments(values));
+        Definition(template, parameters).CommandLine(new ToolArguments(values));
 
     /// <summary>测试用的命令定义，执行目录、超时与输出上限取固定值。</summary>
     private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters) =>
@@ -263,15 +237,4 @@ public sealed class CommandToolTests
     private static readonly CommandToolParameter PasswordParameter = new("pass", "口令");
     private static readonly CommandToolParameter StagedParameter = new("staged", "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
-
-    private sealed class NullSink : IProcessSink
-    {
-        public void OnText(string delta)
-        {
-        }
-
-        public void OnToolCall(ToolCallRecord record)
-        {
-        }
-    }
 }

@@ -1,4 +1,4 @@
-using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Xunit;

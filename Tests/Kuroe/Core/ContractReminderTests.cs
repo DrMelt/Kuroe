@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Node.Llm.Executions;
 using Xunit;
 

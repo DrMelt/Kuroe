@@ -2,8 +2,9 @@ using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.StaticGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -19,11 +20,11 @@ public sealed class TaskRegistry
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal WorkTask Create(string goal, FlowDefinition flow, NodeGraph graph, string? title)
+    internal WorkTask Create(string goal, CompiledFlow flow, string? title)
     {
         lock (_gate)
         {
-            WorkTask task = new(new TaskId(_nextTask++), goal, flow, graph, title);
+            WorkTask task = new(new TaskId(_nextTask++), goal, flow.Model, flow.Graph, title);
             _tasks.Add(task);
 
             return task;

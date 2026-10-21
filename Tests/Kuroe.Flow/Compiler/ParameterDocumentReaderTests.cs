@@ -1,0 +1,113 @@
+using ErrorOr;
+using Kuroe.Flow.Compiler.Description;
+using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.Descriptions;
+using Kuroe.Flow.Shared.StaticGraph.Node;
+using Xunit;
+
+namespace Kuroe.Flow.Compiler.Tests;
+
+/// <summary>参数字段的描述读取：按字段表转换取值、未知字段与形状不符的报出。</summary>
+public sealed class ParameterDocumentReaderTests
+{
+    [Fact]
+    public void Read_converts_values_by_the_declared_shape()
+    {
+        List<string> errors = [];
+
+        TestNodeType type = Assert.IsType<TestNodeType>(ReadParameters(
+            [("Text", new FlowValue.Text("展开")), ("Texts", new FlowValue.Array([new FlowValue.Text("甲"), new FlowValue.Text("乙")]))],
+            errors));
+
+        Assert.Empty(errors);
+        Assert.Equal("展开", type.Parameters!.Text);
+        Assert.Equal(["甲", "乙"], type.Parameters.Texts);
+    }
+
+    [Fact]
+    public void Read_takes_safe_defaults_for_missing_fields()
+    {
+        List<string> errors = [];
+
+        TestNodeType type = Assert.IsType<TestNodeType>(ReadParameters([], errors));
+
+        Assert.Empty(errors);
+        Assert.Null(type.Parameters!.Text);
+        Assert.Empty(type.Parameters.Texts);
+    }
+
+    [Fact]
+    public void Read_reports_unknown_fields() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Extra 不属于 Test 节点。"],
+            Errors([("Text", new FlowValue.Text("展开")), ("Extra", new FlowValue.Text("多余"))]));
+
+    [Fact]
+    public void Read_reports_values_of_the_wrong_shape() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Text 必须是文本。", "流程 测试 的节点 干活：字段 Texts 必须是文本数组。"],
+            Errors([("Text", new FlowValue.Number("5")), ("Texts", new FlowValue.Text("甲"))]));
+
+    [Fact]
+    public void Read_reports_array_items_of_the_wrong_shape() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Texts 的元素必须是文本。"],
+            Errors([("Texts", new FlowValue.Array([new FlowValue.Number("1"), new FlowValue.Text("甲")]))]));
+
+    private static readonly TestTypeFile File = new();
+
+    private static INodeType? ReadParameters((string Name, FlowValue Value)[] entries, List<string> errors) =>
+        ParameterDocumentReader.Read(
+            File,
+            entries.ToDictionary(entry => entry.Name, entry => entry.Value),
+            NodeScope.Flow("测试"),
+            new NodeLabel("干活"),
+            error => errors.Add(error.Description));
+
+    private static List<string> Errors((string Name, FlowValue Value)[] entries)
+    {
+        List<string> errors = [];
+        ReadParameters(entries, errors);
+
+        return errors;
+    }
+
+    private sealed class TestTypeFile : INodeTypeDescription
+    {
+        public NodeKind Kind => TestNodeTypes.Name;
+
+        public NodeTypeShape Shape { get; } = new();
+
+        public IReadOnlyList<ParameterField> Fields { get; } =
+        [
+            new("Text", ParameterValueKind.Text),
+            new("Texts", ParameterValueKind.Texts),
+        ];
+
+        public INodeType Read(IParameterReader values, Action<string> fail) =>
+            TestNodeTypes.Create(new TestParameters(values.Text("Text"), values.Texts("Texts")));
+    }
+
+    private sealed class TestNodeType(TestParameters? parameters) : INodeType
+    {
+        public NodeKind Kind => TestNodeTypes.Name;
+
+        public NodeTypeShape Shape { get; } = new();
+
+        public TestParameters? Parameters { get; } = parameters;
+
+        public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+        {
+        }
+    }
+
+    private static class TestNodeTypes
+    {
+        public static NodeKind Name { get; } = new("Test");
+
+        public static TestNodeType Create(TestParameters parameters) => new(parameters);
+    }
+
+    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts);
+}

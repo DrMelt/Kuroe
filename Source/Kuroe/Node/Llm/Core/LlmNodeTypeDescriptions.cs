@@ -1,0 +1,10 @@
+using Kuroe.Flow.Shared.StaticGraph.Node;
+
+namespace Kuroe.Node.Llm;
+
+/// <summary>Llm 节点描述的注册入口。</summary>
+public static class LlmNodeTypeDescriptions
+{
+    /// <summary>把 Llm 节点的描述注册进注册表。</summary>
+    public static void RegisterInto(INodeTypeDescriptionRegistry files) => files.Register(new LlmNodeTypeDescription());
+}

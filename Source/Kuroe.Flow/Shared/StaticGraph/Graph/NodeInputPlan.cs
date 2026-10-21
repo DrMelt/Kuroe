@@ -21,7 +21,7 @@ public sealed record InputGroup(IReadOnlyList<InputBinding> Bindings)
 
 /// <summary>节点输入侧的编译期方案：启动组与执行次数上限。
 /// 方案在编译期由执行视图一次算出，判定只读它，不再反复扫图。</summary>
-public sealed record NodeInputPlan
+public sealed partial record NodeInputPlan
 {
     /// <summary>启动组，按 From 的组序。</summary>
     public IReadOnlyList<InputGroup> Groups { get; init; } = [];

@@ -5,8 +5,7 @@ using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.RuntimeGraph;
-using Kuroe.Flow.StaticGraph;
+using Kuroe.Flow.Runtime.Graph;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -21,7 +20,7 @@ public sealed class WorkTask : INodeTask
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal WorkTask(TaskId id, string goal, FlowDefinition flow, NodeGraph graph, string? title)
+    internal WorkTask(TaskId id, string goal, FlowDefinition flow, INodeGraph graph, string? title)
     {
         Id = id;
         Goal = goal;
@@ -41,8 +40,8 @@ public sealed class WorkTask : INodeTask
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }
 
-    /// <summary>提交时锁定的流程编译视图。</summary>
-    internal NodeGraph Graph { get; }
+    /// <summary>提交时锁定的流程执行视图。</summary>
+    internal INodeGraph Graph { get; }
 
     /// <summary>任务的流程编译视图，节点实现经它定位成员与读端口类型。</summary>
     INodeGraph INodeTask.Graph => Graph;
@@ -185,11 +184,12 @@ public sealed class WorkTask : INodeTask
                     [.. _executions.Where(execution => execution.Input.Node == node.Path).Select(execution => executions[execution.Id])])),
             ];
 
-            List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => Runtime.SnapshotState(node.Path))];
+            TaskProjection projection = new(Graph, Runtime.Materializer);
+            List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => projection.State(node.Path))];
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
-                Runtime.ContainerSnapshots(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                projection.Containers(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
         }
     }
 

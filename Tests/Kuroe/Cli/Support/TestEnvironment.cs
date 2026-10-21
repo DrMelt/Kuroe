@@ -11,6 +11,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;

@@ -8,11 +8,9 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />
-        <PackageReference Include="Microsoft.Extensions.AI" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Node\Llm\Json\Kuroe.Node.Llm.Json.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Tool\Implementation\Command\Core\Kuroe.Tool.Command.csproj" />
     </ItemGroup>
 

@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Presentation;
 
 namespace Kuroe.Tool.Contract;

@@ -17,7 +17,7 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.All(task.Graph.ExecutableNodes, node => Assert.Equal(2, node.MaxExecutions));
+        Assert.All(task.Context.Graph.ExecutableNodes, node => Assert.Equal(2, node.MaxExecutions));
     }
 
     /// <summary>执行节点的显式配置优先于容器统一上限。</summary>
@@ -29,8 +29,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "重点").MaxExecutions);
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "普通").MaxExecutions);
+        Assert.Equal(5, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "重点").MaxExecutions);
+        Assert.Equal(2, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "普通").MaxExecutions);
     }
 
     /// <summary>嵌套容器的统一上限覆盖外层容器，同层其余成员保留外层的值。</summary>
@@ -42,8 +42,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "内层干活").MaxExecutions);
-        Assert.Equal(2, task.Graph.ExecutableNodes.Single(node => node.Label.Value == "外层干活").MaxExecutions);
+        Assert.Equal(5, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "内层干活").MaxExecutions);
+        Assert.Equal(2, task.Context.Graph.ExecutableNodes.Single(node => node.Label.Value == "外层干活").MaxExecutions);
     }
 
     /// <summary>引用容器时装配层可覆盖库定义统一上限，未覆盖时继承库定义。</summary>
@@ -55,8 +55,8 @@ public sealed class ContainerLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
-        Assert.Equal(3, task.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较轻/干活").MaxExecutions);
+        Assert.Equal(5, task.Context.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
+        Assert.Equal(3, task.Context.Graph.ExecutableNodes.Single(node => node.Path.Value == "整体/较轻/干活").MaxExecutions);
     }
 
     /// <summary>容器统一上限到点后，组内失败的执行节点停驻且返工不放行。</summary>
@@ -71,7 +71,7 @@ public sealed class ContainerLimitTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(1, task.Runtime.Executable(task.Graph.PathOf("干活")).Executions);
+        Assert.Equal(1, Executions(task, "干活"));
         Assert.True(environment.Tasks.Rework(id).IsError, "达到上限的节点不能再返工");
     }
 
@@ -136,4 +136,10 @@ public sealed class ContainerLimitTests
           ] } ]
         }
         """;
+
+    /// <summary>执行节点按启动的执行记录计数。</summary>
+    private static int Executions(WorkTask task, string label) =>
+        task.Snapshot().Executables
+            .Single(executable => executable.Executable.Path == task.Context.Graph.PathOf(label))
+            .Executions.Count;
 }

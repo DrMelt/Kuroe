@@ -9,6 +9,7 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

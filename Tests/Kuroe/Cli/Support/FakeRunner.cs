@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 
 namespace Kuroe.Cli.Tests.Support;
 
@@ -15,13 +16,11 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>单个执行的人为耗时，用于取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
-    /// <summary>按声明的端口生成提交文本：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
-    private static string PortValuesFor(IReadOnlyList<Port> ports)
-    {
-        string body = string.Join(", ", ports.Select(port =>
-            $"\"{port.Name.Value}\": \"{(port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty)}\""));
-        return "{ " + body + " }";
-    }
+    /// <summary>按声明的端口生成提交取值：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
+    private static Dictionary<string, string> PortValuesFor(IReadOnlyList<Port> ports) =>
+        ports.ToDictionary(
+            port => port.Name.Value,
+            port => port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty);
 
     public IExecutionBody CreateBody(ExecutionInput input) => new FakeBody();
 

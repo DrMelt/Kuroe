@@ -1,10 +1,13 @@
+using ErrorOr;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.Compiler;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;
@@ -17,6 +20,12 @@ public sealed class FlowLoadTests
     /// <summary>解析与读写往返用的外部输入协议实例，这些用例不驱动节点执行。</summary>
     private static readonly InputRegistry Inputs = new();
 
+    /// <summary>描述格式与编译管线，错误用例共用一个实现。</summary>
+    private static readonly JsonFlowFormat Format = new();
+
+    private static IFlowDescriptionCompiler Compiler =>
+        new FlowDescriptionCompiler(TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());
+
     [Fact]
     public void Flow_without_root_node_is_rejected() =>
         Assert.Equal(["流程 默认：流程缺少根节点。"], Errors(NoNodes));
@@ -24,6 +33,14 @@ public sealed class FlowLoadTests
     [Fact]
     public void Flow_with_multiple_root_nodes_is_rejected() =>
         Assert.Equal(["流程 默认：流程只能有一个根节点。"], Errors(MultipleRootNodes));
+
+    [Fact]
+    public void Approval_node_with_invalid_input_port_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 审阅：端口名不能为空或含 @。"], Errors(ApprovalInputPortWithoutName));
+
+    [Fact]
+    public void Container_with_invalid_max_executions_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 整体：MaxExecutions 必须是正整数。"], Errors(ContainerWithZeroMaxExecutions));
 
     [Fact]
     public void Unknown_node_field_is_rejected() =>
@@ -127,19 +144,18 @@ public sealed class FlowLoadTests
         File.WriteAllText(file, StructuralFlow);
         try
         {
-            FlowStore store = new(file, root);
+            FlowStore store = new(file, root, Format, Format);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry(Inputs)).ThrowIfError();
-            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestTypeFiles.Registry(Inputs))).ThrowIfError();
+            FlowDocument document = store.Read(file).ThrowIfError();
+            Compiler.Compile(document, []).ThrowIfError();
+            store.Save(document).ThrowIfError();
             string once = File.ReadAllText(file);
 
             Assert.Contains("\"Prompt\": \"写出计划\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
             Assert.DoesNotContain("\": null", once);
 
-            var (Nodes, Flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry(Inputs)).ThrowIfError();
-            store.Save(FlowFile.Write(Nodes, Flows, TestTypeFiles.Registry(Inputs))).ThrowIfError();
+            store.Save(store.Read(file).ThrowIfError()).ThrowIfError();
 
             Assert.Equal(once, File.ReadAllText(file));
         }
@@ -159,11 +175,11 @@ public sealed class FlowLoadTests
         File.WriteAllText(file, TestFlows.ReviewFlow);
         try
         {
-            FlowStore store = new(file, root);
+            FlowStore store = new(file, root, Format, Format);
 
-            var (nodes, flows) = FlowFile.Read(FlowStore.ReadDto(file).ThrowIfError(), TestTypeFiles.Registry(Inputs)).ThrowIfError();
-            FlowAssembler.Assemble(nodes, flows, new NodeLibrary()).ThrowIfError();
-            store.Save(FlowFile.Write(nodes, flows, TestTypeFiles.Registry(Inputs))).ThrowIfError();
+            FlowDocument document = store.Read(file).ThrowIfError();
+            Compiler.Compile(document, []).ThrowIfError();
+            store.Save(document).ThrowIfError();
             string text = File.ReadAllText(file);
 
             Assert.Contains("\"Tools\": [", text);
@@ -416,6 +432,20 @@ public sealed class FlowLoadTests
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Nodes": [
           { "Name": "实施", "Kind": "Llm", "Model": "执行者" },
           { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "实施@结论" } ] }
+        ] } ] }
+        """;
+
+    private const string ApprovalInputPortWithoutName = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "审阅", "Kind": "Approval", "Inputs": [ { "Type": "Signal" } ], "From": [ { "目标": "Start@目标" } ] }
+        ] } ] }
+        """;
+
+    private const string ContainerWithZeroMaxExecutions = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "MaxExecutions": 0, "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "MaxExecutions": 5, "From": [ { "目标": "Start@目标" } ] }
+          ] }
         ] } ] }
         """;
 
@@ -735,6 +765,14 @@ public sealed class FlowLoadTests
         """;
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
-    private static IReadOnlyList<string> Errors(string json) =>
-        [.. FlowFile.Assemble(FlowFileJson.Parse(json)!, new NodeLibrary(), TestTypeFiles.Registry(Inputs)).ErrorsOrEmptyList.Select(error => error.Description)];
+    private static IReadOnlyList<string> Errors(string json)
+    {
+        ErrorOr<FlowDocument> content = Format.Read(json);
+        if (content.IsError)
+        {
+            return [.. content.ErrorsOrEmptyList.Select(error => error.Description)];
+        }
+
+        return [.. Compiler.Compile(content.Value, []).ErrorsOrEmptyList.Select(error => error.Description)];
+    }
 }

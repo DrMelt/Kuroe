@@ -10,6 +10,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Workflows.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
 using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;

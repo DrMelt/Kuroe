@@ -19,9 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Kuroe" />
-        <InternalsVisibleTo Include="Kuroe.Tests" />
-        <InternalsVisibleTo Include="Kuroe.Tool.Command.Tests" />
         <InternalsVisibleTo Include="Kuroe.Node.Llm.Tests" />
+        <InternalsVisibleTo Include="Kuroe.Tests" />
     </ItemGroup>
 </Project>

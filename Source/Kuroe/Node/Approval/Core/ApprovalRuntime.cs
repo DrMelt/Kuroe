@@ -1,4 +1,5 @@
-using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -9,13 +10,17 @@ namespace Kuroe.Node.Approval;
 
 /// <summary>审批节点在任务内的运行期对象：启动条件齐备即停在待批准，在自己的执行里声明接收外部输入，交付即批准并按输入端口转发来源产出。
 /// 不启动执行、不承载自身内容，取消后不再接收。读写都要求持有任务 Gate。</summary>
-internal sealed class ApprovalRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
+internal sealed class ApprovalRuntime(
+    ExecutableNode executable,
+    IInputChannel channel,
+    INodeContext context,
+    IConsumptionLedger? consumed = null)
     : NodeRuntime(executable), IInputProgress
 {
     /// <summary>停在待批准时解析出的内容端口到来源端口的映射，未停驻时为空。信号输入不承载内容，不在此表中。</summary>
     private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _content = [];
 
-    private readonly ConsumptionLedger _consumed = new();
+    private readonly IConsumptionLedger _consumed = consumed ?? new ConsumptionLedger();
     private long _revision;
     private bool _awaiting;
     private bool _canceled;
@@ -46,7 +51,7 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, IInputChannel c
     public override void Activate(INodeContext context)
     {
         if (_canceled || _awaiting || context.Plan(Path) is not { } plan
-            || NodeReadiness.AvailableGroup(plan, context) is not { } group)
+            || plan.AvailableGroup(context) is not { } group)
         {
             return;
         }
@@ -73,15 +78,15 @@ internal sealed class ApprovalRuntime(ExecutableNode executable, IInputChannel c
     }
 
     /// <summary>按输出端口转发来源产出：放行时取当时齐备组解析出的来源端口内容，否则为空。</summary>
-    public override string? PortText(INodeTask task, PortName port) =>
+    public override string? PortText(INodeContext context, PortName port) =>
         Released && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
-            ? context.Runtime(reference.Source).PortText(task, reference.Port)
+            ? context.Runtime(reference.Source).PortText(context, reference.Port)
             : null;
 
     /// <summary>按输出端口取产出：转发来源端口的取值。审批节点一次放行全部端口。</summary>
-    public override IReadOnlyList<ContextValue> OutputValues(INodeTask task, PortName port) =>
+    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
         Released && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
-            ? context.Runtime(reference.Source).OutputValues(task, reference.Port)
+            ? context.Runtime(reference.Source).OutputValues(context, reference.Port)
             : [];
 
     /// <summary>审批节点在快照里的一刻状态。</summary>

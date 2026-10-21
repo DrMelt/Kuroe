@@ -12,10 +12,4 @@
         <ProjectReference Include="..\..\..\Core\Kuroe.Tool.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="Kuroe.Tool.Command.Tests" />
-        <InternalsVisibleTo Include="Kuroe.Tool.Git.Tests" />
-        <InternalsVisibleTo Include="Kuroe.Tool.Dotnet.Tests" />
-    </ItemGroup>
-
 </Project>

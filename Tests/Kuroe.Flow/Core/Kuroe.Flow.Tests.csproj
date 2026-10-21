@@ -12,8 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compiler\Core\Kuroe.Flow.Compiler.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
     <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+    <ProjectReference Include="..\Support\Kuroe.Flow.TestSupport.csproj" />
   </ItemGroup>
 
 </Project>
