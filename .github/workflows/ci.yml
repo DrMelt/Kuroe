@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+      - name: Download ApiHub packages
+        run: |
+          mkdir -p packages
+          grep -oP '<PackageVersion Include="ApiHub[^"]*" Version="[^"]+"' Directory.Packages.props |
+            sed -E 's/.*Include="([^"]+)" Version="([^"]+)"/\1 \2/' |
+            while read -r package version; do
+              curl -fsSL --retry 3 -o "packages/$package.$version.nupkg" \
+                "https://github.com/DrMelt/ApiHub/releases/download/v$version/$package.$version.nupkg"
+            done
+      - run: dotnet build Kuroe.slnx -c Release
+      - run: dotnet test Kuroe.slnx -c Release --no-build --logger trx --results-directory TestResults
+      - run: dotnet publish Source/Kuroe.Cli -c Release --no-build -o artifacts
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        with:
+          name: publish
+          path: artifacts
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: publish
+          path: artifacts
+      - run: |
+          version="${GITHUB_REF_NAME#v}"
+          test -f artifacts/Kuroe.Cli.dll
+          test -d artifacts/source/Source
+          (cd artifacts && zip -qr "../Kuroe.$version.zip" .)
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes --draft
+          gh release upload "$GITHUB_REF_NAME" "Kuroe.${GITHUB_REF_NAME#v}.zip" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
