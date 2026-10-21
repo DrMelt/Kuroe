@@ -278,6 +278,28 @@ public sealed class FlowLoadTests
     public void Value_on_node_output_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 干活：输出端口不认识键 Value，Value 只属于开始端口。"], Errors(NodeOutputWithValue));
 
+    /// <summary>输入端口默认值随声明载入，保存后仍写在文件里。</summary>
+    [Fact]
+    public void Input_default_survives_load_and_save()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "input-default.json"), InputDefaultFlow);
+
+        environment.Flows.Import("input-default.json").ThrowIfError();
+
+        NodeSpec implement = environment.Flows.Find(new FlowName("默认")).ThrowIfError().RootNode.Nodes![0];
+        Assert.Equal("固定背景", implement.Inputs.Single(port => port.Name == new PortName("背景")).Default);
+
+        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
+        Assert.Contains("\"Default\": \"固定背景\"", text);
+    }
+
+    [Fact]
+    public void Value_on_node_input_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认 的节点 干活：输入端口不认识键 Value，条目写 Name、Type、Description 与 Default。"],
+            Errors(NodeInputWithValue));
+
     /// <summary>定义条目写了标签，节点名与标签的写位置互斥。</summary>
     [Fact]
     public void Definition_entry_writing_label_is_rejected() =>
@@ -337,6 +359,24 @@ public sealed class FlowLoadTests
               { "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
             ] }
           ] } ] }
+        """;
+
+    /// <summary>执行节点的输入端口声明默认值，From 省略该端口。</summary>
+    private const string InputDefaultFlow = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标" }, { "Name": "背景", "Default": "固定背景" }], "From": [ { "目标": "Start@目标" } ] }
+          ] }
+        ] } ] }
+        """;
+
+    /// <summary>输入端口写了 Value，默认值只认 Default。</summary>
+    private const string NodeInputWithValue = """
+        { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标", "Value": "固定" }], "From": [ { "目标": "Start@目标" } ] }
+          ] }
+        ] } ] }
         """;
 
     /// <summary>开始端口除目标外再声明一个带固定值的端口。</summary>

@@ -168,7 +168,8 @@ internal sealed class TaskRuntime : INodeContext
     private bool AtLimit(RuntimeExecutable node) =>
         LimitOf(node) is { } limit && node.Executions >= limit;
 
-    /// <summary>把执行节点启动一次。调用者应先用 <see cref="CanStart"/> 判定。</summary>
+    /// <summary>把执行节点启动一次。调用者应先用 <see cref="CanStart"/> 判定。
+    /// 强制重跑沿用上一次的输入侧组，其余启动取驱动判定的组。</summary>
     private void Start(RuntimeExecutable node)
     {
         if (Graph.PlanOf(node.Path) is not { } plan)
@@ -176,6 +177,10 @@ internal sealed class TaskRuntime : INodeContext
             return;
         }
 
+        int group = node.RerunRequested && node.LastInputGroup is { } last
+            ? last
+            : NodeReadiness.DrivenGroup(plan, node, this) ?? node.LastInputGroup ?? 0;
+        node.RecordInputGroup(group);
         node.AddActive();
         node.ClearRerun();
         node.Consume(plan, this);

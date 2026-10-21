@@ -433,6 +433,7 @@ public sealed class NodeLibraryTests
     [InlineData(DuplicateSlotDeclaration, "模型槽位 甲 重复")]
     [InlineData(BlankSlotDeclaration, "模型槽位名不能为空")]
     [InlineData(UnknownSlotBinding, "不在容器 交付 上")]
+    [InlineData(LibraryContainerWithInputDefault, "容器输入端口 计划 不支持默认值")]
     public void Invalid_library_fails_loading(string flowsJson, string expected)
     {
         ErrorOr<TestEnvironment> environment = TestEnvironment.TryCreate(flowsJson);
@@ -496,6 +497,41 @@ public sealed class NodeLibraryTests
           ]
         }
         """;
+    /// <summary>库容器定义的输入端口声明默认值，绑定接口没有默认值语义。</summary>
+    private const string LibraryContainerWithInputDefault = """
+        {
+          "Nodes": [
+            { "Name": "执行", "Kind": "Llm" },
+            {
+              "Name": "交付",
+              "Kind": "Container",
+              "Models": ["执行者"],
+              "Inputs": [{ "Name": "计划", "Default": "固定计划" }],
+              "Nodes": [
+                { "Label": "实施", "Use": "执行", "Model": "执行者", "From": [ { "计划": "@计划" } ] }
+              ]
+            }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                    { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@计划" }, "Models": { "执行者": "执行者" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
     /// <summary>库容器内成员的上游接线条目引用环外节点，装配校验拒绝。</summary>
     private const string MemberFromOutOfScope = """
         {

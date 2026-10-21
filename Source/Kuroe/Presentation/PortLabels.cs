@@ -8,8 +8,11 @@ public static class PortLabels
     /// <summary>输出端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
     public static string Label(this Port port) => Format(port.Name, port.Type, port.Description);
 
-    /// <summary>输入端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
-    public static string Label(this InputPort port) => Format(port.Name, port.Type, port.Description);
+    /// <summary>输入端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾，默认值附后。</summary>
+    public static string Label(this InputPort port) =>
+        port.Default is { Length: > 0 } value
+            ? $"{Format(port.Name, port.Type, port.Description)}，默认 {value}"
+            : Format(port.Name, port.Type, port.Description);
 
     /// <summary>一条上游连接的展示：输入名与来源端口。</summary>
     public static string Label(this FromLink link) => $"{link.Input} ← {link.Ref.Display}";

@@ -21,7 +21,8 @@ public sealed record ExecutionInput
     /// <summary>当前节点已启动的执行数，含本次，从 1 起。</summary>
     public int ExecutionCount { get; init; } = 1;
 
-    /// <summary>本轮各输入端口取到的内容：Context 输入端口的取值在最前，其余按入边序，信号输入不取内容。</summary>
+    /// <summary>本轮各输入端口取到的内容：Context 输入端口的取值在最前，其余按生效组内连接序，
+    /// 未连接的默认值按输入声明序追加，信号输入不取内容。</summary>
     public IReadOnlyList<ContextValue> Inputs { get; init; } = [];
 
     /// <summary>节点声明的输出端口，未声明时为空。</summary>

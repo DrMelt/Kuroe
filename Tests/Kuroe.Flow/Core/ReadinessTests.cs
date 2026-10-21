@@ -44,6 +44,31 @@ public sealed class ReadinessTests
         Assert.True(NodeReadiness.Ready(plan, node, sources));
     }
 
+    /// <summary>生效组取有驱动来源的齐备组，不是第一个齐备组。</summary>
+    [Fact]
+    public void Driven_group_returns_the_group_with_a_fresh_source()
+    {
+        (NodeInputPlan plan, FakeSources sources, RuntimeExecutable node) = TwoGroups();
+
+        sources.Of("节点1").Publish();
+        sources.Of("节点2").Publish();
+        node.Consume(plan, sources);
+        sources.Of("节点2").Publish();
+
+        Assert.Equal(1, NodeReadiness.DrivenGroup(plan, node, sources));
+    }
+
+    /// <summary>强制重跑在没有任何齐备组时也能启动。</summary>
+    [Fact]
+    public void Forced_rerun_is_ready_without_a_driven_group()
+    {
+        (NodeInputPlan plan, FakeSources sources, RuntimeExecutable node) = TwoGroups();
+        node.RequestRerun();
+
+        Assert.Null(NodeReadiness.DrivenGroup(plan, node, sources));
+        Assert.True(NodeReadiness.Ready(plan, node, sources));
+    }
+
     /// <summary>组内必须全部齐备：缺一处时组不齐备，任何组都不成立即不启动。</summary>
     [Fact]
     public void Group_waits_for_every_binding()

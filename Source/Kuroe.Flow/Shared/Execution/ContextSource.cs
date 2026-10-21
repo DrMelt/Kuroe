@@ -43,4 +43,11 @@ public sealed record ContainerPortSource(NodePath Container, PortName Port) : Co
     public override string Label => $"容器「{Container}」端口「{Port}」";
 }
 
+/// <summary>执行节点输入端口声明的默认值。</summary>
+public sealed record DefaultSource(NodePath Node, PortName Port) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => $"节点「{Node}」的端口「{Port}」默认值";
+}
+
 

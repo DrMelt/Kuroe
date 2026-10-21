@@ -2,6 +2,7 @@ using Kuroe.Cli.Views;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph;
+using Kuroe.Presentation;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -16,6 +17,14 @@ public sealed class ViewLabelsTests
         Assert.Equal("已阻塞", ViewLabels.Of(TaskState.Blocked));
         Assert.Equal("已完成", ViewLabels.Of(TaskState.Done));
         Assert.Equal("已取消", ViewLabels.Of(TaskState.Canceled));
+    }
+
+    [Fact]
+    public void Input_port_label_shows_its_default()
+    {
+        InputPort port = new(new PortName("背景"), PortType.Text, "可选背景", "固定背景");
+
+        Assert.Equal("背景：可选背景，默认 固定背景", port.Label());
     }
 
     [Fact]

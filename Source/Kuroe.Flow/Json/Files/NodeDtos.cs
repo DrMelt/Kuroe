@@ -55,7 +55,7 @@ public sealed class NodeDto
     public List<NodeDto>? Nodes { get; set; }
 }
 
-/// <summary>端口的对象形状：输出端口写 Name 与 Type，容器输出端口写 Name 与 Ref，输入端口写 Name 与可选 Type，键名与读侧一致。</summary>
+/// <summary>端口的对象形状：输出端口写 Name 与 Type，容器输出端口写 Name 与 Ref，输入端口写 Name 与可选 Type、Default，键名与读侧一致。</summary>
 public sealed class PortEntryDto
 {
     /// <summary>端口名。</summary>
@@ -72,6 +72,9 @@ public sealed class PortEntryDto
 
     /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交的任务目标。</summary>
     public string? Value { get; set; }
+
+    /// <summary>输入端口的默认值，来源组没有连接该端口时提供内容。</summary>
+    public string? Default { get; set; }
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>

@@ -49,7 +49,7 @@ static class FlowWriter
         return entries;
     }
 
-    /// <summary>把输入端口表转回文件形状：条目写 Name 与 Type，说明写 Description。</summary>
+    /// <summary>把输入端口表转回文件形状：条目写 Name 与 Type，说明写 Description，默认值写 Default。</summary>
     private static List<JsonElement>? ToInputDtos(IReadOnlyList<InputPort> inputs)
     {
         if (inputs.Count == 0)
@@ -61,7 +61,13 @@ static class FlowWriter
         foreach (InputPort input in inputs)
         {
             entries.Add(JsonSerializer.SerializeToElement(
-                new PortEntryDto { Name = input.Name.Value, Type = input.Type, Description = input.Description },
+                new PortEntryDto
+                {
+                    Name = input.Name.Value,
+                    Type = input.Type,
+                    Description = input.Description,
+                    Default = input.Default,
+                },
                 FlowJson.Default.PortEntryDto));
         }
 

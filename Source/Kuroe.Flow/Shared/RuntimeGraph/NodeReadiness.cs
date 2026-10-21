@@ -24,18 +24,31 @@ public static class NodeReadiness
         return null;
     }
 
-    /// <summary>是否可启动：执行次数未达上限，且有重跑意图或组齐备且有驱动来源的新版本。</summary>
+    /// <summary>是否可启动：执行次数未达上限，且有重跑意图或存在驱动来源有新版本的齐备组。</summary>
     public static bool Ready(NodeInputPlan plan, IInputProgress progress, IReadinessSources sources) =>
         progress.Executions < plan.MaxExecutions
-        && (progress.ForceRerun || Driven(plan, progress, sources));
+        && (progress.ForceRerun || DrivenGroup(plan, progress, sources) is not null);
 
-    /// <summary>版本驱动：任一组齐备且该组的驱动来源有新版本，组内有信号绑定时只认信号来源。</summary>
-    private static bool Driven(NodeInputPlan plan, IInputProgress progress, IReadinessSources sources) =>
-        plan.Groups.Any(group =>
-            group.Bindings.All(binding => sources.Source(binding.Source).Released)
-            && (group.DrivenBySignals
-                ? group.Signals.Any(binding => Fresh(binding, progress, sources))
-                : group.Bindings.Any(binding => Fresh(binding, progress, sources))));
+    /// <summary>第一个由来源新版本驱动的齐备组序号，没有这样的组时为空。</summary>
+    public static int? DrivenGroup(NodeInputPlan plan, IInputProgress progress, IReadinessSources sources)
+    {
+        for (int index = 0; index < plan.Groups.Count; index++)
+        {
+            if (Driven(plan.Groups[index], progress, sources))
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>组是否齐备且有驱动来源的新版本，组内有信号绑定时只认信号来源。</summary>
+    private static bool Driven(InputGroup group, IInputProgress progress, IReadinessSources sources) =>
+        group.Bindings.All(binding => sources.Source(binding.Source).Released)
+        && (group.DrivenBySignals
+            ? group.Signals.Any(binding => Fresh(binding, progress, sources))
+            : group.Bindings.Any(binding => Fresh(binding, progress, sources)));
 
     /// <summary>一条绑定相对消费账是否有新版本。</summary>
     private static bool Fresh(InputBinding binding, IInputProgress progress, IReadinessSources sources)

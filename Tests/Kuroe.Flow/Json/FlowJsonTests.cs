@@ -107,6 +107,7 @@ public sealed class FlowJsonTests
         Assert.DoesNotContain("\"Type\"", text);
         Assert.DoesNotContain("\"Description\"", text);
         Assert.DoesNotContain("\"Value\"", text);
+        Assert.DoesNotContain("\"Default\"", text);
     }
 
     /// <summary>写侧缩进输出，非 ASCII 字符不转义，节点类型写成枚举名字。</summary>

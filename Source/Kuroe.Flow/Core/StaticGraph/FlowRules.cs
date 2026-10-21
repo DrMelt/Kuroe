@@ -217,7 +217,7 @@ public static class FlowRules
         }
     }
 
-    /// <summary>校验上游启动组：组覆盖声明的输入端口、来源节点存在、端口存在、容器封装不泄漏。</summary>
+    /// <summary>校验上游启动组：组覆盖不带默认值的输入端口、来源节点存在、端口存在、容器封装不泄漏。</summary>
     private static void CheckFromGroups(NodeSpec node, NodeScope scope, List<Error> errors)
     {
         if (node.Nodes is { Count: > 0 })
@@ -226,6 +226,7 @@ public static class FlowRules
         }
 
         var declared = new HashSet<PortName>([.. node.Inputs.Select(port => port.Name)]);
+        var required = new HashSet<PortName>([.. node.Inputs.Where(port => port.Default is null).Select(port => port.Name)]);
         if (declared.Count > 0 && node.From.Count == 0)
         {
             errors.Add(scope.Node(node.Label.Value, "声明输入端口的节点必须至少给出一组 From 启动条件。"));
@@ -248,9 +249,9 @@ public static class FlowRules
                 }
             }
 
-            if (declared.Count > 0)
+            if (required.Count > 0)
             {
-                foreach (PortName missing in declared.Where(port => !covered.Contains(port)))
+                foreach (PortName missing in required.Where(port => !covered.Contains(port)))
                 {
                     errors.Add(scope.Node(node.Label.Value, $"From 组没有覆盖输入端口 {missing.Value}。"));
                 }

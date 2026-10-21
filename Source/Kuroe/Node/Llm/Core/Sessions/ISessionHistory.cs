@@ -56,6 +56,7 @@ internal sealed class ExecutionHistory(ExecutionInput input) : ISessionHistory
         ExecutionSource source => $"节点「{source.Node}」的端口「{source.Port}」产出：\n{value.Text}",
         ContainerPortSource source => $"节点「{source.Container}」的端口「{source.Port}」产出：\n{value.Text}",
         InputSource source => $"节点「{source.Node}」的输入：\n{value.Text}",
+        DefaultSource source => $"节点「{source.Node}」的端口「{source.Port}」默认值：\n{value.Text}",
         _ => value.Text,
     };
 }

@@ -15,6 +15,9 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>引用的模型选择解析结果：输入节点不启动执行，为空。</summary>
     public required ModelDefinition? Model { get; init; }
 
+    /// <summary>执行节点的输入端口表：名字、类型与默认值，类型决定来源产出如何进入本节点。</summary>
+    public IReadOnlyList<InputPort> Inputs { get; init; } = [];
+
     /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
 

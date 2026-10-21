@@ -5,8 +5,8 @@ using Kuroe.Flow.RuntimeNodes;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>为执行节点装配执行输入：按入边取各输入端口的内容与出处，装配规则集中在一处。
-/// 信号输入不取内容，Context 输入端口的取值置于最前，其余按入边序。</summary>
+/// <summary>为执行节点装配执行输入：按生效组的入边取各输入端口的内容与出处，未连接的 Text 默认端口追加声明值。
+/// 信号输入不取内容，Context 输入端口的取值置于最前，其余按组内连接序。</summary>
 internal static class ExecutionInputFactory
 {
     /// <summary>单条取值文本的上限。</summary>
@@ -17,8 +17,11 @@ internal static class ExecutionInputFactory
     {
         List<ContextValue> contextInput = [];
         List<ContextValue> values = [];
-        foreach (FlowEdge edge in task.Graph.Incoming(node.Path))
+        HashSet<PortName> connected = [];
+        int group = node.LastInputGroup ?? 0;
+        foreach (FlowEdge edge in task.Graph.Incoming(node.Path).Where(edge => edge.Group == group))
         {
+            connected.Add(edge.TargetInput);
             if (edge.Type == PortType.Signal)
             {
                 // 信号输入不取内容，来源产出不进输入，只作启动信号
@@ -30,6 +33,16 @@ internal static class ExecutionInputFactory
             {
                 target.Add(Truncate(value));
             }
+        }
+
+        foreach (InputPort port in node.Executable.Inputs)
+        {
+            if (connected.Contains(port.Name) || port.Type != PortType.Text || port.Default is not { Length: > 0 } text)
+            {
+                continue;
+            }
+
+            values.Add(Truncate(new ContextValue(new DefaultSource(node.Path, port.Name), text)));
         }
 
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于取值最前

@@ -49,6 +49,15 @@ public sealed class NodePortTests
     }
 
     [Fact]
+    public void Executable_keeps_declared_input_defaults()
+    {
+        InputPort input = new(new PortName("背景"), PortType.Text, null, "固定背景");
+        ExecutableNode executable = Executable([]) with { Inputs = [input] };
+
+        Assert.Equal("固定背景", Assert.Single(executable.Inputs).Default);
+    }
+
+    [Fact]
     public void Executable_without_ports_to_submit_has_no_model_output()
     {
         ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortType.Context)]);

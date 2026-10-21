@@ -31,6 +31,18 @@ public static class NodeInterfaceRules
             {
                 fail($"输出端口 {port} 的类型只能是 {Types(declared.OutputTypes)}。");
             }
+
+            foreach (Flow.InputPort port in node.Inputs.Where(port => port.Default is not null))
+            {
+                if (!declared.DispatchesExecutions || port.Type != Flow.PortType.Text)
+                {
+                    fail($"输入端口 {port.Name.Value} 的默认值只用于派发执行的节点的 Text 输入端口。");
+                }
+                else if (string.IsNullOrWhiteSpace(port.Default))
+                {
+                    fail($"输入端口 {port.Name.Value} 的默认值不能为空。");
+                }
+            }
         }
 
         if (node.Spec is null || shape is { DispatchesExecutions: false })

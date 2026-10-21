@@ -245,6 +245,7 @@ internal sealed class FlowCompiler
             Type = TypeOf(entry),
             Model = entry.Model is { } model ? _models[model] : null,
             Spec = spec,
+            Inputs = entry.Inputs,
             Outputs = entry.Outputs,
             MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
         };

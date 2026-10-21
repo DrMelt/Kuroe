@@ -355,7 +355,7 @@ public sealed class FlowRuleTests
                     }),
                 Models("执行者"))));
 
-    /// <summary>每套绑定方案都必须覆盖全部输入端口：两套方案任一齐备即启动，规则接受这种写法。</summary>
+    /// <summary>每套绑定方案都必须覆盖不带默认值的输入端口：两套方案任一齐备即启动，规则接受这种写法。</summary>
     [Fact]
     public void Alternative_groups_are_accepted() =>
         Assert.Empty(Errors(Flow(
@@ -379,6 +379,91 @@ public sealed class FlowRuleTests
                     ],
                 }),
             Models("执行者"))));
+
+    /// <summary>带默认值的输入端口可以不出现在 From 组里。</summary>
+    [Fact]
+    public void Group_may_omit_input_with_default() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Text("准备", "执行者") with { Outputs = [P("结论")] },
+                Exec("实施", "执行者", new ExecutableSpec()) with
+                {
+                    Inputs = [In("结论"), Defaulted("背景", "固定背景")],
+                    From = [Ref("准备", "结论")],
+                }),
+            Models("执行者"))));
+
+    /// <summary>没有默认值的输入端口仍必须由每个组覆盖。</summary>
+    [Fact]
+    public void Group_still_covers_input_without_default() =>
+        Assert.Equal(
+            [NodeError("实施", "From 组没有覆盖输入端口 依据。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("准备", "执行者") with { Outputs = [P("结论")] },
+                    Exec("实施", "执行者", new ExecutableSpec()) with
+                    {
+                        Inputs = [In("结论"), In("依据")],
+                        From = [Ref("准备", "结论")],
+                    }),
+                Models("执行者"))));
+
+    /// <summary>默认值只用于 Text 输入端口，Context 输入端口不能声明。</summary>
+    [Fact]
+    public void Default_on_context_input_is_rejected() =>
+        Assert.Equal(
+            [NodeError("实施", "输入端口 结论 的默认值只用于派发执行的节点的 Text 输入端口。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("准备", "执行者") with { Outputs = [P("结论")] },
+                    Exec("实施", "执行者", new ExecutableSpec()) with
+                    {
+                        Inputs = [new InputPort(PN("结论"), PortType.Context, null, "固定背景")],
+                        From = [Context("准备", "结论")],
+                    }),
+                Models("执行者"))));
+
+    /// <summary>默认值只用于 Text 输入端口，Signal 输入端口不能声明。</summary>
+    [Fact]
+    public void Default_on_signal_input_is_rejected() =>
+        Assert.Equal(
+            [NodeError("实施", "输入端口 结论 的默认值只用于派发执行的节点的 Text 输入端口。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("准备", "执行者") with { Outputs = [P("结论")] },
+                    Exec("实施", "执行者", new ExecutableSpec()) with
+                    {
+                        Inputs = [new InputPort(PN("结论"), PortType.Signal, null, "固定背景")],
+                        From = [Signal("准备", "结论")],
+                    }),
+                Models("执行者"))));
+
+    /// <summary>默认值不能是空白文本。</summary>
+    [Fact]
+    public void Blank_input_default_is_rejected() =>
+        Assert.Equal(
+            [NodeError("实施", "输入端口 背景 的默认值不能为空。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("准备", "执行者") with { Outputs = [P("结论")] },
+                    Exec("实施", "执行者", new ExecutableSpec()) with
+                    {
+                        Inputs = [In("结论"), Defaulted("背景", "  ")],
+                        From = [Ref("准备", "结论")],
+                    }),
+                Models("执行者"))));
+
+    /// <summary>容器输入端口是绑定接口，不声明默认值。</summary>
+    [Fact]
+    public void Container_input_default_is_rejected() =>
+        Assert.Equal(
+            [NodeError("整体", "容器输入端口 计划 不支持默认值。")],
+            Errors(Flow(
+                Container("整体", Text("干活", "执行者")) with
+                {
+                    Inputs = [new InputPort(PN("计划"), PortType.Text, null, "固定计划")],
+                },
+                Models("执行者"))));
 
     /// <summary>输入端口名在同一节点内唯一，与输出端口同一份规则。</summary>
     [Fact]
@@ -432,6 +517,10 @@ public sealed class FlowRuleTests
     /// <summary>输入端口声明，未写类型时按 Text。</summary>
     private static InputPort In(string name, PortType type = PortType.Text) =>
         new(new PortName(name), type);
+
+    /// <summary>带默认值的 Text 输入端口声明。</summary>
+    private static InputPort Defaulted(string name, string value) =>
+        new(new PortName(name), PortType.Text, null, value);
 
     /// <summary>命名端口的引用名。</summary>
     private static PortName PN(string name) => new(name);

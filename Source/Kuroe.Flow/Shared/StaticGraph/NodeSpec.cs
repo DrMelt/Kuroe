@@ -43,7 +43,8 @@ public sealed record NodeSpec
     public NodeName? Use { get; init; }
 
     /// <summary>输入端口声明：执行节点与容器共用，容器由引用处绑定，执行节点由自身 From 绑定；
-    /// 成员用 @端口 引用容器传入端口。</summary>
+    /// 成员用 @端口 引用容器传入端口。派发执行节点的 Text 输入端口可声明默认值，
+    /// 默认值在 From 组没有连接该端口时提供内容。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
     /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员标签@端口 精确取成员命名段。

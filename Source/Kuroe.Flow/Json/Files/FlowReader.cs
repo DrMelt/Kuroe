@@ -613,7 +613,7 @@ static class FlowReader
         return errors.Count > 0 ? errors : result;
     }
 
-    /// <summary>解析输入端口表：条目写 Name 与可选 Type、Description，成员与执行节点都用它声明目标侧输入。</summary>
+    /// <summary>解析输入端口表：条目写 Name 与可选 Type、Description、Default，成员与执行节点都用它声明目标侧输入。</summary>
     private static ErrorOr<IReadOnlyList<InputPort>> ToInputs(
         List<JsonElement>? entries,
         NodeScope scope,
@@ -630,13 +630,14 @@ static class FlowReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(nodeLabel, "输入端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
+                errors.Add(scope.Node(nodeLabel, "输入端口条目必须是带 Name 的对象，类型写 Type，说明写 Description，默认值写 Default。"));
                 continue;
             }
 
             string? declaredName = null;
             PortType? declaredType = null;
             string? declaredDescription = null;
+            string? declaredDefault = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -680,8 +681,20 @@ static class FlowReader
                         }
                         break;
 
+                    case "default":
+                        if (property.Value.ValueKind != JsonValueKind.String)
+                        {
+                            errors.Add(scope.Node(nodeLabel, "输入端口的 Default 键必须是文本。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            declaredDefault = property.Value.GetString();
+                        }
+                        break;
+
                     default:
-                        errors.Add(scope.Node(nodeLabel, $"输入端口不认识键 {property.Name}，条目写 Name、Type 与 Description。"));
+                        errors.Add(scope.Node(nodeLabel, $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Default。"));
                         invalid = true;
                         break;
                 }
@@ -699,7 +712,11 @@ static class FlowReader
                 continue;
             }
 
-            result.Add(new InputPort(parsedName.Value, declaredType ?? PortType.Text, ToDescription(declaredDescription)));
+            result.Add(new InputPort(
+                parsedName.Value,
+                declaredType ?? PortType.Text,
+                ToDescription(declaredDescription),
+                declaredDefault));
         }
 
         return errors.Count > 0 ? errors : result;

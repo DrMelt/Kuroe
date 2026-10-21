@@ -26,6 +26,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
 
     private bool _canceled;
     private bool _rerunRequested;
+    private int? _lastInputGroup;
     private long _stamp;
 
     /// <summary>在跑的执行数。推进时经 AddActive 与 ReleaseActive 改动。</summary>
@@ -48,6 +49,12 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : NodeRuntime
 
     /// <summary>被作废的重跑目标：下一次启动判定越过就绪条件直接重启一次。</summary>
     public bool RerunRequested => _rerunRequested;
+
+    /// <summary>上一次启动使用的输入侧组序号，强制重跑按它装配输入。</summary>
+    public int? LastInputGroup => _lastInputGroup;
+
+    /// <summary>记下本次启动使用的输入侧组序号。</summary>
+    public void RecordInputGroup(int group) => _lastInputGroup = group;
 
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;

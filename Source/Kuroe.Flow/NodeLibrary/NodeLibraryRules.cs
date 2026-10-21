@@ -227,6 +227,11 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(container.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
+        foreach (InputPort port in container.Inputs.Where(port => port.Default is not null))
+        {
+            errors.Add(NodeScope.Library.Node(container.Label.Value, $"容器输入端口 {port.Name} 不支持默认值。"));
+        }
+
         var subtreeLabels = new HashSet<NodeLabel>();
         CollectSubtreeLabels(members, byName, subtreeLabels);
 
