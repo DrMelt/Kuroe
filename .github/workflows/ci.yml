@@ -40,7 +40,7 @@ jobs:
             done
       - run: dotnet build Kuroe.slnx -c Release
       - run: dotnet test Kuroe.slnx -c Release --no-build --logger trx --results-directory TestResults
-      - run: dotnet publish Source/Kuroe.Cli -c Release --no-build -o artifacts
+      - run: dotnet publish Source/Kuroe.Cli -c Release --no-build -p:UseAppHost=false -o artifacts
       - if: always()
         uses: actions/upload-artifact@v7
         with:
