@@ -14,9 +14,9 @@ sealed class CatalogStore(string file, string baseDirectory)
     /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
     public string BaseDirectory => _baseDirectory;
 
-    /// <summary>路径是否指向目录文件本身，比较规则随平台。</summary>
+    /// <summary>路径是否指向目录文件本身，比较忽略大小写。</summary>
     public bool IsCatalogFile(string path) => string.Equals(Path.GetFullPath(path), _file,
-        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        StringComparison.OrdinalIgnoreCase);
 
     /// <summary>读取目录文件，文件不存在时得到空目录。</summary>
     public ErrorOr<CatalogContents> Load() =>

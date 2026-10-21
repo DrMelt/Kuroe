@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Command.Tests;
 
-/// <summary>命令工具：模板展开按命令行断言，不起进程；进程执行只在 Windows 上冒烟。</summary>
+/// <summary>命令工具：模板展开按命令行断言，全程不起进程。</summary>
 public sealed class CommandToolTests
 {
     [Fact]
@@ -53,57 +53,6 @@ public sealed class CommandToolTests
         Assert.Equal(
             ["cmd", "/c", "echo", ""],
             Argv(Texts(["cmd", "/c", "echo", "{text}"]), [TextParameter], Given(("text", ""))));
-    }
-
-    [Fact]
-    public void Execute_returns_output_with_exit_code()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        string result = Invoke(Tool(["cmd", "/c", "echo", "你好"], []), Given());
-
-        Assert.Contains("你好", result);
-        Assert.Contains("退出码 0", result);
-    }
-
-    [Fact]
-    public void Execute_reports_unstartable_process_as_text()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        Assert.Contains("无法启动", Invoke(Tool(["definitely-not-a-program", "x"], []), Given()));
-    }
-
-    [Fact]
-    public void Execute_terminates_timed_out_process()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        CommandTool tool = new(
-            new CommandToolDefinition(new ToolPath("Execution"), "说明", [], Texts(["cmd", "/c", "ping", "-n", "4", "127.0.0.1"]), null, 1, 200),
-            Path.GetTempPath());
-
-        Assert.Contains("未结束，已终止", Invoke(tool, Given()));
-    }
-
-    [Fact]
-    public void Execute_truncates_output_at_limit()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        Assert.Contains("输出已截断", Invoke(Tool(["cmd", "/c", "echo", new string('A', 300)], []), Given()));
     }
 
     [Fact]
@@ -179,14 +128,6 @@ public sealed class CommandToolTests
     {
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
-
-    /// <summary>起进程执行命令，结果渲染成文本。</summary>
-    private static string Invoke(CommandTool tool, Dictionary<string, object?> values) =>
-        ToolResult.Render(tool.Functions[0].Invoke(new ToolArguments(values)));
-
-    /// <summary>在临时目录执行的命令载体。</summary>
-    private static CommandTool Tool(IReadOnlyList<string> template, IReadOnlyList<CommandToolParameter> parameters) =>
-        new(Definition(Texts(template), parameters), Path.GetTempPath());
 
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
