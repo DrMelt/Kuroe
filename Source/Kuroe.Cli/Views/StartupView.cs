@@ -38,7 +38,7 @@ internal sealed class StartupView(
         }
 
         lines.Add(new Text("普通输入与常驻对话任务对话；/task new --flow <流程> <目标> 提交任务，按流程启动执行。", Styles.Hint));
-        lines.Add(new Text("/task 打开任务浏览器，任务 → 执行 → 详情逐级进入；/exit 退出，/help 查看命令，Ctrl+C 中断正在进行的回合，不退出程序。", Styles.Hint));
+        lines.Add(new Text("/task 打开任务浏览器，任务 → 执行 → 详情逐级进入；/exit 退出，/help 查看命令。", Styles.Hint));
 
         terminal.Write(Blocks.Section(BoxKind.View, null, new Rows(lines)));
     }

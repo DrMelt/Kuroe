@@ -19,9 +19,6 @@ public static class PendingErrors
     public static Error RoundFailed(IReadOnlyList<string> failures) => Error.Failure("Task.Ask",
         failures.Count > 0 ? string.Join("；", failures) : "本轮对话没有收口。");
 
-    /// <summary>回答等待期间被取消。</summary>
-    public static Error RoundCanceled() => Error.Failure("Task.Ask", "已取消。");
-
     /// <summary>回答内容为空，不构成输入。</summary>
     public static Error EmptyAnswer() => Error.Validation("Task.Answer", "回答内容不能为空。");
 

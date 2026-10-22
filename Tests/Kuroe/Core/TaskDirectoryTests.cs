@@ -131,7 +131,7 @@ public sealed class TaskDirectoryTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
         Assert.False(reply.IsError);
         Assert.False(Directory.Exists(Path.Combine(environment.Root, ".kuroe_tasks")));

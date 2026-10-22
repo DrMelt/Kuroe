@@ -17,7 +17,7 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create(seedCatalog: false);
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
         Assert.True(reply.IsError);
         Assert.Equal("当前未选择模型。", ErrorText(reply));
@@ -30,7 +30,7 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = _ => "回复你好";
         RecordingSink observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -43,8 +43,8 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
         RecordingSink observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer, CancellationToken.None);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer, CancellationToken.None);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -62,11 +62,11 @@ public sealed class DialogueHostTests
             return $"回复{execution.Input.ExecutionCount}";
         };
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
         environment.Settings.Set("Assistant:Language", "English").ThrowIfError();
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
         environment.Dialogue.Reset();
-        ErrorOr<Success> third = await environment.Dialogue.ReplyAsync("第三问", null, CancellationToken.None);
+        ErrorOr<Success> third = await environment.Dialogue.ReplyAsync("第三问", null);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -83,12 +83,12 @@ public sealed class DialogueHostTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
 
         Assert.False(first.IsError, ErrorText(first));
 
         environment.Runner.SubmitsPorts = false;
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
 
         Assert.True(second.IsError);
         Assert.Contains("未收口", ErrorText(second), StringComparison.Ordinal);
@@ -101,8 +101,8 @@ public sealed class DialogueHostTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null, CancellationToken.None);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null, CancellationToken.None);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -120,7 +120,7 @@ public sealed class DialogueHostTests
         List<ExecutionNotice> notices = [];
         environment.Registry.Notified += notices.Add;
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Empty(notices);
@@ -135,7 +135,7 @@ public sealed class DialogueHostTests
 
         for (int round = 1; round <= 8; round++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer, CancellationToken.None);
+            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer);
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -153,7 +153,7 @@ public sealed class DialogueHostTests
             execution.Sink.OnToolCall(new ToolCallRecord("GetLocalTime", "{}", "2026-10-18 19:10:48", false));
         RecordingSink observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["GetLocalTime"], observer.Calls);
@@ -172,7 +172,7 @@ public sealed class DialogueHostTests
         };
         RecordingSink observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer, CancellationToken.None);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);

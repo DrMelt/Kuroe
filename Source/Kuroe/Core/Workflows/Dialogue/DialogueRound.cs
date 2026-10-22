@@ -18,8 +18,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         TaskId id,
         string? nodePath,
         string input,
-        IProcessSink? observer,
-        CancellationToken cancellationToken)
+        IProcessSink? observer)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
@@ -45,7 +44,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
             return [PendingErrors.NoDialogueTarget()];
         }
 
-        ErrorOr<Success> waited = await WaitForAnsweringAsync(task, cancellationToken);
+        ErrorOr<Success> waited = await WaitForAnsweringAsync(task);
         if (waited.IsError)
         {
             return waited.ErrorsOrEmptyList;
@@ -135,23 +134,8 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                     }
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
-                await Task.Delay(20, cancellationToken);
+                await Task.Delay(20);
             }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            task.UnderLock(() =>
-            {
-                foreach (Execution execution in task.Executions.Where(execution => execution.IsLive))
-                {
-                    execution.Cancel();
-                }
-
-                return true;
-            });
-
-            return PendingErrors.RoundCanceled();
         }
         finally
         {
@@ -161,8 +145,8 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
     }
 
     /// <summary>等任务停在一个待回答的节点上：提交后推进循环异步把挂点评估出来，过早回答命中不了输入节点。
-    /// Done 可能是挂点评估前的瞬态，真收口由 DialogueHost 重建兜底，这里只拦截阻塞与取消。</summary>
-    private async Task<ErrorOr<Success>> WaitForAnsweringAsync(WorkTask task, CancellationToken cancellationToken)
+    /// Done 可能是挂点评估前的瞬态，真收口由 DialogueHost 重建兜底，这里只拦截阻塞。</summary>
+    private async Task<ErrorOr<Success>> WaitForAnsweringAsync(WorkTask task)
     {
         while (true)
         {
@@ -177,8 +161,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                 return [PendingErrors.Settled(task.Id, state)];
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            await Task.Delay(20, cancellationToken);
+            await Task.Delay(20);
         }
     }
 

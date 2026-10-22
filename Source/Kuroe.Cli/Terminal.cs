@@ -117,13 +117,6 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     /// <summary>读一行输入，读到流末尾时为空。</summary>
     public static string? ReadLine() => Console.ReadLine();
 
-    /// <summary>订阅 Ctrl+C。中断不结束进程，中断什么由处理器决定。</summary>
-    public static void OnInterrupt(Action handler) => Console.CancelKeyPress += (_, e) =>
-    {
-        e.Cancel = true;
-        handler();
-    };
-
     /// <summary>一行次要提示。浏览与前台流式期间先排队，退出独占后冲刷。</summary>
     public void Notice(string text, Style style)
     {

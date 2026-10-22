@@ -25,8 +25,7 @@ public sealed class DialogueHost(
     /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程增量写给 observer。</summary>
     public async Task<ErrorOr<Success>> ReplyAsync(
         string input,
-        IProcessSink? observer,
-        CancellationToken cancellationToken)
+        IProcessSink? observer)
     {
         if (models.Current is null)
         {
@@ -35,7 +34,7 @@ public sealed class DialogueHost(
 
         TaskId id = EnsureDialogue();
 
-        return await rounds.AskAsync(id, null, input, observer, cancellationToken);
+        return await rounds.AskAsync(id, null, input, observer);
     }
 
     /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>

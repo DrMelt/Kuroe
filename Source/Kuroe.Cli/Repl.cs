@@ -8,7 +8,6 @@ namespace Kuroe.Cli;
 
 /// <summary>终端对话循环。提示符恒定在根层，普通输入全部交给常驻对话任务。</summary>
 internal sealed class Repl(
-    TaskRegistry registry,
     TaskService tasks,
     ReplCommands commands,
     DialogueSink sink,
@@ -20,9 +19,6 @@ internal sealed class Repl(
 {
     public async Task RunAsync()
     {
-        using var cancellation = new CancellationScope(registry, terminal);
-        Terminal.OnInterrupt(cancellation.Cancel);
-
         notifier.Attach();
         startup.Print();
 
@@ -50,7 +46,7 @@ internal sealed class Repl(
                 continue;
             }
 
-            await AskAsync(input, cancellation);
+            await AskAsync(input);
         }
 
         await tasks.ShutdownAsync();
@@ -62,7 +58,7 @@ internal sealed class Repl(
     /// <summary>助手回合的框标题。</summary>
     private const string SourceLabel = "Kuroe 助手";
 
-    private async Task AskAsync(string input, CancellationScope cancellation)
+    private async Task AskAsync(string input)
     {
         ErrorOr<Success> outcome = Result.Success;
         string? failure = null;
@@ -71,12 +67,7 @@ internal sealed class Repl(
         {
             try
             {
-                outcome = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
-            }
-            catch (OperationCanceledException)
-            {
-                terminal.Line("已取消。");
-                return;
+                outcome = await dialogue.ReplyAsync(input, sink);
             }
             catch (Exception ex)
             {
