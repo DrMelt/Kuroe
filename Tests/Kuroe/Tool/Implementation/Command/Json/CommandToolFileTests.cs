@@ -8,6 +8,7 @@ namespace Kuroe.Tool.Command.Json.Tests;
 public sealed class CommandToolFileTests
 {
     private static readonly CommandToolFile ToolFile = new();
+    private static readonly string[] values = new[] { "src/secret/token.txt" };
 
     [Fact]
     public void File_name_is_tools_json() => Assert.Equal("tools.json", ToolFile.FileName);
@@ -152,7 +153,73 @@ public sealed class CommandToolFileTests
         Assert.True(loaded.Value[0].Definition.Parameters[1].List);
     }
 
+    [Fact]
+    public void Load_accepts_path_parameter_with_access_lists()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "RunDiff",
+                  "Template": ["git", "diff", "--", "{paths}"],
+                  "Parameters": [
+                    { "Name": "paths", "List": true, "Path": true, "Allow": ["src", "docs"], "Deny": ["src/secret"] }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.True(loaded.Value[0].Definition.Parameters[0].List);
+
+        ErrorOr<string> denied = loaded.Value[0].Tool.Functions[0].Invoke(
+            new ToolArguments(new Dictionary<string, object?> { ["paths"] = values }));
+
+        Assert.True(denied.IsError);
+        Assert.Contains("黑名单", denied.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Load_accepts_path_parameter_without_access_lists()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                { "Name": "A", "Template": ["git", "diff", "{path}"], "Parameters": [ { "Name": "path", "Path": true } ] }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+    }
+
+    [Fact]
+    public void Load_accepts_path_parameter_with_execution_directory_inside_work_directory()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "A",
+                  "Directory": "src",
+                  "Template": ["git", "diff", "{path}"],
+                  "Parameters": [ { "Name": "path", "Path": true } ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+    }
+
     [Theory]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p", "Flag": true, "Path": true } ] } ] }""", "不能同时是布尔与路径")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Allow": ["src"] } ] } ] }""", "不是路径参数")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "Allow": [""] } ] } ] }""", "Allow 条目不能为空")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "Deny": ["../outside"] } ] } ] }""", "不在工作目录内")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "Allow": ["bad\u0000dir"] } ] } ] }""", "无法解析为路径")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Directory": "..", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true } ] } ] }""", "必须在工作目录内")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{missing}"] } ] }""", "没有对应的参数声明")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "--flag={files}"], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]

@@ -141,22 +141,32 @@ public sealed class CommandToolFile : IToolFile
             errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"TimeoutSeconds 不能超过 {CommandToolTemplate.MaxTimeoutSeconds} 秒。"));
         }
 
+        string? executionDirectory = workDirectory;
         if (dto.Directory is { Length: > 0 })
         {
             try
             {
-                Path.GetFullPath(dto.Directory, workDirectory);
+                executionDirectory = Path.GetFullPath(dto.Directory, workDirectory);
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
             {
+                executionDirectory = null;
                 errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"Directory {dto.Directory} 无法解析为路径。"));
             }
         }
 
-        ErrorOr<IReadOnlyList<CommandToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters);
+        ErrorOr<IReadOnlyList<CommandToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters, workDirectory);
         if (parameters.IsError)
         {
             errors.AddRange(parameters.ErrorsOrEmptyList);
+        }
+        else if (executionDirectory is not null
+            && parameters.Value.Any(parameter => parameter.Path)
+            && !CommandToolPathAccess.IsUnder(workDirectory, executionDirectory))
+        {
+            errors.Add(CommandToolErrors.Invalid(
+                dto.Name ?? "(未命名)",
+                $"含路径参数的工具执行目录 {dto.Directory} 必须在工作目录内。"));
         }
 
         if (errors.Count > 0)
@@ -185,8 +195,9 @@ public sealed class CommandToolFile : IToolFile
         return dto.Group is { Length: > 0 } group ? $"{group}/{name}" : name;
     }
 
-    /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。</summary>
-    private static ErrorOr<IReadOnlyList<CommandToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos)
+    /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。
+    /// 路径参数不能是布尔，路径规则条目必须在工作目录内。</summary>
+    private static ErrorOr<IReadOnlyList<CommandToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos, string workDirectory)
     {
         List<Error> errors = [];
         List<CommandToolParameter> parameters = [];
@@ -224,10 +235,35 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
+            if (dto.Flag && dto.Path)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 不能同时是布尔与路径。"));
+                continue;
+            }
+
             if (dto.Flag && dto.Required)
             {
                 errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 是布尔开关，不能是必填参数。"));
                 continue;
+            }
+
+            if (!dto.Path && (dto.Allow is not null || dto.Deny is not null))
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 不是路径参数，不能配置 Allow 与 Deny。"));
+                continue;
+            }
+
+            CommandToolPathAccess? access = null;
+            if (dto.Path)
+            {
+                ErrorOr<CommandToolPathAccess> converted = ToPathAccess(tool, dto, workDirectory);
+                if (converted.IsError)
+                {
+                    errors.AddRange(converted.ErrorsOrEmptyList);
+                    continue;
+                }
+
+                access = converted.Value;
             }
 
             parameters.Add(new CommandToolParameter(
@@ -235,10 +271,58 @@ public sealed class CommandToolFile : IToolFile
                 dto.Description ?? $"参数 {dto.Name}",
                 Flag: dto.Flag,
                 Required: dto.Required,
-                List: dto.List));
+                List: dto.List,
+                Path: dto.Path,
+                PathAccess: access));
         }
 
         return errors.Count > 0 ? errors : parameters;
+    }
+
+    /// <summary>装配路径准入规则：白名单与黑名单的条目各自校验，错误一次给出。</summary>
+    private static ErrorOr<CommandToolPathAccess> ToPathAccess(string tool, CommandParameterDto dto, string workDirectory)
+    {
+        List<Error> errors = [];
+        List<string> allow = Entries(tool, "Allow", dto.Allow, workDirectory, errors);
+        List<string> deny = Entries(tool, "Deny", dto.Deny, workDirectory, errors);
+
+        return errors.Count > 0 ? errors : new CommandToolPathAccess(allow, deny);
+    }
+
+    /// <summary>校验路径规则条目：非空、可解析且落在工作目录内。</summary>
+    private static List<string> Entries(string tool, string field, List<string>? entries, string workDirectory, List<Error> errors)
+    {
+        if (entries is null)
+        {
+            return [];
+        }
+
+        foreach (string entry in entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"{field} 条目不能为空。"));
+                continue;
+            }
+
+            string full;
+            try
+            {
+                full = Path.GetFullPath(entry, workDirectory);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"{field} 条目 {entry} 无法解析为路径。"));
+                continue;
+            }
+
+            if (!CommandToolPathAccess.IsUnder(workDirectory, full))
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"{field} 条目 {entry} 不在工作目录内。"));
+            }
+        }
+
+        return entries;
     }
 
     /// <summary>装配模板参数项：字符串项要求非空白，对象项要求 Text 与 OmitWhenMissing 都非空且无未知字段。</summary>

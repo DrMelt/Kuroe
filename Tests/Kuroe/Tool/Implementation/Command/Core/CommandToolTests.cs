@@ -129,6 +129,123 @@ public sealed class CommandToolTests
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
+    [Fact]
+    public void Check_accepts_path_under_root_without_policy()
+    {
+        string root = Root();
+
+        Assert.False(CommandToolPathAccess.Empty.Check(Path.Combine("src", "App.cs"), root, root).IsError);
+        Assert.False(CommandToolPathAccess.Empty.Check("src", root, root).IsError);
+    }
+
+    [Fact]
+    public void Check_rejects_path_outside_root_even_without_policy()
+    {
+        string root = Root();
+        ErrorOr<Success> escaped = CommandToolPathAccess.Empty.Check(Path.Combine("..", "escape.txt"), root, root);
+        ErrorOr<Success> absolute = CommandToolPathAccess.Empty.Check(Path.Combine(root, "..", "escape.txt"), root, root);
+
+        Assert.True(escaped.IsError);
+        Assert.Contains("不在工作目录内", escaped.FirstError.Description, StringComparison.Ordinal);
+        Assert.True(absolute.IsError);
+    }
+
+    [Fact]
+    public void Check_denies_path_in_deny_list_before_allow()
+    {
+        string root = Root();
+        CommandToolPathAccess access = new(["src"], [Path.Combine("src", "secret")]);
+
+        ErrorOr<Success> denied = access.Check(Path.Combine("src", "secret", "token.txt"), root, root);
+
+        Assert.True(denied.IsError);
+        Assert.Contains("黑名单", denied.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Check_rejects_path_outside_allow_list_and_name_prefix()
+    {
+        string root = Root();
+        CommandToolPathAccess access = new(["src"], []);
+
+        ErrorOr<Success> outside = access.Check(Path.Combine("docs", "readme.md"), root, root);
+        ErrorOr<Success> prefix = access.Check(Path.Combine("src2", "readme.md"), root, root);
+
+        Assert.True(outside.IsError);
+        Assert.Contains("白名单", outside.FirstError.Description, StringComparison.Ordinal);
+        Assert.True(prefix.IsError);
+    }
+
+    [Fact]
+    public void Check_accepts_entry_itself_and_subtree()
+    {
+        string root = Root();
+        CommandToolPathAccess access = new(["src"], []);
+
+        Assert.False(access.Check("src", root, root).IsError);
+        Assert.False(access.Check(Path.Combine("src", "dir", "App.cs"), root, root).IsError);
+    }
+
+    [Fact]
+    public void Check_applies_deny_without_allow()
+    {
+        string root = Root();
+        CommandToolPathAccess access = new([], [Path.Combine("docs", "secret")]);
+
+        Assert.False(access.Check(Path.Combine("docs", "readme.md"), root, root).IsError);
+        Assert.True(access.Check(Path.Combine("docs", "secret", "token.txt"), root, root).IsError);
+    }
+
+    [Fact]
+    public void Check_resolves_value_against_execution_directory()
+    {
+        string root = Root();
+        string working = Path.Combine(root, "src");
+        CommandToolPathAccess access = new(["src"], []);
+        CommandToolPathAccess docs = new(["docs"], []);
+
+        Assert.False(access.Check("App.cs", working, root).IsError);
+        Assert.False(docs.Check(Path.Combine("..", "docs", "readme.md"), working, root).IsError);
+        Assert.True(access.Check(Path.Combine("..", "escape.txt"), working, root).IsError);
+    }
+
+    [Fact]
+    public void Execute_rejects_path_list_item_outside_allow_before_starting_process()
+    {
+        string root = Root();
+        CommandToolDefinition definition = PathDefinition(
+            new CommandToolParameter("path", "路径", List: true, Path: true, PathAccess: new(["src"], [])));
+
+        ErrorOr<string> result = Invoke(definition, root, Given(("path", stringArray0)));
+
+        Assert.True(result.IsError);
+        Assert.Contains("docs/b", result.FirstError.Description, StringComparison.Ordinal);
+        Assert.Contains("白名单", result.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Execute_rejects_path_outside_working_directory_before_starting_process()
+    {
+        string root = Root();
+        CommandToolDefinition definition = PathDefinition(new CommandToolParameter("path", "路径", Path: true));
+
+        ErrorOr<string> result = Invoke(definition, root, Given(("path", Path.Combine("..", "escape.txt"))));
+
+        Assert.True(result.IsError);
+        Assert.Contains("不在工作目录内", result.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    /// <summary>临时测试根目录，路径不需要实际存在。</summary>
+    private static string Root() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+    /// <summary>带路径参数的命令定义，程序不存在，校验通过后启动才会失败。</summary>
+    private static CommandToolDefinition PathDefinition(CommandToolParameter parameter) =>
+        new(new ToolPath("Execution"), "说明", [parameter], [new("nonexistent-kuroe-command", null), new("{path}", null)], null, 5, 200);
+
+    /// <summary>通过工具载体调用，路径校验在启动进程前完成。</summary>
+    private static ErrorOr<string> Invoke(CommandToolDefinition definition, string root, Dictionary<string, object?> values) =>
+        new CommandTool(definition, root).Functions[0].Invoke(new ToolArguments(values));
+
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
     {
@@ -178,4 +295,5 @@ public sealed class CommandToolTests
     private static readonly CommandToolParameter PasswordParameter = new("pass", "口令");
     private static readonly CommandToolParameter StagedParameter = new("staged", "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
+    private static readonly string[] stringArray0 = new[] { "src/a", "docs/b" };
 }

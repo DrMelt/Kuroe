@@ -9,16 +9,87 @@ namespace Kuroe.Tool.Command;
 /// <summary>命令模板的展开与执行。模板先按参数项拆分，占位符由实参填充，程序与参数经进程启动，输出文本交回模型。</summary>
 internal static class CommandToolRunner
 {
-    /// <summary>按定义展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。工作目录缺省为项目工作目录根。</summary>
+    /// <summary>按定义校验路径实参、展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。
+    /// baseDirectory 是工作目录根，命令执行目录由定义里的 Directory 相对它解析。</summary>
     public static ErrorOr<string> Execute(CommandToolDefinition definition, string baseDirectory, ToolArguments arguments)
     {
+        string working = WorkingDirectory(definition, baseDirectory);
+
+        Error? rejected = CheckPaths(definition, working, baseDirectory, arguments);
+        if (rejected is not null)
+        {
+            return rejected.Value;
+        }
+
         ErrorOr<IReadOnlyList<string>> argv = definition.CommandLine(arguments);
         if (argv.IsError)
         {
             return argv.ErrorsOrEmptyList;
         }
 
-        return RunProcess(definition, baseDirectory, argv.Value);
+        return RunProcess(definition, working, argv.Value);
+    }
+
+    /// <summary>命令执行目录：Directory 相对工作目录解析，缺省为工作目录根。</summary>
+    private static string WorkingDirectory(CommandToolDefinition definition, string baseDirectory) =>
+        definition.Directory is { Length: > 0 } directory
+            ? Path.GetFullPath(directory, baseDirectory)
+            : baseDirectory;
+
+    /// <summary>校验全部路径实参。列表逐项校验，任一项不通过即返回错误。</summary>
+    private static Error? CheckPaths(
+        CommandToolDefinition definition,
+        string workingDirectory,
+        string rootDirectory,
+        ToolArguments arguments)
+    {
+        foreach (CommandToolParameter parameter in definition.Parameters)
+        {
+            if (!parameter.Path)
+            {
+                continue;
+            }
+
+            CommandToolPathAccess access = parameter.PathAccess ?? CommandToolPathAccess.Empty;
+            ToolName name = new(parameter.Name);
+
+            if (parameter.List)
+            {
+                foreach (string value in arguments.List(name) ?? [])
+                {
+                    Error? rejected = CheckPath(access, value, workingDirectory, rootDirectory);
+                    if (rejected is not null)
+                    {
+                        return rejected;
+                    }
+                }
+
+                continue;
+            }
+
+            if (arguments.Text(name) is { } text)
+            {
+                Error? rejected = CheckPath(access, text, workingDirectory, rootDirectory);
+                if (rejected is not null)
+                {
+                    return rejected;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>校验一个路径值，通过时返回 null。</summary>
+    private static Error? CheckPath(
+        CommandToolPathAccess access,
+        string value,
+        string workingDirectory,
+        string rootDirectory)
+    {
+        ErrorOr<Success> checkedValue = access.Check(value, workingDirectory, rootDirectory);
+
+        return checkedValue.IsError ? checkedValue.FirstError : null;
     }
 
     /// <summary>按定义展开模板得到命令行，第一项是程序本身。返回非空表示中断调用。</summary>
@@ -150,13 +221,9 @@ internal static class CommandToolRunner
         return null;
     }
 
-    /// <summary>启动进程并等待结果，stdout 与 stderr 合并成文本交回，附退出码；超时或启动失败以 ErrorOr 表达。</summary>
-    private static ErrorOr<string> RunProcess(CommandToolDefinition definition, string baseDirectory, IReadOnlyList<string> argv)
+    /// <summary>在工作目录启动进程并等待结果，stdout 与 stderr 合并成文本交回，附退出码；超时或启动失败以 ErrorOr 表达。</summary>
+    private static ErrorOr<string> RunProcess(CommandToolDefinition definition, string working, IReadOnlyList<string> argv)
     {
-        string working = definition.Directory is { Length: > 0 } directory
-            ? Path.GetFullPath(directory, baseDirectory)
-            : baseDirectory;
-
         var startInfo = new ProcessStartInfo
         {
             FileName = argv[0],

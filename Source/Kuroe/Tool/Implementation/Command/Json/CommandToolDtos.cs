@@ -54,6 +54,15 @@ internal sealed class CommandParameterDto
 
     /// <summary>该参数是字符串列表，模型以数组给出。</summary>
     public bool List { get; set; }
+
+    /// <summary>该参数是路径，实参按执行目录解析并限制在工作目录内。</summary>
+    public bool Path { get; set; }
+
+    /// <summary>路径的白名单条目，为空时不限制。</summary>
+    public List<string>? Allow { get; set; }
+
+    /// <summary>路径的黑名单条目，命中即拒绝。</summary>
+    public List<string>? Deny { get; set; }
 }
 
 /// <summary>模板里带省略声明的参数项。Text 是命令行文字，OmitWhenMissing 是关联参数名。</summary>
