@@ -127,11 +127,16 @@ public sealed class CommandRouteTests
     {
         using CliSession cli = new();
         cli.Flows.Run(["/flow", "list"]);
-        Assert.Contains("制定计划", cli.Output.Output);
+        Assert.Contains("默认", cli.Output.Output);
+        Assert.Contains("执行节点", cli.Output.Output);
 
         cli.Flows.Run(["/flow", "show", "默认"]);
+        Assert.Contains("Start", cli.Output.Output);
         Assert.Contains("制定计划", cli.Output.Output);
         Assert.Contains("分配执行", cli.Output.Output);
+        Assert.Contains("上游", cli.Output.Output);
+        Assert.Contains("├", cli.Output.Output);
+        Assert.Contains("└", cli.Output.Output);
     }
 
     [Fact]
@@ -186,7 +191,7 @@ public sealed class CommandRouteTests
         using CliSession cli = new();
         cli.Providers.Run(["/provider", "list"]);
 
-        Assert.Contains("提供商：", cli.Output.Output);
+        Assert.Contains("提供商", cli.Output.Output);
         Assert.Contains("凭据已设置", cli.Output.Output);
     }
 
@@ -247,8 +252,9 @@ public sealed class CommandRouteTests
         using CliSession cli = new();
         cli.Models.Run(["/model", "list"]);
 
-        Assert.Contains("模型：", cli.Output.Output);
-        Assert.Contains("→ test", cli.Output.Output);
+        Assert.Contains("模型", cli.Output.Output);
+        Assert.Contains("test", cli.Output.Output);
+        Assert.Contains("当前", cli.Output.Output);
     }
 
     [Fact]
@@ -257,8 +263,8 @@ public sealed class CommandRouteTests
         using CliSession cli = new();
         cli.Catalogs.Run(["/catalog", "list"]);
 
-        Assert.Contains("提供商：", cli.Output.Output);
-        Assert.Contains("模型：", cli.Output.Output);
+        Assert.Contains("提供商", cli.Output.Output);
+        Assert.Contains("模型", cli.Output.Output);
     }
 
     [Fact]
@@ -327,7 +333,7 @@ public sealed class CommandRouteTests
 
         new ToolCommands([Configured()], cli.Terminal).Run(["/tool", "list"]);
 
-        Assert.Contains("命令工具：", cli.Output.Output);
+        Assert.Contains("模板", cli.Output.Output);
         Assert.Contains("RunDiff", cli.Output.Output);
         Assert.Contains("git diff {path}", cli.Output.Output);
         Assert.Contains("path*", cli.Output.Output);

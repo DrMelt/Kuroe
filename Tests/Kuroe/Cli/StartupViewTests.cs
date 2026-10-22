@@ -14,9 +14,12 @@ public sealed class StartupViewTests
 
         startup.Print();
 
-        Assert.Contains("Kuroe 已启动，当前模型 fake", cli.Output.Output);
+        Assert.Contains("已启动，当前模型 fake", cli.Output.Output);
         Assert.Contains("流程模板 1 条。", cli.Output.Output);
         Assert.Contains("/task new --flow <流程> <目标>", cli.Output.Output);
+        Assert.Contains("Ctrl+C 中断正在进行的回合，不退出程序。", cli.Output.Output);
+        string top = cli.Output.Output.Replace("\r", string.Empty).Split('\n')[0];
+        Assert.Matches("^┌─+┐$", top);
         Assert.DoesNotContain("先 /provider add", cli.Output.Output);
     }
 

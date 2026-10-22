@@ -98,7 +98,7 @@ internal sealed class ReplCommands(
     /// <summary>当前模型无法连接时的注册指引，模型可用时没有输出。</summary>
     public void GuideCurrentModel() => errors.GuideModelRegistration(models, models.Current?.Value);
 
-    /// <summary>各命令族的帮助行按固定顺序汇总，命令列与说明列由栅格对齐。</summary>
+    /// <summary>各命令族的帮助行按固定顺序汇总，命令列与说明列由表格对齐。</summary>
     private void PrintHelp()
     {
         (string Command, string Description)[] rows =
@@ -113,13 +113,12 @@ internal sealed class ReplCommands(
             .. OwnHelp,
         ];
 
-        Grid grid = Terminal.Columns(2, wrapColumns: 1);
+        Table table = Blocks.Table(("命令", false), ("说明", true));
         foreach ((string command, string description) in rows)
         {
-            grid.AddRow(new Text(command, Styles.Key), new Text(description));
+            table.AddRow(new Text(command, Styles.Key), new Text(description));
         }
 
-        terminal.NewLine();
-        terminal.Write(grid);
+        terminal.Write(Blocks.Section(BoxKind.View, "命令", table));
     }
 }

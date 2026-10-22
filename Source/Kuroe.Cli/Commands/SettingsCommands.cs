@@ -68,12 +68,10 @@ internal sealed class SettingsCommands(
 
         foreach (SettingSection section in _settings.Sections)
         {
-            _terminal.Line($"{section.Name}:");
-
-            Grid grid = Terminal.Columns(3, wrapColumns: 1);
+            Table table = Blocks.Table(("设置项", false), ("值", true), ("来源", false));
             foreach (SettingEntry entry in section.Entries)
             {
-                grid.AddRow(
+                table.AddRow(
                     new Text(entry.Name, Styles.Key),
                     new Text(entry.Value),
                     new Text(
@@ -81,7 +79,8 @@ internal sealed class SettingsCommands(
                         entry.FromUserLayer ? Styles.Success : Styles.Hint));
             }
 
-            _terminal.Write(grid);
+            _terminal.NewLine();
+            _terminal.Write(Blocks.Section(BoxKind.View, section.Name, table));
         }
     }
 }

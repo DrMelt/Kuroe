@@ -16,9 +16,9 @@ public sealed class DialogueSinkTests
 
         sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "已写入 5 字符。", false));
 
-        Assert.Contains($"工具 > {Environment.NewLine}WriteFile {{\"path\":\"a.txt\"}}", output.Output);
-        Assert.Contains($"结果 > {Environment.NewLine}已写入 5 字符。", output.Output);
-        Assert.DoesNotContain("失败 >", output.Output);
+        Assert.Contains($"工具 WriteFile {{\"path\":\"a.txt\"}}", output.Output);
+        Assert.Contains("结果 已写入 5 字符。", output.Output);
+        Assert.DoesNotContain("失败 ", output.Output);
     }
 
     [Fact]
@@ -29,8 +29,8 @@ public sealed class DialogueSinkTests
 
         sink.OnToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "被拒绝：缺少参数。", true));
 
-        Assert.Contains($"失败 > {Environment.NewLine}被拒绝：缺少参数。", output.Output);
-        Assert.DoesNotContain("结果 >", output.Output);
+        Assert.Contains("失败 被拒绝：缺少参数。", output.Output);
+        Assert.DoesNotContain("结果 ", output.Output);
     }
 
     [Fact]
@@ -42,6 +42,25 @@ public sealed class DialogueSinkTests
         sink.OnText("我来查看一下。");
         sink.OnToolCall(new ToolCallRecord("ListTools", "{}", "内置对话可用函数与分组", false));
 
-        Assert.Contains($"我来查看一下。{Environment.NewLine}工具 > {Environment.NewLine}ListTools {{}}", output.Output);
+        Assert.Contains($"我来查看一下。{Environment.NewLine}工具 ListTools {{}}", output.Output);
+    }
+
+    [Fact]
+    public void OnToolCall_inside_a_frame_stays_inside_the_borders()
+    {
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
+        output.Profile.Width = 40;
+        DialogueSink sink = new(terminal);
+
+        using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
+        {
+            sink.OnText("我来查看一下。");
+            sink.OnToolCall(new ToolCallRecord("ListTools", "{}", "内置对话可用函数与分组", false));
+        }
+
+        string[] lines = output.Output.Replace("\r", string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Contains(lines, line => line.Contains("│ 我来查看一下。") && line.EndsWith('│'));
+        Assert.Contains(lines, line => line.Contains("│ 工具 ListTools {}") && line.EndsWith('│'));
+        Assert.Contains(lines, line => line.Contains("│ 结果 内置对话可用函数与分组") && line.EndsWith('│'));
     }
 }

@@ -55,7 +55,7 @@ internal sealed class CliSession : IDisposable
 
     public ModelCommands Models => new(Environment.Catalog, Environment.Models, Printer, Terminal, Results, Errors);
 
-    public CatalogCommands Catalogs => new(Environment.Catalog, Printer, Terminal, Results);
+    public CatalogCommands Catalogs => new(Environment.Catalog, Environment.Models, Printer, Terminal, Results);
 
     public FlowCommands Flows => new(Environment.Flows, Terminal, Results);
 
@@ -65,12 +65,13 @@ internal sealed class CliSession : IDisposable
     {
         get
         {
-            TaskListView list = new(Terminal);
-            TaskDetailView detail = new(Terminal, Environment.Pendings);
+            TaskListView list = new(Terminal, Environment.Pendings);
+            TaskOverviewView overview = new(Terminal, Environment.Pendings);
+            TaskTreeView tree = new(Terminal, Environment.Pendings);
             ExecutionDetailView executionView = new(Terminal);
-            TaskBrowser browser = new(Environment.Registry, Environment.Tasks, Environment.Pendings, list, detail, executionView, Terminal, Results);
+            TaskBrowser browser = new(Environment.Registry, Environment.Tasks, Environment.Pendings, list, overview, tree, executionView, Terminal, Results);
 
-            return new TaskCommands(Environment.Registry, Environment.Tasks, Environment.Pendings, list, detail, executionView, browser, Terminal, Results);
+            return new TaskCommands(Environment.Registry, Environment.Tasks, Environment.Pendings, list, overview, tree, executionView, browser, Terminal, Results);
         }
     }
 

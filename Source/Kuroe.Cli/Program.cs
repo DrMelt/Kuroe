@@ -56,7 +56,8 @@ static async Task<int> RunAsync(string? workDirectory)
     services.AddSingleton<DialogueSink>();
     services.AddSingleton<ExecutionNotifier>();
     services.AddSingleton<TaskListView>();
-    services.AddSingleton<TaskDetailView>();
+    services.AddSingleton<TaskOverviewView>();
+    services.AddSingleton<TaskTreeView>();
     services.AddSingleton<ExecutionDetailView>();
     services.AddSingleton<CatalogView>();
     services.AddSingleton<StartupView>();

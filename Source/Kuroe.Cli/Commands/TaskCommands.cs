@@ -15,7 +15,8 @@ internal sealed class TaskCommands(
     TaskService tasks,
     PendingService pendings,
     TaskListView list,
-    TaskDetailView detail,
+    TaskOverviewView overview,
+    TaskTreeView tree,
     ExecutionDetailView executionView,
     TaskBrowser browser,
     Terminal terminal,
@@ -24,10 +25,11 @@ internal sealed class TaskCommands(
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
-        ("/task", "打开任务浏览器，逐级进入执行详情"),
+        ("/task", "打开任务浏览器，进入任务概览与执行详情"),
         ("/task list", "列出任务"),
         ("/task new --flow <流程> <目标>", "按给定流程提交任务"),
-        ("/task show <任务号>", "打印该任务的节点与执行"),
+        ("/task show <任务号>", "打印任务概览与过程记录"),
+        ("/task tree <任务号>", "打印该任务的节点树"),
         ("/task execution <执行号>", "打印该执行的上下文来源与过程"),
         ("/task title <任务号> <文本>", "改任务标题"),
         ("/task approve <任务号>", "批准全部待批准的审批节点"),
@@ -43,7 +45,7 @@ internal sealed class TaskCommands(
 
     public void Run(string[] parts)
     {
-        const string usage = "用法：/task 浏览，/task new --flow <流程> <目标>，/task show <任务号>，/task execution <执行号>，/help 看全部";
+        const string usage = "用法：/task 浏览，/task new --flow <流程> <目标>，/task show <任务号>，/task tree <任务号>，/task execution <执行号>，/help 看全部";
         string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
 
         switch ((subcommand, parts.Length))
@@ -53,6 +55,7 @@ internal sealed class TaskCommands(
                 break;
 
             case ("list", 2):
+                terminal.Page("任务列表");
                 list.Print(registry.Snapshots());
                 break;
 
@@ -62,6 +65,10 @@ internal sealed class TaskCommands(
 
             case ("show", 3) when Number(parts[2], "任务号") is { } task:
                 Show(task);
+                break;
+
+            case ("tree", 3) when Number(parts[2], "任务号") is { } task:
+                ShowTree(task);
                 break;
 
             case ("execution", 3) when Number(parts[2], "执行号") is { } execution:
@@ -209,7 +216,25 @@ internal sealed class TaskCommands(
             return;
         }
 
-        detail.Print(found.Value.Snapshot());
+        TaskSnapshot task = found.Value.Snapshot();
+        terminal.Page($"{task.Id} {task.Title}");
+        overview.Print(task);
+        terminal.NewLine();
+        terminal.Write(Blocks.Section(BoxKind.View, "过程记录", JournalView.Build(task.Journal, task.DroppedJournal)));
+    }
+
+    private void ShowTree(int number)
+    {
+        ErrorOr<WorkTask> found = registry.Find(new TaskId(number));
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        TaskSnapshot task = found.Value.Snapshot();
+        terminal.Page($"{task.Id} {task.Title}");
+        tree.Print(task);
     }
 
     private void ShowExecution(int number)
@@ -229,6 +254,7 @@ internal sealed class TaskCommands(
             return;
         }
 
+        terminal.Page($"{snapshot.Id} {snapshot.Input.Node}");
         executionView.Print(owner.Value.Snapshot(), snapshot);
     }
 

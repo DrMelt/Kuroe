@@ -53,7 +53,7 @@ internal sealed class ModelCommands(
                 break;
 
             case ("list", 2):
-                _printer.PrintModels(_catalog.Snapshot().Models);
+                _printer.PrintModels(_catalog.Snapshot().Models, _models.Current);
                 break;
 
             case (not ("add" or "rm"), 2):

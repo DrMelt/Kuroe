@@ -9,6 +9,7 @@ namespace Kuroe.Cli.Commands;
 /// <summary>/catalog 子命令的解析与执行。</summary>
 internal sealed class CatalogCommands(
     CatalogService catalog,
+    ModelService models,
     CatalogView printer,
     Terminal terminal,
     ResultView results)
@@ -22,6 +23,7 @@ internal sealed class CatalogCommands(
     ];
 
     private readonly CatalogService _catalog = catalog;
+    private readonly ModelService _models = models;
     private readonly CatalogView _printer = printer;
     private readonly Terminal _terminal = terminal;
     private readonly ResultView _results = results;
@@ -36,7 +38,8 @@ internal sealed class CatalogCommands(
             case ("list", 2):
                 CatalogContents contents = _catalog.Snapshot();
                 _printer.PrintProviders(contents.Providers);
-                _printer.PrintModels(contents.Models);
+                _terminal.NewLine();
+                _printer.PrintModels(contents.Models, _models.Current);
                 break;
 
             case ("export", 3):

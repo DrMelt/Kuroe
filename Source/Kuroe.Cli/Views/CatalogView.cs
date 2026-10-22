@@ -18,12 +18,11 @@ internal sealed class CatalogView(Terminal terminal)
             return;
         }
 
-        _terminal.Line("提供商：");
-        Grid grid = Terminal.Columns(3, wrapColumns: 1);
+        Table table = Blocks.Table(("提供商", false), ("端点", true), ("凭据", false));
         foreach (ProviderDefinition provider in providers)
         {
             bool placeholder = CatalogService.IsPlaceholder(provider.ApiKey);
-            grid.AddRow(
+            table.AddRow(
                 new Text(provider.ProviderName.Value, Styles.Key),
                 new Text(provider.BaseAddress.Address.ToString()),
                 new Text(
@@ -31,11 +30,11 @@ internal sealed class CatalogView(Terminal terminal)
                     placeholder ? Styles.Warning : Styles.Success));
         }
 
-        _terminal.Write(grid);
+        _terminal.Write(Blocks.Section(BoxKind.View, $"提供商 {providers.Count} 个", table));
     }
 
-    /// <summary>列出已注册模型及其提供商。</summary>
-    public void PrintModels(IReadOnlyList<ModelDefinition> models)
+    /// <summary>列出已注册模型及其提供商，标记当前模型。</summary>
+    public void PrintModels(IReadOnlyList<ModelDefinition> models, ModelName? current)
     {
         if (models.Count == 0)
         {
@@ -43,15 +42,16 @@ internal sealed class CatalogView(Terminal terminal)
             return;
         }
 
-        _terminal.Line("模型：");
-        Grid grid = Terminal.Columns(2);
+        Table table = Blocks.Table(("模型", false), ("提供商", true), ("当前", false));
         foreach (ModelDefinition model in models)
         {
-            grid.AddRow(
+            bool selected = current is { } name && model.ModelName.Equals(name);
+            table.AddRow(
                 new Text(model.ModelName.Value, Styles.Key),
-                new Text($"→ {model.ProviderName.Value}"));
+                new Text(model.ProviderName.Value),
+                new Text(selected ? "当前" : string.Empty, Styles.Success));
         }
 
-        _terminal.Write(grid);
+        _terminal.Write(Blocks.Section(BoxKind.View, $"模型 {models.Count} 个", table));
     }
 }

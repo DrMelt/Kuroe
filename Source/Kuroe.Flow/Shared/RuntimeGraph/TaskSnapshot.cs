@@ -19,6 +19,7 @@ public sealed record TaskSnapshot(
     IReadOnlyList<ContainerSnapshot> Containers,
     IReadOnlyList<JournalEntry> Journal,
     int DroppedJournal,
+    DateTimeOffset CreatedAt,
     DateTimeOffset LastActivityAt)
 {
     /// <summary>流程的执行节点数。</summary>

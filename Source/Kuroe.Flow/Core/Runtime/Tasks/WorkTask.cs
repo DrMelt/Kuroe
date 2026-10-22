@@ -16,6 +16,7 @@ public sealed class WorkTask : INodeTask
     private const int TitleLimit = 40;
 
     private readonly List<Execution> _executions = [];
+    private readonly DateTimeOffset _createdAt;
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
@@ -27,7 +28,8 @@ public sealed class WorkTask : INodeTask
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
-        _lastActivityAt = DateTimeOffset.UtcNow;
+        _createdAt = DateTimeOffset.UtcNow;
+        _lastActivityAt = _createdAt;
         _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : title;
     }
 
@@ -189,7 +191,7 @@ public sealed class WorkTask : INodeTask
 
             return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
-                projection.Containers(), Journal.Entries, Journal.DroppedEntries, _lastActivityAt);
+                projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }
     }
 

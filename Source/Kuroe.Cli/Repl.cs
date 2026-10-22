@@ -59,38 +59,42 @@ internal sealed class Repl(
     /// <summary>提示符固定在根层，常驻对话任务随时可答。提示符来源行独立，输入从下一行开始。</summary>
     private static string Prompt => "Kuroe >";
 
+    /// <summary>助手回合的框标题。</summary>
+    private const string SourceLabel = "Kuroe 助手";
+
     private async Task AskAsync(string input, CancellationScope cancellation)
     {
-        ErrorOr<Success> outcome;
+        ErrorOr<Success> outcome = Result.Success;
+        string? failure = null;
         using (terminal.Exclusive())
+        using (terminal.OpenFrame(BoxKind.Reply, SourceLabel))
         {
-            terminal.Line("Kuroe 助手> ");
             try
             {
                 outcome = await dialogue.ReplyAsync(input, sink, cancellation.Begin());
             }
             catch (OperationCanceledException)
             {
-                terminal.NewLine();
                 terminal.Line("已取消。");
                 return;
             }
             catch (Exception ex)
             {
-                terminal.NewLine();
-                terminal.Error($"请求失败：{ex.Message}");
-                return;
+                failure = ex.Message;
             }
+        }
+
+        if (failure is not null)
+        {
+            terminal.Error($"请求失败：{failure}");
+            return;
         }
 
         if (outcome.IsError)
         {
             errors.Report(outcome.ErrorsOrEmptyList);
             commands.GuideCurrentModel();
-            return;
         }
-
-        terminal.CloseLine();
     }
 }
 

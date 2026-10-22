@@ -1,3 +1,4 @@
+using Kuroe.Cli.Views;
 using Kuroe.Presentation;
 using Kuroe.Tool.Json;
 using Spectre.Console;
@@ -40,18 +41,16 @@ internal sealed class ToolCommands(
             return;
         }
 
-        terminal.Line("命令工具：");
-        Grid grid = Terminal.Columns(5, wrapColumns: 4);
-        grid.AddRow(
-            new Text("路径", Styles.Hint),
-            new Text("名称", Styles.Hint),
-            new Text("说明", Styles.Hint),
-            new Text("模板", Styles.Hint),
-            new Text("参数", Styles.Hint));
+        Table table = Blocks.Table(
+            ("路径", true),
+            ("名称", false),
+            ("说明", true),
+            ("模板", true),
+            ("参数", true));
 
         foreach (ConfiguredTool tool in configuredTools)
         {
-            grid.AddRow(
+            table.AddRow(
                 new Text(tool.Definition.Path.Value, Styles.Hint),
                 new Text(tool.Definition.Path.Name.Value, Styles.Key),
                 new Text(tool.Definition.Description),
@@ -59,7 +58,6 @@ internal sealed class ToolCommands(
                 new Text(tool.Definition.Parameters.Labels(), Styles.Hint));
         }
 
-        terminal.NewLine();
-        terminal.Write(grid);
+        terminal.Write(Blocks.Section(BoxKind.View, $"命令工具 {configuredTools.Count} 个", table));
     }
 }

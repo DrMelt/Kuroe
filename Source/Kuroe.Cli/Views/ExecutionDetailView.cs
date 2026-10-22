@@ -1,10 +1,11 @@
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Spectre.Console;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>执行详情：头部、输入取值及其出处、逐步过程。</summary>
+/// <summary>执行详情：头部字段、输入取值及其出处、过程记录。</summary>
 internal sealed class ExecutionDetailView(Terminal terminal)
 {
     /// <summary>取值一行能看到的文本长度。</summary>
@@ -15,9 +16,18 @@ internal sealed class ExecutionDetailView(Terminal terminal)
     public void Print(TaskSnapshot task, ExecutionSnapshot execution)
     {
         ExecutionInput input = execution.Input;
-        _terminal.Line($"{execution.Id} · {input.Node} · 第 {input.ExecutionCount} 轮");
-        _terminal.Line($"{task.Id} {task.Title}\u3000节点 {task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}\u3000模型 {(input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
-        _terminal.Line($"状态 {ViewLabels.State(execution)}\u3000{ViewLabels.Clock(execution.StartedAt)} → {ViewLabels.Clock(execution.FinishedAt)}\u3000耗时 {ViewLabels.Elapsed(execution.Elapsed)}");
+        _terminal.Write(Blocks.Section(
+            BoxKind.View,
+            "概要",
+            Blocks.Fields(
+                ("任务", new Text($"{task.Id} {task.Title}")),
+                ("节点", new Text($"{task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}")),
+                ("轮次", new Text($"第 {input.ExecutionCount} 轮")),
+                ("模型", new Text((input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)")),
+                ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
+                ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
+                ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),
+                ("耗时", new Text(ViewLabels.Elapsed(execution.Elapsed), Styles.Hint)))));
 
         foreach (string failure in execution.Failures)
         {
@@ -25,27 +35,31 @@ internal sealed class ExecutionDetailView(Terminal terminal)
         }
 
         _terminal.NewLine();
-        _terminal.Line($"输入取值（{input.Inputs.Count} 条）：");
-        if (input.Inputs.Count == 0)
-        {
-            _terminal.Hint("  没有取到任何来源内容。");
-        }
-
-        foreach (ContextValue value in input.Inputs)
-        {
-            _terminal.Line($"  {value.Origin.Label}");
-            _terminal.Line($"    {OneLine(value.Text)}");
-        }
+        _terminal.Write(Blocks.Section(
+            BoxKind.View,
+            $"输入取值 {input.Inputs.Count} 条",
+            input.Inputs.Count == 0
+                ? new Text("没有取到任何来源内容。", Styles.Hint)
+                : InputTable(input)));
 
         _terminal.NewLine();
-        _terminal.Line("过程：");
-        JournalView.Print(_terminal, execution.Journal, execution.DroppedEntries);
+        _terminal.Write(Blocks.Section(BoxKind.View, "过程记录", JournalView.Build(execution.Journal, execution.DroppedEntries)));
     }
 
-    private static string OneLine(string text)
+    /// <summary>输入取值按出处分组，内容一行内截断。</summary>
+    private static Table InputTable(ExecutionInput input)
     {
-        string flat = text.Replace('\n', ' ').Replace('\r', ' ');
+        Table table = Blocks.Table(("来源", false), ("内容", true));
+        foreach (IGrouping<ContextSource, ContextValue> group in input.Inputs.GroupBy(value => value.Origin))
+        {
+            foreach (ContextValue value in group)
+            {
+                table.AddRow(
+                    new Text(group.Key.Label, Styles.Key),
+                    new Text(ViewLabels.OneLine(value.Text, ValueLimit)));
+            }
+        }
 
-        return flat.Length <= ValueLimit ? flat : string.Concat(flat.AsSpan(0, ValueLimit), "…");
+        return table;
     }
 }

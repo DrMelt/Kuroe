@@ -85,6 +85,7 @@ public sealed class DialogueTests
             [
                 new ToolPath("GetLocalTime"),
                 new ToolPath("KuroeInfo"),
+                new ToolPath("file/read"),
                 new ToolPath("source"),
                 new ToolPath("git/read"),
                 new ToolPath("dotnet/read"),

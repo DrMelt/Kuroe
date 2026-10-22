@@ -1,74 +1,92 @@
 using Kuroe.Flow.Shared.Execution.Process;
+using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace Kuroe.Cli.Views;
 
-/// <summary>过程记录的逐行呈现，任务与执行详情共用。</summary>
+/// <summary>过程记录的表格呈现，任务与执行详情共用。一条调用占两行：调用与结果。</summary>
 internal static class JournalView
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>
     private const int Limit = 40;
 
-    public static void Print(Terminal terminal, IReadOnlyList<JournalEntry> entries, int dropped)
+    public static IRenderable Build(IReadOnlyList<JournalEntry> entries, int dropped)
     {
+        List<IRenderable> lines = [];
         if (dropped > 0)
         {
-            terminal.Hint($"更早的 {dropped} 条记录已丢弃。");
+            lines.Add(new Text($"更早的 {dropped} 条记录已丢弃。", Styles.Hint));
         }
 
         List<JournalEntry> shown = [.. entries.Skip(Math.Max(0, entries.Count - Limit))];
         if (entries.Count > shown.Count)
         {
-            terminal.Hint($"只呈现最近 {shown.Count} 条记录。");
+            lines.Add(new Text($"只呈现最近 {shown.Count} 条记录。", Styles.Hint));
         }
 
         if (shown.Count == 0)
         {
-            terminal.Hint("还没有记录。");
-            return;
+            lines.Add(new Text("还没有记录。", Styles.Hint));
+
+            return new Rows(lines);
         }
 
+        Table table = Blocks.Table(("时间", false), ("类型", false), ("内容", true));
         foreach (JournalEntry entry in shown)
         {
-            string at = ViewLabels.Clock(entry.At);
-            switch (entry)
-            {
-                case PromptEntry prompt:
-                    terminal.ToolCall($"[{at}] 输入 > {prompt.Text}");
-                    break;
+            Add(table, entry);
+        }
 
-                case TextEntry text:
-                    terminal.Line($"[{at}] {text.Text}");
-                    break;
+        lines.Add(table);
 
-                case ToolCallEntry call:
-                    string callLine = call.Call.Arguments.Length == 0
-                        ? call.Call.Name
-                        : $"{call.Call.Name} {call.Call.Arguments}";
+        return new Rows(lines);
+    }
 
-                    terminal.ToolCall($"[{at}] 工具 > ");
-                    terminal.ToolCall($"        {callLine}");
+    private static void Add(Table table, JournalEntry entry)
+    {
+        switch (entry)
+        {
+            case PromptEntry prompt:
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("输入", Styles.Key),
+                    new Text(prompt.Text, Styles.Key));
+                break;
 
-                    if (call.Call.Failed)
-                    {
-                        terminal.Warn($"        失败 > ");
-                        terminal.Warn($"        {call.Call.Outcome}");
-                    }
-                    else
-                    {
-                        terminal.ToolResult($"        结果 > ");
-                        terminal.ToolResult($"        {call.Call.Outcome}");
-                    }
+            case TextEntry text:
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("回复", Styles.Hint),
+                    new Text(text.Text));
+                break;
 
-                    break;
+            case ToolCallEntry call:
+                string invocation = call.Call.Arguments.Length == 0
+                    ? call.Call.Name
+                    : $"{call.Call.Name} {call.Call.Arguments}";
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("工具", Styles.Key),
+                    new Text(invocation, Styles.Key));
+                table.AddRow(
+                    new Text(string.Empty),
+                    new Text(call.Call.Failed ? "失败" : "结果", call.Call.Failed ? Styles.Warning : Styles.Hint),
+                    new Text(call.Call.Outcome, call.Call.Failed ? Styles.Warning : Styles.Hint));
+                break;
 
-                case ErrorEntry error:
-                    terminal.Failure($"[{at}] 错误 > {error.Text}");
-                    break;
+            case ErrorEntry error:
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("错误", Styles.Error),
+                    new Text(error.Text, Styles.Error));
+                break;
 
-                case DiscardedEntry:
-                    terminal.Warn($"[{at}] 本轮未计入上下文。");
-                    break;
-            }
+            case DiscardedEntry:
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("丢弃", Styles.Warning),
+                    new Text("本轮未计入上下文。", Styles.Warning));
+                break;
         }
     }
 }

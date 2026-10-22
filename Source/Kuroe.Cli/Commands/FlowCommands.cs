@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Node.Llm;
 using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
 using Spectre.Console;
@@ -16,6 +16,9 @@ internal sealed class FlowCommands(
     Terminal terminal,
     ResultView results)
 {
+    /// <summary>提问一行能看到的文本长度。</summary>
+    private const int QuestionLimit = 40;
+
     /// <summary>该命令族的帮助行。</summary>
     public static IReadOnlyList<(string Command, string Description)> Help { get; } =
     [
@@ -51,22 +54,32 @@ internal sealed class FlowCommands(
 
     private void List()
     {
-        Grid grid = Terminal.Columns(3, wrapColumns: 2);
-        grid.AddRow(
-            new Text("流程", Styles.Hint),
-            new Text("节点", Styles.Hint),
-            new Text("说明", Styles.Hint));
-
-        foreach (FlowDefinition flow in flows.All())
+        IReadOnlyList<FlowDefinition> all = flows.All();
+        if (all.Count == 0)
         {
-            grid.AddRow(
+            terminal.Hint("流程库为空，用 /flow add <文件> 导入流程。");
+            return;
+        }
+
+        Table table = Blocks.Table(
+            ("流程", false),
+            ("执行节点", false),
+            ("容器", false),
+            ("模型选择", false),
+            ("说明", true));
+
+        foreach (FlowDefinition flow in all)
+        {
+            (int executables, int containers) = Count(flow.RootNode);
+            table.AddRow(
                 new Text(flow.Name.Value, Styles.Key),
-                new Text(string.Join(" → ", FlowCommands.Flatten(flow.RootNode).Select(node => node.Label.Value))),
+                new Text(executables.ToString()),
+                new Text(containers.ToString()),
+                new Text(flow.Models.Count.ToString()),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
-        terminal.NewLine();
-        terminal.Write(grid);
+        terminal.Write(Blocks.Section(BoxKind.View, $"流程 {all.Count} 条", table));
     }
 
     private void Show(string name)
@@ -78,48 +91,27 @@ internal sealed class FlowCommands(
             return;
         }
 
-        ErrorOr<FlowDefinition> found = flows.Find(flowName.Value);
+        ErrorOr<CompiledFlow> found = flows.FindCompiled(flowName.Value);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
             return;
         }
 
-        Grid grid = Terminal.Columns(5, wrapColumns: 5);
-        grid.AddRow(
-            new Text("序号", Styles.Hint),
-            new Text("执行节点", Styles.Hint),
-            new Text("模型", Styles.Hint),
-            new Text("类型", Styles.Hint),
-            new Text("上游与要求", Styles.Hint));
-
-        int index = 0;
-        foreach ((NodeSpec node, int depth) in FlowCommands.Walk(found.Value.RootNode))
-        {
-            if (node.Spec is not null)
-            {
-                grid.AddRow(
-                    new Text($"{index + 1}", Styles.Key),
-                    new Text(new string(' ', depth * 2) + node.Label.Value),
-                    new Text(node.Model?.Value ?? "—"),
-                    new Text(node.EffectiveKind.Value),
-                    new Text(Requirement(node), Styles.Hint));
-                index++;
-            }
-            else if (node.Nodes is { Count: > 0 })
-            {
-                grid.AddRow(
-                    new Text(string.Empty),
-                    new Text(new string(' ', depth * 2) + node.Label),
-                    new Text("容器", Styles.Hint),
-                    new Text(string.Empty),
-                    new Text(string.Empty));
-            }
-        }
+        CompiledFlow compiled = found.Value;
+        terminal.Write(Blocks.Section(
+            BoxKind.View,
+            $"流程 {compiled.Model.Name.Value}",
+            Blocks.Fields(
+                ("执行节点", new Text(compiled.Graph.TotalExecutables.ToString())),
+                ("容器", new Text(compiled.Graph.Containers.Count.ToString())),
+                ("模型选择", new Text(compiled.Model.Models.Count.ToString())),
+                ("说明", new Text(
+                    compiled.Model.Description is { Length: > 0 } description ? description : "—",
+                    Styles.Hint)))));
 
         terminal.NewLine();
-        terminal.Write(grid);
-        terminal.Hint($"开始 {string.Join("、", found.Value.StartOutputs.Select(StartPort))}");
+        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(), Line));
     }
 
     private void Add(string file)
@@ -138,77 +130,125 @@ internal sealed class FlowCommands(
         }
     }
 
-    /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
-    private static string StartPort(Port port) =>
-        port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
-
-    private static string Requirement(NodeSpec node)
+    private static Paragraph Line(GraphNode node) => node switch
     {
-        LlmParameters? parameters = NodeParameterView.Llm(node.Type);
-        List<string> parts = [];
-        if (parameters?.Tools is { Count: > 0 } tools)
+        StartNode start => StartLine(start),
+        ContainerNode container => ContainerLine(container),
+        ExecutableNode executable => ExecutableLine(executable),
+        _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
+    };
+
+    private static Paragraph StartLine(StartNode start)
+    {
+        ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
+        if (start.Outputs.Count > 0)
         {
-            parts.Add($"工具 {string.Join("、", tools)}");
+            line.Add($"端口 {string.Join('、', start.Outputs.Select(port => port.StartLabel()))}", Styles.Hint);
         }
 
-        if (node.Inputs.Count > 0)
-        {
-            parts.Add($"输入 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
-        }
-
-        if (node.From.Count > 0)
-        {
-            parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
-        }
-
-        if (NodeParameterView.Question(node.Type) is { Length: > 0 } question)
-        {
-            parts.Add($"提问 {question}");
-        }
-
-        if (node.Outputs.Count > 0)
-        {
-            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
-        }
-
-        if (parameters?.SystemPrompt is { Count: > 0 } blocks)
-        {
-            parts.Add($"系统指令 {blocks.Count} 块");
-        }
-
-        return parts.Count == 0 ? "—" : string.Join("；", parts);
+        return line.Build();
     }
 
-    /// <summary>递归收集流程里的全部执行节点。</summary>
-    private static IEnumerable<NodeSpec> Flatten(NodeSpec node)
+    private static Paragraph ContainerLine(ContainerNode container)
     {
-        if (node.Nodes is { Count: > 0 } children)
+        ViewLine line = new ViewLine().Add(container.Label.Value, Styles.Key).Add("容器", Styles.Hint);
+        if (container.PortBindings is { Count: > 0 } bindings)
         {
-            foreach (NodeSpec child in children)
+            line.Add($"端口 {string.Join('、', bindings.Keys.Select(port => port.Value))}", Styles.Hint);
+        }
+
+        return line.Build();
+    }
+
+    private static Paragraph ExecutableLine(ExecutableNode executable)
+    {
+        ViewLine line = new ViewLine().Add(executable.Label.Value, Styles.Key).Add(executable.Kind.Value, Styles.Hint);
+        if (executable.Model is { } model)
+        {
+            line.Add($"模型 {ViewLabels.ModelLabel(model)}", Styles.Hint);
+        }
+
+        if (executable.Inputs.Count > 0)
+        {
+            line.Add($"输入 {string.Join('、', executable.Inputs.Select(port => port.Label()))}", Styles.Hint);
+        }
+
+        if (executable.Outputs.Count > 0)
+        {
+            line.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}", Styles.Hint);
+        }
+
+        if (NodeParameterView.Llm(executable.Type) is { } parameters)
+        {
+            if (parameters.Tools is { Count: > 0 } tools)
             {
-                foreach (NodeSpec descendant in Flatten(child))
-                {
-                    yield return descendant;
-                }
+                line.Add($"工具 {string.Join('、', tools.Select(tool => tool.Value))}", Styles.Hint);
+            }
+
+            if (parameters.SystemPrompt is { Count: > 0 } blocks)
+            {
+                line.Add($"系统指令 {blocks.Count} 块", Styles.Hint);
             }
         }
-        else
+
+        if (NodeParameterView.Question(executable.Type) is { Length: > 0 } question)
         {
-            yield return node;
+            line.Add($"提问 {ViewLabels.OneLine(question, QuestionLimit)}", Styles.Hint);
         }
+
+        if (executable.MaxExecutions != ExecutableNode.DefaultMaxExecutions)
+        {
+            line.Add($"上限 {executable.MaxExecutions}", Styles.Hint);
+        }
+
+        string upstream = Upstream(executable.Incoming);
+        if (upstream.Length > 0)
+        {
+            line.Add($"上游 {upstream}", Styles.Hint);
+        }
+
+        return line.Build();
     }
 
-    /// <summary>先根序遍历节点树，附带层级深度供缩进。</summary>
-    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(NodeSpec node, int depth = 0)
+    /// <summary>入边按启动组展开，组内以顿号连接，组间表示任一齐备。</summary>
+    private static string Upstream(IReadOnlyList<FlowEdge> edges) =>
+        string.Join(" 或 ", edges
+            .GroupBy(edge => edge.Group)
+            .OrderBy(group => group.Key)
+            .Select(group => string.Join('、', group.Select(edge =>
+                $"{edge.TargetInput}←{edge.Source}@{edge.SourcePort}"))));
+
+    /// <summary>流程里的执行节点与容器数量。</summary>
+    private static (int Executables, int Containers) Count(NodeSpec root)
     {
-        yield return (node, depth);
+        int executables = 0;
+        int containers = 0;
+        foreach (NodeSpec node in Walk(root))
+        {
+            if (node.IsContainer)
+            {
+                containers++;
+            }
+            else if (node.Spec is not null)
+            {
+                executables++;
+            }
+        }
+
+        return (executables, containers);
+    }
+
+    /// <summary>先根序遍历节点树。</summary>
+    private static IEnumerable<NodeSpec> Walk(NodeSpec node)
+    {
+        yield return node;
         if (node.Nodes is { Count: > 0 } children)
         {
             foreach (NodeSpec child in children)
             {
-                foreach ((NodeSpec descendant, int childDepth) in Walk(child, depth + 1))
+                foreach (NodeSpec descendant in Walk(child))
                 {
-                    yield return (descendant, childDepth);
+                    yield return descendant;
                 }
             }
         }

@@ -1,6 +1,9 @@
+using Kuroe.Cli.Views;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
+using Spectre.Console.Testing;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -29,18 +32,24 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_show_prints_the_detail()
+    public void Task_tree_view_prints_only_the_node_tree()
     {
         using CliSession cli = new();
         cli.Tasks.Run(["/task", "new", "--flow", "默认", "补齐 README"]);
-        cli.Tasks.Run(["/task", "show", "1"]);
+        cli.Environment.Settle(new TaskId(1));
 
-        Assert.Contains("任务 #1", cli.Output.Output);
-        Assert.Contains("目标：补齐 README", cli.Output.Output);
+        Terminal terminal = CliSession.NewTerminal(out TestConsole output, out _);
+        new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
+
+        Assert.Contains("节点", output.Output);
+        Assert.DoesNotContain('┌', output.Output);
+        Assert.DoesNotContain("目标：", output.Output);
+        Assert.DoesNotContain("流程：", output.Output);
+        Assert.DoesNotContain("最近", output.Output);
     }
 
     [Fact]
-    public void Task_show_prints_the_node_table()
+    public void Task_show_prints_the_overview_and_execution_list()
     {
         using CliSession cli = new();
         cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
@@ -48,8 +57,225 @@ public sealed class TaskAndReplTests
 
         cli.Tasks.Run(["/task", "show", "1"]);
 
-        Assert.Contains("制定计划", cli.Output.Output);
-        Assert.Contains("分配执行", cli.Output.Output);
+        Assert.Contains("整体/制定计划", cli.Output.Output);
+        Assert.Contains("执行 #1", cli.Output.Output);
+        Assert.Contains("过程记录", cli.Output.Output);
+        Assert.Contains("── 任务 #1 目标 ", cli.Output.Output);
+        Assert.DoesNotContain("├", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_show_prints_pending_nodes_without_the_tree()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.ReviewFlow);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Tasks.Run(["/task", "show", "1"]);
+
+        Assert.Contains("待批准", cli.Output.Output);
+        Assert.Contains("确认计划", cli.Output.Output);
+        Assert.Contains("过程记录", cli.Output.Output);
+        Assert.DoesNotContain("├", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_tree_prints_a_tree_and_marks_waiting_nodes()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.ReviewFlow);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Tasks.Run(["/task", "tree", "1"]);
+
+        Assert.Contains("├", cli.Output.Output);
+        Assert.Contains("└", cli.Output.Output);
+        Assert.Contains("待批准：确认计划", cli.Output.Output);
+        Assert.Contains("── 任务 #1 目标 ", cli.Output.Output);
+        Assert.DoesNotContain("过程记录", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_tree_view_leaves_the_journal_to_the_command()
+    {
+        using CliSession cli = new();
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        TaskTreeView tree = new(cli.Terminal, cli.Environment.Pendings);
+        tree.Print(cli.Environment.Snapshot(new TaskId(1)));
+
+        Assert.Contains("节点", cli.Output.Output);
+        Assert.Contains("已完成", cli.Output.Output);
+        Assert.DoesNotContain("过程记录", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_browser_opens_the_overview_without_the_tree()
+    {
+        using CliSession cli = new();
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Run(["/task"]);
+
+        Assert.Contains("任务 1 个", cli.Output.Output);
+        Assert.Contains("── 任务列表 › 任务 #1 目标 ", cli.Output.Output);
+        Assert.Contains("查看节点树", cli.Output.Output);
+        Assert.DoesNotContain("├", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_browser_marks_the_task_and_execution_levels()
+    {
+        using CliSession cli = new();
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Run(["/task"]);
+
+        Assert.Contains("› 执行 #1 ", cli.Output.Output);
+        Assert.Contains("概要", cli.Output.Output);
+
+        string[] taskPages = [.. cli.Output.Output.Replace("\r", string.Empty).Split('\n')
+            .Where(line => line.StartsWith("── 任务列表 › 任务 #1 目标 ", StringComparison.Ordinal))
+            .Where(line => !line.Contains("› 执行 #1", StringComparison.Ordinal))];
+        Assert.Equal(2, taskPages.Length);
+    }
+
+    [Fact]
+    public void Task_browser_keeps_the_task_when_the_stop_confirmation_is_not_accepted()
+    {
+        using CliSession cli = new();
+        cli.Environment.Runner.DelayMs = 20000;
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "长任务"]);
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Run(["/task"]);
+
+        Assert.Contains("取消任务 #1？", cli.Output.Output);
+        Assert.Contains("确认取消整个任务", cli.Output.Output);
+        Assert.Equal(TaskState.Running, cli.Environment.Snapshot(new TaskId(1)).State);
+
+        cli.Tasks.Run(["/task", "stop", "1"]);
+    }
+
+    [Fact]
+    public void Task_browser_stops_the_task_after_confirmation()
+    {
+        using CliSession cli = new();
+        cli.Environment.Runner.DelayMs = 20000;
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "长任务"]);
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.UpArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Run(["/task"]);
+
+        Assert.Contains("确认取消整个任务", cli.Output.Output);
+        Assert.Equal(TaskState.Canceled, cli.Environment.Snapshot(new TaskId(1)).State);
+    }
+
+    [Fact]
+    public void Task_browser_lists_waiting_inputs_and_answers_the_selected_node()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.TwoInputFlow);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count == 2);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("reply");
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Run(["/task"]);
+
+        Assert.Contains("选择要回答的节点", cli.Output.Output);
+        Assert.Contains("整体/输入二 · 待输入：问题二", cli.Output.Output);
+        NodePath left = Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer));
+        Assert.Equal("整体/输入一", left.Value);
+    }
+
+    [Fact]
+    public void Task_list_shows_the_creation_time_without_progress()
+    {
+        using CliSession cli = new();
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Tasks.Run(["/task", "list"]);
+
+        Assert.Contains("创建时间", cli.Output.Output);
+        Assert.DoesNotContain("进度", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_list_shows_waiting_node_count()
+    {
+        using CliSession cli = new(flowsJson: TestFlows.ReviewFlow);
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count > 0);
+
+        cli.Tasks.Run(["/task", "list"]);
+
+        string row = cli.Output.Output
+            .Split('\n')
+            .Last(line => line.Contains("#1 "));
+        Assert.Contains("待处理", cli.Output.Output);
+        Assert.Matches(@"执行中\s+1\s+\d{2}:\d{2}:\d{2}", row);
+        Assert.DoesNotContain("整体/审阅", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Task_execution_renders_input_sources()
+    {
+        using CliSession cli = new();
+        cli.Tasks.Run(["/task", "new", "--flow", "默认", "目标"]);
+        cli.Environment.Settle(new TaskId(1));
+
+        cli.Tasks.Run(["/task", "execution", "1"]);
+
+        Assert.Contains("输入取值", cli.Output.Output);
+        Assert.Contains("流程起点端口「目标」", cli.Output.Output);
+        Assert.Contains("来源", cli.Output.Output);
+        Assert.Contains("── 执行 #1 ", cli.Output.Output);
     }
 
     [Fact]
@@ -238,7 +464,7 @@ public sealed class TaskAndReplTests
 
         Assert.Contains("执行 #1", cli.Output.Output);
         Assert.Contains("输入取值", cli.Output.Output);
-        Assert.Contains("过程：", cli.Output.Output);
+        Assert.Contains("过程记录", cli.Output.Output);
     }
 
     [Fact]
@@ -351,10 +577,10 @@ public sealed class TaskAndReplTests
         cli.Repl.Execute("/unset Runtime:Temperature");
 
         Assert.Contains("用户层文件：", cli.Output.Output);
-        Assert.Contains("提供商：", cli.Output.Output);
+        Assert.Contains("提供商", cli.Output.Output);
         Assert.Contains("当前模型 fake。", cli.Output.Output);
         Assert.Contains("还没有任务", cli.Output.Output);
-        Assert.Contains("制定计划", cli.Output.Output);
+        Assert.Contains("执行节点", cli.Output.Output);
         Assert.Contains("没有配置命令工具", cli.Output.Output);
         Assert.Contains("已保存并生效。", cli.Output.Output);
     }
@@ -367,5 +593,20 @@ public sealed class TaskAndReplTests
         cli.Repl.Execute("/TASK LIST");
 
         Assert.Contains("还没有任务", cli.Output.Output);
+    }
+
+    [Fact]
+    public void List_commands_render_inside_a_view_box()
+    {
+        using CliSession cli = new();
+
+        cli.Repl.Execute("/help");
+        cli.Repl.Execute("/flow list");
+        cli.Repl.Execute("/provider list");
+
+        Assert.Contains('┌', cli.Output.Output);
+        Assert.Contains("命令", cli.Output.Output);
+        Assert.Contains("流程 1 条", cli.Output.Output);
+        Assert.Contains("提供商", cli.Output.Output);
     }
 }

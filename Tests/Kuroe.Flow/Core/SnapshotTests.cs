@@ -47,7 +47,7 @@ public sealed class SnapshotTests
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", "目标", Flow, Graph, TaskState.Running, 0,
             [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, []))],
-            states, [], [], 0, DateTimeOffset.UtcNow);
+            states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
     }
 
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };

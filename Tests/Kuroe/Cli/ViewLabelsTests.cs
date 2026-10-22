@@ -68,6 +68,39 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Canceled));
     }
 
+    [Fact]
+    public void Style_of_node_state_picks_the_host_style()
+    {
+        Assert.Equal(Styles.Success, ViewLabels.StyleOf(NodeState.Done));
+        Assert.Equal(Styles.Key, ViewLabels.StyleOf(NodeState.Running));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(NodeState.Blocked));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(NodeState.Pending));
+    }
+
+    [Fact]
+    public void Style_of_execution_state_picks_the_host_style()
+    {
+        Assert.Equal(Styles.Success, ViewLabels.StyleOf(ExecutionState.Succeeded));
+        Assert.Equal(Styles.Error, ViewLabels.StyleOf(ExecutionState.Failed));
+        Assert.Equal(Styles.Key, ViewLabels.StyleOf(ExecutionState.Running));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(ExecutionState.Canceled));
+    }
+
+    [Fact]
+    public void One_line_flattens_newlines_and_truncates()
+    {
+        Assert.Equal("甲 乙", ViewLabels.OneLine("甲\n乙", 10));
+        Assert.Equal("甲乙丙…", ViewLabels.OneLine("甲乙丙丁", 3));
+    }
+
+    [Fact]
+    public void Start_port_label_includes_its_fixed_value()
+    {
+        Port port = new(new PortName("风格"), PortType.Text, Value: "技术文档风格");
+
+        Assert.Equal("风格＝技术文档风格", port.StartLabel());
+    }
+
     private static ExecutionSnapshot Execution(string progress) => new(
         new ExecutionId(1), Input(), ExecutionState.Running, progress,
         DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], 0);
