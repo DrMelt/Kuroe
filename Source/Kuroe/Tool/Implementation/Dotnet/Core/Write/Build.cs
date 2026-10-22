@@ -16,7 +16,7 @@ internal static class Build
         new ToolPath("dotnet/write/Build"),
         "编译项目，project 是项目、解决方案或目录，configuration 是生成配置如 Debug 或 Release。",
         [
-            new CommandToolParameter(Project, "项目、解决方案或目录路径，缺省在项目工作目录里查找"),
+            new CommandToolParameter(Project, "项目、解决方案或目录路径，缺省在项目工作目录里查找", Path: true),
             new CommandToolParameter(Configuration, "生成配置，如 Debug 或 Release，缺省用项目自身的配置"),
         ],
         [

@@ -21,7 +21,7 @@ internal static class Diff
         [
             new CommandToolParameter(Staged, "与暂存区比较而不是与工作树比较，布尔，缺省为假", Flag: true),
             new CommandToolParameter(Revision, "比较的修订号，如 HEAD、main、提交号，缺省与索引比较"),
-            new CommandToolParameter(Paths, "限定查看的文件或目录路径列表，缺省查看全部", List: true),
+            new CommandToolParameter(Paths, "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true),
         ],
         [new("git", null), new("diff", null), new("--staged", Staged), new("{revision}", null), new("--", Paths), new("{paths}", null)]);
 }

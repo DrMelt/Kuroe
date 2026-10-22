@@ -16,7 +16,7 @@ internal static class Test
         new ToolPath("dotnet/write/Test"),
         "运行测试，project 是项目、解决方案或目录，filter 是测试筛选表达式。",
         [
-            new CommandToolParameter(Project, "项目、解决方案或目录路径，缺省在项目工作目录里查找"),
+            new CommandToolParameter(Project, "项目、解决方案或目录路径，缺省在项目工作目录里查找", Path: true),
             new CommandToolParameter(Filter, "测试筛选表达式，如 FullyQualifiedName~Kuroe，缺省运行全部测试"),
         ],
         [

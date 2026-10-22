@@ -17,7 +17,7 @@ internal static class Commit
         "把暂存区的改动提交，message 是提交说明。给 paths 时只提交这些路径的改动。",
         [
             new CommandToolParameter(Message, "提交说明", Required: true),
-            new CommandToolParameter(Paths, "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true),
+            new CommandToolParameter(Paths, "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true, Path: true),
         ],
         [new("git", null), new("commit", null), new("-m", null), new("{message}", null), new("--", Paths), new("{paths}", null)]);
 }

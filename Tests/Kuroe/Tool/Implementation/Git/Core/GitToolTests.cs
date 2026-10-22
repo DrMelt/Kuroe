@@ -175,6 +175,24 @@ public sealed class GitToolTests
     }
 
     [Fact]
+    public void Path_values_are_declared_as_path_parameters()
+    {
+        Assert.All(
+            [
+                ("git/read/Diff", "paths"),
+                ("git/read/Log", "paths"),
+                ("git/write/Add", "paths"),
+                ("git/write/Commit", "paths"),
+                ("git/write/Restore", "paths"),
+            ],
+            entry => Assert.True(CommandParameter(Definition(entry.Item1), entry.Item2).Path));
+
+        Assert.False(CommandParameter(Definition("git/read/Show"), "revision").Path);
+        Assert.False(CommandParameter(Definition("git/write/Switch"), "branch").Path);
+        Assert.False(CommandParameter(Definition("git/write/Commit"), "message").Path);
+    }
+
+    [Fact]
     public void Tools_carry_every_definition()
     {
         IReadOnlyList<ITool> tools = GitTools.Tools(Path.GetTempPath());
@@ -192,6 +210,10 @@ public sealed class GitToolTests
     /// <summary>按名字取参数声明。</summary>
     private static ToolParameter Parameter(CommandToolDefinition definition, string name) =>
         definition.Definition.Parameters.Single(parameter => parameter.Name.Value == name);
+
+    /// <summary>按名字取命令参数声明。</summary>
+    private static CommandToolParameter CommandParameter(CommandToolDefinition definition, string name) =>
+        definition.Parameters.Single(parameter => parameter.Name == name);
 
     /// <summary>按完整路径取模板。</summary>
     private static IReadOnlyList<CommandToolTemplateItem> Template(string path) => Definition(path).Template;
