@@ -1,4 +1,4 @@
-namespace Kuroe.Tool.Command.Model;
+namespace Kuroe.Tool.Command.Shared;
 
 /// <summary>命令工具的一个参数声明。名字是模板占位符与关联参数匹配的依据。</summary>
 /// <param name="Name">参数名。</param>

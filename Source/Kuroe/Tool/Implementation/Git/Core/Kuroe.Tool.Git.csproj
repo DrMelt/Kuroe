@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Command\Core\Kuroe.Tool.Command.csproj" />
+        <ProjectReference Include="..\..\Command\Shared\Kuroe.Tool.Command.Shared.csproj" />
     </ItemGroup>
 
 </Project>

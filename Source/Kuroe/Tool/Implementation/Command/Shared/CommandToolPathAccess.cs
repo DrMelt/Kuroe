@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Tool.Command.Model;
+namespace Kuroe.Tool.Command.Shared;
 
 /// <summary>路径参数的准入规则：目标必须落在工作目录内，白名单与黑名单在此范围内收窄。
 /// 实参按执行目录解析，条目按工作目录解析，匹配按目录段前缀，黑名单优先。不解析符号链接与目录联接点。</summary>

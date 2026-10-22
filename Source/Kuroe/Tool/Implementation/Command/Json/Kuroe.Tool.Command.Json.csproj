@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Core\Kuroe.Tool.Command.csproj" />
+        <ProjectReference Include="..\Shared\Kuroe.Tool.Command.Shared.csproj" />
         <ProjectReference Include="..\..\..\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>

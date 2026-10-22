@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Tool.Command;
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.Git.Tests;

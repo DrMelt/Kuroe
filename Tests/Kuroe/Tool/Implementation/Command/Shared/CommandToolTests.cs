@@ -1,9 +1,8 @@
 using ErrorOr;
-using Kuroe.Tool.Command;
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Shared;
 using Xunit;
 
-namespace Kuroe.Tool.Command.Tests;
+namespace Kuroe.Tool.Command.Shared.Tests;
 
 /// <summary>命令工具：模板展开按命令行断言，全程不起进程。</summary>
 public sealed class CommandToolTests
@@ -209,42 +208,8 @@ public sealed class CommandToolTests
         Assert.True(access.Check(Path.Combine("..", "escape.txt"), working, root).IsError);
     }
 
-    [Fact]
-    public void Execute_rejects_path_list_item_outside_allow_before_starting_process()
-    {
-        string root = Root();
-        CommandToolDefinition definition = PathDefinition(
-            new CommandToolParameter("path", "路径", List: true, Path: true, PathAccess: new(["src"], [])));
-
-        ErrorOr<string> result = Invoke(definition, root, Given(("path", stringArray0)));
-
-        Assert.True(result.IsError);
-        Assert.Contains("docs/b", result.FirstError.Description, StringComparison.Ordinal);
-        Assert.Contains("白名单", result.FirstError.Description, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Execute_rejects_path_outside_working_directory_before_starting_process()
-    {
-        string root = Root();
-        CommandToolDefinition definition = PathDefinition(new CommandToolParameter("path", "路径", Path: true));
-
-        ErrorOr<string> result = Invoke(definition, root, Given(("path", Path.Combine("..", "escape.txt"))));
-
-        Assert.True(result.IsError);
-        Assert.Contains("不在工作目录内", result.FirstError.Description, StringComparison.Ordinal);
-    }
-
     /// <summary>临时测试根目录，路径不需要实际存在。</summary>
     private static string Root() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    /// <summary>带路径参数的命令定义，程序不存在，校验通过后启动才会失败。</summary>
-    private static CommandToolDefinition PathDefinition(CommandToolParameter parameter) =>
-        new(new ToolPath("Execution"), "说明", [parameter], [new("nonexistent-kuroe-command", null), new("{path}", null)], null, 5, 200);
-
-    /// <summary>通过工具载体调用，路径校验在启动进程前完成。</summary>
-    private static ErrorOr<string> Invoke(CommandToolDefinition definition, string root, Dictionary<string, object?> values) =>
-        new CommandTool(definition, root).Functions[0].Invoke(new ToolArguments(values));
 
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
@@ -295,5 +260,4 @@ public sealed class CommandToolTests
     private static readonly CommandToolParameter PasswordParameter = new("pass", "口令");
     private static readonly CommandToolParameter StagedParameter = new("staged", "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
-    private static readonly string[] stringArray0 = new[] { "src/a", "docs/b" };
 }

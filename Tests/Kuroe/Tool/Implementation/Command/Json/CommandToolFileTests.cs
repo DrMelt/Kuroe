@@ -8,7 +8,7 @@ namespace Kuroe.Tool.Command.Json.Tests;
 public sealed class CommandToolFileTests
 {
     private static readonly CommandToolFile ToolFile = new();
-    private static readonly string[] values = new[] { "src/secret/token.txt" };
+    private static readonly string[] values = ["src/secret/token.txt"];
 
     [Fact]
     public void File_name_is_tools_json() => Assert.Equal("tools.json", ToolFile.FileName);

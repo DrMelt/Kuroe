@@ -1,4 +1,4 @@
-using Kuroe.Tool.Command.Model;
+using Kuroe.Tool.Command.Shared;
 
 namespace Kuroe.Tool.Git.Read;
 
