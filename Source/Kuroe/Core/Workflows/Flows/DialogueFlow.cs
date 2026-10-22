@@ -37,12 +37,12 @@ internal static class DialogueFlow
     /// <summary>回复端口名：回话节点的输出端口，只作环的回边驱动，也是收话节点取用它的输入端口。</summary>
     internal static PortName ReplyPort { get; } = new("完成");
 
-    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。</summary>
+    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。文件工具不在此列，对话任务没有工作目录。</summary>
     internal static IReadOnlyList<ToolPath> Tools { get; } =
     [
         new ToolPath("GetLocalTime"),
         new ToolPath("KuroeInfo"),
-        new ToolPath("file"),
+        new ToolPath("file/read"),
         new ToolPath("source"),
         new ToolPath("git/read"),
         new ToolPath("dotnet/read"),

@@ -8,6 +8,7 @@ public sealed class KuroePaths
         string root = Path.GetFullPath(directory);
         WorkingDirectory = root;
         ConfigDirectory = Path.Combine(root, ".kuroe");
+        TasksDirectory = Path.Combine(root, ".kuroe_tasks");
         UserSettingsFile = Path.Combine(ConfigDirectory, "settings.json");
         CatalogFile = Path.Combine(ConfigDirectory, "catalog.json");
         FlowsFile = Path.Combine(ConfigDirectory, "flows.json");
@@ -18,6 +19,9 @@ public sealed class KuroePaths
 
     /// <summary>配置目录，各配置文件的所在目录。</summary>
     public string ConfigDirectory { get; }
+
+    /// <summary>任务目录的根，各任务的工作目录在其下按名字建立。</summary>
+    public string TasksDirectory { get; }
 
     /// <summary>用户层偏好文件。</summary>
     public string UserSettingsFile { get; }

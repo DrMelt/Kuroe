@@ -23,6 +23,7 @@ using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Dialogue;
+using Kuroe.Workflows.Tasks;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
@@ -67,6 +68,12 @@ public static class ServiceCollectionExtensions
             return catalog.ErrorsOrEmptyList;
         }
 
+        ErrorOr<TaskDirectory> taskDirectory = TaskDirectory.Create(paths.TasksDirectory);
+        if (taskDirectory.IsError)
+        {
+            return taskDirectory.ErrorsOrEmptyList;
+        }
+
         NodeTypeDescriptionRegistry typeFiles = new();
         InputRegistry inputs = new();
         JsonFlowFormat format = new();
@@ -105,12 +112,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
+        services.AddSingleton<ITaskWorkspace>(taskDirectory.Value);
         services.AddSingleton(descriptionCompiler);
         services.AddSingleton(configuredTools.Value);
 
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
 
+        TaskRegistry taskRegistry = new(taskDirectory.Value.NextTaskNumber);
         ErrorOr<Success> registered = RegisterTools(
             services,
             configuredTools.Value,
@@ -119,7 +128,8 @@ public static class ServiceCollectionExtensions
             flows.Value,
             modelService,
             paths.WorkingDirectory,
-            sourceDirectory);
+            sourceDirectory,
+            taskRegistry);
         if (registered.IsError)
         {
             return registered.ErrorsOrEmptyList;
@@ -142,7 +152,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IFlowRuntimeCatalog>(),
-            sp.GetRequiredService<IExecutionTargetResolver>()));
+            sp.GetRequiredService<IExecutionTargetResolver>(),
+            sp.GetRequiredService<ITaskWorkspace>()));
         services.AddSingleton(sp => new PendingService(
             sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<FlowEngine>(),
@@ -170,7 +181,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
-    /// TaskRegistry 在此建实例并注册，各契约工具的提交链与其它消费者共享。</summary>
+    /// TaskRegistry 由调用方建立，在此注册，各契约工具的提交链与其它消费者共享。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         IReadOnlyList<ConfiguredTool> configured,
@@ -179,9 +190,9 @@ public static class ServiceCollectionExtensions
         FlowService flows,
         ModelService models,
         string workingDirectory,
-        string sourceDirectory)
+        string sourceDirectory,
+        TaskRegistry taskRegistry)
     {
-        TaskRegistry taskRegistry = new();
         PortSubmitter portSubmitter = new(taskRegistry);
         CannotCompleteSubmitter cannotCompleteSubmitter = new(taskRegistry);
         ExecutionStatusReader statusReader = new(taskRegistry);

@@ -9,12 +9,13 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>任务与执行的索引：分配标识、交出快照、转发执行通知。状态本身存在任务与运行期节点上。</summary>
-public sealed class TaskRegistry
+/// <param name="firstTaskId">首个任务的标识，宿主按已有任务目录给出的续号。</param>
+public sealed class TaskRegistry(int firstTaskId = 1)
 {
     private readonly Lock _gate = new();
     private readonly List<WorkTask> _tasks = [];
     private readonly Dictionary<ExecutionId, Execution> _executions = [];
-    private int _nextTask = 1;
+    private int _nextTask = firstTaskId;
     private int _nextExecution = 1;
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
@@ -28,6 +29,15 @@ public sealed class TaskRegistry
             _tasks.Add(task);
 
             return task;
+        }
+    }
+
+    /// <summary>丢弃一个尚未启动的任务，任务目录无法建立时提交方换号重来。</summary>
+    internal void Discard(WorkTask task)
+    {
+        lock (_gate)
+        {
+            _tasks.Remove(task);
         }
     }
 

@@ -188,7 +188,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         Assert.Contains("内置对话放行的路径前缀", noTools);
         Assert.Contains("GetLocalTime", noTools);
         Assert.Contains("KuroeInfo", noTools);
-        Assert.Contains("file", noTools);
+        Assert.Contains("source", noTools);
         Assert.Contains("没有配置命令工具", noTools);
 
         ConfiguredTool diff = Configured();

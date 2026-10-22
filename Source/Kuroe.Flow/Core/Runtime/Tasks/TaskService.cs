@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -12,19 +13,21 @@ namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>宿主对任务的动作：提交、返工、取消、改名。
 /// 前置条件与回执在这里判定，状态改动经推进器落地。</summary>
-/// <remarks>装配任务动作所需的注册表、推进器、流程目录与执行目标解析。</remarks>
+/// <remarks>装配任务动作所需的注册表、推进器、流程目录、执行目标解析与任务工作目录。</remarks>
 public sealed class TaskService(
     TaskRegistry registry,
     IFlowRunner driver,
     IFlowRuntimeCatalog flows,
-    IExecutionTargetResolver targets)
+    IExecutionTargetResolver targets,
+    ITaskWorkspace workspace)
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
     private readonly IFlowRuntimeCatalog _flows = flows;
     private readonly IExecutionTargetResolver _targets = targets;
+    private readonly ITaskWorkspace _workspace = workspace;
 
-    /// <summary>提交任务：按流程建任务并启动执行。</summary>
+    /// <summary>提交任务：按流程建任务、建立工作目录并启动执行。</summary>
     public ErrorOr<TaskSnapshot> Submit(string goal, FlowName flowName, string? title)
     {
         if (string.IsNullOrWhiteSpace(goal))
@@ -38,11 +41,16 @@ public sealed class TaskService(
             return flow.ErrorsOrEmptyList;
         }
 
-        return SubmitCompiled(goal.Trim(), flow.Value, title);
+        return Start(goal.Trim(), flow.Value, title, _workspace);
     }
 
-    /// <summary>按编译结果提交：校验开始直连下游的宿主声明、建任务并启动推进。</summary>
-    public ErrorOr<TaskSnapshot> SubmitCompiled(string goal, CompiledFlow flow, string? title)
+    /// <summary>按编译结果提交：建任务并启动推进，不建立工作目录。</summary>
+    public ErrorOr<TaskSnapshot> SubmitCompiled(string goal, CompiledFlow flow, string? title) =>
+        Start(goal, flow, title, null);
+
+    /// <summary>校验开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
+    /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。</summary>
+    private ErrorOr<TaskSnapshot> Start(string goal, CompiledFlow flow, string? title, ITaskWorkspace? workspace)
     {
         INodeGraph graph = flow.Graph;
 
@@ -62,13 +70,34 @@ public sealed class TaskService(
             }
         }
 
-        WorkTask task = _registry.Create(goal, flow, title);
-        lock (task.Gate)
+        while (true)
         {
-            _driver.Start(task);
-        }
+            WorkTask task = _registry.Create(goal, flow, title);
 
-        return task.Snapshot();
+            ErrorOr<Success> prepared = Result.Success;
+            if (workspace is not null)
+            {
+                prepared = workspace.Prepare(task.Id, task.Flow.Name, task.Title);
+            }
+
+            if (prepared.IsError)
+            {
+                _registry.Discard(task);
+                if (prepared.FirstError.Code == FlowErrorCodes.TaskWorkspaceConflict)
+                {
+                    continue;
+                }
+
+                return prepared.ErrorsOrEmptyList;
+            }
+
+            lock (task.Gate)
+            {
+                _driver.Start(task);
+            }
+
+            return task.Snapshot();
+        }
     }
 
     /// <summary>改任务标题。</summary>
