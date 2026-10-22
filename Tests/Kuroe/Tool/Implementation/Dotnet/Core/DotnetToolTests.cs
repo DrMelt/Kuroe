@@ -149,10 +149,10 @@ public sealed class DotnetToolTests
     public void Run_carries_project_and_application_arguments()
     {
         Assert.Equal(["dotnet", "run"], Argv("dotnet/write/Run", Given()));
-        Assert.Equal(["dotnet", "run", "Source/Kuroe.Cli"], Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Cli"))));
+        Assert.Equal(["dotnet", "run", "Source/Kuroe.Console"], Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Console"))));
         Assert.Equal(
-            ["dotnet", "run", "Source/Kuroe.Cli", "--", "--input", "a.txt"],
-            Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Cli"), ("arguments", TwoArguments))));
+            ["dotnet", "run", "Source/Kuroe.Console", "--", "--input", "a.txt"],
+            Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Console"), ("arguments", TwoArguments))));
         Assert.Equal(
             ["dotnet", "run", "--", "--input", "a.txt"],
             Argv("dotnet/write/Run", Given(("arguments", TwoArguments))));
@@ -169,20 +169,20 @@ public sealed class DotnetToolTests
 
         Assert.Equal(["dotnet", "publish"], Argv("dotnet/write/Publish", Given()));
         Assert.Equal(
-            ["dotnet", "publish", "Source/Kuroe.Cli", "--configuration", "Release"],
-            Argv("dotnet/write/Publish", Given(("project", "Source/Kuroe.Cli"), ("configuration", "Release"))));
+            ["dotnet", "publish", "Source/Kuroe.Console", "--configuration", "Release"],
+            Argv("dotnet/write/Publish", Given(("project", "Source/Kuroe.Console"), ("configuration", "Release"))));
     }
 
     [Fact]
     public void Add_package_carries_package_and_optional_version()
     {
         Assert.Equal(
-            ["dotnet", "add", "Source/Kuroe.Cli", "package", "Serilog"],
-            Argv("dotnet/write/AddPackage", Given(("project", "Source/Kuroe.Cli"), ("package", "Serilog"))));
+            ["dotnet", "add", "Source/Kuroe.Console", "package", "Serilog"],
+            Argv("dotnet/write/AddPackage", Given(("project", "Source/Kuroe.Console"), ("package", "Serilog"))));
         Assert.Equal(
             ["dotnet", "add", "package", "Serilog", "--version", "4.0.0"],
             Argv("dotnet/write/AddPackage", Given(("package", "Serilog"), ("version", "4.0.0"))));
-        Assert.Equal("缺少参数 package。", Rejected("dotnet/write/AddPackage", Given(("project", "Source/Kuroe.Cli"))));
+        Assert.Equal("缺少参数 package。", Rejected("dotnet/write/AddPackage", Given(("project", "Source/Kuroe.Console"))));
     }
 
     [Fact]
