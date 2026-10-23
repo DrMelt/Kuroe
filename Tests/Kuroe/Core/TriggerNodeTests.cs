@@ -37,20 +37,24 @@ public sealed class TriggerNodeTests
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
+        environment.Wait(id, snapshot => RoundCount(snapshot, "回话") == 1);
         ExecutionSnapshot first = environment.Runner.Started
             .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 1)
             .Snapshot();
         Assert.DoesNotContain(first.Input.Inputs, value => value.Text.Contains("第一问"));
 
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot done = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
-        Assert.Equal(2, done.Executables.Single(node => node.Executable.Label.Value == "回话").Executions.Count);
+        TaskSnapshot done = environment.Wait(id, snapshot => RoundCount(snapshot, "回话") == 2);
+        Assert.Equal(2, RoundCount(done, "回话"));
         ExecutionSnapshot second = environment.Runner.Started
             .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 2)
             .Snapshot();
         Assert.DoesNotContain(second.Input.Inputs, value => value.Text.Contains("第二问"));
     }
+
+    /// <summary>任务里给定标签的执行节点已经启动的执行数。</summary>
+    private static int RoundCount(TaskSnapshot snapshot, string label) =>
+        snapshot.Executables.Single(node => node.Executable.Label.Value == label).Executions.Count;
 
     /// <summary>触发与数据 From 并存：数据源产出照常注入，触发源内容不进上下文。</summary>
     [Fact]

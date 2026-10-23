@@ -562,6 +562,30 @@ public sealed class TaskAndReplTests
     }
 
     [Fact]
+    public async Task Task_list_does_not_show_the_dialogue_task()
+    {
+        using ConsoleSession cli = new();
+
+        var reply = await cli.Environment.Dialogue.ReplyAsync("你好", null);
+        cli.Tasks.Run(["/task", "list"]);
+
+        Assert.False(reply.IsError);
+        Assert.Contains("还没有任务", cli.Output.Output);
+    }
+
+    [Fact]
+    public async Task Task_stop_cannot_reach_the_dialogue_task()
+    {
+        using ConsoleSession cli = new();
+
+        var reply = await cli.Environment.Dialogue.ReplyAsync("你好", null);
+        cli.Tasks.Run(["/task", "stop", "1"]);
+
+        Assert.False(reply.IsError);
+        Assert.Contains("没有任务 #1", cli.ErrorsOut.Output);
+    }
+
+    [Fact]
     public void Repl_dispatches_to_every_command_family()
     {
         using ConsoleSession cli = new();

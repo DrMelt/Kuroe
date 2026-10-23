@@ -16,7 +16,6 @@ namespace Kuroe.Flow.Runtime.Engine;
 /// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
 internal sealed class TaskDriver(
     WorkTask task,
-    TaskRegistry registry,
     ExecutionDispatcher dispatcher,
     IExecutionTargetResolver targetResolver)
 {
@@ -154,7 +153,7 @@ internal sealed class TaskDriver(
         }
         catch (Exception ex)
         {
-            registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的推进异常：{ex.Message}"));
+            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的推进异常：{ex.Message}"));
         }
     }
 
@@ -202,7 +201,7 @@ internal sealed class TaskDriver(
         }
         catch (Exception ex)
         {
-            registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
+            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
         }
     }
 
@@ -228,11 +227,11 @@ internal sealed class TaskDriver(
                     node.ReleaseActive();
                     node.EnterBlocked([node.Path]);
                     task.Journal.Append(new ErrorEntry(declaration.FirstError.Description));
-                    registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
+                    task.Registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
                     return;
                 }
 
-                execution = registry.NewExecution(ExecutionInputBuilder.Build(task.Id, node, task.Context, declaration.Value));
+                execution = task.Registry.NewExecution(task, ExecutionInputBuilder.Build(task.Id, node, task.Context, declaration.Value));
                 task.Attach(execution);
             }
 
@@ -255,7 +254,7 @@ internal sealed class TaskDriver(
                     task.Journal.Append(new ErrorEntry(message));
                 }
 
-                registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
+                task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
             }
 
             TaskRuntime.SettlePlan plan;

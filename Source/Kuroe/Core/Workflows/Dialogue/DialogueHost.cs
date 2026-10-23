@@ -12,7 +12,7 @@ namespace Kuroe.Workflows.Dialogue;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。</summary>
 public sealed class DialogueHost(
-    TaskService tasks,
+    TaskActions actions,
     DialogueRound rounds,
     ModelService models,
     SettingsProvider settings,
@@ -47,22 +47,39 @@ public sealed class DialogueHost(
             _dialogue = null;
         }
 
-        if (old is { } id && registry.Find(id).IsSuccess)
+        if (old is { } id)
         {
-            tasks.StopTask(id);
+            actions.StopTask(id);
         }
+
+        registry.ClearSettled();
     }
 
     /// <summary>当前对话任务，不存在、已被清理或已收口时新建。助手语言在创建时读取，配置变化后用 /reset 重建任务生效。</summary>
     private TaskId EnsureDialogue()
     {
+        TaskId? replaced = null;
         lock (_gate)
         {
-            if (_dialogue is { } current && IsUsable(current))
+            if (_dialogue is { } current)
             {
-                return current;
+                if (IsUsable(current))
+                {
+                    return current;
+                }
+
+                replaced = current;
+                _dialogue = null;
             }
         }
+
+        // 被替换的旧任务先停止，转为已取消后随 ClearSettled 清出任务域
+        if (replaced is { } stale)
+        {
+            actions.StopTask(stale);
+        }
+
+        registry.ClearSettled();
 
         var document = Kuroe.Workflows.Flows.DialogueFlow.Build(settings.Current.Assistant.Language);
         ErrorOr<CompiledDocument> compiled = compiler.Compile(document, []);
@@ -76,7 +93,7 @@ public sealed class DialogueHost(
             throw new InvalidOperationException("提交的文档必须恰好包含一条流程。");
         }
 
-        ErrorOr<TaskSnapshot> created = tasks.SubmitCompiled("对话", compiled.Value.Flows[0], "对话");
+        ErrorOr<TaskSnapshot> created = actions.SubmitCompiled("对话", compiled.Value.Flows[0], "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

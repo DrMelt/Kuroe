@@ -43,6 +43,20 @@ public sealed class KuroeInfoToolTests : IDisposable
     }
 
     [Fact]
+    public async Task Dialogue_task_is_not_visible_to_task_queries()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Reply = _ => "回复你好";
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
+
+        TaskKuroeInfoTool tool = new(environment.Registry);
+
+        Assert.False(reply.IsError);
+        Assert.Contains("还没有任务", Call(tool, "ListTasks"));
+        Assert.Contains("没有任务", Call(tool, "GetTask", ("taskId", "1")));
+    }
+
+    [Fact]
     public void GetTask_describes_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();

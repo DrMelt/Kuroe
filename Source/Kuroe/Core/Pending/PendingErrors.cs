@@ -11,9 +11,9 @@ public static class PendingErrors
     /// <summary>对话任务里没有可回话的执行节点，一问一答无从收口。</summary>
     public static Error NoDialogueTarget() => Error.Validation("Task.Ask", "任务里没有可回话的执行节点。");
 
-    /// <summary>本轮判定出来前任务先行收口或阻塞，对话无法继续。</summary>
-    public static Error Settled(TaskId task, TaskState state) =>
-        Error.Conflict("Task.Ask", $"{task} {state.Label()}，无法继续对话。");
+    /// <summary>本轮判定出来前对话先行收口或阻塞，对话无法继续。</summary>
+    public static Error DialogueSettled(TaskState state) =>
+        Error.Conflict("Task.Ask", $"对话{state.Label()}，无法继续对话。");
 
     /// <summary>本轮对话的执行没有成功收口，失败原因随错误带回。</summary>
     public static Error RoundFailed(IReadOnlyList<string> failures) => Error.Failure("Task.Ask",

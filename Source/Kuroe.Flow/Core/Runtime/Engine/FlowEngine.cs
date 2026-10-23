@@ -9,23 +9,24 @@ namespace Kuroe.Flow.Runtime.Engine;
 /// <summary>任务推进的宿主：每次提交为任务建一个推进循环，返工与取消经信号恢复或终止。
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 public sealed class FlowEngine(
-    TaskRegistry registry,
     ExecutionDispatcher dispatcher,
     IExecutionTargetResolver targetResolver) : IFlowRunner
 {
     private readonly Lock _gate = new();
-    private readonly Dictionary<TaskId, TaskDriver> _drivers = [];
+    private readonly Dictionary<WorkTask, TaskDriver> _drivers = [];
+    private readonly HashSet<TaskRegistry> _registries = [];
 
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
     {
-        TaskDriver driver = new(task, registry, dispatcher, targetResolver);
+        TaskDriver driver = new(task, dispatcher, targetResolver);
         driver.Start();
 
         // 注册在推进循环启动之后，宿主拿到的推进循环一定已就绪
         lock (_gate)
         {
-            _drivers[task.Id] = driver;
+            _drivers[task] = driver;
+            _registries.Add(task.Registry);
         }
 
         // 推进循环结束后把驱动移出索引，任务仍留在注册表里供查询
@@ -34,7 +35,7 @@ public sealed class FlowEngine(
             await driver.Loop.ConfigureAwait(false);
             lock (_gate)
             {
-                _drivers.Remove(task.Id);
+                _drivers.Remove(task);
             }
         });
     }
@@ -49,7 +50,7 @@ public sealed class FlowEngine(
             task.Touch();
         }
 
-        Find(task.Id)?.Resume(targets);
+        Find(task)?.Resume(targets);
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的执行节点再开一轮返工，返回实际发出的重跑目标数。</summary>
@@ -75,7 +76,7 @@ public sealed class FlowEngine(
             }
         }
 
-        if (targets.Count > 0 && Find(task.Id) is { } driver)
+        if (targets.Count > 0 && Find(task) is { } driver)
         {
             driver.Rework(targets);
         }
@@ -86,7 +87,7 @@ public sealed class FlowEngine(
     /// <summary>取消任务：任务对象停止全部执行，推进循环随之终止。推进循环已收口时只停任务。</summary>
     public void Cancel(WorkTask task)
     {
-        if (Find(task.Id) is { } driver)
+        if (Find(task) is { } driver)
         {
             driver.Stop();
             return;
@@ -102,9 +103,11 @@ public sealed class FlowEngine(
     public async Task ShutdownAsync()
     {
         List<TaskDriver> drivers;
+        TaskRegistry[] registries;
         lock (_gate)
         {
             drivers = [.. _drivers.Values];
+            registries = [.. _registries];
         }
 
         foreach (TaskDriver driver in drivers)
@@ -120,17 +123,22 @@ public sealed class FlowEngine(
         lock (_gate)
         {
             _drivers.Clear();
+            _registries.Clear();
         }
 
         await dispatcher.ShutdownAsync();
-        registry.Forget();
+
+        foreach (TaskRegistry registry in registries)
+        {
+            registry.Forget();
+        }
     }
 
-    private TaskDriver? Find(TaskId id)
+    private TaskDriver? Find(WorkTask task)
     {
         lock (_gate)
         {
-            return _drivers.GetValueOrDefault(id);
+            return _drivers.GetValueOrDefault(task);
         }
     }
 }

@@ -7,12 +7,12 @@ namespace Kuroe.Flow.Runtime.Contract;
 
 /// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待返工。
 /// 提交者身份在此认定，结果以上报后的本轮契约状态交回，回执措辞由工具实现层给出。</summary>
-public sealed class CannotCompleteSubmitter(TaskRegistry registry)
+public sealed class CannotCompleteSubmitter(ExecutionIndex executions)
 {
     /// <summary>上报本轮无法完成并给出原因，原因必填。成功时给出上报后的本轮契约状态，错误以 ErrorOr 表达。</summary>
     public ErrorOr<ExecutionStatus> Report(ExecutionId id, string? reason)
     {
-        ErrorOr<(Execution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(registry, id, "上报无法完成");
+        ErrorOr<(Execution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(executions, id, "上报无法完成");
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;

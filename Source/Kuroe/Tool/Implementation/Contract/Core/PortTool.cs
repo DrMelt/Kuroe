@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Contract;
 
 namespace Kuroe.Tool.Contract;
@@ -11,28 +11,28 @@ namespace Kuroe.Tool.Contract;
 public sealed class PortTool : IScopedTool
 {
     private readonly PortSubmitter _intake;
-    private readonly TaskRegistry _registry;
+    private readonly ExecutionIndex _executions;
 
     /// <summary>容器装配用的载体，尚未绑定执行。</summary>
-    public PortTool(PortSubmitter intake, TaskRegistry registry)
+    public PortTool(PortSubmitter intake, ExecutionIndex executions)
     {
         _intake = intake;
-        _registry = registry;
+        _executions = executions;
         Functions = Declare(intake, null, null);
     }
 
-    private PortTool(PortSubmitter intake, TaskRegistry registry, ExecutionId execution)
+    private PortTool(PortSubmitter intake, ExecutionIndex executions, ExecutionId execution)
     {
         _intake = intake;
-        _registry = registry;
-        Functions = Declare(intake, execution, ContractPorts.DeclaredPorts(registry, execution));
+        _executions = executions;
+        Functions = Declare(intake, execution, ContractPorts.DeclaredPorts(executions, execution));
     }
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>换一份绑定到该执行的载体。</summary>
-    public ITool ForExecution(ExecutionId execution) => new PortTool(_intake, _registry, execution);
+    public ITool ForExecution(ExecutionId execution) => new PortTool(_intake, _executions, execution);
 
     /// <summary>把契约定义绑上提交该执行端口产出的调用体，有端口清单时写进说明。</summary>
     private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, ExecutionId? execution, IReadOnlyList<Port>? ports) =>

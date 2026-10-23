@@ -9,6 +9,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Workflows.Dialogue;
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
@@ -29,9 +30,10 @@ public sealed class TestEnvironment : IDisposable
         _provider = provider;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
+        Executions = provider.GetRequiredService<ExecutionIndex>();
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
-        PortTool = new PortTool(provider.GetRequiredService<PortSubmitter>(), Registry);
+        PortTool = new PortTool(provider.GetRequiredService<PortSubmitter>(), Executions);
         CannotCompleteTool = new CannotCompleteTool(provider.GetRequiredService<CannotCompleteSubmitter>());
         runner.PortTool = PortTool;
         runner.CannotCompleteTool = CannotCompleteTool;
@@ -43,6 +45,9 @@ public sealed class TestEnvironment : IDisposable
     public FakeRunner Runner { get; }
 
     public TaskRegistry Registry { get; }
+
+    /// <summary>全部任务域共享的执行索引。</summary>
+    public ExecutionIndex Executions { get; }
 
     public TaskService Tasks { get; }
 

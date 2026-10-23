@@ -9,19 +9,13 @@ namespace Kuroe.Flow.Runtime.Contract;
 internal static class SubmitterContext
 {
     /// <summary>认定提交者，action 是提交入口的动作名，进入未在跑的提示。</summary>
-    public static ErrorOr<(Execution Execution, WorkTask Task)> Resolve(TaskRegistry registry, ExecutionId id, string action)
+    public static ErrorOr<(Execution Execution, WorkTask Task)> Resolve(ExecutionIndex executions, ExecutionId id, string action)
     {
-        if (registry.FindExecution(id) is not { IsError: false } found || !found.Value.IsLive)
+        if (executions.FindOwned(id) is not { IsError: false } found || !found.Value.Execution.IsLive)
         {
             return Error.Validation("Tool.Argument", $"只有进行中的执行能{action}。");
         }
 
-        ErrorOr<WorkTask> task = registry.Find(found.Value.Input.Task);
-        if (task.IsError)
-        {
-            return Error.Unexpected("Tool.Internal", "该执行没有归属任务。");
-        }
-
-        return (found.Value, task.Value);
+        return (found.Value.Execution, found.Value.Owner);
     }
 }

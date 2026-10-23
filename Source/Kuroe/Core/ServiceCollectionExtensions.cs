@@ -119,7 +119,9 @@ public static class ServiceCollectionExtensions
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
 
-        TaskRegistry taskRegistry = new(taskDirectory.Value.NextTaskNumber);
+        ExecutionIndex executions = new();
+        TaskRegistry taskRegistry = new(executions, taskDirectory.Value.NextTaskNumber);
+        TaskRegistry dialogueRegistry = new(executions);
         ErrorOr<Success> registered = RegisterTools(
             services,
             configuredTools.Value,
@@ -129,7 +131,8 @@ public static class ServiceCollectionExtensions
             modelService,
             paths.WorkingDirectory,
             sourceDirectory,
-            taskRegistry);
+            taskRegistry,
+            executions);
         if (registered.IsError)
         {
             return registered.ErrorsOrEmptyList;
@@ -145,28 +148,35 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IModelSettings>()));
         services.AddSingleton(sp => new FlowEngine(
-            sp.GetRequiredService<TaskRegistry>(),
             sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton(sp => new TaskService(
-            sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<FlowEngine>(),
-            sp.GetRequiredService<IFlowRuntimeCatalog>(),
-            sp.GetRequiredService<IExecutionTargetResolver>(),
-            sp.GetRequiredService<ITaskWorkspace>()));
+            new TaskActions(
+                taskRegistry,
+                sp.GetRequiredService<FlowEngine>(),
+                sp.GetRequiredService<IExecutionTargetResolver>(),
+                sp.GetRequiredService<ITaskWorkspace>()),
+            sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(
-            sp.GetRequiredService<TaskRegistry>(),
+            taskRegistry,
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IInputDelivery>()));
         services.AddSingleton(sp => new DialogueRound(
-            sp.GetRequiredService<TaskRegistry>(),
-            sp.GetRequiredService<PendingService>()));
+            dialogueRegistry,
+            new PendingService(
+                dialogueRegistry,
+                sp.GetRequiredService<FlowEngine>(),
+                sp.GetRequiredService<IInputDelivery>())));
         services.AddSingleton(sp => new DialogueHost(
-            sp.GetRequiredService<TaskService>(),
+            new TaskActions(
+                dialogueRegistry,
+                sp.GetRequiredService<FlowEngine>(),
+                sp.GetRequiredService<IExecutionTargetResolver>(),
+                null),
             sp.GetRequiredService<DialogueRound>(),
             sp.GetRequiredService<ModelService>(),
             sp.GetRequiredService<SettingsProvider>(),
-            sp.GetRequiredService<TaskRegistry>(),
+            dialogueRegistry,
             sp.GetRequiredService<IFlowDescriptionCompiler>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ILoggerFactory>(),
@@ -181,7 +191,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
-    /// TaskRegistry 由调用方建立，在此注册，各契约工具的提交链与其它消费者共享。</summary>
+    /// TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引；契约工具按执行索引定位对话域与用户域的执行。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         IReadOnlyList<ConfiguredTool> configured,
@@ -191,11 +201,12 @@ public static class ServiceCollectionExtensions
         ModelService models,
         string workingDirectory,
         string sourceDirectory,
-        TaskRegistry taskRegistry)
+        TaskRegistry taskRegistry,
+        ExecutionIndex executions)
     {
-        PortSubmitter portSubmitter = new(taskRegistry);
-        CannotCompleteSubmitter cannotCompleteSubmitter = new(taskRegistry);
-        ExecutionStatusReader statusReader = new(taskRegistry);
+        PortSubmitter portSubmitter = new(executions);
+        CannotCompleteSubmitter cannotCompleteSubmitter = new(executions);
+        ExecutionStatusReader statusReader = new(executions);
 
         List<ITool> tools =
         [
@@ -209,7 +220,7 @@ public static class ServiceCollectionExtensions
             new SourceTool(sourceDirectory),
             .. GitTools.Tools(workingDirectory),
             .. DotnetTools.Tools(workingDirectory),
-            new PortTool(portSubmitter, taskRegistry),
+            new PortTool(portSubmitter, executions),
             new CannotCompleteTool(cannotCompleteSubmitter),
             new StatusTool(statusReader),
             new TaskKuroeInfoTool(taskRegistry),
@@ -241,6 +252,7 @@ public static class ServiceCollectionExtensions
             return conflicts.ToList();
         }
 
+        services.AddSingleton(executions);
         services.AddSingleton(taskRegistry);
         services.AddSingleton(portSubmitter);
         services.AddSingleton(cannotCompleteSubmitter);

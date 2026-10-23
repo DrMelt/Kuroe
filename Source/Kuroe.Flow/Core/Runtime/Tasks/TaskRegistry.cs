@@ -8,15 +8,14 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>任务与执行的索引：分配标识、交出快照、转发执行通知。状态本身存在任务与运行期节点上。</summary>
-/// <param name="firstTaskId">首个任务的标识，宿主按已有任务目录给出的续号。</param>
-public sealed class TaskRegistry(int firstTaskId = 1)
+/// <summary>一个任务域内的任务索引：分配域内任务号、交出快照、转发执行通知。状态本身存在任务与运行期节点上。</summary>
+/// <param name="executions">全部任务域共享的执行索引。</param>
+/// <param name="firstTaskId">域内首个任务的标识，用户任务域按已有任务目录给出续号。</param>
+public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
 {
     private readonly Lock _gate = new();
     private readonly List<WorkTask> _tasks = [];
-    private readonly Dictionary<ExecutionId, Execution> _executions = [];
     private int _nextTask = firstTaskId;
-    private int _nextExecution = 1;
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
@@ -25,7 +24,7 @@ public sealed class TaskRegistry(int firstTaskId = 1)
     {
         lock (_gate)
         {
-            WorkTask task = new(new TaskId(_nextTask++), goal, flow.Model, flow.Graph, title);
+            WorkTask task = new(this, new TaskId(_nextTask++), goal, flow.Model, flow.Graph, title);
             _tasks.Add(task);
 
             return task;
@@ -41,16 +40,7 @@ public sealed class TaskRegistry(int firstTaskId = 1)
         }
     }
 
-    internal Execution NewExecution(ExecutionInput input)
-    {
-        lock (_gate)
-        {
-            Execution execution = new(new ExecutionId(_nextExecution++), input);
-            _executions[execution.Id] = execution;
-
-            return execution;
-        }
-    }
+    internal Execution NewExecution(WorkTask owner, ExecutionInput input) => executions.Create(owner, input);
 
     /// <summary>按任务号取任务，不存在时返回错误。</summary>
     public ErrorOr<WorkTask> Find(TaskId id)
@@ -63,16 +53,19 @@ public sealed class TaskRegistry(int firstTaskId = 1)
         }
     }
 
-    /// <summary>按执行号取执行，不存在时返回错误。</summary>
+    /// <summary>按执行号取本域的执行，不存在或属于其它任务域时返回错误。</summary>
     public ErrorOr<Execution> FindExecution(ExecutionId id)
     {
-        lock (_gate)
+        if (executions.FindOwned(id) is not { IsError: false } found
+            || !ReferenceEquals(found.Value.Owner.Registry, this))
         {
-            return _executions.TryGetValue(id, out Execution? execution) ? execution : [ExecutionErrors.ExecutionNotFound(id.Value)];
+            return [ExecutionErrors.ExecutionNotFound(id.Value)];
         }
+
+        return found.Value.Execution;
     }
 
-    /// <summary>全部任务的快照，按提交顺序。</summary>
+    /// <summary>本域全部任务的快照，按提交顺序。</summary>
     public IReadOnlyList<TaskSnapshot> Snapshots()
     {
         WorkTask[] all;
@@ -84,16 +77,23 @@ public sealed class TaskRegistry(int firstTaskId = 1)
         return [.. all.Select(task => task.Snapshot())];
     }
 
-    /// <summary>在跑的执行，含排队中的，按启动先后。</summary>
+    /// <summary>本域在跑的执行，含排队中的，按启动先后。</summary>
     public IReadOnlyList<ExecutionSnapshot> LiveExecutions()
     {
-        Execution[] all;
+        WorkTask[] tasks;
         lock (_gate)
         {
-            all = [.. _executions.Values];
+            tasks = [.. _tasks];
         }
 
-        return [.. all.Where(execution => execution.IsLive).OrderBy(execution => execution.Id.Value).Select(execution => execution.Snapshot())];
+        return
+        [
+            .. tasks
+                .SelectMany(task => task.UnderLock(() => task.Executions.ToArray()))
+                .Where(execution => execution.IsLive)
+                .OrderBy(execution => execution.Id.Value)
+                .Select(execution => execution.Snapshot()),
+        ];
     }
 
     /// <summary>丢掉已收口且没有执行在跑的任务。判定与移除都在该任务 Gate 之内，保持锁序一致。</summary>
@@ -110,7 +110,7 @@ public sealed class TaskRegistry(int firstTaskId = 1)
         {
             lock (task.Gate)
             {
-                if (!task.State.IsSettled())
+                if (!task.State.IsSettled() || task.Executions.Any(execution => execution.IsLive))
                 {
                     continue;
                 }
@@ -119,7 +119,7 @@ public sealed class TaskRegistry(int firstTaskId = 1)
                 {
                     foreach (Execution execution in task.Executions)
                     {
-                        _executions.Remove(execution.Id);
+                        executions.Remove(execution.Id);
                     }
 
                     if (_tasks.Remove(task))
@@ -133,13 +133,25 @@ public sealed class TaskRegistry(int firstTaskId = 1)
         return cleared;
     }
 
-    /// <summary>丢弃全部任务与执行索引，退出时调用。</summary>
+    /// <summary>丢弃本域全部任务与执行索引条目，退出时调用。</summary>
     internal void Forget()
     {
+        WorkTask[] tasks;
         lock (_gate)
         {
-            _executions.Clear();
+            tasks = [.. _tasks];
             _tasks.Clear();
+        }
+
+        foreach (WorkTask task in tasks)
+        {
+            lock (task.Gate)
+            {
+                foreach (Execution execution in task.Executions)
+                {
+                    executions.Remove(execution.Id);
+                }
+            }
         }
     }
 

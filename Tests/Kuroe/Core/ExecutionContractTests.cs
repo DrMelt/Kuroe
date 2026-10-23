@@ -42,7 +42,7 @@ public sealed class ExecutionContractTests
         IExecution ported = Ported(environment);
         PortTool port = environment.PortTool;
         CannotCompleteTool cannotComplete = environment.CannotCompleteTool;
-        StatusTool status = new(new ExecutionStatusReader(environment.Registry));
+        StatusTool status = new(new ExecutionStatusReader(environment.Executions));
 
         IScopedTool[] tools = [port, cannotComplete, status];
 
@@ -88,7 +88,7 @@ public sealed class ExecutionContractTests
         Assert.Contains(environment.Runner.Submissions, text =>
             text.Contains("已记录本轮无法完成：缺少输入资料", StringComparison.Ordinal)
             && text.Contains("本轮仍需交回：端口「结论」、「理由」", StringComparison.Ordinal));
-        Assert.Null(new ContractReminder(new ExecutionStatusReader(environment.Registry)).Text(execution));
+        Assert.Null(new ContractReminder(new ExecutionStatusReader(environment.Executions)).Text(execution));
     }
 
     /// <summary>上报无法完成必须给出原因，缺原因时按拒绝交回，本轮照常收口。</summary>
@@ -130,7 +130,7 @@ public sealed class ExecutionContractTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        StatusTool tool = new(new ExecutionStatusReader(environment.Registry));
+        StatusTool tool = new(new ExecutionStatusReader(environment.Executions));
         ToolFunction function = Assert.Single(tool.ForExecution(Ported(environment).Id).Functions);
 
         string text = function.Invoke(new ToolArguments(new Dictionary<string, object?>())).Value;

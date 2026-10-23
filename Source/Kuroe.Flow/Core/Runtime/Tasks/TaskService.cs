@@ -1,31 +1,19 @@
 using ErrorOr;
-using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Engine;
-using Kuroe.Flow.Shared;
+using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Compiler.Shared;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>宿主对任务的动作：提交、返工、取消、改名。
-/// 前置条件与回执在这里判定，状态改动经推进器落地。</summary>
-/// <remarks>装配任务动作所需的注册表、推进器、流程目录、执行目标解析与任务工作目录。</remarks>
+/// <summary>用户任务域对任务的动作：按流程名提交、返工、取消、改名。用户任务的提交策略在这里，域内生命周期由 <see cref="TaskActions"/> 承担。</summary>
+/// <remarks>装配用户任务提交所需的动作与流程目录。</remarks>
 public sealed class TaskService(
-    TaskRegistry registry,
-    IFlowRunner driver,
-    IFlowRuntimeCatalog flows,
-    IExecutionTargetResolver targets,
-    ITaskWorkspace workspace)
+    TaskActions actions,
+    IFlowRuntimeCatalog flows)
 {
-    private readonly TaskRegistry _registry = registry;
-    private readonly IFlowRunner _driver = driver;
+    private readonly TaskActions _actions = actions;
     private readonly IFlowRuntimeCatalog _flows = flows;
-    private readonly IExecutionTargetResolver _targets = targets;
-    private readonly ITaskWorkspace _workspace = workspace;
 
     /// <summary>提交任务：按流程建任务、建立工作目录并启动执行。</summary>
     public ErrorOr<TaskSnapshot> Submit(string goal, FlowName flowName, string? title)
@@ -41,140 +29,21 @@ public sealed class TaskService(
             return flow.ErrorsOrEmptyList;
         }
 
-        return Start(goal.Trim(), flow.Value, title, _workspace);
-    }
-
-    /// <summary>按编译结果提交：建任务并启动推进，不建立工作目录。</summary>
-    public ErrorOr<TaskSnapshot> SubmitCompiled(string goal, CompiledFlow flow, string? title) =>
-        Start(goal, flow, title, null);
-
-    /// <summary>校验开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
-    /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。</summary>
-    private ErrorOr<TaskSnapshot> Start(string goal, CompiledFlow flow, string? title, ITaskWorkspace? workspace)
-    {
-        INodeGraph graph = flow.Graph;
-
-        // 不启动执行的节点不需要宿主声明；开始直连的派发节点要求声明可解析
-        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
-        {
-            if (graph[edge.Target] is not ExecutableNode target
-                || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
-            {
-                continue;
-            }
-
-            ErrorOr<INodeDeclaration> declaration = _targets.For(target);
-            if (declaration.IsError)
-            {
-                return declaration.ErrorsOrEmptyList;
-            }
-        }
-
-        while (true)
-        {
-            WorkTask task = _registry.Create(goal, flow, title);
-
-            ErrorOr<Success> prepared = Result.Success;
-            if (workspace is not null)
-            {
-                prepared = workspace.Prepare(task.Id, task.Flow.Name, task.Title);
-            }
-
-            if (prepared.IsError)
-            {
-                _registry.Discard(task);
-                if (prepared.FirstError.Code == FlowErrorCodes.TaskWorkspaceConflict)
-                {
-                    continue;
-                }
-
-                return prepared.ErrorsOrEmptyList;
-            }
-
-            lock (task.Gate)
-            {
-                _driver.Start(task);
-            }
-
-            return task.Snapshot();
-        }
+        return _actions.SubmitCompiled(goal.Trim(), flow.Value, title);
     }
 
     /// <summary>改任务标题。</summary>
-    public ErrorOr<Success> Rename(TaskId id, string title)
-    {
-        ErrorOr<WorkTask> found = _registry.Find(id);
-        if (found.IsError)
-        {
-            return found.ErrorsOrEmptyList;
-        }
-
-        found.Value.Title = title;
-
-        return Result.Success;
-    }
+    public ErrorOr<Success> Rename(TaskId id, string title) => _actions.Rename(id, title);
 
     /// <summary>对被阻塞的执行节点再开一轮实施。</summary>
-    public ErrorOr<Success> Rework(TaskId id)
-    {
-        ErrorOr<WorkTask> found = _registry.Find(id);
-        if (found.IsError)
-        {
-            return found.ErrorsOrEmptyList;
-        }
-
-        WorkTask task = found.Value;
-        int reworked;
-        lock (task.Gate)
-        {
-            reworked = _driver.Rework(task);
-        }
-
-        if (reworked == 0)
-        {
-            return [TaskErrors.NotBlocked(id)];
-        }
-
-        return Result.Success;
-    }
+    public ErrorOr<Success> Rework(TaskId id) => _actions.Rework(id);
 
     /// <summary>取消一个执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
-    public ErrorOr<Success> StopExecution(ExecutionId id)
-    {
-        ErrorOr<Execution> found = _registry.FindExecution(id);
-        if (found.IsError)
-        {
-            return found.ErrorsOrEmptyList;
-        }
-
-        if (!found.Value.IsLive)
-        {
-            return [ExecutionErrors.ExecutionSettled(id, "取消")];
-        }
-
-        found.Value.Cancel();
-
-        return Result.Success;
-    }
+    public ErrorOr<Success> StopExecution(ExecutionId id) => _actions.StopExecution(id);
 
     /// <summary>取消任务：在跑的执行全部取消，未走完的执行节点不再推进。</summary>
-    public ErrorOr<Success> StopTask(TaskId id)
-    {
-        ErrorOr<WorkTask> found = _registry.Find(id);
-        if (found.IsError)
-        {
-            return found.ErrorsOrEmptyList;
-        }
-
-        WorkTask task = found.Value;
-        lock (task.Gate)
-        {
-            _driver.Cancel(task);
-        }
-
-        return Result.Success;
-    }
+    public ErrorOr<Success> StopTask(TaskId id) => _actions.StopTask(id);
 
     /// <summary>退出时取消全部任务与执行并等待收口。</summary>
-    public Task ShutdownAsync() => _driver.ShutdownAsync();
+    public Task ShutdownAsync() => _actions.ShutdownAsync();
 }

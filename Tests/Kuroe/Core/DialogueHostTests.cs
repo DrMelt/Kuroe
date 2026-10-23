@@ -94,6 +94,25 @@ public sealed class DialogueHostTests
         Assert.Contains("未收口", ErrorText(second), StringComparison.Ordinal);
     }
 
+    /// <summary>对话轮次阻塞后，下一次输入先停止旧任务并清出任务域，再建新任务。</summary>
+    [Fact]
+    public async Task A_blocked_dialogue_task_is_discarded_before_rebuilding()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Reply = _ => "回复你好";
+        environment.Runner.SubmitsPorts = false;
+
+        ErrorOr<Success> blocked = await environment.Dialogue.ReplyAsync("第一问", null);
+        IExecution stale = Assert.Single(environment.Runner.Started);
+
+        environment.Runner.SubmitsPorts = true;
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("第二问", null);
+
+        Assert.True(blocked.IsError);
+        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.True(environment.Executions.FindOwned(stale.Id).IsError);
+    }
+
     /// <summary>回话节点每轮各自交回自己的「完成」，轮次之间不重复提交。</summary>
     [Fact]
     public async Task Each_round_submits_its_own_port_output()
@@ -177,11 +196,8 @@ public sealed class DialogueHostTests
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
 
-        TaskSnapshot task = Assert.Single(environment.Registry.Snapshots());
-        List<JournalEntry> entries =
-        [
-            .. task.Executables.SelectMany(executable => executable.Executions).SelectMany(execution => execution.Journal),
-        ];
+        IExecution round = Assert.Single(environment.Runner.Started);
+        List<JournalEntry> entries = [.. round.Snapshot().Journal];
         Assert.Contains(entries, entry => entry is PromptEntry prompt && prompt.Text == "问题");
         Assert.Contains(entries, entry => entry is TextEntry text && text.Text.Contains("增量", StringComparison.Ordinal));
     }
@@ -189,9 +205,9 @@ public sealed class DialogueHostTests
     [Fact]
     public void Settled_dialogue_error_names_the_state_in_its_display_form()
     {
-        Error error = PendingErrors.Settled(new TaskId(1), TaskState.Blocked);
+        Error error = PendingErrors.DialogueSettled(TaskState.Blocked);
 
-        Assert.Equal("任务 #1 已阻塞，无法继续对话。", error.Description);
+        Assert.Equal("对话已阻塞，无法继续对话。", error.Description);
     }
 
     private static string ErrorText(ErrorOr<Success> result) =>

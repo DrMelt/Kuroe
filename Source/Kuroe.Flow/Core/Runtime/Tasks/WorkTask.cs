@@ -21,8 +21,9 @@ public sealed class WorkTask : INodeTask
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal WorkTask(TaskId id, string goal, FlowDefinition flow, INodeGraph graph, string? title)
+    internal WorkTask(TaskRegistry registry, TaskId id, string goal, FlowDefinition flow, INodeGraph graph, string? title)
     {
+        Registry = registry;
         Id = id;
         Goal = goal;
         Flow = flow;
@@ -35,6 +36,9 @@ public sealed class WorkTask : INodeTask
 
     /// <summary>任务标识。</summary>
     public TaskId Id { get; }
+
+    /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>
+    internal TaskRegistry Registry { get; }
 
     /// <summary>提交时给出的目标。</summary>
     public string Goal { get; }
@@ -63,7 +67,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>任务的过程记录，只记执行侧诊断内容。</summary>
     internal Journal Journal { get; } = new();
 
-    /// <summary>任务内状态改动的串行点。锁序固定为任务 Gate、注册表、派发器。</summary>
+    /// <summary>任务内状态改动的串行点。锁序以任务 Gate 为最外层，注册表先于执行索引。</summary>
     internal Lock Gate { get; } = new();
 
     private event Action<Execution>? ExecutionSettled;

@@ -27,19 +27,19 @@ public sealed class TaskKuroeInfoTool : ITool
     /// <summary>列出全部任务的函数定义。</summary>
     private static readonly ToolDefinition ListTasks = new(
         new ToolPath("KuroeInfo/ListTasks"),
-        "列出全部任务：编号、标题、状态、节点进度与执行数。",
+        "列出全部用户任务：编号、标题、状态、节点进度与执行数。",
         []);
 
     /// <summary>查看任务详情的函数定义。</summary>
     private static readonly ToolDefinition GetTask = new(
         new ToolPath("KuroeInfo/GetTask"),
-        "查看指定任务的详情：目标、流程、执行节点状态与执行列表。",
+        "查看指定用户任务的详情：目标、流程、执行节点状态与执行列表。",
         [new ToolParameter(new ToolName("taskId"), "要查看的任务号", Required: true)]);
 
     /// <summary>查看执行详情的函数定义。</summary>
     private static readonly ToolDefinition GetExecution = new(
         new ToolPath("KuroeInfo/GetExecution"),
-        "查看指定执行的详情：输入取值与执行过程。",
+        "查看指定用户任务的执行详情：输入取值与执行过程。",
         [new ToolParameter(new ToolName("executionId"), "要查看的执行号", Required: true)]);
 
     /// <summary>用任务与执行的索引建立载体。</summary>

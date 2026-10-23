@@ -130,7 +130,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                     // 本轮执行已挂上时结果由它的收口给出，未挂上才按任务状态判定收口
                     if (!started && state is (TaskState.Blocked or TaskState.Canceled or TaskState.Done))
                     {
-                        return [PendingErrors.Settled(id, state)];
+                        return [PendingErrors.DialogueSettled(state)];
                     }
                 }
 
@@ -158,7 +158,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
             TaskState state = task.State;
             if (state is TaskState.Blocked or TaskState.Canceled)
             {
-                return [PendingErrors.Settled(task.Id, state)];
+                return [PendingErrors.DialogueSettled(state)];
             }
 
             await Task.Delay(20);
