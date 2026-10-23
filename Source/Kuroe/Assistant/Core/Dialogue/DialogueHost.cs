@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Node.Llm;
@@ -8,7 +9,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Compiler.Shared;
 
-namespace Kuroe.Workflows.Dialogue;
+namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。</summary>
 public sealed class DialogueHost(
@@ -81,7 +82,7 @@ public sealed class DialogueHost(
 
         registry.ClearSettled();
 
-        var document = Kuroe.Workflows.Flows.DialogueFlow.Build(settings.Current.Assistant.Language);
+        var document = DialogueFlow.Build(settings.AssistantLanguage);
         ErrorOr<CompiledDocument> compiled = compiler.Compile(document, []);
         if (compiled.IsError)
         {

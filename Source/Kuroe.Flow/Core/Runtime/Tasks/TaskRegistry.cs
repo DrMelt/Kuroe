@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -20,11 +21,11 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal WorkTask Create(string goal, CompiledFlow flow, string? title)
+    internal WorkTask Create(string goal, CompiledFlow flow, string? title, IProcessSink? observer)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, new TaskId(_nextTask++), goal, flow.Model, flow.Graph, title);
+            WorkTask task = new(this, new TaskId(_nextTask++), goal, flow.Model, flow.Graph, title, observer);
             _tasks.Add(task);
 
             return task;

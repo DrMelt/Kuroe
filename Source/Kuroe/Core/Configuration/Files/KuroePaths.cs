@@ -1,3 +1,6 @@
+using ErrorOr;
+using Kuroe.Shared;
+
 namespace Kuroe.Configuration.Files;
 
 /// <summary>存储目录下的文件路径。目录由宿主给出，这里不做位置推断。</summary>
@@ -34,5 +37,23 @@ public sealed class KuroePaths
 
     /// <summary>按存储目录组装文件路径，相对目录按进程当前目录解析。</summary>
     public static KuroePaths At(string directory) => new(directory);
+
+    /// <summary>解析启动参数给出的工作目录：空白用进程当前目录，相对路径转绝对路径，非法路径返回错误。</summary>
+    public static ErrorOr<KuroePaths> Resolve(string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return At(Directory.GetCurrentDirectory());
+        }
+
+        try
+        {
+            return At(Path.GetFullPath(directory));
+        }
+        catch (ArgumentException)
+        {
+            return Error.Validation(ErrorCodes.WorkDirectoryInvalid, $"工作目录不是合法路径：{directory}");
+        }
+    }
 }
 

@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -27,6 +28,20 @@ public sealed class LimitsTests
 
         Assert.Equal(41, snapshot.Title.Length);
         Assert.StartsWith(new string('目', 40), snapshot.Title);
+        Assert.EndsWith("…", snapshot.Title);
+    }
+
+    [Fact]
+    public void Explicit_title_is_truncated_at_forty_characters()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        string title = new('标', 50);
+
+        TaskId id = environment.Tasks.Submit("目标", new FlowName("默认"), title).ThrowIfError().Id;
+
+        TaskSnapshot snapshot = environment.Snapshot(id);
+        Assert.Equal(41, snapshot.Title.Length);
+        Assert.StartsWith(new string('标', 40), snapshot.Title);
         Assert.EndsWith("…", snapshot.Title);
     }
 

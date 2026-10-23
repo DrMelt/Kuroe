@@ -17,9 +17,15 @@ internal static class TestTypeFiles
         NodeTypeDescriptionRegistry files = new();
         ContainerNodeTypeDescriptions.RegisterInto(files);
         LlmNodeTypeDescriptions.RegisterInto(files);
-        InputNodeTypeDescriptions.RegisterInto(files, inputs);
-        ApprovalNodeTypeDescriptions.RegisterInto(files, inputs);
+        RegisterAll(files, inputs);
 
         return files;
+    }
+
+    /// <summary>把输入与审批节点描述注册进注册表。</summary>
+    internal static void RegisterAll(INodeTypeDescriptionRegistry files, IInputChannel inputs)
+    {
+        InputNodeTypeDescriptions.RegisterInto(files, inputs);
+        ApprovalNodeTypeDescriptions.RegisterInto(files, inputs);
     }
 }

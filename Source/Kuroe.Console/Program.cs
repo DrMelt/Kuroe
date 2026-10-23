@@ -1,16 +1,16 @@
 using System.CommandLine;
 using ErrorOr;
 using Kuroe;
+using Kuroe.Assistant;
 using Kuroe.Console;
 using Kuroe.Console.Commands;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
-using Kuroe.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
-RootCommand root = new("Kuroe 智能体：终端 REPL，流式输出与自动工具调用");
+RootCommand root = new("Kuroe 助手：终端 REPL，流式输出与自动工具调用");
 Option<string?> workDirectory = new("--work-directory", "-d") { Description = "工作目录，未指定时用进程当前目录" };
 root.Options.Add(workDirectory);
 root.SetAction(parseResult => RunAsync(parseResult.GetValue(workDirectory)));
@@ -29,14 +29,12 @@ static async Task<int> RunAsync(string? workDirectory)
         return 1;
     }
 
-    ErrorOr<string> directory = WorkDirectory.Resolve(workDirectory);
-    if (directory.IsError)
+    ErrorOr<KuroePaths> paths = KuroePaths.Resolve(workDirectory);
+    if (paths.IsError)
     {
-        errors.Report(directory.ErrorsOrEmptyList);
+        errors.Report(paths.ErrorsOrEmptyList);
         return 1;
     }
-
-    KuroePaths paths = KuroePaths.At(directory.Value);
 
     // 生成产物里随附仓库源码与文档，导出目录由宿主给出
     string sourceDirectory = Path.Combine(AppContext.BaseDirectory, "source");
@@ -44,10 +42,19 @@ static async Task<int> RunAsync(string? workDirectory)
     var services = new ServiceCollection();
     services.AddSingleton(terminal);
     services.AddSingleton(errors);
-    ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, sourceDirectory);
-    if (startup.IsError)
+    ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
+        paths.Value,
+        new KuroeCoreOptions { RegisterNodeTypes = NodeTypes.Register });
+    if (composition.IsError)
     {
-        errors.Report(startup.ErrorsOrEmptyList);
+        errors.Report(composition.ErrorsOrEmptyList);
+        return 1;
+    }
+
+    ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, sourceDirectory);
+    if (assistant.IsError)
+    {
+        errors.Report(assistant.ErrorsOrEmptyList);
         return 1;
     }
 
@@ -78,7 +85,7 @@ static async Task<int> RunAsync(string? workDirectory)
     services.Configure<ConsoleLoggerOptions>(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
     services.AddLogging(builder => builder
         // 日志级别只在启动时生效
-        .SetMinimumLevel(startup.Value.LogLevel)
+        .SetMinimumLevel(composition.Value.Startup.LogLevel)
         .AddSimpleConsole(options =>
         {
             options.SingleLine = true;

@@ -20,7 +20,6 @@
         <ProjectReference Include="..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Tool\Implementation\Time\Core\Kuroe.Tool.Time.csproj" />
         <ProjectReference Include="..\Tool\Implementation\File\Core\Kuroe.Tool.File.csproj" />
-        <ProjectReference Include="..\Tool\Implementation\Source\Core\Kuroe.Tool.Source.csproj" />
         <ProjectReference Include="..\Tool\Implementation\Git\Core\Kuroe.Tool.Git.csproj" />
         <ProjectReference Include="..\Tool\Implementation\Dotnet\Core\Kuroe.Tool.Dotnet.csproj" />
         <ProjectReference Include="..\Tool\Json\Kuroe.Tool.Json.csproj" />
@@ -39,8 +38,6 @@
         <ProjectReference Include="..\..\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\Node\Input\Core\Kuroe.Node.Input.csproj" />
-        <ProjectReference Include="..\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
     </ItemGroup>
 
     <ItemGroup>

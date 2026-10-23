@@ -10,7 +10,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
-using Kuroe.Workflows.Flows;
+using Kuroe.Assistant.Flows;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Tests.Support;
 using Xunit;

@@ -9,7 +9,8 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Workflows.Dialogue;
+using Kuroe.Assistant;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
@@ -108,10 +109,16 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, Path.Combine(root, "source"));
-        if (startup.IsError)
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, new KuroeCoreOptions { RegisterNodeTypes = NodeTypes.Register });
+        if (composition.IsError)
         {
-            return startup.ErrorsOrEmptyList;
+            return composition.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(root, "source"));
+        if (assistant.IsError)
+        {
+            return assistant.ErrorsOrEmptyList;
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的

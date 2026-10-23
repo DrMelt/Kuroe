@@ -8,7 +8,8 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Workflows.Dialogue;
+using Kuroe.Assistant;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
@@ -105,6 +106,9 @@ public sealed class TestEnvironment : IDisposable
         }
         """;
 
+    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。</summary>
+    internal static KuroeCoreOptions Options => new() { RegisterNodeTypes = TestTypeFiles.RegisterAll };
+
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
     public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true)
     {
@@ -123,10 +127,16 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(paths, Path.Combine(root, "source"));
-        if (startup.IsError)
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, Options);
+        if (composition.IsError)
         {
-            return startup.ErrorsOrEmptyList;
+            return composition.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(root, "source"));
+        if (assistant.IsError)
+        {
+            return assistant.ErrorsOrEmptyList;
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的

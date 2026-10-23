@@ -8,7 +8,7 @@ using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Json;
-using Kuroe.Workflows.Flows;
+using Kuroe.Assistant.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -182,6 +182,35 @@ public sealed class KuroeInfoToolTests : IDisposable
     }
 
     [Fact]
+    public void GetFlow_reports_waiting_node_question()
+    {
+        using TestEnvironment environment = TestEnvironment.Create("""
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" } ] },
+                  "Nodes": [
+                    {
+                      "Name": "收话",
+                      "Kind": "Input",
+                      "Question": "请补充背景",
+                      "Outputs": [ { "Name": "回答", "Type": "Text" } ],
+                      "From": [ { "目标": "Start@目标" } ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        FlowKuroeInfoTool tool = new(environment.Flows);
+        string output = Call(tool, "GetFlow", ("flowName", "默认"));
+
+        Assert.Contains("提问 请补充背景", output);
+    }
+
+    [Fact]
     public void GetConfig_lists_sections()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -253,7 +282,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
+        ErrorOr<KuroeComposition> startup = services.AddKuroeCore(KuroePaths.At(_root));
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,

@@ -22,4 +22,13 @@ public static class ErrorCodes
 
     /// <summary>配置的工具与其他已注册工具重名。</summary>
     public const string ToolDuplicate = "Tool.Duplicate";
+
+    /// <summary>启动参数给出的工作目录不是合法路径。</summary>
+    public const string WorkDirectoryInvalid = "WorkDirectory.Invalid";
+
+    /// <summary>命令行执行中出现未预期异常。</summary>
+    public const string CliInternal = "Cli.Internal";
+
+    /// <summary>命令行操作缺少提供商凭据。</summary>
+    public const string CliCredentialMissing = "Cli.CredentialMissing";
 }

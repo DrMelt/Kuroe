@@ -13,6 +13,7 @@ public static class ApprovalNodeTypes
     /// <summary>审批节点类型的静态形状：对外端口由输入端口派生，Signal 只作驱动。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
+        AwaitsApproval = true,
         DerivesOutputsFromInputs = true,
         InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
         OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],

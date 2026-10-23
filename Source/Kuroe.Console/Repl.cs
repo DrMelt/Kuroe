@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Console.Commands;
 using Kuroe.Console.Views;
-using Kuroe.Workflows.Dialogue;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Console;

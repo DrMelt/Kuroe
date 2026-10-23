@@ -1,6 +1,6 @@
 using Kuroe.Catalogs;
 using Kuroe.Console.Views;
-using Kuroe.Workflows.Dialogue;
+using Kuroe.Assistant.Dialogue;
 using Spectre.Console;
 
 namespace Kuroe.Console.Commands;

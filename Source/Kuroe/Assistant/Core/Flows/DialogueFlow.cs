@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Tool;
 
-namespace Kuroe.Workflows.Flows;
+namespace Kuroe.Assistant.Flows;
 
 /// <summary>内置对话流程：收话与回话互引构成环，收话由 开始 触发，一轮回答驱动一轮迭代后回到挂起。管理层用它创建常驻对话任务。</summary>
 internal static class DialogueFlow

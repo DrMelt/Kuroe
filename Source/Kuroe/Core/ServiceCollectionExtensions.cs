@@ -19,10 +19,8 @@ using Kuroe.Tool.File;
 using Kuroe.Tool.Git;
 using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Json;
-using Kuroe.Tool.Source;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
-using Kuroe.Workflows.Dialogue;
 using Kuroe.Workflows.Tasks;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
@@ -36,8 +34,6 @@ using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Node.Input;
-using Kuroe.Node.Approval;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
@@ -46,16 +42,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Kuroe;
 
-/// <summary>Kuroe 的装配入口，新增工具或服务改这里。宿主提供路径，日志输出由宿主注册。</summary>
+/// <summary>Kuroe 核心装配入口，新增核心工具或服务改这里。宿主提供路径，日志输出由宿主注册。</summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>装配配置、目录、流程、工具与任务推进，失败时返回启动期的全部错误。</summary>
+    /// <summary>装配配置、目录、流程、基础工具与任务推进，失败时返回启动期的全部错误。
+    /// 内置助手由 AddKuroeAssistant 在核心装配之后并入。</summary>
     /// <param name="services">服务集合。</param>
     /// <param name="paths">工作目录及其下的配置路径。</param>
-    /// <param name="sourceDirectory">随程序导出的源码与文档目录，供 source 工具组查阅。</param>
-    /// <returns>启动信息，其中的日志级别用于宿主注册日志输出。</returns>
-    public static ErrorOr<KuroeStartup> AddKuroe(this IServiceCollection services, KuroePaths paths, string sourceDirectory)
+    /// <param name="options">宿主追加的节点类型与流程库失败策略。</param>
+    /// <returns>装配产物，其中的启动信息用于宿主注册日志输出，工具集可继续并入工具。</returns>
+    public static ErrorOr<KuroeComposition> AddKuroeCore(
+        this IServiceCollection services,
+        KuroePaths paths,
+        KuroeCoreOptions? options = null)
     {
+        KuroeCoreOptions coreOptions = options ?? new KuroeCoreOptions();
         ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths);
         if (settings.IsError)
         {
@@ -81,13 +82,13 @@ public static class ServiceCollectionExtensions
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles);
-        InputNodeTypeDescriptions.RegisterInto(typeFiles, inputs);
-        ApprovalNodeTypeDescriptions.RegisterInto(typeFiles, inputs);
+        coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(
             new FlowStore(paths.FlowsFile, paths.WorkingDirectory, format, format),
             BuiltinNodes.Nodes,
-            descriptionCompiler);
+            descriptionCompiler,
+            coreOptions.AllowFlowFailures);
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;
@@ -119,18 +120,21 @@ public static class ServiceCollectionExtensions
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
 
-        ExecutionIndex executions = new();
-        TaskRegistry taskRegistry = new(executions, taskDirectory.Value.NextTaskNumber);
-        TaskRegistry dialogueRegistry = new(executions);
-        ErrorOr<Success> registered = RegisterTools(
+        KuroeComposition composition = new(
             services,
             configuredTools.Value,
+            new KuroeStartup(settings.Value.Current.Runtime.LogLevel));
+
+        ExecutionIndex executions = new();
+        TaskRegistry taskRegistry = new(executions, taskDirectory.Value.NextTaskNumber);
+        ErrorOr<Success> registered = RegisterTools(
+            services,
+            composition,
             settings.Value,
             catalog.Value,
             flows.Value,
             modelService,
             paths.WorkingDirectory,
-            sourceDirectory,
             taskRegistry,
             executions);
         if (registered.IsError)
@@ -161,23 +165,6 @@ public static class ServiceCollectionExtensions
             taskRegistry,
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IInputDelivery>()));
-        services.AddSingleton(sp => new DialogueRound(
-            dialogueRegistry,
-            new PendingService(
-                dialogueRegistry,
-                sp.GetRequiredService<FlowEngine>(),
-                sp.GetRequiredService<IInputDelivery>())));
-        services.AddSingleton(sp => new DialogueHost(
-            new TaskActions(
-                dialogueRegistry,
-                sp.GetRequiredService<FlowEngine>(),
-                sp.GetRequiredService<IExecutionTargetResolver>(),
-                null),
-            sp.GetRequiredService<DialogueRound>(),
-            sp.GetRequiredService<ModelService>(),
-            sp.GetRequiredService<SettingsProvider>(),
-            dialogueRegistry,
-            sp.GetRequiredService<IFlowDescriptionCompiler>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ILoggerFactory>(),
             sp.GetRequiredService<IModelSettings>(),
@@ -187,20 +174,19 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<IExecutionStatusReader>()));
 
-        return new KuroeStartup(settings.Value.Current.Runtime.LogLevel);
+        return composition;
     }
 
-    /// <summary>装配工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
-    /// TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引；契约工具按执行索引定位对话域与用户域的执行。</summary>
+    /// <summary>装配核心工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
+    /// TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引；契约工具按执行号经执行索引定位执行。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
-        IReadOnlyList<ConfiguredTool> configured,
+        KuroeComposition composition,
         SettingsProvider settings,
         CatalogService catalog,
         FlowService flows,
         ModelService models,
         string workingDirectory,
-        string sourceDirectory,
         TaskRegistry taskRegistry,
         ExecutionIndex executions)
     {
@@ -217,7 +203,6 @@ public static class ServiceCollectionExtensions
             new WriteFileTool(workingDirectory),
             new PatchFileTool(workingDirectory),
             new GetFileInfoTool(workingDirectory),
-            new SourceTool(sourceDirectory),
             .. GitTools.Tools(workingDirectory),
             .. DotnetTools.Tools(workingDirectory),
             new PortTool(portSubmitter, executions),
@@ -227,29 +212,13 @@ public static class ServiceCollectionExtensions
             new CatalogKuroeInfoTool(new ToolCatalogView(catalog, models)),
             new FlowKuroeInfoTool(flows),
             new SettingsKuroeInfoTool(settings),
-            new ToolboxKuroeInfoTool(DialogueFlow.Tools, configured),
-            .. configured.Select(entry => entry.Tool),
+            .. composition.ConfiguredTools.Select(entry => entry.Tool),
         ];
 
-        IReadOnlyList<ToolFunction> functions = [.. tools.SelectMany(tool => tool.Functions)];
-
-        IReadOnlyList<ToolPath> duplicates = [.. functions
-            .GroupBy(function => function.Definition.Path)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)];
-        if (duplicates.Count > 0)
+        ErrorOr<Success> added = composition.AddTools(tools);
+        if (added.IsError)
         {
-            return duplicates.Select(path => ToolFileErrors.Duplicate(path.Value)).ToList();
-        }
-
-        IReadOnlyList<Error> conflicts = [.. functions
-            .GroupBy(function => function.Definition.Path.CallName.Value)
-            .Where(group => group.Select(function => function.Definition.Path.Value).Distinct().Count() > 1)
-            .Select(group => ToolFileErrors.CallNameConflict(
-                group.Key, [.. group.Select(function => function.Definition.Path.Value).Distinct()]))];
-        if (conflicts.Count > 0)
-        {
-            return conflicts.ToList();
+            return added.ErrorsOrEmptyList;
         }
 
         services.AddSingleton(executions);
@@ -258,10 +227,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(cannotCompleteSubmitter);
         services.AddSingleton(statusReader);
         services.AddSingleton<IExecutionStatusReader>(statusReader);
-        foreach (ITool tool in tools)
-        {
-            services.AddSingleton(tool);
-        }
 
         return Result.Success;
     }

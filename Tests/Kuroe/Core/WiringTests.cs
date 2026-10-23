@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Assistant;
 using Kuroe.Flow.Runtime;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
@@ -11,6 +12,7 @@ using Kuroe.Tool;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Workflows.Flows;
+using Kuroe.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -67,7 +69,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
+        ErrorOr<KuroeComposition> startup = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList, error => error.Description.Contains("重复", StringComparison.Ordinal));
@@ -89,7 +91,7 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
+        ErrorOr<KuroeComposition> startup = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
 
         Assert.True(startup.IsError);
         Assert.Contains(startup.ErrorsOrEmptyList,
@@ -157,8 +159,11 @@ public sealed class WiringTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
-        Assert.False(startup.IsError);
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        Assert.False(composition.IsError);
+
+        ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));
+        Assert.False(assistant.IsError);
 
         return services.BuildServiceProvider();
     }

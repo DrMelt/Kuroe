@@ -7,7 +7,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 
-namespace Kuroe.Workflows.Dialogue;
+namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>对话任务的一轮问答：把输入交给停在等待的输入节点，等本轮执行收口并把回复交回。
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>

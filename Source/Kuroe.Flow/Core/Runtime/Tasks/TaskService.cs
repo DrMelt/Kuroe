@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -15,8 +16,12 @@ public sealed class TaskService(
     private readonly TaskActions _actions = actions;
     private readonly IFlowRuntimeCatalog _flows = flows;
 
-    /// <summary>提交任务：按流程建任务、建立工作目录并启动执行。</summary>
-    public ErrorOr<TaskSnapshot> Submit(string goal, FlowName flowName, string? title)
+    /// <summary>提交任务：按流程建任务、建立工作目录并启动执行。observer 收到该任务全部执行的过程播发。</summary>
+    public ErrorOr<TaskSnapshot> Submit(
+        string goal,
+        FlowName flowName,
+        string? title,
+        IProcessSink? observer = null)
     {
         if (string.IsNullOrWhiteSpace(goal))
         {
@@ -29,7 +34,7 @@ public sealed class TaskService(
             return flow.ErrorsOrEmptyList;
         }
 
-        return _actions.SubmitCompiled(goal.Trim(), flow.Value, title);
+        return _actions.SubmitCompiled(goal.Trim(), flow.Value, title, observer);
     }
 
     /// <summary>改任务标题。</summary>

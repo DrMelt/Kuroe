@@ -129,7 +129,7 @@ public sealed class FlowKuroeInfoTool : ITool
     /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node)
     {
-        LlmParameters? parameters = NodeParameterView.Llm(node.Type);
+        LlmParameters? parameters = (node.Type as LlmNodeType)?.Parameters;
         List<string> parts = [];
         if (parameters?.Tools is { Count: > 0 } tools)
         {
@@ -146,7 +146,7 @@ public sealed class FlowKuroeInfoTool : ITool
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
         }
 
-        if (NodeParameterView.Question(node.Type) is { Length: > 0 } question)
+        if (node.Type is IQuestionNodeType { Question: { Length: > 0 } question })
         {
             parts.Add($"提问 {question}");
         }

@@ -3,6 +3,7 @@ using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -24,11 +25,12 @@ public sealed class TaskActions(
     private readonly ITaskWorkspace? _workspace = workspace;
 
     /// <summary>按编译结果提交：校验开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
-    /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。</summary>
+    /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。observer 收到该任务全部执行的过程播发。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         string goal,
         CompiledFlow flow,
-        string? title)
+        string? title,
+        IProcessSink? observer = null)
     {
         if (string.IsNullOrWhiteSpace(goal))
         {
@@ -55,7 +57,7 @@ public sealed class TaskActions(
 
         while (true)
         {
-            WorkTask task = _registry.Create(goal, flow, title);
+            WorkTask task = _registry.Create(goal, flow, title, observer);
 
             ErrorOr<Success> prepared = Result.Success;
             if (_workspace is { } directory)

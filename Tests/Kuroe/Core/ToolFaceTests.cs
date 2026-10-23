@@ -1,14 +1,16 @@
 using ErrorOr;
+using Kuroe.Assistant;
 using Kuroe.Configuration.Files;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Shared;
 using Kuroe.Tool;
+using Kuroe.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>内置工具面的装配：各载体在 AddKuroe 里注册后进入工具集。</summary>
+/// <summary>内置工具面的装配：各载体在核心装配里注册后进入工具集。</summary>
 public sealed class ToolFaceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
@@ -60,8 +62,11 @@ public sealed class ToolFaceTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
 
-        ErrorOr<KuroeStartup> startup = services.AddKuroe(KuroePaths.At(_root), Path.Combine(_root, "source"));
-        Assert.False(startup.IsError);
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(KuroePaths.At(_root), TestEnvironment.Options);
+        Assert.False(composition.IsError);
+
+        ErrorOr<Success> assistant = services.AddKuroeAssistant(composition.Value, Path.Combine(_root, "source"));
+        Assert.False(assistant.IsError);
 
         return services.BuildServiceProvider();
     }

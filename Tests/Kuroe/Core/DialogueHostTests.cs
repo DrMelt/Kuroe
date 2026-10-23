@@ -3,7 +3,7 @@ using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Workflows.Dialogue;
+using Kuroe.Assistant.Dialogue;
 using Kuroe.Pending;
 using Xunit;
 

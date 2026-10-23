@@ -17,11 +17,19 @@ public sealed class WorkTask : INodeTask
 
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
+    private readonly IProcessSink? _observer;
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
 
-    internal WorkTask(TaskRegistry registry, TaskId id, string goal, FlowDefinition flow, INodeGraph graph, string? title)
+    internal WorkTask(
+        TaskRegistry registry,
+        TaskId id,
+        string goal,
+        FlowDefinition flow,
+        INodeGraph graph,
+        string? title,
+        IProcessSink? observer)
     {
         Registry = registry;
         Id = id;
@@ -31,7 +39,8 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
-        _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : title;
+        _observer = observer;
+        _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : Shorten(title);
     }
 
     /// <summary>任务标识。</summary>
@@ -162,6 +171,11 @@ public sealed class WorkTask : INodeTask
         _executions.Add(execution);
         Runtime.Executable(execution.Input.Node).RecordExecution();
         _lastActivityAt = DateTimeOffset.UtcNow;
+        if (_observer is { } observer)
+        {
+            execution.Observe(observer);
+        }
+
         ExecutionAttached?.Invoke(execution);
     }
 

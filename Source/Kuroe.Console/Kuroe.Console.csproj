@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <!-- 导出资料的仓库根，Link 据此保留仓库相对路径 -->
-        <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../..'))</RepoRoot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,7 +15,11 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Kuroe\Core\Kuroe.csproj" />
+        <ProjectReference Include="..\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
         <ProjectReference Include="..\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />
+        <ProjectReference Include="..\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Presentation\Kuroe.Presentation.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
@@ -29,16 +31,5 @@
         <InternalsVisibleTo Include="Kuroe.Console.Tests" />
     </ItemGroup>
 
-    <!-- 产物随附仓库源码与文档，运行时按 source 路径查阅；Link 决定产物内的相对路径 -->
-    <ItemGroup>
-        <None
-            Include="$(RepoRoot)/Source/**/*.cs;$(RepoRoot)/Source/**/*.csproj;$(RepoRoot)/Tests/**/*.cs;$(RepoRoot)/Tests/**/*.csproj;$(RepoRoot)/docs/**/*.md"
-            Exclude="$(RepoRoot)/**/bin/**;$(RepoRoot)/**/obj/**;$(RepoRoot)/**/TestResults/**"
-            Link="source/$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))"
-            CopyToOutputDirectory="PreserveNewest" />
-        <None
-            Include="$(RepoRoot)/README.md;$(RepoRoot)/LICENSE;$(RepoRoot)/Kuroe.slnx;$(RepoRoot)/Directory.Build.props;$(RepoRoot)/Directory.Packages.props;$(RepoRoot)/nuget.config;$(RepoRoot)/.editorconfig"
-            Link="source/$([MSBuild]::MakeRelative($(RepoRoot), %(FullPath)))"
-            CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
+    <Import Project="..\SourceExport.props" />
 </Project>

@@ -5,7 +5,6 @@ using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Node.Approval;
 
 namespace Kuroe.Pending;
 
@@ -14,23 +13,12 @@ public readonly record struct PendingNode(NodePath Node, PendingKind Kind);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进下游。
 /// 外部输入经协议交到节点上，登记即代表收下。</summary>
-public sealed class PendingService
+public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, IInputDelivery inputs)
 {
-    private readonly TaskRegistry _registry;
-    private readonly IFlowRunner _runner;
-    private readonly IInputDelivery _inputs;
-
-    internal PendingService(TaskRegistry registry, IFlowRunner runner, IInputDelivery inputs)
-    {
-        _registry = registry;
-        _runner = runner;
-        _inputs = inputs;
-    }
-
     /// <summary>任务里此刻待处理的节点，按图先根序。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
-        ErrorOr<WorkTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -59,7 +47,7 @@ public sealed class PendingService
         string input,
         IReadOnlyList<NodePath>? nodes)
     {
-        ErrorOr<WorkTask> found = _registry.Find(id);
+        ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -108,7 +96,7 @@ public sealed class PendingService
             return accepted.ErrorsOrEmptyList;
         }
 
-        _runner.Resume(task, accepted.Value);
+        runner.Resume(task, accepted.Value);
 
         return Result.Success;
     }
@@ -118,7 +106,7 @@ public sealed class PendingService
     {
         foreach (NodePath node in nodes)
         {
-            _inputs.Deliver(task.Context, node, input);
+            inputs.Deliver(task.Context, node, input);
         }
     }
 
@@ -126,13 +114,13 @@ public sealed class PendingService
     private List<PendingNode> Pending(WorkTask task)
     {
         INodeTask access = task;
-        HashSet<NodePath> accepting = [.. _inputs.Accepting(task.Context)];
+        HashSet<NodePath> accepting = [.. inputs.Accepting(task.Context)];
 
         return
         [
             .. access.Graph.ExecutableNodes
                 .Where(node => accepting.Contains(node.Path))
-                .Select(node => new PendingNode(node.Path, node.Type is ApprovalNodeType ? PendingKind.Approve : PendingKind.Answer)),
+                .Select(node => new PendingNode(node.Path, node.Type.Shape.AwaitsApproval ? PendingKind.Approve : PendingKind.Answer)),
         ];
     }
 }

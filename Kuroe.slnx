@@ -27,8 +27,10 @@
     <Project Path="Source/Kuroe.Flow/InputChannel/Shared/Kuroe.Flow.InputChannel.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Core/Kuroe.Flow.InputChannel.csproj" />
     <Project Path="Source/Kuroe/Node/Approval/Core/Kuroe.Node.Approval.csproj" />
+    <Project Path="Source/Kuroe/Assistant/Core/Kuroe.Assistant.csproj" />
     <Project Path="Source/Kuroe/Core/Kuroe.csproj" />
     <Project Path="Source/Kuroe.Console/Kuroe.Console.csproj" />
+    <Project Path="Source/Kuroe.Cli/Kuroe.Cli.csproj" />
     <Project Path="Tests/Kuroe/Core/Kuroe.Tests.csproj" />
     <Project Path="Tests/Kuroe/Shared/Kuroe.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Core/Kuroe.Tool.Tests.csproj" />
@@ -51,4 +53,5 @@
     <Project Path="Tests/Kuroe/Node/Input/Core/Kuroe.Node.Input.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Approval/Core/Kuroe.Node.Approval.Tests.csproj" />
     <Project Path="Tests/Kuroe.Console/Kuroe.Console.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Cli/Kuroe.Cli.Tests.csproj" />
 </Solution>
