@@ -677,13 +677,114 @@ public sealed class FileToolTests : IDisposable
     }
 
     [Fact]
+    public void MoveFile_renames_file_in_place()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "old.txt"), "内容");
+
+        string output = Call("MoveFile", ("source", "old.txt"), ("target", "new.txt"));
+
+        Assert.Equal("已把 old.txt 移动到 new.txt。", output);
+        Assert.False(File.Exists(Path.Combine(_root, "old.txt")));
+        Assert.Equal("内容", File.ReadAllText(Path.Combine(_root, "new.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_moves_file_and_creates_missing_parent_directory()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
+
+        string output = Call("MoveFile", ("source", "a.txt"), ("target", "nested/dir/b.txt"));
+
+        Assert.Equal("已把 a.txt 移动到 nested/dir/b.txt。", output);
+        Assert.Equal("A内容", File.ReadAllText(Path.Combine(_root, "nested", "dir", "b.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_renames_directory_with_its_entries()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "old"));
+        File.WriteAllText(Path.Combine(_root, "old", "a.txt"), "A内容");
+
+        string output = Call("MoveFile", ("source", "old"), ("target", "new"));
+
+        Assert.Equal("已把 old 移动到 new。", output);
+        Assert.False(Directory.Exists(Path.Combine(_root, "old")));
+        Assert.Equal("A内容", File.ReadAllText(Path.Combine(_root, "new", "a.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_rejects_missing_arguments()
+    {
+        Assert.Contains("缺少参数 source", Call("MoveFile", ("target", "b.txt")));
+        Assert.Contains("缺少参数 target", Call("MoveFile", ("source", "a.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_rejects_missing_source()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("不存在", Call("MoveFile", ("source", "nope.txt"), ("target", "b.txt")));
+        Assert.False(File.Exists(Path.Combine(_root, "b.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_rejects_existing_target()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "A");
+        File.WriteAllText(Path.Combine(_root, "b.txt"), "B");
+
+        string output = Call("MoveFile", ("source", "a.txt"), ("target", "b.txt"));
+
+        Assert.Contains("已存在", output);
+        Assert.Equal("B", File.ReadAllText(Path.Combine(_root, "b.txt")));
+        Assert.Equal("A", File.ReadAllText(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_rejects_path_escaping_working_directory()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
+
+        Assert.Contains("不在工作目录内", Call("MoveFile", ("source", ".."), ("target", "b.txt")));
+        Assert.Contains("不在工作目录内", Call("MoveFile", ("source", "a.txt"), ("target", "../b.txt")));
+        Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void MoveFile_rejects_moving_directory_into_itself()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "old"));
+
+        string output = Call("MoveFile", ("source", "old"), ("target", "old/sub"));
+
+        Assert.Contains("自身子目录", output);
+        Assert.True(Directory.Exists(Path.Combine(_root, "old")));
+        Assert.False(Directory.Exists(Path.Combine(_root, "old", "sub")));
+    }
+
+    [Fact]
+    public void MoveFile_description_hints_rename()
+    {
+        ToolDefinition definition = Face().SelectMany(tool => tool.Functions)
+            .Single(function => function.Definition.Path.Value == "file/write/MoveFile")
+            .Definition;
+
+        Assert.Contains("重命名", definition.Description);
+    }
+
+    [Fact]
     public void Face_functions_split_into_read_and_write_groups()
     {
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
         string[] readFunctions = ["ReadFile", "ReadFiles", "ListDirectory", "GetFileInfo"];
-        string[] writeFunctions = ["WriteFile", "PatchFile"];
+        string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile"];
         foreach (string name in readFunctions)
         {
             Assert.Equal($"file/read/{name}", paths[name]);
@@ -703,6 +804,7 @@ public sealed class FileToolTests : IDisposable
         new ReadFilesTool(_root),
         new WriteFileTool(_root),
         new PatchFileTool(_root),
+        new MoveFileTool(_root),
         new GetFileInfoTool(_root),
     ];
 

@@ -200,6 +200,7 @@ public static class ServiceCollectionExtensions
             new ReadFilesTool(workingDirectory),
             new WriteFileTool(workingDirectory),
             new PatchFileTool(workingDirectory),
+            new MoveFileTool(workingDirectory),
             new GetFileInfoTool(workingDirectory),
             .. GitTools.Tools(workingDirectory),
             .. DotnetTools.Tools(workingDirectory),
