@@ -1,14 +1,15 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
-using ErrorOr;
+using DiagnosticsProcess = System.Diagnostics.Process;
 
-namespace Kuroe.Tool.Command;
+namespace Kuroe.Process;
 
 /// <summary>用系统进程执行命令。stdout 与 stderr 的行汇入同一份文本，顺序不保；超时终止整个进程树。</summary>
-internal sealed class CommandProcessRunner : ICommandProcessRunner
+public sealed class ProcessRunner : IProcessRunner
 {
-    /// <summary>在工作目录启动程序并等待结果，输出按 UTF-8 解码。超时以 TimedOut 交回，无法启动以 ErrorOr 表达。</summary>
-    public ErrorOr<CommandProcessResult> Run(
+    /// <summary>在工作目录启动程序并等待结果，输出按 UTF-8 解码。超时以 TimedOut 交回，无法启动时抛 <see cref="ProcessStartException"/>。</summary>
+    public ProcessResult Run(
         string program,
         IReadOnlyList<string> arguments,
         string workingDirectory,
@@ -30,7 +31,7 @@ internal sealed class CommandProcessRunner : ICommandProcessRunner
             startInfo.ArgumentList.Add(argument);
         }
 
-        using var process = new Process { StartInfo = startInfo };
+        using var process = new DiagnosticsProcess { StartInfo = startInfo };
         object gate = new();
         var output = new StringBuilder();
         process.OutputDataReceived += (_, eventArgs) => AppendData(output, eventArgs.Data, gate);
@@ -40,12 +41,12 @@ internal sealed class CommandProcessRunner : ICommandProcessRunner
         {
             if (!process.Start())
             {
-                return ToolErrors.Execute($"无法启动 {program}。");
+                throw new ProcessStartException($"无法启动 {program}。");
             }
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
-            return ToolErrors.Execute($"无法启动 {program}：{ex.Message}");
+            throw new ProcessStartException($"无法启动 {program}：{ex.Message}", ex);
         }
 
         process.BeginOutputReadLine();
@@ -56,12 +57,12 @@ internal sealed class CommandProcessRunner : ICommandProcessRunner
         {
             KillTree(process);
             process.WaitForExit(5000);
-            return new CommandProcessResult(output.ToString(), 0, TimedOut: true);
+            return new ProcessResult(output.ToString(), 0, TimedOut: true);
         }
 
         process.WaitForExit();
 
-        return new CommandProcessResult(output.ToString(), process.ExitCode, TimedOut: false);
+        return new ProcessResult(output.ToString(), process.ExitCode, TimedOut: false);
     }
 
     /// <summary>stdout 与 stderr 的行汇入同一份文本，顺序不保。两路回调可能并行，写入加锁。</summary>
@@ -77,13 +78,13 @@ internal sealed class CommandProcessRunner : ICommandProcessRunner
     }
 
     /// <summary>终止整个进程树，尽力而为，失败不阻断超时返回。</summary>
-    private static void KillTree(Process process)
+    private static void KillTree(DiagnosticsProcess process)
     {
         try
         {
             process.Kill(entireProcessTree: true);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException)
         {
             // 进程可能已退出或已被系统清理，不追加错误
         }

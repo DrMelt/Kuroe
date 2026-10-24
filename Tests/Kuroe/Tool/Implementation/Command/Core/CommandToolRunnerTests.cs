@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Process;
 using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Shared;
 using Xunit;
@@ -13,7 +14,7 @@ public sealed class CommandToolRunnerTests
     {
         FakeProcessRunner process = new()
         {
-            Result = new CommandProcessResult($"甲{Environment.NewLine}乙{Environment.NewLine}", 0, false),
+            Result = new ProcessResult($"甲{Environment.NewLine}乙{Environment.NewLine}", 0, false),
         };
 
         ErrorOr<string> result = Invoke(Definition(), Root(), Given(), process);
@@ -27,7 +28,7 @@ public sealed class CommandToolRunnerTests
     {
         FakeProcessRunner process = new()
         {
-            Result = new CommandProcessResult("abcdefgh", 1, false),
+            Result = new ProcessResult("abcdefgh", 1, false),
         };
 
         ErrorOr<string> result = Invoke(Definition(outputLimit: 5), Root(), Given(), process);
@@ -41,7 +42,7 @@ public sealed class CommandToolRunnerTests
     {
         FakeProcessRunner process = new()
         {
-            Result = new CommandProcessResult(string.Empty, 3, false),
+            Result = new ProcessResult(string.Empty, 3, false),
         };
 
         ErrorOr<string> result = Invoke(Definition(), Root(), Given(), process);
@@ -55,7 +56,7 @@ public sealed class CommandToolRunnerTests
     {
         FakeProcessRunner process = new()
         {
-            Result = new CommandProcessResult("部分输出", 0, true),
+            Result = new ProcessResult("部分输出", 0, true),
         };
 
         ErrorOr<string> result = Invoke(Definition(timeoutSeconds: 5), Root(), Given(), process);
@@ -70,7 +71,7 @@ public sealed class CommandToolRunnerTests
     {
         FakeProcessRunner process = new()
         {
-            Failure = ToolErrors.Execute("无法启动 cmd。"),
+            Failure = new ProcessStartException("无法启动 cmd。"),
         };
 
         ErrorOr<string> result = Invoke(Definition(), Root(), Given(), process);
@@ -182,7 +183,7 @@ public sealed class CommandToolRunnerTests
         CommandToolDefinition definition,
         string root,
         Dictionary<string, object?> values,
-        ICommandProcessRunner process) =>
+        IProcessRunner process) =>
         new CommandTool(definition, root, process).Functions[0].Invoke(new ToolArguments(values));
 
     /// <summary>一次调用的实参。</summary>
@@ -190,11 +191,11 @@ public sealed class CommandToolRunnerTests
         values.ToDictionary(value => value.Name, value => value.Value);
 
     /// <summary>记录调用并返回预设结果或错误的进程替身。</summary>
-    private sealed class FakeProcessRunner : ICommandProcessRunner
+    private sealed class FakeProcessRunner : IProcessRunner
     {
-        public CommandProcessResult Result { get; init; } = new(string.Empty, 0, false);
+        public ProcessResult Result { get; init; } = new(string.Empty, 0, false);
 
-        public Error? Failure { get; init; }
+        public ProcessStartException? Failure { get; init; }
 
         public bool Called { get; private set; }
 
@@ -206,7 +207,7 @@ public sealed class CommandToolRunnerTests
 
         public TimeSpan Timeout { get; private set; }
 
-        public ErrorOr<CommandProcessResult> Run(
+        public ProcessResult Run(
             string program,
             IReadOnlyList<string> arguments,
             string workingDirectory,
@@ -220,7 +221,7 @@ public sealed class CommandToolRunnerTests
 
             if (Failure is { } failure)
             {
-                return failure;
+                throw failure;
             }
 
             return Result;

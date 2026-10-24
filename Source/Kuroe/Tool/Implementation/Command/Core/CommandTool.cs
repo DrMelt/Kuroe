@@ -1,3 +1,4 @@
+using Kuroe.Process;
 using Kuroe.Tool.Command.Shared;
 
 namespace Kuroe.Tool.Command;
@@ -7,7 +8,7 @@ public sealed class CommandTool : ITool
 {
     /// <summary>用工作目录与默认进程执行建立载体。</summary>
     public CommandTool(CommandToolDefinition definition, string baseDirectory)
-        : this(definition, baseDirectory, new CommandProcessRunner())
+        : this(definition, baseDirectory, new ProcessRunner())
     {
     }
 
@@ -18,7 +19,7 @@ public sealed class CommandTool : ITool
     public CommandTool(
         CommandToolDefinition definition,
         string baseDirectory,
-        ICommandProcessRunner process)
+        IProcessRunner process)
     {
         CommandToolRunner runner = new(definition, baseDirectory, process);
         Functions = [definition.Definition.Bind(runner.Execute, runner.Paths)];

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
+        <ProjectReference Include="..\..\..\Process\Core\Kuroe.Process.csproj" />
+        <ProjectReference Include="..\..\..\Shared\Kuroe.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Kuroe.Node.Command.Tests" />
+    </ItemGroup>
+
+</Project>

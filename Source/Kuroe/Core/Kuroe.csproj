@@ -39,6 +39,7 @@
         <ProjectReference Include="..\..\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
         <ProjectReference Include="..\Node\File\Core\Kuroe.Node.File.csproj" />
+        <ProjectReference Include="..\Node\Command\Core\Kuroe.Node.Command.csproj" />
     </ItemGroup>
 
     <ItemGroup>
