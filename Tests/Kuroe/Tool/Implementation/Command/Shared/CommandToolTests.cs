@@ -128,91 +128,8 @@ public sealed class CommandToolTests
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
-    [Fact]
-    public void Check_accepts_path_under_root_without_policy()
-    {
-        string root = Root();
-
-        Assert.False(CommandToolPathAccess.Empty.Check(Path.Combine("src", "App.cs"), root, root).IsError);
-        Assert.False(CommandToolPathAccess.Empty.Check("src", root, root).IsError);
-    }
-
-    [Fact]
-    public void Check_rejects_path_outside_root_even_without_policy()
-    {
-        string root = Root();
-        ErrorOr<Success> escaped = CommandToolPathAccess.Empty.Check(Path.Combine("..", "escape.txt"), root, root);
-        ErrorOr<Success> absolute = CommandToolPathAccess.Empty.Check(Path.Combine(root, "..", "escape.txt"), root, root);
-
-        Assert.True(escaped.IsError);
-        Assert.Contains("不在工作目录内", escaped.FirstError.Description, StringComparison.Ordinal);
-        Assert.True(absolute.IsError);
-    }
-
-    [Fact]
-    public void Check_denies_path_in_deny_list_before_allow()
-    {
-        string root = Root();
-        CommandToolPathAccess access = new(["src"], [Path.Combine("src", "secret")]);
-
-        ErrorOr<Success> denied = access.Check(Path.Combine("src", "secret", "token.txt"), root, root);
-
-        Assert.True(denied.IsError);
-        Assert.Contains("黑名单", denied.FirstError.Description, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Check_rejects_path_outside_allow_list_and_name_prefix()
-    {
-        string root = Root();
-        CommandToolPathAccess access = new(["src"], []);
-
-        ErrorOr<Success> outside = access.Check(Path.Combine("docs", "readme.md"), root, root);
-        ErrorOr<Success> prefix = access.Check(Path.Combine("src2", "readme.md"), root, root);
-
-        Assert.True(outside.IsError);
-        Assert.Contains("白名单", outside.FirstError.Description, StringComparison.Ordinal);
-        Assert.True(prefix.IsError);
-    }
-
-    [Fact]
-    public void Check_accepts_entry_itself_and_subtree()
-    {
-        string root = Root();
-        CommandToolPathAccess access = new(["src"], []);
-
-        Assert.False(access.Check("src", root, root).IsError);
-        Assert.False(access.Check(Path.Combine("src", "dir", "App.cs"), root, root).IsError);
-    }
-
-    [Fact]
-    public void Check_applies_deny_without_allow()
-    {
-        string root = Root();
-        CommandToolPathAccess access = new([], [Path.Combine("docs", "secret")]);
-
-        Assert.False(access.Check(Path.Combine("docs", "readme.md"), root, root).IsError);
-        Assert.True(access.Check(Path.Combine("docs", "secret", "token.txt"), root, root).IsError);
-    }
-
-    [Fact]
-    public void Check_resolves_value_against_execution_directory()
-    {
-        string root = Root();
-        string working = Path.Combine(root, "src");
-        CommandToolPathAccess access = new(["src"], []);
-        CommandToolPathAccess docs = new(["docs"], []);
-
-        Assert.False(access.Check("App.cs", working, root).IsError);
-        Assert.False(docs.Check(Path.Combine("..", "docs", "readme.md"), working, root).IsError);
-        Assert.True(access.Check(Path.Combine("..", "escape.txt"), working, root).IsError);
-    }
-
-    /// <summary>临时测试根目录，路径不需要实际存在。</summary>
-    private static string Root() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
-    private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
+    private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
     {
         ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
 
@@ -222,7 +139,7 @@ public sealed class CommandToolTests
     }
 
     /// <summary>展开被拒的错误文本，未拒绝时用例失败。</summary>
-    private static string Rejected(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values)
+    private static string Rejected(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
     {
         ErrorOr<IReadOnlyList<string>> argv = Expand(template, parameters, values);
 
@@ -232,11 +149,11 @@ public sealed class CommandToolTests
     }
 
     /// <summary>调用命令面的展开，只组装命令行，不起进程。</summary>
-    private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters, Dictionary<string, object?> values) =>
+    private static ErrorOr<IReadOnlyList<string>> Expand(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values) =>
         Definition(template, parameters).CommandLine(new ToolArguments(values));
 
     /// <summary>测试用的命令定义，执行目录、超时与输出上限取固定值。</summary>
-    private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<CommandToolParameter> parameters) =>
+    private static CommandToolDefinition Definition(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters) =>
         new(new ToolPath("Execution"), "说明", parameters, template, null, 5, 200);
 
     /// <summary>模板项：文字，无关联参数。</summary>
@@ -251,13 +168,13 @@ public sealed class CommandToolTests
     private static Dictionary<string, object?> Given(params (string Name, object? Value)[] values) =>
         values.ToDictionary(value => value.Name, value => value.Value);
 
-    private static readonly CommandToolParameter FileParameter = new("files", "文件列表", List: true);
-    private static readonly CommandToolParameter RequiredFileParameter = new("files", "文件列表", Required: true, List: true);
-    private static readonly CommandToolParameter TextParameter = new("text", "文本", Required: true);
-    private static readonly CommandToolParameter TokenParameter = new("token", "令牌");
-    private static readonly CommandToolParameter RequiredTokenParameter = new("token", "令牌", Required: true);
-    private static readonly CommandToolParameter UserParameter = new("user", "用户");
-    private static readonly CommandToolParameter PasswordParameter = new("pass", "口令");
-    private static readonly CommandToolParameter StagedParameter = new("staged", "开关", Flag: true);
+    private static readonly ToolParameter FileParameter = new(new ToolName("files"), "文件列表", List: true);
+    private static readonly ToolParameter RequiredFileParameter = new(new ToolName("files"), "文件列表", Required: true, List: true);
+    private static readonly ToolParameter TextParameter = new(new ToolName("text"), "文本", Required: true);
+    private static readonly ToolParameter TokenParameter = new(new ToolName("token"), "令牌");
+    private static readonly ToolParameter RequiredTokenParameter = new(new ToolName("token"), "令牌", Required: true);
+    private static readonly ToolParameter UserParameter = new(new ToolName("user"), "用户");
+    private static readonly ToolParameter PasswordParameter = new(new ToolName("pass"), "口令");
+    private static readonly ToolParameter StagedParameter = new(new ToolName("staged"), "开关", Flag: true);
     private static readonly string[] stringArray = ["甲", "乙"];
 }

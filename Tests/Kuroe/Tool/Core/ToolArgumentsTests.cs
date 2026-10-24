@@ -52,6 +52,8 @@ public sealed class ToolArgumentsTests
         Assert.False(parameter.Flag);
         Assert.False(parameter.Required);
         Assert.False(parameter.List);
+        Assert.False(parameter.Path);
+        Assert.Null(parameter.PathAccess);
     }
 
     [Fact]

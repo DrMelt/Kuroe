@@ -223,11 +223,11 @@ public sealed class DotnetToolTests
                 "dotnet/write/Publish",
                 "dotnet/write/AddPackage",
             ],
-            path => Assert.True(CommandParameter(Definition(path), "project").Path));
+            path => Assert.True(Parameter(Definition(path), "project").Path));
 
-        Assert.False(CommandParameter(Definition("dotnet/write/Build"), "configuration").Path);
-        Assert.False(CommandParameter(Definition("dotnet/write/Test"), "filter").Path);
-        Assert.False(CommandParameter(Definition("dotnet/write/AddPackage"), "package").Path);
+        Assert.False(Parameter(Definition("dotnet/write/Build"), "configuration").Path);
+        Assert.False(Parameter(Definition("dotnet/write/Test"), "filter").Path);
+        Assert.False(Parameter(Definition("dotnet/write/AddPackage"), "package").Path);
     }
 
     [Fact]
@@ -247,11 +247,7 @@ public sealed class DotnetToolTests
 
     /// <summary>按名字取参数声明。</summary>
     private static ToolParameter Parameter(CommandToolDefinition definition, string name) =>
-        definition.Definition.Parameters.Single(parameter => parameter.Name.Value == name);
-
-    /// <summary>按名字取命令参数声明。</summary>
-    private static CommandToolParameter CommandParameter(CommandToolDefinition definition, string name) =>
-        definition.Parameters.Single(parameter => parameter.Name == name);
+        definition.Parameters.Single(parameter => parameter.Name.Value == name);
 
     /// <summary>按完整路径取模板。</summary>
     private static IReadOnlyList<CommandToolTemplateItem> Template(string path) => Definition(path).Template;

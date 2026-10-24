@@ -39,6 +39,24 @@ public sealed class ToolJsonTests
     }
 
     [Fact]
+    public void Schema_treats_path_parameters_as_text()
+    {
+        ToolParameter[] parameters =
+        [
+            new(new ToolName("path"), "文件路径", Required: true, Path: true),
+            new(new ToolName("paths"), "文件路径列表", List: true, Path: true),
+        ];
+
+        JsonElement schema = Json.Schema(parameters);
+
+        JsonElement path = schema.GetProperty("properties").GetProperty("path");
+        JsonElement paths = schema.GetProperty("properties").GetProperty("paths");
+        Assert.Equal("string", path.GetProperty("type").GetString());
+        Assert.Equal("array", paths.GetProperty("type").GetString());
+        Assert.Equal("string", paths.GetProperty("items").GetProperty("type").GetString());
+    }
+
+    [Fact]
     public void Describe_writes_json_values_verbatim_and_other_values_as_text()
     {
         using JsonDocument document = JsonDocument.Parse("""["甲", "乙"]""");

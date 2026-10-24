@@ -183,6 +183,18 @@ public sealed class SourceToolTests : IDisposable
         Assert.Contains("不存在", Call(new SourceTool(_root), "ReadSourceFile", ("path", "Kuroe/nope.cs")));
     }
 
+    [Fact]
+    public void ReadSourceFile_declares_path_parameter()
+    {
+        SourceTool tool = new(_root);
+        ToolDefinition list = tool.Functions.Single(function => function.Definition.Path.Name.Value == "ListSourceDirectory").Definition;
+        ToolDefinition read = tool.Functions.Single(function => function.Definition.Path.Name.Value == "ReadSourceFile").Definition;
+
+        Assert.True(list.Parameters.Single(parameter => parameter.Name.Value == "path").Path);
+        Assert.True(read.Parameters.Single(parameter => parameter.Name.Value == "path").Path);
+        Assert.False(read.Parameters.Single(parameter => parameter.Name.Value == "from").Path);
+    }
+
     private static string Call(SourceTool tool, string name, params (string Key, object? Value)[] args) =>
         ToolResult.Render(tool.Functions.Single(function => function.Definition.Path.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));

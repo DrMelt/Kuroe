@@ -12,6 +12,6 @@ internal static class Add
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("git/write/Add"),
         "把指定路径的改动放入暂存区，供 Commit 提交。",
-        [new CommandToolParameter(Paths, "要暂存的文件或目录路径列表", Required: true, List: true, Path: true)],
+        [new ToolParameter(new ToolName(Paths), "要暂存的文件或目录路径列表", Required: true, List: true, Path: true)],
         [new("git", null), new("add", null), new("--", null), new("{paths}", null)]);
 }

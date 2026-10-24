@@ -155,14 +155,14 @@ public sealed class CommandToolFile : IToolFile
             }
         }
 
-        ErrorOr<IReadOnlyList<CommandToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters, workDirectory);
+        ErrorOr<IReadOnlyList<ToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters, workDirectory);
         if (parameters.IsError)
         {
             errors.AddRange(parameters.ErrorsOrEmptyList);
         }
         else if (executionDirectory is not null
             && parameters.Value.Any(parameter => parameter.Path)
-            && !CommandToolPathAccess.IsUnder(workDirectory, executionDirectory))
+            && !ToolPathAccess.IsUnder(workDirectory, executionDirectory))
         {
             errors.Add(CommandToolErrors.Invalid(
                 dto.Name ?? "(未命名)",
@@ -197,10 +197,10 @@ public sealed class CommandToolFile : IToolFile
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。
     /// 路径参数不能是布尔，路径规则条目必须在工作目录内。</summary>
-    private static ErrorOr<IReadOnlyList<CommandToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos, string workDirectory)
+    private static ErrorOr<IReadOnlyList<ToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos, string workDirectory)
     {
         List<Error> errors = [];
-        List<CommandToolParameter> parameters = [];
+        List<ToolParameter> parameters = [];
         HashSet<string> names = [];
 
         foreach (CommandParameterDto dto in dtos ?? [])
@@ -253,10 +253,10 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
-            CommandToolPathAccess? access = null;
+            ToolPathAccess? access = null;
             if (dto.Path)
             {
-                ErrorOr<CommandToolPathAccess> converted = ToPathAccess(tool, dto, workDirectory);
+                ErrorOr<ToolPathAccess> converted = ToPathAccess(tool, dto, workDirectory);
                 if (converted.IsError)
                 {
                     errors.AddRange(converted.ErrorsOrEmptyList);
@@ -266,8 +266,8 @@ public sealed class CommandToolFile : IToolFile
                 access = converted.Value;
             }
 
-            parameters.Add(new CommandToolParameter(
-                dto.Name,
+            parameters.Add(new ToolParameter(
+                new ToolName(dto.Name),
                 dto.Description ?? $"参数 {dto.Name}",
                 Flag: dto.Flag,
                 Required: dto.Required,
@@ -280,13 +280,13 @@ public sealed class CommandToolFile : IToolFile
     }
 
     /// <summary>装配路径准入规则：白名单与黑名单的条目各自校验，错误一次给出。</summary>
-    private static ErrorOr<CommandToolPathAccess> ToPathAccess(string tool, CommandParameterDto dto, string workDirectory)
+    private static ErrorOr<ToolPathAccess> ToPathAccess(string tool, CommandParameterDto dto, string workDirectory)
     {
         List<Error> errors = [];
         List<string> allow = Entries(tool, "Allow", dto.Allow, workDirectory, errors);
         List<string> deny = Entries(tool, "Deny", dto.Deny, workDirectory, errors);
 
-        return errors.Count > 0 ? errors : new CommandToolPathAccess(allow, deny);
+        return errors.Count > 0 ? errors : new ToolPathAccess(allow, deny);
     }
 
     /// <summary>校验路径规则条目：非空、可解析且落在工作目录内。</summary>
@@ -316,7 +316,7 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
-            if (!CommandToolPathAccess.IsUnder(workDirectory, full))
+            if (!ToolPathAccess.IsUnder(workDirectory, full))
             {
                 errors.Add(CommandToolErrors.Invalid(tool, $"{field} 条目 {entry} 不在工作目录内。"));
             }

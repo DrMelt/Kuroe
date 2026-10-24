@@ -21,7 +21,7 @@ public sealed class CommandTool : ITool
         ICommandProcessRunner process)
     {
         CommandToolRunner runner = new(definition, baseDirectory, process);
-        Functions = [definition.Definition.Bind(runner.Execute)];
+        Functions = [definition.Definition.Bind(runner.Execute, runner.Paths)];
     }
 
     /// <summary>本载体的函数声明。</summary>

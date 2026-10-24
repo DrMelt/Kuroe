@@ -19,9 +19,9 @@ internal static class AddPackage
         new ToolPath("dotnet/write/AddPackage"),
         "给项目添加包引用，project 是项目、解决方案或目录，package 是包名，version 是版本号。",
         [
-            new CommandToolParameter(Project, "项目、解决方案或目录路径，缺省在项目工作目录里查找", Path: true),
-            new CommandToolParameter(Package, "要添加的包名", Required: true),
-            new CommandToolParameter(Version, "包版本号，缺省用可用的最新稳定版"),
+            new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在项目工作目录里查找", Path: true),
+            new ToolParameter(new ToolName(Package), "要添加的包名", Required: true),
+            new ToolParameter(new ToolName(Version), "包版本号，缺省用可用的最新稳定版"),
         ],
         [
             new("dotnet", null),

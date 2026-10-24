@@ -16,7 +16,7 @@ public sealed class PatchFileTool : ITool
         new ToolPath("file/write/PatchFile"),
         "按行号范围替换工作目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
         [
-            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，第 1 行起", Required: true),
             new ToolParameter(new ToolName("to"), "结束行号，数字", Required: true),
             new ToolParameter(new ToolName("original"), "该范围现在的原文，逐行与文件比对", Required: true),
@@ -31,17 +31,13 @@ public sealed class PatchFileTool : ITool
     public PatchFileTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [PatchFile.Bind(Patch)];
+        Functions = [PatchFile.Bind(Patch, _scope.Paths)];
     }
 
     /// <summary>按行号范围替换文件内容，替换区间的原文须与 original 逐行一致；错误与拒绝以 ErrorOr 表达。行号从 1 起，replacement 行数可增减，为空时删除该范围，写回统一换行符并按 encoding 参数编码。</summary>
     private ErrorOr<string> Patch(ToolArguments arguments)
     {
-        string? path = arguments.Text(new ToolName("path"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return ToolErrors.Argument("缺少参数 path。");
-        }
+        string path = arguments.Text(new ToolName("path"))!;
 
         ErrorOr<LineRange> range = LineRange.Parse(arguments, 0, 0);
         if (range.IsError)

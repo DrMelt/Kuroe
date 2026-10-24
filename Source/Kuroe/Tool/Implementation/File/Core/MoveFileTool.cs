@@ -15,8 +15,8 @@ public sealed class MoveFileTool : ITool
         new ToolPath("file/write/MoveFile"),
         "把工作目录内的文件或目录移动到另一个路径。source 是现有的文件或目录，target 是移动后的完整路径，移动到同一目录下的新名字即重命名。目标已存在时拒绝，目标父目录缺失时自动创建。",
         [
-            new ToolParameter(new ToolName("source"), "相对工作目录的现有文件或目录路径", Required: true),
-            new ToolParameter(new ToolName("target"), "相对工作目录的移动后完整路径", Required: true),
+            new ToolParameter(new ToolName("source"), "相对工作目录的现有文件或目录路径", Required: true, Path: true),
+            new ToolParameter(new ToolName("target"), "相对工作目录的移动后完整路径", Required: true, Path: true),
         ]);
 
     /// <summary>本载体的函数声明。</summary>
@@ -26,23 +26,14 @@ public sealed class MoveFileTool : ITool
     public MoveFileTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [MoveFile.Bind(Move)];
+        Functions = [MoveFile.Bind(Move, _scope.Paths)];
     }
 
     /// <summary>把文件或目录移动到工作目录内的另一个路径，目标已存在时拒绝，父目录缺失时自动创建；错误与拒绝以 ErrorOr 表达。</summary>
     private ErrorOr<string> Move(ToolArguments arguments)
     {
-        string? source = arguments.Text(new ToolName("source"));
-        if (string.IsNullOrWhiteSpace(source))
-        {
-            return ToolErrors.Argument("缺少参数 source。");
-        }
-
-        string? target = arguments.Text(new ToolName("target"));
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            return ToolErrors.Argument("缺少参数 target。");
-        }
+        string source = arguments.Text(new ToolName("source"))!;
+        string target = arguments.Text(new ToolName("target"))!;
 
         ErrorOr<string> resolvedSource = _scope.Resolve(source);
         if (resolvedSource.IsError)

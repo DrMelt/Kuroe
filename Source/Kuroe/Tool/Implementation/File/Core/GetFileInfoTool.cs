@@ -12,7 +12,7 @@ public sealed class GetFileInfoTool : ITool
     private static readonly ToolDefinition GetFileInfo = new(
         new ToolPath("file/read/GetFileInfo"),
         "取工作目录内一个文件的文件系统信息：字节大小、创建/修改/访问时间、只读隐藏系统归档属性。只报文件系统事实，不判断内容；目录用 ListDirectory 列出条目。",
-        [new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true)]);
+        [new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true)]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
@@ -21,17 +21,13 @@ public sealed class GetFileInfoTool : ITool
     public GetFileInfoTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [GetFileInfo.Bind(Info)];
+        Functions = [GetFileInfo.Bind(Info, _scope.Paths)];
     }
 
     /// <summary>取一个文件的文件系统事实并渲染成文本，错误与拒绝以 ErrorOr 表达。目录不受理，提示改用 ListDirectory。</summary>
     private ErrorOr<string> Info(ToolArguments arguments)
     {
-        string? path = arguments.Text(new ToolName("path"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return ToolErrors.Argument("缺少参数 path。");
-        }
+        string path = arguments.Text(new ToolName("path"))!;
 
         ErrorOr<FileDetails> details = _scope.Inspect(path, "ListDirectory");
         if (details.IsError)

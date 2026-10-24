@@ -6,7 +6,7 @@ public static class ToolErrorCodes
     /// <summary>工具调用参数缺失或取值非法。</summary>
     public const string Argument = "Tool.Argument";
 
-    /// <summary>工具调用的路径解析越界或目标不是可操作的文件。</summary>
+    /// <summary>工具调用的路径解析越界、不符合准入规则，或目标类型不符合要求。</summary>
     public const string Path = "Tool.Path";
 
     /// <summary>工具读取工作目录内文件失败。</summary>

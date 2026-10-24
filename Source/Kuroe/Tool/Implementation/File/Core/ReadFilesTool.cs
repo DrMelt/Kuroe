@@ -4,7 +4,7 @@ using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>一次读取工作目录内多个文本文件的工具。路径解析后必须落回工作目录内，单个条目的错误不阻断其它条目。</summary>
+/// <summary>一次读取工作目录内多个文本文件的工具。路径参数在调用前整体校验，文件不存在等读取错误逐项交回。</summary>
 public sealed class ReadFilesTool : ITool
 {
     /// <summary>批量读取一次交回的总字符上限，超出后停止并提示。</summary>
@@ -16,7 +16,7 @@ public sealed class ReadFilesTool : ITool
     private static readonly ToolDefinition ReadFiles = new(
         new ToolPath("file/read/ReadFiles"),
         "一次读取工作目录内的多个文本文件。paths 是相对工作目录的文件路径列表，结果按列表顺序分段交回。",
-        [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true)]);
+        [new ToolParameter(new ToolName("paths"), "相对工作目录的文件路径列表", Required: true, List: true, Path: true)]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
@@ -25,17 +25,13 @@ public sealed class ReadFilesTool : ITool
     public ReadFilesTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [ReadFiles.Bind(Read)];
+        Functions = [ReadFiles.Bind(Read, _scope.Paths)];
     }
 
-    /// <summary>一次读取多个文件，结果按传入顺序分段交回；整体超长截断。单个条目的错误不阻断其它条目。</summary>
+    /// <summary>一次读取多个文件，结果按传入顺序分段交回；整体超长截断。文件不存在等读取错误不阻断其它条目。</summary>
     private ErrorOr<string> Read(ToolArguments arguments)
     {
-        IReadOnlyList<string>? paths = arguments.List(new ToolName("paths"));
-        if (paths is null || paths.Count == 0)
-        {
-            return ToolErrors.Argument("至少给一个文件路径。");
-        }
+        IReadOnlyList<string> paths = arguments.List(new ToolName("paths"))!;
 
         var text = new StringBuilder();
         foreach (string path in paths)

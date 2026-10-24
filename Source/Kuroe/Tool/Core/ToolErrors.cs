@@ -8,7 +8,7 @@ public static class ToolErrors
     /// <summary>参数缺失、取值非法或参数指定的内容不被接受。</summary>
     public static Error Argument(string message) => Error.Validation(ToolErrorCodes.Argument, message);
 
-    /// <summary>路径解析越界，或目标是目录而不是文件。</summary>
+    /// <summary>路径解析越界、不符合准入规则，或目标类型不符合要求。</summary>
     public static Error Path(string message) => Error.Validation(ToolErrorCodes.Path, message);
 
     /// <summary>读取工作目录内文件失败。</summary>

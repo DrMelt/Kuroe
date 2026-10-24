@@ -16,8 +16,8 @@ internal static class Run
         new ToolPath("dotnet/write/Run"),
         "运行项目，project 是项目或目录，arguments 是传给应用的参数；应用在超时前不结束会被终止。",
         [
-            new CommandToolParameter(Project, "项目或目录路径，缺省在项目工作目录里查找", Path: true),
-            new CommandToolParameter(Arguments, "传给应用的参数列表，缺省不给参数", List: true),
+            new ToolParameter(new ToolName(Project), "项目或目录路径，缺省在项目工作目录里查找", Path: true),
+            new ToolParameter(new ToolName(Arguments), "传给应用的参数列表，缺省不给参数", List: true),
         ],
         [
             new("dotnet", null),

@@ -18,14 +18,14 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     private static readonly ToolDefinition ListSourceDirectory = new(
         new ToolPath("source/ListSourceDirectory"),
         "列出导出目录内一个目录的直接子项。path 缺省时列出导出目录根的条目。",
-        [new ToolParameter(new ToolName("path"), "相对导出目录的目录路径，缺省为导出目录根")]);
+        [new ToolParameter(new ToolName("path"), "相对导出目录的目录路径，缺省为导出目录根", Path: true)]);
 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
         "读取导出目录内源码或文档指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
         [
-            new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
         ]);
@@ -36,8 +36,8 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>把各定义绑上导出目录的调用体。</summary>
     private static IReadOnlyList<ToolFunction> Declare(FileScope scope) =>
     [
-        ListSourceDirectory.Bind(arguments => List(scope, arguments)),
-        ReadSourceFile.Bind(arguments => Read(scope, arguments)),
+        ListSourceDirectory.Bind(arguments => List(scope, arguments), scope.Paths),
+        ReadSourceFile.Bind(arguments => Read(scope, arguments), scope.Paths),
     ];
 
     /// <summary>导出目录内一个目录的直接子项，按名字序数排序并标注目录，超上限截断。</summary>
@@ -74,11 +74,7 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>读取导出目录内文件指定行号范围的内容，按行截取并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
     private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
-        string? path = arguments.Text(new ToolName("path"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return ToolErrors.Argument("缺少参数 path。");
-        }
+        string path = arguments.Text(new ToolName("path"))!;
 
         ErrorOr<LineRange> range = LineRange.Parse(arguments, 1, DefaultLines);
         if (range.IsError)

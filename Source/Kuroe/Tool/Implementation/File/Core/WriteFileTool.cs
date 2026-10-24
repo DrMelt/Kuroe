@@ -16,7 +16,7 @@ public sealed class WriteFileTool : ITool
         new ToolPath("file/write/WriteFile"),
         "把文本覆盖写入工作目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
         [
-            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
         ]);
@@ -28,17 +28,13 @@ public sealed class WriteFileTool : ITool
     public WriteFileTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [WriteFile.Bind(Write)];
+        Functions = [WriteFile.Bind(Write, _scope.Paths)];
     }
 
     /// <summary>把文本覆盖写入工作目录内的文件，父目录缺失时自动创建，已有文件直接覆盖；错误与拒绝以 ErrorOr 表达。编码按 encoding 参数，缺省 UTF-8 无 BOM。</summary>
     private ErrorOr<string> Write(ToolArguments arguments)
     {
-        string? path = arguments.Text(new ToolName("path"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return ToolErrors.Argument("缺少参数 path。");
-        }
+        string path = arguments.Text(new ToolName("path"))!;
 
         string? content = arguments.Text(new ToolName("content"));
         if (content is null)

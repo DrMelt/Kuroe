@@ -116,8 +116,8 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("至少给一个文件路径", Call("ReadFiles"));
-        Assert.Contains("至少给一个文件路径", Call("ReadFiles", ("paths", Array.Empty<string>())));
+        Assert.Contains("缺少参数 paths", Call("ReadFiles"));
+        Assert.Contains("缺少参数 paths", Call("ReadFiles", ("paths", Array.Empty<string>())));
     }
 
     [Fact]
@@ -133,14 +133,14 @@ public sealed class FileToolTests : IDisposable
     }
 
     [Fact]
-    public void ReadFiles_rejects_escaping_entry()
+    public void ReadFiles_rejects_escaping_entry_before_reading()
     {
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
 
         string output = Call("ReadFiles", ("paths", _escapingPath));
 
-        Assert.Contains("A内容", output);
+        Assert.DoesNotContain("A内容", output);
         Assert.Contains("不在工作目录内", output);
     }
 
@@ -796,6 +796,29 @@ public sealed class FileToolTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Face_declares_path_parameters()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        Assert.All(
+            [
+                ("ReadFile", "path"),
+                ("ReadFiles", "paths"),
+                ("ListDirectory", "path"),
+                ("GetFileInfo", "path"),
+                ("WriteFile", "path"),
+                ("PatchFile", "path"),
+                ("MoveFile", "source"),
+                ("MoveFile", "target"),
+            ],
+            entry => Assert.True(Parameter(definitions, entry.Item1, entry.Item2).Path));
+
+        Assert.False(Parameter(definitions, "WriteFile", "content").Path);
+        Assert.False(Parameter(definitions, "ReadFile", "from").Path);
+    }
+
     /// <summary>文件工具面的全部载体，按函数名取用其中的函数。</summary>
     private IReadOnlyList<ITool> Face() =>
     [
@@ -812,6 +835,11 @@ public sealed class FileToolTests : IDisposable
         ToolResult.Render(Face().SelectMany(tool => tool.Functions)
             .Single(function => function.Definition.Path.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));
+
+    /// <summary>按函数名与参数名取参数声明。</summary>
+    private static ToolParameter Parameter(IReadOnlyList<ToolDefinition> definitions, string function, string name) =>
+        definitions.Single(definition => definition.Path.Name.Value == function)
+            .Parameters.Single(parameter => parameter.Name.Value == name);
 
     public void Dispose()
     {

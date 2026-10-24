@@ -16,7 +16,7 @@ public sealed class ReadFileTool : ITool
         new ToolPath("file/read/ReadFile"),
         "读取工作目录内文本文件指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
         [
-            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true),
+            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
         ]);
@@ -28,17 +28,13 @@ public sealed class ReadFileTool : ITool
     public ReadFileTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [ReadFile.Bind(Read)];
+        Functions = [ReadFile.Bind(Read, _scope.Paths)];
     }
 
     /// <summary>读取指定文本文件指定行号范围的内容，按行截取并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
     private ErrorOr<string> Read(ToolArguments arguments)
     {
-        string? path = arguments.Text(new ToolName("path"));
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return ToolErrors.Argument("缺少参数 path。");
-        }
+        string path = arguments.Text(new ToolName("path"))!;
 
         ErrorOr<LineRange> range = LineRange.Parse(arguments, 1, DefaultLines);
         if (range.IsError)

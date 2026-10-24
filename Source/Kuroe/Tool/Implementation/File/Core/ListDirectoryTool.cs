@@ -16,7 +16,7 @@ public sealed class ListDirectoryTool : ITool
     private static readonly ToolDefinition ListDirectory = new(
         new ToolPath("file/read/ListDirectory"),
         "列出工作目录内一个目录的直接子项。path 缺省时列出工作目录根的条目。",
-        [new ToolParameter(new ToolName("path"), "相对工作目录的目录路径，缺省为工作目录根")]);
+        [new ToolParameter(new ToolName("path"), "相对工作目录的目录路径，缺省为工作目录根", Path: true)]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
@@ -25,7 +25,7 @@ public sealed class ListDirectoryTool : ITool
     public ListDirectoryTool(string baseDirectory)
     {
         _scope = FileTools.Scope(baseDirectory);
-        Functions = [ListDirectory.Bind(List)];
+        Functions = [ListDirectory.Bind(List, _scope.Paths)];
     }
 
     /// <summary>列出目录的直接子项，按名字排序并标注目录；错误与拒绝以 ErrorOr 表达。</summary>

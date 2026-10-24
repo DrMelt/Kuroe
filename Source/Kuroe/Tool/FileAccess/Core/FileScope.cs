@@ -13,36 +13,15 @@ public sealed class FileScope(string root, string name)
     private const int OutputLimit = 8000;
 
     private readonly string _root = root;
-    private readonly string _name = name;
 
     /// <summary>根目录的绝对路径。</summary>
     public string Root => _root;
 
+    /// <summary>路径参数的解析范围，解析基准与根目录都是本根目录。</summary>
+    public ToolPathScope Paths { get; } = new(root, root, name);
+
     /// <summary>把相对路径解析为根目录内的绝对路径，越界或不可解析时给出拒绝错误。</summary>
-    public ErrorOr<string> Resolve(string path)
-    {
-        string full;
-        try
-        {
-            full = Path.GetFullPath(path, _root);
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
-        {
-            return ToolErrors.Path($"路径 {Display(path)} 无法解析：{ex.Message}");
-        }
-
-        string relative = Path.GetRelativePath(_root, full);
-        if (Path.IsPathRooted(relative) || IsOutside(relative))
-        {
-            return ToolErrors.Path($"路径 {Display(path)} 不在{_name}内。");
-        }
-
-        return full;
-    }
-
-    /// <summary>相对路径是否落在根目录之外。首段是 .. 即越界，..foo 这类是根目录内的名字。</summary>
-    private static bool IsOutside(string relative) =>
-        relative == ".." || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
+    public ErrorOr<string> Resolve(string path) => Paths.Resolve(path);
 
     /// <summary>列出根目录内目录的直接子项，按名字序数排序。目标是文件或不存在时给出拒绝错误。
     /// fileFunction 是提示里指出的读取函数名。</summary>
@@ -227,5 +206,5 @@ public sealed class FileScope(string root, string name)
         text.Length <= OutputLimit ? text : string.Concat(text.AsSpan(0, OutputLimit), "…内容已截断");
 
     /// <summary>路径的展示。空路径即根目录。</summary>
-    public string Display(string path) => path.Length == 0 ? $"{_name}根" : path;
+    public string Display(string path) => Paths.Display(path);
 }

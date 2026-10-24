@@ -117,7 +117,7 @@ public sealed class CommandToolRunnerTests
     [Fact]
     public void Execute_rejects_path_outside_working_directory_before_starting_process()
     {
-        CommandToolDefinition definition = PathDefinition(new CommandToolParameter("path", "路径", Path: true));
+        CommandToolDefinition definition = PathDefinition(new ToolParameter(new ToolName("path"), "路径", Path: true));
         FakeProcessRunner process = new();
 
         ErrorOr<string> result = Invoke(
@@ -137,7 +137,7 @@ public sealed class CommandToolRunnerTests
     public void Execute_rejects_path_list_item_outside_allow_before_starting_process()
     {
         CommandToolDefinition definition = PathDefinition(
-            new CommandToolParameter("path", "路径", List: true, Path: true, PathAccess: new(["src"], [])));
+            new ToolParameter(new ToolName("path"), "路径", List: true, Path: true, PathAccess: new ToolPathAccess(["src"], [])));
         FakeProcessRunner process = new();
 
         ErrorOr<string> result = Invoke(
@@ -167,7 +167,7 @@ public sealed class CommandToolRunnerTests
             outputLimit);
 
     /// <summary>带路径参数的命令定义，路径校验在启动进程前完成。</summary>
-    private static CommandToolDefinition PathDefinition(CommandToolParameter parameter) =>
+    private static CommandToolDefinition PathDefinition(ToolParameter parameter) =>
         new(
             new ToolPath("Execution"),
             "说明",

@@ -15,25 +15,23 @@ namespace Kuroe.Tool.Command.Shared;
 public sealed record CommandToolDefinition(
     ToolPath Path,
     string Description,
-    IReadOnlyList<CommandToolParameter> Parameters,
+    IReadOnlyList<ToolParameter> Parameters,
     IReadOnlyList<CommandToolTemplateItem> Template,
     string? Directory = null,
     int TimeoutSeconds = CommandToolTemplate.DefaultTimeoutSeconds,
     int OutputLimit = CommandToolTemplate.DefaultOutputLimit)
 {
     /// <summary>交给工具契约的函数定义：路径、说明与参数。</summary>
-    public ToolDefinition Definition =>
-        new(Path, Description, [.. Parameters.Select(ToContract)]);
+    public ToolDefinition Definition => new(Path, Description, Parameters);
 
     /// <summary>按模板与实参展开命令行，第一项是程序本身。返回非空表示实参缺项或模板不合法。</summary>
     public ErrorOr<IReadOnlyList<string>> CommandLine(ToolArguments arguments)
     {
-        IReadOnlyList<ToolParameter> parameters = Definition.Parameters;
         var argv = new List<string>();
 
         foreach (CommandToolTemplateItem item in Template)
         {
-            Error? rejected = ExpandItem(parameters, arguments, item, argv);
+            Error? rejected = ExpandItem(Parameters, arguments, item, argv);
             if (rejected is not null)
             {
                 return rejected.Value;
@@ -153,9 +151,4 @@ public sealed record CommandToolDefinition(
 
         return null;
     }
-
-    /// <summary>命令侧的参数声明转成工具契约的声明。</summary>
-    private static ToolParameter ToContract(CommandToolParameter parameter) =>
-        new(new ToolName(parameter.Name), parameter.Description,
-            Flag: parameter.Flag, Required: parameter.Required, List: parameter.List);
 }
