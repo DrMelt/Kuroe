@@ -92,6 +92,58 @@ public static class TestFlows
         }
         """;
 
+    /// <summary>开始声明目标与风格两个输入端口，执行节点按端口接两个输入。</summary>
+    public const string MultiStartFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    {
+                      "Name": "实施",
+                      "Kind": "Llm",
+                      "Model": "执行者",
+                      "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
+                      "From": [{ "目标": "Start@目标", "风格": "Start@风格" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>开始端口带固定值：固定端口只作为上下文，不带值的端口才询问。</summary>
+    public const string FixedStartFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "固定",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "风格", "Type": "Text", "Value": "简洁" }] },
+              "Nodes": [
+                {
+                  "Name": "实施",
+                  "Kind": "Llm",
+                  "Model": "执行者",
+                  "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
+                  "From": [{ "目标": "Start@目标", "风格": "Start@风格" }]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
     /// <summary>两个并行输入节点：不带节点路径回答时要求点名。</summary>
     public const string TwoInputFlow = """
         {

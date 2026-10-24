@@ -110,14 +110,12 @@ public sealed class FlowRuleTests
     [Fact]
     public void Start_without_a_goal_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"],
+            ["流程 默认：开始入口必须至少有一个不带 Value 的端口承接提交的任务输入。"],
             Errors(StartFlow([P("目标") with { Value = "固定" }])));
 
     [Fact]
-    public void Start_with_two_goal_ports_is_rejected() =>
-        Assert.Equal(
-            ["流程 默认：开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"],
-            Errors(StartFlow([StartOutput, P("另一目标")])));
+    public void Start_with_two_goal_ports_is_accepted() =>
+        Assert.Empty(Errors(StartFlow([StartOutput, P("另一目标")])));
 
     [Fact]
     public void Start_with_blank_value_is_rejected() =>

@@ -25,7 +25,7 @@ public sealed class WorkTask : INodeTask
     internal WorkTask(
         TaskRegistry registry,
         TaskId id,
-        string goal,
+        StartInputs inputs,
         FlowDefinition flow,
         INodeGraph graph,
         string? title,
@@ -33,14 +33,14 @@ public sealed class WorkTask : INodeTask
     {
         Registry = registry;
         Id = id;
-        Goal = goal;
+        Inputs = inputs;
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
         _observer = observer;
-        _title = string.IsNullOrWhiteSpace(title) ? Shorten(goal) : Shorten(title);
+        _title = Shorten(string.IsNullOrWhiteSpace(title) ? FirstInput() : title);
     }
 
     /// <summary>任务标识。</summary>
@@ -49,8 +49,8 @@ public sealed class WorkTask : INodeTask
     /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>
     internal TaskRegistry Registry { get; }
 
-    /// <summary>提交时给出的目标。</summary>
-    public string Goal { get; }
+    /// <summary>提交时按开始端口给出的输入。</summary>
+    public StartInputs Inputs { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }
@@ -95,7 +95,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>图驱动的执行状态，执行节点就地决定激活与发布。</summary>
     internal TaskRuntime Runtime { get; }
 
-    /// <summary>任务标题，未给出时取目标首行。</summary>
+    /// <summary>任务标题，未给出时取第一个开始输入的首行。</summary>
     public string Title
     {
         get
@@ -207,13 +207,17 @@ public sealed class WorkTask : INodeTask
             TaskProjection projection = new(Graph, Runtime.Materializer);
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => projection.State(node.Path))];
 
-            return new TaskSnapshot(Id, _title, Goal, Flow, Graph, Summarize(),
+            return new TaskSnapshot(Id, _title, Inputs, Flow, Graph, Summarize(),
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
                 projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }
     }
 
-    /// <summary>取目标的首行作标题，过长时截断。</summary>
+    /// <summary>第一个开始输入的文本，没有输入时取流程名。</summary>
+    private string FirstInput() =>
+        Inputs.Values.Count > 0 ? Inputs.Values[0].Text : Flow.Name.Value;
+
+    /// <summary>取文本首行作标题，过长时截断。</summary>
     private static string Shorten(string text)
     {
         string first = text.Trim().Split('\n')[0].Trim();

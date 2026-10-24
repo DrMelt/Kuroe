@@ -120,10 +120,10 @@ internal sealed class FlowBrowser(
 
     private void Import()
     {
-        string? file = terminal.Ask("流程文件：");
-        if (file is not null)
+        InputForm form = new(terminal, "导入流程", [new FormField("文件")]);
+        if (form.Run() is { } values)
         {
-            Import(file);
+            Import(values[0]);
         }
     }
 

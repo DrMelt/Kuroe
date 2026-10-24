@@ -7,6 +7,7 @@ using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
@@ -24,20 +25,20 @@ public sealed class TaskActions(
     private readonly IExecutionTargetResolver _targets = targets;
     private readonly ITaskWorkspace? _workspace = workspace;
 
-    /// <summary>按编译结果提交：校验开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
+    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
     /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。observer 收到该任务全部执行的过程播发。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
-        string goal,
+        StartInputs inputs,
         CompiledFlow flow,
         string? title,
         IProcessSink? observer = null)
     {
-        if (string.IsNullOrWhiteSpace(goal))
-        {
-            return [TaskErrors.EmptyGoal()];
-        }
-
         INodeGraph graph = flow.Graph;
+
+        if (CheckInputs(graph.Start, inputs) is { Count: > 0 } inputErrors)
+        {
+            return inputErrors;
+        }
 
         // 不启动执行的节点不需要宿主声明；开始直连的派发节点要求声明可解析
         foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
@@ -57,7 +58,7 @@ public sealed class TaskActions(
 
         while (true)
         {
-            WorkTask task = _registry.Create(goal, flow, title, observer);
+            WorkTask task = _registry.Create(inputs, flow, title, observer);
 
             ErrorOr<Success> prepared = Result.Success;
             if (_workspace is { } directory)
@@ -83,6 +84,37 @@ public sealed class TaskActions(
 
             return task.Snapshot();
         }
+    }
+
+    /// <summary>开始输入必须逐个覆盖不带固定值的开始端口，且只落在这些端口上。</summary>
+    private static List<Error> CheckInputs(StartNode start, StartInputs inputs)
+    {
+        List<(PortName Name, string? Text)> required =
+        [
+            .. start.Outputs
+                .Where(port => port.Value is null)
+                .Select(port => (port.Name, Text: inputs.Text(port.Name))),
+        ];
+
+        List<StartInput> supplied = [.. inputs.Values.DistinctBy(input => input.Port)];
+
+        return
+        [
+            .. required.Where(entry => entry.Text is null).Select(entry => TaskErrors.MissingInput(entry.Name)),
+            .. required
+                .Where(entry => entry.Text is { } text && string.IsNullOrWhiteSpace(text))
+                .Select(entry => TaskErrors.BlankInput(entry.Name)),
+            .. inputs.Values
+                .GroupBy(input => input.Port)
+                .Where(group => group.Count() > 1)
+                .Select(group => TaskErrors.DuplicateInput(group.Key)),
+            .. supplied
+                .Where(input => start.FindPort(input.Port) is null)
+                .Select(input => TaskErrors.UnknownInput(input.Port)),
+            .. supplied
+                .Where(input => start.FindPort(input.Port) is { Value: not null })
+                .Select(input => TaskErrors.ConstantInput(input.Port)),
+        ];
     }
 
     /// <summary>改任务标题。</summary>

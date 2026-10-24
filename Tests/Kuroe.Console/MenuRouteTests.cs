@@ -38,6 +38,31 @@ public sealed class MenuRouteTests
     }
 
     [Fact]
+    public void Provider_add_from_the_menu_shows_every_field_and_the_filled_state()
+    {
+        using ConsoleSession cli = new();
+
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("backup");
+        cli.Output.Input.PushTextWithEnter("https://example.invalid/v2");
+        cli.Output.Input.PushTextWithEnter("token");
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        cli.Catalogs.Browse();
+
+        string output = cli.Output.Output;
+        Assert.Contains("添加提供商", output);
+        Assert.Contains("提供商名称", output);
+        Assert.Contains("端点", output);
+        Assert.Contains("凭据", output);
+        Assert.Contains("已填写", output);
+        Assert.DoesNotContain("token", output);
+        Assert.Contains(cli.Environment.Catalog.Snapshot().Providers,
+            provider => provider.ProviderName.Value == "backup");
+    }
+
+    [Fact]
     public void Provider_key_replaces_the_credentials()
     {
         using ConsoleSession cli = new();
@@ -109,6 +134,32 @@ public sealed class MenuRouteTests
         cli.Catalogs.SelectModel(ModelName.Create("m2").Value);
         Assert.Contains("已保存并生效。", cli.Output.Output);
         Assert.Equal("m2", cli.Environment.Models.Current?.Value);
+    }
+
+    [Fact]
+    public void Model_add_from_the_menu_shows_the_provider_context()
+    {
+        using ConsoleSession cli = new();
+
+        for (int index = 0; index < 4; index++)
+        {
+            cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        }
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("m2");
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        cli.Catalogs.Browse();
+
+        string output = cli.Output.Output;
+        Assert.Contains("注册模型", output);
+        Assert.Contains("提供商", output);
+        Assert.Contains("test", output);
+        Assert.Contains("已注册。", output);
+        Assert.Contains(cli.Environment.Catalog.Snapshot().Models,
+            model => model.ModelName.Value == "m2");
     }
 
     [Fact]
@@ -448,6 +499,8 @@ public sealed class MenuRouteTests
         cli.Settings.Browse();
 
         Assert.Contains("已保存，重启后生效。", cli.Output.Output);
+        Assert.Contains("写入设置", cli.Output.Output);
+        Assert.Contains("当前值", cli.Output.Output);
         Assert.Equal("Debug", cli.Environment.Settings.TryGetUserValue("Runtime:LogLevel"));
     }
 

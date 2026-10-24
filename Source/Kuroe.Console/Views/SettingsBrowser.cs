@@ -110,10 +110,14 @@ internal sealed class SettingsBrowser(
         switch (picked.Action)
         {
             case "set":
-                string? value = terminal.Ask($"新值，当前 {Markup.Escape(entry.Value)}：");
-                if (value is not null)
+                InputForm form = new(
+                    terminal,
+                    "写入设置",
+                    [new FormField("新值")],
+                    [new FormInfo("设置项", entry.Path), new FormInfo("当前值", entry.Value)]);
+                if (form.Run() is { } values)
                 {
-                    Set(entry.Path, value);
+                    Set(entry.Path, values[0]);
                 }
 
                 break;

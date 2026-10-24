@@ -9,6 +9,8 @@ public static class FlowErrorCodes
     /// <summary>执行号不存在。</summary>
     public const string ExecutionNotFound = "Execution.NotFound";
 
+    /// <summary>提交的开始输入与开始端口不一致。</summary>
+    public const string TaskInput = "Task.Input";
     /// <summary>任务工作目录已被同名目录或文件占用。</summary>
     public const string TaskWorkspaceConflict = "TaskWorkspace.Conflict";
 

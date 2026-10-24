@@ -8,6 +8,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime;
@@ -157,9 +158,13 @@ public sealed class TestEnvironment : IDisposable
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
         TryCreate(flowsJson, seedCatalog).ThrowIfError();
 
-    /// <summary>按流程名提交任务，未点名时用测试默认写入的那条流程。</summary>
+    /// <summary>按 目标 端口提交任务，未点名时用测试默认写入的那条流程。</summary>
     public TaskId Submit(string goal, FlowName? flow = null) =>
-        Tasks.Submit(goal, flow ?? new FlowName("默认"), null).ThrowIfError().Id;
+        Submit(StartInputs.Single(new PortName("目标"), goal), flow);
+
+    /// <summary>按开始输入表提交任务，未点名时用测试默认写入的那条流程。</summary>
+    public TaskId Submit(StartInputs inputs, FlowName? flow = null) =>
+        Tasks.Submit(inputs, flow ?? new FlowName("默认"), null).ThrowIfError().Id;
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();
 

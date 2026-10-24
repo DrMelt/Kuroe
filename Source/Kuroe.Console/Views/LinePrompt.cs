@@ -11,7 +11,7 @@ internal sealed class LinePrompt(string label, bool secret = false) : IPrompt<st
     public string? Show(IAnsiConsole console)
     {
         StringBuilder text = new();
-        console.Markup(label.TrimEnd() + " ");
+        console.Write(label.TrimEnd() + " ", Style.Plain);
 
         while (true)
         {

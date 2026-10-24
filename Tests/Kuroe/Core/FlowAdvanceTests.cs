@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Pending;
 using Xunit;
 
@@ -16,7 +17,8 @@ public sealed class FlowAdvanceTests
     {
         using TestEnvironment environment = TestEnvironment.Create(flowsJson: "{}");
 
-        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit("补齐 README", new FlowName("默认"), null);
+        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("目标"), "补齐 README"), new FlowName("默认"), null);
 
         Assert.True(submitted.IsError);
         Assert.Contains(submitted.ErrorsOrEmptyList,

@@ -66,7 +66,7 @@ internal static class FlowRules
     internal static void ValidateGraph(NodeGraph graph, NodeScope scope, List<Error> errors) =>
         CheckShape(graph, scope, errors);
 
-    /// <summary>开始入口的静态规则：至少一个 Text 端口，恰好一个不带 Value 的端口承接提交目标，其余端口必须带 Value。</summary>
+    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接提交输入，其余端口必须带 Value。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
@@ -94,10 +94,10 @@ internal static class FlowRules
             }
         }
 
-        if (flow.StartOutputs.Count(port => port.Value is null) != 1)
+        if (!flow.StartOutputs.Any(port => port.Value is null))
         {
             errors.Add(FlowErrors.Body(flow.Name.Value,
-                "开始入口必须恰好有一个不带 Value 的端口承接提交的任务目标。"));
+                "开始入口必须至少有一个不带 Value 的端口承接提交的任务输入。"));
         }
     }
 

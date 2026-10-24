@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace Kuroe.Console.Views;
 
@@ -14,15 +15,16 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
 
     public void Print(TaskSnapshot task)
     {
-        _terminal.Write(Blocks.Section(
-            BoxKind.View,
-            "概览",
-            Blocks.Fields(
-                ("目标", new Text(task.Goal)),
-                ("流程", new Text(task.Flow.Name.Value)),
-                ("状态", new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State))),
-                ("创建时间", new Text(ViewLabels.Clock(task.CreatedAt), Styles.Hint)),
-                ("最近活动", new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint)))));
+        List<(string Label, IRenderable Value)> fields =
+        [
+            .. task.Inputs.Values.Select(input => ($"输入 {input.Port}", (IRenderable)new Text(input.Text))),
+            ("流程", new Text(task.Flow.Name.Value)),
+            ("状态", new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State))),
+            ("创建时间", new Text(ViewLabels.Clock(task.CreatedAt), Styles.Hint)),
+            ("最近活动", new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint)),
+        ];
+
+        _terminal.Write(Blocks.Section(BoxKind.View, "概览", Blocks.Fields([.. fields])));
 
         PrintWaiting(task);
         PrintExecutions(task);

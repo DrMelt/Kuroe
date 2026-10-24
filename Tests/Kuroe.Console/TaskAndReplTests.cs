@@ -31,7 +31,75 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Submit(new FlowName("默认"), "   ");
 
-        Assert.Contains("目标不能为空。", cli.ErrorsOut.Output);
+        Assert.Contains("开始端口 目标 的输入不能为空。", cli.ErrorsOut.Output);
+        Assert.Empty(cli.Environment.Registry.Snapshots());
+    }
+
+    [Fact]
+    public void Task_submit_asks_every_start_port()
+    {
+        using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushTextWithEnter("plain");
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Browse();
+
+        string output = cli.Output.Output;
+        string[] blocks = output.Split("开始输入");
+        Assert.Equal(4, blocks.Length);
+        Assert.Contains("readme", blocks[2]);
+        Assert.Contains("readme", blocks[3]);
+        Assert.Contains("plain", blocks[3]);
+        Assert.Contains("已提交 任务 #1", output);
+        TaskSnapshot task = cli.Environment.Snapshot(new TaskId(1));
+        Assert.Equal(["readme", "plain"], task.Inputs.Values.Select(input => input.Text));
+    }
+
+    [Fact]
+    public void Task_submit_shows_fixed_start_ports_as_context()
+    {
+        using ConsoleSession cli = new(flowsJson: TestFlows.FixedStartFlow);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        cli.Tasks.Browse();
+
+        string output = cli.Output.Output;
+        Assert.Equal(2, output.Split("开始输入").Length - 1);
+        Assert.Contains("固定", output);
+        Assert.Contains("风格", output);
+        Assert.Contains("简洁", output);
+        Assert.Contains("已提交 任务 #1", output);
+        Assert.Equal("readme", cli.Environment.Snapshot(new TaskId(1)).Inputs.Values.Single().Text);
+    }
+
+    [Fact]
+    public void Task_submit_is_cancelled_at_the_confirmation()
+    {
+        using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushTextWithEnter("plain");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+
+        cli.Tasks.Browse();
+
         Assert.Empty(cli.Environment.Registry.Snapshots());
     }
 
@@ -264,6 +332,8 @@ public sealed partial class TaskAndReplTests
 
         Assert.Contains("选择要回答的节点", cli.Output.Output);
         Assert.Contains("整体/输入二 · 待输入：问题二", cli.Output.Output);
+        Assert.Contains("回答等待输入", cli.Output.Output);
+        Assert.Contains("提问", cli.Output.Output);
         NodePath left = Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer));
         Assert.Equal("整体/输入一", left.Value);
     }
@@ -276,6 +346,8 @@ public sealed partial class TaskAndReplTests
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("menu-submit");
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         cli.Tasks.Browse();

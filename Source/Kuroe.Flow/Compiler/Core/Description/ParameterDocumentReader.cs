@@ -1,3 +1,4 @@
+using System.Globalization;
 using ErrorOr;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared;
@@ -89,6 +90,24 @@ static class ParameterDocumentReader
             }
 
             return texts;
+        }
+
+        public int? Integer(string name)
+        {
+            if (!values.TryGetValue(name, out FlowValue? value) || value is FlowValue.Null)
+            {
+                return null;
+            }
+
+            if (value is FlowValue.Number number
+                && int.TryParse(number.Raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+            {
+                return parsed;
+            }
+
+            fail($"字段 {name} 必须是整数。");
+
+            return null;
         }
     }
 }

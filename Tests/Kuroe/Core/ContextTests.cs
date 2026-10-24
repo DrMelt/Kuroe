@@ -2,6 +2,7 @@ using ApiHub.Shared.Models;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
@@ -49,6 +50,62 @@ public sealed class ContextTests
         ContextValue seed = Assert.Single(execution.Input.Inputs);
         Assert.Equal("固定背景", seed.Text);
         Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Origin).Port);
+    }
+
+    [Fact]
+    public void Multiple_start_ports_feed_downstream_in_the_declared_order()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(MultiStartFlow);
+
+        TaskSnapshot done = environment.Settle(environment.Submit(new StartInputs(
+        [
+            new StartInput(new PortName("目标"), "补齐 README"),
+            new StartInput(new PortName("风格"), "技术文档风格"),
+        ])));
+
+        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        Assert.Equal(["补齐 README", "技术文档风格"], execution.Input.Inputs.Select(value => value.Text));
+        Assert.Equal(new PortName("风格"), Assert.IsType<StartSource>(execution.Input.Inputs[1].Origin).Port);
+    }
+
+    [Fact]
+    public void Submit_without_one_start_input_is_rejected()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(MultiStartFlow);
+
+        var submitted = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("目标"), "补齐 README"), new FlowName("默认"), null);
+
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("开始端口 风格 没有输入。"));
+    }
+
+    [Fact]
+    public void Submit_rejects_duplicate_start_input()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(MultiStartFlow);
+
+        var submitted = environment.Tasks.Submit(new StartInputs(
+        [
+            new StartInput(new PortName("目标"), "甲"),
+            new StartInput(new PortName("目标"), "乙"),
+            new StartInput(new PortName("风格"), "丙"),
+        ]), new FlowName("默认"), null);
+
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("开始端口 目标 的输入重复。"));
+    }
+
+    [Fact]
+    public void Submit_rejects_input_for_a_start_port_with_a_value()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
+
+        var submitted = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("背景"), "覆盖"), new FlowName("默认"), null);
+
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("开始端口 背景 带固定值"));
     }
 
     /// <summary>组内省略带默认值的输入端口时，执行输入追加声明值。</summary>
@@ -199,6 +256,34 @@ public sealed class ContextTests
                         { "结论": "准备甲@结论", "附加": "准备甲@结论" },
                         { "结论": "准备乙@结论" }
                       ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>开始声明两个不带固定值的端口，执行节点按声明序接两个输入。</summary>
+    private const string MultiStartFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    {
+                      "Name": "干活",
+                      "Kind": "Llm",
+                      "Model": "执行者",
+                      "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
+                      "From": [{ "目标": "Start@目标", "风格": "Start@风格" }]
                     }
                   ]
                 }

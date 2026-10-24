@@ -17,12 +17,17 @@ public sealed class ParameterDocumentReaderTests
         List<string> errors = [];
 
         TestNodeType type = Assert.IsType<TestNodeType>(ReadParameters(
-            [("Text", new FlowValue.Text("展开")), ("Texts", new FlowValue.Array([new FlowValue.Text("甲"), new FlowValue.Text("乙")]))],
+            [
+                ("Text", new FlowValue.Text("展开")),
+                ("Texts", new FlowValue.Array([new FlowValue.Text("甲"), new FlowValue.Text("乙")])),
+                ("Number", new FlowValue.Number("5")),
+            ],
             errors));
 
         Assert.Empty(errors);
         Assert.Equal("展开", type.Parameters!.Text);
         Assert.Equal(["甲", "乙"], type.Parameters.Texts);
+        Assert.Equal(5, type.Parameters.Number);
     }
 
     [Fact]
@@ -35,6 +40,7 @@ public sealed class ParameterDocumentReaderTests
         Assert.Empty(errors);
         Assert.Null(type.Parameters!.Text);
         Assert.Empty(type.Parameters.Texts);
+        Assert.Null(type.Parameters.Number);
     }
 
     [Fact]
@@ -46,8 +52,23 @@ public sealed class ParameterDocumentReaderTests
     [Fact]
     public void Read_reports_values_of_the_wrong_shape() =>
         Assert.Equal(
-            ["流程 测试 的节点 干活：字段 Text 必须是文本。", "流程 测试 的节点 干活：字段 Texts 必须是文本数组。"],
-            Errors([("Text", new FlowValue.Number("5")), ("Texts", new FlowValue.Text("甲"))]));
+            [
+                "流程 测试 的节点 干活：字段 Text 必须是文本。",
+                "流程 测试 的节点 干活：字段 Texts 必须是文本数组。",
+                "流程 测试 的节点 干活：字段 Number 必须是整数。",
+            ],
+            Errors(
+                [
+                    ("Text", new FlowValue.Number("5")),
+                    ("Texts", new FlowValue.Text("甲")),
+                    ("Number", new FlowValue.Text("五")),
+                ]));
+
+    [Fact]
+    public void Read_reports_numbers_that_are_not_integers() =>
+        Assert.Equal(
+            ["流程 测试 的节点 干活：字段 Number 必须是整数。"],
+            Errors([("Number", new FlowValue.Number("1.5"))]));
 
     [Fact]
     public void Read_reports_array_items_of_the_wrong_shape() =>
@@ -83,10 +104,11 @@ public sealed class ParameterDocumentReaderTests
         [
             new("Text", ParameterValueKind.Text),
             new("Texts", ParameterValueKind.Texts),
+            new("Number", ParameterValueKind.Integer),
         ];
 
         public INodeType Read(IParameterReader values, Action<string> fail) =>
-            TestNodeTypes.Create(new TestParameters(values.Text("Text"), values.Texts("Texts")));
+            TestNodeTypes.Create(new TestParameters(values.Text("Text"), values.Texts("Texts"), values.Integer("Number")));
     }
 
     private sealed class TestNodeType(TestParameters? parameters) : INodeType
@@ -109,5 +131,5 @@ public sealed class ParameterDocumentReaderTests
         public static TestNodeType Create(TestParameters parameters) => new(parameters);
     }
 
-    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts);
+    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts, int? Number);
 }

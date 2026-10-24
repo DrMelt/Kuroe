@@ -19,6 +19,28 @@ internal static class CliFlows
         }
         """;
 
+    /// <summary>开始声明两个输入端口，执行节点把两者都接进输入。</summary>
+    public const string MultiStart = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }] },
+              "Nodes": [
+                {
+                  "Name": "实施",
+                  "Kind": "Llm",
+                  "Model": "执行者",
+                  "Inputs": [ { "Name": "目标" }, { "Name": "风格" } ],
+                  "From": [ { "目标": "Start@目标", "风格": "Start@风格" } ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
     /// <summary>执行节点声明输出端口但不交回，任务停在阻塞。</summary>
     public const string Blocked = """
         {

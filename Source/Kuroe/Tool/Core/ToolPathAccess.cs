@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Shared;
 
 namespace Kuroe.Tool;
 
@@ -32,12 +33,5 @@ public sealed record ToolPathAccess(IReadOnlyList<string> Allow, IReadOnlyList<s
     }
 
     /// <summary>目标路径是否落在根目录内：目标等于根目录或位于其下。两个参数都是绝对路径。</summary>
-    public static bool IsUnder(string rootDirectory, string path)
-    {
-        string relative = Path.GetRelativePath(rootDirectory, path);
-
-        return !Path.IsPathRooted(relative)
-            && relative != ".."
-            && !relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
-    }
+    public static bool IsUnder(string rootDirectory, string path) => WorkspacePath.IsUnder(rootDirectory, path);
 }

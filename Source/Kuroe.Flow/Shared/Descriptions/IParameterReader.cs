@@ -8,4 +8,7 @@ public interface IParameterReader
 
     /// <summary>取文本数组，未写时为空集合。</summary>
     IReadOnlyList<string> Texts(string name);
+
+    /// <summary>取整数值，未写或为空值时为 null，形状不符或不是整数时经 fail 报出。</summary>
+    int? Integer(string name);
 }

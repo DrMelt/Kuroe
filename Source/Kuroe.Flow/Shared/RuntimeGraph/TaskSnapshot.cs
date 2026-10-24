@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Shared.RuntimeGraph;
 public sealed record TaskSnapshot(
     TaskId Id,
     string Title,
-    string Goal,
+    StartInputs Inputs,
     FlowDefinition Flow,
     INodeGraph Graph,
     TaskState State,

@@ -7,6 +7,7 @@ using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
+using Kuroe.Node.File;
 using Kuroe.Flow.Compiler.Description;
 using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
@@ -82,6 +83,7 @@ public static class ServiceCollectionExtensions
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles);
+        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
         coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(

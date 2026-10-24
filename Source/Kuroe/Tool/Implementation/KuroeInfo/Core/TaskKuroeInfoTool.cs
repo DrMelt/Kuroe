@@ -124,7 +124,10 @@ public sealed class TaskKuroeInfoTool : ITool
     {
         var text = new StringBuilder();
         text.AppendLine($"{task.Id} · {task.Title} · 状态：{InfoLabels.Of(task.State)}");
-        text.AppendLine($"目标：{task.Goal}");
+        foreach (StartInput input in task.Inputs.Values)
+        {
+            text.AppendLine($"输入 {input.Port}：{input.Text}");
+        }
         text.AppendLine($"流程：{task.Flow.Name}"
             + $"（{string.Join(" → ", task.Graph.ExecutableNodes.Select(executable => executable.Path))}）"
             + $" · 节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");

@@ -8,4 +8,7 @@ public enum ParameterValueKind
 
     /// <summary>文本数组。</summary>
     Texts,
+
+    /// <summary>整数值。</summary>
+    Integer,
 }

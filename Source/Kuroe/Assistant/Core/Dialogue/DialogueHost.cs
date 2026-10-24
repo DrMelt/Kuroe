@@ -94,7 +94,8 @@ public sealed class DialogueHost(
             throw new InvalidOperationException("提交的文档必须恰好包含一条流程。");
         }
 
-        ErrorOr<TaskSnapshot> created = actions.SubmitCompiled("对话", compiled.Value.Flows[0], "对话");
+        ErrorOr<TaskSnapshot> created = actions.SubmitCompiled(
+            StartInputs.Single(DialogueFlow.StartPort, "对话"), compiled.Value.Flows[0], "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

@@ -18,23 +18,18 @@ public sealed class TaskService(
 
     /// <summary>提交任务：按流程建任务、建立工作目录并启动执行。observer 收到该任务全部执行的过程播发。</summary>
     public ErrorOr<TaskSnapshot> Submit(
-        string goal,
+        StartInputs inputs,
         FlowName flowName,
         string? title,
         IProcessSink? observer = null)
     {
-        if (string.IsNullOrWhiteSpace(goal))
-        {
-            return [TaskErrors.EmptyGoal()];
-        }
-
         ErrorOr<CompiledFlow> flow = _flows.FindCompiled(flowName);
         if (flow.IsError)
         {
             return flow.ErrorsOrEmptyList;
         }
 
-        return _actions.SubmitCompiled(goal.Trim(), flow.Value, title, observer);
+        return _actions.SubmitCompiled(inputs, flow.Value, title, observer);
     }
 
     /// <summary>改任务标题。</summary>

@@ -2,9 +2,11 @@ using ErrorOr;
 using Kuroe.Cli.Views;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Cli.Commands;
 
@@ -14,11 +16,12 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
     /// <summary>等待任务状态的轮询间隔。</summary>
     private const int PollMilliseconds = 50;
 
-    public async Task<int> RunAsync(string flowName, string? title, string goal)
+    public async Task<int> RunAsync(string flowName, string? title, IReadOnlyList<string> inputs)
     {
-        if (string.IsNullOrWhiteSpace(goal))
+        ErrorOr<StartInputs> parsed = ParseInputs(inputs);
+        if (parsed.IsError)
         {
-            output.ErrorLine("用法：dotnet Kuroe.Cli.dll run --flow <流程> <目标>");
+            output.Report(parsed.ErrorsOrEmptyList);
 
             return ExitCodes.Failure;
         }
@@ -43,7 +46,7 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
         session.Registry.Notified += report;
         try
         {
-            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(goal.Trim(), flow.Value, title, new ProcessSink(output));
+            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(parsed.Value, flow.Value, title, new ProcessSink(output));
             if (submitted.IsError)
             {
                 output.Report(submitted.ErrorsOrEmptyList);
@@ -57,6 +60,30 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
         {
             session.Registry.Notified -= report;
         }
+    }
+
+    /// <summary>把 端口=值 形式的参数解析成开始输入表。</summary>
+    private static ErrorOr<StartInputs> ParseInputs(IReadOnlyList<string> inputs)
+    {
+        List<StartInput> values = [];
+        foreach (string input in inputs)
+        {
+            int separator = input.IndexOf('=');
+            if (separator <= 0)
+            {
+                return [Error.Validation(FlowErrorCodes.TaskInput, $"输入要写成 端口=值，收到 {input}。")];
+            }
+
+            ErrorOr<PortName> port = PortName.Create(input[..separator]);
+            if (port.IsError)
+            {
+                return port.ErrorsOrEmptyList;
+            }
+
+            values.Add(new StartInput(port.Value, input[(separator + 1)..]));
+        }
+
+        return new StartInputs(values);
     }
 
     /// <summary>等任务进入终态并给出退出码。</summary>

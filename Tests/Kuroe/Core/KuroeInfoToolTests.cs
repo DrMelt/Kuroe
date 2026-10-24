@@ -67,7 +67,7 @@ public sealed class KuroeInfoToolTests : IDisposable
 
         Assert.Contains($"#{id.Value}", output);
         Assert.Contains("写一段百字以内的欢迎致辞", output);
-        Assert.Contains("目标：", output);
+        Assert.Contains("输入 目标：", output);
     }
 
     [Theory]

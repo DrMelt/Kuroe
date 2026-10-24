@@ -4,10 +4,10 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
-using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
@@ -30,7 +30,7 @@ internal sealed class TaskBrowser(
         string Action,
         TaskId? Task = null,
         ExecutionId? Execution = null,
-        string? Node = null);
+        NodePath? Node = null);
 
     private static readonly Item Back = new("← 返回上一级", "back");
     private static readonly Item Exit = new("× 退出浏览", "exit");
@@ -46,10 +46,10 @@ internal sealed class TaskBrowser(
         }
     }
 
-    /// <summary>按流程提交任务。</summary>
-    public void Submit(FlowName flow, string goal)
+    /// <summary>按流程与开始输入提交任务。</summary>
+    public void Submit(FlowName flow, StartInputs inputs)
     {
-        ErrorOr<TaskSnapshot> submitted = tasks.Submit(goal, flow, null);
+        ErrorOr<TaskSnapshot> submitted = tasks.Submit(inputs, flow, null);
         if (submitted.IsError)
         {
             results.Reject(submitted.ErrorsOrEmptyList);
@@ -131,19 +131,53 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        string? goal = terminal.Ask("任务目标：");
-        if (goal is not null)
+        if (AskInputs(all[index]) is { } inputs)
         {
-            Submit(all[index].Name, goal);
+            Submit(all[index].Name, inputs);
         }
     }
 
-    private void Rename(TaskId id)
+    /// <summary>按开始端口询问不带固定值的项目，每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
+    private StartInputs? AskInputs(FlowDefinition flow)
     {
-        string? title = terminal.Ask("新标题：");
-        if (title is not null)
+        List<Port> ports = [.. flow.StartOutputs.Where(port => port.Value is null)];
+        List<FormInfo> info =
+        [
+            new("流程", flow.Name.Value),
+            .. flow.StartOutputs
+                .Where(port => port.Value is not null)
+                .Select(port => new FormInfo(port.Name.Value, port.Value!)),
+        ];
+        InputForm form = new(
+            terminal,
+            "开始输入",
+            [.. ports.Select(port => new FormField(port.Name.Value, port.Description))],
+            info);
+
+        if (form.Run() is not { } values)
         {
-            Rename(id, title);
+            return null;
+        }
+
+        if (!Confirmation.Ask(terminal, "提交这个任务？", "提交任务", "取消提交"))
+        {
+            return null;
+        }
+
+        return new StartInputs(
+            [.. ports.Select((port, index) => new StartInput(port.Name, values[index]))]);
+    }
+
+    private void PromptRename(TaskId id, string currentTitle)
+    {
+        InputForm form = new(
+            terminal,
+            "改任务标题",
+            [new FormField("新标题")],
+            [new FormInfo("当前标题", currentTitle)]);
+        if (form.Run() is { } values)
+        {
+            Rename(id, values[0]);
         }
     }
 
@@ -219,7 +253,7 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "rename":
-                    Rename(id);
+                    PromptRename(id, task.Title);
                     break;
 
                 case "journal":
@@ -271,17 +305,25 @@ internal sealed class TaskBrowser(
 
         TaskSnapshot task = found.Value.Snapshot();
         List<Item> items = [.. waiting.Select(node => new Item(
-            AnswerItemLabel(task, node), "answer", Node: node.Node.Value))];
+            AnswerItemLabel(task, node), "answer", Node: node.Node))];
 
         if (Choose("选择要回答的节点", items).Node is not { } nodePath)
         {
             return;
         }
 
-        string? input = terminal.Ask($"回答「{Markup.Escape(nodePath)}」：");
-        if (input is not null)
+        ExecutableNode? executable = task.Graph[nodePath] as ExecutableNode;
+        string? question = NodeParameterView.Question(executable?.Type);
+        List<FormInfo> info = [new("节点", nodePath.Value)];
+        if (question is { Length: > 0 })
         {
-            Answer(id, nodePath, input);
+            info.Add(new("提问", question));
+        }
+
+        InputForm form = new(terminal, "回答等待输入", [new FormField("回答")], info);
+        if (form.Run() is { } values)
+        {
+            Answer(id, nodePath.Value, values[0]);
         }
     }
 

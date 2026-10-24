@@ -89,5 +89,7 @@ public sealed class LlmNodeTypeDescriptionTests
             SystemPromptName => blocks ?? [],
             _ => [],
         };
+
+        public int? Integer(string name) => null;
     }
 }

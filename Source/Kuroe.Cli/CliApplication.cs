@@ -17,10 +17,10 @@ internal sealed class CliApplication(
         string? directory,
         string flow,
         string? title,
-        string[] goal) =>
+        string[] inputs) =>
         ExecuteAsync(directory, (session, commandOutput) =>
             new RunCommand(session, commandOutput)
-                .RunAsync(flow, title, Join(goal)));
+                .RunAsync(flow, title, inputs));
 
     /// <summary>执行一个同步命令。</summary>
     public Task<int> ExecuteAsync(string? directory, Func<CliSession, CliOutput, int> action) =>
@@ -67,6 +67,4 @@ internal sealed class CliApplication(
 
     private void ReportInternal(Exception ex) =>
         _output.ErrorLine($"错误：{ErrorCodes.CliInternal}：{ex.Message}");
-
-    private static string Join(string[] parts) => string.Join(' ', parts);
 }

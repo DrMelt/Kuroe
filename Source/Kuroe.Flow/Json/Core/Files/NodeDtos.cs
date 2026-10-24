@@ -70,7 +70,7 @@ public sealed class PortEntryDto
     /// <summary>端口承载内容的说明，未写时为空。</summary>
     public string? Description { get; set; }
 
-    /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交的任务目标。</summary>
+    /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交时按该端口给出的输入。</summary>
     public string? Value { get; set; }
 
     /// <summary>输入端口的默认值，来源组没有连接该端口时提供内容。</summary>

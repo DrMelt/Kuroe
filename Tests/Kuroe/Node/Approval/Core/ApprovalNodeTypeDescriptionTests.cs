@@ -47,5 +47,7 @@ public sealed class ApprovalNodeTypeDescriptionTests
         public string? Text(string name) => name == "Question" ? question : null;
 
         public IReadOnlyList<string> Texts(string name) => [];
+
+        public int? Integer(string name) => null;
     }
 }

@@ -13,7 +13,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
         (RunCommand command, StringWriter output, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, "目标");
+        int code = await command.RunAsync("默认", null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("输出", output.ToString());
@@ -29,7 +29,7 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(flowsJson);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, "目标");
+        int code = await command.RunAsync("默认", null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Failure, code);
         Assert.Contains(kind, error.ToString());
@@ -42,10 +42,46 @@ public sealed class RunCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Blocked);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, "目标");
+        int code = await command.RunAsync("默认", null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Blocked, code);
         Assert.Contains("已阻塞", error.ToString());
+    }
+
+    [Fact]
+    public async Task Multiple_inputs_are_given_by_port_name()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
+        (RunCommand command, StringWriter output, _) = Build(environment);
+
+        int code = await command.RunAsync("默认", null, ["目标=写致辞", "风格=口语"]);
+
+        Assert.Equal(ExitCodes.Success, code);
+        Assert.Contains("输出", output.ToString());
+    }
+
+    [Fact]
+    public async Task Missing_start_input_is_rejected()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.MultiStart);
+        (RunCommand command, _, StringWriter error) = Build(environment);
+
+        int code = await command.RunAsync("默认", null, ["目标=写致辞"]);
+
+        Assert.Equal(ExitCodes.Failure, code);
+        Assert.Contains("开始端口 风格 没有输入。", error.ToString());
+    }
+
+    [Fact]
+    public async Task Input_without_port_name_is_rejected()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        (RunCommand command, _, StringWriter error) = Build(environment);
+
+        int code = await command.RunAsync("默认", null, ["目标"]);
+
+        Assert.Equal(ExitCodes.Failure, code);
+        Assert.Contains("端口=值", error.ToString());
     }
 
     private static (RunCommand Command, StringWriter Output, StringWriter Error) Build(CliEnvironment environment)

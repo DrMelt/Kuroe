@@ -35,10 +35,10 @@ internal static class CliCommandLine
             Description = "流程名",
             Required = true,
         };
-        Option<string?> title = new("--title", "-t") { Description = "任务标题，未指定时取目标首行" };
-        Argument<string[]> goal = new("目标")
+        Option<string?> title = new("--title", "-t") { Description = "任务标题，未指定时取第一个开始输入的首行" };
+        Option<string[]> input = new("--input", "-i")
         {
-            Description = "提交给流程的目标",
+            Description = "开始端口输入，写作 端口=值，每个不带固定值的开始端口各给一项",
             Arity = ArgumentArity.OneOrMore,
         };
         const string unsupported = "run 不接受 --answer 或 --approve，流程不能包含等待外部输入的节点。";
@@ -71,14 +71,14 @@ internal static class CliCommandLine
 
         command.Options.Add(flow);
         command.Options.Add(title);
+        command.Options.Add(input);
         command.Options.Add(answer);
         command.Options.Add(approve);
-        command.Arguments.Add(goal);
         command.SetAction(parseResult => application.RunAsync(
             parseResult.GetValue(workDirectory),
             parseResult.GetValue(flow) ?? string.Empty,
             parseResult.GetValue(title),
-            parseResult.GetValue(goal) ?? []));
+            parseResult.GetValue(input) ?? []));
 
         return command;
     }

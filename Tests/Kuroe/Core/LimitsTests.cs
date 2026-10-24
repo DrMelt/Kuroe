@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -37,7 +38,8 @@ public sealed class LimitsTests
         using TestEnvironment environment = TestEnvironment.Create();
         string title = new('标', 50);
 
-        TaskId id = environment.Tasks.Submit("目标", new FlowName("默认"), title).ThrowIfError().Id;
+        TaskId id = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("目标"), "目标"), new FlowName("默认"), title).ThrowIfError().Id;
 
         TaskSnapshot snapshot = environment.Snapshot(id);
         Assert.Equal(41, snapshot.Title.Length);

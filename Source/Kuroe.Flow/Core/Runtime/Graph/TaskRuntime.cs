@@ -24,7 +24,7 @@ internal sealed class TaskRuntime : INodeContext
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _materializer = new NodeMaterializer(task.Graph, task.Goal, this);
+        _materializer = new NodeMaterializer(task.Graph, task.Inputs, this);
         // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
         _ = _materializer.Get(Graph.Start.Path);
     }
@@ -110,8 +110,18 @@ internal sealed class TaskRuntime : INodeContext
         RefreshContainers(node.Path);
     }
 
-    /// <summary>作废已发表产出，宿主返工入口按节点路径定位节点。</summary>
-    public void Invalidate(NodePath node) => InvalidateNode(Executable(node));
+    /// <summary>作废已发表产出或清除自驱型节点的失败，宿主返工入口按节点路径定位节点。</summary>
+    public void Invalidate(NodePath node)
+    {
+        NodeRuntime runtime = _materializer.Get(node);
+        if (runtime is RuntimeExecutable executable)
+        {
+            InvalidateNode(executable);
+            return;
+        }
+
+        runtime.Retry();
+    }
 
     // ---- 返工 ----
 
@@ -144,8 +154,9 @@ internal sealed class TaskRuntime : INodeContext
 
     // ---- 汇总 ----
 
-    /// <summary>是否有执行节点停在等待返工。</summary>
-    public bool HasBlocked => _materializer.Materialized.OfType<RuntimeExecutable>().Any(node => node.Blocked);
+    /// <summary>是否有节点停在阻塞：执行节点失败或未收口，自驱型节点激活失败。</summary>
+    public bool HasBlocked =>
+        _materializer.Materialized.Any(node => node.Snapshot().State == NodeState.Blocked);
 
     /// <summary>还有在跑的执行、可启动的执行节点或尚未放行的节点，任务就没走完。随任务取消的节点不计。</summary>
     public bool HasWork =>
@@ -252,7 +263,7 @@ internal sealed class TaskRuntime : INodeContext
 
     // ---- 推进评估 ----
 
-    /// <summary>一个节点被激活后的评估：非派发型节点在其中自行处理，派发型的按就绪条件启动一次执行。
+    /// <summary>一个节点被激活后的评估：非派发型节点在其中自行处理并报告版本与失败，派发型的按就绪条件启动一次执行。
     /// 返回要通知的下游与要启动的执行。要求持有 Gate。</summary>
     public EvaluateResult Evaluate(NodeRuntime node)
     {
@@ -268,9 +279,24 @@ internal sealed class TaskRuntime : INodeContext
 
         if (!shape.DispatchesExecutions)
         {
+            long revision = node.Revision;
             node.Activate(this);
 
-            return new EvaluateResult([], false);
+            if (node.TakeFailure() is { Length: > 0 } failure)
+            {
+                _task.Journal.Append(new ErrorEntry($"{node.Path}：{failure}"));
+                _task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{_task.Id} 停在节点 {node.Path.Label}，{failure}"));
+                _task.Touch();
+            }
+
+            if (node.Revision == revision)
+            {
+                return new EvaluateResult([], false);
+            }
+
+            _task.Touch();
+
+            return new EvaluateResult(Notify([node.Path]), false);
         }
 
         if (node is not RuntimeExecutable executable || !CanStart(executable))
@@ -290,10 +316,10 @@ internal sealed class TaskRuntime : INodeContext
     public IReadOnlyList<NodePath> Roots() =>
         [.. Graph.Outgoing(Graph.Start.Path).Select(edge => _materializer.Get(edge.Target).Path)];
 
-    /// <summary>一个返工目标：停在阻塞的执行节点，与它记下要重跑的节点。</summary>
+    /// <summary>一个返工目标：停住的节点，与它要重跑的节点。自驱型节点的失败目标与自身相同。</summary>
     public readonly record struct ReworkTarget(NodePath Blocked, NodePath Node);
 
-    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行节点记录的目标，配对其所在节点。顺序按执行节点表。不改变状态。要求持有 Gate。</summary>
+    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行节点记录的目标，以及阻塞的自驱型节点自身。顺序按执行节点表，自驱型节点随后按实例化顺序。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<ReworkTarget> PlanRework()
     {
         List<ReworkTarget> targets = [];
@@ -310,12 +336,25 @@ internal sealed class TaskRuntime : INodeContext
             }
         }
 
+        foreach (NodeRuntime node in _materializer.Materialized)
+        {
+            if (node is not RuntimeExecutable && node.Snapshot().State == NodeState.Blocked)
+            {
+                targets.Add(new ReworkTarget(node.Path, node.Path));
+            }
+        }
+
         return targets;
     }
 
-    /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。要求持有 Gate。</summary>
-    public void Unblock(NodePath node, IReadOnlyList<NodePath> handled) =>
-        Executable(node).FinishRework(handled);
+    /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。自驱型节点没有目标表，失败由 <see cref="Invalidate"/> 清除。</summary>
+    public void Unblock(NodePath node, IReadOnlyList<NodePath> handled)
+    {
+        if (Materialized(node) is RuntimeExecutable executable)
+        {
+            executable.FinishRework(handled);
+        }
+    }
 
     /// <summary>未实例化节点的来源状态：没有产出、版本为零。</summary>
     private sealed class UnmaterializedSource : ISourceState

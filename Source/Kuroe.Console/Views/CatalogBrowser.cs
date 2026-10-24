@@ -2,7 +2,6 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Shared.Catalogs;
-using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
@@ -220,22 +219,17 @@ internal sealed class CatalogBrowser(
 
     private void AddProvider()
     {
-        string? name = terminal.Ask("提供商名称：");
-        if (name is null)
+        InputForm form = new(
+            terminal,
+            "添加提供商",
+            [
+                new FormField("提供商名称"),
+                new FormField("端点"),
+                new FormField("凭据", Secret: true),
+            ]);
+        if (form.Run() is { } values)
         {
-            return;
-        }
-
-        string? endpoint = terminal.Ask("端点：");
-        if (endpoint is null)
-        {
-            return;
-        }
-
-        string? credential = terminal.AskSecret("凭据：");
-        if (credential is not null)
-        {
-            AddProvider(name, endpoint, credential);
+            AddProvider(values[0], values[1], values[2]);
         }
     }
 
@@ -246,10 +240,14 @@ internal sealed class CatalogBrowser(
             return;
         }
 
-        string? credential = terminal.AskSecret($"新凭据，提供商 {Markup.Escape(provider.ProviderName.Value)}：");
-        if (credential is not null)
+        InputForm form = new(
+            terminal,
+            "更换提供商凭据",
+            [new FormField("新凭据", Secret: true)],
+            [new FormInfo("提供商", provider.ProviderName.Value)]);
+        if (form.Run() is { } values)
         {
-            SetProviderKey(provider, credential);
+            SetProviderKey(provider, values[0]);
         }
     }
 
@@ -268,23 +266,29 @@ internal sealed class CatalogBrowser(
 
     private void AddModel()
     {
-        string? name = terminal.Ask("模型名：");
-        if (name is null)
+        if (PickProvider() is not { } provider)
         {
             return;
         }
 
-        ErrorOr<ModelName> parsed = ModelName.Create(name.Trim());
+        InputForm form = new(
+            terminal,
+            "注册模型",
+            [new FormField("模型名")],
+            [new FormInfo("提供商", provider.ProviderName.Value)]);
+        if (form.Run() is not { } values)
+        {
+            return;
+        }
+
+        ErrorOr<ModelName> parsed = ModelName.Create(values[0].Trim());
         if (parsed.IsError)
         {
             results.Reject(parsed.ErrorsOrEmptyList);
             return;
         }
 
-        if (PickProvider() is { } provider)
-        {
-            AddModel(parsed.Value, provider.ProviderName);
-        }
+        AddModel(parsed.Value, provider.ProviderName);
     }
 
     /// <summary>选择模型，含取消选择。模型选择由目录维护，助手页复用同一入口。</summary>
@@ -335,19 +339,19 @@ internal sealed class CatalogBrowser(
 
     private void Export()
     {
-        string? file = terminal.Ask("导出文件：");
-        if (file is not null)
+        InputForm form = new(terminal, "导出目录", [new FormField("文件")]);
+        if (form.Run() is { } values)
         {
-            Export(file);
+            Export(values[0]);
         }
     }
 
     private void Import()
     {
-        string? file = terminal.Ask("导入文件：");
-        if (file is not null)
+        InputForm form = new(terminal, "导入目录", [new FormField("文件")]);
+        if (form.Run() is { } values)
         {
-            Import(file);
+            Import(values[0]);
         }
     }
 

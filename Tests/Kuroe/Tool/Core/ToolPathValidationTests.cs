@@ -75,7 +75,7 @@ public sealed class ToolPathValidationTests
         Assert.True(called);
     }
 
-    private static readonly string[] stringArray = new[] { "src/a", ".." };
+    private static readonly string[] stringArray = ["src/a", ".."];
 
     [Fact]
     public void Path_list_item_outside_scope_rejects_whole_call()

@@ -48,6 +48,16 @@ public sealed class LinePromptTests
     }
 
     [Fact]
+    public void Line_prompt_writes_the_label_without_markup_parsing()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushTextWithEnter("ok");
+
+        Assert.Equal("ok", terminal.Ask("[red]标签[/]"));
+        Assert.Contains("[red]标签[/]", output.Output);
+    }
+
+    [Fact]
     public void Secret_line_prompt_masks_the_echo()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
