@@ -53,8 +53,8 @@ public sealed class FileNodeTypeTests
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.Equal([PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text], shape.OutputTypes);
+        Assert.Equal([PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
     [Fact]
@@ -65,8 +65,8 @@ public sealed class FileNodeTypeTests
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.Equal([PortType.Text, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text, PortType.Signal], shape.OutputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.OutputTypes);
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public sealed class FileNodeTypeTests
     {
         Port[] outputs =
         [
-            new(new PortName("甲"), PortType.Text),
-            new(new PortName("乙"), PortType.Text),
+            new(new PortName("甲"), PortTypes.Text),
+            new(new PortName("乙"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(ReadType, ReadNode(outputs: outputs)),
@@ -135,8 +135,8 @@ public sealed class FileNodeTypeTests
     {
         InputPort[] inputs =
         [
-            new(new PortName("正文"), PortType.Text),
-            new(new PortName("补充"), PortType.Text),
+            new(new PortName("正文"), PortTypes.Text),
+            new(new PortName("补充"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(WriteType, WriteNode(inputs)),
@@ -148,8 +148,8 @@ public sealed class FileNodeTypeTests
     {
         InputPort[] inputs =
         [
-            new(new PortName("正文"), PortType.Text),
-            new(new PortName("批准"), PortType.Signal),
+            new(new PortName("正文"), PortTypes.Text),
+            new(new PortName("批准"), PortTypes.Signal),
         ];
 
         Assert.Empty(Failures(WriteType, WriteNode(inputs)));
@@ -160,8 +160,8 @@ public sealed class FileNodeTypeTests
     {
         Port[] outputs =
         [
-            new(new PortName("甲"), PortType.Text),
-            new(new PortName("乙"), PortType.Signal),
+            new(new PortName("甲"), PortTypes.Text),
+            new(new PortName("乙"), PortTypes.Signal),
         ];
 
         Assert.Contains(Failures(WriteType, WriteNode(outputs: outputs)),
@@ -191,8 +191,8 @@ public sealed class FileNodeTypeTests
         Label = new NodeLabel("读入"),
         Type = ReadType,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortType.Signal)],
-        Outputs = outputs ?? [new Port(new PortName("正文"), PortType.Text)],
+        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Outputs = outputs ?? [new Port(new PortName("正文"), PortTypes.Text)],
     };
 
     private static NodeSpec WriteNode(InputPort[]? inputs = null, Port[]? outputs = null) => new()
@@ -200,7 +200,7 @@ public sealed class FileNodeTypeTests
         Label = new NodeLabel("写出"),
         Type = WriteType,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("正文"), PortType.Text)],
+        Inputs = inputs ?? [new InputPort(new PortName("正文"), PortTypes.Text)],
         Outputs = outputs ?? [],
     };
 }

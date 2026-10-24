@@ -43,8 +43,8 @@ public sealed class PortTool : IScopedTool
     /// <summary>提交端口产出并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>
     private static ErrorOr<string> Submit(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports, ToolArguments arguments)
     {
-        ErrorOr<IReadOnlyDictionary<string, string>> parsed =
-            PortValues.Parse(arguments.Text(new ToolName("valuesJson")) ?? string.Empty);
+        ErrorOr<IReadOnlyDictionary<string, PortValue>> parsed =
+            PortValues.Parse(arguments.Text(new ToolName("valuesJson")) ?? string.Empty, ports);
         if (parsed.IsError)
         {
             return parsed.ErrorsOrEmptyList;
@@ -56,6 +56,9 @@ public sealed class PortTool : IScopedTool
             return outcome.ErrorsOrEmptyList;
         }
 
-        return $"已记录 {ports?.Count ?? 0} 个端口的产出。{ContractReceipts.Needs(outcome.Value)}";
+        int silent = parsed.Value.Values.Count(value => !value.Fires);
+        string note = silent > 0 ? $"，其中 {silent} 个端口不触发下游" : string.Empty;
+
+        return $"已记录 {parsed.Value.Count} 个端口的产出{note}。{ContractReceipts.Needs(outcome.Value)}";
     }
 }

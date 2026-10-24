@@ -14,10 +14,10 @@ public sealed class NodeSpecInterfaceTests
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(new PortName("背景"), PortType.Context)],
+            Inputs = [new InputPort(new PortName("背景"), PortTypes.Context)],
         };
 
-        Assert.Equal(["输入端口 背景 的类型只能是 Text。"], Errors(node, Shape(input: [PortType.Text])));
+        Assert.Equal(["输入端口 背景 的类型只能是 Text。"], Errors(node, Shape(input: [PortTypes.Text])));
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public sealed class NodeSpecInterfaceTests
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(new PortName("背景"), PortType.Context)],
+            Inputs = [new InputPort(new PortName("背景"), PortTypes.Context)],
         };
 
         Assert.Empty(Errors(node, shape: null));
@@ -38,7 +38,7 @@ public sealed class NodeSpecInterfaceTests
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(new PortName("背景"), PortType.Context, null, "默认")],
+            Inputs = [new InputPort(new PortName("背景"), PortTypes.Context, null, "默认")],
         };
 
         Assert.Equal(
@@ -49,8 +49,8 @@ public sealed class NodeSpecInterfaceTests
     private static NodeTypeShape Shape(IReadOnlyList<PortType>? input = null) => new()
     {
         DispatchesExecutions = true,
-        InputTypes = input ?? [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
+        InputTypes = input ?? [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
     private static List<string> Errors(NodeSpec node, NodeTypeShape? shape)

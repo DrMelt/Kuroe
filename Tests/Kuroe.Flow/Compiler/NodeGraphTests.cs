@@ -19,7 +19,7 @@ public sealed class NodeGraphTests
             new StartNode
             {
                 Path = new NodePath([StartNode.ReservedLabel]),
-                Outputs = [new Port(new PortName("目标"), PortType.Text)],
+                Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
             },
             new ExecutableNode
             {

@@ -2,9 +2,12 @@ using ErrorOr;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph;
 
-/// <summary>值得宿主单独提示一句的执行事件。成功进展由发起方当场呈现，这里只承载问题。</summary>
+/// <summary>值得宿主单独提示一句的执行事件。成功进展由发起方当场呈现，这里承载需要当场说明的推进与问题。</summary>
 public enum NoticeLevel
 {
+    /// <summary>不需要处理的推进事件，如启动组因触发值为 false 被消耗。</summary>
+    Information,
+
     /// <summary>可恢复的问题：异常、停驻与取消。</summary>
     Warning,
 

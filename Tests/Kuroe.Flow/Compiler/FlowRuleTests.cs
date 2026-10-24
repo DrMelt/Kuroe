@@ -204,7 +204,7 @@ public sealed class FlowRuleTests
             Errors(Flow(
                 Container("整体",
                     Container("箱子", Text("干活", "执行者") with { Outputs = [P("结论")] }),
-                    Text("实施", "执行者") with { Inputs = [In("结论", PortType.Context)], From = [Context("箱子", "结论")] }),
+                    Text("实施", "执行者") with { Inputs = [In("结论", PortTypes.Context)], From = [Context("箱子", "结论")] }),
                 Models("执行者"))));
 
     [Fact]
@@ -213,7 +213,7 @@ public sealed class FlowRuleTests
             [
                 MemberError("实施", "From 连接 @输入 是对绑定端口的引用，请写明来源节点。"),
             ],
-            Errors(Flow(Container("整体", Text("实施", "执行者") with { Inputs = [In("输入", PortType.Context)], From = [BoundContext("输入")] }), Models("执行者"))));
+            Errors(Flow(Container("整体", Text("实施", "执行者") with { Inputs = [In("输入", PortTypes.Context)], From = [BoundContext("输入")] }), Models("执行者"))));
 
     [Fact]
     public void Duplicate_from_link_is_rejected() =>
@@ -266,7 +266,7 @@ public sealed class FlowRuleTests
                 Text("放行", "执行者") with { Outputs = [P("结论")] },
                 Exec("实施", "执行者", new ExecutableSpec()) with
                 {
-                    Inputs = [In("结论"), In("批准", PortType.Signal)],
+                    Inputs = [In("结论"), In("批准", PortTypes.Signal)],
                     From =
                     [
                         new([
@@ -419,7 +419,7 @@ public sealed class FlowRuleTests
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
                     Exec("实施", "执行者", new ExecutableSpec()) with
                     {
-                        Inputs = [new InputPort(PN("结论"), PortType.Context, null, "固定背景")],
+                        Inputs = [new InputPort(PN("结论"), PortTypes.Context, null, "固定背景")],
                         From = [Context("准备", "结论")],
                     }),
                 Models("执行者"))));
@@ -434,7 +434,7 @@ public sealed class FlowRuleTests
                     Text("准备", "执行者") with { Outputs = [P("结论")] },
                     Exec("实施", "执行者", new ExecutableSpec()) with
                     {
-                        Inputs = [new InputPort(PN("结论"), PortType.Signal, null, "固定背景")],
+                        Inputs = [new InputPort(PN("结论"), PortTypes.Signal, null, "固定背景")],
                         From = [Signal("准备", "结论")],
                     }),
                 Models("执行者"))));
@@ -462,7 +462,7 @@ public sealed class FlowRuleTests
             Errors(Flow(
                 Container("整体", Text("干活", "执行者")) with
                 {
-                    Inputs = [new InputPort(PN("计划"), PortType.Text, null, "固定计划")],
+                    Inputs = [new InputPort(PN("计划"), PortTypes.Text, null, "固定计划")],
                 },
                 Models("执行者"))));
 
@@ -510,18 +510,18 @@ public sealed class FlowRuleTests
         Exec(name, model, new ExecutableSpec()) with { Outputs = [P("计划")] };
 
     /// <summary>Text 端口声明。</summary>
-    private static Port P(string name) => new(new PortName(name), PortType.Text);
+    private static Port P(string name) => new(new PortName(name), PortTypes.Text);
 
     /// <summary>Context 端口声明。</summary>
-    private static Port ContextPort(string name) => new(new PortName(name), PortType.Context);
+    private static Port ContextPort(string name) => new(new PortName(name), PortTypes.Context);
 
     /// <summary>输入端口声明，未写类型时按 Text。</summary>
-    private static InputPort In(string name, PortType type = PortType.Text) =>
-        new(new PortName(name), type);
+    private static InputPort In(string name, PortType? type = null) =>
+        new(new PortName(name), type ?? PortTypes.Text);
 
     /// <summary>带默认值的 Text 输入端口声明。</summary>
     private static InputPort Defaulted(string name, string value) =>
-        new(new PortName(name), PortType.Text, null, value);
+        new(new PortName(name), PortTypes.Text, null, value);
 
     /// <summary>命名端口的引用名。</summary>
     private static PortName PN(string name) => new(name);
@@ -561,7 +561,7 @@ public sealed class FlowRuleTests
     private static PortName StartPort => new("目标");
 
     /// <summary>开始入口的输出端口声明。</summary>
-    private static Port StartOutput => new(StartPort, PortType.Text);
+    private static Port StartOutput => new(StartPort, PortTypes.Text);
 
     /// <summary>由开始入口触发的启动组。</summary>
     private static FromGroup StartRef() => One("目标", StartNode.ReservedLabel.Value, "目标");

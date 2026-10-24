@@ -54,7 +54,9 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
         return true;
     }
 
-    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
+
+    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
 
     int IInputProgress.Executions => 0;
 
@@ -81,4 +83,8 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
         && context.Materialized(target.Node) is { } member
             ? (member, target.Port)
             : null;
+
+    /// <summary>按输出端口转发成员端口的触发值；未放行或未声明端口时按触发处理。</summary>
+    public override bool Triggers(PortName port) =>
+        Released && MemberOf(port) is { } member && member.Node.Triggers(member.Port);
 }

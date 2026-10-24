@@ -24,6 +24,9 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     /// <summary>随任务取消。</summary>
     public abstract bool Canceled { get; }
 
+    /// <summary>节点已声明等待外部输入，尚未交付。等待中的节点算任务活动。</summary>
+    public virtual bool AwaitingInput => false;
+
     /// <summary>随任务进入取消态。</summary>
     public abstract void Cancel();
 
@@ -48,4 +51,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
 
     /// <summary>按输出端口取产出：每条给出出处与取值文本。未放行或端口未产出时为空。</summary>
     public abstract IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port);
+
+    /// <summary>该输出端口最近一次产出是否触发下游。没有触发值的端口恒为 true。</summary>
+    public virtual bool Triggers(PortName port) => true;
 }

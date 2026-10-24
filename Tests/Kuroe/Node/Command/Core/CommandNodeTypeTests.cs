@@ -37,8 +37,8 @@ public sealed class CommandNodeTypeTests
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.Equal([PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text], shape.OutputTypes);
+        Assert.Equal([PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public sealed class CommandNodeTypeTests
     {
         Port[] outputs =
         [
-            new(new PortName("甲"), PortType.Text),
-            new(new PortName("乙"), PortType.Text),
+            new(new PortName("甲"), PortTypes.Text),
+            new(new PortName("乙"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(Type, Node(outputs: outputs)),
@@ -114,8 +114,8 @@ public sealed class CommandNodeTypeTests
         Label = new NodeLabel("执行"),
         Type = Type,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortType.Signal)],
-        Outputs = outputs ?? [new Port(new PortName("输出"), PortType.Text)],
+        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Outputs = outputs ?? [new Port(new PortName("输出"), PortTypes.Text)],
     };
 
     /// <summary>测试用的进程执行替身，类型规则阶段不会调用。</summary>

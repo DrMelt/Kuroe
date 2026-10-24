@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>输入侧的就绪判定：组齐备与驱动两处实现，纯函数不改状态。
-/// 组间任一齐备即启动，组内全部齐备；达到执行次数上限后不再启动。</summary>
+/// 组间任一齐备即启动，组内全部齐备；达到执行次数上限后不再启动。Trigger 绑定为 false 的组不驱动。</summary>
 public sealed partial record NodeInputPlan
 {
     /// <summary>组齐备：任一组内的绑定全部可用。</summary>
@@ -28,12 +28,12 @@ public sealed partial record NodeInputPlan
         progress.Executions < MaxExecutions
         && (progress.ForceRerun || DrivenGroup(progress, sources) is not null);
 
-    /// <summary>第一个由来源新版本驱动的齐备组序号，没有这样的组时为空。</summary>
+    /// <summary>第一个由来源新版本驱动且未被 Trigger 抑制的齐备组序号，没有这样的组时为空。</summary>
     public int? DrivenGroup(IInputProgress progress, IReadinessSources sources)
     {
         for (int index = 0; index < Groups.Count; index++)
         {
-            if (Driven(Groups[index], progress, sources))
+            if (DrivesNewVersion(Groups[index], progress, sources) && !Groups[index].Suppressed(sources))
             {
                 return index;
             }
@@ -42,8 +42,12 @@ public sealed partial record NodeInputPlan
         return null;
     }
 
+    /// <summary>第一个有驱动来源新版本但存在触发值为 false 的齐备组，没有这样的组时为空。</summary>
+    public InputGroup? SuppressedGroup(IInputProgress progress, IReadinessSources sources) =>
+        Groups.FirstOrDefault(group => DrivesNewVersion(group, progress, sources) && group.Suppressed(sources));
+
     /// <summary>组是否齐备且有驱动来源的新版本，组内有信号绑定时只认信号来源。</summary>
-    private static bool Driven(InputGroup group, IInputProgress progress, IReadinessSources sources) =>
+    private static bool DrivesNewVersion(InputGroup group, IInputProgress progress, IReadinessSources sources) =>
         group.Bindings.All(binding => sources.Source(binding.Source).Released)
         && (group.DrivenBySignals
             ? group.Signals.Any(binding => Fresh(binding, progress, sources))
@@ -54,6 +58,6 @@ public sealed partial record NodeInputPlan
     {
         ISourceState source = sources.Source(binding.Source);
 
-        return source.Released && source.Revision > progress.ConsumedRevision(binding.Source);
+        return source.Released && source.Revision > progress.ConsumedRevision(binding.Key);
     }
 }

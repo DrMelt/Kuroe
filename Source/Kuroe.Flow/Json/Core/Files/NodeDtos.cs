@@ -61,8 +61,8 @@ public sealed class PortEntryDto
     /// <summary>端口名。</summary>
     public string? Name { get; set; }
 
-    /// <summary>端口类型，未写时按 Text。</summary>
-    public PortType? Type { get; set; }
+    /// <summary>端口类型名，取值由端口类型注册表决定。输入端口的 Type 未写时按 Text；节点输出端口必填，容器输出端口不写 Type。</summary>
+    public string? Type { get; set; }
 
     /// <summary>容器输出端口的转发目标，写 成员@端口。</summary>
     public string? Ref { get; set; }

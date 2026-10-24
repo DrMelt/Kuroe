@@ -92,7 +92,7 @@ public sealed record OutputValidation(ValidationPredicate Predicate, string? Arg
         }
 
         string[] parts = [.. outputs
-            .Where(port => port.Type == PortType.Text)
+            .Where(port => Ports.CarriesText(port.Type))
             .Select(port => values.GetValueOrDefault(port.Name))
             .Where(value => value is { Length: > 0 })
             .Cast<string>()];

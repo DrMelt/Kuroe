@@ -108,7 +108,7 @@ public sealed class ReadinessTests
     public void Execution_limit_stops_further_starts()
     {
         ExecutableNode target = Definition("节点2", maxExecutions: 1);
-        NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortType.Text)]);
+        NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortTypes.Text)]);
         NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RuntimeExecutable node = new(target);
@@ -142,7 +142,7 @@ public sealed class ReadinessTests
     public void Consume_uses_the_injected_ledger()
     {
         ExecutableNode target = Definition("节点2");
-        NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortType.Text)]);
+        NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortTypes.Text)]);
         NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RecordingLedger ledger = new();
@@ -156,19 +156,19 @@ public sealed class ReadinessTests
 
     /// <summary>一个来源到目标的单组场景。</summary>
     private static (NodeInputPlan Plan, FakeSources Sources, RuntimeExecutable Node) Single() =>
-        Build([Value("节点1", "节点2", PortType.Text)]);
+        Build([Value("节点1", "节点2", PortTypes.Text)]);
 
     /// <summary>同一目标上的两个组，各由不同的数据来源驱动。</summary>
     private static (NodeInputPlan Plan, FakeSources Sources, RuntimeExecutable Node) TwoGroups() =>
-        Build([Value("节点1", "节点3", PortType.Text, group: 0), Value("节点2", "节点3", PortType.Text, group: 1)]);
+        Build([Value("节点1", "节点3", PortTypes.Text, group: 0), Value("节点2", "节点3", PortTypes.Text, group: 1)]);
 
     /// <summary>一个组内两处绑定，两处都放行才齐备。</summary>
     private static (NodeInputPlan Plan, FakeSources Sources, RuntimeExecutable Node) OneGroupOfTwo() =>
-        Build([Value("节点1", "节点3", PortType.Text), Value("节点2", "节点3", PortType.Text)]);
+        Build([Value("节点1", "节点3", PortTypes.Text), Value("节点2", "节点3", PortTypes.Text)]);
 
     /// <summary>一个组内一个数据来源与一个信号来源。</summary>
     private static (NodeInputPlan Plan, FakeSources Sources, RuntimeExecutable Node) WithSignal() =>
-        Build([Value("节点1", "节点2", PortType.Text), Value("节点2", "节点2", PortType.Signal, new PortName("信号"))]);
+        Build([Value("节点1", "节点2", PortTypes.Text), Value("节点2", "节点2", PortTypes.Signal, new PortName("信号"))]);
 
     /// <summary>按边建出图、方案与判定侧，目标节点取最后一条边的目标。</summary>
     private static (NodeInputPlan Plan, FakeSources Sources, RuntimeExecutable Node) Build(IReadOnlyList<FlowEdge> edges)
@@ -199,14 +199,14 @@ public sealed class ReadinessTests
         Type = TestNodeTypes.Executable,
         Spec = new ExecutableSpec(),
         Model = new ModelDefinition { Name = new ModelRef("执行者") },
-        Outputs = [new Port(OutputPort, PortType.Text)],
+        Outputs = [new Port(OutputPort, PortTypes.Text)],
         MaxExecutions = maxExecutions,
     };
 
     private static StartNode StartDefinition() => new()
     {
         Path = new NodePath([StartNode.ReservedLabel]),
-        Outputs = [new Port(OutputPort, PortType.Text)],
+        Outputs = [new Port(OutputPort, PortTypes.Text)],
     };
 
     /// <summary>记录启动登记的消费账替身。</summary>
@@ -214,7 +214,11 @@ public sealed class ReadinessTests
     {
         public NodeInputPlan? Recorded { get; private set; }
 
-        public long Revision(NodePath source) => 0;
+        public long Revision(ConsumptionKey key) => 0;
+
+        public void Record(InputGroup group, IReadinessSources sources)
+        {
+        }
 
         public void Record(NodeInputPlan plan, IReadinessSources sources) => Recorded = plan;
     }

@@ -112,11 +112,11 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Input_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 实施：输入端口的 Type 应为 Text、Context 或 Signal。"], Errors(InputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 实施：输入端口的 Type 应为已注册的端口类型名。"], Errors(InputTypeOutOfDomain));
 
     [Fact]
     public void Output_type_out_of_domain_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为 Text、Context 或 Signal。"], Errors(OutputTypeOutOfDomain));
+        Assert.Equal(["流程 默认 的节点 准备：输出端口的 Type 应为已注册的端口类型名。"], Errors(OutputTypeOutOfDomain));
 
     [Fact]
     public void Referenced_container_port_missing_is_rejected() =>
@@ -224,8 +224,8 @@ public sealed class FlowLoadTests
 
         IReadOnlyList<NodeSpec> members = environment.Flows.Find(new FlowName("默认")).ThrowIfError().RootNode.Nodes!;
 
-        Assert.Equal(PortType.Signal, members[0].Inputs.Find(new PortName("回复"))?.Type);
-        Assert.Equal(PortType.Signal, members[1].Outputs.Find(new PortName("回复"))?.Type);
+        Assert.Equal(PortTypes.Signal, members[0].Inputs.Find(new PortName("回复"))?.Type);
+        Assert.Equal(PortTypes.Signal, members[1].Outputs.Find(new PortName("回复"))?.Type);
 
         string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
         Assert.Contains("\"Type\": \"Signal\"", text);

@@ -310,7 +310,7 @@ static class FlowDocumentReader
                     case "type":
                         if (!TryPortType(property.Value, out PortType parsedType))
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Type 应为 Text、Context 或 Signal。"));
+                            errors.Add(scope.Node(label, "输出端口的 Type 应为已注册的端口类型名。"));
                             invalid = true;
                         }
                         else
@@ -427,7 +427,7 @@ static class FlowDocumentReader
                     case "type":
                         if (!TryPortType(property.Value, out PortType parsedType))
                         {
-                            errors.Add(scope.Node(label, "输入端口的 Type 应为 Text、Context 或 Signal。"));
+                            errors.Add(scope.Node(label, "输入端口的 Type 应为已注册的端口类型名。"));
                             invalid = true;
                         }
                         else
@@ -484,8 +484,7 @@ static class FlowDocumentReader
         type = default;
 
         return element.ValueKind == JsonValueKind.String
-            && Enum.TryParse(element.GetString(), ignoreCase: true, out type)
-            && Enum.IsDefined(type);
+            && PortTypes.TryParse(element.GetString(), out type);
     }
 
     private static ErrorOr<List<string>?> ReadModelSlots(JsonElement? models, NodeScope scope, string label)

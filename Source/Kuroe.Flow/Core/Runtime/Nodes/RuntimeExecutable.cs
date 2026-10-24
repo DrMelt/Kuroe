@@ -76,13 +76,13 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
     public void ClearRerun() => _rerunRequested = false;
 
     /// <summary>某次执行交回的命名端口值，未交回时为空。</summary>
-    public IReadOnlyDictionary<PortName, string>? Ports(ExecutionId execution) =>
+    public IReadOnlyDictionary<PortName, PortValue>? SubmittedPorts(ExecutionId execution) =>
         _submissions.GetValueOrDefault(execution)?.Ports;
 
     /// <summary>本轮该交回但尚未交回的命名端口，按节点声明的需交回端口判定。</summary>
     public IReadOnlyList<PortName> Shortfall(ExecutionId execution)
     {
-        IReadOnlyDictionary<PortName, string>? values = Ports(execution);
+        IReadOnlyDictionary<PortName, PortValue>? values = SubmittedPorts(execution);
 
         return [.. Executable.RequiredPorts
             .Select(port => port.Name)
@@ -94,7 +94,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
         _submissions.GetValueOrDefault(execution)?.CannotCompleteReason;
 
     /// <summary>记下一次执行交回的命名端口值。</summary>
-    public void CollectPorts(ExecutionId execution, IReadOnlyDictionary<PortName, string> values) =>
+    public void CollectPorts(ExecutionId execution, IReadOnlyDictionary<PortName, PortValue> values) =>
         _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { Ports = values };
 
     /// <summary>记下一次执行上报的无法完成原因，同一执行重复上报覆盖。</summary>
@@ -152,7 +152,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
     /// <summary>启动即登记方案内全部取值来源的当前版本，防止同版本重复触发。</summary>
     public void Consume(NodeInputPlan plan, IReadinessSources sources) => _consumed.Record(plan, sources);
 
-    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
+
+    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
 
     int IInputProgress.Executions => Executions;
 
@@ -170,21 +172,37 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
     /// <summary>记下新启动的执行。</summary>
     public void AddActive() => Active++;
 
-    /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，Text 端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
+    /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，Text 语义端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        Executable.FindPort(port)?.Type == PortType.Context ? Join(ContextInputs()) : PortValue(port);
+        Executable.FindPort(port) is { } declared && declared.Type.Semantics == PortSemantics.Context
+            ? Join(ContextInputs())
+            : PublishedValue(port)?.Text;
 
-    /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，Text 端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
+    /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，Text 语义端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port)
     {
-        if (Executable.FindPort(port)?.Type == PortType.Context)
+        if (Executable.FindPort(port) is { } declared && declared.Type.Semantics == PortSemantics.Context)
         {
             return ContextInputs();
         }
 
-        return PortValue(port) is { Length: > 0 } value && PublishedExecution is { } execution
-            ? [new ContextValue(new ExecutionSource(execution.Id, Path, port), value)]
+        return PublishedValue(port) is { Text: { Length: > 0 } text } && PublishedExecution is { } execution
+            ? [new ContextValue(new ExecutionSource(execution.Id, Path, port), text)]
             : [];
+    }
+
+    /// <summary>Trigger 版输出端口的最近一次产出是否触发下游，其余端口恒触发。</summary>
+    public override bool Triggers(PortName port)
+    {
+        if (Executable.FindPort(port) is not { Type.IsTrigger: true })
+        {
+            return true;
+        }
+
+        return PublishedExecution is not { } execution
+            || SubmittedPorts(execution.Id) is not { } values
+            || !values.TryGetValue(port, out PortValue value)
+            || value.Fires;
     }
 
     /// <summary>来源执行输入侧取到的内容，按原出处给出。尚未产出时为空。</summary>
@@ -198,10 +216,13 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
         return parts.Length == 0 ? null : string.Join("\n\n", parts);
     }
 
-    /// <summary>按端口取已发布产出的一个返回值：只有 Text 端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
-    private string? PortValue(PortName port) =>
-        Executable.FindPort(port) is { Type: PortType.Text } && PublishedExecution is { } execution
-            ? Ports(execution.Id)?.GetValueOrDefault(port)
+    /// <summary>按端口取已发布产出的一个返回值：只有 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
+    private PortValue? PublishedValue(PortName port) =>
+        Executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        && PublishedExecution is { } execution
+        && SubmittedPorts(execution.Id) is { } values
+        && values.TryGetValue(port, out PortValue value)
+            ? value
             : null;
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
@@ -230,6 +251,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
 
     /// <summary>一次执行交回的内容。</summary>
     private sealed record Submission(
-        IReadOnlyDictionary<PortName, string>? Ports = null,
+        IReadOnlyDictionary<PortName, PortValue>? Ports = null,
         string? CannotCompleteReason = null);
 }

@@ -33,8 +33,8 @@ public sealed class LlmNodeTypeTests
 
         Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
-        Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.OutputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger], shape.InputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger], shape.OutputTypes);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class LlmNodeTypeTests
     {
         Label = new NodeLabel("干活"),
         Type = LlmNodeTypes.Create(null),
-        Outputs = [new Port(new PortName("结论"), PortType.Text)],
+        Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
         Spec = spec,
     };
 }

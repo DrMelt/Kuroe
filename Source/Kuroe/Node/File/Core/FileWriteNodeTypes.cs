@@ -15,8 +15,8 @@ public static class FileWriteNodeTypes
     /// <summary>文件写入节点的静态形状：Text 输入承载写入内容，Signal 输入只作触发，输出可选。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
-        InputTypes = [PortType.Text, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Signal],
+        InputTypes = [PortTypes.Text, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Signal],
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>

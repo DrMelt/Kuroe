@@ -12,11 +12,11 @@ public sealed class NodePortTests
     [Fact]
     public void Port_table_finds_declarations_by_name()
     {
-        IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortType.Text), new Port(new PortName("上下文"), PortType.Context)];
-        IReadOnlyList<InputPort> inputs = [new InputPort(new PortName("目标")), new InputPort(new PortName("催办"), PortType.Signal)];
+        IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortTypes.Text), new Port(new PortName("上下文"), PortTypes.Context)];
+        IReadOnlyList<InputPort> inputs = [new InputPort(new PortName("目标")), new InputPort(new PortName("催办"), PortTypes.Signal)];
 
-        Assert.Equal(PortType.Context, outputs.Find(new PortName("上下文"))!.Value.Type);
-        Assert.Equal(PortType.Signal, inputs.Find(new PortName("催办"))!.Value.Type);
+        Assert.Equal(PortTypes.Context, outputs.Find(new PortName("上下文"))!.Value.Type);
+        Assert.Equal(PortTypes.Signal, inputs.Find(new PortName("催办"))!.Value.Type);
         Assert.Null(outputs.Find(new PortName("检查")));
         Assert.Null(inputs.Find(new PortName("检查")));
     }
@@ -24,7 +24,7 @@ public sealed class NodePortTests
     [Fact]
     public void Port_renders_its_name_as_text()
     {
-        Assert.Equal("结论", new Port(new PortName("结论"), PortType.Text).ToString());
+        Assert.Equal("结论", new Port(new PortName("结论"), PortTypes.Text).ToString());
         Assert.Equal("目标", new InputPort(new PortName("目标")).ToString());
     }
 
@@ -43,10 +43,10 @@ public sealed class NodePortTests
     [Fact]
     public void Executable_reports_its_declared_port_kinds()
     {
-        ExecutableNode executable = Executable([new Port(new PortName("结论"), PortType.Text)]);
+        ExecutableNode executable = Executable([new Port(new PortName("结论"), PortTypes.Text)]);
 
         Assert.Equal([new PortName("结论")], executable.RequiredPorts.Select(port => port.Name));
-        Assert.Equal(PortType.Text, executable.FindPort(new PortName("结论"))!.Value.Type);
+        Assert.Equal(PortTypes.Text, executable.FindPort(new PortName("结论"))!.Value.Type);
         Assert.Null(executable.FindPort(new PortName("任务")));
         Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
     }
@@ -54,7 +54,7 @@ public sealed class NodePortTests
     [Fact]
     public void Executable_keeps_declared_input_defaults()
     {
-        InputPort input = new(new PortName("背景"), PortType.Text, null, "固定背景");
+        InputPort input = new(new PortName("背景"), PortTypes.Text, null, "固定背景");
         ExecutableNode executable = Executable([]) with { Inputs = [input] };
 
         Assert.Equal("固定背景", Assert.Single(executable.Inputs).Default);
@@ -63,7 +63,7 @@ public sealed class NodePortTests
     [Fact]
     public void Executable_without_ports_to_submit_has_no_model_output()
     {
-        ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortType.Context)]);
+        ExecutableNode executable = Executable([new Port(new PortName("上下文"), PortTypes.Context)]);
 
         Assert.Empty(executable.RequiredPorts);
     }
@@ -71,7 +71,7 @@ public sealed class NodePortTests
     [Fact]
     public void Signal_port_is_submitted_without_content()
     {
-        ExecutableNode executable = Executable([new Port(new PortName("完成"), PortType.Signal)]);
+        ExecutableNode executable = Executable([new Port(new PortName("完成"), PortTypes.Signal)]);
 
         Assert.Equal([new PortName("完成")], executable.RequiredPorts.Select(port => port.Name));
     }
@@ -82,11 +82,11 @@ public sealed class NodePortTests
         StartNode start = new()
         {
             Path = new NodePath([StartNode.ReservedLabel]),
-            Outputs = [new Port(new PortName("目标"), PortType.Text)],
+            Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
         };
 
         Assert.Equal("Start", StartNode.ReservedLabel.Value);
-        Assert.Equal(PortType.Text, start.FindPort(new PortName("目标"))!.Value.Type);
+        Assert.Equal(PortTypes.Text, start.FindPort(new PortName("目标"))!.Value.Type);
         Assert.Null(start.FindPort(new PortName("任务")));
     }
 

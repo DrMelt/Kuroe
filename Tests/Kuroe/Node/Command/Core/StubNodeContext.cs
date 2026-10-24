@@ -63,5 +63,5 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
     public NodeTypeShape? ShapeOf(NodePath path) => node.Type.Shape;
 
-    public PortType TypeOf(NodePath node, PortName port) => PortType.Text;
+    public PortType TypeOf(NodePath node, PortName port) => PortTypes.Text;
 }

@@ -46,11 +46,11 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>按执行差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
     public Func<IExecution, int>? DelayFor { get; set; }
 
-    /// <summary>按声明的端口生成提交文本：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
+    /// <summary>按声明的端口生成提交文本：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static string PortValuesFor(IReadOnlyList<Port> ports)
     {
         string body = string.Join(", ", ports.Select(port =>
-            $"\"{port.Name.Value}\": \"{(port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty)}\""));
+            $"\"{port.Name.Value}\": \"{(Ports.CarriesText(port.Type) ? $"{port.Name.Value}产出" : string.Empty)}\""));
         return "{ " + body + " }";
     }
 

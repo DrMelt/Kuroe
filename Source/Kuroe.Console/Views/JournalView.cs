@@ -81,6 +81,13 @@ internal static class JournalView
                     new Text(error.Text, Styles.Error));
                 break;
 
+            case InfoEntry info:
+                table.AddRow(
+                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+                    new Text("信息", Styles.Hint),
+                    new Text(info.Text, Styles.Hint));
+                break;
+
             case DiscardedEntry:
                 table.AddRow(
                     new Text(ViewLabels.Clock(entry.At), Styles.Hint),

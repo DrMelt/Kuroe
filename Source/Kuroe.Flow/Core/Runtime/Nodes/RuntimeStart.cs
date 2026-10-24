@@ -33,5 +33,7 @@ internal sealed class RuntimeStart(StartNode node, StartInputs inputs) : NodeRun
     }
 
     private string? Text(PortName port) =>
-        node.FindPort(port) is { Type: PortType.Text } declared ? declared.Value ?? _inputs.Text(port) : null;
+        node.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+            ? declared.Value ?? _inputs.Text(port)
+            : null;
 }

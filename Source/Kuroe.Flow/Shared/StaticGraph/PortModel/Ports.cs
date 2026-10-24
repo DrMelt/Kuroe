@@ -3,8 +3,16 @@ namespace Kuroe.Flow.Shared.StaticGraph.PortModel;
 /// <summary>端口表的查找、交回判定与声明文本。</summary>
 public static class Ports
 {
-    /// <summary>模型需经契约工具交回的端口类型：Text 交回内容，Signal 只交回端口名；Context 由来源透传，不需要交回。</summary>
-    public static bool RequiresSubmission(PortType type) => type is PortType.Text or PortType.Signal;
+    /// <summary>模型需经契约工具交回的端口类型：Text 交回内容，Signal 交回端口名或触发值；Context 由来源透传，不需要交回。
+    /// Trigger 版与普通版同属一种语义，普通版交回时触发值恒为 true。</summary>
+    public static bool RequiresSubmission(PortType type) =>
+        type.Semantics is PortSemantics.Text or PortSemantics.Signal;
+
+    /// <summary>端口是否承载文本内容。</summary>
+    public static bool CarriesText(PortType type) => type.Semantics == PortSemantics.Text;
+
+    /// <summary>端口是否承载触发值。</summary>
+    public static bool CarriesTrigger(PortType type) => type.IsTrigger;
 
     /// <summary>输出端口表里模型需交回的端口，按声明序。</summary>
     public static IReadOnlyList<Port> RequiringSubmission(IReadOnlyList<Port> ports) =>

@@ -63,7 +63,7 @@ public sealed class InputRuntimeTests
         Type = new InputNodeType(null, channel),
         Spec = new ExecutableSpec(),
         Model = null,
-        Outputs = [new Port(new PortName("回答"), PortType.Text)],
+        Outputs = [new Port(new PortName("回答"), PortTypes.Text)],
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,
     };
 }

@@ -34,7 +34,7 @@ internal sealed class FileWriteRuntime(ExecutableNode executable, FileParameters
     private string Content(INodeContext context, int group)
     {
         FlowEdge? edge = context.Graph.Incoming(Path)
-            .FirstOrDefault(edge => edge.Group == group && edge.Type == PortType.Text);
+            .FirstOrDefault(edge => edge.Group == group && Ports.CarriesText(edge.Type));
         if (edge is null)
         {
             return string.Empty;

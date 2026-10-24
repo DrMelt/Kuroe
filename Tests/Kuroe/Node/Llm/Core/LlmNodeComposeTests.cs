@@ -35,7 +35,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["ReadFile", "SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters { Tools = [new ToolPath("ReadFile")] })
-                .ToolPaths([new Port(new PortName("结论"), PortType.Text)])
+                .ToolPaths([new Port(new PortName("结论"), PortTypes.Text)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("结论"), PortType.Text)])
+                .ToolPaths([new Port(new PortName("结论"), PortTypes.Text)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("完成"), PortType.Signal)])
+                .ToolPaths([new Port(new PortName("完成"), PortTypes.Signal)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -59,7 +59,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("上下文"), PortType.Context)])
+                .ToolPaths([new Port(new PortName("上下文"), PortTypes.Context)])
                 .Select(path => path.Value));
 
     [Fact]

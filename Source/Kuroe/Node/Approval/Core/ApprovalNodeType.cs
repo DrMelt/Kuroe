@@ -39,7 +39,7 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChann
         }
 
         Reject(node.Inputs.Count == 0, "审批节点必须声明输入端口，对外端口取自身输入端口。");
-        Reject(node.Inputs.Count(port => port.Type == PortType.Context) > 1, "审批节点至多声明一个 Context 输入端口。");
+        Reject(node.Inputs.Count(port => port.Type.Semantics == PortSemantics.Context) > 1, "审批节点至多声明一个 Context 输入端口。");
         Reject(node.Model is not null, "审批节点不启动执行，不能声明模型选择。");
         Reject(spec.Validate is not null, "审批节点不启动执行，不能声明 Validate。");
         Reject(node.MaxExecutions is not null, "审批节点不启动执行，不能声明 MaxExecutions。");

@@ -20,7 +20,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType
     /// <summary>文件写入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;
 
-    /// <summary>文件写入节点的类型规则：恰好一个 Text 输入承载写入内容，输出可选，不接受执行方式与校验。</summary>
+    /// <summary>文件写入节点的类型规则：恰好一个承载文本的输入端口，输出可选，不接受执行方式与校验。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
         ExecutableSpec spec = node.Spec!;
@@ -35,7 +35,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType
 
         Reject(node.Model is not null, "文件写入节点不启动执行，不能声明模型选择。");
         Reject(spec.Validate is not null, "文件写入节点不启动执行，不能声明 Validate。");
-        Reject(node.Inputs.Count(port => port.Type == PortType.Text) != 1,
+        Reject(node.Inputs.Count(port => Ports.CarriesText(port.Type)) != 1,
             "文件写入节点必须声明一个 Text 输入端口，写入内容取自它。");
         Reject(node.Outputs.Count > 1, "文件写入节点最多声明一个输出端口。");
         Reject(spec.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");

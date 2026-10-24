@@ -130,7 +130,7 @@ internal sealed class FlowCompilation
                     continue;
                 }
 
-                PortType type = Ports.Find(pending.Entry.Inputs, link.Input)?.Type ?? PortType.Text;
+                PortType type = Ports.Find(pending.Entry.Inputs, link.Input)?.Type ?? PortTypes.Text;
 
                 AddEdge(from, pending.Path, link.Ref.Port, link.Input, type, groupIndex);
             }

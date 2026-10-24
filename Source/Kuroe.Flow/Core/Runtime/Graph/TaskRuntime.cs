@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
@@ -56,7 +57,10 @@ internal sealed class TaskRuntime : INodeContext
     /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
     public NodeRuntime Runtime(NodePath node) => this[node];
 
-    ISourceState IReadinessSources.Source(NodePath node) => Materialized(node) ?? IdleSource;
+    ISourceState IReadinessSources.Source(NodePath node) => State(node);
+
+    /// <summary>按节点路径取来源状态，未实例化时给未放行的默认状态。</summary>
+    private ISourceState State(NodePath node) => Materialized(node) ?? IdleSource;
 
     /// <summary>已实例化的执行节点，按执行节点表顺序。判定与展示按它读数，不创建节点。</summary>
     private IEnumerable<RuntimeExecutable> MaterializedExecutables() => _materializer.Executables();
@@ -158,14 +162,21 @@ internal sealed class TaskRuntime : INodeContext
     public bool HasBlocked =>
         _materializer.Materialized.Any(node => node.Snapshot().State == NodeState.Blocked);
 
-    /// <summary>还有在跑的执行、可启动的执行节点或尚未放行的节点，任务就没走完。随任务取消的节点不计。</summary>
+    /// <summary>还有在跑的执行、等待外部输入的节点、可启动或可由来源新版本驱动的节点，任务就没走完，
+    /// 已发布产出的循环节点仍可由新版本再次启动。被抑制消耗后不再有活动的节点不阻止完成。随任务取消的节点不计。</summary>
     public bool HasWork =>
         Graph.ExecutableNodes.Any(executable => Materialized(executable.Path) switch
         {
-            RuntimeExecutable node => !node.Released || node.HasActive || CanStart(node),
-            NodeRuntime node => !node.Released && !node.Canceled,
+            RuntimeExecutable node => node.HasActive || CanStart(node),
+            NodeRuntime node => node.AwaitingInput || Drivable(node),
             _ => Startable(executable),
         });
+
+    /// <summary>已实例化的非派发节点当前是否有重跑意图或可由来源新版本驱动。</summary>
+    private bool Drivable(NodeRuntime node) =>
+        node is IInputProgress progress
+        && (progress.ForceRerun
+            || (Graph.PlanOf(node.Path) is { } plan && plan.DrivenGroup(progress, this) is not null));
 
     /// <summary>尚未实例化的执行节点是否已具启动条件：与启动判定共用同一实现，未实例化的来源按未放行求值。
     /// 未实例化说明推进循环还没把它激活。</summary>
@@ -218,8 +229,10 @@ internal sealed class TaskRuntime : INodeContext
         }
 
         // 输出校验不通过即不发布，节点停驻等返工
+        IReadOnlyDictionary<PortName, string>? outputs = node.SubmittedPorts(execution.Id)?
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Text ?? string.Empty);
         if (executable.Spec.Validate is { } validation
-            && !validation.Passes(executable.Outputs, node.Ports(execution.Id)))
+            && !validation.Passes(executable.Outputs, outputs))
         {
             execution.MarkUncollected("输出校验不通过，本步未收口。");
 
@@ -279,6 +292,15 @@ internal sealed class TaskRuntime : INodeContext
 
         if (!shape.DispatchesExecutions)
         {
+            // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
+            if (node is IInputProgress progress
+                && Graph.PlanOf(node.Path) is { } plan
+                && ConsumeSuppressed(node, progress, plan)
+                && plan.DrivenGroup(progress, this) is null)
+            {
+                return new EvaluateResult([], false);
+            }
+
             long revision = node.Revision;
             node.Activate(this);
 
@@ -299,14 +321,72 @@ internal sealed class TaskRuntime : INodeContext
             return new EvaluateResult(Notify([node.Path]), false);
         }
 
-        if (node is not RuntimeExecutable executable || !CanStart(executable))
+        if (node is not RuntimeExecutable executable)
         {
+            return new EvaluateResult([], false);
+        }
+
+        if (!CanStart(executable))
+        {
+            if (Graph.PlanOf(executable.Path) is { } plan)
+            {
+                ConsumeSuppressed(executable, executable, plan);
+            }
+
             return new EvaluateResult([], false);
         }
 
         Start(executable);
 
         return new EvaluateResult([], true);
+    }
+
+    /// <summary>消耗所有由新版本驱动但存在 Trigger 为 false 的启动组，每组写一条信息记录。节点在跑、阻塞、取消、强制重跑或达到执行上限时不消耗。</summary>
+    private bool ConsumeSuppressed(NodeRuntime node, IInputProgress progress, NodeInputPlan plan)
+    {
+        if (!AcceptsConsumption(node, progress, plan))
+        {
+            return false;
+        }
+
+        bool consumed = false;
+        while (plan.SuppressedGroup(progress, this) is { } group)
+        {
+            progress.Consume(group, this);
+            NoteSuppressed(node, group);
+            consumed = true;
+        }
+
+        return consumed;
+    }
+
+    /// <summary>节点此刻是否接受抑制组消耗：在跑、阻塞、取消、强制重跑或达到执行上限时保留来源版本。</summary>
+    private static bool AcceptsConsumption(NodeRuntime node, IInputProgress progress, NodeInputPlan plan)
+    {
+        if (node.Canceled || progress.ForceRerun || node.Snapshot().State == NodeState.Blocked)
+        {
+            return false;
+        }
+
+        if (progress.Executions >= plan.MaxExecutions)
+        {
+            return false;
+        }
+
+        return node is not RuntimeExecutable executable || !executable.HasActive;
+    }
+
+    /// <summary>记录一次抑制组消耗：给出节点、未触发的来源与端口。</summary>
+    private void NoteSuppressed(NodeRuntime node, InputGroup group)
+    {
+        string ports = string.Join('、', group.Bindings
+            .Where(binding => !binding.Triggers(State(binding.Source)))
+            .Select(binding => $"{binding.Source}@{binding.Port}"));
+        string message = $"{_task.Id} 的节点 {node.Path.Label} 有启动组未触发：{ports} 的产出为 false，本组已消耗，不再等待。";
+
+        _task.Journal.Append(new InfoEntry(message));
+        _task.Registry.Report(new ExecutionNotice(NoticeLevel.Information, message));
+        _task.Touch();
     }
 
     /// <summary>一次评估的结果：要通知的下游执行节点路径与是否已启动执行。</summary>
@@ -369,7 +449,11 @@ internal sealed class TaskRuntime : INodeContext
     {
         public bool ForceRerun => false;
 
-        public long ConsumedRevision(NodePath source) => 0;
+        public long ConsumedRevision(ConsumptionKey key) => 0;
+
+        public void Consume(InputGroup group, IReadinessSources sources)
+        {
+        }
 
         public int Executions => 0;
     }

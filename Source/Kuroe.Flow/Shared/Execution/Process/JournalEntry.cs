@@ -15,5 +15,8 @@ public sealed record ToolCallEntry(ToolCallRecord Call) : JournalEntry(DateTimeO
 /// <summary>一条失败说明。</summary>
 public sealed record ErrorEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
 
+/// <summary>一条信息说明。</summary>
+public sealed record InfoEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
+
 /// <summary>本轮输入与输出未计入上下文。</summary>
 public sealed record DiscardedEntry() : JournalEntry(DateTimeOffset.UtcNow);

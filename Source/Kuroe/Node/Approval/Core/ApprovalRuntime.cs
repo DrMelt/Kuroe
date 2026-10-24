@@ -17,8 +17,8 @@ internal sealed class ApprovalRuntime(
     IConsumptionLedger? consumed = null)
     : NodeRuntime(executable), IInputProgress
 {
-    /// <summary>停在待批准时解析出的内容端口到来源端口的映射，未停驻时为空。信号输入不承载内容，不在此表中。</summary>
-    private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _content = [];
+    /// <summary>停驻时解析出的端口到来源端口的映射，放行后按它转发产出与触发值。</summary>
+    private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _sources = [];
 
     private readonly IConsumptionLedger _consumed = consumed ?? new ConsumptionLedger();
     private long _revision;
@@ -34,35 +34,38 @@ internal sealed class ApprovalRuntime(
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
+    /// <summary>已停在待批准，等待外部批准。</summary>
+    public override bool AwaitingInput => _awaiting;
+
     /// <summary>随任务进入取消态并撤销接收声明。</summary>
     public override void Cancel()
     {
         _canceled = true;
+        _awaiting = false;
         channel.Decline(context, Path);
     }
 
-    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
+
+    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
 
     int IInputProgress.Executions => 0;
 
     bool IInputProgress.ForceRerun => false;
 
-    /// <summary>哪一组就绪就按哪一组取值：记下该组的来源端口并登记消费账，随后声明接收外部输入，重复停驻与取消后不停驻。</summary>
+    /// <summary>哪一组由新版本驱动就按哪一组取值：记下该组的来源端口，登记全部启动组的当前版本，随后声明接收外部输入。已停驻或已取消时不再停驻。</summary>
     public override void Activate(INodeContext context)
     {
         if (_canceled || _awaiting || context.Plan(Path) is not { } plan
-            || plan.AvailableGroup(context) is not { } group)
+            || plan.DrivenGroup(this, context) is not { } group)
         {
             return;
         }
 
-        _content.Clear();
+        _sources.Clear();
         foreach (FlowEdge edge in context.Graph.Incoming(Path).Where(edge => edge.Group == group))
         {
-            if (edge.Type != PortType.Signal)
-            {
-                _content[edge.TargetInput] = (edge.Source, edge.SourcePort);
-            }
+            _sources[edge.TargetInput] = (edge.Source, edge.SourcePort);
         }
 
         _consumed.Record(plan, context);
@@ -79,15 +82,21 @@ internal sealed class ApprovalRuntime(
 
     /// <summary>按输出端口转发来源产出：放行时取当时齐备组解析出的来源端口内容，否则为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        Released && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
+        Released && _sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
             ? context.Runtime(reference.Source).PortText(context, reference.Port)
             : null;
 
     /// <summary>按输出端口取产出：转发来源端口的取值。审批节点一次放行全部端口。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && _content.TryGetValue(port, out (NodePath Source, PortName Port) reference)
+        Released && _sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
             ? context.Runtime(reference.Source).OutputValues(context, reference.Port)
             : [];
+
+    /// <summary>按输出端口转发来源端口的触发值。</summary>
+    public override bool Triggers(PortName port) =>
+        !Released
+        || !_sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
+        || context.Runtime(reference.Source).Triggers(reference.Port);
 
     /// <summary>审批节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot() => new(Path, State);

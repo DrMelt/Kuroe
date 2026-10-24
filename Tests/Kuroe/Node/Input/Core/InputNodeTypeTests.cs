@@ -37,8 +37,8 @@ public sealed class InputNodeTypeTests
         Assert.False(shape.Organizes);
         Assert.False(shape.DerivesOutputsFromInputs);
         Assert.True(shape.StartsUnaided);
-        Assert.Equal([PortType.Text, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text], shape.OutputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
     [Fact]
@@ -70,8 +70,8 @@ public sealed class InputNodeTypeTests
         {
             Outputs =
             [
-                new Port(new PortName("甲"), PortType.Text),
-                new Port(new PortName("乙"), PortType.Text),
+                new Port(new PortName("甲"), PortTypes.Text),
+                new Port(new PortName("乙"), PortTypes.Text),
             ],
         };
 

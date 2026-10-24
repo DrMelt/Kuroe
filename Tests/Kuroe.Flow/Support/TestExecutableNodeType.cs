@@ -15,8 +15,8 @@ public sealed class TestExecutableNodeType : INodeType
     public NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
-        InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
+        InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
     /// <summary>替身的类型规则：执行上限必须是正整数，覆盖类型规则经节点作用域报出的路径。</summary>

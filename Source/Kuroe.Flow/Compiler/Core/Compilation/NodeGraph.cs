@@ -94,9 +94,9 @@ public sealed class NodeGraph : INodeGraph
     public PortType TypeOf(NodePath node, PortName port) =>
         this[node] switch
         {
-            ExecutableNode executable => executable.FindPort(port)?.Type ?? PortType.Text,
-            StartNode start => start.FindPort(port)?.Type ?? PortType.Text,
-            _ => PortType.Text,
+            ExecutableNode executable => executable.FindPort(port)?.Type ?? PortTypes.Text,
+            StartNode start => start.FindPort(port)?.Type ?? PortTypes.Text,
+            _ => PortTypes.Text,
         };
 
     /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。

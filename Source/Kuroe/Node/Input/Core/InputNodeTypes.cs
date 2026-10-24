@@ -14,8 +14,8 @@ public static class InputNodeTypes
     public static NodeTypeShape Shape { get; } = new()
     {
         StartsUnaided = true,
-        InputTypes = [PortType.Text, PortType.Signal],
-        OutputTypes = [PortType.Text],
+        InputTypes = [PortTypes.Text, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text],
     };
 
     /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。外部输入协议是建运行期对象所需的运行期依赖，由装配处给出。</summary>

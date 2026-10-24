@@ -34,7 +34,7 @@ public sealed partial record NodeSpec
 
             foreach (InputPort port in Inputs.Where(port => port.Default is not null))
             {
-                if (!declared.DispatchesExecutions || port.Type != PortType.Text)
+                if (!declared.DispatchesExecutions || port.Type != PortTypes.Text)
                 {
                     fail($"输入端口 {port.Name.Value} 的默认值只用于派发执行的节点的 Text 输入端口。");
                 }
@@ -50,7 +50,7 @@ public sealed partial record NodeSpec
             return;
         }
 
-        if (Outputs.Count(port => port.Type == PortType.Context) > 1)
+        if (Outputs.Count(port => port.Type.Semantics == PortSemantics.Context) > 1)
         {
             fail("Context 输出端口至多声明一个。");
         }

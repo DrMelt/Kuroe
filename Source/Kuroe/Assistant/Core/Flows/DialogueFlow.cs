@@ -66,7 +66,7 @@ internal static class DialogueFlow
                 Name.Value,
                 "内置对话：回答用户的每轮输入",
                 [new ModelDocument(RuntimeModel.Value, null, Runtime: true)],
-                [new PortDocument(StartPort.Value, PortType.Text, "任务的初始输入，提交时给出。")],
+                [new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。")],
                 new NodeDefinitionDocument
                 {
                     Name = "对话",
@@ -79,11 +79,11 @@ internal static class DialogueFlow
                             Kind = "Input",
                             Inputs =
                             [
-                                new InputPortDocument(StartPort.Value, PortType.Text),
+                                new InputPortDocument(StartPort.Value, PortTypes.Text),
                                 // 回复输入只作回边的触发，不消费回话产出，回复内容随回话执行的过程播发写出
-                                new InputPortDocument(ReplyPort.Value, PortType.Signal),
+                                new InputPortDocument(ReplyPort.Value, PortTypes.Signal),
                             ],
-                            Outputs = [new PortDocument(InputPort.Value, PortType.Text)],
+                            Outputs = [new PortDocument(InputPort.Value, PortTypes.Text)],
                             Parameters = new Dictionary<string, FlowValue>
                             {
                                 ["Question"] = new FlowValue.Text("请输入"),
@@ -101,10 +101,10 @@ internal static class DialogueFlow
                         {
                             Name = ReplyNodeName.Value,
                             Kind = "Llm",
-                            Inputs = [new InputPortDocument(InputPort.Value, PortType.Text)],
+                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text)],
                             Model = RuntimeModel.Value,
                             // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
-                            Outputs = [new PortDocument(ReplyPort.Value, PortType.Signal)],
+                            Outputs = [new PortDocument(ReplyPort.Value, PortTypes.Signal)],
                             Parameters = new Dictionary<string, FlowValue>
                             {
                                 ["Tools"] = new FlowValue.Array([.. Tools.Select(tool => new FlowValue.Text(tool.Value))]),

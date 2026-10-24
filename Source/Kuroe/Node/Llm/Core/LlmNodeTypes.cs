@@ -9,12 +9,13 @@ public static class LlmNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Llm");
 
-    /// <summary>Llm 类型的静态形状：派发执行，输入与输出端口都取文本、上下文与信号，Signal 输出交回端口名后只作下游驱动。</summary>
+    /// <summary>Llm 类型的静态形状：派发执行，输入与输出端口取文本、上下文与信号，Text 与 Signal 另有 Trigger 版，
+    /// Trigger 版交回时携带是否触发下游的布尔值。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
-        InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
+        InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
+        OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
     };
 
     /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。</summary>

@@ -15,8 +15,8 @@ public static class FileReadNodeTypes
     /// <summary>文件读取节点的静态形状：输入只作触发，输出承载读取内容。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
-        InputTypes = [PortType.Signal],
-        OutputTypes = [PortType.Text],
+        InputTypes = [PortTypes.Signal],
+        OutputTypes = [PortTypes.Text],
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>

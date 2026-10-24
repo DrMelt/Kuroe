@@ -41,6 +41,28 @@ public sealed class FlowDocumentFormatTests
     }
 
     [Fact]
+    public void Trigger_port_types_round_trip()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "来源", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }, { "Name": "信号", "Type": "SignalTrigger" }] },
+                  { "Name": "下游", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }, { "Name": "信号", "Type": "SignalTrigger" }] }
+                ] }
+              ] } ]
+            }
+            """;
+
+        FlowDocument document = Ok(Format.Read(flow));
+        string text = Ok(Format.Write(document));
+
+        Assert.Contains("\"Type\": \"TextTrigger\"", text);
+        Assert.Contains("\"Type\": \"SignalTrigger\"", text);
+        Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
+    }
+
+    [Fact]
     public void Read_rejects_a_reference_with_name_and_without_label()
     {
         ErrorOr<FlowDocument> document = Format.Read("""

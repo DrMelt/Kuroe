@@ -37,13 +37,13 @@ public sealed class ApprovalNodeTypeTests
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.True(shape.DerivesOutputsFromInputs);
-        Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.InputTypes);
-        Assert.Equal([PortType.Text, PortType.Context, PortType.Signal], shape.OutputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger], shape.InputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger], shape.OutputTypes);
     }
 
     [Fact]
     public void Node_with_content_port_passes() =>
-        Assert.Empty(Failures(Node([new InputPort(new PortName("计划"), PortType.Text)])));
+        Assert.Empty(Failures(Node([new InputPort(new PortName("计划"), PortTypes.Text)])));
 
     [Fact]
     public void Node_without_input_port_is_rejected() =>
@@ -55,14 +55,14 @@ public sealed class ApprovalNodeTypeTests
             ["流程 测试 的节点 把关：审批节点至多声明一个 Context 输入端口。"],
             Failures(Node(
             [
-                new InputPort(new PortName("甲"), PortType.Context),
-                new InputPort(new PortName("乙"), PortType.Context),
+                new InputPort(new PortName("甲"), PortTypes.Context),
+                new InputPort(new PortName("乙"), PortTypes.Context),
             ])));
 
     [Fact]
     public void Execution_config_and_model_are_rejected()
     {
-        NodeSpec node = Node([new InputPort(new PortName("计划"), PortType.Text)]) with
+        NodeSpec node = Node([new InputPort(new PortName("计划"), PortTypes.Text)]) with
         {
             Model = new ModelRef("规划者"),
             MaxExecutions = 3,

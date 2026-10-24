@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
+using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
@@ -15,6 +16,13 @@ internal sealed class ExecutionNotifier(TaskRegistry registry, Terminal terminal
     private void Report(ExecutionNotice notice)
     {
         string text = notice.Text.EndsWith('。') ? notice.Text : notice.Text + "。";
-        _terminal.Notice(text, notice.Level == NoticeLevel.Error ? Styles.Error : Styles.Warning);
+        Style style = notice.Level switch
+        {
+            NoticeLevel.Error => Styles.Error,
+            NoticeLevel.Warning => Styles.Warning,
+            _ => Styles.Hint,
+        };
+
+        _terminal.Notice(text, style);
     }
 }

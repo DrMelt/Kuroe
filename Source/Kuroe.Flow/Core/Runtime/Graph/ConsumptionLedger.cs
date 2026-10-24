@@ -3,21 +3,30 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
-/// <summary>消费账：按来源节点路径记已消费的版本。
-/// 执行节点的输入消费与容器的内容版本共用这一份记账。读写要求持有任务 Gate。</summary>
+/// <summary>消费账：按来源节点与来源端口记已消费的版本。执行节点与容器各持一份，
+/// 输入消费与内容版本共用这套记账规则。读写要求持有任务 Gate。</summary>
 public sealed class ConsumptionLedger : IConsumptionLedger
 {
-    private readonly Dictionary<NodePath, long> _revisions = [];
+    private readonly Dictionary<ConsumptionKey, long> _revisions = [];
 
-    /// <summary>某来源的已消费版本，未消费过为零。</summary>
-    public long Revision(NodePath source) => _revisions.GetValueOrDefault(source);
+    /// <summary>某来源端口绑定已消费的版本，未消费过为零。</summary>
+    public long Revision(ConsumptionKey key) => _revisions.GetValueOrDefault(key);
 
-    /// <summary>登记方案内全部取值来源的当前版本。</summary>
+    /// <summary>登记一组绑定内全部来源端口的当前版本。</summary>
+    public void Record(InputGroup group, IReadinessSources sources)
+    {
+        foreach (InputBinding binding in group.Bindings)
+        {
+            _revisions[binding.Key] = sources.Source(binding.Source).Revision;
+        }
+    }
+
+    /// <summary>登记方案内全部启动组的当前版本。</summary>
     public void Record(NodeInputPlan plan, IReadinessSources sources)
     {
-        foreach (NodePath source in plan.Groups.SelectMany(group => group.Bindings).Select(binding => binding.Source))
+        foreach (InputGroup group in plan.Groups)
         {
-            _revisions[source] = sources.Source(source).Revision;
+            Record(group, sources);
         }
     }
 }

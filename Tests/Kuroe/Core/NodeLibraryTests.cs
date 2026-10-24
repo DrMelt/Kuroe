@@ -209,7 +209,7 @@ public sealed class NodeLibraryTests
                 Name = new NodeName("干活组"),
                 Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
-                Outputs = [new Port(new PortName("结论"), PortType.Text)],
+                Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 ModelSlots = [new ModelRef("执行者")],
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Model = new ModelRef("执行者"), Spec = new ExecutableSpec() }],

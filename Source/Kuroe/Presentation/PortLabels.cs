@@ -26,10 +26,10 @@ public static class PortLabels
     public static string StartLabel(this Port port) =>
         port.Value is { Length: > 0 } value ? $"{port.Name.Value}={value}" : port.Name.Value;
 
-    /// <summary>端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
+    /// <summary>端口的展示：普通 Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
     private static string Format(PortName name, PortType type, string? description)
     {
-        string label = type == PortType.Text ? name.Value : $"{name.Value}·{type}";
+        string label = type == PortTypes.Text ? name.Value : $"{name.Value}·{type}";
 
         return description is { Length: > 0 } text ? $"{label}：{text}" : label;
     }

@@ -67,11 +67,11 @@ public sealed class OutputValidationTests
         OutputValidation validation = new(ValidationPredicate.TextEquals, "甲\n乙");
 
         Assert.True(validation.Passes(
-            [new Port(First, PortType.Text), new Port(Second, PortType.Text)],
+            [new Port(First, PortTypes.Text), new Port(Second, PortTypes.Text)],
             new Dictionary<PortName, string> { [First] = "甲", [Second] = "乙" }));
     }
 
-    private static IReadOnlyList<Port> Outputs() => [new Port(First, PortType.Text)];
+    private static IReadOnlyList<Port> Outputs() => [new Port(First, PortTypes.Text)];
 
     private static Dictionary<PortName, string> Values(string text) =>
         new() { [First] = text };

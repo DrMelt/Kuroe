@@ -16,7 +16,7 @@ public sealed class StartupViewTests
 
         Assert.Contains("已启动，当前模型 fake", cli.Output.Output);
         Assert.Contains("流程模板 1 条。", cli.Output.Output);
-        Assert.Contains("「Kuroe 助手」进入常驻对话任务；「任务」提交任务并查看执行进展。", cli.Output.Output);
+        Assert.Contains("回车进入选中项，方向键切换菜单项，Esc 返回上一级。", cli.Output.Output);
         string top = cli.Output.Output.Replace("\r", string.Empty).Split('\n')[0];
         Assert.Matches("^┌─+┐$", top);
         Assert.DoesNotContain("先「模型与提供商」", cli.Output.Output);

@@ -136,7 +136,7 @@ public sealed class FileRuntimeTests
     {
         using TempRoot root = new();
         ExecutableNode node = WriteNode(root, "out/nested/result.txt",
-            outputs: [new Port(new PortName("回执"), PortType.Text)]);
+            outputs: [new Port(new PortName("回执"), PortTypes.Text)]);
         StubNodeContext context = new(node);
         context.AddSource(new SourceRuntime(SourcePath, "写入内容"));
         FileWriteRuntime runtime = WriteRuntime(node, context);
@@ -195,10 +195,10 @@ public sealed class FileRuntimeTests
         Type = FileReadNodeTypes.Create(Parameters(root, relative, maxChars)),
         Spec = new ExecutableSpec(),
         Model = null,
-        Inputs = [new InputPort(new PortName("触发"), PortType.Signal)],
-        Outputs = [new Port(ContentPort, PortType.Text)],
+        Inputs = [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Outputs = [new Port(ContentPort, PortTypes.Text)],
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-        Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortType.Signal)],
+        Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal)],
     };
 
     private static ExecutableNode WriteNode(
@@ -211,10 +211,10 @@ public sealed class FileRuntimeTests
             Type = FileWriteNodeTypes.Create(Parameters(root, relative, maxChars)),
             Spec = new ExecutableSpec(),
             Model = null,
-            Inputs = [new InputPort(ContentPort, PortType.Text)],
+            Inputs = [new InputPort(ContentPort, PortTypes.Text)],
             Outputs = outputs ?? [],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-            Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), ContentPort, PortType.Text)],
+            Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), ContentPort, PortTypes.Text)],
         };
 
     private static FileParameters Parameters(TempRoot root, string relative, int maxChars) => new()

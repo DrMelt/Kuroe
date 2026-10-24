@@ -5,8 +5,11 @@ namespace Kuroe.Flow.Shared.RuntimeGraph;
 /// <summary>判定要读的目标自身状态：消费账、执行次数与重跑意图。</summary>
 public interface IInputProgress
 {
-    /// <summary>某来源的已消费版本，未消费过为零。</summary>
-    long ConsumedRevision(NodePath source);
+    /// <summary>某来源端口绑定已消费的版本，未消费过为零。</summary>
+    long ConsumedRevision(ConsumptionKey key);
+
+    /// <summary>登记一组绑定的当前版本，这一组视为已消费。</summary>
+    void Consume(InputGroup group, IReadinessSources sources);
 
     /// <summary>已启动的执行数。</summary>
     int Executions { get; }

@@ -19,8 +19,8 @@ public static class CommandNodeTypes
     /// <summary>命令节点的静态形状：Signal 输入触发，输出承载命令输出。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
-        InputTypes = [PortType.Signal],
-        OutputTypes = [PortType.Text],
+        InputTypes = [PortTypes.Signal],
+        OutputTypes = [PortTypes.Text],
     };
 
     /// <summary>按类型专属声明与进程执行边界建出类型实例。</summary>

@@ -155,10 +155,10 @@ public sealed class CommandRuntimeTests
         Type = CommandNodeTypes.Create(Parameters(maxChars), process),
         Spec = new ExecutableSpec(),
         Model = null,
-        Inputs = [new InputPort(new PortName("触发"), PortType.Signal)],
-        Outputs = [new Port(OutputPort, PortType.Text)],
+        Inputs = [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Outputs = [new Port(OutputPort, PortTypes.Text)],
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-        Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortType.Signal)],
+        Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal)],
     };
 
     private static CommandParameters Parameters(int maxChars) => new()

@@ -83,7 +83,7 @@ static class FlowDocumentWriter
                 new PortEntryDto
                 {
                     Name = port.Name,
-                    Type = port.Type,
+                    Type = port.Type?.Name,
                     Description = port.Description,
                     Value = allowValue ? port.Value : null,
                     Ref = port.Ref,
@@ -105,7 +105,7 @@ static class FlowDocumentWriter
                 new PortEntryDto
                 {
                     Name = input.Name,
-                    Type = input.Type,
+                    Type = input.Type?.Name,
                     Description = input.Description,
                     Default = input.Default,
                 },

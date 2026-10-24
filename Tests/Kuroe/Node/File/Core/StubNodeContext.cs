@@ -67,12 +67,12 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
     public NodeTypeShape? ShapeOf(NodePath path) => node.Type.Shape;
 
-    public PortType TypeOf(NodePath node, PortName port) => PortType.Text;
+    public PortType TypeOf(NodePath node, PortName port) => PortTypes.Text;
 }
 
 /// <summary>测试用的来源运行期对象：按输出端口给出固定文本。</summary>
 internal sealed class SourceRuntime(NodePath path, string content)
-    : NodeRuntime(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortType.Text)] })
+    : NodeRuntime(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
 {
     public override bool Released => true;
 

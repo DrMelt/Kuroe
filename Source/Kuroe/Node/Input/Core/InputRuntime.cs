@@ -1,4 +1,5 @@
 using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -10,10 +11,12 @@ namespace Kuroe.Node.Input;
 /// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
 internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
-    : NodeRuntime(executable)
+    : NodeRuntime(executable), IInputProgress
 {
+    private readonly ConsumptionLedger _consumed = new();
     private string? _answer;
     private bool _canceled;
+    private bool _waiting;
     private long _revision;
 
     /// <summary>产出已放行、可被下游消费：已有回答且未被取消。</summary>
@@ -25,10 +28,22 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
+    /// <summary>已声明接收外部输入且尚未交付。</summary>
+    public override bool AwaitingInput => _waiting;
+
+    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
+
+    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
+
+    int IInputProgress.Executions => 0;
+
+    bool IInputProgress.ForceRerun => false;
+
     /// <summary>随任务进入取消态并撤销接收声明。</summary>
     public override void Cancel()
     {
         _canceled = true;
+        _waiting = false;
         channel.Decline(context, Path);
     }
 
@@ -41,23 +56,36 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
         }
 
         _answer = null;
+        _waiting = true;
         channel.Accept(context, Path, Deliver);
+        if (context.Plan(Path) is { } plan)
+        {
+            _consumed.Record(plan, context);
+        }
     }
 
     /// <summary>收下一次外部输入：记下回答并推进放行代数，声明由交付方随交付撤销。</summary>
     private void Deliver(string text)
     {
         _answer = text;
+        _waiting = false;
         _revision++;
     }
 
-    /// <summary>按输出端口取回答文本，端口不是 Text 或尚未回答时为空。</summary>
+    /// <summary>按输出端口取回答文本，端口不是 Text 语义或尚未回答时为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer ? answer : null;
+        executable.Outputs.Find(port) is { } declared
+        && Ports.CarriesText(declared.Type)
+        && _answer is { Length: > 0 } answer
+            ? answer
+            : null;
 
-    /// <summary>按输出端口取回答：端口不是 Text 或尚未回答时为空。</summary>
+    /// <summary>按输出端口取回答：端口不是 Text 语义或尚未回答时为空。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && executable.Outputs.Find(port) is { Type: PortType.Text } && _answer is { Length: > 0 } answer
+        Released
+        && executable.Outputs.Find(port) is { } declared
+        && Ports.CarriesText(declared.Type)
+        && _answer is { Length: > 0 } answer
             ? [new ContextValue(new InputSource(Path, port), answer)]
             : [];
 

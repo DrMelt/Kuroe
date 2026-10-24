@@ -24,7 +24,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Input_port_label_shows_its_default()
     {
-        InputPort port = new(new PortName("背景"), PortType.Text, "可选背景", "固定背景");
+        InputPort port = new(new PortName("背景"), PortTypes.Text, "可选背景", "固定背景");
 
         Assert.Equal("背景：可选背景，默认 固定背景", port.Label());
     }
@@ -96,7 +96,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Start_port_label_includes_its_fixed_value()
     {
-        Port port = new(new PortName("风格"), PortType.Text, Value: "技术文档风格");
+        Port port = new(new PortName("风格"), PortTypes.Text, Value: "技术文档风格");
 
         Assert.Equal("风格=技术文档风格", port.StartLabel());
     }

@@ -88,7 +88,7 @@ public sealed class FlowJsonTests
     [Fact]
     public void Port_entry_writes_its_type_by_name()
     {
-        PortEntryDto entry = new() { Name = "目标", Type = PortType.Text };
+        PortEntryDto entry = new() { Name = "目标", Type = PortTypes.Text.Name };
 
         string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
 

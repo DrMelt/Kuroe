@@ -331,7 +331,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
-            result.Add(new InputPort(name.Value, entry.Type ?? PortType.Text, ToDescription(entry.Description), entry.Default));
+            result.Add(new InputPort(name.Value, entry.Type ?? PortTypes.Text, ToDescription(entry.Description), entry.Default));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -394,7 +394,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 
             if (entry.Type is not { } type)
             {
-                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是 Text、Context 或 Signal。"));
+                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是已注册的端口类型名。"));
                 continue;
             }
 

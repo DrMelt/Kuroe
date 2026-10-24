@@ -27,13 +27,13 @@ internal static class ExecutionInputBuilder
         foreach (FlowEdge edge in context.Graph.Incoming(node.Path).Where(edge => edge.Group == group))
         {
             connected.Add(edge.TargetInput);
-            if (edge.Type == PortType.Signal)
+            if (edge.Type.Semantics == PortSemantics.Signal)
             {
-                // 信号输入不取内容，来源产出不进输入，只作启动信号
+                // 信号语义不取内容，来源产出不进输入，只作启动信号；Trigger 版只额外携带触发值
                 continue;
             }
 
-            List<ContextValue> target = edge.Type == PortType.Context ? contextInput : values;
+            List<ContextValue> target = edge.Type.Semantics == PortSemantics.Context ? contextInput : values;
             foreach (ContextValue value in context.Runtime(edge.Source).OutputValues(context, edge.SourcePort))
             {
                 target.Add(Truncate(value));
@@ -42,7 +42,7 @@ internal static class ExecutionInputBuilder
 
         foreach (InputPort port in node.Executable.Inputs)
         {
-            if (connected.Contains(port.Name) || port.Type != PortType.Text || port.Default is not { Length: > 0 } text)
+            if (connected.Contains(port.Name) || port.Type != PortTypes.Text || port.Default is not { Length: > 0 } text)
             {
                 continue;
             }

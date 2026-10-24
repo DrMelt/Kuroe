@@ -1,12 +1,28 @@
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
-/// <summary>输入侧的一条绑定：从来源取值。信号来源只以新版本驱动启动，不取内容。</summary>
-public sealed record InputBinding(
-    NodePath Source,
-    bool Signal);
+/// <summary>输入侧的一条绑定：从来源节点的一个端口取值。信号语义只以新版本驱动启动，不取内容；Trigger 版还携带触发值。</summary>
+public sealed record InputBinding(NodePath Source, PortName? Port, PortType? Type = null)
+{
+    /// <summary>节点级绑定，用于容器按成员整体推进内容版本。</summary>
+    public static InputBinding Node(NodePath source) => new(source, null);
+
+    /// <summary>是否信号语义，组内有信号绑定时只认信号来源的新版本。</summary>
+    public bool Signal => Type?.Semantics == PortSemantics.Signal;
+
+    /// <summary>是否为 Trigger 版端口，启动组按该端口的触发值决定是否启动。</summary>
+    public bool CarriesTrigger => Type is { } type && Ports.CarriesTrigger(type);
+
+    /// <summary>消费账的键。</summary>
+    public ConsumptionKey Key => new(Source, Port);
+
+    /// <summary>这一绑定是否触发下游。普通端口与节点级绑定恒触发。</summary>
+    public bool Triggers(ISourceState source) =>
+        !CarriesTrigger || Port is not { } port || source.Triggers(port);
+}
 
 /// <summary>输入侧的一个启动组：组内绑定全部可用时组齐备，组间任一齐备即可启动。
 /// 组内有信号绑定时只认信号来源的新版本，否则认组内任一边的新版本。</summary>
@@ -17,6 +33,10 @@ public sealed record InputGroup(IReadOnlyList<InputBinding> Bindings)
 
     /// <summary>组内的信号绑定。</summary>
     public IEnumerable<InputBinding> Signals => Bindings.Where(binding => binding.Signal);
+
+    /// <summary>组内是否存在触发值为 false 的 Trigger 绑定。</summary>
+    public bool Suppressed(IReadinessSources sources) =>
+        Bindings.Any(binding => !binding.Triggers(sources.Source(binding.Source)));
 }
 
 /// <summary>节点输入侧的编译期方案：启动组与执行次数上限。
@@ -47,11 +67,11 @@ public sealed partial record NodeInputPlan
     {
         Groups =
         [
-            new InputGroup([.. children.Select(child => new InputBinding(child.Path, false))]),
+            new InputGroup([.. children.Select(child => InputBinding.Node(child.Path))]),
         ],
         MaxExecutions = int.MaxValue,
     };
 
-    /// <summary>一条边在方案里的绑定：信号标注按输入类型。</summary>
-    private static InputBinding Binding(FlowEdge edge) => new(edge.Source, edge.Type == PortType.Signal);
+    /// <summary>一条边在方案里的绑定：来源端口与类型随边落定。</summary>
+    private static InputBinding Binding(FlowEdge edge) => new(edge.Source, edge.SourcePort, edge.Type);
 }

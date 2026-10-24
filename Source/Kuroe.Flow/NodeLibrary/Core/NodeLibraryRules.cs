@@ -302,7 +302,7 @@ internal static class NodeLibraryRules
         {
             NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) ? definition : node;
             if (ShapeOf(declared) is { Organizes: false } shape
-                && !shape.OutputTypes.Contains(PortType.Context))
+                && !shape.OutputTypes.Any(type => type.Semantics == PortSemantics.Context))
             {
                 contextless.Add(node.Label);
             }
@@ -356,7 +356,7 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (memberPort.Type == PortType.Context && contextless.Contains(sourceLabel))
+            if (memberPort.Type.Semantics == PortSemantics.Context && contextless.Contains(sourceLabel))
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不产出上下文端口，不能作为上下文端口来源。"));

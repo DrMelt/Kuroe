@@ -22,7 +22,7 @@ internal sealed class StartupView(
 
         List<IRenderable> lines =
         [
-            new Text($"已启动，当前模型 {model}。"),
+            new Text($"Kuroe 已启动，当前模型 {model}。"),
             new Text($"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型，"
                 + $"流程模板 {flows.All().Count} 条。", Styles.Hint),
         ];
@@ -37,8 +37,7 @@ internal sealed class StartupView(
             lines.Add(new Text("当前没有可用工具，检查是否注册了工具载体、载体是否声明了函数。", Styles.Hint));
         }
 
-        lines.Add(new Text("「Kuroe 助手」进入常驻对话任务；「任务」提交任务并查看执行进展。", Styles.Hint));
-        lines.Add(new Text("回车进入选中项，方向键切换菜单项，Esc 返回上一级；主菜单按 Esc 或选择「退出」都要再次确认。", Styles.Hint));
+        lines.Add(new Text("回车进入选中项，方向键切换菜单项，Esc 返回上一级。", Styles.Hint));
 
         terminal.Write(Blocks.Section(BoxKind.View, null, new Rows(lines)));
     }

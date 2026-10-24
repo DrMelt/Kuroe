@@ -79,8 +79,8 @@ public sealed class NodeSpecStructureTests
     private static TestType Executable() => new(new NodeKind("Executable"), new NodeTypeShape
     {
         DispatchesExecutions = true,
-        InputTypes = [PortType.Text, PortType.Context, PortType.Signal],
-        OutputTypes = [PortType.Text, PortType.Context, PortType.Signal],
+        InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     });
 
     private static List<string> Errors(NodeSpec node, NodeRuleContext context)

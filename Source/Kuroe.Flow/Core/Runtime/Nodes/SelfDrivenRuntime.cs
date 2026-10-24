@@ -36,7 +36,9 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
     /// <inheritdoc/>
     public override bool Canceled => _canceled;
 
-    long IInputProgress.ConsumedRevision(NodePath source) => _consumed.Revision(source);
+    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
+
+    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
 
     int IInputProgress.Executions => _executions;
 
@@ -108,13 +110,16 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
         }
     }
 
-    /// <summary>按输出端口取单段文本：只有 Text 端口承载内容，未成功产出时为空。</summary>
+    /// <summary>按输出端口取单段文本：只有 Text 语义端口承载内容，未成功产出时为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { Type: PortType.Text } ? _content : null;
+        Released && executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+            ? _content
+            : null;
 
-    /// <summary>按输出端口取产出：Text 端口给出本次产出的文本，出处指向本节点。</summary>
+    /// <summary>按输出端口取产出：Text 语义端口给出本次产出的文本，出处指向本节点。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { Type: PortType.Text } && _content is { Length: > 0 } content
+        Released && executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        && _content is { Length: > 0 } content
             ? [new ContextValue(new NodeSource(Path, port), content)]
             : [];
 

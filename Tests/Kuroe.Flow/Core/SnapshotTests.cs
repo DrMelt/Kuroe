@@ -53,7 +53,7 @@ public sealed class SnapshotTests
     private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
-        [new Port(new PortName("目标"), PortType.Text)],
+        [new Port(new PortName("目标"), PortTypes.Text)],
         new NodeSpec
         {
             Label = new NodeLabel("整体"),
@@ -69,7 +69,7 @@ public sealed class SnapshotTests
         new StartNode
         {
             Path = new NodePath([StartNode.ReservedLabel]),
-            Outputs = [new Port(new PortName("目标"), PortType.Text)],
+            Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
         },
         new ExecutableNode
         {

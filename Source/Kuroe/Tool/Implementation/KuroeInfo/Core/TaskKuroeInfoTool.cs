@@ -239,6 +239,10 @@ public sealed class TaskKuroeInfoTool : ITool
                     text.AppendLine($"  [{at}] 错误 > {error.Text}");
                     break;
 
+                case InfoEntry info:
+                    text.AppendLine($"  [{at}] 信息 > {info.Text}");
+                    break;
+
                 case DiscardedEntry:
                     text.AppendLine($"  [{at}] 本轮未计入上下文。");
                     break;

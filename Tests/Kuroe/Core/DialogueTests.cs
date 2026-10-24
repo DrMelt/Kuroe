@@ -37,8 +37,8 @@ public sealed class DialogueTests
     {
         IReadOnlyList<NodeSpec> nodes = Members(AssistantSettings.DefaultLanguage);
 
-        Assert.Equal(PortType.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
-        Assert.Equal(PortType.Signal, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
+        Assert.Equal(PortTypes.Signal, nodes[0].Inputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
+        Assert.Equal(PortTypes.Signal, nodes[1].Outputs.Find(DialogueFlow.ReplyPort)!.Value.Type);
     }
 
     [Fact]

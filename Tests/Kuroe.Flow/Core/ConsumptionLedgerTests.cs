@@ -1,6 +1,7 @@
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
 namespace Kuroe.Flow.Tests;
@@ -12,21 +13,24 @@ public sealed class ConsumptionLedgerTests
     public void Record_stores_the_current_revision_of_every_source()
     {
         NodePath source = NodePath.Of("来源");
+        PortName port = new("结论");
+        ConsumptionKey key = new(source, port);
         NodeInputPlan plan = new()
         {
-            Groups = [new InputGroup([new InputBinding(source, Signal: false)])],
+            Groups = [new InputGroup([new InputBinding(source, port, PortTypes.Text)])],
         };
         Sources sources = new() { Revision = 3 };
         ConsumptionLedger ledger = new();
 
-        Assert.Equal(0, ledger.Revision(source));
+        Assert.Equal(0, ledger.Revision(key));
 
         ledger.Record(plan, sources);
-        Assert.Equal(3, ledger.Revision(source));
+        Assert.Equal(3, ledger.Revision(key));
 
         sources.Revision = 5;
-        Assert.Equal(3, ledger.Revision(source));
-        Assert.Equal(0, ledger.Revision(NodePath.Of("未登记")));
+        Assert.Equal(3, ledger.Revision(key));
+        Assert.Equal(0, ledger.Revision(new ConsumptionKey(NodePath.Of("未登记"), port)));
+        Assert.Equal(0, ledger.Revision(new ConsumptionKey(source, new PortName("另一端口"))));
     }
 
     private sealed class Sources : IReadinessSources

@@ -78,7 +78,7 @@ internal static class FlowRules
         var names = new HashSet<PortName>();
         foreach (Port port in flow.StartOutputs)
         {
-            if (port.Type != PortType.Text)
+            if (port.Type != PortTypes.Text)
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的类型只能是 Text。"));
             }
@@ -280,7 +280,7 @@ internal static class FlowRules
                 errors.Add(scope.Node(target.Path.Value, $"容器 {container.Path} 没有输出端口 {edge.SourcePort.Value}。"));
             }
 
-            if (edge.Type == PortType.Context)
+            if (edge.Type == PortTypes.Context)
             {
                 errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {container.Path} 必须是非输入执行节点。"));
             }
@@ -304,7 +304,7 @@ internal static class FlowRules
                 $"不能从容器外直接引用容器内成员或端口 {executable.Path}，容器对外只暴露输出端口。"));
         }
 
-        if (edge.Type == PortType.Context)
+        if (edge.Type == PortTypes.Context)
         {
             CheckContextSource(graph, executable, target, scope, errors);
         }
@@ -313,7 +313,7 @@ internal static class FlowRules
     /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口。</summary>
     private static void CheckContextSource(NodeGraph graph, ExecutableNode source, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
-        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(PortType.Context))
+        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(PortTypes.Context))
         {
             errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不产出上下文端口。"));
         }

@@ -16,11 +16,13 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>单个执行的人为耗时，用于取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
-    /// <summary>按声明的端口生成提交取值：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
-    private static Dictionary<string, string> PortValuesFor(IReadOnlyList<Port> ports) =>
+    /// <summary>按声明的端口生成提交取值：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
+    private static Dictionary<string, PortValue> PortValuesFor(IReadOnlyList<Port> ports) =>
         ports.ToDictionary(
             port => port.Name.Value,
-            port => port.Type == PortType.Text ? $"{port.Name.Value}产出" : string.Empty);
+            port => port.Type.Semantics == PortSemantics.Text
+                ? new PortValue($"{port.Name.Value}产出")
+                : new PortValue(null));
 
     public IExecutionBody CreateBody(ExecutionInput input) => new FakeBody();
 
