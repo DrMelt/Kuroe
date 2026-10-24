@@ -14,13 +14,13 @@ internal sealed class ApprovalRuntime(
     ExecutableNode executable,
     IInputChannel channel,
     INodeContext context,
-    IConsumptionLedger? consumed = null)
+    IConsumedRevisionStore? consumed = null)
     : NodeRuntime(executable), IInputProgress
 {
     /// <summary>停驻时解析出的端口到来源端口的映射，放行后按它转发产出与触发值。</summary>
     private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _sources = [];
 
-    private readonly IConsumptionLedger _consumed = consumed ?? new ConsumptionLedger();
+    private readonly IConsumedRevisionStore _consumed = consumed ?? new ConsumedRevisionStore();
     private long _revision;
     private bool _awaiting;
     private bool _canceled;

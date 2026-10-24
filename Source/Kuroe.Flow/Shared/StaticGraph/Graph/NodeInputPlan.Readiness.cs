@@ -53,7 +53,7 @@ public sealed partial record NodeInputPlan
             ? group.Signals.Any(binding => Fresh(binding, progress, sources))
             : group.Bindings.Any(binding => Fresh(binding, progress, sources)));
 
-    /// <summary>一条绑定相对消费账是否有新版本。</summary>
+    /// <summary>一条绑定相对已消费版本是否有新版本。</summary>
     private static bool Fresh(InputBinding binding, IInputProgress progress, IReadinessSources sources)
     {
         ISourceState source = sources.Source(binding.Source);

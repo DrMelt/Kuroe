@@ -11,7 +11,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// 产出是唯一的文本内容，按声明为 Text 的输出端口放出。读写都要求持有任务 Gate。</summary>
 public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime(executable), IInputProgress
 {
-    private readonly ConsumptionLedger _consumed = new();
+    private readonly ConsumedRevisionStore _consumed = new();
     private string? _content;
     private string? _failure;
     private bool _failureTaken;
@@ -68,7 +68,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
         _retry = true;
     }
 
-    /// <summary>触发齐备且版本有变化时产出一次。成功推进修订号并登记消费账，失败停在阻塞等待返工。</summary>
+    /// <summary>组齐备且来源有未消费的新版本时产出一次。成功推进修订号并登记已消费版本，失败停在阻塞等待返工。</summary>
     public override void Activate(INodeContext context)
     {
         if (_canceled || _failure is not null)

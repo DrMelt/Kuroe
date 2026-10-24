@@ -83,7 +83,7 @@ public sealed class ExecutionLimitTests
         Assert.Single(done.Executables.Single(node => node.Executable.Label == new NodeLabel("交付")).Executions);
     }
 
-    /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证账本环受 MaxExecutions 约束。</summary>
+    /// <summary>互驱动环迭代到每节点的执行上限后收敛为完成，验证执行上限约束生效。</summary>
     [Fact]
     public void Loop_iterates_to_max_executions()
     {

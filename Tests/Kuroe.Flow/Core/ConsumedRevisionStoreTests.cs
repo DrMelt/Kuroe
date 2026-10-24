@@ -6,8 +6,8 @@ using Xunit;
 
 namespace Kuroe.Flow.Tests;
 
-/// <summary>消费账：按来源记当前版本，未登记的来源为零。</summary>
-public sealed class ConsumptionLedgerTests
+/// <summary>已消费版本记录：按来源记当前版本，未登记的来源为零。</summary>
+public sealed class ConsumedRevisionStoreTests
 {
     [Fact]
     public void Record_stores_the_current_revision_of_every_source()
@@ -20,17 +20,17 @@ public sealed class ConsumptionLedgerTests
             Groups = [new InputGroup([new InputBinding(source, port, PortTypes.Text)])],
         };
         Sources sources = new() { Revision = 3 };
-        ConsumptionLedger ledger = new();
+        ConsumedRevisionStore store = new();
 
-        Assert.Equal(0, ledger.Revision(key));
+        Assert.Equal(0, store.Revision(key));
 
-        ledger.Record(plan, sources);
-        Assert.Equal(3, ledger.Revision(key));
+        store.Record(plan, sources);
+        Assert.Equal(3, store.Revision(key));
 
         sources.Revision = 5;
-        Assert.Equal(3, ledger.Revision(key));
-        Assert.Equal(0, ledger.Revision(new ConsumptionKey(NodePath.Of("未登记"), port)));
-        Assert.Equal(0, ledger.Revision(new ConsumptionKey(source, new PortName("另一端口"))));
+        Assert.Equal(3, store.Revision(key));
+        Assert.Equal(0, store.Revision(new ConsumptionKey(NodePath.Of("未登记"), port)));
+        Assert.Equal(0, store.Revision(new ConsumptionKey(source, new PortName("另一端口"))));
     }
 
     private sealed class Sources : IReadinessSources

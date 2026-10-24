@@ -7,10 +7,10 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>执行次数账按执行节点累计，以启动的执行记录为核算真相。</summary>
+/// <summary>执行次数按执行节点累计，以启动的执行记录为准。</summary>
 public sealed class ExecutionCountTests
 {
-    /// <summary>失败返工后重跑一次，节点账按启动的执行累计。</summary>
+    /// <summary>失败返工后重跑一次，节点执行次数按启动的执行累计。</summary>
     [Fact]
     public void Rework_increments_the_node_execution_count()
     {
@@ -42,7 +42,7 @@ public sealed class ExecutionCountTests
         Assert.Equal(0, Executions(task, "下游"));
     }
 
-    /// <summary>节点账与派发记录全等：派发即记账，节点账不会多于或少于执行记录。</summary>
+    /// <summary>节点执行次数与派发记录全等：每次派发计一次，节点执行次数不会多于或少于执行记录。</summary>
     [Fact]
     public void Executions_agree_with_execution_records()
     {

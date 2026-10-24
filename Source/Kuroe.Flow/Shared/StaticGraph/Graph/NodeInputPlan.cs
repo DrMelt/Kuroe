@@ -16,7 +16,7 @@ public sealed record InputBinding(NodePath Source, PortName? Port, PortType? Typ
     /// <summary>是否为 Trigger 版端口，启动组按该端口的触发值决定是否启动。</summary>
     public bool CarriesTrigger => Type is { } type && Ports.CarriesTrigger(type);
 
-    /// <summary>消费账的键。</summary>
+    /// <summary>已消费版本的键。</summary>
     public ConsumptionKey Key => new(Source, Port);
 
     /// <summary>这一绑定是否触发下游。普通端口与节点级绑定恒触发。</summary>

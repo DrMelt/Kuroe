@@ -11,7 +11,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionLedger? consumed = null) : NodeRuntime(executable), IInputProgress
+internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevisionStore? consumed = null) : NodeRuntime(executable), IInputProgress
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
@@ -19,8 +19,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
     /// <summary>各次执行交回的内容，发布后只保留已发布那次。</summary>
     private readonly Dictionary<ExecutionId, Submission> _submissions = [];
 
-    /// <summary>输入侧消费账，版本驱动的判定按它比较来源版本。</summary>
-    private readonly IConsumptionLedger _consumed = consumed ?? new ConsumptionLedger();
+    /// <summary>输入侧已消费版本，版本驱动的判定按它比较来源版本。</summary>
+    private readonly IConsumedRevisionStore _consumed = consumed ?? new ConsumedRevisionStore();
 
     /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
     private readonly List<NodePath> _reworkTargets = [];
@@ -63,7 +63,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
     /// <summary>产出已放行、可被下游消费：产出已发布且不在阻塞与取消。</summary>
     public override bool Released => PublishedExecution is not null && !Blocked && !Canceled;
 
-    /// <summary>单调的发布计数，作废归零产出锚但不清计数。消费账按它记账，重跑后版本不回退。</summary>
+    /// <summary>单调的发布计数，作废归零产出锚但不清计数。下游把它登记为已消费版本，重跑后版本不回退。</summary>
     public override long Revision => _stamp;
 
     /// <summary>随任务进入取消态。</summary>
@@ -125,7 +125,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumptionL
         }
     }
 
-    /// <summary>产出发布：产出锚指向这次执行，只保留这次执行的交回记录，发表号单调递增，下游据此重新评估。</summary>
+    /// <summary>产出发布：产出锚指向这次执行，只保留这次执行的交回记录，发布号单调递增，下游据此重新评估。</summary>
     public void Publish(Execution execution)
     {
         PublishedExecution = execution;

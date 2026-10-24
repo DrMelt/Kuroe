@@ -3,9 +3,9 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
-/// <summary>消费账：按来源节点与来源端口记已消费的版本。执行节点与容器各持一份，
-/// 输入消费与内容版本共用这套记账规则。读写要求持有任务 Gate。</summary>
-public sealed class ConsumptionLedger : IConsumptionLedger
+/// <summary>已消费版本记录：按来源节点与来源端口记录已消费到的版本。执行节点与容器各持一份，
+/// 输入消费与内容版本共用这套登记规则。读写要求持有任务 Gate。</summary>
+public sealed class ConsumedRevisionStore : IConsumedRevisionStore
 {
     private readonly Dictionary<ConsumptionKey, long> _revisions = [];
 

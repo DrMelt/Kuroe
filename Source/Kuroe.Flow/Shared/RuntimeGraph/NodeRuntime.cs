@@ -18,7 +18,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     /// <summary>产出已放行、可被下游消费。</summary>
     public abstract bool Released { get; }
 
-    /// <summary>产出版本：执行节点给发表号，容器给齐备代数，等待型节点给放行代数。版本是消费账的依据。</summary>
+    /// <summary>产出版本：执行节点给发布号，容器给齐备代数，等待型节点给放行代数。下游以此判断来源是否有未消费的产出。</summary>
     public abstract long Revision { get; }
 
     /// <summary>随任务取消。</summary>

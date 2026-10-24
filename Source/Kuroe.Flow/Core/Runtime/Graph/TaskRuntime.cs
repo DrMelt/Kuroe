@@ -138,7 +138,7 @@ internal sealed class TaskRuntime : INodeContext
 
     // ---- 容器推进 ----
 
-    /// <summary>沿着节点所在的祖先链刷新容器：来源版本账有变化且内容齐备时推进内容版本并广播出边。
+    /// <summary>沿着节点所在的祖先链刷新容器：来源有未消费的新版本且内容齐备时推进内容版本并广播出边。
     /// 返回内容版本变化的容器出边目标。</summary>
     public IReadOnlyList<NodePath> RefreshContainers(NodePath path)
     {
@@ -245,7 +245,7 @@ internal sealed class TaskRuntime : INodeContext
         return Settled(node, Downstream(node));
     }
 
-    /// <summary>执行停驻阻塞：判定先交回等待方，再把这个执行节点记为阻塞并核算执行上限。</summary>
+    /// <summary>执行停驻阻塞：判定先交回等待方，再把这个执行节点记为阻塞并检查执行上限。</summary>
     private SettlePlan Block(RuntimeExecutable node, Execution execution)
     {
         _task.NotifyExecutionSettled(execution);
@@ -444,7 +444,7 @@ internal sealed class TaskRuntime : INodeContext
         public long Revision => 0;
     }
 
-    /// <summary>未实例化节点的进展：没有消费、没有执行次数。</summary>
+    /// <summary>未实例化节点的进展：没有已消费版本、没有执行次数。</summary>
     private sealed class UnmaterializedProgress : IInputProgress
     {
         public bool ForceRerun => false;

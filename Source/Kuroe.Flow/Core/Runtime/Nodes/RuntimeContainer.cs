@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// <summary>一个容器在任务内的运行时对象：容器定义与内容版本。容器不执行、不启动执行，
 /// 内容齐备与内容版本按输入侧方案随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeContainer(ContainerNode container, INodeContext context, IConsumptionLedger? consumed = null) : NodeRuntime(container), IInputProgress
+internal sealed class RuntimeContainer(ContainerNode container, INodeContext context, IConsumedRevisionStore? consumed = null) : NodeRuntime(container), IInputProgress
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
@@ -15,7 +15,7 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     /// <summary>已实例化的直接子节点运行时对象。层级由容器自己持有，寻址从根逐段下钻。</summary>
     private readonly List<NodeRuntime> _children = [];
 
-    private readonly IConsumptionLedger _consumed = consumed ?? new ConsumptionLedger();
+    private readonly IConsumedRevisionStore _consumed = consumed ?? new ConsumedRevisionStore();
     private int _revision;
     private bool _canceled;
 
@@ -28,7 +28,7 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     /// <summary>输入侧方案：一组绑定覆盖全部直接成员与子容器。</summary>
     private NodeInputPlan Plan => context.Plan(Path)!;
 
-    /// <summary>内容版本：任一直接来源发布新版本且容器重新齐备即递增，是容器作来源时与执行节点一致的版本账。</summary>
+    /// <summary>内容版本：任一直接来源有未消费的新版本且容器重新齐备即递增，是容器作来源时与执行节点一致的产出版本。</summary>
     public override long Revision => _revision;
 
     /// <summary>内容齐备：取消或任一直接成员、子容器未放行时不齐备。未实例化的成员没有产出。</summary>
@@ -40,7 +40,7 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>内容变化的发布落点：成员版本相对消费账有变化且内容齐备时记新账并推进内容版本，返回是否产生新版本。</summary>
+    /// <summary>内容变化的发布落点：成员有未消费的新版本且内容齐备时登记这些版本并推进内容版本，返回是否产生新版本。</summary>
     public bool PublishIfChanged()
     {
         if (!Plan.Ready(this, context))

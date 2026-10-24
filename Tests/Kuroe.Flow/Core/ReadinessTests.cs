@@ -137,21 +137,21 @@ public sealed class ReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
-    /// <summary>消费账经接口注入，启动登记交给注入的实现。</summary>
+    /// <summary>已消费版本记录经接口注入，启动登记交给注入的实现。</summary>
     [Fact]
-    public void Consume_uses_the_injected_ledger()
+    public void Consume_uses_the_injected_store()
     {
         ExecutableNode target = Definition("节点2");
         NodeGraph graph = new([StartDefinition(), Definition("节点1"), target], [Value("节点1", "节点2", PortTypes.Text)]);
         NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
-        RecordingLedger ledger = new();
-        RuntimeExecutable node = new(target, ledger);
+        RecordingStore store = new();
+        RuntimeExecutable node = new(target, store);
 
         sources.Of("节点1").Publish();
         node.Consume(plan, sources);
 
-        Assert.Same(plan, ledger.Recorded);
+        Assert.Same(plan, store.Recorded);
     }
 
     /// <summary>一个来源到目标的单组场景。</summary>
@@ -209,8 +209,8 @@ public sealed class ReadinessTests
         Outputs = [new Port(OutputPort, PortTypes.Text)],
     };
 
-    /// <summary>记录启动登记的消费账替身。</summary>
-    private sealed class RecordingLedger : IConsumptionLedger
+    /// <summary>接收启动登记的已消费版本记录替身。</summary>
+    private sealed class RecordingStore : IConsumedRevisionStore
     {
         public NodeInputPlan? Recorded { get; private set; }
 

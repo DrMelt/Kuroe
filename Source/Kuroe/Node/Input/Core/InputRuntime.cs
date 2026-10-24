@@ -13,7 +13,7 @@ namespace Kuroe.Node.Input;
 internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
     : NodeRuntime(executable), IInputProgress
 {
-    private readonly ConsumptionLedger _consumed = new();
+    private readonly ConsumedRevisionStore _consumed = new();
     private string? _answer;
     private bool _canceled;
     private bool _waiting;
