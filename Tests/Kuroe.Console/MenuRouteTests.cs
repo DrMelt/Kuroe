@@ -44,9 +44,13 @@ public sealed class MenuRouteTests
 
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("backup");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("https://example.invalid/v2");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("token");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         cli.Catalogs.Browse();
@@ -148,7 +152,9 @@ public sealed class MenuRouteTests
 
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("m2");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         cli.Catalogs.Browse();
@@ -327,7 +333,9 @@ public sealed class MenuRouteTests
         // 流程库非空时首项是查看详情，导入是第二项
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter(file);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         cli.Flows.Browse();
@@ -493,7 +501,9 @@ public sealed class MenuRouteTests
         using ConsoleSession cli = new();
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("Debug");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
 
         cli.Settings.Browse();

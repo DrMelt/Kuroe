@@ -42,8 +42,11 @@ public sealed partial class TaskAndReplTests
 
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("plain");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.End);
@@ -53,10 +56,11 @@ public sealed partial class TaskAndReplTests
 
         string output = cli.Output.Output;
         string[] blocks = output.Split("开始输入");
-        Assert.Equal(4, blocks.Length);
+        Assert.Equal(5, blocks.Length);
         Assert.Contains("readme", blocks[2]);
-        Assert.Contains("readme", blocks[3]);
         Assert.Contains("plain", blocks[3]);
+        Assert.Contains("readme", blocks[4]);
+        Assert.Contains("plain", blocks[4]);
         Assert.Contains("已提交 任务 #1", output);
         TaskSnapshot task = cli.Environment.Snapshot(new TaskId(1));
         Assert.Equal(["readme", "plain"], task.Inputs.Values.Select(input => input.Text));
@@ -69,7 +73,9 @@ public sealed partial class TaskAndReplTests
 
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
@@ -77,7 +83,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Browse();
 
         string output = cli.Output.Output;
-        Assert.Equal(2, output.Split("开始输入").Length - 1);
+        Assert.Equal(3, output.Split("开始输入").Length - 1);
         Assert.Contains("固定", output);
         Assert.Contains("风格", output);
         Assert.Contains("简洁", output);
@@ -92,8 +98,11 @@ public sealed partial class TaskAndReplTests
 
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("readme");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("plain");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.End);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -323,7 +332,9 @@ public sealed partial class TaskAndReplTests
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("reply");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
         cli.Output.Input.PushKey(ConsoleKey.End);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -345,7 +356,9 @@ public sealed partial class TaskAndReplTests
 
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushTextWithEnter("menu-submit");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
