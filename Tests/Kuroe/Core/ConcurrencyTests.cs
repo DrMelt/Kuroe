@@ -4,21 +4,9 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>并发额度：Runtime:MaxConcurrentExecutions 限制同时在跑的执行数。</summary>
+/// <summary>独立节点在并发额度内并行。</summary>
 public sealed class ConcurrencyTests
 {
-    [Fact]
-    public void MaxConcurrentExecutions_limits_parallel_executions()
-    {
-        using TestEnvironment environment = TestEnvironment.Create();
-        environment.Settings.Set("Runtime:MaxConcurrentExecutions", "1").ThrowIfError();
-        environment.Runner.DelayMs = 60;
-
-        environment.Settle(environment.Submit("补齐 README"));
-
-        Assert.Equal(1, environment.Runner.Peak);
-    }
-
     [Fact]
     public void Independent_nodes_run_in_parallel_within_the_limit()
     {

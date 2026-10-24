@@ -124,7 +124,7 @@ public sealed class FlowKuroeInfoTool : ITool
 
     /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
     private static string StartPort(Port port) =>
-        port.Value is { Length: > 0 } value ? $"{port.Name}＝{value}" : port.Name.Value;
+        port.Value is { Length: > 0 } value ? $"{port.Name}={value}" : port.Name.Value;
 
     /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node)

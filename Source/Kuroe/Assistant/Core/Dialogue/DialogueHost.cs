@@ -56,7 +56,7 @@ public sealed class DialogueHost(
         registry.ClearSettled();
     }
 
-    /// <summary>当前对话任务，不存在、已被清理或已收口时新建。助手语言在创建时读取，配置变化后用 /reset 重建任务生效。</summary>
+    /// <summary>当前对话任务，不存在、已被清理或已收口时新建。助手语言在创建时读取，配置变化后重置对话重建任务生效。</summary>
     private TaskId EnsureDialogue()
     {
         TaskId? replaced = null;

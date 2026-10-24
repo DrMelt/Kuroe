@@ -25,17 +25,14 @@ public sealed class FrameworkWiringTests
     }
 
     [Fact]
-    public void Execution_options_carry_tools_and_sampling()
+    public void Execution_options_carry_tools()
     {
         var options = new ChatClientAgentRunOptions(new ChatOptions
         {
-            Temperature = 0.7f,
-            MaxOutputTokens = 256,
             Tools = [AIFunctionFactory.Create(() => "ok")],
         });
 
         Assert.NotNull(options.ChatOptions);
-        Assert.Equal(0.7f, options.ChatOptions.Temperature);
         Assert.NotNull(options.ChatOptions.Tools);
         Assert.Single(options.ChatOptions.Tools);
     }

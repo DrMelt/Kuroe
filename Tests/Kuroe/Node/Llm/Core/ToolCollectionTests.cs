@@ -86,6 +86,18 @@ public sealed class ToolCollectionTests
     }
 
     [Fact]
+    public void Definitions_keep_full_paths_in_declaration_order()
+    {
+        ToolCollection tools = new(
+            [new FakeTool("GetLocalTime", "KuroeInfo/ListTasks", "file/read/ReadFile")],
+            new ToolJson());
+
+        Assert.Equal(
+            ["GetLocalTime", "KuroeInfo/ListTasks", "file/read/ReadFile"],
+            tools.Definitions.Select(definition => definition.Path.Value));
+    }
+
+    [Fact]
     public void Whitelist_with_similar_prefix_does_not_match_group()
     {
         ToolCollection tools = new(

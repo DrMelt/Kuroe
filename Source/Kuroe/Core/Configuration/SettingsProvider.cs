@@ -27,10 +27,6 @@ public sealed class SettingsProvider : IModelSettings, ISettingsView
 
     ModelName? IModelSettings.Model => Current.Runtime.Model;
 
-    float? IModelSettings.Temperature => Current.Runtime.Temperature;
-
-    int? IModelSettings.MaxOutputTokens => Current.Runtime.MaxOutputTokens;
-
     /// <summary>用户层偏好文件的绝对路径。</summary>
     public string UserSettingsFile => _paths.UserSettingsFile;
 

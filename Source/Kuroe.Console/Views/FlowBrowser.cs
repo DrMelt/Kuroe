@@ -1,17 +1,16 @@
 using ErrorOr;
-using Kuroe.Console.Views;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Workflows.Flows;
 using Kuroe.Presentation;
+using Kuroe.Workflows.Flows;
 using Spectre.Console;
 
-namespace Kuroe.Console.Commands;
+namespace Kuroe.Console.Views;
 
-/// <summary>/flow 子命令的解析与执行。流程模板的查看与导入。</summary>
-internal sealed class FlowCommands(
+/// <summary>流程菜单：列表、编译结果查看与文件导入。</summary>
+internal sealed class FlowBrowser(
     FlowService flows,
     Terminal terminal,
     ResultView results)
@@ -19,45 +18,120 @@ internal sealed class FlowCommands(
     /// <summary>提问一行能看到的文本长度。</summary>
     private const int QuestionLimit = 40;
 
-    /// <summary>该命令族的帮助行。</summary>
-    public static IReadOnlyList<(string Command, string Description)> Help { get; } =
-    [
-        ("/flow list", "列出流程与节点库"),
-        ("/flow show <流程>", "打印流程的节点"),
-        ("/flow add <文件>", "导入流程与节点库，同名覆盖"),
-    ];
+    /// <summary>一个菜单项。</summary>
+    private sealed record Item(string Label, string Action);
 
-    public void Run(string[] parts)
+    private static readonly Item Back = new("← 返回", "back");
+    private static readonly Item Refresh = new("~ 刷新", "refresh");
+
+    public void Browse()
     {
-        const string usage = "用法：/flow list | show <流程> | add <文件>";
-        string subcommand = parts.Length > 1 ? parts[1].ToLowerInvariant() : string.Empty;
-
-        switch ((subcommand, parts.Length))
+        using (terminal.Exclusive())
         {
-            case ("list", 2):
-                List();
-                break;
+            while (true)
+            {
+                IReadOnlyList<FlowDefinition> all = flows.All();
 
-            case ("show", 3):
-                Show(parts[2]);
-                break;
+                terminal.Page("主菜单", "流程");
+                Print(all);
+                terminal.NewLine();
 
-            case ("add", 3):
-                Add(parts[2]);
-                break;
+                List<Item> items = [];
+                if (all.Count > 0)
+                {
+                    items.Add(new Item("≡ 查看流程详情", "show"));
+                }
 
-            default:
-                terminal.Hint(usage);
-                break;
+                items.Add(new Item("+ 导入流程", "import"));
+                items.Add(Refresh);
+                items.Add(Back);
+
+                Item picked = terminal.Choose("流程操作", items, item => item.Label, Back);
+                if (picked.Action == "back")
+                {
+                    return;
+                }
+
+                switch (picked.Action)
+                {
+                    case "show":
+                        Show(all);
+                        break;
+
+                    case "import":
+                        Import();
+                        break;
+                }
+            }
         }
     }
 
-    private void List()
+    /// <summary>打印流程、端口与接线。</summary>
+    public void PrintDetail(FlowName name)
     {
-        IReadOnlyList<FlowDefinition> all = flows.All();
+        ErrorOr<CompiledFlow> found = flows.FindCompiled(name);
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        CompiledFlow compiled = found.Value;
+        terminal.Page("主菜单", "流程", compiled.Model.Name.Value);
+        terminal.Write(Blocks.Section(
+            BoxKind.View,
+            $"流程 {compiled.Model.Name.Value}",
+            Blocks.Fields(
+                ("执行节点", new Text(compiled.Graph.TotalExecutables.ToString())),
+                ("容器", new Text(compiled.Graph.Containers.Count.ToString())),
+                ("模型选择", new Text(compiled.Model.Models.Count.ToString())),
+                ("说明", new Text(
+                    compiled.Model.Description is { Length: > 0 } description ? description : "—",
+                    Styles.Hint)))));
+
+        terminal.NewLine();
+        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(), Line));
+    }
+
+    /// <summary>从文件导入流程与节点库，同名覆盖。</summary>
+    public void Import(string file)
+    {
+        ErrorOr<FlowImport> imported = flows.Import(file);
+        if (imported.IsError)
+        {
+            results.Reject(imported.ErrorsOrEmptyList);
+            return;
+        }
+
+        terminal.Ok($"已从 {imported.Value.Source} 导入 {imported.Value.Names.Count} 条流程。");
+        foreach (string note in imported.Value.Notes)
+        {
+            terminal.Hint($"  {note}");
+        }
+    }
+
+    private void Show(IReadOnlyList<FlowDefinition> all)
+    {
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name.Value)]) is { } index)
+        {
+            ViewPage.Browse(terminal, "流程详情", () => PrintDetail(all[index].Name));
+        }
+    }
+
+    private void Import()
+    {
+        string? file = terminal.Ask("流程文件：");
+        if (file is not null)
+        {
+            Import(file);
+        }
+    }
+
+    private void Print(IReadOnlyList<FlowDefinition> all)
+    {
         if (all.Count == 0)
         {
-            terminal.Hint("流程库为空，用 /flow add <文件> 导入流程。");
+            terminal.Hint("流程库为空，选择「导入流程」导入流程文件。");
             return;
         }
 
@@ -80,54 +154,6 @@ internal sealed class FlowCommands(
         }
 
         terminal.Write(Blocks.Section(BoxKind.View, $"流程 {all.Count} 条", table));
-    }
-
-    private void Show(string name)
-    {
-        ErrorOr<FlowName> flowName = FlowName.Create(name);
-        if (flowName.IsError)
-        {
-            results.Reject(flowName.ErrorsOrEmptyList);
-            return;
-        }
-
-        ErrorOr<CompiledFlow> found = flows.FindCompiled(flowName.Value);
-        if (found.IsError)
-        {
-            results.Reject(found.ErrorsOrEmptyList);
-            return;
-        }
-
-        CompiledFlow compiled = found.Value;
-        terminal.Write(Blocks.Section(
-            BoxKind.View,
-            $"流程 {compiled.Model.Name.Value}",
-            Blocks.Fields(
-                ("执行节点", new Text(compiled.Graph.TotalExecutables.ToString())),
-                ("容器", new Text(compiled.Graph.Containers.Count.ToString())),
-                ("模型选择", new Text(compiled.Model.Models.Count.ToString())),
-                ("说明", new Text(
-                    compiled.Model.Description is { Length: > 0 } description ? description : "—",
-                    Styles.Hint)))));
-
-        terminal.NewLine();
-        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(), Line));
-    }
-
-    private void Add(string file)
-    {
-        ErrorOr<FlowImport> imported = flows.Import(file);
-        if (imported.IsError)
-        {
-            results.Reject(imported.ErrorsOrEmptyList);
-            return;
-        }
-
-        terminal.Ok($"已从 {imported.Value.Source} 导入 {imported.Value.Names.Count} 条流程。");
-        foreach (string note in imported.Value.Notes)
-        {
-            terminal.Hint($"  {note}");
-        }
     }
 
     private static Paragraph Line(GraphNode node) => node switch

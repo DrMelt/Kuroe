@@ -270,7 +270,7 @@ internal static class CliCommandLine
             (session, output) => new ConfigCommands(session, output).List()));
 
         Command set = new("set", "写入用户层设置并立即生效。");
-        Argument<string> path = new("路径") { Description = "设置项路径，如 Runtime:Temperature" };
+        Argument<string> path = new("路径") { Description = "设置项路径，如 Runtime:LogLevel" };
         Argument<string[]> value = new("值")
         {
             Description = "设置值，按 JSON 字面量解析，不是合法 JSON 时按字符串写入",
@@ -285,7 +285,7 @@ internal static class CliCommandLine
                 string.Join(' ', parseResult.GetValue(value) ?? []))));
 
         Command unset = new("unset", "删除用户层中的该项。");
-        Argument<string> removedPath = new("路径") { Description = "设置项路径，如 Runtime:Temperature" };
+        Argument<string> removedPath = new("路径") { Description = "设置项路径，如 Runtime:LogLevel" };
         unset.Arguments.Add(removedPath);
         unset.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),

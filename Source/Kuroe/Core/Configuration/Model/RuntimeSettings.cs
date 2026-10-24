@@ -7,7 +7,7 @@ using Kuroe.Configuration.Files;
 
 namespace Kuroe.Configuration.Model;
 
-/// <summary>运行偏好与请求参数，绑定自用户层的 Runtime 节。接入信息由目录提供，不在此处。
+/// <summary>运行偏好，绑定自用户层的 Runtime 节。接入信息由目录提供，不在此处。
 /// 各项默认值只有属性初始化器一处，用户层未写的项取它。</summary>
 internal sealed record RuntimeSettings
 {
@@ -21,13 +21,6 @@ internal sealed record RuntimeSettings
 
     /// 低于该级别的日志不产生输出。
     public LogLevel LogLevel { get; init; } = LogLevel.Warning;
-
-    public float? Temperature { get; init; }
-
-    public int? MaxOutputTokens { get; init; }
-
-    /// <summary>同时在跑的执行数上限，超出的排队等待。改动即时生效。</summary>
-    public int MaxConcurrentExecutions { get; init; } = 4;
 
     /// <summary>模型变化后旧上下文不再适用。凭据与端点变化不影响历史，会话客户端按模型接入信息重建。</summary>
     public bool InvalidatesHistory(RuntimeSettings other) => Model != other.Model;
@@ -71,9 +64,6 @@ internal sealed record RuntimeSettings
         {
             Model = model,
             LogLevel = file.LogLevel ?? defaults.LogLevel,
-            Temperature = file.Temperature,
-            MaxOutputTokens = file.MaxOutputTokens,
-            MaxConcurrentExecutions = file.MaxConcurrentExecutions ?? defaults.MaxConcurrentExecutions,
         };
     }
 }
@@ -84,10 +74,4 @@ internal sealed class RuntimeSectionDto
     public string? Model { get; set; }
 
     public LogLevel? LogLevel { get; set; }
-
-    public float? Temperature { get; set; }
-
-    public int? MaxOutputTokens { get; set; }
-
-    public int? MaxConcurrentExecutions { get; set; }
 }

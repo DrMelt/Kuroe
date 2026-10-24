@@ -4,10 +4,12 @@ using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Flow.Runtime;
 
-/// <summary>按并发额度推进执行。派生只入队，收口回调在额度释放后于线程池上执行，可安全再派生。
-/// 额度改动对后续入队即时生效。</summary>
-public sealed class ExecutionDispatcher(IExecutionRunner runner, IExecutionPolicy policy)
+/// <summary>按并发额度推进执行。派生只入队，收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
+public sealed class ExecutionDispatcher(IExecutionRunner runner)
 {
+    /// <summary>同时在跑的执行数上限，超出的排队等待。</summary>
+    private const int MaxConcurrentExecutions = 4;
+
     private readonly Lock _gate = new();
     private readonly Queue<Execution> _queue = [];
     private readonly Dictionary<ExecutionId, (Execution Execution, Task Task)> _live = [];
@@ -76,8 +78,7 @@ public sealed class ExecutionDispatcher(IExecutionRunner runner, IExecutionPolic
     /// <summary>要求持有 <see cref="_gate"/>。额度有空位就取一个开跑，已取消的直接交回收口。</summary>
     private void Pump(List<Execution> dropped)
     {
-        int limit = Math.Max(1, policy.MaxConcurrentExecutions);
-        while (_queue.Count > 0 && _live.Count < limit)
+        while (_queue.Count > 0 && _live.Count < MaxConcurrentExecutions)
         {
             Execution execution = _queue.Dequeue();
             if (execution.CancellationToken.IsCancellationRequested)

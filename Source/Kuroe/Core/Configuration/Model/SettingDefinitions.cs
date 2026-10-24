@@ -8,9 +8,6 @@ internal static class SettingDefinitions
     [
         Runtime(nameof(RuntimeSettings.Model), settings => settings.Runtime.Model),
         Runtime(nameof(RuntimeSettings.LogLevel), settings => settings.Runtime.LogLevel),
-        Runtime(nameof(RuntimeSettings.Temperature), settings => settings.Runtime.Temperature),
-        Runtime(nameof(RuntimeSettings.MaxOutputTokens), settings => settings.Runtime.MaxOutputTokens),
-        Runtime(nameof(RuntimeSettings.MaxConcurrentExecutions), settings => settings.Runtime.MaxConcurrentExecutions),
         Assistant(nameof(AssistantSettings.Language), settings => settings.Assistant.Language),
     ];
 

@@ -13,17 +13,17 @@ public sealed class ConfigCommandTests
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
         (ConfigCommands command, StringWriter output, StringWriter error) = Build(environment);
 
-        int set = command.Set("Runtime:Temperature", "0.7");
+        int set = command.Set("Runtime:LogLevel", "Debug");
 
         Assert.Equal(ExitCodes.Success, set);
-        Assert.Equal("0.7", environment.Session.Settings.TryGetUserValue("Runtime:Temperature"));
+        Assert.Equal("Debug", environment.Session.Settings.TryGetUserValue("Runtime:LogLevel"));
         Assert.Contains("已保存", output.ToString());
         Assert.Empty(error.ToString());
 
-        int unset = command.Unset("Runtime:Temperature");
+        int unset = command.Unset("Runtime:LogLevel");
 
         Assert.Equal(ExitCodes.Success, unset);
-        Assert.Null(environment.Session.Settings.TryGetUserValue("Runtime:Temperature"));
+        Assert.Null(environment.Session.Settings.TryGetUserValue("Runtime:LogLevel"));
     }
 
     [Fact]

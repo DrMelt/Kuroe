@@ -58,7 +58,7 @@ internal static class DialogueFlow
         $"使用「{language}」语言母语者语言风格回答。",
     ];
 
-    /// <summary>内置对话流程：回话面向运行时模型解析，随用户 /model 切换即时生效。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
+    /// <summary>内置对话流程：回话面向运行时模型解析，随模型选择切换即时生效。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
     internal static FlowDocument Build(string language) => new(
         [],
         [

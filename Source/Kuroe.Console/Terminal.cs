@@ -54,12 +54,12 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
 
     public void Hint(string text) => Write(text, Styles.Hint);
 
-    /// <summary>页面层级标题：标题按纯文本处理，横线占满终端宽度。层级之间由它划分，页内内容由框承载。</summary>
-    public void Page(string title) =>
-        Write(new Rule(Markup.Escape(title))
+    /// <summary>页面层级标题：路径段按 › 连接，标题按纯文本处理并加粗，横线与标题用强调色，横线占满终端宽度。层级之间由它划分，页内内容由框承载。</summary>
+    public void Page(params string[] path) =>
+        Write(new Rule($"[bold]{Markup.Escape(string.Join(" › ", path))}[/]")
         {
             Justification = Justify.Left,
-            Style = Styles.Border,
+            Style = Styles.Page,
         });
 
     /// <summary>工具调用行。</summary>
@@ -113,9 +113,6 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
             _lineOpen = false;
         }
     }
-
-    /// <summary>读一行输入，读到流末尾时为空。</summary>
-    public static string? ReadLine() => System.Console.ReadLine();
 
     /// <summary>一行次要提示。浏览与前台流式期间先排队，退出独占后冲刷。</summary>
     public void Notice(string text, Style style)
@@ -171,8 +168,17 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     }
 
     /// <summary>读键控件用的出口。调用方须持有独占呈现。</summary>
-    public T Prompt<T>(IPrompt<T> prompt)
-        where T : notnull => output.Prompt(prompt);
+    public T Prompt<T>(IPrompt<T> prompt) => output.Prompt(prompt);
+
+    /// <summary>读键选择，Esc 返回取消项。调用方须持有独占呈现。</summary>
+    public T Choose<T>(string title, IReadOnlyList<T> choices, Func<T, string> label, T cancel)
+        where T : notnull => Prompt(new MenuPrompt<T>(title, choices, label, cancel));
+
+    /// <summary>读一行文本，Esc 或空输入返回 null。调用方须持有独占呈现。</summary>
+    public string? Ask(string label) => Prompt(new LinePrompt(label));
+
+    /// <summary>读一行凭据，输入以掩码显示，Esc 或空输入返回 null。调用方须持有独占呈现。</summary>
+    public string? AskSecret(string label) => Prompt(new LinePrompt(label, secret: true));
 
     /// <summary>开一个文本框。回合结束后释放，底边由释放收尾。</summary>
     public Frame OpenFrame(BoxKind kind, string title)
@@ -457,6 +463,9 @@ internal static class Styles
 
     /// <summary>框线与框标题。</summary>
     public static readonly Style Border = new(Color.Grey);
+
+    /// <summary>页面标题横线与标题。</summary>
+    public static readonly Style Page = new(Color.Aqua);
 
     /// <summary>等待按键的框。</summary>
     public static readonly Style BorderActive = new(Color.Blue);

@@ -98,7 +98,7 @@ public sealed class ViewLabelsTests
     {
         Port port = new(new PortName("风格"), PortType.Text, Value: "技术文档风格");
 
-        Assert.Equal("风格＝技术文档风格", port.StartLabel());
+        Assert.Equal("风格=技术文档风格", port.StartLabel());
     }
 
     private static ExecutionSnapshot Execution(string progress) => new(

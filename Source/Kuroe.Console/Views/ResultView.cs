@@ -37,7 +37,7 @@ internal sealed class ResultView(Terminal terminal, ErrorView errors)
 
         if (effect.RequiresDialogueRebuild)
         {
-            terminal.Hint("内置助手语言已变更，已有对话任务需用 /reset 重建后生效。");
+            terminal.Hint("内置助手语言已变更，已有对话任务需在「Kuroe 助手」页选择「重置对话」后生效。");
         }
     }
 

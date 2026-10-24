@@ -12,7 +12,7 @@ public sealed class CliCommandLineTests
         Assert.Empty(Build().Parse(["flow", "show", "默认"]).Errors);
         Assert.Empty(Build().Parse(["run", "--flow", "默认", "目标"]).Errors);
         Assert.Empty(Build().Parse(["model", "use", "gpt"]).Errors);
-        Assert.Empty(Build().Parse(["config", "set", "Runtime:Temperature", "0.7"]).Errors);
+        Assert.Empty(Build().Parse(["config", "set", "Runtime:LogLevel", "Debug"]).Errors);
     }
 
     [Fact]

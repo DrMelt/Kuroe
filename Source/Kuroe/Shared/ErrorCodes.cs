@@ -5,7 +5,7 @@ namespace Kuroe.Shared;
 /// 流程与任务码在引擎侧的 FlowErrorCodes 里。</summary>
 public static class ErrorCodes
 {
-    /// <summary>模型选择不按路径写入，只经 /model 维护。</summary>
+    /// <summary>模型选择不按设置路径写入，只经模型选择维护。</summary>
     public const string SettingsModelPath = "Settings.ModelPath";
 
     /// <summary>写入的值是 JSON null。</summary>

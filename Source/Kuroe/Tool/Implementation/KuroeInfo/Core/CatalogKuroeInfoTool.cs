@@ -35,7 +35,7 @@ public sealed class CatalogKuroeInfoTool : ITool
 
         if (providers.Count == 0)
         {
-            text.AppendLine("还没有提供商，用 /provider add <名> <端点> <凭据> 添加。");
+            text.AppendLine("还没有提供商，先添加提供商。");
         }
         else
         {
@@ -49,7 +49,7 @@ public sealed class CatalogKuroeInfoTool : ITool
 
         if (models.Count == 0)
         {
-            text.AppendLine("还没有注册模型，用 /model add <模型> <提供商> 注册。");
+            text.AppendLine("还没有注册模型，先注册模型。");
         }
         else
         {

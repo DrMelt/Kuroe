@@ -23,19 +23,19 @@ public sealed class ErrorViewTests
     }
 
     [Theory]
-    [InlineData(ErrorCodes.SettingsModelPath, "模型选择用 /model <模型> 切换，/model none 取消选择。")]
-    [InlineData(ErrorCodes.SettingsNullValue, "清除设置用 /unset <路径>。")]
-    [InlineData(FlowErrorCodes.TaskNotFound, "用 /task list 查看任务号。")]
-    [InlineData(FlowErrorCodes.ExecutionNotFound, "执行号全局递增，用 /task list 或 /task show <任务号> 查看。")]
-    [InlineData(FlowErrorCodes.FlowNotFound, "用 /flow list 查看流程名。")]
-    [InlineData(FlowErrorCodes.FlowInvalidPath, "/flow add 的文件参数相对工作目录解析，路径非法时换一个写法。")]
-    [InlineData(FlowErrorCodes.FlowNode, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。")]
-    [InlineData(FlowErrorCodes.FlowBody, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。")]
-    [InlineData(FlowErrorCodes.FlowName, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。")]
-    [InlineData(FlowErrorCodes.FlowFormat, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完用 /flow list 确认是否加载成功。")]
-    [InlineData(ErrorCodes.ToolDuplicate, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完用 /tool list 确认是否加载成功。")]
-    [InlineData(ErrorCodes.ToolInvalid, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完用 /tool list 确认是否加载成功。")]
-    [InlineData(ErrorCodes.ToolFormat, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完用 /tool list 确认是否加载成功。")]
+    [InlineData(ErrorCodes.SettingsModelPath, "模型选择在「模型与提供商」菜单里切换。")]
+    [InlineData(ErrorCodes.SettingsNullValue, "清除设置用「设置」菜单里的「删除用户层设置」。")]
+    [InlineData(FlowErrorCodes.TaskNotFound, "在「任务」菜单里查看任务号。")]
+    [InlineData(FlowErrorCodes.ExecutionNotFound, "执行号全局递增，在「任务」菜单里逐级查看执行。")]
+    [InlineData(FlowErrorCodes.FlowNotFound, "在「流程」菜单里查看流程名。")]
+    [InlineData(FlowErrorCodes.FlowInvalidPath, "「流程」菜单导入时文件路径相对工作目录解析，路径非法时换一个写法。")]
+    [InlineData(FlowErrorCodes.FlowNode, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完在「流程」菜单确认是否加载成功。")]
+    [InlineData(FlowErrorCodes.FlowBody, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完在「流程」菜单确认是否加载成功。")]
+    [InlineData(FlowErrorCodes.FlowName, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完在「流程」菜单确认是否加载成功。")]
+    [InlineData(FlowErrorCodes.FlowFormat, "流程文件是工作目录 `.kuroe/` 下的 flows.json，改完在「流程」菜单确认是否加载成功。")]
+    [InlineData(ErrorCodes.ToolDuplicate, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完在「工具」菜单确认是否加载成功。")]
+    [InlineData(ErrorCodes.ToolInvalid, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完在「工具」菜单确认是否加载成功。")]
+    [InlineData(ErrorCodes.ToolFormat, "命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完在「工具」菜单确认是否加载成功。")]
     public void Guide_maps_error_codes_to_hints(string code, string hint)
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
@@ -66,7 +66,7 @@ public sealed class ErrorViewTests
 
         errors.GuideModelRegistration(environment.Models, null);
 
-        Assert.Contains("用 /model <模型> 选择模型", output.Output);
+        Assert.Contains("在「模型与提供商」菜单选择模型", output.Output);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class ErrorViewTests
 
         errors.GuideModelRegistration(environment.Models, "未注册");
 
-        Assert.Contains("用 /model add 未注册 <提供商> 注册该模型。", output.Output);
+        Assert.Contains("在「模型与提供商」菜单的「注册模型」里注册 未注册。", output.Output);
     }
 
     [Fact]

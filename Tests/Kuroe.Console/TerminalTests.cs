@@ -39,12 +39,23 @@ public sealed class TerminalTests
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         output.Profile.Width = 40;
 
-        terminal.Page("任务列表 › 任务 #1 目标");
+        terminal.Page("主菜单", "任务", "任务 #1 目标");
 
         string line = Assert.Single(Rows(output.Output));
-        Assert.StartsWith("── 任务列表 › 任务 #1 目标 ", line);
+        Assert.StartsWith("── 主菜单 › 任务 › 任务 #1 目标 ", line);
         Assert.EndsWith("─", line);
         Assert.Equal(40, line.GetCellWidth());
+    }
+
+    [Fact]
+    public void Page_joins_path_segments_and_escapes_them()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Profile.Width = 40;
+
+        terminal.Page("主菜单", "任务 [1]");
+
+        Assert.Contains("主菜单 › 任务 [1]", output.Output);
     }
 
     [Fact]
@@ -69,6 +80,19 @@ public sealed class TerminalTests
         string line = Assert.Single(Rows(output.Output));
         Assert.Equal(10, line.GetCellWidth());
         Assert.Contains('…', line);
+    }
+
+    [Fact]
+    public void Page_uses_the_accent_color_and_bolds_the_title()
+    {
+        using TestConsole output = new();
+        output.EmitAnsiSequences();
+        output.Profile.Width = 40;
+        Terminal terminal = new(output, output);
+
+        terminal.Page("主菜单", "任务");
+
+        Assert.Contains("\u001b[1;38;5;14m", output.Output);
     }
 
     [Fact]

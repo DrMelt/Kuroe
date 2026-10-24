@@ -4,7 +4,7 @@ using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>目录两张表的终端渲染，供 /provider、/model、/catalog 的 list 共用。</summary>
+/// <summary>目录两张表的终端渲染，供目录菜单的列表共用。</summary>
 internal sealed class CatalogView(Terminal terminal)
 {
     private readonly Terminal _terminal = terminal;
@@ -14,7 +14,7 @@ internal sealed class CatalogView(Terminal terminal)
     {
         if (providers.Count == 0)
         {
-            _terminal.Hint("目录为空，用 /provider add <名> <端点> <凭据> 添加提供商。");
+            _terminal.Hint("目录为空，在「模型与提供商」菜单添加提供商。");
             return;
         }
 
@@ -38,7 +38,7 @@ internal sealed class CatalogView(Terminal terminal)
     {
         if (models.Count == 0)
         {
-            _terminal.Hint("还没有注册模型，用 /model add <模型> <提供商> 注册。");
+            _terminal.Hint("还没有注册模型，在「模型与提供商」菜单注册。");
             return;
         }
 

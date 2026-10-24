@@ -1,22 +1,36 @@
-using ErrorOr;
-using Kuroe.Console.Commands;
 using Kuroe.Console.Views;
-using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Console;
 
-/// <summary>终端对话循环。提示符恒定在根层，普通输入全部交给常驻对话任务。</summary>
+/// <summary>终端交互循环。主菜单是唯一入口，对话作为菜单项，普通输入进入常驻对话任务。</summary>
 internal sealed class Repl(
     TaskService tasks,
-    ReplCommands commands,
-    DialogueSink sink,
+    DialogueBrowser dialogueBrowser,
     ExecutionNotifier notifier,
     StartupView startup,
-    Terminal terminal,
-    ErrorView errors,
-    DialogueHost dialogue)
+    TaskBrowser taskBrowser,
+    FlowBrowser flowBrowser,
+    CatalogBrowser catalogBrowser,
+    SettingsBrowser settingsBrowser,
+    ToolView toolView,
+    Terminal terminal)
 {
+    private sealed record Item(string Label, string Action);
+
+    private static readonly Item Exit = new("退出程序", "exit");
+
+    private static readonly Item[] Items =
+    [
+        new("Kuroe 助手", "dialogue"),
+        new("任务", "task"),
+        new("流程", "flow"),
+        new("工具", "tool"),
+        new("模型与提供商", "catalog"),
+        new("设置", "settings"),
+        Exit,
+    ];
+
     public async Task RunAsync()
     {
         notifier.Attach();
@@ -24,67 +38,62 @@ internal sealed class Repl(
 
         while (true)
         {
-            terminal.Append($"\n{Prompt}\n");
-            string? input = Terminal.ReadLine()?.Trim();
-            if (input is null)
+            terminal.Page("主菜单");
+
+            Item picked;
+            using (terminal.Exclusive())
             {
-                break;
+                picked = terminal.Choose("选择操作", Items, item => item.Label, Exit);
             }
 
-            if (input.Length == 0)
+            switch (picked.Action)
             {
-                continue;
-            }
+                case "exit":
+                    if (!ConfirmExit())
+                    {
+                        break;
+                    }
 
-            if (input.StartsWith('/'))
-            {
-                if (commands.Execute(input))
-                {
+                    await tasks.ShutdownAsync();
+                    return;
+
+                case "dialogue":
+                    await dialogueBrowser.BrowseAsync();
                     break;
-                }
 
-                continue;
+                case "task":
+                    taskBrowser.Browse();
+                    break;
+
+                case "flow":
+                    flowBrowser.Browse();
+                    break;
+
+                case "tool":
+                    using (terminal.Exclusive())
+                    {
+                        ViewPage.Browse(terminal, "工具", toolView.Print);
+                    }
+
+                    break;
+
+                case "catalog":
+                    catalogBrowser.Browse();
+                    break;
+
+                case "settings":
+                    settingsBrowser.Browse();
+                    break;
             }
-
-            await AskAsync(input);
         }
-
-        await tasks.ShutdownAsync();
     }
 
-    /// <summary>提示符固定在根层，常驻对话任务随时可答。提示符来源行独立，输入从下一行开始。</summary>
-    private static string Prompt => "Kuroe >";
-
-    /// <summary>助手回合的框标题。</summary>
-    private const string SourceLabel = "Kuroe 助手";
-
-    private async Task AskAsync(string input)
+    /// <summary>退出会取消全部任务，选择后要求再次确认，默认停在返回主菜单的选项。</summary>
+    private bool ConfirmExit()
     {
-        ErrorOr<Success> outcome = Result.Success;
-        string? failure = null;
         using (terminal.Exclusive())
-        using (terminal.OpenFrame(BoxKind.Reply, SourceLabel))
         {
-            try
-            {
-                outcome = await dialogue.ReplyAsync(input, sink);
-            }
-            catch (Exception ex)
-            {
-                failure = ex.Message;
-            }
-        }
-
-        if (failure is not null)
-        {
-            terminal.Error($"请求失败：{failure}");
-            return;
-        }
-
-        if (outcome.IsError)
-        {
-            errors.Report(outcome.ErrorsOrEmptyList);
-            commands.GuideCurrentModel();
+            return Confirmation.Ask(terminal, "退出并取消全部任务？", "× 确认退出", "← 返回主菜单");
         }
     }
 }

@@ -29,7 +29,7 @@ internal sealed class StartupView(
 
         if (contents.Providers.Length == 0)
         {
-            lines.Add(new Text("先 /provider add <提供商> <端点> <凭据> 添加提供商，再 /model add <模型> <提供商> 注册模型。", Styles.Hint));
+            lines.Add(new Text("先在「模型与提供商」菜单添加提供商，再注册模型。", Styles.Hint));
         }
 
         if (tools.Names.Count == 0)
@@ -37,8 +37,8 @@ internal sealed class StartupView(
             lines.Add(new Text("当前没有可用工具，检查是否注册了工具载体、载体是否声明了函数。", Styles.Hint));
         }
 
-        lines.Add(new Text("普通输入与常驻对话任务对话；/task new --flow <流程> <目标> 提交任务，按流程启动执行。", Styles.Hint));
-        lines.Add(new Text("/task 打开任务浏览器，任务 → 执行 → 详情逐级进入；/exit 退出，/help 查看命令。", Styles.Hint));
+        lines.Add(new Text("「Kuroe 助手」进入常驻对话任务；「任务」提交任务并查看执行进展。", Styles.Hint));
+        lines.Add(new Text("回车进入选中项，方向键切换菜单项，Esc 返回上一级；主菜单按 Esc 或选择「退出」都要再次确认。", Styles.Hint));
 
         terminal.Write(Blocks.Section(BoxKind.View, null, new Rows(lines)));
     }

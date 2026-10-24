@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe;
 using Kuroe.Assistant;
 using Kuroe.Console;
-using Kuroe.Console.Commands;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,17 +67,14 @@ static async Task<int> RunAsync(string? workDirectory)
     services.AddSingleton<ExecutionDetailView>();
     services.AddSingleton<CatalogView>();
     services.AddSingleton<StartupView>();
-    services.AddSingleton<TaskBrowser>();
 
-    // 命令族与对话循环
-    services.AddSingleton<SettingsCommands>();
-    services.AddSingleton<ProviderCommands>();
-    services.AddSingleton<ModelCommands>();
-    services.AddSingleton<CatalogCommands>();
-    services.AddSingleton<FlowCommands>();
-    services.AddSingleton<ToolCommands>();
-    services.AddSingleton<TaskCommands>();
-    services.AddSingleton<ReplCommands>();
+    // 交互菜单与对话循环
+    services.AddSingleton<TaskBrowser>();
+    services.AddSingleton<FlowBrowser>();
+    services.AddSingleton<CatalogBrowser>();
+    services.AddSingleton<SettingsBrowser>();
+    services.AddSingleton<ToolView>();
+    services.AddSingleton<DialogueBrowser>();
     services.AddSingleton<Repl>();
 
     // 日志全部导向 stderr，避免与 stdout 上的流式回复交错

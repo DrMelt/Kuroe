@@ -21,8 +21,12 @@ public sealed class ToolCollection
     {
         _carriers = [.. carriers];
         _json = json;
-        Names = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Definition.Path.Name)];
+        Definitions = [.. _carriers.SelectMany(carrier => carrier.Functions).Select(function => function.Definition)];
+        Names = [.. Definitions.Select(definition => definition.Path.Name)];
     }
+
+    /// <summary>全部函数的定义，按载体与声明顺序排列，供宿主展示工具面。</summary>
+    public IReadOnlyList<ToolDefinition> Definitions { get; }
 
     /// <summary>函数名，取工具路径的末段，供宿主展示可用性。</summary>
     public IReadOnlyList<ToolName> Names { get; }

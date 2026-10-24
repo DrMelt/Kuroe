@@ -144,7 +144,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IToolJson, ToolJson>();
         services.AddSingleton<ToolCollection>();
-        services.AddSingleton<IExecutionPolicy>(sp => new SettingsExecutionPolicy(sp.GetRequiredService<SettingsProvider>()));
         services.AddSingleton<ExecutionDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
@@ -167,7 +166,6 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IInputDelivery>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ILoggerFactory>(),
-            sp.GetRequiredService<IModelSettings>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
         services.AddSingleton<IExecutionRunner>(sp => new ExecutionRunner(

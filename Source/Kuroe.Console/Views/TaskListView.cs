@@ -17,7 +17,7 @@ internal sealed class TaskListView(Terminal terminal, PendingService pendings)
     {
         if (tasks.Count == 0)
         {
-            _terminal.Hint("还没有任务，用 /task new --flow <流程> <目标> 提交一个。");
+            _terminal.Hint("还没有任务，在「任务」菜单提交任务。");
             return;
         }
 

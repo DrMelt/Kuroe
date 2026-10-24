@@ -60,7 +60,7 @@ public sealed class TaskKuroeInfoTool : ITool
         IReadOnlyList<TaskSnapshot> tasks = _registry.Snapshots();
         if (tasks.Count == 0)
         {
-            return "还没有任务，用 /task new <目标> 提交一个。";
+            return "还没有任务，先提交一个任务。";
         }
 
         var text = new StringBuilder();

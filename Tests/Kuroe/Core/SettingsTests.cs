@@ -17,7 +17,7 @@ public sealed class SettingsTests
         IReadOnlyList<SettingSection> sections = environment.Settings.Sections;
 
         Assert.Equal(["Runtime", "Assistant"], sections.Select(section => section.Name));
-        Assert.Contains(Entries(sections, "Runtime"), entry => entry.Path == "Runtime:Temperature");
+        Assert.Contains(Entries(sections, "Runtime"), entry => entry.Path == "Runtime:LogLevel");
         Assert.Contains(Entries(sections, "Assistant"), entry => entry.Path == "Assistant:Language");
         Assert.All(sections, section =>
             Assert.All(section.Entries, entry => Assert.Equal(section.Name, entry.Path.Split(':')[0])));
@@ -50,9 +50,7 @@ public sealed class SettingsTests
         IReadOnlyList<SettingEntry> runtime = Entries(environment.Settings.Sections, "Runtime");
         IReadOnlyList<SettingEntry> assistant = Entries(environment.Settings.Sections, "Assistant");
 
-        Assert.Equal("未设置", Value(runtime, "Temperature"));
         Assert.Equal("Warning", Value(runtime, "LogLevel"));
-        Assert.Equal("4", Value(runtime, "MaxConcurrentExecutions"));
         Assert.Equal("中文", Value(assistant, "Language"));
     }
 
@@ -73,7 +71,7 @@ public sealed class SettingsTests
     [Fact]
     public void Path_resolution_keeps_defined_items_and_rejects_the_rest()
     {
-        Assert.Equal("Runtime:Temperature", SettingsProvider.ResolvePath("runtime:temperature").ThrowIfError());
+        Assert.Equal("Runtime:LogLevel", SettingsProvider.ResolvePath("runtime:loglevel").ThrowIfError());
         Assert.Equal("Assistant:Language", SettingsProvider.ResolvePath("assistant:language").ThrowIfError());
         Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Runtime:Nope").FirstError.Description);
     }
@@ -84,11 +82,9 @@ public sealed class SettingsTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         SettingsEffect language = environment.Settings.Set("Assistant:Language", "English").ThrowIfError();
-        SettingsEffect temperature = environment.Settings.Set("Runtime:Temperature", "0.5").ThrowIfError();
 
         Assert.True(language.RequiresDialogueRebuild);
         Assert.False(language.RequiresRestart);
         Assert.False(language.InvalidatesHistory);
-        Assert.False(temperature.RequiresDialogueRebuild);
     }
 }

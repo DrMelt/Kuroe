@@ -14,7 +14,6 @@ namespace Kuroe.Node.Llm.Sessions;
 public sealed class Session
 {
     private readonly ClientProvider _clients;
-    private readonly IModelSettings _settings;
     private readonly IModelAccess _access;
     private readonly ToolCollection _tools;
     private readonly ISessionHistory _history;
@@ -22,13 +21,11 @@ public sealed class Session
 
     internal Session(
         ClientProvider clients,
-        IModelSettings settings,
         IModelAccess access,
         ToolCollection tools,
         ISessionHistory history)
     {
         _clients = clients;
-        _settings = settings;
         _access = access;
         _tools = tools;
         _history = history;
@@ -176,14 +173,12 @@ public sealed class Session
         return !calls.IsSubsetOf(results);
     }
 
-    /// <summary>请求选项逐轮取自当前设置，工具按本次执行的身份、播发出口与记录构造。</summary>
+    /// <summary>请求选项按本次执行构造，工具与系统指令来自执行输入。</summary>
     private ChatClientAgentRunOptions Options(IExecution execution, ProcessJournal journal)
     {
         return new ChatClientAgentRunOptions(new ChatOptions
         {
             Tools = [.. _tools.Build(execution.Id, execution.Sink, journal, _history.ToolPaths)],
-            Temperature = _settings.Temperature,
-            MaxOutputTokens = _settings.MaxOutputTokens,
             Instructions = _history.SystemPrompt,
         });
     }

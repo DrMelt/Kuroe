@@ -2,9 +2,11 @@ using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
+using Kuroe.Workflows.Flows;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;
@@ -14,6 +16,7 @@ internal sealed class TaskBrowser(
     TaskRegistry registry,
     TaskService tasks,
     PendingService pendings,
+    FlowService flows,
     TaskListView list,
     TaskOverviewView overview,
     TaskTreeView tree,
@@ -30,8 +33,10 @@ internal sealed class TaskBrowser(
         string? Node = null);
 
     private static readonly Item Back = new("← 返回上一级", "back");
-    private static readonly Item Exit = new("✕ 退出浏览", "exit");
-    private static readonly Item Refresh = new("⟳ 刷新", "refresh");
+    private static readonly Item Exit = new("× 退出浏览", "exit");
+    private static readonly Item Refresh = new("~ 刷新", "refresh");
+    private static readonly Item SubmitItem = new("+ 提交任务", "submit");
+    private static readonly Item ClearItem = new("- 清理已完成与已取消的任务", "clear");
 
     public void Browse()
     {
@@ -41,20 +46,130 @@ internal sealed class TaskBrowser(
         }
     }
 
+    /// <summary>按流程提交任务。</summary>
+    public void Submit(FlowName flow, string goal)
+    {
+        ErrorOr<TaskSnapshot> submitted = tasks.Submit(goal, flow, null);
+        if (submitted.IsError)
+        {
+            results.Reject(submitted.ErrorsOrEmptyList);
+            return;
+        }
+
+        TaskSnapshot task = submitted.Value;
+        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveExecutions} 个执行已启动。");
+        list.Print([task]);
+    }
+
+    /// <summary>丢掉已完成或已取消的内存任务。</summary>
+    public void Clear() => terminal.Ok($"已丢掉 {registry.ClearSettled()} 个任务。");
+
+    /// <summary>改任务标题。</summary>
+    public void Rename(TaskId id, string title) => results.Report(tasks.Rename(id, title), "已改标题。");
+
+    /// <summary>批准全部待批准的节点。</summary>
+    public void Approve(TaskId id) => results.Report(pendings.Approve(id), $"{id} 已批准，继续下一步。");
+
+    /// <summary>回答等待输入的节点，nodePath 为空时回答唯一待输入节点。</summary>
+    public void Answer(TaskId id, string? nodePath, string input) =>
+        results.Report(pendings.Answer(id, nodePath, input), $"{id} 已收到回答，继续下一步。");
+
+    /// <summary>返工被阻塞的节点。</summary>
+    public void Rework(TaskId id) => results.Report(tasks.Rework(id), $"{id} 已返工。");
+
+    /// <summary>取消任务。</summary>
+    public void StopTask(TaskId id) => results.Report(tasks.StopTask(id), $"{id} 已取消。");
+
+    /// <summary>取消单个执行。</summary>
+    public void StopExecution(ExecutionId id) => results.Report(tasks.StopExecution(id), $"{id} 已取消。");
+
+    /// <summary>打开任务节点树页。</summary>
+    public void ShowTree(TaskId id) => ViewPage.Browse(terminal, "节点树", () => PrintTree(id));
+
+    /// <summary>打开任务过程记录页。</summary>
+    public void ShowJournal(TaskId id) => ViewPage.Browse(terminal, "过程记录", () => PrintJournal(id));
+
+    private void PrintTree(TaskId id)
+    {
+        ErrorOr<WorkTask> found = registry.Find(id);
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        TaskSnapshot task = found.Value.Snapshot();
+        terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", "节点树");
+        tree.Print(task);
+    }
+
+    private void PrintJournal(TaskId id)
+    {
+        ErrorOr<WorkTask> found = registry.Find(id);
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        TaskSnapshot task = found.Value.Snapshot();
+        terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", "过程记录");
+        terminal.Write(Blocks.Section(BoxKind.View, "过程记录", JournalView.Build(task.Journal, task.DroppedJournal)));
+    }
+
+    private void Submit()
+    {
+        IReadOnlyList<FlowDefinition> all = flows.All();
+        if (all.Count == 0)
+        {
+            terminal.Hint("流程库为空，先在「流程」菜单导入流程。");
+            return;
+        }
+
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name.Value)]) is not { } index)
+        {
+            return;
+        }
+
+        string? goal = terminal.Ask("任务目标：");
+        if (goal is not null)
+        {
+            Submit(all[index].Name, goal);
+        }
+    }
+
+    private void Rename(TaskId id)
+    {
+        string? title = terminal.Ask("新标题：");
+        if (title is not null)
+        {
+            Rename(id, title);
+        }
+    }
+
     private void PickTask()
     {
         while (true)
         {
             IReadOnlyList<TaskSnapshot> snapshots = registry.Snapshots();
-            terminal.Page("任务列表");
+            terminal.Page("主菜单", "任务");
             list.Print(snapshots);
             terminal.NewLine();
 
             Item picked = Choose("选择任务",
-                [.. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), Refresh, Exit]);
-            if (picked.Action == "exit")
+                [.. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), SubmitItem, ClearItem, Refresh, Exit]);
+            switch (picked.Action)
             {
-                return;
+                case "exit" or "back":
+                    return;
+
+                case "submit":
+                    Submit();
+                    break;
+
+                case "clear":
+                    Clear();
+                    break;
             }
 
             if (picked.Task is { } id)
@@ -75,7 +190,7 @@ internal sealed class TaskBrowser(
 
             TaskSnapshot task = found.Value.Snapshot();
 
-            terminal.Page($"任务列表 › {task.Id} {task.Title}");
+            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}");
             overview.Print(task);
             terminal.NewLine();
 
@@ -83,7 +198,9 @@ internal sealed class TaskBrowser(
                 .OrderBy(execution => execution.Id.Value)
                 .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id))];
             AddTaskActions(items, task);
+            items.Add(new Item("* 改任务标题", "rename", Task: id));
             items.Add(new Item("≡ 查看节点树", "tree", Task: id));
+            items.Add(new Item("≡ 查看过程记录", "journal", Task: id));
             items.Add(Refresh);
             items.Add(Back);
 
@@ -94,16 +211,23 @@ internal sealed class TaskBrowser(
                     return;
 
                 case "execution" when picked.Execution is { } executionId:
-                    ShowExecution(executionId);
+                    BrowseExecution(executionId);
                     break;
 
                 case "tree":
-                    tree.Print(task);
-                    terminal.NewLine();
+                    ShowTree(id);
+                    break;
+
+                case "rename":
+                    Rename(id);
+                    break;
+
+                case "journal":
+                    ShowJournal(id);
                     break;
 
                 case "approve":
-                    Act(pendings.Approve(id));
+                    Approve(id);
                     break;
 
                 case "answer":
@@ -111,7 +235,7 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "rework":
-                    Act(tasks.Rework(id));
+                    Rework(id);
                     break;
 
                 case "stopTask":
@@ -119,7 +243,7 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "stopExecution" when picked.Execution is { } target:
-                    Act(tasks.StopExecution(target));
+                    StopExecution(target);
                     break;
             }
         }
@@ -154,9 +278,11 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        TextPrompt<string> prompt = new($"回答「{nodePath}」：");
-
-        Act(pendings.Answer(id, nodePath, terminal.Prompt(prompt)));
+        string? input = terminal.Ask($"回答「{Markup.Escape(nodePath)}」：");
+        if (input is not null)
+        {
+            Answer(id, nodePath, input);
+        }
     }
 
     private static string AnswerItemLabel(TaskSnapshot task, PendingNode node)
@@ -166,24 +292,37 @@ internal sealed class TaskBrowser(
         return $"{node.Node.Value} · {ViewLabels.WaitingLabel(node, executable?.Type)}";
     }
 
-    private void ShowExecution(ExecutionId executionId)
+    /// <summary>打印执行详情。</summary>
+    public void ShowExecution(ExecutionId executionId)
+    {
+        ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> found = FindExecution(executionId);
+        if (found.IsError)
+        {
+            results.Reject(found.ErrorsOrEmptyList);
+            return;
+        }
+
+        terminal.Page(
+            "主菜单",
+            "任务",
+            $"{found.Value.Task.Id} {found.Value.Task.Title}",
+            $"{found.Value.Execution.Id} {found.Value.Execution.Input.Node}");
+        executionView.Print(found.Value.Task, found.Value.Execution);
+    }
+
+    private void BrowseExecution(ExecutionId executionId)
     {
         while (true)
         {
-            if (registry.FindExecution(executionId) is not { IsError: false } foundExecution)
+            if (FindExecution(executionId) is not { IsError: false } found)
             {
                 return;
             }
 
-            ExecutionSnapshot snapshot = foundExecution.Value.Snapshot();
-            if (registry.Find(snapshot.Input.Task) is not { IsError: false } foundTask)
-            {
-                return;
-            }
+            TaskSnapshot task = found.Value.Task;
+            ExecutionSnapshot snapshot = found.Value.Execution;
 
-            TaskSnapshot task = foundTask.Value.Snapshot();
-
-            terminal.Page($"任务列表 › {task.Id} {task.Title} › {snapshot.Id} {snapshot.Input.Node}");
+            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Input.Node}");
             executionView.Print(task, snapshot);
             terminal.NewLine();
 
@@ -194,7 +333,7 @@ internal sealed class TaskBrowser(
 
             if (!snapshot.State.IsSettled())
             {
-                items.Add(new Item("✕ 取消该执行", "stopExecution", Execution: executionId));
+                items.Add(new Item("× 取消该执行", "stopExecution", Execution: executionId));
             }
 
             items.Add(Refresh);
@@ -211,21 +350,35 @@ internal sealed class TaskBrowser(
                     break;
 
                 case "stopExecution":
-                    Act(tasks.StopExecution(executionId));
+                    StopExecution(executionId);
                     break;
             }
         }
     }
 
+    /// <summary>按执行号取执行与其所属任务的快照。</summary>
+    private ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> FindExecution(ExecutionId id)
+    {
+        ErrorOr<Execution> execution = registry.FindExecution(id);
+        if (execution.IsError)
+        {
+            return execution.ErrorsOrEmptyList;
+        }
+
+        ExecutionSnapshot snapshot = execution.Value.Snapshot();
+        ErrorOr<WorkTask> owner = registry.Find(snapshot.Input.Task);
+
+        return owner.IsError
+            ? owner.ErrorsOrEmptyList
+            : (owner.Value.Snapshot(), snapshot);
+    }
+
     /// <summary>取消整个任务不可恢复，选择后要求再次确认，默认停在保留任务的选项。</summary>
     private void ConfirmStopTask(TaskId id)
     {
-        Item keep = new("← 返回，保留任务", "keep");
-        Item stop = new("✕ 确认取消整个任务", "stop");
-
-        if (Choose($"取消{id}？", [keep, stop]).Action == "stop")
+        if (Confirmation.Ask(terminal, $"取消{id}？", "× 确认取消整个任务", "← 返回，保留任务"))
         {
-            Act(tasks.StopTask(id));
+            StopTask(id);
         }
     }
 
@@ -242,28 +395,20 @@ internal sealed class TaskBrowser(
 
         if (waiting.Any(node => node.Kind == PendingKind.Approve))
         {
-            items.Add(new Item("✓ 批准待批准的节点，开下一步", "approve", Task: task.Id));
+            items.Add(new Item("√ 批准待批准的节点，开下一步", "approve", Task: task.Id));
         }
 
         if (waiting.Any(node => node.Kind == PendingKind.Answer))
         {
-            items.Add(new Item("✎ 回答等待输入的节点", "answer", Task: task.Id));
+            items.Add(new Item("* 回答等待输入的节点", "answer", Task: task.Id));
         }
 
         if (blocked)
         {
-            items.Add(new Item("↺ 返工被阻塞的节点", "rework", Task: task.Id));
+            items.Add(new Item("* 返工被阻塞的节点", "rework", Task: task.Id));
         }
 
-        items.Add(new Item("✕ 取消整个任务", "stopTask", Task: task.Id));
-    }
-
-    private void Act(ErrorOr<Success> result)
-    {
-        if (result.IsError)
-        {
-            results.Reject(result.ErrorsOrEmptyList);
-        }
+        items.Add(new Item("× 取消整个任务", "stopTask", Task: task.Id));
     }
 
     private Item Choose(string title, IReadOnlyList<Item> items) =>
