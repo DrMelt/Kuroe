@@ -18,8 +18,9 @@
 - [安装与运行](usage/安装与运行.md)
 - [模型接入](usage/模型接入.md)
 - [设置](usage/设置.md)
-- [流程定义](reference/流程定义.md)
 - [工具配置](reference/工具配置.md)
+- [流程定义](reference/流程定义.md)
+- [流程示例](reference/流程示例.md)
 
 ## 参考
 
