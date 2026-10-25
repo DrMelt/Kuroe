@@ -26,6 +26,10 @@ static class TaskErrors
     public static Error ConstantInput(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 带固定值，不接受提交输入。");
 
+    /// <summary>输入落在宿主固定提供的开始端口上。</summary>
+    public static Error FixedInput(PortName port) =>
+        Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 由宿主提供，不接受提交输入。");
+
     /// <summary>同一开始端口给出了多项输入。</summary>
     public static Error DuplicateInput(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 的输入重复。");

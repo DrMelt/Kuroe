@@ -13,20 +13,23 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>一个任务域内的任务动作：提交、返工、取消与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
-/// <remarks>装配任务动作所需的注册表、推进器、执行目标解析与可选任务工作目录。任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
+/// <remarks>装配任务动作所需的注册表、推进器、执行目标解析、工作区根目录与可选任务工作目录。
+/// 任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
 public sealed class TaskActions(
     TaskRegistry registry,
     IFlowRunner driver,
     IExecutionTargetResolver targets,
+    string workspaceDirectory,
     ITaskWorkspace? workspace)
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
     private readonly IExecutionTargetResolver _targets = targets;
+    private readonly string _workspaceDirectory = workspaceDirectory;
     private readonly ITaskWorkspace? _workspace = workspace;
 
-    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、建任务并按需建立工作目录，随后启动推进。
-    /// 任务目录被占用时丢弃刚建的任务，换下一个任务号重来。observer 收到该任务全部执行的过程播发。</summary>
+    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、按需建立工作目录，再建任务并启动推进。
+    /// 任务目录被占用时换下一个任务号重来。observer 收到该任务全部执行的过程播发。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
         CompiledFlow flow,
@@ -56,26 +59,36 @@ public sealed class TaskActions(
             }
         }
 
+        string taskTitle = TaskTitle.Compose(inputs, flow.Model.Name, title);
+
         while (true)
         {
-            WorkTask task = _registry.Create(inputs, flow, title, observer);
+            TaskId id = _registry.Allocate();
 
-            ErrorOr<Success> prepared = Result.Success;
+            string? taskDirectory = null;
             if (_workspace is { } directory)
             {
-                prepared = directory.Prepare(task.Id, task.Flow.Name, task.Title);
-            }
-
-            if (prepared.IsError)
-            {
-                _registry.Discard(task);
-                if (prepared.FirstError.Code == FlowErrorCodes.TaskWorkspaceConflict)
+                ErrorOr<string> prepared = directory.Prepare(id, flow.Model.Name, taskTitle);
+                if (prepared.IsError)
                 {
-                    continue;
+                    if (prepared.FirstError.Code == FlowErrorCodes.TaskWorkspaceConflict)
+                    {
+                        continue;
+                    }
+
+                    return prepared.ErrorsOrEmptyList;
                 }
 
-                return prepared.ErrorsOrEmptyList;
+                taskDirectory = prepared.Value;
             }
+
+            WorkTask task = _registry.Add(
+                id,
+                inputs,
+                new StartPaths(_workspaceDirectory, taskDirectory),
+                flow,
+                taskTitle,
+                observer);
 
             lock (task.Gate)
             {
@@ -112,7 +125,10 @@ public sealed class TaskActions(
                 .Where(input => start.FindPort(input.Port) is null)
                 .Select(input => TaskErrors.UnknownInput(input.Port)),
             .. supplied
-                .Where(input => start.FindPort(input.Port) is { Value: not null })
+                .Where(input => StartNode.FindFixed(input.Port) is not null)
+                .Select(input => TaskErrors.FixedInput(input.Port)),
+            .. supplied
+                .Where(input => start.FindDeclared(input.Port) is { Value: not null })
                 .Select(input => TaskErrors.ConstantInput(input.Port)),
         ];
     }

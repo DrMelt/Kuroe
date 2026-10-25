@@ -13,8 +13,6 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask : INodeTask
 {
-    private const int TitleLimit = 40;
-
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
     private readonly IProcessSink? _observer;
@@ -26,21 +24,23 @@ public sealed class WorkTask : INodeTask
         TaskRegistry registry,
         TaskId id,
         StartInputs inputs,
+        StartPaths paths,
         FlowDefinition flow,
         INodeGraph graph,
-        string? title,
+        string title,
         IProcessSink? observer)
     {
         Registry = registry;
         Id = id;
         Inputs = inputs;
+        Paths = paths;
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
         _observer = observer;
-        _title = Shorten(string.IsNullOrWhiteSpace(title) ? FirstInput() : title);
+        _title = title;
     }
 
     /// <summary>任务标识。</summary>
@@ -51,6 +51,9 @@ public sealed class WorkTask : INodeTask
 
     /// <summary>提交时按开始端口给出的输入。</summary>
     public StartInputs Inputs { get; }
+
+    /// <summary>任务启动时的宿主路径，开始节点的固定端口按它取值。</summary>
+    internal StartPaths Paths { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }
@@ -95,7 +98,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>图驱动的执行状态，执行节点就地决定激活与发布。</summary>
     internal TaskRuntime Runtime { get; }
 
-    /// <summary>任务标题，未给出时取第一个开始输入的首行。</summary>
+    /// <summary>任务标题，创建时按输入与流程名推导，可由宿主改写。</summary>
     public string Title
     {
         get
@@ -111,7 +114,7 @@ public sealed class WorkTask : INodeTask
             {
                 if (!string.IsNullOrWhiteSpace(value))
                 {
-                    _title = Shorten(value);
+                    _title = TaskTitle.Shorten(value);
                 }
             }
         }
@@ -211,17 +214,5 @@ public sealed class WorkTask : INodeTask
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
                 projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }
-    }
-
-    /// <summary>第一个开始输入的文本，没有输入时取流程名。</summary>
-    private string FirstInput() =>
-        Inputs.Values.Count > 0 ? Inputs.Values[0].Text : Flow.Name.Value;
-
-    /// <summary>取文本首行作标题，过长时截断。</summary>
-    private static string Shorten(string text)
-    {
-        string first = text.Trim().Split('\n')[0].Trim();
-
-        return first.Length <= TitleLimit ? first : string.Concat(first.AsSpan(0, TitleLimit), "…");
     }
 }

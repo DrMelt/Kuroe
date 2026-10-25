@@ -17,10 +17,11 @@ public sealed class TaskDirectoryTests : IDisposable
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
 
-        directory.Prepare(new TaskId(3), new FlowName("审阅"), "修复登录超时").ThrowIfError();
+        string prepared = directory.Prepare(new TaskId(3), new FlowName("审阅"), "修复登录超时").ThrowIfError();
 
         string created = Assert.Single(Directory.GetDirectories(_root));
         Assert.Equal("0003-审阅-修复登录超时", Path.GetFileName(created));
+        Assert.Equal(created, prepared);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public sealed class TaskDirectoryTests : IDisposable
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
         directory.Prepare(new TaskId(1), new FlowName("默认"), "目标").ThrowIfError();
 
-        ErrorOr<Success> second = directory.Prepare(new TaskId(1), new FlowName("默认"), "目标");
+        ErrorOr<string> second = directory.Prepare(new TaskId(1), new FlowName("默认"), "目标");
 
         Assert.True(second.IsError);
         Assert.Equal(FlowErrorCodes.TaskWorkspaceConflict, second.FirstError.Code);
@@ -90,7 +91,7 @@ public sealed class TaskDirectoryTests : IDisposable
         string root = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, new string('长', 175));
         TaskDirectory directory = TaskDirectory.Create(root).Value;
 
-        ErrorOr<Success> result = directory.Prepare(
+        ErrorOr<string> result = directory.Prepare(
             new TaskId(1),
             new FlowName(new string('流', 20)),
             new string('标', 40));

@@ -3,6 +3,7 @@ using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Presentation;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
@@ -167,9 +168,10 @@ internal sealed class FlowBrowser(
     private static Paragraph StartLine(StartNode start)
     {
         ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
-        if (start.Outputs.Count > 0)
+        IReadOnlyList<Port> ports = start.AllPorts;
+        if (ports.Count > 0)
         {
-            line.Add($"端口 {string.Join('、', start.Outputs.Select(port => port.StartLabel()))}", Styles.Hint);
+            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel()))}", Styles.Hint);
         }
 
         return line.Build();

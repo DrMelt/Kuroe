@@ -3,6 +3,7 @@ using Kuroe.Assistant.Dialogue;
 using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Configuration.Files;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime;
@@ -52,6 +53,7 @@ public static class AssistantServiceCollectionExtensions
                     registry,
                     sp.GetRequiredService<FlowEngine>(),
                     sp.GetRequiredService<IExecutionTargetResolver>(),
+                    sp.GetRequiredService<KuroePaths>().WorkingDirectory,
                     null),
                 round,
                 sp.GetRequiredService<ModelService>(),

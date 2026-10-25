@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Compiler.Compilation;
 using Kuroe.Flow.Compiler.Validation;
 using Xunit;
 
@@ -128,6 +129,23 @@ public sealed class FlowRuleTests
         Assert.Equal(
             ["流程 默认：开始端口 背景 重复。"],
             Errors(StartFlow([StartOutput, P("背景") with { Value = "甲" }, P("背景") with { Value = "乙" }])));
+
+    [Fact]
+    public void Start_with_a_host_port_name_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认：开始端口 WORKSPACE_PATH 由宿主固定提供，不能声明。"],
+            Errors(StartFlow([StartOutput, P(StartNode.WorkspacePath.Port.Name.Value)])));
+
+    [Fact]
+    public void Host_ports_are_reachable_from_start_without_being_declared()
+    {
+        NodeGraph graph = FlowRules.ValidateAndCompile(StartFlow([StartOutput])).Value;
+
+        Assert.NotNull(graph.Start.FindPort(StartNode.WorkspacePath.Port.Name));
+        Assert.NotNull(graph.Start.FindPort(StartNode.TaskWorkPath.Port.Name));
+        Assert.DoesNotContain(graph.Start.Outputs, port => port.Name == StartNode.WorkspacePath.Port.Name);
+        Assert.DoesNotContain(graph.Start.Outputs, port => port.Name == StartNode.TaskWorkPath.Port.Name);
+    }
 
     [Fact]
     public void Node_named_start_is_rejected() =>

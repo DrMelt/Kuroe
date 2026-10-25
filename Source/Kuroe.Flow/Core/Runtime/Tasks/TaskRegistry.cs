@@ -21,23 +21,30 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    internal WorkTask Create(StartInputs inputs, CompiledFlow flow, string? title, IProcessSink? observer)
+    /// <summary>取本域下一个任务号。目录准备失败时任务号照常消耗，与按号命名的目录一致。</summary>
+    internal TaskId Allocate()
     {
         lock (_gate)
         {
-            WorkTask task = new(this, new TaskId(_nextTask++), inputs, flow.Model, flow.Graph, title, observer);
-            _tasks.Add(task);
-
-            return task;
+            return new TaskId(_nextTask++);
         }
     }
 
-    /// <summary>丢弃一个尚未启动的任务，任务目录无法建立时提交方换号重来。</summary>
-    internal void Discard(WorkTask task)
+    /// <summary>把已定号、已备好启动路径的任务加入本域。</summary>
+    internal WorkTask Add(
+        TaskId id,
+        StartInputs inputs,
+        StartPaths paths,
+        CompiledFlow flow,
+        string title,
+        IProcessSink? observer)
     {
         lock (_gate)
         {
-            _tasks.Remove(task);
+            WorkTask task = new(this, id, inputs, paths, flow.Model, flow.Graph, title, observer);
+            _tasks.Add(task);
+
+            return task;
         }
     }
 
@@ -75,7 +82,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
             all = [.. _tasks];
         }
 
-        return [.. all.Select(task => task.Snapshot())];
+        return [.. all.OrderBy(task => task.Id.Value).Select(task => task.Snapshot())];
     }
 
     /// <summary>本域在跑的执行，含排队中的，按启动先后。</summary>

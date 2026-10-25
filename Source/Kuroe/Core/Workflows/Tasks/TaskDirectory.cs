@@ -69,8 +69,8 @@ public sealed class TaskDirectory : ITaskWorkspace
         }
     }
 
-    /// <summary>按名字建立任务目录。名字已被目录或文件占用时给出冲突错误。</summary>
-    public ErrorOr<Success> Prepare(TaskId id, FlowName flow, string title)
+    /// <summary>按名字建立任务目录并给出它的绝对路径。名字已被目录或文件占用时给出冲突错误。</summary>
+    public ErrorOr<string> Prepare(TaskId id, FlowName flow, string title)
     {
         string path = Path.Combine(_root, Compose(id, flow, title));
         if (path.Length > PathLimit)
@@ -89,7 +89,7 @@ public sealed class TaskDirectory : ITaskWorkspace
 
                 Directory.CreateDirectory(path);
 
-                return Result.Success;
+                return path;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

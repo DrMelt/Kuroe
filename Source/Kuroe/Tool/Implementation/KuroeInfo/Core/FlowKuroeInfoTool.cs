@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
@@ -75,7 +76,8 @@ public sealed class FlowKuroeInfoTool : ITool
 
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
-        text.AppendLine($"开始 {string.Join("、", found.Value.StartOutputs.Select(StartPort))}");
+        IEnumerable<Port> startPorts = [.. found.Value.StartOutputs, .. StartNode.FixedPorts.Select(port => port.Port)];
+        text.AppendLine($"开始 {string.Join("、", startPorts.Select(StartPort))}");
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {

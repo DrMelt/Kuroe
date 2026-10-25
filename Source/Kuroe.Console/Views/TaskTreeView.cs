@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Pending;
 using Kuroe.Presentation;
 using Spectre.Console;
@@ -33,9 +34,10 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     private static Paragraph StartLine(StartNode start)
     {
         ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
-        if (start.Outputs.Count > 0)
+        IReadOnlyList<Port> ports = start.AllPorts;
+        if (ports.Count > 0)
         {
-            line.Add($"端口 {string.Join('、', start.Outputs.Select(port => port.StartLabel()))}", Styles.Hint);
+            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel()))}", Styles.Hint);
         }
 
         return line.Build();

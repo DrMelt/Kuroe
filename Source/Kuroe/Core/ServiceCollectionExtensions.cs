@@ -108,6 +108,7 @@ public static class ServiceCollectionExtensions
             return configuredTools.ErrorsOrEmptyList;
         }
 
+        services.AddSingleton(paths);
         services.AddSingleton(settings.Value);
         services.AddSingleton(catalog.Value);
         services.AddSingleton<IInputChannel>(inputs);
@@ -162,6 +163,7 @@ public static class ServiceCollectionExtensions
                 taskRegistry,
                 sp.GetRequiredService<FlowEngine>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
+                paths.WorkingDirectory,
                 sp.GetRequiredService<ITaskWorkspace>()),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(

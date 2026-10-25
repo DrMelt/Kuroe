@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>运行期节点的物化：按图定义建立节点对象，按路径逐段下钻，未命中时按需建出缺失的段。
 /// 容器的直接子节点登记在容器上，根级节点由这里持有。取消后迟实例化的节点创建即取消。</summary>
-internal sealed class NodeMaterializer(INodeGraph graph, StartInputs inputs, INodeContext context)
+internal sealed class NodeMaterializer(INodeGraph graph, StartInputs inputs, StartPaths paths, INodeContext context)
 {
     /// <summary>已实例化的根级节点：开始与流程根节点。容器的直接子节点由容器自己持有。</summary>
     private readonly List<NodeRuntime> _roots = [];
@@ -92,7 +92,7 @@ internal sealed class NodeMaterializer(INodeGraph graph, StartInputs inputs, INo
     private NodeRuntime Create(NodePath path) =>
         graph[path] switch
         {
-            StartNode start => new RuntimeStart(start, inputs),
+            StartNode start => new RuntimeStart(start, inputs, paths),
             ExecutableNode executable when executable.Type.Shape.DispatchesExecutions => new RuntimeExecutable(executable),
             ContainerNode container when container.Type.Shape.Organizes => new RuntimeContainer(container, context),
             ContainerNode container => container.Type.Create(container, context),

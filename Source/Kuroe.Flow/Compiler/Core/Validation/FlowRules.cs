@@ -88,6 +88,11 @@ internal static class FlowRules
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 重复。"));
             }
 
+            if (StartNode.FixedPorts.Any(fixedPort => fixedPort.Port.Name == port.Name))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 由宿主固定提供，不能声明。"));
+            }
+
             if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
