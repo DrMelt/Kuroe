@@ -172,6 +172,42 @@ public sealed class KuroeInfoToolTests : IDisposable
     }
 
     [Fact]
+    public void GetFlow_shows_host_start_inputs()
+    {
+        using TestEnvironment environment = TestEnvironment.Create("""
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "Models": [ { "Name": "执行者", "Model": "fake" } ],
+                  "Start": {
+                    "Outputs": [
+                      { "Name": "目标", "Type": "Text" },
+                      { "Name": "启动路径", "Type": "Text" }
+                    ]
+                  },
+                  "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
+                  "Nodes": [
+                    {
+                      "Name": "实施",
+                      "Kind": "Llm",
+                      "Model": "执行者",
+                      "Inputs": [ { "Name": "目标" }, { "Name": "启动路径" } ],
+                      "From": [ { "目标": "Start@目标", "启动路径": "Start@启动路径" } ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        FlowKuroeInfoTool tool = new(environment.Flows);
+        string output = Call(tool, "GetFlow", ("flowName", "默认"));
+
+        Assert.Contains("启动路径←WORKSPACE_PATH", output);
+    }
+
+    [Fact]
     public void GetFlow_reports_missing_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();

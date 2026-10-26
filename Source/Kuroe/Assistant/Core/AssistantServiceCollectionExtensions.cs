@@ -13,6 +13,7 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Pending;
 using Kuroe.Tool.KuroeInfo;
 using Kuroe.Tool.Source;
+using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Assistant;
@@ -53,8 +54,7 @@ public static class AssistantServiceCollectionExtensions
                     registry,
                     sp.GetRequiredService<FlowEngine>(),
                     sp.GetRequiredService<IExecutionTargetResolver>(),
-                    sp.GetRequiredService<KuroePaths>().WorkingDirectory,
-                    null),
+                    new KuroeTaskStart(sp.GetRequiredService<KuroePaths>().WorkingDirectory, null)),
                 round,
                 sp.GetRequiredService<ModelService>(),
                 sp.GetRequiredService<SettingsProvider>(),

@@ -75,13 +75,13 @@ public sealed class RunCommandTests
     [Fact]
     public async Task Host_start_port_input_is_rejected()
     {
-        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.HostInput);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
-        int code = await command.RunAsync("默认", null, ["目标=目标", "WORKSPACE_PATH=."]);
+        int code = await command.RunAsync("默认", null, ["目标=目标", "启动路径=."]);
 
         Assert.Equal(ExitCodes.Failure, code);
-        Assert.Contains("开始端口 WORKSPACE_PATH 由宿主提供，不接受提交输入。", error.ToString());
+        Assert.Contains("开始端口 启动路径 由宿主提供，不接受提交输入。", error.ToString());
     }
 
     [Fact]

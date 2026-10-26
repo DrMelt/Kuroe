@@ -49,6 +49,33 @@ public sealed class FlowJsonTests
         Assert.Empty(flow.Nodes);
         Assert.Null(flow.Description);
         Assert.Null(flow.Start);
+        Assert.Null(flow.HostStartInputs);
+    }
+
+    /// <summary>开始端口到宿主输入名的绑定按原样读写。</summary>
+    [Fact]
+    public void Host_start_inputs_round_trip()
+    {
+        const string json = """
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "HostStartInputs": { "启动路径": "WORKSPACE_PATH" }
+                }
+              ]
+            }
+            """;
+
+        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        FlowDto flow = Assert.Single(file.Flows);
+
+        Assert.Equal("WORKSPACE_PATH", Assert.Single(flow.HostStartInputs!).Value);
+
+        string written = FlowFileJson.Serialize(file);
+
+        Assert.Contains("\"HostStartInputs\"", written);
+        Assert.Contains("\"启动路径\": \"WORKSPACE_PATH\"", written);
     }
 
     /// <summary>节点类型名按文件里写的原样保留，大小写不敏感的比较在装配层。</summary>

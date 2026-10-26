@@ -96,7 +96,13 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             return root.ErrorsOrEmptyList;
         }
 
-        return new FlowDefinition(name, flow.Description, models, startOutputs.Value, root.Value);
+        Dictionary<PortName, string> hostStartInputs = [];
+        foreach ((string port, string input) in flow.HostStartInputs)
+        {
+            hostStartInputs[new PortName(port)] = input;
+        }
+
+        return new FlowDefinition(name, flow.Description, models, startOutputs.Value, hostStartInputs, root.Value);
     }
 
     private ErrorOr<NodeSpec> ToNode(NodeDocument document, NodeScope scope, List<Error> errors) => document switch

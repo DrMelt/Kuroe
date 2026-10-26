@@ -3,24 +3,33 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Tests.Support;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>开始节点的宿主固定端口：WORKSPACE_PATH 与 TASK_WORK_PATH 由任务启动时给出，不接受提交输入。</summary>
+/// <summary>流程声明的宿主开始输入：HostStartInputs 绑定到 WORKSPACE_PATH 与 TASK_WORK_PATH，由任务启动时给出，不接受提交输入。</summary>
 public sealed class StartPathsTests
 {
-    /// <summary>执行节点同时取开始的目标与两个固定端口。</summary>
+    /// <summary>执行节点取开始的目标与两个宿主输入。</summary>
     private const string FixedPortFlow = """
         {
           "Flows": [
             {
               "Name": "默认",
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "启动", "Type": "Text" },
+                  { "Name": "流程", "Type": "Text" }
+                ]
+              },
+              "HostStartInputs": {
+                "启动": "WORKSPACE_PATH",
+                "流程": "TASK_WORK_PATH"
+              },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -38,8 +47,8 @@ public sealed class StartPathsTests
                       "From": [
                         {
                           "目标": "Start@目标",
-                          "启动": "Start@WORKSPACE_PATH",
-                          "流程": "Start@TASK_WORK_PATH"
+                          "启动": "Start@启动",
+                          "流程": "Start@流程"
                         }
                       ]
                     }
@@ -75,13 +84,13 @@ public sealed class StartPathsTests
             new StartInputs(
             [
                 new StartInput(new PortName("目标"), "整理目录"),
-                new StartInput(StartNode.WorkspacePath.Port.Name, environment.Root),
+                new StartInput(new PortName("启动"), environment.Root),
             ]),
             new FlowName("默认"),
             null);
 
         Assert.True(submitted.IsError);
         Assert.Equal(FlowErrorCodes.TaskInput, submitted.FirstError.Code);
-        Assert.Equal("开始端口 WORKSPACE_PATH 由宿主提供，不接受提交输入。", submitted.FirstError.Description);
+        Assert.Equal("开始端口 启动 由宿主提供，不接受提交输入。", submitted.FirstError.Description);
     }
 }

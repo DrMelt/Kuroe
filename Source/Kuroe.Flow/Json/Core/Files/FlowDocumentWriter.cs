@@ -28,6 +28,9 @@ static class FlowDocumentWriter
             }),
         ],
         Start = new StartDto { Outputs = WritePorts(flow.StartOutputs, allowValue: true) },
+        HostStartInputs = flow.HostStartInputs.Count > 0
+            ? new Dictionary<string, string>(flow.HostStartInputs)
+            : null,
         Nodes = flow.Root is null ? [] : [WriteNode(flow.Root)],
     };
 

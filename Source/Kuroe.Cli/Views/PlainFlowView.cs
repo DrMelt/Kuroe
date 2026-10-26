@@ -85,7 +85,7 @@ internal static class PlainFlowView
     private static string Start(StartNode start)
     {
         List<string> parts = ["Start", "开始"];
-        IReadOnlyList<Port> ports = start.AllPorts;
+        IReadOnlyList<Port> ports = start.Outputs;
         if (ports.Count > 0)
         {
             parts.Add($"端口 {string.Join('、', ports.Select(port => port.Name.Value))}");

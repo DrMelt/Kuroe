@@ -41,6 +41,34 @@ internal static class CliFlows
         }
         """;
 
+    /// <summary>开始声明一个绑定宿主输入的开始端口，执行节点把它接进输入。</summary>
+    public const string HostInput = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Models": [ { "Name": "执行者", "Model": "fake" } ],
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "启动路径", "Type": "Text" }
+                ]
+              },
+              "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
+              "Nodes": [
+                {
+                  "Name": "实施",
+                  "Kind": "Llm",
+                  "Model": "执行者",
+                  "Inputs": [ { "Name": "目标" }, { "Name": "启动路径" } ],
+                  "From": [ { "目标": "Start@目标", "启动路径": "Start@启动路径" } ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
     /// <summary>执行节点声明输出端口但不交回，任务停在阻塞。</summary>
     public const string Blocked = """
         {

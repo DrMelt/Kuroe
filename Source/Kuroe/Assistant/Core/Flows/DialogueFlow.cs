@@ -67,6 +67,7 @@ internal static class DialogueFlow
                 "内置对话：回答用户的每轮输入",
                 [new ModelDocument(RuntimeModel.Value, null, Runtime: true)],
                 [new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。")],
+                new Dictionary<string, string>(),
                 new NodeDefinitionDocument
                 {
                     Name = "对话",

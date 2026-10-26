@@ -95,23 +95,23 @@ public sealed class FlowRuleTests
         Assert.Equal(
             ["流程 默认：流程必须声明开始入口，至少一个 Text 输出端口。"],
             Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
-                [], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
+                [], new Dictionary<PortName, string>(), Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
     public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
             ["流程 默认：开始端口 目标 的类型只能是 Text。"],
             Errors(new FlowDefinition(new FlowName("默认"), null, Models("执行者"),
-                [ContextPort("目标")], Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
+                [ContextPort("目标")], new Dictionary<PortName, string>(), Container("整体", Exec("干活", "执行者", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
     public void Start_with_constant_port_is_accepted() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("背景") with { Value = "固定背景" }])));
 
     [Fact]
-    public void Start_without_a_goal_port_is_rejected() =>
+    public void Start_without_an_input_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：开始入口必须至少有一个不带 Value 的端口承接提交的任务输入。"],
+            ["流程 默认：开始入口必须至少有一个不带 Value 的端口承接开始输入。"],
             Errors(StartFlow([P("目标") with { Value = "固定" }])));
 
     [Fact]
@@ -131,20 +131,35 @@ public sealed class FlowRuleTests
             Errors(StartFlow([StartOutput, P("背景") with { Value = "甲" }, P("背景") with { Value = "乙" }])));
 
     [Fact]
-    public void Start_with_a_host_port_name_is_rejected() =>
-        Assert.Equal(
-            ["流程 默认：开始端口 WORKSPACE_PATH 由宿主固定提供，不能声明。"],
-            Errors(StartFlow([StartOutput, P(StartNode.WorkspacePath.Port.Name.Value)])));
+    public void Start_port_can_use_a_host_input_name() =>
+        Assert.Empty(Errors(StartFlow([StartOutput, P("WORKSPACE_PATH")])));
 
     [Fact]
-    public void Host_ports_are_reachable_from_start_without_being_declared()
-    {
-        NodeGraph graph = FlowRules.ValidateAndCompile(StartFlow([StartOutput])).Value;
+    public void Host_start_input_must_bind_a_declared_port() =>
+        Assert.Equal(
+            ["流程 默认：宿主开始输入 启动路径 没有对应的开始端口。"],
+            Errors(StartFlow([StartOutput], Bind("启动路径", "WORKSPACE_PATH"))));
 
-        Assert.NotNull(graph.Start.FindPort(StartNode.WorkspacePath.Port.Name));
-        Assert.NotNull(graph.Start.FindPort(StartNode.TaskWorkPath.Port.Name));
-        Assert.DoesNotContain(graph.Start.Outputs, port => port.Name == StartNode.WorkspacePath.Port.Name);
-        Assert.DoesNotContain(graph.Start.Outputs, port => port.Name == StartNode.TaskWorkPath.Port.Name);
+    [Fact]
+    public void Host_start_input_cannot_bind_a_constant_port() =>
+        Assert.Equal(
+            ["流程 默认：开始端口 环境 带固定值，不能绑定宿主输入。"],
+            Errors(StartFlow([StartOutput, P("环境") with { Value = "固定" }], Bind("环境", "WORKSPACE_PATH"))));
+
+    [Fact]
+    public void Host_start_input_name_cannot_be_blank() =>
+        Assert.Equal(
+            ["流程 默认：开始端口 启动路径 的宿主输入不能为空。"],
+            Errors(StartFlow([StartOutput, P("启动路径")], Bind("启动路径", " "))));
+
+    [Fact]
+    public void Host_start_input_port_is_declared_and_bound()
+    {
+        NodeGraph graph = FlowRules.ValidateAndCompile(
+            StartFlow([StartOutput, P("启动路径")], Bind("启动路径", "WORKSPACE_PATH"))).Value;
+
+        Assert.NotNull(graph.Start.FindPort(new PortName("启动路径")));
+        Assert.Null(graph.Start.FindPort(new PortName("WORKSPACE_PATH")));
     }
 
     [Fact]
@@ -590,12 +605,19 @@ public sealed class FlowRuleTests
 
     /// <summary>一条名为默认的流程。</summary>
     private static FlowDefinition Flow(NodeSpec root, params ModelDefinition[] models) =>
-        new(new FlowName("默认"), null, models, [StartOutput], root);
+        new(new FlowName("默认"), null, models, [StartOutput], new Dictionary<PortName, string>(), root);
 
-    /// <summary>一条名为默认的流程，开始端口按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
-    private static FlowDefinition StartFlow(IReadOnlyList<Port> startOutputs) =>
+    /// <summary>一条名为默认的流程，开始端口与宿主输入绑定按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
+    private static FlowDefinition StartFlow(
+        IReadOnlyList<Port> startOutputs,
+        IReadOnlyDictionary<PortName, string>? hostStartInputs = null) =>
         new(new FlowName("默认"), null, Models("执行者"), startOutputs,
+            hostStartInputs ?? new Dictionary<PortName, string>(),
             Container("整体", Exec("干活", "执行者", new ExecutableSpec())));
+
+    /// <summary>一个宿主输入绑定。</summary>
+    private static Dictionary<PortName, string> Bind(string port, string input) =>
+        new() { [new PortName(port)] = input };
 
     /// <summary>流程内某个节点的错误说明。</summary>
     private static string NodeError(string node, string message) =>

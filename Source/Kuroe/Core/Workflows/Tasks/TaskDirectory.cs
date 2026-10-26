@@ -1,14 +1,14 @@
 using System.Globalization;
 using System.Text;
 using ErrorOr;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Shared;
 
 namespace Kuroe.Workflows.Tasks;
 
 /// <summary>任务工作目录：按任务号、流程与标题给目录命名，在启动目录下建立，并按已有目录续号。</summary>
-public sealed class TaskDirectory : ITaskWorkspace
+public sealed class TaskDirectory
 {
     /// <summary>任务号的定宽位数。</summary>
     private const int NumberWidth = 4;
@@ -65,7 +65,7 @@ public sealed class TaskDirectory : ITaskWorkspace
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return Error.Failure(FlowErrorCodes.TaskWorkspaceCreate, $"扫描任务目录 {root} 失败：{ex.Message}");
+            return Error.Failure(ErrorCodes.TaskWorkspaceCreate, $"扫描任务目录 {root} 失败：{ex.Message}");
         }
     }
 
@@ -75,7 +75,7 @@ public sealed class TaskDirectory : ITaskWorkspace
         string path = Path.Combine(_root, Compose(id, flow, title));
         if (path.Length > PathLimit)
         {
-            return Error.Validation(FlowErrorCodes.TaskWorkspaceCreate, $"任务目录路径过长：{path}");
+            return Error.Validation(ErrorCodes.TaskWorkspaceCreate, $"任务目录路径过长：{path}");
         }
 
         lock (_gate)
@@ -84,7 +84,7 @@ public sealed class TaskDirectory : ITaskWorkspace
             {
                 if (Directory.Exists(path) || File.Exists(path))
                 {
-                    return Error.Conflict(FlowErrorCodes.TaskWorkspaceConflict, $"任务目录已存在：{path}");
+                    return Error.Conflict(ErrorCodes.TaskWorkspaceConflict, $"任务目录已存在：{path}");
                 }
 
                 Directory.CreateDirectory(path);
@@ -93,7 +93,7 @@ public sealed class TaskDirectory : ITaskWorkspace
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                return Error.Failure(FlowErrorCodes.TaskWorkspaceCreate, $"建立任务目录 {path} 失败：{ex.Message}");
+                return Error.Failure(ErrorCodes.TaskWorkspaceCreate, $"建立任务目录 {path} 失败：{ex.Message}");
             }
         }
     }

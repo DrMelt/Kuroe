@@ -7,12 +7,13 @@ public sealed record FlowDocument(
     IReadOnlyList<NodeDefinitionDocument> Nodes,
     IReadOnlyList<FlowDocumentFlow> Flows);
 
-/// <summary>描述文档里的一条流程。</summary>
+/// <summary>描述文档里的一条流程。HostStartInputs 是开始端口到宿主输入名的绑定，端口名可以自定义，输入名由宿主解释。</summary>
 public sealed record FlowDocumentFlow(
     string Name,
     string? Description,
     IReadOnlyList<ModelDocument> Models,
     IReadOnlyList<PortDocument> StartOutputs,
+    IReadOnlyDictionary<string, string> HostStartInputs,
     NodeDocument? Root);
 
 /// <summary>流程里命名的模型选择。</summary>

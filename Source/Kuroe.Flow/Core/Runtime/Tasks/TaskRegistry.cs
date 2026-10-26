@@ -30,18 +30,18 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
         }
     }
 
-    /// <summary>把已定号、已备好启动路径的任务加入本域。</summary>
+    /// <summary>把已定号、已备好宿主开始值的任务加入本域。</summary>
     internal WorkTask Add(
         TaskId id,
         StartInputs inputs,
-        StartPaths paths,
+        HostStartValues hostValues,
         CompiledFlow flow,
         string title,
         IProcessSink? observer)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, paths, flow.Model, flow.Graph, title, observer);
+            WorkTask task = new(this, id, inputs, hostValues, flow.Model, flow.Graph, title, observer);
             _tasks.Add(task);
 
             return task;

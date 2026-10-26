@@ -137,16 +137,20 @@ internal sealed class TaskBrowser(
         }
     }
 
-    /// <summary>按开始端口询问不带固定值的项目，每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
+    /// <summary>按开始端口询问不带固定值且未绑定宿主输入的项目，每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
     private StartInputs? AskInputs(FlowDefinition flow)
     {
-        List<Port> ports = [.. flow.StartOutputs.Where(port => port.Value is null)];
+        List<Port> ports = [.. flow.StartOutputs.Where(port =>
+            port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))];
         List<FormInfo> info =
         [
             new("流程", flow.Name.Value),
             .. flow.StartOutputs
                 .Where(port => port.Value is not null)
                 .Select(port => new FormInfo(port.Name.Value, port.Value!)),
+            .. flow.StartOutputs
+                .Where(port => flow.HostStartInputs.ContainsKey(port.Name))
+                .Select(port => new FormInfo(port.Name.Value, $"宿主 {flow.HostStartInputs[port.Name]}")),
         ];
         InputForm form = new(
             terminal,

@@ -118,7 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
-        services.AddSingleton<ITaskWorkspace>(taskDirectory.Value);
+        services.AddSingleton<IHostTaskStart>(new KuroeTaskStart(paths.WorkingDirectory, taskDirectory.Value));
         services.AddSingleton(descriptionCompiler);
         services.AddSingleton(configuredTools.Value);
 
@@ -163,8 +163,7 @@ public static class ServiceCollectionExtensions
                 taskRegistry,
                 sp.GetRequiredService<FlowEngine>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
-                paths.WorkingDirectory,
-                sp.GetRequiredService<ITaskWorkspace>()),
+                sp.GetRequiredService<IHostTaskStart>()),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(
             taskRegistry,

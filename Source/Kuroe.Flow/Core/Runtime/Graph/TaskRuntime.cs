@@ -25,7 +25,7 @@ internal sealed class TaskRuntime : INodeContext
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _materializer = new NodeMaterializer(task.Graph, task.Inputs, task.Paths, this);
+        _materializer = new NodeMaterializer(task.Graph, task.Inputs, task.HostValues, this);
         // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
         _ = _materializer.Get(Graph.Start.Path);
     }

@@ -72,6 +72,10 @@ internal sealed class ErrorView(Terminal terminal)
                 case ErrorCodes.ToolDuplicate or ErrorCodes.ToolInvalid or ErrorCodes.ToolFormat:
                     terminal.Hint("命令工具文件是工作目录 `.kuroe/` 下的 tools.json，改完在「工具」菜单确认是否加载成功。");
                     break;
+
+                case ErrorCodes.TaskStartInput:
+                    terminal.Hint("检查流程的 HostStartInputs 与当前宿主支持的输入名，改完重新提交。");
+                    break;
             }
         }
     }

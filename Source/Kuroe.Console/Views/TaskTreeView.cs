@@ -34,7 +34,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     private static Paragraph StartLine(StartNode start)
     {
         ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
-        IReadOnlyList<Port> ports = start.AllPorts;
+        IReadOnlyList<Port> ports = start.Outputs;
         if (ports.Count > 0)
         {
             line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel()))}", Styles.Hint);

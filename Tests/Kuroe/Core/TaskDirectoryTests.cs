@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Shared;
 using Kuroe.Workflows.Tasks;
 using Xunit;
 
@@ -82,7 +82,7 @@ public sealed class TaskDirectoryTests : IDisposable
         ErrorOr<string> second = directory.Prepare(new TaskId(1), new FlowName("默认"), "目标");
 
         Assert.True(second.IsError);
-        Assert.Equal(FlowErrorCodes.TaskWorkspaceConflict, second.FirstError.Code);
+        Assert.Equal(ErrorCodes.TaskWorkspaceConflict, second.FirstError.Code);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class TaskDirectoryTests : IDisposable
             new string('标', 40));
 
         Assert.True(result.IsError);
-        Assert.Equal(FlowErrorCodes.TaskWorkspaceCreate, result.FirstError.Code);
+        Assert.Equal(ErrorCodes.TaskWorkspaceCreate, result.FirstError.Code);
         Assert.Contains("路径过长", result.FirstError.Description, StringComparison.Ordinal);
     }
 

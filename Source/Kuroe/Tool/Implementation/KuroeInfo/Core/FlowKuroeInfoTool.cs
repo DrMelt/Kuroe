@@ -1,7 +1,6 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
@@ -76,8 +75,8 @@ public sealed class FlowKuroeInfoTool : ITool
 
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
-        IEnumerable<Port> startPorts = [.. found.Value.StartOutputs, .. StartNode.FixedPorts.Select(port => port.Port)];
-        text.AppendLine($"开始 {string.Join("、", startPorts.Select(StartPort))}");
+        IEnumerable<Port> startPorts = found.Value.StartOutputs;
+        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => StartPort(port, found.Value.HostStartInputs)))}");
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {
@@ -124,9 +123,16 @@ public sealed class FlowKuroeInfoTool : ITool
     /// <summary>展开节点上的模型引用，未绑定为空。</summary>
     private static string NodeModel(NodeSpec node) => node.Model is { } model ? model.Value : "未绑定";
 
-    /// <summary>开始端口的展示：带固定值的端口写出值。</summary>
-    private static string StartPort(Port port) =>
-        port.Value is { Length: > 0 } value ? $"{port.Name}={value}" : port.Name.Value;
+    /// <summary>开始端口的展示：绑定宿主输入时写宿主输入名，带固定值时写出值。</summary>
+    private static string StartPort(Port port, IReadOnlyDictionary<PortName, string> hostInputs)
+    {
+        if (hostInputs.TryGetValue(port.Name, out string? input))
+        {
+            return $"{port.Name}←{input}";
+        }
+
+        return port.Value is { Length: > 0 } value ? $"{port.Name}={value}" : port.Name.Value;
+    }
 
     /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
     private static string Requirement(NodeSpec node)

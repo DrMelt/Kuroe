@@ -24,7 +24,7 @@ public sealed class WorkTask : INodeTask
         TaskRegistry registry,
         TaskId id,
         StartInputs inputs,
-        StartPaths paths,
+        HostStartValues hostValues,
         FlowDefinition flow,
         INodeGraph graph,
         string title,
@@ -33,7 +33,7 @@ public sealed class WorkTask : INodeTask
         Registry = registry;
         Id = id;
         Inputs = inputs;
-        Paths = paths;
+        HostValues = hostValues;
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
@@ -52,8 +52,8 @@ public sealed class WorkTask : INodeTask
     /// <summary>提交时按开始端口给出的输入。</summary>
     public StartInputs Inputs { get; }
 
-    /// <summary>任务启动时的宿主路径，开始节点的固定端口按它取值。</summary>
-    internal StartPaths Paths { get; }
+    /// <summary>任务启动时的宿主开始输入值，绑定到宿主输入名的端口按它取值。</summary>
+    internal HostStartValues HostValues { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }

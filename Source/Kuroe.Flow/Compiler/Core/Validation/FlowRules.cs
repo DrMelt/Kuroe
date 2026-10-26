@@ -66,7 +66,7 @@ internal static class FlowRules
     internal static void ValidateGraph(NodeGraph graph, NodeScope scope, List<Error> errors) =>
         CheckShape(graph, scope, errors);
 
-    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接提交输入，其余端口必须带 Value。</summary>
+    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入，其余端口必须带 Value。宿主输入只能绑定已声明且不带 Value 的端口。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
@@ -76,6 +76,7 @@ internal static class FlowRules
         }
 
         var names = new HashSet<PortName>();
+        Dictionary<PortName, Port> declared = [];
         foreach (Port port in flow.StartOutputs)
         {
             if (port.Type != PortTypes.Text)
@@ -88,10 +89,7 @@ internal static class FlowRules
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 重复。"));
             }
 
-            if (StartNode.FixedPorts.Any(fixedPort => fixedPort.Port.Name == port.Name))
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 由宿主固定提供，不能声明。"));
-            }
+            declared[port.Name] = port;
 
             if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
             {
@@ -99,10 +97,36 @@ internal static class FlowRules
             }
         }
 
+        foreach ((PortName port, string input) in flow.HostStartInputs)
+        {
+            if (string.IsNullOrWhiteSpace(port.Value))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, "宿主开始输入的端口名不能为空。"));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port} 的宿主输入不能为空。"));
+                continue;
+            }
+
+            if (!declared.TryGetValue(port, out Port startPort))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"宿主开始输入 {port} 没有对应的开始端口。"));
+                continue;
+            }
+
+            if (startPort.Value is not null)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port} 带固定值，不能绑定宿主输入。"));
+            }
+        }
+
         if (!flow.StartOutputs.Any(port => port.Value is null))
         {
             errors.Add(FlowErrors.Body(flow.Name.Value,
-                "开始入口必须至少有一个不带 Value 的端口承接提交的任务输入。"));
+                "开始入口必须至少有一个不带 Value 的端口承接开始输入。"));
         }
     }
 
