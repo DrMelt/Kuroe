@@ -7,9 +7,9 @@ namespace Kuroe.Node.Llm.Executions;
 internal sealed class ContractReminder(IExecutionStatusReader status)
 {
     /// <summary>还缺交回内容时给出补交要求，齐备时为空。</summary>
-    public string? Text(IExecution execution)
+    public string? Text(ExecutionId execution)
     {
-        if (status.Read(execution.Id) is not { IsError: false } read)
+        if (status.Read(execution) is not { IsError: false } read)
         {
             return null;
         }

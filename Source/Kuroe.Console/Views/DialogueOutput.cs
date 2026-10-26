@@ -1,14 +1,13 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Console.Views;
 
 /// <summary>对话过程的终端呈现：文本增量直接写出，一次工具调用占两行。</summary>
-internal sealed class DialogueSink(Terminal terminal) : IProcessSink
+internal sealed class DialogueOutput(Terminal terminal)
 {
-    public void OnText(string delta) => terminal.Append(delta);
+    public void Text(string delta) => terminal.Append(delta);
 
-    public void OnToolCall(ToolCallRecord record)
+    public void ToolCall(ToolCallRecord record)
     {
         terminal.ToolCall(record.Arguments.Length == 0
             ? $"工具 {record.Name}"

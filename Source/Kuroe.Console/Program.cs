@@ -59,7 +59,7 @@ static async Task<int> RunAsync(string? workDirectory)
 
     // 呈现与通知
     services.AddSingleton<ResultView>();
-    services.AddSingleton<DialogueSink>();
+    services.AddSingleton<DialogueOutput>();
     services.AddSingleton<ExecutionNotifier>();
     services.AddSingleton<TaskListView>();
     services.AddSingleton<TaskOverviewView>();

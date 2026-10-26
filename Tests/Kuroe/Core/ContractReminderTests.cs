@@ -60,7 +60,7 @@ public sealed class ContractReminderTests
         ContractReminder reminder = new(new ExecutionStatusReader(environment.Executions));
         foreach (ExecutionSnapshot execution in done.Executables.SelectMany(executable => executable.Executions))
         {
-            Assert.Null(reminder.Text(environment.Registry.FindExecution(execution.Id).ThrowIfError()));
+            Assert.Null(reminder.Text(execution.Id));
         }
     }
 
@@ -83,5 +83,5 @@ public sealed class ContractReminderTests
     }
 
     private static string Reminder(TestEnvironment environment, ExecutionId id) =>
-        Assert.IsType<string>(new ContractReminder(new ExecutionStatusReader(environment.Executions)).Text(environment.Registry.FindExecution(id).ThrowIfError()));
+        Assert.IsType<string>(new ContractReminder(new ExecutionStatusReader(environment.Executions)).Text(id));
 }

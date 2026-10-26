@@ -1,7 +1,6 @@
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Process;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -15,7 +14,8 @@ public sealed class WorkTask : INodeTask
 {
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
-    private readonly IProcessSink? _observer;
+    private readonly Action<string>? _onText;
+    private readonly Action<ToolCallRecord>? _onToolCall;
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private bool _canceled;
@@ -28,7 +28,8 @@ public sealed class WorkTask : INodeTask
         FlowDefinition flow,
         INodeGraph graph,
         string title,
-        IProcessSink? observer)
+        Action<string>? onText,
+        Action<ToolCallRecord>? onToolCall)
     {
         Registry = registry;
         Id = id;
@@ -39,7 +40,8 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
-        _observer = observer;
+        _onText = onText;
+        _onToolCall = onToolCall;
         _title = title;
     }
 
@@ -174,9 +176,14 @@ public sealed class WorkTask : INodeTask
         _executions.Add(execution);
         Runtime.Executable(execution.Input.Node).RecordExecution();
         _lastActivityAt = DateTimeOffset.UtcNow;
-        if (_observer is { } observer)
+        if (_onText is { } onText)
         {
-            execution.Observe(observer);
+            execution.TextEmitted += onText;
+        }
+
+        if (_onToolCall is { } onToolCall)
+        {
+            execution.ToolCallRecorded += onToolCall;
         }
 
         ExecutionAttached?.Invoke(execution);

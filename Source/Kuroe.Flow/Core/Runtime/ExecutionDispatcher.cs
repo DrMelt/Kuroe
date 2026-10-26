@@ -1,11 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Flow.Runtime;
 
 /// <summary>按并发额度推进执行。派生只入队，收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
-public sealed class ExecutionDispatcher(IExecutionRunner runner)
+public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
 {
     /// <summary>同时在跑的执行数上限，超出的排队等待。</summary>
     private const int MaxConcurrentExecutions = 4;
@@ -96,10 +95,12 @@ public sealed class ExecutionDispatcher(IExecutionRunner runner)
     {
         try
         {
-            IExecutionBody body = runner.CreateBody(execution.Input);
-            execution.AttachBody(body);
+            IExecutionRunner runner = runners.Create(execution.Id);
+            execution.AttachJournal(runner.Journal);
             execution.MarkRunning();
-            ErrorOr<Success> outcome = await runner.ExecuteAsync(execution, body, execution.CancellationToken);
+            ErrorOr<Success> outcome = await runner.ExecuteAsync(
+                execution.Input,
+                execution.CancellationToken);
             if (outcome.IsError)
             {
                 execution.MarkFailed(outcome.ErrorsOrEmptyList);

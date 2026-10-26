@@ -123,7 +123,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<IExecutionRunner>(runner);
+        services.AddSingleton<IExecutionRunnerFactory>(runner);
         ServiceProvider provider = services.BuildServiceProvider();
 
         if (seedCatalog)

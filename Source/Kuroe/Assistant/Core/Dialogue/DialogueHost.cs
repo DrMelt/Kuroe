@@ -4,7 +4,6 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Compiler.Shared;
@@ -23,10 +22,11 @@ public sealed class DialogueHost(
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
 
-    /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程增量写给 observer。</summary>
+    /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程增量与工具调用经回调送出。</summary>
     public async Task<ErrorOr<Success>> ReplyAsync(
         string input,
-        IProcessSink? observer)
+        Action<string>? onText = null,
+        Action<ToolCallRecord>? onToolCall = null)
     {
         if (models.Current is null)
         {
@@ -35,7 +35,7 @@ public sealed class DialogueHost(
 
         TaskId id = EnsureDialogue();
 
-        return await rounds.AskAsync(id, null, input, observer);
+        return await rounds.AskAsync(id, null, input, onText, onToolCall);
     }
 
     /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>

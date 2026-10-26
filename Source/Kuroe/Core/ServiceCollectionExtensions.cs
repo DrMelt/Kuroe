@@ -173,7 +173,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILoggerFactory>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<ToolCollection>()));
-        services.AddSingleton<IExecutionRunner>(sp => new ExecutionRunner(
+        services.AddSingleton<IExecutionRunnerFactory>(sp => new ExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<IExecutionStatusReader>()));
 

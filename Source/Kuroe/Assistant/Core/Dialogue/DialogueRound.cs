@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
@@ -13,12 +12,13 @@ namespace Kuroe.Assistant.Dialogue;
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>
 public sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
 {
-    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程增量写给 observer。</summary>
+    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程增量与工具调用经回调送出。</summary>
     public async Task<ErrorOr<Success>> AskAsync(
         TaskId id,
         string? nodePath,
         string input,
-        IProcessSink? observer)
+        Action<string>? onText = null,
+        Action<ToolCallRecord>? onToolCall = null)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
@@ -73,9 +73,14 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                 return true;
             });
 
-            if (observer is { } sink)
+            if (onText is { } textObserver)
             {
-                execution.Observe(sink);
+                execution.TextEmitted += textObserver;
+            }
+
+            if (onToolCall is { } toolObserver)
+            {
+                execution.ToolCallRecorded += toolObserver;
             }
         });
         Action unsubscribeSettled = task.SubscribeExecutionSettled(execution =>

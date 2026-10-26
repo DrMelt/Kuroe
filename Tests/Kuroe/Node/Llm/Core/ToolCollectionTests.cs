@@ -1,5 +1,4 @@
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
@@ -23,7 +22,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(),
+            new ExecutionId(1), Journal(),
             [new ToolPath("GetLocalTime"), new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
         Assert.Equal(
@@ -42,7 +41,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo")]);
+            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfo")]);
 
         Assert.Equal(
             ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
@@ -59,7 +58,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfo/GetTask")]);
+            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfo/GetTask")]);
 
         Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
     }
@@ -76,7 +75,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(),
+            new ExecutionId(1), Journal(),
             [new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
         Assert.Equal(
@@ -107,12 +106,12 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), NoSink, new ProcessJournal(), [new ToolPath("KuroeInfoX")]);
+            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfoX")]);
 
         Assert.Empty(built);
     }
 
-    private static readonly NullSink NoSink = new();
+    private static ProcessJournal Journal() => new();
 
     private sealed class FakeTool(params string[] paths) : ITool
     {
@@ -123,14 +122,4 @@ public sealed class ToolCollectionTests
             ];
     }
 
-    private sealed class NullSink : IProcessSink
-    {
-        public void OnText(string delta)
-        {
-        }
-
-        public void OnToolCall(ToolCallRecord record)
-        {
-        }
-    }
 }

@@ -43,10 +43,10 @@ public sealed class Session
         }
     }
 
-    /// <summary>一轮请求。execution 给出工具绑定的身份与过程播发出口，journal 收本次执行的过程记录。只报成功或失败，回复文本经过程记录与过程播发送出。</summary>
+    /// <summary>一轮请求。execution 给出工具绑定的身份，journal 收本次执行的过程记录并播发过程。只报成功或失败。</summary>
     internal async Task<ErrorOr<Success>> AskAsync(
         string input,
-        IExecution execution,
+        ExecutionId execution,
         ProcessJournal journal,
         CancellationToken cancellationToken = default)
     {
@@ -84,7 +84,6 @@ public sealed class Session
                 if (update.Text is { Length: > 0 } text)
                 {
                     journal.AppendText(text);
-                    execution.Sink.OnText(text);
                 }
             }
         }
@@ -174,11 +173,11 @@ public sealed class Session
     }
 
     /// <summary>请求选项按本次执行构造，工具与系统指令来自执行输入。</summary>
-    private ChatClientAgentRunOptions Options(IExecution execution, ProcessJournal journal)
+    private ChatClientAgentRunOptions Options(ExecutionId execution, ProcessJournal journal)
     {
         return new ChatClientAgentRunOptions(new ChatOptions
         {
-            Tools = [.. _tools.Build(execution.Id, execution.Sink, journal, _history.ToolPaths)],
+            Tools = [.. _tools.Build(execution, journal, _history.ToolPaths)],
             Instructions = _history.SystemPrompt,
         });
     }

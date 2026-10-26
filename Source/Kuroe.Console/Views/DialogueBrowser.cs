@@ -11,7 +11,7 @@ internal sealed class DialogueBrowser(
     ModelService models,
     CatalogBrowser catalogs,
     SettingsProvider settings,
-    DialogueSink sink,
+    DialogueOutput output,
     Terminal terminal,
     ErrorView errors)
 {
@@ -87,7 +87,7 @@ internal sealed class DialogueBrowser(
         {
             try
             {
-                outcome = await dialogue.ReplyAsync(input, sink);
+                outcome = await dialogue.ReplyAsync(input, output.Text, output.ToolCall);
             }
             catch (Exception ex)
             {

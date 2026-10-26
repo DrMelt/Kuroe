@@ -33,7 +33,7 @@ public sealed class ToolCollection
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
     /// 工具面按本轮的能力路径给出：只给路径落在名单里的函数及其子树。</summary>
-    internal IReadOnlyList<AITool> Build(ExecutionId execution, IProcessSink sink, ProcessJournal journal, IReadOnlyList<ToolPath> tools)
+    internal IReadOnlyList<AITool> Build(ExecutionId execution, ProcessJournal journal, IReadOnlyList<ToolPath> tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
@@ -41,15 +41,15 @@ public sealed class ToolCollection
             ITool bound = carrier is IScopedTool scoped ? scoped.ForExecution(execution) : carrier;
             result.AddRange(bound.Functions
                 .Where(function => tools.Any(entry => entry.Allows(function.Definition.Path.Value)))
-                .Select(function => new DeclaredFunction(function, sink, journal, _json)));
+                .Select(function => new DeclaredFunction(function, journal, _json)));
         }
 
         return result;
     }
 
-    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，同时播发给观察者。
+    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，记录随后播发。
     /// 模型侧的名字取路径的调用名，过程记录与展示仍用路径。</summary>
-    private sealed class DeclaredFunction(ToolFunction declaration, IProcessSink sink, ProcessJournal journal, IToolJson json) : AIFunction
+    private sealed class DeclaredFunction(ToolFunction declaration, ProcessJournal journal, IToolJson json) : AIFunction
     {
         private readonly JsonElement _schema = json.Schema(declaration.Definition.Parameters);
 
@@ -80,11 +80,8 @@ public sealed class ToolCollection
             return new ValueTask<object?>(result);
         }
 
-        /// <summary>一次调用同时落记录与播发。</summary>
-        private void Record(ToolCallRecord call)
-        {
+        /// <summary>一次调用落进过程记录，记录由执行器播发。</summary>
+        private void Record(ToolCallRecord call) =>
             journal.Append(new ToolCallEntry(call));
-            sink.OnToolCall(call);
-        }
     }
 }

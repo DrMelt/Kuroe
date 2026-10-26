@@ -3,6 +3,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
@@ -113,8 +114,8 @@ public sealed class KuroeInfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.DelayMs = 60_000;
-        environment.Runner.Emits = (execution, _) =>
-            execution.Sink.OnToolCall(new ToolCallRecord("file/ReadFile", "{}", "完成", false));
+        environment.Runner.Emits = (_, journal) =>
+            journal.Append(new ToolCallEntry(new ToolCallRecord("file/ReadFile", "{}", "完成", false)));
 
         TaskId id = environment.Submit("做一个测试任务");
         TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables

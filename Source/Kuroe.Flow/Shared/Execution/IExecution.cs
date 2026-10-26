@@ -1,8 +1,6 @@
-using Kuroe.Flow.Shared.Execution.Process;
-
 namespace Kuroe.Flow.Shared.Execution;
 
-/// <summary>一次执行对执行器与宿主的视图：所属上下文、过程播发出口与只读快照。状态改动只在引擎内部。</summary>
+/// <summary>一次执行对宿主的视图：所属上下文、状态快照与过程事件。状态改动只在引擎内部。</summary>
 public interface IExecution
 {
     /// <summary>执行标识。</summary>
@@ -10,9 +8,6 @@ public interface IExecution
 
     /// <summary>本次执行的输入。</summary>
     ExecutionInput Input { get; }
-
-    /// <summary>本次执行的过程播发出口，文本增量与工具调用经它送给观察者。</summary>
-    IProcessSink Sink { get; }
 
     /// <summary>当前执行状态。</summary>
     ExecutionState State { get; }
@@ -22,4 +17,10 @@ public interface IExecution
 
     /// <summary>取消本次执行，进行中的一轮请求随之结束。</summary>
     void Cancel();
+
+    /// <summary>模型输出的一段文本，按到达顺序给出。收口后不再触发。</summary>
+    event Action<string>? TextEmitted;
+
+    /// <summary>一次工具调用及其结果。收口后不再触发。</summary>
+    event Action<ToolCallRecord>? ToolCallRecorded;
 }

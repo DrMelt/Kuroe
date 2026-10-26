@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Node.Llm.Tools;
@@ -9,10 +10,13 @@ using Kuroe.Flow.Shared.StaticGraph.PortModel;
 namespace Kuroe.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并记录并发峰值。</summary>
-public sealed class FakeRunner : IExecutionRunner
+public sealed class FakeRunner : IExecutionRunnerFactory
 {
     private readonly Lock _gate = new();
     private readonly List<IExecution> _started = [];
+
+    /// <summary>执行索引，用于按执行号取执行对象供测试断言。</summary>
+    public ExecutionIndex? Executions { get; set; }
     private int _live;
     private int _peak;
 
@@ -60,7 +64,7 @@ public sealed class FakeRunner : IExecutionRunner
     /// <summary>本轮回复文本，经过程记录与过程播发送出，缺省为节点路径加产出。</summary>
     public Func<IExecution, string>? Reply { get; set; }
 
-    /// <summary>本次执行期间写进过程记录与过程流的内容，用于断言记录与过程增量。</summary>
+    /// <summary>本次执行期间写进过程记录的内容，用于断言记录与过程事件。</summary>
     internal Action<IExecution, RecordingJournal>? Emits { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
@@ -82,13 +86,19 @@ public sealed class FakeRunner : IExecutionRunner
 
     public int Peak { get { lock (_gate) { return _peak; } } }
 
-    public IExecutionBody CreateBody(ExecutionInput input) => new FakeBody();
+    public IExecutionRunner Create(ExecutionId execution) => new Run(this, execution);
 
-    public async Task<ErrorOr<Success>> ExecuteAsync(IExecution execution, IExecutionBody body, CancellationToken cancellationToken)
+    private async Task<ErrorOr<Success>> ExecuteAsync(
+        ExecutionId execution,
+        ExecutionInput input,
+        RecordingJournal journal,
+        CancellationToken cancellationToken)
     {
+        IExecution started = Executions!.Find(execution).ThrowIfError();
+
         lock (_gate)
         {
-            _started.Add(execution);
+            _started.Add(started);
         }
 
         int now = Interlocked.Increment(ref _live);
@@ -99,14 +109,14 @@ public sealed class FakeRunner : IExecutionRunner
 
         try
         {
-            Emits?.Invoke(execution, ((FakeBody)body).Journal);
+            Emits?.Invoke(started, journal);
 
-            await Task.Delay(DelayFor?.Invoke(execution) ?? DelayMs, cancellationToken);
+            await Task.Delay(DelayFor?.Invoke(started) ?? DelayMs, cancellationToken);
 
-            IReadOnlyList<Port> requiredPorts = execution.Input.RequiredPorts;
+            IReadOnlyList<Port> requiredPorts = input.RequiredPorts;
             if (requiredPorts.Count > 0 && SubmitsPorts)
             {
-                string json = PortValuesJsonFor?.Invoke(execution)
+                string json = PortValuesJsonFor?.Invoke(started)
                     ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(requiredPorts));
                 _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 if (DoubleSubmitPorts)
@@ -120,14 +130,13 @@ public sealed class FakeRunner : IExecutionRunner
                 _submissions.Enqueue(Call(CannotCompleteTool!, execution, new Dictionary<string, object?> { ["reason"] = CannotCompleteReason }));
             }
 
-            if (FailsWhen?.Invoke(execution) == true)
+            if (FailsWhen?.Invoke(started) == true)
             {
                 return Error.Failure("模拟执行器失败");
             }
 
-            string reply = Reply?.Invoke(execution) ?? $"{execution.Input.Node}产出";
-            ((FakeBody)body).Journal.AppendText(reply);
-            execution.Sink.OnText(reply);
+            string reply = Reply?.Invoke(started) ?? $"{input.Node}产出";
+            journal.AppendText(reply);
 
             return Result.Success;
         }
@@ -138,14 +147,17 @@ public sealed class FakeRunner : IExecutionRunner
     }
 
     /// <summary>按模型调用工具的方式取回执文本：换一份绑定该执行的载体，实参按参数名给出。</summary>
-    private static string Call(IScopedTool tool, IExecution execution, Dictionary<string, object?> arguments) =>
-        ToolResult.Render(tool.ForExecution(execution.Id).Functions.Single().Invoke(new ToolArguments(arguments)));
+    private static string Call(IScopedTool tool, ExecutionId execution, Dictionary<string, object?> arguments) =>
+        ToolResult.Render(tool.ForExecution(execution).Functions.Single().Invoke(new ToolArguments(arguments)));
 
-    /// <summary>测试用的执行体：只带过程记录，由假执行器自己写。</summary>
-    private sealed class FakeBody : IExecutionBody
+    /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
+    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner
     {
-        public RecordingJournal Journal { get; } = new();
+        private readonly RecordingJournal _journal = new();
 
-        IProcessJournal IExecutionBody.Journal => Journal;
+        public IProcessJournal Journal => _journal;
+
+        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+            owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
 }

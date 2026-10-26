@@ -8,7 +8,7 @@ using Kuroe.Flow.Runtime.Contract;
 namespace Kuroe.Console.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
-public sealed class FakeRunner : IExecutionRunner
+public sealed class FakeRunner : IExecutionRunnerFactory
 {
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
@@ -24,33 +24,87 @@ public sealed class FakeRunner : IExecutionRunner
                 ? new PortValue($"{port.Name.Value}产出")
                 : new PortValue(null));
 
-    public IExecutionBody CreateBody(ExecutionInput input) => new FakeBody();
+    public IExecutionRunner Create(ExecutionId execution) => new Run(this, execution);
 
-    public async Task<ErrorOr<Success>> ExecuteAsync(IExecution execution, IExecutionBody body, CancellationToken cancellationToken)
+    private async Task<ErrorOr<Success>> ExecuteAsync(
+        ExecutionId execution,
+        ExecutionInput input,
+        OutputJournal journal,
+        CancellationToken cancellationToken)
     {
         await Task.Delay(DelayMs, cancellationToken);
 
-        IReadOnlyList<Port> ports = execution.Input.RequiredPorts;
+        IReadOnlyList<Port> ports = input.RequiredPorts;
         if (ports.Count > 0)
         {
-            _ = PortSubmitter!.SubmitValues(execution.Id, PortValuesFor(ports));
+            _ = PortSubmitter!.SubmitValues(execution, PortValuesFor(ports));
         }
 
-        execution.Sink.OnText($"{execution.Input.Node}产出");
+        journal.AppendText($"{input.Node}产出");
 
         return Result.Success;
     }
 
-    /// <summary>测试用的执行体：本组测试不看过程记录。</summary>
-    private sealed class FakeBody : IExecutionBody
+    /// <summary>测试用的过程记录：保存条目并播发文本。</summary>
+    private sealed class OutputJournal : IProcessJournal
     {
-        IProcessJournal IExecutionBody.Journal { get; } = new EmptyJournal();
+        private readonly Lock _gate = new();
+        private readonly List<JournalEntry> _entries = [];
 
-        private sealed class EmptyJournal : IProcessJournal
+        /// <summary>文本追加后给出该增量。</summary>
+        public event Action<string>? TextAppended;
+
+        /// <summary>工具调用记录后给出该记录。</summary>
+        public event Action<ToolCallRecord>? ToolCallRecorded;
+
+        /// <summary>追加一条过程记录，工具调用随后播发。</summary>
+        public void Append(JournalEntry entry)
         {
-            public IReadOnlyList<JournalEntry> Entries => [];
+            lock (_gate)
+            {
+                _entries.Add(entry);
+            }
 
-            public int DroppedEntries => 0;
+            if (entry is ToolCallEntry toolCall)
+            {
+                ToolCallRecorded?.Invoke(toolCall.Call);
+            }
         }
+
+        /// <summary>追加文本增量，随后播发该增量。</summary>
+        public void AppendText(string delta)
+        {
+            if (delta.Length == 0)
+            {
+                return;
+            }
+
+            Append(new TextEntry(delta));
+            TextAppended?.Invoke(delta);
+        }
+
+        public IReadOnlyList<JournalEntry> Entries
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return [.. _entries];
+                }
+            }
+        }
+
+        public int DroppedEntries => 0;
+    }
+
+    /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
+    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner
+    {
+        private readonly OutputJournal _journal = new();
+
+        public IProcessJournal Journal => _journal;
+
+        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+            owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
 }

@@ -28,9 +28,9 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
-        RecordingSink observer = new();
+        RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -41,10 +41,10 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
-        RecordingSink observer = new();
+        RecordingOutput observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Text, observer.ToolCall);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Text, observer.ToolCall);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -150,11 +150,11 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
-        RecordingSink observer = new();
+        RecordingOutput observer = new();
 
         for (int round = 1; round <= 8; round++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer);
+            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Text, observer.ToolCall);
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -168,11 +168,11 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
-        environment.Runner.Emits = (execution, _) =>
-            execution.Sink.OnToolCall(new ToolCallRecord("GetLocalTime", "{}", "2026-10-18 19:10:48", false));
-        RecordingSink observer = new();
+        environment.Runner.Emits = (_, journal) =>
+            journal.Append(new ToolCallEntry(new ToolCallRecord("GetLocalTime", "{}", "2026-10-18 19:10:48", false)));
+        RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["GetLocalTime"], observer.Calls);
@@ -183,15 +183,14 @@ public sealed class DialogueHostTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
-        environment.Runner.Emits = (execution, journal) =>
+        environment.Runner.Emits = (_, journal) =>
         {
             journal.Append(new PromptEntry("问题"));
             journal.AppendText("增量");
-            execution.Sink.OnText("增量");
         };
-        RecordingSink observer = new();
+        RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
@@ -214,14 +213,14 @@ public sealed class DialogueHostTests
         result.IsError ? string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)) : string.Empty;
 
     /// <summary>记下收到的过程，供断言。</summary>
-    private sealed class RecordingSink : IProcessSink
+    private sealed class RecordingOutput
     {
         public List<string> Texts { get; } = [];
 
         public List<string> Calls { get; } = [];
 
-        public void OnText(string delta) => Texts.Add(delta);
+        public void Text(string delta) => Texts.Add(delta);
 
-        public void OnToolCall(ToolCallRecord record) => Calls.Add(record.Name);
+        public void ToolCall(ToolCallRecord record) => Calls.Add(record.Name);
     }
 }

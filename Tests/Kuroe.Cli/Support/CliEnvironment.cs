@@ -31,7 +31,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
 
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<IExecutionRunner>(new StubRunner()));
+            services => services.AddSingleton<IExecutionRunnerFactory>(new StubRunner()));
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -61,33 +61,84 @@ internal sealed class CliEnvironment : IAsyncDisposable
 }
 
 /// <summary>不接模型的执行器：只播发固定文本，不提交端口产出。</summary>
-internal sealed class StubRunner : IExecutionRunner
+internal sealed class StubRunner : IExecutionRunnerFactory
 {
+    /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 
-    public IExecutionBody CreateBody(ExecutionInput input) => new EmptyBody();
+    public IExecutionRunner Create(ExecutionId execution) => new Run(this);
 
-    public async Task<ErrorOr<Success>> ExecuteAsync(
-        IExecution execution,
-        IExecutionBody body,
+    private async Task<ErrorOr<Success>> ExecuteAsync(
+        StubJournal journal,
         CancellationToken cancellationToken)
     {
         await Task.Delay(5, cancellationToken);
-        execution.Sink.OnText(Text);
+        journal.AppendText(Text);
 
         return Result.Success;
     }
 
-    private sealed class EmptyBody : IExecutionBody
+    /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
+    private sealed class Run(StubRunner owner) : IExecutionRunner
     {
-        public IProcessJournal Journal { get; } = new EmptyJournal();
+        private readonly StubJournal _journal = new();
 
-        private sealed class EmptyJournal : IProcessJournal
+        public IProcessJournal Journal => _journal;
+
+        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+            owner.ExecuteAsync(_journal, cancellationToken);
+    }
+
+    /// <summary>测试用的过程记录：保存条目并播发文本。</summary>
+    private sealed class StubJournal : IProcessJournal
+    {
+        private readonly Lock _gate = new();
+        private readonly List<JournalEntry> _entries = [];
+
+        /// <summary>文本追加后给出该增量。</summary>
+        public event Action<string>? TextAppended;
+
+        /// <summary>工具调用记录后给出该记录。</summary>
+        public event Action<ToolCallRecord>? ToolCallRecorded;
+
+        /// <summary>追加一条过程记录，工具调用随后播发。</summary>
+        public void Append(JournalEntry entry)
         {
-            public IReadOnlyList<JournalEntry> Entries => [];
+            lock (_gate)
+            {
+                _entries.Add(entry);
+            }
 
-            public int DroppedEntries => 0;
+            if (entry is ToolCallEntry toolCall)
+            {
+                ToolCallRecorded?.Invoke(toolCall.Call);
+            }
         }
+
+        /// <summary>追加文本增量，随后播发该增量。</summary>
+        public void AppendText(string delta)
+        {
+            if (delta.Length == 0)
+            {
+                return;
+            }
+
+            Append(new TextEntry(delta));
+            TextAppended?.Invoke(delta);
+        }
+
+        public IReadOnlyList<JournalEntry> Entries
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return [.. _entries];
+                }
+            }
+        }
+
+        public int DroppedEntries => 0;
     }
 }
 

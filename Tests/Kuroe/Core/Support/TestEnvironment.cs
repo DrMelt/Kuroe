@@ -33,6 +33,7 @@ public sealed class TestEnvironment : IDisposable
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Executions = provider.GetRequiredService<ExecutionIndex>();
+        runner.Executions = Executions;
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
         PortTool = new PortTool(provider.GetRequiredService<PortSubmitter>(), Executions);
@@ -141,7 +142,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<IExecutionRunner>(runner);
+        services.AddSingleton<IExecutionRunnerFactory>(runner);
         ServiceProvider provider = services.BuildServiceProvider();
 
         if (seedCatalog)

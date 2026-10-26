@@ -88,7 +88,7 @@ public sealed class ExecutionContractTests
         Assert.Contains(environment.Runner.Submissions, text =>
             text.Contains("已记录本轮无法完成：缺少输入资料", StringComparison.Ordinal)
             && text.Contains("本轮仍需交回：端口「结论」、「理由」", StringComparison.Ordinal));
-        Assert.Null(new ContractReminder(new ExecutionStatusReader(environment.Executions)).Text(execution));
+        Assert.Null(new ContractReminder(new ExecutionStatusReader(environment.Executions)).Text(execution.Id));
     }
 
     /// <summary>上报无法完成必须给出原因，缺原因时按拒绝交回，本轮照常收口。</summary>
