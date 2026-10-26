@@ -16,10 +16,10 @@ public static class CommandNodeTypes
     /// <summary>未声明 MaxChars 时的输出上限。</summary>
     public const int DefaultMaxChars = 8000;
 
-    /// <summary>命令节点的静态形状：Signal 输入触发，输出承载命令输出。</summary>
+    /// <summary>命令节点的静态形状：BasePath 给出解析基准，Signal 输入触发，输出承载命令输出。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
-        InputTypes = [PortTypes.Signal],
+        InputTypes = [PortTypes.Text, PortTypes.Signal],
         OutputTypes = [PortTypes.Text],
     };
 

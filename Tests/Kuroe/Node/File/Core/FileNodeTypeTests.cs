@@ -12,7 +12,7 @@ public sealed class FileNodeTypeTests
     private static readonly FileParameters Parameters = new()
     {
         Path = "a.txt",
-        FullPath = Path.GetFullPath("a.txt"),
+        RootDirectory = Path.GetFullPath("."),
         MaxChars = 8000,
     };
 
@@ -46,14 +46,14 @@ public sealed class FileNodeTypeTests
     }
 
     [Fact]
-    public void Read_shape_takes_signal_inputs_and_produces_text()
+    public void Read_shape_takes_text_and_signal_inputs_and_produces_text()
     {
         NodeTypeShape shape = ReadType.Shape;
 
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.Equal([PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
         Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
@@ -112,9 +112,36 @@ public sealed class FileNodeTypeTests
     {
         string[] errors = [.. Failures(ReadType, ReadNode() with { Inputs = [], Outputs = [] })];
 
-        Assert.Equal(2, errors.Length);
         Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明至少一个 Signal 输入端口作为触发。"));
+        Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明 BasePath 输入端口作为路径解析基准。"));
         Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明一个输出端口，读取内容写入该端口。"));
+    }
+
+    [Fact]
+    public void Read_rejects_text_input_besides_base_path()
+    {
+        InputPort[] inputs =
+        [
+            new(FileNodePorts.BasePath, PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+            new(new PortName("正文"), PortTypes.Text),
+        ];
+
+        Assert.Contains(Failures(ReadType, ReadNode(inputs)),
+            error => error.EndsWith("文件读取节点只有 BasePath 可以是 Text 输入端口。"));
+    }
+
+    [Fact]
+    public void Read_rejects_a_signal_base_path()
+    {
+        InputPort[] inputs =
+        [
+            new(FileNodePorts.BasePath, PortTypes.Signal),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+
+        Assert.Contains(Failures(ReadType, ReadNode(inputs)),
+            error => error.EndsWith("BasePath 输入端口只能是 Text。"));
     }
 
     [Fact]
@@ -137,10 +164,20 @@ public sealed class FileNodeTypeTests
         [
             new(new PortName("正文"), PortTypes.Text),
             new(new PortName("补充"), PortTypes.Text),
+            new(FileNodePorts.BasePath, PortTypes.Text),
         ];
 
         Assert.Contains(Failures(WriteType, WriteNode(inputs)),
             error => error.EndsWith("文件写入节点必须声明一个 Text 输入端口，写入内容取自它。"));
+    }
+
+    [Fact]
+    public void Write_requires_a_base_path_input()
+    {
+        InputPort[] inputs = [new(new PortName("正文"), PortTypes.Text)];
+
+        Assert.Contains(Failures(WriteType, WriteNode(inputs)),
+            error => error.EndsWith("文件写入节点必须声明 BasePath 输入端口作为路径解析基准。"));
     }
 
     [Fact]
@@ -149,6 +186,7 @@ public sealed class FileNodeTypeTests
         InputPort[] inputs =
         [
             new(new PortName("正文"), PortTypes.Text),
+            new(FileNodePorts.BasePath, PortTypes.Text),
             new(new PortName("批准"), PortTypes.Signal),
         ];
 
@@ -191,7 +229,11 @@ public sealed class FileNodeTypeTests
         Label = new NodeLabel("读入"),
         Type = ReadType,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Inputs = inputs
+            ?? [
+                new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("触发"), PortTypes.Signal),
+            ],
         Outputs = outputs ?? [new Port(new PortName("正文"), PortTypes.Text)],
     };
 
@@ -200,7 +242,11 @@ public sealed class FileNodeTypeTests
         Label = new NodeLabel("写出"),
         Type = WriteType,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("正文"), PortTypes.Text)],
+        Inputs = inputs
+            ?? [
+                new InputPort(new PortName("正文"), PortTypes.Text),
+                new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+            ],
         Outputs = outputs ?? [],
     };
 }

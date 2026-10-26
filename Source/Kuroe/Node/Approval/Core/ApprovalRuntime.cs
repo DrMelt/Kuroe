@@ -8,7 +8,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Approval;
 
-/// <summary>审批节点在任务内的运行期对象：启动条件齐备即停在待批准，在自己的执行里声明接收外部输入，交付即批准并按输入端口转发来源产出。
+/// <summary>审批节点在任务内的运行期对象：输入齐备即停在待批准，在自己的执行里声明接收外部输入，交付即批准并按输入端口放出停驻时的取值。
 /// 不启动执行、不承载自身内容，取消后不再接收。读写都要求持有任务 Gate。</summary>
 internal sealed class ApprovalRuntime(
     ExecutableNode executable,
@@ -17,8 +17,8 @@ internal sealed class ApprovalRuntime(
     IConsumedRevisionStore? consumed = null)
     : NodeRuntime(executable), IInputProgress
 {
-    /// <summary>停驻时解析出的端口到来源端口的映射，放行后按它转发产出与触发值。</summary>
-    private readonly Dictionary<PortName, (NodePath Source, PortName Port)> _sources = [];
+    /// <summary>停驻时装入的输入，放行后按同名输出端口放出。</summary>
+    private NodeInputValues _inputs = NodeInputValues.Empty;
 
     private readonly IConsumedRevisionStore _consumed = consumed ?? new ConsumedRevisionStore();
     private long _revision;
@@ -53,22 +53,15 @@ internal sealed class ApprovalRuntime(
 
     bool IInputProgress.ForceRerun => false;
 
-    /// <summary>哪一组由新版本驱动就按哪一组取值：记下该组的来源端口，登记全部启动组的当前版本，随后声明接收外部输入。已停驻或已取消时不再停驻。</summary>
-    public override void Activate(INodeContext context)
+    /// <summary>装入本次输入并声明接收外部输入：停驻时保存输入端口取值，批准后按同名输出端口放出。已停驻或已取消时不再停驻。</summary>
+    public override void Activate(INodeContext context, NodeInputValues inputs)
     {
-        if (_canceled || _awaiting || context.Plan(Path) is not { } plan
-            || plan.DrivenGroup(this, context) is not { } group)
+        if (_canceled || _awaiting)
         {
             return;
         }
 
-        _sources.Clear();
-        foreach (FlowEdge edge in context.Graph.Incoming(Path).Where(edge => edge.Group == group))
-        {
-            _sources[edge.TargetInput] = (edge.Source, edge.SourcePort);
-        }
-
-        _consumed.Record(plan, context);
+        _inputs = inputs;
         _awaiting = true;
         channel.Accept(context, Path, _ => Approve());
     }
@@ -80,23 +73,16 @@ internal sealed class ApprovalRuntime(
         _revision++;
     }
 
-    /// <summary>按输出端口转发来源产出：放行时取当时齐备组解析出的来源端口内容，否则为空。</summary>
+    /// <summary>按输出端口放出停驻时装入的输入文本：输入端口与输出端口同名，未放行时为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        Released && _sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
-            ? context.Runtime(reference.Source).PortText(context, reference.Port)
-            : null;
+        Released ? _inputs.Text(port) : null;
 
-    /// <summary>按输出端口取产出：转发来源端口的取值。审批节点一次放行全部端口。</summary>
+    /// <summary>按输出端口放出停驻时装入的输入取值。审批节点一次放行全部端口。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && _sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
-            ? context.Runtime(reference.Source).OutputValues(context, reference.Port)
-            : [];
+        Released ? _inputs.Values(port) : [];
 
-    /// <summary>按输出端口转发来源端口的触发值。</summary>
-    public override bool Triggers(PortName port) =>
-        !Released
-        || !_sources.TryGetValue(port, out (NodePath Source, PortName Port) reference)
-        || context.Runtime(reference.Source).Triggers(reference.Port);
+    /// <summary>按输出端口放出停驻时记录的触发值，未放行时按触发处理。</summary>
+    public override bool Triggers(PortName port) => !Released || _inputs.Triggers(port);
 
     /// <summary>审批节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot() => new(Path, State);

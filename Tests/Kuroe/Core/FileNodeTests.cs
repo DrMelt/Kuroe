@@ -79,13 +79,35 @@ public sealed class FileNodeTests
     }
 
     [Fact]
-    public void Path_outside_the_working_directory_fails_loading()
+    public void Missing_base_path_fails_loading()
     {
-        ErrorOr<TestEnvironment> created = TestEnvironment.TryCreate(EscapePathFlow);
+        ErrorOr<TestEnvironment> created = TestEnvironment.TryCreate(MissingBasePathFlow);
 
         Assert.True(created.IsError);
         Assert.Contains(created.ErrorsOrEmptyList,
-            error => error.Description.Contains("不是工作目录内的合法路径"));
+            error => error.Description.Contains("必须声明 BasePath 输入端口作为路径解析基准"));
+    }
+
+    [Fact]
+    public void Unconnected_base_path_fails_loading()
+    {
+        ErrorOr<TestEnvironment> created = TestEnvironment.TryCreate(UnconnectedBasePathFlow);
+
+        Assert.True(created.IsError);
+        Assert.Contains(created.ErrorsOrEmptyList,
+            error => error.Description.Contains("From 组没有覆盖输入端口 BasePath"));
+    }
+
+    [Fact]
+    public void Path_outside_the_working_directory_blocks_the_task()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(EscapePathFlow);
+
+        TaskId id = environment.Submit("逃逸路径");
+        TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+
+        Assert.Contains(blocked.Journal,
+            entry => entry is ErrorEntry error && error.Text.Contains("不是工作区内的合法路径"));
     }
 
     /// <summary>读入后写出：文件内容直接落到另一个文件。</summary>
@@ -94,7 +116,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -104,16 +126,16 @@ public sealed class FileNodeTests
                       "Name": "读入",
                       "Kind": "FileRead",
                       "Path": "in.txt",
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
                     {
                       "Name": "写出",
                       "Kind": "FileWrite",
                       "Path": "out/result.txt",
-                      "Inputs": [{ "Name": "正文" }],
-                      "From": [{ "正文": "读入@正文" }]
+                      "Inputs": [{ "Name": "正文" }, { "Name": "BasePath" }],
+                      "From": [{ "正文": "读入@正文", "BasePath": "Start@基准" }]
                     }
                   ]
                 }
@@ -130,7 +152,7 @@ public sealed class FileNodeTests
             {
               "Name": "默认",
               "Models": [{ "Name": "执行者", "Model": "fake" }],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -140,8 +162,8 @@ public sealed class FileNodeTests
                       "Name": "读入",
                       "Kind": "FileRead",
                       "Path": "in.txt",
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
                     {
@@ -165,7 +187,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -176,16 +198,16 @@ public sealed class FileNodeTests
                       "Kind": "FileRead",
                       "Path": "in.txt",
                       "MaxChars": 2,
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
                     {
                       "Name": "写出",
                       "Kind": "FileWrite",
                       "Path": "out/result.txt",
-                      "Inputs": [{ "Name": "正文" }],
-                      "From": [{ "正文": "读入@正文" }]
+                      "Inputs": [{ "Name": "正文" }, { "Name": "BasePath" }],
+                      "From": [{ "正文": "读入@正文", "BasePath": "Start@基准" }]
                     }
                   ]
                 }
@@ -201,7 +223,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -212,8 +234,8 @@ public sealed class FileNodeTests
                       "Kind": "FileRead",
                       "Path": "in.txt",
                       "MaxChars": -1,
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     }
                   ]
@@ -224,8 +246,8 @@ public sealed class FileNodeTests
         }
         """;
 
-    /// <summary>路径越出工作目录：装载期即报错。</summary>
-    private const string EscapePathFlow = """
+    /// <summary>未声明 BasePath：装载期即报错。</summary>
+    private const string MissingBasePathFlow = """
         {
           "Flows": [
             {
@@ -239,9 +261,65 @@ public sealed class FileNodeTests
                     {
                       "Name": "读入",
                       "Kind": "FileRead",
-                      "Path": "../escape.txt",
+                      "Path": "in.txt",
                       "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                       "From": [{ "触发": "Start@目标" }],
+                      "Outputs": [{ "Name": "正文", "Type": "Text" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>声明了 BasePath 但 From 没有连接：装载期即报错。</summary>
+    private const string UnconnectedBasePathFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    {
+                      "Name": "读入",
+                      "Kind": "FileRead",
+                      "Path": "in.txt",
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "触发": "Start@目标" }],
+                      "Outputs": [{ "Name": "正文", "Type": "Text" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    /// <summary>路径越出工作区：运行期解析失败并停在阻塞。</summary>
+    private const string EscapePathFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Nodes": [
+                    {
+                      "Name": "读入",
+                      "Kind": "FileRead",
+                      "Path": "../escape.txt",
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     }
                   ]

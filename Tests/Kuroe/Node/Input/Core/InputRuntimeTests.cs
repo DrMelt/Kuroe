@@ -19,7 +19,7 @@ public sealed class InputRuntimeTests
         StubInputChannel channel = new();
         StubNodeContext context = new();
 
-        Runtime(channel, context).Activate(context);
+        Runtime(channel, context).Activate(context, NodeInputValues.Empty);
 
         Assert.Equal([Path], [.. channel.Declared.Select(entry => entry.Node)]);
     }
@@ -30,7 +30,7 @@ public sealed class InputRuntimeTests
         StubInputChannel channel = new();
         StubNodeContext context = new();
         InputRuntime runtime = Runtime(channel, context);
-        runtime.Activate(context);
+        runtime.Activate(context, NodeInputValues.Empty);
 
         Assert.Single(channel.Declared).Receive("需要支持多语言");
 
@@ -44,10 +44,10 @@ public sealed class InputRuntimeTests
         StubInputChannel channel = new();
         StubNodeContext context = new();
         InputRuntime runtime = Runtime(channel, context);
-        runtime.Activate(context);
+        runtime.Activate(context, NodeInputValues.Empty);
         runtime.Cancel();
 
-        runtime.Activate(context);
+        runtime.Activate(context, NodeInputValues.Empty);
 
         Assert.Single(channel.Declared);
         Assert.Equal([Path], channel.Declined);

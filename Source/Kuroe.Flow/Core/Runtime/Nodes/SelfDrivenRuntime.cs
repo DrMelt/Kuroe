@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
-/// <summary>自驱型节点的运行期基类：按输入侧方案判定版本驱动与执行上限，激活时产出一次，成功后推进版本，失败停在阻塞。
+/// <summary>自驱型节点的运行期基类：激活时消费引擎装入的输入并产出一次，成功后推进版本，失败停在阻塞等待返工。
 /// 产出是唯一的文本内容，按声明为 Text 的输出端口放出。读写都要求持有任务 Gate。</summary>
 public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime(executable), IInputProgress
 {
@@ -19,7 +19,6 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
     private bool _canceled;
     private long _revision;
     private int _executions;
-    private int? _lastGroup;
 
     /// <summary>本次操作的名字，用于失败说明。</summary>
     protected abstract string Action { get; }
@@ -68,27 +67,17 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
         _retry = true;
     }
 
-    /// <summary>组齐备且来源有未消费的新版本时产出一次。成功推进修订号并登记已消费版本，失败停在阻塞等待返工。</summary>
-    public override void Activate(INodeContext context)
+    /// <summary>消费本次输入并产出一次。成功推进修订号，失败停在阻塞等待返工。</summary>
+    public override void Activate(INodeContext context, NodeInputValues inputs)
     {
         if (_canceled || _failure is not null)
         {
             return;
         }
 
-        if (context.Plan(Path) is not { } plan || !plan.Ready(this, context))
-        {
-            return;
-        }
-
-        int group = _retry && _lastGroup is { } last
-            ? last
-            : plan.DrivenGroup(this, context) ?? plan.AvailableGroup(context) ?? 0;
-        _lastGroup = group;
-
         try
         {
-            string? failure = Produce(context, group);
+            string? failure = Produce(inputs);
             if (failure is null)
             {
                 _revision++;
@@ -106,7 +95,6 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
         finally
         {
             _retry = false;
-            _consumed.Record(plan, context);
         }
     }
 
@@ -144,7 +132,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
     }
 
     /// <summary>执行本次产出，成功时写入内容并返回空，失败时返回原因。</summary>
-    protected abstract string? Produce(INodeContext context, int group);
+    protected abstract string? Produce(NodeInputValues inputs);
 
     /// <summary>记下本次成功产出的内容。</summary>
     protected void SetContent(string content) => _content = content;

@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
@@ -42,5 +43,15 @@ public sealed class NodeInputPlanTests
         Assert.Equal(new PortName("目标"), edge.TargetInput);
         Assert.Equal(PortTypes.Text, edge.Type);
         Assert.Equal(3, edge.Group);
+    }
+
+    [Fact]
+    public void Plan_binding_carries_the_target_input()
+    {
+        FlowEdge edge = new(NodePath.Of("甲"), NodePath.Of("乙"), new PortName("结果"), new PortName("目标"), PortTypes.Text);
+        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [edge]);
+
+        InputBinding binding = Assert.Single(Assert.Single(plan.Groups).Bindings);
+        Assert.Equal(new PortName("目标"), binding.TargetInput);
     }
 }

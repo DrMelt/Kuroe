@@ -85,22 +85,31 @@ internal sealed class TaskRuntime : INodeContext
     private bool AtLimit(RuntimeExecutable node) =>
         LimitOf(node) is { } limit && node.Executions >= limit;
 
-    /// <summary>把执行节点启动一次。调用者应先用 <see cref="CanStart"/> 判定。
+    /// <summary>把执行节点启动一次，并返回本次装入的输入。调用者应先用 <see cref="CanStart"/> 判定。
     /// 强制重跑沿用上一次的输入侧组，其余启动取驱动判定的组。</summary>
-    private void Start(RuntimeExecutable node)
+    private NodeInputValues Start(RuntimeExecutable node)
     {
         if (Graph.PlanOf(node.Path) is not { } plan)
         {
-            return;
+            return NodeInputValues.Empty;
         }
 
         int group = node.RerunRequested && node.LastInputGroup is { } last
             ? last
             : plan.DrivenGroup(node, this) ?? node.LastInputGroup ?? 0;
+
+        if (group < 0 || group >= plan.Groups.Count)
+        {
+            return NodeInputValues.Empty;
+        }
+
         node.RecordInputGroup(group);
+        NodeInputValues inputs = NodeInputValues.From(plan.Groups[group], this);
         node.AddActive();
         node.ClearRerun();
         node.Consume(plan, this);
+
+        return inputs;
     }
 
     // ---- 发布与作废 ----
@@ -282,27 +291,65 @@ internal sealed class TaskRuntime : INodeContext
     {
         if (Graph.ShapeOf(node.Path) is not { } shape)
         {
-            return new EvaluateResult([], false);
+            return new EvaluateResult([]);
         }
 
         if (shape.Organizes)
         {
-            return new EvaluateResult([], false);
+            return new EvaluateResult([]);
         }
 
         if (!shape.DispatchesExecutions)
         {
-            // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
-            if (node is IInputProgress progress
-                && Graph.PlanOf(node.Path) is { } plan
-                && ConsumeSuppressed(node, progress, plan)
-                && plan.DrivenGroup(progress, this) is null)
+            if (node.Canceled || node.AwaitingInput || node.Snapshot().State == NodeState.Blocked)
             {
-                return new EvaluateResult([], false);
+                return new EvaluateResult([]);
+            }
+
+            if (node is not IInputProgress progress)
+            {
+                return new EvaluateResult([]);
+            }
+
+            NodeInputValues inputs = NodeInputValues.Empty;
+            if (node.NeedsInput)
+            {
+                if (Graph.PlanOf(node.Path) is not { } plan)
+                {
+                    return new EvaluateResult([]);
+                }
+
+                // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
+                if (ConsumeSuppressed(node, progress, plan) && plan.DrivenGroup(progress, this) is null)
+                {
+                    return new EvaluateResult([]);
+                }
+
+                if (!plan.Ready(progress, this))
+                {
+                    return new EvaluateResult([]);
+                }
+
+                int? group = progress.ForceRerun && node.LastInputGroup is { } last
+                    ? last
+                    : plan.DrivenGroup(progress, this) ?? plan.AvailableGroup(this);
+
+                if (group is not { } index || index < 0 || index >= plan.Groups.Count)
+                {
+                    return new EvaluateResult([]);
+                }
+
+                inputs = NodeInputValues.From(plan.Groups[index], this);
+                node.RecordInputGroup(index);
             }
 
             long revision = node.Revision;
-            node.Activate(this);
+            node.Activate(this, inputs);
+
+            if (Graph.PlanOf(node.Path) is { } consumed)
+            {
+                ConsumePlan(progress, consumed);
+            }
 
             if (node.TakeFailure() is { Length: > 0 } failure)
             {
@@ -313,17 +360,17 @@ internal sealed class TaskRuntime : INodeContext
 
             if (node.Revision == revision)
             {
-                return new EvaluateResult([], false);
+                return new EvaluateResult([]);
             }
 
             _task.Touch();
 
-            return new EvaluateResult(Notify([node.Path]), false);
+            return new EvaluateResult(Notify([node.Path]));
         }
 
         if (node is not RuntimeExecutable executable)
         {
-            return new EvaluateResult([], false);
+            return new EvaluateResult([]);
         }
 
         if (!CanStart(executable))
@@ -333,12 +380,19 @@ internal sealed class TaskRuntime : INodeContext
                 ConsumeSuppressed(executable, executable, plan);
             }
 
-            return new EvaluateResult([], false);
+            return new EvaluateResult([]);
         }
 
-        Start(executable);
+        return new EvaluateResult([], Start(executable));
+    }
 
-        return new EvaluateResult([], true);
+    /// <summary>登记方案内全部启动组的当前版本。</summary>
+    private void ConsumePlan(IInputProgress progress, NodeInputPlan plan)
+    {
+        foreach (InputGroup group in plan.Groups)
+        {
+            progress.Consume(group, this);
+        }
     }
 
     /// <summary>消耗所有由新版本驱动但存在 Trigger 为 false 的启动组，每组写一条信息记录。节点在跑、阻塞、取消、强制重跑或达到执行上限时不消耗。</summary>
@@ -389,8 +443,10 @@ internal sealed class TaskRuntime : INodeContext
         _task.Touch();
     }
 
-    /// <summary>一次评估的结果：要通知的下游执行节点路径与是否已启动执行。</summary>
-    public readonly record struct EvaluateResult(IReadOnlyList<NodePath> Notify, bool Started);
+    /// <summary>一次评估的结果：要通知的下游执行节点路径，以及派发执行要用的输入。输入为空表示没有启动执行。</summary>
+    public readonly record struct EvaluateResult(
+        IReadOnlyList<NodePath> Notify,
+        NodeInputValues? Inputs = null);
 
     /// <summary>任务启动的第一批：开始已放行，由它的直连下游起步。返回前全部实例化。</summary>
     public IReadOnlyList<NodePath> Roots() =>

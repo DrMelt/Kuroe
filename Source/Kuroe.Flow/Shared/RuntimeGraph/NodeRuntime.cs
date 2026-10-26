@@ -27,11 +27,20 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     /// <summary>节点已声明等待外部输入，尚未交付。等待中的节点算任务活动。</summary>
     public virtual bool AwaitingInput => false;
 
+    /// <summary>节点是否从输入端口取内容激活。输入节点等待外部交付，不依赖来源组齐备。</summary>
+    public virtual bool NeedsInput => true;
+
+    /// <summary>上一次激活使用的输入侧组序号，强制重跑按它装配输入。</summary>
+    public int? LastInputGroup { get; private set; }
+
     /// <summary>随任务进入取消态。</summary>
     public abstract void Cancel();
 
-    /// <summary>节点被激活：派发型节点由引擎按就绪条件启动执行，其余类型由节点自行处理。</summary>
-    public virtual void Activate(INodeContext context)
+    /// <summary>记下本次激活使用的输入侧组序号。</summary>
+    public void RecordInputGroup(int group) => LastInputGroup = group;
+
+    /// <summary>节点被激活：派发型节点由引擎按就绪条件启动执行，其余类型消费引擎装入的输入。</summary>
+    public virtual void Activate(INodeContext context, NodeInputValues inputs)
     {
     }
 

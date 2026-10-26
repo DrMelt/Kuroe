@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
 
-/// <summary>命令节点的描述契约：字段表、参数读取与执行目录边界校验。</summary>
+/// <summary>命令节点的描述契约：字段表与参数读取。</summary>
 public sealed class CommandNodeTypeDescriptionTests
 {
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-command-description-tests"));
@@ -40,7 +40,8 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Empty(failures);
         Assert.Equal("dotnet", parameters.Program);
         Assert.Equal(["build", "--no-restore"], parameters.Arguments);
-        Assert.Equal(Path.Combine(Root, "src"), parameters.FullDirectory);
+        Assert.Equal("src", parameters.Directory);
+        Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(30, parameters.TimeoutSeconds);
         Assert.Equal(1200, parameters.MaxChars);
     }
@@ -52,16 +53,6 @@ public sealed class CommandNodeTypeDescriptionTests
         _ = new CommandNodeTypeDescription(Root, new FakeProcessRunner()).Read(new Reader(), failures.Add);
 
         Assert.Equal(["命令执行节点必须声明 Program。"], failures);
-    }
-
-    [Fact]
-    public void Directory_outside_the_working_directory_is_reported()
-    {
-        List<string> failures = [];
-        _ = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
-            .Read(new Reader("dotnet", directory: "../escape"), failures.Add);
-
-        Assert.Equal([$"Directory ../escape 不是工作目录内的合法路径。"], failures);
     }
 
     [Fact]
@@ -85,7 +76,7 @@ public sealed class CommandNodeTypeDescriptionTests
     }
 
     [Fact]
-    public void Defaults_use_the_working_directory_and_declared_limits()
+    public void Defaults_use_the_workspace_root_and_declared_limits()
     {
         List<string> failures = [];
         INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
@@ -94,7 +85,8 @@ public sealed class CommandNodeTypeDescriptionTests
         CommandParameters parameters = Assert.IsType<CommandNodeType>(type).Parameters!;
 
         Assert.Empty(failures);
-        Assert.Equal(Root, parameters.FullDirectory);
+        Assert.Null(parameters.Directory);
+        Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(CommandNodeTypes.DefaultTimeoutSeconds, parameters.TimeoutSeconds);
         Assert.Equal(CommandNodeTypes.DefaultMaxChars, parameters.MaxChars);
     }

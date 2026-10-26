@@ -6,8 +6,8 @@ using Kuroe.Flow.Runtime.Nodes;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
-/// <summary>为执行节点装配执行输入：按生效组的入边取各输入端口的内容与出处，未连接的 Text 默认端口追加声明值。
-/// 信号输入不取内容，Context 输入端口的取值置于最前，其余按组内连接序。</summary>
+/// <summary>为执行节点装配执行输入：按节点层级装入的输入取各输入端口的取值与出处，未连接的 Text 默认端口追加声明值。
+/// Context 输入端口的取值置于最前，其余按组内连接序。</summary>
 internal static class ExecutionInputBuilder
 {
     /// <summary>单条取值文本的上限。</summary>
@@ -17,32 +17,20 @@ internal static class ExecutionInputBuilder
     internal static ExecutionInput Build(
         TaskId id,
         RuntimeExecutable node,
-        INodeContext context,
+        NodeInputValues inputs,
         INodeDeclaration? declaration)
     {
         List<ContextValue> contextInput = [];
         List<ContextValue> values = [];
-        HashSet<PortName> connected = [];
-        int group = node.LastInputGroup ?? 0;
-        foreach (FlowEdge edge in context.Graph.Incoming(node.Path).Where(edge => edge.Group == group))
+        foreach (NodeInputValue input in inputs.Ordered)
         {
-            connected.Add(edge.TargetInput);
-            if (edge.Type.Semantics == PortSemantics.Signal)
-            {
-                // 信号语义不取内容，来源产出不进输入，只作启动信号；Trigger 版只额外携带触发值
-                continue;
-            }
-
-            List<ContextValue> target = edge.Type.Semantics == PortSemantics.Context ? contextInput : values;
-            foreach (ContextValue value in context.Runtime(edge.Source).OutputValues(context, edge.SourcePort))
-            {
-                target.Add(Truncate(value));
-            }
+            List<ContextValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
+            target.Add(Truncate(input.Value));
         }
 
         foreach (InputPort port in node.Executable.Inputs)
         {
-            if (connected.Contains(port.Name) || port.Type != PortTypes.Text || port.Default is not { Length: > 0 } text)
+            if (inputs.Connected(port.Name) || port.Type != PortTypes.Text || port.Default is not { Length: > 0 } text)
             {
                 continue;
             }

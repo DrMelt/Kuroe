@@ -13,35 +13,35 @@ internal sealed class FileWriteRuntime(ExecutableNode executable, FileParameters
     protected override string Action => "写入";
 
     /// <inheritdoc/>
-    protected override string? Produce(INodeContext context, int group)
+    protected override string? Produce(NodeInputValues inputs)
     {
-        if (Directory.Exists(Parameters.FullPath))
+        string? failure = ResolveTarget(inputs, out string fullPath);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        if (Directory.Exists(fullPath))
         {
             return $"写入 {Parameters.Path} 失败：目标是目录。";
         }
 
-        string content = Content(context, group);
-        string? failure = FileContent.Write(Parameters.FullPath, content, Parameters.MaxChars);
-        if (failure is null)
+        string content = Content(inputs);
+        string? writeFailure = FileContent.Write(fullPath, content, Parameters.MaxChars);
+        if (writeFailure is null)
         {
             SetContent(content);
         }
 
-        return failure;
+        return writeFailure;
     }
 
-    /// <summary>取生效组里 Text 输入端口的内容，多个来源值按序拼合。</summary>
-    private string Content(INodeContext context, int group)
+    /// <summary>取写入内容端口的内容，BasePath 不算内容端口。</summary>
+    private string Content(NodeInputValues inputs)
     {
-        FlowEdge? edge = context.Graph.Incoming(Path)
-            .FirstOrDefault(edge => edge.Group == group && Ports.CarriesText(edge.Type));
-        if (edge is null)
-        {
-            return string.Empty;
-        }
+        InputPort? port = Executable.Inputs.FirstOrDefault(candidate =>
+            candidate.Name != FileNodePorts.BasePath && Ports.CarriesText(candidate.Type));
 
-        return string.Join("\n\n", context.Runtime(edge.Source).OutputValues(context, edge.SourcePort)
-            .Select(value => value.Text)
-            .Where(text => text.Length > 0));
+        return port is { } content ? inputs.Text(content.Name) ?? string.Empty : string.Empty;
     }
 }

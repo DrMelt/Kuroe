@@ -1,16 +1,15 @@
 using Kuroe.Flow.Shared.Descriptions;
-using Kuroe.Shared;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点参数段的读取：Program 必填，Directory 按工作目录解析并校验边界。</summary>
+/// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，解析基准与边界由运行期给出。</summary>
 internal static class CommandParameterReader
 {
     /// <summary>读出程序、参数、执行目录、超时与输出上限，缺失或非法时经 fail 报出。</summary>
     internal static CommandParameters Read(
         IParameterReader values,
         Action<string> fail,
-        string workingDirectory)
+        string rootDirectory)
     {
         string? program = values.Text(CommandParameterNames.Program);
         if (string.IsNullOrWhiteSpace(program))
@@ -23,14 +22,6 @@ internal static class CommandParameterReader
         IReadOnlyList<string> arguments = values.Texts(CommandParameterNames.Arguments);
 
         string? directory = values.Text(CommandParameterNames.Directory);
-        string fullDirectory = workingDirectory;
-        if (!string.IsNullOrWhiteSpace(directory)
-            && !WorkspacePath.TryResolve(workingDirectory, directory, out fullDirectory))
-        {
-            fail($"Directory {directory} 不是工作目录内的合法路径。");
-
-            fullDirectory = string.Empty;
-        }
 
         int? timeout = values.Integer(CommandParameterNames.TimeoutSeconds);
         if (timeout is <= 0)
@@ -52,7 +43,8 @@ internal static class CommandParameterReader
         {
             Program = program,
             Arguments = arguments,
-            FullDirectory = fullDirectory,
+            Directory = string.IsNullOrWhiteSpace(directory) ? null : directory,
+            RootDirectory = rootDirectory,
             TimeoutSeconds = timeout ?? CommandNodeTypes.DefaultTimeoutSeconds,
             MaxChars = maxChars ?? CommandNodeTypes.DefaultMaxChars,
         };

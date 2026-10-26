@@ -4,8 +4,13 @@ using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
-/// <summary>输入侧的一条绑定：从来源节点的一个端口取值。信号语义只以新版本驱动启动，不取内容；Trigger 版还携带触发值。</summary>
-public sealed record InputBinding(NodePath Source, PortName? Port, PortType? Type = null)
+/// <summary>输入侧的一条绑定：从来源节点的一个端口取值，进入本节点的一个输入端口。
+/// 信号语义只以新版本驱动启动，不取内容；Trigger 版还携带触发值。</summary>
+public sealed record InputBinding(
+    NodePath Source,
+    PortName? Port,
+    PortType? Type = null,
+    PortName? TargetInput = null)
 {
     /// <summary>节点级绑定，用于容器按成员整体推进内容版本。</summary>
     public static InputBinding Node(NodePath source) => new(source, null);
@@ -72,6 +77,7 @@ public sealed partial record NodeInputPlan
         MaxExecutions = int.MaxValue,
     };
 
-    /// <summary>一条边在方案里的绑定：来源端口与类型随边落定。</summary>
-    private static InputBinding Binding(FlowEdge edge) => new(edge.Source, edge.SourcePort, edge.Type);
+    /// <summary>一条边在方案里的绑定：来源端口、目标输入端口与类型随边落定。</summary>
+    private static InputBinding Binding(FlowEdge edge) =>
+        new(edge.Source, edge.SourcePort, edge.Type, edge.TargetInput);
 }

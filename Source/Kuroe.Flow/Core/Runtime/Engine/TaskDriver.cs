@@ -162,14 +162,14 @@ internal sealed class TaskDriver(
     private void Activate(NodePath name)
     {
         List<NodePath> notify = [];
-        bool started;
         NodeRuntime node;
+        NodeInputValues? inputs;
         lock (task.Gate)
         {
             node = task.Runtime[name];
             TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
-            started = result.Started;
+            inputs = result.Inputs;
         }
 
         foreach (NodePath next in notify)
@@ -177,8 +177,8 @@ internal sealed class TaskDriver(
             Enqueue([next]);
         }
 
-        // 只有派发执行的节点会给出启动项，审批节点与输入节点不派发执行
-        if (node is not RuntimeExecutable executable || !started)
+        // 只有派发执行的节点会给出启动输入，审批节点与输入节点不派发执行
+        if (node is not RuntimeExecutable executable || inputs is null)
         {
             return;
         }
@@ -189,15 +189,15 @@ internal sealed class TaskDriver(
         }
 
         // 直接调用让装配段同步完成，执行编号与派发顺序保持确定，await 之后才回到线程池
-        _ = DispatchAndSettleAsync(executable);
+        _ = DispatchAndSettleAsync(executable, inputs);
     }
 
     /// <summary>执行装配与启动的包装：收口异常上报为推进异常，不越过调度循环。</summary>
-    private async Task DispatchAndSettleAsync(RuntimeExecutable node)
+    private async Task DispatchAndSettleAsync(RuntimeExecutable node, NodeInputValues inputs)
     {
         try
         {
-            await DispatchExecutionAsync(node).ConfigureAwait(false);
+            await DispatchExecutionAsync(node, inputs).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -207,7 +207,7 @@ internal sealed class TaskDriver(
 
     /// <summary>为一个执行装配、派发并收口，再按收口计划入队下游或重派目标。
     /// 无论收口结果如何必释放在途并唤醒挂起，让主循环重新判定退出或取批。</summary>
-    private async Task DispatchExecutionAsync(RuntimeExecutable node)
+    private async Task DispatchExecutionAsync(RuntimeExecutable node, NodeInputValues inputs)
     {
         try
         {
@@ -231,7 +231,9 @@ internal sealed class TaskDriver(
                     return;
                 }
 
-                execution = task.Registry.NewExecution(task, ExecutionInputBuilder.Build(task.Id, node, task.Context, declaration.Value));
+                execution = task.Registry.NewExecution(
+                    task,
+                    ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value));
                 task.Attach(execution);
             }
 

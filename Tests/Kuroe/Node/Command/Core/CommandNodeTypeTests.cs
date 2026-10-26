@@ -14,7 +14,8 @@ public sealed class CommandNodeTypeTests
     {
         Program = "dotnet",
         Arguments = ["build"],
-        FullDirectory = Path.GetFullPath("."),
+        Directory = null,
+        RootDirectory = Path.GetFullPath("."),
         TimeoutSeconds = CommandNodeTypes.DefaultTimeoutSeconds,
         MaxChars = CommandNodeTypes.DefaultMaxChars,
     };
@@ -30,14 +31,14 @@ public sealed class CommandNodeTypeTests
     }
 
     [Fact]
-    public void Shape_takes_signal_inputs_and_produces_text()
+    public void Shape_takes_text_and_signal_inputs_and_produces_text()
     {
         NodeTypeShape shape = Type.Shape;
 
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.Equal([PortTypes.Signal], shape.InputTypes);
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
         Assert.Equal([PortTypes.Text], shape.OutputTypes);
     }
 
@@ -75,9 +76,36 @@ public sealed class CommandNodeTypeTests
     {
         string[] errors = [.. Failures(Type, Node() with { Inputs = [], Outputs = [] })];
 
-        Assert.Equal(2, errors.Length);
         Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明至少一个 Signal 输入端口作为触发。"));
+        Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明 BasePath 输入端口作为路径解析基准。"));
         Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明一个输出端口，命令输出写入该端口。"));
+    }
+
+    [Fact]
+    public void Text_input_besides_base_path_is_rejected()
+    {
+        InputPort[] inputs =
+        [
+            new(CommandNodePorts.BasePath, PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+            new(new PortName("说明"), PortTypes.Text),
+        ];
+
+        Assert.Contains(Failures(Type, Node(inputs)),
+            error => error.EndsWith("命令执行节点只有 BasePath 可以是 Text 输入端口。"));
+    }
+
+    [Fact]
+    public void A_signal_base_path_is_rejected()
+    {
+        InputPort[] inputs =
+        [
+            new(CommandNodePorts.BasePath, PortTypes.Signal),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+
+        Assert.Contains(Failures(Type, Node(inputs)),
+            error => error.EndsWith("BasePath 输入端口只能是 Text。"));
     }
 
     [Fact]
@@ -114,7 +142,11 @@ public sealed class CommandNodeTypeTests
         Label = new NodeLabel("执行"),
         Type = Type,
         Spec = new ExecutableSpec(),
-        Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        Inputs = inputs
+            ?? [
+                new InputPort(CommandNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("触发"), PortTypes.Signal),
+            ],
         Outputs = outputs ?? [new Port(new PortName("输出"), PortTypes.Text)],
     };
 

@@ -13,7 +13,9 @@ public sealed class CommandRuntimeTests
 {
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
+    private static readonly NodePath BasePathSourcePath = NodePath.Of("整体", "基准");
     private static readonly PortName OutputPort = new("输出");
+    private static readonly string Root = Path.GetTempPath();
 
     [Fact]
     public void Execute_produces_the_output_and_completes()
@@ -21,10 +23,10 @@ public sealed class CommandRuntimeTests
         FakeProcessRunner process = new FakeProcessRunner()
             .Returns($"甲{Environment.NewLine}乙{Environment.NewLine}");
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.True(runtime.Released);
         Assert.Equal(1, runtime.Revision);
@@ -34,18 +36,18 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
-    public void Without_a_new_source_version_it_does_not_run_again()
+    public void Consuming_the_group_clears_readiness()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("第一次");
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
-        runtime.Activate(context);
+        NodeInputPlan plan = context.Plan(TargetPath)!;
 
-        runtime.Activate(context);
+        Assert.True(plan.Ready(runtime, context));
+        ((IInputProgress)runtime).Consume(plan.Groups[0], context);
 
-        Assert.Equal(1, process.Calls);
-        Assert.Equal("第一次", runtime.PortText(context, OutputPort));
+        Assert.False(plan.Ready(runtime, context));
     }
 
     [Fact]
@@ -53,10 +55,10 @@ public sealed class CommandRuntimeTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.False(runtime.Released);
         Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
@@ -72,10 +74,10 @@ public sealed class CommandRuntimeTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("部分输出", timedOut: true);
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.False(runtime.Released);
         Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
@@ -87,10 +89,10 @@ public sealed class CommandRuntimeTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Throws("无法启动 dotnet。");
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.False(runtime.Released);
         Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
@@ -104,12 +106,12 @@ public sealed class CommandRuntimeTests
             .Throws("无法启动 dotnet。")
             .Returns("恢复内容");
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         runtime.Retry();
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.True(runtime.Released);
         Assert.Equal("恢复内容", runtime.PortText(context, OutputPort));
@@ -122,15 +124,71 @@ public sealed class CommandRuntimeTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         ExecutableNode node = Node(process);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.Equal("dotnet", process.Program);
         Assert.Equal(["--version"], process.Arguments);
-        Assert.Equal(Path.GetTempPath(), process.WorkingDirectory);
+        Assert.Equal(Root, process.WorkingDirectory);
         Assert.Equal(TimeSpan.FromSeconds(5), process.Timeout);
+    }
+
+    [Fact]
+    public void Execute_uses_the_base_path_as_the_default_directory()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process);
+        StubNodeContext context = Context(node, Path.Combine(Root, "sub"));
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Execute_resolves_the_declared_directory_from_the_base_path()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process, directory: "sub");
+        StubNodeContext context = Context(node);
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Directory_outside_the_workspace_blocks_the_node()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process, directory: "../escape");
+        StubNodeContext context = Context(node);
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
+        Assert.Contains("Directory ../escape 不是工作区内的合法路径", runtime.TakeFailure());
+        Assert.Equal(0, process.Calls);
+    }
+
+    [Fact]
+    public void Base_path_outside_the_workspace_blocks_the_node()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process);
+        StubNodeContext context = Context(node, Path.GetFullPath("..", Root));
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
+        Assert.Contains("不是工作区内的合法路径", runtime.TakeFailure());
+        Assert.Equal(0, process.Calls);
     }
 
     [Fact]
@@ -138,34 +196,62 @@ public sealed class CommandRuntimeTests
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("abcdef");
         ExecutableNode node = Node(process, maxChars: 3);
-        StubNodeContext context = new(node);
+        StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
-        runtime.Activate(context);
+        runtime.Activate(context, Inputs(context));
 
         Assert.Equal("abc…输出已截断", runtime.PortText(context, OutputPort));
     }
 
+    private static StubNodeContext Context(ExecutableNode node, string? basePath = null)
+    {
+        StubNodeContext context = new(node);
+        context.AddSource(new SourceRuntime(BasePathSourcePath, basePath ?? Root));
+
+        return context;
+    }
+
+    private static NodeInputValues Inputs(StubNodeContext context) =>
+        NodeInputValues.From(context.Plan(TargetPath)!.Groups[0], context);
+
     private static CommandRuntime Runtime(ExecutableNode node, StubNodeContext context) =>
         Assert.IsType<CommandRuntime>(node.Type.Create(node, context));
 
-    private static ExecutableNode Node(FakeProcessRunner process, int maxChars = CommandNodeTypes.DefaultMaxChars) => new()
-    {
-        Path = TargetPath,
-        Type = CommandNodeTypes.Create(Parameters(maxChars), process),
-        Spec = new ExecutableSpec(),
-        Model = null,
-        Inputs = [new InputPort(new PortName("触发"), PortTypes.Signal)],
-        Outputs = [new Port(OutputPort, PortTypes.Text)],
-        MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-        Incoming = [new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal)],
-    };
+    private static ExecutableNode Node(
+        FakeProcessRunner process,
+        int maxChars = CommandNodeTypes.DefaultMaxChars,
+        string? directory = null) => new()
+        {
+            Path = TargetPath,
+            Type = CommandNodeTypes.Create(Parameters(maxChars, directory), process),
+            Spec = new ExecutableSpec(),
+            Model = null,
+            Inputs =
+            [
+                new InputPort(CommandNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("触发"), PortTypes.Signal),
+            ],
+            Outputs = [new Port(OutputPort, PortTypes.Text)],
+            MaxExecutions = ExecutableNode.DefaultMaxExecutions,
+            Incoming =
+            [
+                new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal),
+                new FlowEdge(
+                    BasePathSourcePath,
+                    TargetPath,
+                    new PortName("结果"),
+                    CommandNodePorts.BasePath,
+                    PortTypes.Text),
+            ],
+        };
 
-    private static CommandParameters Parameters(int maxChars) => new()
+    private static CommandParameters Parameters(int maxChars, string? directory) => new()
     {
         Program = "dotnet",
         Arguments = ["--version"],
-        FullDirectory = Path.GetTempPath(),
+        Directory = directory,
+        RootDirectory = Root,
         TimeoutSeconds = 5,
         MaxChars = maxChars,
     };

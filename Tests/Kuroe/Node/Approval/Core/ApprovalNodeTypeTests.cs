@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Node.Approval.Tests;
 
-/// <summary>审批节点类型的形状与类型规则：不启动执行，对外端口由输入端口派生，批准后转发产出。</summary>
+/// <summary>审批节点类型的形状与类型规则：不启动执行，对外端口由输入端口派生，放行后放出停驻时的取值。</summary>
 public sealed class ApprovalNodeTypeTests
 {
     private static readonly StubInputChannel Channel = new();

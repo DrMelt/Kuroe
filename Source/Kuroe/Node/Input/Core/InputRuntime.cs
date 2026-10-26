@@ -31,6 +31,9 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     /// <summary>已声明接收外部输入且尚未交付。</summary>
     public override bool AwaitingInput => _waiting;
 
+    /// <summary>输入节点等待外部交付，不依赖来源取值。</summary>
+    public override bool NeedsInput => false;
+
     long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
 
     void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
@@ -47,8 +50,8 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
         channel.Decline(context, Path);
     }
 
-    /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。</summary>
-    public override void Activate(INodeContext context)
+    /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。输入节点不消费来源取值。</summary>
+    public override void Activate(INodeContext context, NodeInputValues inputs)
     {
         if (_canceled)
         {
@@ -58,10 +61,6 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
         _answer = null;
         _waiting = true;
         channel.Accept(context, Path, Deliver);
-        if (context.Plan(Path) is { } plan)
-        {
-            _consumed.Record(plan, context);
-        }
     }
 
     /// <summary>收下一次外部输入：记下回答并推进放行代数，声明由交付方随交付撤销。</summary>

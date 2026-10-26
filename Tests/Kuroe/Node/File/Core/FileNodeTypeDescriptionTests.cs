@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Kuroe.Node.File.Tests;
 
-/// <summary>文件节点的描述契约：字段表、路径解析与边界校验。</summary>
+/// <summary>文件节点的描述契约：字段表与参数读取。</summary>
 public sealed class FileNodeTypeDescriptionTests
 {
     private static readonly string Root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "kuroe-file-description-tests"));
@@ -40,7 +40,7 @@ public sealed class FileNodeTypeDescriptionTests
     }
 
     [Fact]
-    public void Read_resolves_the_path_inside_the_working_directory()
+    public void Read_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
         INodeType type = new FileReadNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
@@ -49,12 +49,12 @@ public sealed class FileNodeTypeDescriptionTests
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
-        Assert.Equal(Path.Combine(Root, "a", "b.txt"), parameters.FullPath);
+        Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(FileReadNodeTypes.DefaultMaxChars, parameters.MaxChars);
     }
 
     [Fact]
-    public void Write_resolves_the_path_inside_the_working_directory()
+    public void Write_keeps_the_path_and_the_workspace_root()
     {
         List<string> failures = [];
         INodeType type = new FileWriteNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
@@ -63,7 +63,7 @@ public sealed class FileNodeTypeDescriptionTests
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
-        Assert.Equal(Path.Combine(Root, "a", "b.txt"), parameters.FullPath);
+        Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(FileWriteNodeTypes.DefaultMaxChars, parameters.MaxChars);
     }
 
@@ -74,15 +74,6 @@ public sealed class FileNodeTypeDescriptionTests
         _ = new FileReadNodeTypeDescription(Root).Read(new Reader(), failures.Add);
 
         Assert.Equal(["文件读取节点必须声明 Path。"], failures);
-    }
-
-    [Fact]
-    public void Path_outside_the_working_directory_is_reported()
-    {
-        List<string> failures = [];
-        _ = new FileWriteNodeTypeDescription(Root).Read(new Reader("../escape.txt"), failures.Add);
-
-        Assert.Equal(["Path ../escape.txt 不是工作目录内的合法路径。"], failures);
     }
 
     [Fact]

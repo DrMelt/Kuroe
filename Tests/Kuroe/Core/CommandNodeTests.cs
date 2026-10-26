@@ -40,7 +40,7 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -51,16 +51,16 @@ public sealed class CommandNodeTests
                       "Kind": "Command",
                       "Program": "dotnet",
                       "Arguments": ["--version"],
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "输出", "Type": "Text" }]
                     },
                     {
                       "Name": "写出",
                       "Kind": "FileWrite",
                       "Path": "out/version.txt",
-                      "Inputs": [{ "Name": "正文" }],
-                      "From": [{ "正文": "版本@输出" }]
+                      "Inputs": [{ "Name": "正文" }, { "Name": "BasePath" }],
+                      "From": [{ "正文": "版本@输出", "BasePath": "Start@基准" }]
                     }
                   ]
                 }
@@ -76,7 +76,7 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -86,8 +86,8 @@ public sealed class CommandNodeTests
                       "Name": "缺失",
                       "Kind": "Command",
                       "Program": "kuroe-command-does-not-exist",
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
                       "Outputs": [{ "Name": "输出", "Type": "Text" }]
                     }
                   ]

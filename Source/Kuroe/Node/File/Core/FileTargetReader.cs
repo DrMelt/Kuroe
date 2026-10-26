@@ -1,17 +1,16 @@
 using Kuroe.Flow.Shared.Descriptions;
-using Kuroe.Shared;
 
 namespace Kuroe.Node.File;
 
-/// <summary>文件节点参数段的读取：Path 必填，按工作目录解析并校验边界。</summary>
+/// <summary>文件节点参数段的读取：Path 必填，解析基准与边界由运行期给出。</summary>
 internal static class FileTargetReader
 {
-    /// <summary>读出文件路径与字符上限，路径缺失或越界、上限为负数时经 fail 报出。</summary>
+    /// <summary>读出文件路径与字符上限，路径缺失或上限为负数时经 fail 报出。</summary>
     internal static FileParameters Read(
         IParameterReader values,
         Action<string> fail,
         string nodeName,
-        string workingDirectory,
+        string rootDirectory,
         int defaultMaxChars)
     {
         string? path = values.Text(FileParameterNames.Path);
@@ -19,14 +18,12 @@ internal static class FileTargetReader
         {
             fail($"{nodeName}必须声明 Path。");
 
-            return new FileParameters { Path = string.Empty, FullPath = string.Empty, MaxChars = defaultMaxChars };
-        }
-
-        if (!WorkspacePath.TryResolve(workingDirectory, path, out string fullPath))
-        {
-            fail($"Path {path} 不是工作目录内的合法路径。");
-
-            return new FileParameters { Path = path, FullPath = string.Empty, MaxChars = defaultMaxChars };
+            return new FileParameters
+            {
+                Path = string.Empty,
+                RootDirectory = rootDirectory,
+                MaxChars = defaultMaxChars,
+            };
         }
 
         int? maxChars = values.Integer(FileParameterNames.MaxChars);
@@ -39,7 +36,7 @@ internal static class FileTargetReader
         return new FileParameters
         {
             Path = path,
-            FullPath = fullPath,
+            RootDirectory = rootDirectory,
             MaxChars = maxChars ?? defaultMaxChars,
         };
     }

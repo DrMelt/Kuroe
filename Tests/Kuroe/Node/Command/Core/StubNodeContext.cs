@@ -10,14 +10,18 @@ namespace Kuroe.Node.Command.Tests;
 internal sealed class StubNodeContext(ExecutableNode node) : INodeContext
 {
     private readonly ExecutableNode _node = node;
+    private readonly Dictionary<NodePath, NodeRuntime> _sources = [];
 
     public INodeGraph Graph { get; } = new StubGraph(node);
 
+    /// <summary>登记一个来源运行期对象，供节点读取输入内容。</summary>
+    public void AddSource(NodeRuntime runtime) => _sources[runtime.Path] = runtime;
+
     public NodeInputPlan? Plan(NodePath node) => node == _node.Path ? _node.Plan : null;
 
-    public NodeRuntime Runtime(NodePath node) => throw new NotSupportedException();
+    public NodeRuntime Runtime(NodePath node) => _sources[node];
 
-    public NodeRuntime? Materialized(NodePath node) => null;
+    public NodeRuntime? Materialized(NodePath node) => _sources.GetValueOrDefault(node);
 
     public ISourceState Source(NodePath node) => new ReleasedSource();
 }
@@ -64,4 +68,24 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
     public NodeTypeShape? ShapeOf(NodePath path) => node.Type.Shape;
 
     public PortType TypeOf(NodePath node, PortName port) => PortTypes.Text;
+}
+
+/// <summary>测试用的来源运行期对象：按输出端口给出固定文本。</summary>
+internal sealed class SourceRuntime(NodePath path, string content)
+    : NodeRuntime(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
+{
+    public override bool Released => true;
+
+    public override long Revision => 1;
+
+    public override bool Canceled => false;
+
+    public override void Cancel()
+    {
+    }
+
+    public override string? PortText(INodeContext context, PortName port) => content;
+
+    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
+        [new ContextValue(new StartSource(port), content)];
 }
