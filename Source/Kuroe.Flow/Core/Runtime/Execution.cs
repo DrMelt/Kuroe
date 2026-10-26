@@ -57,11 +57,11 @@ public sealed class Execution : IExecution
         remove => _process.Text -= value;
     }
 
-    /// <summary>一次工具调用及其结果。</summary>
-    public event Action<ToolCallRecord>? ToolCallRecorded
+    /// <summary>一条需要即时呈现的过程记录。</summary>
+    public event Action<JournalEntry>? EntryEmitted
     {
-        add => _process.ToolCall += value;
-        remove => _process.ToolCall -= value;
+        add => _process.Entry += value;
+        remove => _process.Entry -= value;
     }
 
     internal void MarkRunning()
@@ -87,7 +87,8 @@ public sealed class Execution : IExecution
         }
 
         journal.TextAppended += PublishText;
-        journal.ToolCallRecorded += PublishToolCall;
+        journal.EntryAppended += PublishEntry;
+        journal.ProgressReported += UpdateProgress;
     }
 
     /// <summary>转给订阅者一段文本增量。</summary>
@@ -104,8 +105,8 @@ public sealed class Execution : IExecution
         _process.PublishText(delta);
     }
 
-    /// <summary>转给订阅者一次工具调用，并更新进度。</summary>
-    private void PublishToolCall(ToolCallRecord record)
+    /// <summary>更新进度。</summary>
+    private void UpdateProgress(string text)
     {
         lock (_gate)
         {
@@ -114,10 +115,22 @@ public sealed class Execution : IExecution
                 return;
             }
 
-            _progress = $"调用工具 {record.Name}";
+            _progress = text;
+        }
+    }
+
+    /// <summary>转给订阅者一条需要即时呈现的过程记录。</summary>
+    private void PublishEntry(JournalEntry entry)
+    {
+        lock (_gate)
+        {
+            if (_state.IsSettled())
+            {
+                return;
+            }
         }
 
-        _process.PublishToolCall(record);
+        _process.PublishEntry(entry);
     }
 
     internal void MarkSucceeded() => Settle(ExecutionState.Succeeded, []);
@@ -149,7 +162,8 @@ public sealed class Execution : IExecution
         if (journal is not null)
         {
             journal.TextAppended -= PublishText;
-            journal.ToolCallRecorded -= PublishToolCall;
+            journal.EntryAppended -= PublishEntry;
+            journal.ProgressReported -= UpdateProgress;
         }
 
         _cancellation.Dispose();
@@ -212,7 +226,7 @@ public sealed class Execution : IExecution
     {
         private readonly Lock _gate = new();
         private Action<string>? _text;
-        private Action<ToolCallRecord>? _toolCall;
+        private Action<JournalEntry>? _entry;
         private bool _closed;
 
         public event Action<string>? Text
@@ -236,7 +250,7 @@ public sealed class Execution : IExecution
             }
         }
 
-        public event Action<ToolCallRecord>? ToolCall
+        public event Action<JournalEntry>? Entry
         {
             add
             {
@@ -244,7 +258,7 @@ public sealed class Execution : IExecution
                 {
                     if (!_closed)
                     {
-                        _toolCall += value;
+                        _entry += value;
                     }
                 }
             }
@@ -252,7 +266,7 @@ public sealed class Execution : IExecution
             {
                 lock (_gate)
                 {
-                    _toolCall -= value;
+                    _entry -= value;
                 }
             }
         }
@@ -268,15 +282,15 @@ public sealed class Execution : IExecution
             handler?.Invoke(delta);
         }
 
-        public void PublishToolCall(ToolCallRecord record)
+        public void PublishEntry(JournalEntry entry)
         {
-            Action<ToolCallRecord>? handler;
+            Action<JournalEntry>? handler;
             lock (_gate)
             {
-                handler = _toolCall;
+                handler = _entry;
             }
 
-            handler?.Invoke(record);
+            handler?.Invoke(entry);
         }
 
         /// <summary>清空订阅者并拒绝之后的订阅。</summary>
@@ -286,7 +300,7 @@ public sealed class Execution : IExecution
             {
                 _closed = true;
                 _text = null;
-                _toolCall = null;
+                _entry = null;
             }
         }
     }

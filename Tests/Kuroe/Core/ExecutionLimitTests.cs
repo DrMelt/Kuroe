@@ -24,7 +24,8 @@ public sealed class ExecutionLimitTests
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(2, Executions(task, "干活"));
-        Assert.Contains(blocked.Journal, entry => entry is ErrorEntry error && error.Text.Contains("已达上限"));
+        Assert.Contains(blocked.Journal,
+            entry => entry.Level == JournalLevel.Error && entry.Text.Contains("已达上限"));
         Assert.True(environment.Tasks.Rework(id).IsError, "达到上限的节点不能再返工");
     }
 

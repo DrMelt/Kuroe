@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
-using Kuroe.Flow.Shared.Execution.Process;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Tools;
@@ -47,7 +46,7 @@ public sealed class ToolCollection
         return result;
     }
 
-    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，记录随后播发。
+    /// <summary>按声明执行的函数，调用参数与结果写进过程记录，过程条目随后播发。
     /// 模型侧的名字取路径的调用名，过程记录与展示仍用路径。</summary>
     private sealed class DeclaredFunction(ToolFunction declaration, ProcessJournal journal, IToolJson json) : AIFunction
     {
@@ -80,8 +79,8 @@ public sealed class ToolCollection
             return new ValueTask<object?>(result);
         }
 
-        /// <summary>一次调用落进过程记录，记录由执行器播发。</summary>
+        /// <summary>一次调用落进过程记录，过程条目由执行器播发。</summary>
         private void Record(ToolCallRecord call) =>
-            journal.Append(new ToolCallEntry(call));
+            journal.AppendToolCall(call);
     }
 }

@@ -31,7 +31,7 @@ public sealed class CommandNodeTests
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         Assert.Contains(blocked.Journal,
-            entry => entry is ErrorEntry error && error.Text.Contains("无法启动"));
+            entry => entry.Level == JournalLevel.Error && entry.Text.Contains("无法启动"));
     }
 
     /// <summary>命令节点执行 dotnet --version，输出经文件写入节点落到文件。</summary>

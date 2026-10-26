@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
@@ -52,6 +53,14 @@ internal static class ViewLabels
         ExecutionState.Failed => Styles.Error,
         ExecutionState.Running or ExecutionState.Queued => Styles.Key,
         _ => Styles.Hint,
+    };
+
+    /// <summary>过程记录内容的样式。</summary>
+    public static Style StyleOf(JournalLevel level) => level switch
+    {
+        JournalLevel.Error => Styles.Error,
+        JournalLevel.Warning => Styles.Warning,
+        _ => Style.Plain,
     };
 
     /// <summary>执行在一行里的字段与顺序，树行、菜单项与执行清单共用。</summary>

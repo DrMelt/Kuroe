@@ -30,7 +30,7 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = _ => "回复你好";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -43,8 +43,8 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Text, observer.ToolCall);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Text, observer.ToolCall);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Text, observer.Entry);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Text, observer.Entry);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -154,7 +154,7 @@ public sealed class DialogueHostTests
 
         for (int round = 1; round <= 8; round++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Text, observer.ToolCall);
+            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Text, observer.Entry);
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -169,13 +169,15 @@ public sealed class DialogueHostTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
         environment.Runner.Emits = (_, journal) =>
-            journal.Append(new ToolCallEntry(new ToolCallRecord("GetLocalTime", "{}", "2026-10-18 19:10:48", false)));
+            journal.AppendToolCall("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
-        Assert.Equal(["GetLocalTime"], observer.Calls);
+        JournalEntry entry = Assert.Single(observer.Entries);
+        Assert.Equal("工具", entry.Label);
+        Assert.Equal("GetLocalTime {}\n结果 2026-10-18 19:10:48", entry.Text);
     }
 
     [Fact]
@@ -185,20 +187,20 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = _ => "回复你好";
         environment.Runner.Emits = (_, journal) =>
         {
-            journal.Append(new PromptEntry("问题"));
+            journal.AppendPrompt("问题");
             journal.AppendText("增量");
         };
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.ToolCall);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
 
         IExecution round = Assert.Single(environment.Runner.Started);
         List<JournalEntry> entries = [.. round.Snapshot().Journal];
-        Assert.Contains(entries, entry => entry is PromptEntry prompt && prompt.Text == "问题");
-        Assert.Contains(entries, entry => entry is TextEntry text && text.Text.Contains("增量", StringComparison.Ordinal));
+        Assert.Contains(entries, entry => entry.Label == "输入" && entry.Text == "问题");
+        Assert.Contains(entries, entry => entry.Text.Contains("增量", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -217,10 +219,10 @@ public sealed class DialogueHostTests
     {
         public List<string> Texts { get; } = [];
 
-        public List<string> Calls { get; } = [];
+        public List<JournalEntry> Entries { get; } = [];
 
         public void Text(string delta) => Texts.Add(delta);
 
-        public void ToolCall(ToolCallRecord record) => Calls.Add(record.Name);
+        public void Entry(JournalEntry entry) => Entries.Add(entry);
     }
 }

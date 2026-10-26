@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Cli;
 
@@ -65,15 +65,18 @@ internal sealed class CliOutput(TextWriter output, TextWriter error)
         }
     }
 
-    /// <summary>一次工具调用及其结果写 stderr，避免与 stdout 上的模型文本交错。</summary>
-    public void ToolCall(ToolCallRecord record)
+    /// <summary>一条过程记录写 stderr，避免与 stdout 上的模型文本交错。</summary>
+    public void Entry(JournalEntry entry)
     {
+        string[] lines = entry.Text.Split('\n');
         lock (_gate)
         {
-            error.WriteLine(record.Arguments.Length == 0
-                ? $"工具 {record.Name}"
-                : $"工具 {record.Name} {record.Arguments}");
-            error.WriteLine(record.Failed ? $"失败 {record.Outcome}" : $"结果 {record.Outcome}");
+            error.WriteLine($"{entry.Label} {lines[0]}");
+            for (int index = 1; index < lines.Length; index++)
+            {
+                error.WriteLine(lines[index]);
+            }
+
             error.Flush();
         }
     }

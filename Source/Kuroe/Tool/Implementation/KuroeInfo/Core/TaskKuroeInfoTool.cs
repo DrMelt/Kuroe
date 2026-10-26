@@ -220,33 +220,8 @@ public sealed class TaskKuroeInfoTool : ITool
         foreach (JournalEntry entry in shown)
         {
             string at = InfoLabels.Clock(entry.At);
-            switch (entry)
-            {
-                case PromptEntry prompt:
-                    text.AppendLine($"  [{at}] 输入 > {prompt.Text}");
-                    break;
-
-                case TextEntry textEntry:
-                    text.AppendLine($"  [{at}] {textEntry.Text}");
-                    break;
-
-                case ToolCallEntry call:
-                    text.AppendLine($"  [{at}] 工具 > {call.Call.Name} {call.Call.Arguments}");
-                    text.AppendLine($"         结果 > {call.Call.Outcome}");
-                    break;
-
-                case ErrorEntry error:
-                    text.AppendLine($"  [{at}] 错误 > {error.Text}");
-                    break;
-
-                case InfoEntry info:
-                    text.AppendLine($"  [{at}] 信息 > {info.Text}");
-                    break;
-
-                case DiscardedEntry:
-                    text.AppendLine($"  [{at}] 本轮未计入上下文。");
-                    break;
-            }
+            string content = entry.Text.Replace("\n", "\n         ", StringComparison.Ordinal);
+            text.AppendLine($"  [{at}] {entry.Label} > {content}");
         }
     }
 

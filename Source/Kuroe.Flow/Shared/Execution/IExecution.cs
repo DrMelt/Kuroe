@@ -1,3 +1,5 @@
+using Kuroe.Flow.Shared.Execution.Process;
+
 namespace Kuroe.Flow.Shared.Execution;
 
 /// <summary>一次执行对宿主的视图：所属上下文、状态快照与过程事件。状态改动只在引擎内部。</summary>
@@ -21,6 +23,6 @@ public interface IExecution
     /// <summary>模型输出的一段文本，按到达顺序给出。收口后不再触发。</summary>
     event Action<string>? TextEmitted;
 
-    /// <summary>一次工具调用及其结果。收口后不再触发。</summary>
-    event Action<ToolCallRecord>? ToolCallRecorded;
+    /// <summary>一条需要即时呈现的过程记录。收口后不再触发。</summary>
+    event Action<JournalEntry>? EntryEmitted;
 }

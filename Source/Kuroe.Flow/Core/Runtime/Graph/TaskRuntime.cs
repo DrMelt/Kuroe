@@ -1,6 +1,5 @@
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
@@ -272,7 +271,7 @@ internal sealed class TaskRuntime : INodeContext
             return;
         }
 
-        _task.Journal.Append(new ErrorEntry($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。"));
+        _task.Journal.AppendError($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。");
     }
 
     /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
@@ -353,7 +352,7 @@ internal sealed class TaskRuntime : INodeContext
 
             if (node.TakeFailure() is { Length: > 0 } failure)
             {
-                _task.Journal.Append(new ErrorEntry($"{node.Path}：{failure}"));
+                _task.Journal.AppendError($"{node.Path}：{failure}");
                 _task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{_task.Id} 停在节点 {node.Path.Label}，{failure}"));
                 _task.Touch();
             }
@@ -438,7 +437,7 @@ internal sealed class TaskRuntime : INodeContext
             .Select(binding => $"{binding.Source}@{binding.Port}"));
         string message = $"{_task.Id} 的节点 {node.Path.Label} 有启动组未触发：{ports} 的产出为 false，本组已消耗，不再等待。";
 
-        _task.Journal.Append(new InfoEntry(message));
+        _task.Journal.AppendInfo(message);
         _task.Registry.Report(new ExecutionNotice(NoticeLevel.Information, message));
         _task.Touch();
     }

@@ -1,10 +1,12 @@
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Presentation;
+using Spectre.Console;
 using Xunit;
 
 namespace Kuroe.Console.Tests;
@@ -84,6 +86,14 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Error, ViewLabels.StyleOf(ExecutionState.Failed));
         Assert.Equal(Styles.Key, ViewLabels.StyleOf(ExecutionState.Running));
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(ExecutionState.Canceled));
+    }
+
+    [Fact]
+    public void Style_of_journal_level_picks_the_host_style()
+    {
+        Assert.Equal(Style.Plain, ViewLabels.StyleOf(JournalLevel.Information));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(JournalLevel.Warning));
+        Assert.Equal(Styles.Error, ViewLabels.StyleOf(JournalLevel.Error));
     }
 
     [Fact]

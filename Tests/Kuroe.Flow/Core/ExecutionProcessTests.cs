@@ -25,7 +25,7 @@ public sealed class ExecutionProcessTests
     public void Attached_journal_appears_in_snapshot()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        InfoEntry entry = new("记录");
+        JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "信息", "记录");
         TestJournal journal = new([entry], 3);
 
         execution.AttachJournal(journal);
@@ -36,23 +36,28 @@ public sealed class ExecutionProcessTests
     }
 
     [Fact]
-    public void Journal_text_and_tool_call_reach_subscribers_and_update_progress()
+    public void Journal_text_entry_and_progress_reach_subscribers()
     {
         Execution execution = new(new ExecutionId(1), Input());
         TestJournal journal = new([]);
         List<string> texts = [];
-        List<ToolCallRecord> calls = [];
+        List<JournalEntry> entries = [];
         execution.AttachJournal(journal);
         execution.TextEmitted += texts.Add;
-        execution.ToolCallRecorded += calls.Add;
+        execution.EntryEmitted += entries.Add;
         execution.MarkRunning();
 
         journal.EmitText("增量");
-        ToolCallRecord call = new("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
-        journal.EmitToolCall(call);
+        JournalEntry entry = new(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Information,
+            "工具",
+            "GetLocalTime {}\n结果 2026-10-18 19:10:48");
+        journal.EmitEntry(entry);
+        journal.EmitProgress("调用工具 GetLocalTime");
 
         Assert.Equal(["增量"], texts);
-        Assert.Equal([call], calls);
+        Assert.Equal([entry], entries);
         Assert.Equal("调用工具 GetLocalTime", execution.Snapshot().Progress);
     }
 
@@ -60,48 +65,49 @@ public sealed class ExecutionProcessTests
     public void Settled_execution_stops_events_and_keeps_journal()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestJournal journal = new([new TextEntry("保留")]);
+        TestJournal journal = new([new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "回复", "保留")]);
         execution.AttachJournal(journal);
         int texts = 0;
-        int calls = 0;
+        int entries = 0;
         execution.TextEmitted += _ => texts++;
-        execution.ToolCallRecorded += _ => calls++;
+        execution.EntryEmitted += _ => entries++;
         execution.MarkRunning();
         execution.MarkSucceeded();
 
         journal.EmitText("后");
-        journal.EmitToolCall(new ToolCallRecord("GetLocalTime", "{}", "完成", false));
+        journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
+        journal.EmitProgress("调用工具 GetLocalTime");
 
         Assert.Equal(0, texts);
-        Assert.Equal(0, calls);
+        Assert.Equal(0, entries);
         Assert.Equal(string.Empty, execution.Snapshot().Progress);
         Assert.Single(execution.Snapshot().Journal);
     }
 
     [Fact]
-    public void Every_subscriber_receives_text_and_tool_calls()
+    public void Every_subscriber_receives_text_and_entries()
     {
         Execution execution = new(new ExecutionId(1), Input());
         TestJournal journal = new([]);
         List<string> firstTexts = [];
         List<string> secondTexts = [];
-        List<ToolCallRecord> firstCalls = [];
-        List<ToolCallRecord> secondCalls = [];
+        List<JournalEntry> firstEntries = [];
+        List<JournalEntry> secondEntries = [];
         execution.AttachJournal(journal);
         execution.TextEmitted += firstTexts.Add;
         execution.TextEmitted += secondTexts.Add;
-        execution.ToolCallRecorded += firstCalls.Add;
-        execution.ToolCallRecorded += secondCalls.Add;
+        execution.EntryEmitted += firstEntries.Add;
+        execution.EntryEmitted += secondEntries.Add;
         execution.MarkRunning();
 
         journal.EmitText("增量");
-        ToolCallRecord call = new("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
-        journal.EmitToolCall(call);
+        JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}");
+        journal.EmitEntry(entry);
 
         Assert.Equal(["增量"], firstTexts);
         Assert.Equal(["增量"], secondTexts);
-        Assert.Equal([call], firstCalls);
-        Assert.Equal([call], secondCalls);
+        Assert.Equal([entry], firstEntries);
+        Assert.Equal([entry], secondEntries);
     }
 
     [Fact]
@@ -113,15 +119,15 @@ public sealed class ExecutionProcessTests
         execution.MarkRunning();
         execution.MarkSucceeded();
         List<string> texts = [];
-        List<ToolCallRecord> calls = [];
+        List<JournalEntry> entries = [];
         execution.TextEmitted += texts.Add;
-        execution.ToolCallRecorded += calls.Add;
+        execution.EntryEmitted += entries.Add;
 
         journal.EmitText("后");
-        journal.EmitToolCall(new ToolCallRecord("GetLocalTime", "{}", "完成", false));
+        journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
 
         Assert.Empty(texts);
-        Assert.Empty(calls);
+        Assert.Empty(entries);
     }
 
     private static ExecutionInput Input() => new()
@@ -139,10 +145,14 @@ public sealed class ExecutionProcessTests
 
         public event Action<string>? TextAppended;
 
-        public event Action<ToolCallRecord>? ToolCallRecorded;
+        public event Action<JournalEntry>? EntryAppended;
+
+        public event Action<string>? ProgressReported;
 
         public void EmitText(string delta) => TextAppended?.Invoke(delta);
 
-        public void EmitToolCall(ToolCallRecord call) => ToolCallRecorded?.Invoke(call);
+        public void EmitEntry(JournalEntry entry) => EntryAppended?.Invoke(entry);
+
+        public void EmitProgress(string text) => ProgressReported?.Invoke(text);
     }
 }

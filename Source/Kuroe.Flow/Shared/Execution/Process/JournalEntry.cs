@@ -1,22 +1,21 @@
 namespace Kuroe.Flow.Shared.Execution.Process;
 
-/// <summary>过程记录中的一条，按发生顺序排列。</summary>
-public abstract record JournalEntry(DateTimeOffset At);
+/// <summary>过程记录的严重程度。</summary>
+public enum JournalLevel
+{
+    /// <summary>一般过程信息。</summary>
+    Information,
 
-/// <summary>发给模型的一句话或一条指令。</summary>
-public sealed record PromptEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
+    /// <summary>可恢复的问题或需要留意的结果。</summary>
+    Warning,
 
-/// <summary>模型输出的一段文本。</summary>
-public sealed record TextEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
+    /// <summary>失败或阻塞原因。</summary>
+    Error,
+}
 
-/// <summary>一次工具调用及其结果。</summary>
-public sealed record ToolCallEntry(ToolCallRecord Call) : JournalEntry(DateTimeOffset.UtcNow);
-
-/// <summary>一条失败说明。</summary>
-public sealed record ErrorEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
-
-/// <summary>一条信息说明。</summary>
-public sealed record InfoEntry(string Text) : JournalEntry(DateTimeOffset.UtcNow);
-
-/// <summary>本轮输入与输出未计入上下文。</summary>
-public sealed record DiscardedEntry() : JournalEntry(DateTimeOffset.UtcNow);
+/// <summary>过程记录中的一条，按发生顺序排列。标签与级别由写入方给出，取用方按级别与文本展示，不解析标签语义。</summary>
+/// <param name="At">发生时刻。</param>
+/// <param name="Level">严重程度。</param>
+/// <param name="Label">条目标签，由写入方给出，取用方不解析。</param>
+/// <param name="Text">记录文本。首行为摘要，其余行为详情，至少一行。</param>
+public sealed record JournalEntry(DateTimeOffset At, JournalLevel Level, string Label, string Text);

@@ -1,5 +1,5 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -9,12 +9,16 @@ namespace Kuroe.Console.Tests;
 public sealed class DialogueOutputTests
 {
     [Fact]
-    public void ToolCall_success_prints_tool_result_line()
+    public void Entry_success_prints_tool_result_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         DialogueOutput dialogue = new(terminal);
 
-        dialogue.ToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "已写入 5 字符。", false));
+        dialogue.Entry(new JournalEntry(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Information,
+            "工具",
+            "WriteFile {\"path\":\"a.txt\"}\n结果 已写入 5 字符。"));
 
         Assert.Contains($"工具 WriteFile {{\"path\":\"a.txt\"}}", output.Output);
         Assert.Contains("结果 已写入 5 字符。", output.Output);
@@ -22,31 +26,39 @@ public sealed class DialogueOutputTests
     }
 
     [Fact]
-    public void ToolCall_failure_prints_warning_line()
+    public void Entry_failure_prints_warning_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         DialogueOutput dialogue = new(terminal);
 
-        dialogue.ToolCall(new ToolCallRecord("WriteFile", """{"path":"a.txt"}""", "被拒绝：缺少参数。", true));
+        dialogue.Entry(new JournalEntry(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Warning,
+            "工具",
+            "WriteFile {\"path\":\"a.txt\"}\n失败 被拒绝：缺少参数。"));
 
         Assert.Contains("失败 被拒绝：缺少参数。", output.Output);
         Assert.DoesNotContain("结果 ", output.Output);
     }
 
     [Fact]
-    public void ToolCall_after_text_starts_on_new_line()
+    public void Entry_after_text_starts_on_new_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         DialogueOutput dialogue = new(terminal);
 
         dialogue.Text("我来查看一下。");
-        dialogue.ToolCall(new ToolCallRecord("ListTools", "{}", "内置对话可用函数与分组", false));
+        dialogue.Entry(new JournalEntry(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Information,
+            "工具",
+            "ListTools {}\n结果 内置对话可用函数与分组"));
 
         Assert.Contains($"我来查看一下。{Environment.NewLine}工具 ListTools {{}}", output.Output);
     }
 
     [Fact]
-    public void ToolCall_inside_a_frame_stays_inside_the_borders()
+    public void Entry_inside_a_frame_stays_inside_the_borders()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         output.Profile.Width = 40;
@@ -55,7 +67,11 @@ public sealed class DialogueOutputTests
         using (terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手"))
         {
             dialogue.Text("我来查看一下。");
-            dialogue.ToolCall(new ToolCallRecord("ListTools", "{}", "内置对话可用函数与分组", false));
+            dialogue.Entry(new JournalEntry(
+                DateTimeOffset.UtcNow,
+                JournalLevel.Information,
+                "工具",
+                "ListTools {}\n结果 内置对话可用函数与分组"));
         }
 
         string[] lines = output.Output.Replace("\r", string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);

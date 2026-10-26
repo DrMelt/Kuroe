@@ -4,7 +4,7 @@ using Spectre.Console.Rendering;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>过程记录的表格呈现，任务与执行详情共用。一条调用占两行：调用与结果。</summary>
+/// <summary>过程记录的表格呈现，任务与执行详情共用。</summary>
 internal static class JournalView
 {
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>
@@ -44,56 +44,10 @@ internal static class JournalView
 
     private static void Add(Table table, JournalEntry entry)
     {
-        switch (entry)
-        {
-            case PromptEntry prompt:
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("输入", Styles.Key),
-                    new Text(prompt.Text, Styles.Key));
-                break;
-
-            case TextEntry text:
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("回复", Styles.Hint),
-                    new Text(text.Text));
-                break;
-
-            case ToolCallEntry call:
-                string invocation = call.Call.Arguments.Length == 0
-                    ? call.Call.Name
-                    : $"{call.Call.Name} {call.Call.Arguments}";
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("工具", Styles.Key),
-                    new Text(invocation, Styles.Key));
-                table.AddRow(
-                    new Text(string.Empty),
-                    new Text(call.Call.Failed ? "失败" : "结果", call.Call.Failed ? Styles.Warning : Styles.Hint),
-                    new Text(call.Call.Outcome, call.Call.Failed ? Styles.Warning : Styles.Hint));
-                break;
-
-            case ErrorEntry error:
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("错误", Styles.Error),
-                    new Text(error.Text, Styles.Error));
-                break;
-
-            case InfoEntry info:
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("信息", Styles.Hint),
-                    new Text(info.Text, Styles.Hint));
-                break;
-
-            case DiscardedEntry:
-                table.AddRow(
-                    new Text(ViewLabels.Clock(entry.At), Styles.Hint),
-                    new Text("丢弃", Styles.Warning),
-                    new Text("本轮未计入上下文。", Styles.Warning));
-                break;
-        }
+        Style style = ViewLabels.StyleOf(entry.Level);
+        table.AddRow(
+            new Text(ViewLabels.Clock(entry.At), Styles.Hint),
+            new Text(entry.Label, Styles.Hint),
+            new Text(entry.Text, style));
     }
 }

@@ -3,7 +3,6 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
@@ -99,6 +98,27 @@ public sealed class KuroeInfoToolTests : IDisposable
     }
 
     [Fact]
+    public void GetExecution_renders_tool_entry_with_indented_detail()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Emits = (_, journal) =>
+            journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
+        TaskId id = environment.Submit("做一个测试任务");
+        environment.Settle(id);
+
+        ExecutionId executionId = environment.Snapshot(id).Executables
+            .SelectMany(node => node.Executions)
+            .First()
+            .Id;
+        TaskKuroeInfoTool tool = new(environment.Registry);
+        string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()))
+            .Replace("\r", string.Empty);
+
+        Assert.Contains("工具 > file/ReadFile {}", output);
+        Assert.Contains("\n         结果 完成", output);
+    }
+
+    [Fact]
     public void GetExecution_rejects_bad_arguments()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -115,7 +135,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.DelayMs = 60_000;
         environment.Runner.Emits = (_, journal) =>
-            journal.Append(new ToolCallEntry(new ToolCallRecord("file/ReadFile", "{}", "完成", false)));
+            journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
 
         TaskId id = environment.Submit("做一个测试任务");
         TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables

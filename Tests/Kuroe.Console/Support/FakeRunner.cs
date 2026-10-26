@@ -50,24 +50,32 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     {
         private readonly Lock _gate = new();
         private readonly List<JournalEntry> _entries = [];
+        private Action<JournalEntry>? _entryAppended;
+        private Action<string>? _progressReported;
 
         /// <summary>文本追加后给出该增量。</summary>
         public event Action<string>? TextAppended;
 
-        /// <summary>工具调用记录后给出该记录。</summary>
-        public event Action<ToolCallRecord>? ToolCallRecorded;
+        /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
+        public event Action<JournalEntry>? EntryAppended
+        {
+            add => _entryAppended += value;
+            remove => _entryAppended -= value;
+        }
 
-        /// <summary>追加一条过程记录，工具调用随后播发。</summary>
+        /// <summary>执行进度变化后给出进度文本。</summary>
+        public event Action<string>? ProgressReported
+        {
+            add => _progressReported += value;
+            remove => _progressReported -= value;
+        }
+
+        /// <summary>追加一条过程记录。</summary>
         public void Append(JournalEntry entry)
         {
             lock (_gate)
             {
                 _entries.Add(entry);
-            }
-
-            if (entry is ToolCallEntry toolCall)
-            {
-                ToolCallRecorded?.Invoke(toolCall.Call);
             }
         }
 
@@ -79,7 +87,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
                 return;
             }
 
-            Append(new TextEntry(delta));
+            Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "回复", delta));
             TextAppended?.Invoke(delta);
         }
 

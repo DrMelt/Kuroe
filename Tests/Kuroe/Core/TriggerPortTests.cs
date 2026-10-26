@@ -25,8 +25,9 @@ public sealed class TriggerPortTests
         Assert.Empty(Executions(snapshot, "下游"));
         Assert.Contains(environment.Runner.Submissions, text =>
             text.Contains("其中 1 个端口不触发下游", StringComparison.Ordinal));
-        Assert.Contains(snapshot.Journal.OfType<InfoEntry>(), entry =>
-            entry.Text.Contains("下游", StringComparison.Ordinal)
+        Assert.Contains(snapshot.Journal, entry =>
+            entry.Level == JournalLevel.Information
+            && entry.Text.Contains("下游", StringComparison.Ordinal)
             && entry.Text.Contains("来源@结论", StringComparison.Ordinal));
     }
 
@@ -114,8 +115,9 @@ public sealed class TriggerPortTests
             current.State == TaskState.Done && HasTriggerInfo(current));
 
         Assert.Empty(Executions(snapshot, "下游"));
-        Assert.Contains(snapshot.Journal.OfType<InfoEntry>(), entry =>
-            entry.Text.Contains("箱@结论", StringComparison.Ordinal));
+        Assert.Contains(snapshot.Journal, entry =>
+            entry.Level == JournalLevel.Information
+            && entry.Text.Contains("箱@结论", StringComparison.Ordinal));
     }
 
     /// <summary>审批节点收到 false 时不进入待批准，下游不启动。</summary>
@@ -180,7 +182,9 @@ public sealed class TriggerPortTests
 
     /// <summary>本轮过程记录里是否已有触发抑制的信息条目。</summary>
     private static bool HasTriggerInfo(TaskSnapshot snapshot) =>
-        snapshot.Journal.OfType<InfoEntry>().Any(entry => entry.Text.Contains("未触发", StringComparison.Ordinal));
+        snapshot.Journal.Any(entry =>
+            entry.Level == JournalLevel.Information
+            && entry.Text.Contains("未触发", StringComparison.Ordinal));
 
     /// <summary>某个标签的执行节点已启动的执行。</summary>
     private static IReadOnlyList<ExecutionSnapshot> Executions(TaskSnapshot snapshot, string label) =>

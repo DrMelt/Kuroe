@@ -10,7 +10,7 @@ internal static class PlainTaskView
     /// <summary>列出任务级与执行级的失败说明，写到 stderr。</summary>
     public static void Failures(CliOutput output, TaskSnapshot task)
     {
-        foreach (ErrorEntry entry in task.Journal.OfType<ErrorEntry>())
+        foreach (JournalEntry entry in task.Journal.Where(entry => entry.Level == JournalLevel.Error))
         {
             output.ErrorLine($"任务记录：{entry.Text}");
         }

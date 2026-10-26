@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -50,7 +49,7 @@ public sealed class Session
         ProcessJournal journal,
         CancellationToken cancellationToken = default)
     {
-        journal.Append(new PromptEntry(input));
+        journal.AppendPrompt(input);
 
         if (_history.Model is not { } model)
         {
@@ -143,7 +142,7 @@ public sealed class Session
             history.RemoveRange(historyStart, history.Count - historyStart);
         }
 
-        journal.Append(new DiscardedEntry());
+        journal.AppendDiscarded();
     }
 
     /// <summary>消息序列中是否有缺少结果的工具调用。</summary>

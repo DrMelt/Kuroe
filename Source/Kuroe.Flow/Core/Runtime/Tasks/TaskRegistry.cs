@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -37,11 +38,11 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
         CompiledFlow flow,
         string title,
         Action<string>? onText,
-        Action<ToolCallRecord>? onToolCall)
+        Action<JournalEntry>? onEntry)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, hostValues, flow.Model, flow.Graph, title, onText, onToolCall);
+            WorkTask task = new(this, id, inputs, hostValues, flow.Model, flow.Graph, title, onText, onEntry);
             _tasks.Add(task);
 
             return task;

@@ -46,7 +46,7 @@ public sealed class FileNodeTests
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         Assert.Contains(blocked.Journal,
-            entry => entry is ErrorEntry error && error.Text.Contains("读取 in.txt 失败"));
+            entry => entry.Level == JournalLevel.Error && entry.Text.Contains("读取 in.txt 失败"));
 
         File.WriteAllText(Path.Combine(environment.Root, "in.txt"), "恢复内容");
         environment.Tasks.Rework(id).ThrowIfError();
@@ -107,7 +107,7 @@ public sealed class FileNodeTests
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         Assert.Contains(blocked.Journal,
-            entry => entry is ErrorEntry error && error.Text.Contains("不是工作区内的合法路径"));
+            entry => entry.Level == JournalLevel.Error && entry.Text.Contains("不是工作区内的合法路径"));
     }
 
     /// <summary>读入后写出：文件内容直接落到另一个文件。</summary>

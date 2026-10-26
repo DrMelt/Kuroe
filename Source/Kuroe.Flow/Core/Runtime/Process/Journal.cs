@@ -8,18 +8,20 @@ internal sealed class Journal
     /// <summary>保留的记录条数，超出后丢最早的记录。</summary>
     private const int EntryLimit = 400;
 
+    private const string ErrorLabel = "错误";
+    private const string InfoLabel = "信息";
+
     private readonly Lock _gate = new();
     private readonly List<JournalEntry> _entries = [];
     private int _dropped;
 
-    /// <summary>追加一条过程记录。</summary>
-    public void Append(JournalEntry entry)
-    {
-        lock (_gate)
-        {
-            AppendCore(entry);
-        }
-    }
+    /// <summary>追加一条失败说明。</summary>
+    public void AppendError(string text) =>
+        Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Error, ErrorLabel, text));
+
+    /// <summary>追加一条信息说明。</summary>
+    public void AppendInfo(string text) =>
+        Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, InfoLabel, text));
 
     /// <summary>已记录的条目，按发生顺序。</summary>
     public IReadOnlyList<JournalEntry> Entries
@@ -42,6 +44,15 @@ internal sealed class Journal
             {
                 return _dropped;
             }
+        }
+    }
+
+    /// <summary>追加一条过程记录。</summary>
+    private void Append(JournalEntry entry)
+    {
+        lock (_gate)
+        {
+            AppendCore(entry);
         }
     }
 

@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -25,13 +26,13 @@ public sealed class TaskActions(
     private readonly IHostTaskStart _host = host;
 
     /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取宿主开始输入值，再建任务并启动推进。
-    /// 任务号被宿主资源占用时换下一个任务号重来。onText 与 onToolCall 收到该任务全部执行的过程事件。</summary>
+    /// 任务号被宿主资源占用时换下一个任务号重来。onText 与 onEntry 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
         CompiledFlow flow,
         string? title,
         Action<string>? onText = null,
-        Action<ToolCallRecord>? onToolCall = null)
+        Action<JournalEntry>? onEntry = null)
     {
         INodeGraph graph = flow.Graph;
         IReadOnlyDictionary<PortName, string> hostInputs = flow.Model.HostStartInputs;
@@ -86,7 +87,7 @@ public sealed class TaskActions(
                 flow,
                 taskTitle,
                 onText,
-                onToolCall);
+                onEntry);
 
             lock (task.Gate)
             {

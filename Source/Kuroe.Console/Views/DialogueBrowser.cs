@@ -87,7 +87,7 @@ internal sealed class DialogueBrowser(
         {
             try
             {
-                outcome = await dialogue.ReplyAsync(input, output.Text, output.ToolCall);
+                outcome = await dialogue.ReplyAsync(input, output.Text, output.Entry);
             }
             catch (Exception ex)
             {

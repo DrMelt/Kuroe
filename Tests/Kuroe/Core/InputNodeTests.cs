@@ -284,7 +284,7 @@ public sealed class InputNodeTests
         ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
         ExecutionSnapshot firstExecution = Assert.Single(replyNode.Executions);
         Assert.Contains(firstExecution.Input.Inputs, value => value.Text.Contains("第一问"));
-        Assert.Contains(firstExecution.Journal, entry => entry is TextEntry text && text.Text == "回复第1轮");
+        Assert.Contains(firstExecution.Journal, entry => entry.Text == "回复第1轮");
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
 
@@ -295,7 +295,7 @@ public sealed class InputNodeTests
         Assert.Equal(2, replyNodeSecond.Executions.Count);
         ExecutionSnapshot secondExecution = replyNodeSecond.Executions[^1];
         Assert.Contains(secondExecution.Input.Inputs, value => value.Text.Contains("第二问"));
-        Assert.Contains(secondExecution.Journal, entry => entry is TextEntry text && text.Text == "回复第2轮");
+        Assert.Contains(secondExecution.Journal, entry => entry.Text == "回复第2轮");
     }
 
     /// <summary>回话执行在跑时收话已回答，此时再回答按没有等待回答的输入节点拒绝，收口后回到挂起。</summary>

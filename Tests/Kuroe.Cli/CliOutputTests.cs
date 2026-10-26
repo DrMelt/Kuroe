@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -25,14 +25,22 @@ public sealed class CliOutputTests
     }
 
     [Fact]
-    public void Tool_call_writes_invocation_and_result_to_stderr()
+    public void Entry_writes_label_and_text_to_stderr()
     {
         StringWriter output = new();
         StringWriter error = new();
         CliOutput cli = new(output, error);
 
-        cli.ToolCall(new ToolCallRecord("file/read", "{\"path\":\"a\"}", "内容", false));
-        cli.ToolCall(new ToolCallRecord("file/read", "{}", "失败原因", true));
+        cli.Entry(new JournalEntry(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Information,
+            "工具",
+            "file/read {\"path\":\"a\"}\n结果 内容"));
+        cli.Entry(new JournalEntry(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Warning,
+            "工具",
+            "file/read {}\n失败 失败原因"));
 
         Assert.Empty(output.ToString());
         Assert.Equal(

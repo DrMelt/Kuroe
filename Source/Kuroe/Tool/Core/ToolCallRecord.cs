@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.Execution;
+namespace Kuroe.Tool;
 
 /// <summary>一次工具调用的记录，参数文本由执行实参生成。</summary>
 /// <param name="Name">工具路径，模型按它调用。</param>

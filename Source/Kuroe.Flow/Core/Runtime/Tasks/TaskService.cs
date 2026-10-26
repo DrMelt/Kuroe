@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -15,13 +16,13 @@ public sealed class TaskService(
     private readonly TaskActions _actions = actions;
     private readonly IFlowRuntimeCatalog _flows = flows;
 
-    /// <summary>提交任务：按流程建任务、取宿主开始输入值并启动执行。onText 与 onToolCall 收到该任务全部执行的过程事件。</summary>
+    /// <summary>提交任务：按流程建任务、取宿主开始输入值并启动执行。onText 与 onEntry 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         StartInputs inputs,
         FlowName flowName,
         string? title,
         Action<string>? onText = null,
-        Action<ToolCallRecord>? onToolCall = null)
+        Action<JournalEntry>? onEntry = null)
     {
         ErrorOr<CompiledFlow> flow = _flows.FindCompiled(flowName);
         if (flow.IsError)
@@ -29,7 +30,7 @@ public sealed class TaskService(
             return flow.ErrorsOrEmptyList;
         }
 
-        return _actions.SubmitCompiled(inputs, flow.Value, title, onText, onToolCall);
+        return _actions.SubmitCompiled(inputs, flow.Value, title, onText, onEntry);
     }
 
     /// <summary>改任务标题。</summary>

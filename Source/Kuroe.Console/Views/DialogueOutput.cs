@@ -1,24 +1,26 @@
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Execution.Process;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>对话过程的终端呈现：文本增量直接写出，一次工具调用占两行。</summary>
+/// <summary>对话过程的终端呈现：文本增量直接写出，过程条目按文本行展开。</summary>
 internal sealed class DialogueOutput(Terminal terminal)
 {
     public void Text(string delta) => terminal.Append(delta);
 
-    public void ToolCall(ToolCallRecord record)
+    public void Entry(JournalEntry entry)
     {
-        terminal.ToolCall(record.Arguments.Length == 0
-            ? $"工具 {record.Name}"
-            : $"工具 {record.Name} {record.Arguments}");
+        string[] lines = entry.Text.Split('\n');
+        terminal.ToolCall($"{entry.Label} {lines[0]}");
 
-        if (record.Failed)
+        for (int index = 1; index < lines.Length; index++)
         {
-            terminal.Warn($"失败 {record.Outcome}");
-            return;
-        }
+            if (entry.Level != JournalLevel.Information)
+            {
+                terminal.Warn(lines[index]);
+                continue;
+            }
 
-        terminal.ToolResult($"结果 {record.Outcome}");
+            terminal.ToolResult(lines[index]);
+        }
     }
 }

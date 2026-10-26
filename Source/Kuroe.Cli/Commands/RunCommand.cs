@@ -46,7 +46,7 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
         session.Registry.Notified += report;
         try
         {
-            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(parsed.Value, flow.Value, title, output.Text, output.ToolCall);
+            ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(parsed.Value, flow.Value, title, output.Text, output.Entry);
             if (submitted.IsError)
             {
                 output.Report(submitted.ErrorsOrEmptyList);
