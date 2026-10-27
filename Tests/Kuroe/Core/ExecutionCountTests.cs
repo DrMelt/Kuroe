@@ -73,8 +73,8 @@ public sealed class ExecutionCountTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
                   ]
                 }
               ]
@@ -95,8 +95,8 @@ public sealed class ExecutionCountTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "上游", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "上游", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "下游", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "上游@结论" } ] }
                   ]
                 }

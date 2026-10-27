@@ -30,10 +30,10 @@ public static class AssistantServiceCollectionExtensions
         KuroeComposition composition,
         string sourceDirectory)
     {
-        ErrorOr<Success> tools = composition.AddTools(
+        ErrorOr<Success> tools = composition.AddToolSources(
         [
-            new SourceTool(sourceDirectory),
-            new ToolboxKuroeInfoTool(DialogueFlow.Tools, composition.ConfiguredTools),
+            new SourceToolSource(sourceDirectory),
+            new ToolboxToolSource(DialogueFlow.Tools, composition.ConfiguredTools),
         ]);
         if (tools.IsError)
         {

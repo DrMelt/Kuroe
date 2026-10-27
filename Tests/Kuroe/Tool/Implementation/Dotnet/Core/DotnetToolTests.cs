@@ -233,7 +233,10 @@ public sealed class DotnetToolTests
     [Fact]
     public void Tools_carry_every_definition()
     {
-        IReadOnlyList<ITool> tools = DotnetTools.Tools(Path.GetTempPath());
+        IReadOnlyList<ITool> tools =
+        [
+            .. DotnetTools.Definitions.Select(definition => new CommandTool(definition, Path.GetTempPath())),
+        ];
 
         Assert.Equal(DotnetTools.Definitions.Count, tools.Count);
         Assert.All(

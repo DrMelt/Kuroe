@@ -11,10 +11,10 @@ public static class ToolErrors
     /// <summary>路径解析越界、不符合准入规则，或目标类型不符合要求。</summary>
     public static Error Path(string message) => Error.Validation(ToolErrorCodes.Path, message);
 
-    /// <summary>读取工作目录内文件失败。</summary>
+    /// <summary>读取文件失败。</summary>
     public static Error ReadFailed(string message) => Error.Failure(ToolErrorCodes.ReadFailed, message);
 
-    /// <summary>写入工作目录内文件失败。</summary>
+    /// <summary>写入文件失败。</summary>
     public static Error WriteFailed(string message) => Error.Failure(ToolErrorCodes.WriteFailed, message);
 
     /// <summary>命令无法启动或超时被终止。</summary>

@@ -42,10 +42,9 @@ public sealed class Session
         }
     }
 
-    /// <summary>一轮请求。execution 给出工具绑定的身份，journal 收本次执行的过程记录并播发过程。只报成功或失败。</summary>
+    /// <summary>一轮请求。journal 收本次执行的过程记录并播发过程。只报成功或失败。</summary>
     internal async Task<ErrorOr<Success>> AskAsync(
         string input,
-        ExecutionId execution,
         ProcessJournal journal,
         CancellationToken cancellationToken = default)
     {
@@ -76,7 +75,7 @@ public sealed class Session
             await foreach (var update in agent.RunStreamingAsync(
                 [new ChatMessage(ChatRole.User, input)],
                 _session,
-                Options(execution, journal),
+                Options(journal),
                 cancellationToken))
             {
                 updates.Add(update);
@@ -172,11 +171,11 @@ public sealed class Session
     }
 
     /// <summary>请求选项按本次执行构造，工具与系统指令来自执行输入。</summary>
-    private ChatClientAgentRunOptions Options(ExecutionId execution, ProcessJournal journal)
+    private ChatClientAgentRunOptions Options(ProcessJournal journal)
     {
         return new ChatClientAgentRunOptions(new ChatOptions
         {
-            Tools = [.. _tools.Build(execution, journal, _history.ToolPaths)],
+            Tools = [.. _tools.Build(journal, _history.ToolPaths)],
             Instructions = _history.SystemPrompt,
         });
     }

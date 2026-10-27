@@ -73,11 +73,6 @@ public sealed partial record NodeSpec
                     fail("容器节点不是执行节点，不支持 From。");
                 }
 
-                if (In is not null)
-                {
-                    fail("容器节点不是执行节点，不支持输入端口绑定。");
-                }
-
                 if (Model is not null || Models is not null)
                 {
                     fail("容器节点不是执行节点，不支持模型选择。");

@@ -14,6 +14,7 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
+using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
 using Kuroe.Tool.Dotnet;
@@ -24,6 +25,7 @@ using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Tasks;
+using Kuroe.Tools;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
@@ -77,13 +79,45 @@ public static class ServiceCollectionExtensions
             return taskDirectory.ErrorsOrEmptyList;
         }
 
+        ToolFileRegistry toolFiles = new();
+        CommandToolFiles.RegisterInto(toolFiles);
+
+        ErrorOr<IReadOnlyList<ConfiguredTool>> configuredTools =
+            ToolFiles.Load(toolFiles, paths.ConfigDirectory, paths.WorkingDirectory);
+        if (configuredTools.IsError)
+        {
+            return configuredTools.ErrorsOrEmptyList;
+        }
+
+        KuroeComposition composition = new(
+            services,
+            configuredTools.Value,
+            new KuroeStartup(settings.Value.Current.Runtime.LogLevel));
+
+        // 工具定义先于流程编译，供 ToolPorts 在装载期校验变量映射
+        List<IToolSource> definitionSources =
+        [
+            new FileToolSource(),
+            new GitToolSource(),
+            new DotnetToolSource(),
+            new ConfiguredToolSource(configuredTools.Value),
+            new TimeToolSource(),
+        ];
+        ErrorOr<Success> definitionTools = composition.AddToolSources(definitionSources);
+        if (definitionTools.IsError)
+        {
+            return definitionTools.ErrorsOrEmptyList;
+        }
+
+        ToolContractCatalog contracts = new(definitionSources.SelectMany(source => source.Definitions));
+
         NodeTypeDescriptionRegistry typeFiles = new();
         InputRegistry inputs = new();
         JsonFlowFormat format = new();
         IFlowExpander expander = new NodeLibraryExpander();
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
-        LlmNodeTypeDescriptions.RegisterInto(typeFiles);
+        LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
         FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
         CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
         coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
@@ -96,16 +130,6 @@ public static class ServiceCollectionExtensions
         if (flows.IsError)
         {
             return flows.ErrorsOrEmptyList;
-        }
-
-        ToolFileRegistry toolFiles = new();
-        CommandToolFiles.RegisterInto(toolFiles);
-
-        ErrorOr<IReadOnlyList<ConfiguredTool>> configuredTools =
-            ToolFiles.Load(toolFiles, paths.ConfigDirectory, paths.WorkingDirectory);
-        if (configuredTools.IsError)
-        {
-            return configuredTools.ErrorsOrEmptyList;
         }
 
         services.AddSingleton(paths);
@@ -125,11 +149,6 @@ public static class ServiceCollectionExtensions
         ModelService modelService = new(settings.Value, catalog.Value);
         services.AddSingleton(modelService);
 
-        KuroeComposition composition = new(
-            services,
-            configuredTools.Value,
-            new KuroeStartup(settings.Value.Current.Runtime.LogLevel));
-
         ExecutionIndex executions = new();
         TaskRegistry taskRegistry = new(executions, taskDirectory.Value.NextTaskNumber);
         ErrorOr<Success> registered = RegisterTools(
@@ -148,7 +167,10 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<IToolJson, ToolJson>();
-        services.AddSingleton<ToolCollection>();
+        // 工具面展示用的只读集合，只持有定义，不建立载体
+        services.AddSingleton(sp => ToolCollection.ForDisplay(
+            sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
+            sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
@@ -172,7 +194,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<ILoggerFactory>(),
             sp.GetRequiredService<IModelAccess>(),
-            sp.GetRequiredService<ToolCollection>()));
+            sp.GetRequiredService<IToolFactory>(),
+            sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<IExecutionRunnerFactory>(sp => new ExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
             sp.GetRequiredService<IExecutionStatusReader>()));
@@ -180,8 +203,8 @@ public static class ServiceCollectionExtensions
         return composition;
     }
 
-    /// <summary>装配核心工具载体并注册：内置工具、状态查询工具、命令工具与契约工具一次创建，注册前按路径与模型调用名校验重复。
-    /// TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引；契约工具按执行号经执行索引定位执行。</summary>
+    /// <summary>装配运行期工具源并注册：状态查询工具与契约工具按定义校验重复。
+    /// 路径型工具定义已在流程编译前注册。载体在每次执行时按上下文创建。TaskRegistry 是用户任务域，ExecutionIndex 是全部任务域共享的执行索引。</summary>
     private static ErrorOr<Success> RegisterTools(
         IServiceCollection services,
         KuroeComposition composition,
@@ -197,29 +220,13 @@ public static class ServiceCollectionExtensions
         CannotCompleteSubmitter cannotCompleteSubmitter = new(executions);
         ExecutionStatusReader statusReader = new(executions);
 
-        List<ITool> tools =
+        List<IToolSource> sources =
         [
-            new TimeTool(),
-            new ReadFileTool(workingDirectory),
-            new ListDirectoryTool(workingDirectory),
-            new ReadFilesTool(workingDirectory),
-            new WriteFileTool(workingDirectory),
-            new PatchFileTool(workingDirectory),
-            new MoveFileTool(workingDirectory),
-            new GetFileInfoTool(workingDirectory),
-            .. GitTools.Tools(workingDirectory),
-            .. DotnetTools.Tools(workingDirectory),
-            new PortTool(portSubmitter, executions),
-            new CannotCompleteTool(cannotCompleteSubmitter),
-            new StatusTool(statusReader),
-            new TaskKuroeInfoTool(taskRegistry),
-            new CatalogKuroeInfoTool(new ToolCatalogView(catalog, models)),
-            new FlowKuroeInfoTool(flows),
-            new SettingsKuroeInfoTool(settings),
-            .. composition.ConfiguredTools.Select(entry => entry.Tool),
+            new KuroeInfoToolSource(taskRegistry, new ToolCatalogView(catalog, models), flows, settings),
+            new ContractToolSource(portSubmitter, cannotCompleteSubmitter, statusReader),
         ];
 
-        ErrorOr<Success> added = composition.AddTools(tools);
+        ErrorOr<Success> added = composition.AddToolSources(sources);
         if (added.IsError)
         {
             return added.ErrorsOrEmptyList;
@@ -231,6 +238,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(cannotCompleteSubmitter);
         services.AddSingleton(statusReader);
         services.AddSingleton<IExecutionStatusReader>(statusReader);
+        services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(
+            [.. sp.GetServices<IToolSource>()],
+            workingDirectory));
 
         return Result.Success;
     }

@@ -11,7 +11,8 @@ public sealed class FileNodeTypeTests
 {
     private static readonly FileParameters Parameters = new()
     {
-        Path = "a.txt",
+        Path = "{root}/a.txt",
+        Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
         RootDirectory = Path.GetFullPath("."),
         MaxChars = 8000,
     };
@@ -113,35 +114,35 @@ public sealed class FileNodeTypeTests
         string[] errors = [.. Failures(ReadType, ReadNode() with { Inputs = [], Outputs = [] })];
 
         Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明至少一个 Signal 输入端口作为触发。"));
-        Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明 BasePath 输入端口作为路径解析基准。"));
+        Assert.Contains(errors, error => error.EndsWith("路径变量 root 映射到未声明的输入端口 任务路径。"));
         Assert.Contains(errors, error => error.EndsWith("文件读取节点必须声明一个输出端口，读取内容写入该端口。"));
     }
 
     [Fact]
-    public void Read_rejects_text_input_besides_base_path()
+    public void Read_rejects_text_inputs_outside_path_variables()
     {
         InputPort[] inputs =
         [
-            new(FileNodePorts.BasePath, PortTypes.Text),
+            new(new PortName("任务路径"), PortTypes.Text),
             new(new PortName("触发"), PortTypes.Signal),
             new(new PortName("正文"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(ReadType, ReadNode(inputs)),
-            error => error.EndsWith("文件读取节点只有 BasePath 可以是 Text 输入端口。"));
+            error => error.EndsWith("文件读取节点的 Text 输入必须是路径变量端口。"));
     }
 
     [Fact]
-    public void Read_rejects_a_signal_base_path()
+    public void Read_rejects_a_signal_variable_port()
     {
         InputPort[] inputs =
         [
-            new(FileNodePorts.BasePath, PortTypes.Signal),
+            new(new PortName("任务路径"), PortTypes.Signal),
             new(new PortName("触发"), PortTypes.Signal),
         ];
 
         Assert.Contains(Failures(ReadType, ReadNode(inputs)),
-            error => error.EndsWith("BasePath 输入端口只能是 Text。"));
+            error => error.EndsWith("路径变量 root 映射到的输入端口 任务路径 必须是 Text。"));
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public sealed class FileNodeTypeTests
         [
             new(new PortName("正文"), PortTypes.Text),
             new(new PortName("补充"), PortTypes.Text),
-            new(FileNodePorts.BasePath, PortTypes.Text),
+            new(new PortName("任务路径"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(WriteType, WriteNode(inputs)),
@@ -172,12 +173,12 @@ public sealed class FileNodeTypeTests
     }
 
     [Fact]
-    public void Write_requires_a_base_path_input()
+    public void Write_requires_the_variable_port()
     {
         InputPort[] inputs = [new(new PortName("正文"), PortTypes.Text)];
 
         Assert.Contains(Failures(WriteType, WriteNode(inputs)),
-            error => error.EndsWith("文件写入节点必须声明 BasePath 输入端口作为路径解析基准。"));
+            error => error.EndsWith("路径变量 root 映射到未声明的输入端口 任务路径。"));
     }
 
     [Fact]
@@ -186,7 +187,7 @@ public sealed class FileNodeTypeTests
         InputPort[] inputs =
         [
             new(new PortName("正文"), PortTypes.Text),
-            new(FileNodePorts.BasePath, PortTypes.Text),
+            new(new PortName("任务路径"), PortTypes.Text),
             new(new PortName("批准"), PortTypes.Signal),
         ];
 
@@ -231,7 +232,7 @@ public sealed class FileNodeTypeTests
         Spec = new ExecutableSpec(),
         Inputs = inputs
             ?? [
-                new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("任务路径"), PortTypes.Text),
                 new InputPort(new PortName("触发"), PortTypes.Signal),
             ],
         Outputs = outputs ?? [new Port(new PortName("正文"), PortTypes.Text)],
@@ -245,7 +246,7 @@ public sealed class FileNodeTypeTests
         Inputs = inputs
             ?? [
                 new InputPort(new PortName("正文"), PortTypes.Text),
-                new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("任务路径"), PortTypes.Text),
             ],
         Outputs = outputs ?? [],
     };

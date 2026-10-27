@@ -147,8 +147,8 @@ internal static class NodeLibraryRules
         List<Error> errors,
         bool checkSlots)
     {
-        var subtreeLabels = new HashSet<NodeLabel>();
-        CollectSubtreeLabels(members, byName, subtreeLabels);
+        NodeSpec? find(NodeName name) => byName.GetValueOrDefault(name);
+        HashSet<NodeLabel> subtreeLabels = ContainerScope.SubtreeLabels(members, find);
 
         var subtreeOutputs = new Dictionary<NodeLabel, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
@@ -164,7 +164,9 @@ internal static class NodeLibraryRules
         var literalLabels = new HashSet<NodeLabel>();
         CheckLiteralLabels(members, literalLabels, container, errors);
 
-        var ports = new HashSet<PortName>([.. container.Inputs.Select(port => port.Name)]);
+        ContainerScope.Check(container, members, find, (member, message) =>
+            errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
+
         if (checkSlots)
         {
             CheckModelSlots(container, members, container.ModelSlots ?? [], byName, errors);
@@ -173,7 +175,7 @@ internal static class NodeLibraryRules
         foreach (NodeSpec member in members)
         {
             member.Type?.Validate(member, NodeScope.Library, errors.Add);
-            CheckMember(member, ports, subtreeLabels, byName, errors);
+            CheckMember(member, byName, errors);
             CheckMemberModel(member, byName, errors);
             member.CheckInterface(ShapeOf(member), message =>
                 errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
@@ -389,31 +391,9 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集容器整棵子树（含被引用容器定义）的全部成员标签。</summary>
-    private static void CollectSubtreeLabels(
-        IReadOnlyList<NodeSpec> nodes,
-        Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeLabel> labels)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            labels.Add(node.Label);
-
-            if (node.Nodes is { Count: > 0 })
-            {
-                CollectSubtreeLabels(node.Nodes, byName, labels);
-            }
-            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
-            {
-                CollectSubtreeLabels(referenced.Nodes, byName, labels);
-            }
-        }
-    }
-    /// <summary>校验容器的一个成员：结构不混用、引用存在、From 引用自包含。</summary>
+    /// <summary>校验容器的一个成员：结构不混用、引用存在。作用域来源由 ContainerScope 判定。</summary>
     private static void CheckMember(
         NodeSpec member,
-        HashSet<PortName> ports,
-        HashSet<NodeLabel> subtreeLabels,
         Dictionary<NodeName, NodeSpec> byName,
         List<Error> errors)
     {
@@ -441,20 +421,6 @@ internal static class NodeLibraryRules
         if (member.Use is not null && member.MaxExecutions is { } referenceLimit && referenceLimit < 1)
         {
             errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxExecutions 必须是正整数。"));
-        }
-
-        foreach (PortRef reference in member.From.SelectMany(group => group.Links).Select(link => link.Ref))
-        {
-            bool inScope = reference.Source is { } source
-                ? subtreeLabels.Contains(source)
-                : ports.Contains(reference.Port);
-            if (!inScope)
-            {
-                string message = reference.Source is null
-                    ? $"端口 @{reference.Port.Value} 没有在此容器上声明。"
-                    : $"From 引用的节点 {reference.Source.Value} 不在容器 {member.Label} 的作用域里。";
-                errors.Add(NodeScope.Library.Node(member.Label.Value, message));
-            }
         }
     }
 

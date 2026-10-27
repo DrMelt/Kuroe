@@ -4,24 +4,37 @@ using ErrorOr;
 namespace Kuroe.Tool.FileAccess;
 
 /// <summary>根目录内的文件访问：路径解析与越界拒绝，按行号范围读取并按字符上限截断。
-/// 不解析链接，根目录内指向外部的链接不被拦截。</summary>
-/// <param name="root">根目录的绝对路径。</param>
-/// <param name="name">根目录名，错误文案与空路径的展示名都由它拼出。</param>
-public sealed class FileScope(string root, string name)
+/// 不解析链接，根目录内指向外部的符号链接、目录联接点与硬链接不被拦截。</summary>
+/// <param name="root">路径参数的解析基准目录，绝对路径。</param>
+/// <param name="boundary">允许的边界目录，绝对路径。</param>
+/// <param name="rootName">基准目录名，空路径的展示名由它拼出。</param>
+/// <param name="boundaryName">边界目录名，越界拒绝文案由它拼出。</param>
+public sealed class FileScope(string root, string boundary, string rootName, string boundaryName)
 {
     /// <summary>单条读取内容与提示文本的字符上限，超长截断并提示。</summary>
     private const int OutputLimit = 8000;
 
     private readonly string _root = root;
+    private readonly string _rootName = rootName;
+
+    /// <summary>路径解析基准与边界相同的根目录。</summary>
+    public FileScope(string root, string name)
+        : this(root, root, name, name)
+    {
+    }
 
     /// <summary>根目录的绝对路径。</summary>
     public string Root => _root;
 
-    /// <summary>路径参数的解析范围，解析基准与根目录都是本根目录。</summary>
-    public ToolPathScope Paths { get; } = new(root, root, name);
+    /// <summary>建立作用域时的绑定错误，非空时所有解析都返回它。</summary>
+    public Error? BindingError { get; init; }
+
+    /// <summary>路径参数的解析范围，解析基准是根目录，边界是边界目录。</summary>
+    public ToolPathScope Paths { get; } = new(root, boundary, boundaryName);
 
     /// <summary>把相对路径解析为根目录内的绝对路径，越界或不可解析时给出拒绝错误。</summary>
-    public ErrorOr<string> Resolve(string path) => Paths.Resolve(path);
+    public ErrorOr<string> Resolve(string path) =>
+        BindingError is { } error ? error : Paths.Resolve(path);
 
     /// <summary>列出根目录内目录的直接子项，按名字序数排序。目标是文件或不存在时给出拒绝错误。
     /// fileFunction 是提示里指出的读取函数名。</summary>
@@ -205,6 +218,6 @@ public sealed class FileScope(string root, string name)
     public static string Truncate(string text) =>
         text.Length <= OutputLimit ? text : string.Concat(text.AsSpan(0, OutputLimit), "…内容已截断");
 
-    /// <summary>路径的展示。空路径即根目录。</summary>
-    public string Display(string path) => Paths.Display(path);
+    /// <summary>路径的展示。空路径即路径基准目录。</summary>
+    public string Display(string path) => path.Length == 0 ? $"{_rootName}根" : path;
 }

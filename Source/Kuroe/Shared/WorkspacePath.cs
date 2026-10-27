@@ -1,7 +1,7 @@
 namespace Kuroe.Shared;
 
 /// <summary>工作区根目录内的路径边界：相对路径按根目录或基准目录解析，解析结果必须落在根目录内。
-/// 只做字符串解析与归一，不解析符号链接与目录联接点。</summary>
+/// 只做字符串解析与归一，不解析符号链接、目录联接点与硬链接。</summary>
 public static class WorkspacePath
 {
     /// <summary>把路径解析为根目录内的绝对路径，越界或不可解析时返回 false。</summary>

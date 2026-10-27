@@ -331,13 +331,13 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "收集",
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                      "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                      "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                       ]
                     },
                     { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "收集@回答" } ] }
@@ -360,13 +360,13 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "审查容器",
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                      "Nodes": [
-                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                      "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                        { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                       ]
                     },
                     { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "回答" }], "From": [ { "回答": "审查容器@回答" } ] }
@@ -390,8 +390,8 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
                     { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
                   ]
                 }

@@ -22,7 +22,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), Journal(),
+            Journal(),
             [new ToolPath("GetLocalTime"), new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
         Assert.Equal(
@@ -41,7 +41,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfo")]);
+            Journal(), [new ToolPath("KuroeInfo")]);
 
         Assert.Equal(
             ["KuroeInfo_ListTasks", "KuroeInfo_GetTask", "KuroeInfo_GetExecution"],
@@ -58,7 +58,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfo/GetTask")]);
+            Journal(), [new ToolPath("KuroeInfo/GetTask")]);
 
         Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
     }
@@ -75,7 +75,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), Journal(),
+            Journal(),
             [new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
         Assert.Equal(
@@ -106,7 +106,7 @@ public sealed class ToolCollectionTests
         new ToolJson());
 
         IReadOnlyList<AITool> built = tools.Build(
-            new ExecutionId(1), Journal(), [new ToolPath("KuroeInfoX")]);
+            Journal(), [new ToolPath("KuroeInfoX")]);
 
         Assert.Empty(built);
     }

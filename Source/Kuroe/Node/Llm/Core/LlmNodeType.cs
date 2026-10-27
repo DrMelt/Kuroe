@@ -3,16 +3,20 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Tools;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立，类型专属声明封在实例里。</summary>
-public sealed class LlmNodeType(LlmParameters? parameters) : INodeType
+public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null) : INodeType
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public LlmParameters? Parameters { get; } = parameters;
+
+    /// <summary>装载期可用的工具契约，未经过工具装配时为空。</summary>
+    private IToolContractCatalog? Contracts { get; } = contracts;
 
     /// <summary>类型名。</summary>
     public NodeKind Kind => LlmNodeTypes.Name;
@@ -33,6 +37,8 @@ public sealed class LlmNodeType(LlmParameters? parameters) : INodeType
         {
             fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明文本语义的输出端口，校验对象是端口产出。"));
         }
+
+        ToolPortRules.Validate(Parameters, node, Contracts, scope, fail);
     }
 
     /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。</summary>

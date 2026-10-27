@@ -46,7 +46,6 @@ public sealed class CommandToolFileTests
         ConfiguredTool diff = loaded.Value[0];
         Assert.Equal(new ToolPath("RunDiff"), diff.Definition.Path);
         Assert.Equal("git diff {path}", diff.Configuration);
-        Assert.Equal(new ToolPath("RunDiff"), diff.Tool.Functions[0].Definition.Path);
         Assert.Single(diff.Definition.Parameters);
         Assert.True(diff.Definition.Parameters[0].Required);
 
@@ -70,7 +69,6 @@ public sealed class CommandToolFileTests
 
         ConfiguredTool tool = loaded.Value[0];
         Assert.Equal(new ToolPath("git/RunDiff"), tool.Definition.Path);
-        Assert.Equal(new ToolPath("git/RunDiff"), tool.Tool.Functions[0].Definition.Path);
     }
 
     [Fact]
@@ -173,7 +171,8 @@ public sealed class CommandToolFileTests
         Assert.False(loaded.IsError);
         Assert.True(loaded.Value[0].Definition.Parameters[0].List);
 
-        ErrorOr<string> denied = loaded.Value[0].Tool.Functions[0].Invoke(
+        ITool tool = loaded.Value[0].Create(ToolBinding.Root(Path.GetTempPath()));
+        ErrorOr<string> denied = tool.Functions[0].Invoke(
             new ToolArguments(new Dictionary<string, object?> { ["paths"] = values }));
 
         Assert.True(denied.IsError);
@@ -192,6 +191,36 @@ public sealed class CommandToolFileTests
             """);
 
         Assert.False(loaded.IsError);
+    }
+
+    [Fact]
+    public void Load_adds_directory_placeholders_to_the_path_variables()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                { "Name": "A", "Template": ["x"], "Directory": "{root}/src" }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.Equal(["root"], loaded.Value[0].Definition.PathVariables);
+    }
+
+    [Fact]
+    public void Load_accepts_a_declared_directory_variable_and_keeps_it_once()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                { "Name": "A", "Template": ["x"], "Variables": ["root"], "Directory": "{root}/src" }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.Equal(["root"], loaded.Value[0].Definition.PathVariables);
     }
 
     [Fact]
@@ -220,7 +249,10 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "Deny": ["../outside"] } ] } ] }""", "不在工作目录内")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "Allow": ["bad\u0000dir"] } ] } ] }""", "无法解析为路径")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Directory": "..", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true } ] } ] }""", "必须在工作目录内")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{missing}"] } ] }""", "没有对应的参数声明")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Directory": "..", "Template": ["x"] } ] }""", "必须在工作目录内")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{missing}"] } ] }""", "没有对应的参数或路径变量声明")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Variables": ["extra"] } ] }""", "没有被模板或 Directory 引用")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Directory": "{p}/src", "Parameters": [ { "Name": "p" } ] } ] }""", "路径变量 p 与参数同名")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "--flag={files}"], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "", "Template": ["x"] } ] }""", "工具名不能为空")]

@@ -15,6 +15,8 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
+using Kuroe.Node.Llm.Tools;
+using Kuroe.Tool;
 using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,7 @@ namespace Kuroe.Tests.Support;
 public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
+    private readonly ContractToolSource _contractTools;
 
     private TestEnvironment(string root, ServiceProvider provider, FakeRunner runner)
     {
@@ -36,10 +39,11 @@ public sealed class TestEnvironment : IDisposable
         runner.Executions = Executions;
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
-        PortTool = new PortTool(provider.GetRequiredService<PortSubmitter>(), Executions);
-        CannotCompleteTool = new CannotCompleteTool(provider.GetRequiredService<CannotCompleteSubmitter>());
-        runner.PortTool = PortTool;
-        runner.CannotCompleteTool = CannotCompleteTool;
+        _contractTools = new ContractToolSource(
+            provider.GetRequiredService<PortSubmitter>(),
+            provider.GetRequiredService<CannotCompleteSubmitter>(),
+            new ExecutionStatusReader(Executions));
+        runner.ContractToolFactory = (execution, input) => CreateContractTools(execution, input);
     }
 
     /// <summary>临时工作目录。</summary>
@@ -67,11 +71,36 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>端口产出的交回通道，测试直接调用它验证提交校验。</summary>
     public PortSubmitter PortSubmitter => _provider.GetRequiredService<PortSubmitter>();
 
-    /// <summary>交回端口产出的契约工具载体，假执行器按模型调用方式经它提交。</summary>
-    public PortTool PortTool { get; }
+    /// <summary>交回端口产出的契约工具，按执行创建。</summary>
+    public ITool PortToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.Port);
 
-    /// <summary>上报无法完成的契约工具载体，假执行器按模型调用方式经它上报。</summary>
-    public CannotCompleteTool CannotCompleteTool { get; }
+    /// <summary>上报无法完成的契约工具，按执行创建。</summary>
+    public ITool CannotCompleteToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.CannotComplete);
+
+    /// <summary>查看执行契约状态的契约工具，按执行创建。</summary>
+    public ITool StatusToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.Status);
+
+    /// <summary>按执行创建全部契约工具。</summary>
+    public IReadOnlyList<ITool> CreateContractTools(ExecutionId execution, ExecutionInput input) =>
+        _contractTools.Create(new ToolContext(
+            new ExecutionPortAccess(input),
+            new Dictionary<string, IReadOnlyDictionary<string, PortName>>(),
+            Root,
+            execution,
+            [
+                new ToolPath(ContractTools.Port),
+                new ToolPath(ContractTools.CannotComplete),
+                new ToolPath(ContractTools.Status),
+            ]));
+
+    /// <summary>取指定路径的契约工具。</summary>
+    private ITool ContractTool(ExecutionId execution, string path)
+    {
+        Execution found = Executions.Find(execution).ThrowIfError();
+        IReadOnlyList<ITool> tools = CreateContractTools(execution, found.Input);
+
+        return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
+    }
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 
@@ -95,10 +124,10 @@ public sealed class TestEnvironment : IDisposable
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "交付", "Kind": "Container", "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "制定计划@计划" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "In": { "计划": "制定计划@计划" }, "Nodes": [
+                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
                     ] }
                   ]
                 }

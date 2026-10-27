@@ -365,7 +365,7 @@ public sealed class MenuRouteTests
         using ConsoleSession cli = new();
         ConfiguredTool tool = Configured();
 
-        new ToolView(new ToolCollection([tool.Tool], new ToolJson()), [tool], cli.Terminal).Print();
+        new ToolView(ToolCollection.ForDisplay([tool.Definition], new ToolJson()), [tool], cli.Terminal).Print();
 
         string output = cli.Output.Output;
         Assert.Contains("模板", output);
@@ -389,7 +389,7 @@ public sealed class MenuRouteTests
             """);
 
         new ToolView(
-            new ToolCollection([.. tools.Select(tool => tool.Tool)], new ToolJson()),
+            ToolCollection.ForDisplay(tools.Select(tool => tool.Definition), new ToolJson()),
             tools,
             cli.Terminal).Print();
 
@@ -560,8 +560,8 @@ public sealed class MenuRouteTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "唯一步骤", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "唯一步骤", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
                   ]
                 }
               ]

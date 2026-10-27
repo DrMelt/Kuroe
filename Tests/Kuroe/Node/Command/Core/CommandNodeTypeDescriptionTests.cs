@@ -22,6 +22,7 @@ public sealed class CommandNodeTypeDescriptionTests
                 new ParameterField("Program", ParameterValueKind.Text),
                 new ParameterField("Arguments", ParameterValueKind.Texts),
                 new ParameterField("Directory", ParameterValueKind.Text),
+                new ParameterField("Variables", ParameterValueKind.Map),
                 new ParameterField("TimeoutSeconds", ParameterValueKind.Integer),
                 new ParameterField("MaxChars", ParameterValueKind.Integer),
             ],
@@ -33,14 +34,16 @@ public sealed class CommandNodeTypeDescriptionTests
     {
         List<string> failures = [];
         INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
-            .Read(new Reader("dotnet", ["build", "--no-restore"], "src", 30, 1200), failures.Add);
+            .Read(new Reader("dotnet", ["build", "--no-restore"], "{root}/src", 30, 1200,
+                new Dictionary<string, string> { ["root"] = "任务路径" }), failures.Add);
 
         CommandParameters parameters = Assert.IsType<CommandNodeType>(type).Parameters!;
 
         Assert.Empty(failures);
         Assert.Equal("dotnet", parameters.Program);
         Assert.Equal(["build", "--no-restore"], parameters.Arguments);
-        Assert.Equal("src", parameters.Directory);
+        Assert.Equal("{root}/src", parameters.Directory);
+        Assert.Equal(new Dictionary<string, string> { ["root"] = "任务路径" }, parameters.Variables);
         Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(30, parameters.TimeoutSeconds);
         Assert.Equal(1200, parameters.MaxChars);
@@ -107,7 +110,8 @@ public sealed class CommandNodeTypeDescriptionTests
         IReadOnlyList<string>? arguments = null,
         string? directory = null,
         int? timeoutSeconds = null,
-        int? maxChars = null) : IParameterReader
+        int? maxChars = null,
+        IReadOnlyDictionary<string, string>? variables = null) : IParameterReader
     {
         public string? Text(string name) => name switch
         {
@@ -124,6 +128,12 @@ public sealed class CommandNodeTypeDescriptionTests
             "MaxChars" => maxChars,
             _ => null,
         };
+
+        public IReadOnlyDictionary<string, string> Mappings(string name) =>
+            name == "Variables" ? variables ?? new Dictionary<string, string>() : new Dictionary<string, string>();
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
+            new Dictionary<string, IReadOnlyDictionary<string, string>>();
     }
 
     /// <summary>测试用的描述注册表：记录注册序并按名查找。</summary>

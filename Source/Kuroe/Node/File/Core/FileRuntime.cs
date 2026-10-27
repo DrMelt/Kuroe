@@ -1,5 +1,7 @@
+using ErrorOr;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
@@ -18,26 +20,32 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
     /// <inheritdoc/>
     protected override string Target => Parameters.Path;
 
-    /// <summary>按 BasePath 输入解析文件路径，成功时给出工作区内的绝对路径。</summary>
+    /// <summary>按路径变量解析文件路径，成功时给出工作区内的绝对路径。</summary>
     protected string? ResolveTarget(NodeInputValues inputs, out string fullPath)
     {
         fullPath = string.Empty;
 
-        string? basePath = inputs.Text(FileNodePorts.BasePath);
-        if (string.IsNullOrWhiteSpace(basePath))
+        ErrorOr<PathResolution> resolved = PathVariables.Resolve(
+            Parameters.Variables,
+            port => inputs.Text(new PortName(port)),
+            Parameters.RootDirectory);
+        if (resolved.IsError)
         {
-            return "BasePath 未连接或为空。";
+            return resolved.FirstError.Description;
         }
 
-        if (!WorkspacePath.TryResolve(Parameters.RootDirectory, basePath, out string baseDirectory))
+        ErrorOr<string> path = PathVariables.Expand(
+            Parameters.Path,
+            resolved.Value.Variables,
+            resolved.Value.BaseDirectory,
+            Parameters.RootDirectory,
+            "Path");
+        if (path.IsError)
         {
-            return $"BasePath {basePath} 不是工作区内的合法路径。";
+            return path.FirstError.Description;
         }
 
-        if (!WorkspacePath.TryResolveWithin(Parameters.RootDirectory, baseDirectory, Parameters.Path, out fullPath))
-        {
-            return $"Path {Parameters.Path} 不是工作区内的合法路径。";
-        }
+        fullPath = path.Value;
 
         return null;
     }

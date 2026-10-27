@@ -77,35 +77,39 @@ public sealed class CommandNodeTypeTests
         string[] errors = [.. Failures(Type, Node() with { Inputs = [], Outputs = [] })];
 
         Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明至少一个 Signal 输入端口作为触发。"));
-        Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明 BasePath 输入端口作为路径解析基准。"));
         Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明一个输出端口，命令输出写入该端口。"));
     }
 
     [Fact]
-    public void Text_input_besides_base_path_is_rejected()
+    public void Text_input_without_a_variable_mapping_is_rejected()
     {
         InputPort[] inputs =
         [
-            new(CommandNodePorts.BasePath, PortTypes.Text),
             new(new PortName("触发"), PortTypes.Signal),
             new(new PortName("说明"), PortTypes.Text),
         ];
 
         Assert.Contains(Failures(Type, Node(inputs)),
-            error => error.EndsWith("命令执行节点只有 BasePath 可以是 Text 输入端口。"));
+            error => error.EndsWith("命令执行节点的 Text 输入必须是路径变量端口。"));
     }
 
     [Fact]
-    public void A_signal_base_path_is_rejected()
+    public void A_signal_variable_port_is_rejected()
     {
+        CommandParameters parameters = Parameters with
+        {
+            Directory = "{root}/src",
+            Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
+        };
+        CommandNodeType type = new(parameters, Process);
         InputPort[] inputs =
         [
-            new(CommandNodePorts.BasePath, PortTypes.Signal),
+            new(new PortName("任务路径"), PortTypes.Signal),
             new(new PortName("触发"), PortTypes.Signal),
         ];
 
-        Assert.Contains(Failures(Type, Node(inputs)),
-            error => error.EndsWith("BasePath 输入端口只能是 Text。"));
+        Assert.Contains(Failures(type, Node(inputs, type: type)),
+            error => error.EndsWith("路径变量 root 映射到的输入端口 任务路径 必须是 Text。"));
     }
 
     [Fact]
@@ -137,18 +141,17 @@ public sealed class CommandNodeTypeTests
         return [.. errors.Select(error => error.Description)];
     }
 
-    private static NodeSpec Node(InputPort[]? inputs = null, Port[]? outputs = null) => new()
-    {
-        Label = new NodeLabel("执行"),
-        Type = Type,
-        Spec = new ExecutableSpec(),
-        Inputs = inputs
-            ?? [
-                new InputPort(CommandNodePorts.BasePath, PortTypes.Text),
-                new InputPort(new PortName("触发"), PortTypes.Signal),
-            ],
-        Outputs = outputs ?? [new Port(new PortName("输出"), PortTypes.Text)],
-    };
+    private static NodeSpec Node(
+        InputPort[]? inputs = null,
+        Port[]? outputs = null,
+        CommandNodeType? type = null) => new()
+        {
+            Label = new NodeLabel("执行"),
+            Type = type ?? Type,
+            Spec = new ExecutableSpec(),
+            Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
+            Outputs = outputs ?? [new Port(new PortName("输出"), PortTypes.Text)],
+        };
 
     /// <summary>测试用的进程执行替身，类型规则阶段不会调用。</summary>
     private sealed class FakeProcessRunner : IProcessRunner

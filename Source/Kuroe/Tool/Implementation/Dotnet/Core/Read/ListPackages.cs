@@ -16,7 +16,7 @@ internal static class ListPackages
         new ToolPath("dotnet/read/ListPackages"),
         "列出项目的顶层包引用，project 是项目、解决方案或目录，outdated 为真时只列出有新版本的包。",
         [
-            new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在项目工作目录里查找", Path: true),
+            new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在路径基准目录里查找", Path: true),
             new ToolParameter(new ToolName(Outdated), "只列出有新版本的包，布尔，缺省为假", Flag: true),
         ],
         [new("dotnet", null), new("list", null), new("{project}", null), new("package", null), new("--outdated", Outdated)],

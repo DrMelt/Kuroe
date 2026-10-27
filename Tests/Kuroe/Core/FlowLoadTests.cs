@@ -129,7 +129,9 @@ public sealed class FlowLoadTests
 
     [Fact]
     public void Cross_container_member_reference_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 整体/复盘：From 引用的节点 交付.实施 不在流程里。"], Errors(ContainerOutCrossContainer));
+        Assert.Equal(
+            ["流程 默认 的节点 整体：根容器的端口 结论 引用的节点 交付.实施 不在流程作用域里。"],
+            Errors(ContainerOutCrossContainer));
 
     [Fact]
     public void Referenced_container_with_from_is_rejected() =>
@@ -363,9 +365,9 @@ public sealed class FlowLoadTests
     private const string SameLabelTwice = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] },
-              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "@目标" } ] },
+              { "Label": "副本", "Use": "执行", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ] }
         """;
@@ -373,8 +375,8 @@ public sealed class FlowLoadTests
     private const string LabelLessReferenceFlow = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Use": "执行", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+              { "Use": "执行", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ] }
         """;
@@ -382,8 +384,8 @@ public sealed class FlowLoadTests
     /// <summary>执行节点的输入端口声明默认值，From 省略该端口。</summary>
     private const string InputDefaultFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标" }, { "Name": "背景", "Default": "固定背景" }], "From": [ { "目标": "Start@目标" } ] }
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标" }, { "Name": "背景", "Default": "固定背景" }], "From": [ { "目标": "@目标" } ] }
           ] }
         ] } ] }
         """;
@@ -391,8 +393,8 @@ public sealed class FlowLoadTests
     /// <summary>输入端口写了 Value，默认值只认 Default。</summary>
     private const string NodeInputWithValue = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标", "Value": "固定" }], "From": [ { "目标": "Start@目标" } ] }
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "目标", "Value": "固定" }], "From": [ { "目标": "@目标" } ] }
           ] }
         ] } ] }
         """;
@@ -406,8 +408,8 @@ public sealed class FlowLoadTests
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
                 ] }
               ]
             }
@@ -418,8 +420,8 @@ public sealed class FlowLoadTests
     /// <summary>执行节点的输出端口写了 Value，只属于开始端口。</summary>
     private const string NodeOutputWithValue = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定" }], "From": [ { "目标": "Start@目标" } ] }
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定" }], "From": [ { "目标": "@目标" } ] }
           ] }
         ] } ] }
         """;
@@ -443,8 +445,8 @@ public sealed class FlowLoadTests
 
     private const string ContainerWithZeroMaxExecutions = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "MaxExecutions": 0, "Nodes": [
-            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "MaxExecutions": 5, "From": [ { "目标": "Start@目标" } ] }
+          { "Name": "整体", "Kind": "Container", "MaxExecutions": 0, "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "干活", "Kind": "Llm", "Model": "执行者", "MaxExecutions": 5, "From": [ { "目标": "@目标" } ] }
           ] }
         ] } ] }
         """;
@@ -629,9 +631,9 @@ public sealed class FlowLoadTests
             }
           ],
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "结论" }], "In": { "结论": "交付.实施@结论" }, "Nodes": [
               { "Label": "交付", "Use": "交付", "Models": { "执行者": "执行者" } },
-              { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "交付.实施@结论" } ] }
+              { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "@结论" } ] }
             ] }
           ] } ]
         }
@@ -662,8 +664,8 @@ public sealed class FlowLoadTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "写出计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "写出计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "制定计划@计划" } ] }
                   ]
                 }
@@ -687,8 +689,8 @@ public sealed class FlowLoadTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "制定计划@计划" } ] }
                   ]
                 }
@@ -700,8 +702,8 @@ public sealed class FlowLoadTests
 
     private const string LoopWithInputNode = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "收话", "Kind": "Input", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "回复", "Type": "Signal" }], "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "Start@目标", "回复": "回话@回复" } ] },
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "收话", "Kind": "Input", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "回复", "Type": "Signal" }], "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
             { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Signal" }], "From": [ { "回答": "收话@回答" } ] }
           ] }
         ] } ] }
@@ -728,8 +730,8 @@ public sealed class FlowLoadTests
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Label": "端口组", "Use": "端口组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  { "Label": "端口组", "Use": "端口组", "In": { "计划": "@目标" }, "Models": { "执行者": "执行者" } }
                 ] }
               ]
             }
@@ -743,9 +745,9 @@ public sealed class FlowLoadTests
           "Flows": [
             { "Name": "默认", "Description": "结构覆盖", "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
-              "Nodes": [ { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Nodes": [
-                { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxExecutions": 2, "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "规划", "Kind": "Llm", "Model": "执行者", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+              "Nodes": [ { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] },
+                { "Name": "规划", "Kind": "Llm", "Model": "执行者", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "计划": "规划@计划" } ] },
                 { "Name": "收尾", "Kind": "Llm", "Model": "执行者",
                   "Inputs": [{ "Name": "结论" }, { "Name": "信号", "Type": "Signal" }],
@@ -758,11 +760,342 @@ public sealed class FlowLoadTests
     /// <summary>流程名两侧带空白，加载时去掉。</summary>
     private const string SurroundingSpacesFlowName = """
         { "Flows": [ { "Name": "  默认 ", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "分析", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "分析", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
           ] }
         ] } ] }
         """;
+
+    [Fact]
+    public void Tool_port_mapping_for_an_unknown_tool_is_rejected()
+    {
+        string[] errors = [.. Errors("""
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "Models": [ { "Name": "执行者", "Model": "fake" } ],
+                  "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ] },
+                  "Nodes": [
+                    {
+                      "Name": "实施",
+                      "Kind": "Llm",
+                      "Model": "执行者",
+                      "Inputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ],
+                      "Tools": [ "file" ],
+                      "ToolPorts": { "missing": { "root": "任务路径" } },
+                      "From": [ { "目标": "Start@目标", "任务路径": "Start@任务路径" } ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """)];
+
+        Assert.Contains(errors, error => error.Contains("工具路径 missing 没有匹配任何已注册工具", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Whitelisted_tool_without_a_mapping_is_rejected()
+    {
+        string[] errors = [.. Errors("""
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "Models": [ { "Name": "执行者", "Model": "fake" } ],
+                  "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ] },
+                  "Nodes": [
+                    {
+                      "Name": "实施",
+                      "Kind": "Llm",
+                      "Model": "执行者",
+                      "Inputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "任务路径", "Type": "Text" } ],
+                      "Tools": [ "file/read" ],
+                      "From": [ { "目标": "Start@目标", "任务路径": "Start@任务路径" } ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """)];
+
+        Assert.Contains(errors, error => error.Contains("缺少路径变量 root 的映射", StringComparison.Ordinal));
+    }
+
+    /// <summary>容器成员不能直接引用开始端口，开始值经根容器的 In 进入。</summary>
+    [Fact]
+    public void Container_member_cannot_reference_start_directly() =>
+        Assert.Equal(
+            ["流程 默认 的节点 实施：From 引用的节点 Start 不在容器 整体 的作用域里。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "目标": "Start@目标" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>容器成员不能引用容器外的节点，跨边界传值经容器的 In 与 @端口。</summary>
+    [Fact]
+    public void Container_member_cannot_reference_a_node_outside_the_container() =>
+        Assert.Equal(
+            ["流程 默认 的节点 实施：From 引用的节点 准备 不在容器 内层 的作用域里。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "目标" }],
+                          "In": { "目标": "Start@目标" },
+                          "Nodes": [
+                            { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [{ "目标": "@目标" }] },
+                            {
+                              "Name": "内层",
+                              "Kind": "Container",
+                              "Nodes": [
+                                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "结论": "准备@结论" }] }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>容器成员的 In 在所属容器作用域里求值，不能直接取开始端口。</summary>
+    [Fact]
+    public void Container_member_in_cannot_reference_start_directly() =>
+        Assert.Equal(
+            ["流程 默认 的节点 内层：In 引用的节点 Start 不在容器 整体 的作用域里。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "目标" }],
+                          "In": { "目标": "Start@目标" },
+                          "Nodes": [
+                            {
+                              "Name": "内层",
+                              "Kind": "Container",
+                              "Inputs": [{ "Name": "计划" }],
+                              "In": { "计划": "Start@目标" },
+                              "Nodes": [
+                                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "计划": "@计划" }] }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>内联容器声明传入端口并由 In 绑定，嵌套容器经 @端口 透传外层传入值。</summary>
+    [Fact]
+    public void Nested_inline_container_passes_outer_port_through() =>
+        Assert.Empty(Errors("""
+            {
+              "Flows": [
+                {
+                  "Name": "默认",
+                  "Models": [{ "Name": "执行者", "Model": "fake" }],
+                  "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                  "Nodes": [
+                    {
+                      "Name": "整体",
+                      "Kind": "Container",
+                      "Inputs": [{ "Name": "目标" }],
+                      "In": { "目标": "Start@目标" },
+                      "Nodes": [
+                        { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [{ "目标": "@目标" }] },
+                        {
+                          "Name": "内层",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "计划" }],
+                          "In": { "计划": "准备@结论" },
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "计划": "@计划" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+
+    /// <summary>容器 In 的键必须是容器声明的传入端口。</summary>
+    [Fact]
+    public void Container_in_with_an_undeclared_port_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认 的节点 整体：端口 风格 不在容器 整体 上。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "目标" }],
+                          "In": { "目标": "Start@目标", "风格": "Start@风格" },
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "目标": "@目标" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>容器输入端口名在同一节点内唯一。</summary>
+    [Fact]
+    public void Container_duplicate_input_port_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认 的节点 整体：输入端口 目标 重复。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "目标" }, { "Name": "目标" }],
+                          "In": { "目标": "Start@目标" },
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "目标": "@目标" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>容器声明的传入端口全部要给出绑定，未使用的端口也不例外。</summary>
+    [Fact]
+    public void Container_input_without_binding_is_rejected() =>
+        Assert.Equal(
+            [
+                "流程 默认 的节点 整体：端口 目标 没有绑定。",
+                "流程 默认 的节点 目标：端口 @目标 没有绑定来源。",
+            ],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "目标" }],
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [{ "目标": "@目标" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>流程作用域里只有开始节点，根容器的传入端口只能绑定开始端口。</summary>
+    [Fact]
+    public void Root_container_in_cannot_reference_a_non_start_node() =>
+        Assert.Equal(
+            ["流程 默认 的节点 整体：根容器的端口 计划 引用的节点 自造 不在流程作用域里。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "计划" }],
+                          "In": { "计划": "自造@计划" },
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
+
+    /// <summary>根容器没有更外层作用域，不能把传入端口再绑到更外层端口。</summary>
+    [Fact]
+    public void Root_container_in_cannot_reference_an_outer_port() =>
+        Assert.Equal(
+            ["流程 默认 的节点 整体：根容器的端口 计划 不能引用更外层端口。"],
+            Errors("""
+                {
+                  "Flows": [
+                    {
+                      "Name": "默认",
+                      "Models": [{ "Name": "执行者", "Model": "fake" }],
+                      "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+                      "Nodes": [
+                        {
+                          "Name": "整体",
+                          "Kind": "Container",
+                          "Inputs": [{ "Name": "计划" }],
+                          "In": { "计划": "@计划" },
+                          "Nodes": [
+                            { "Name": "实施", "Kind": "Llm", "Model": "执行者" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """));
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json)

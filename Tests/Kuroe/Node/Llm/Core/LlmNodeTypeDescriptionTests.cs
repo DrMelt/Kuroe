@@ -30,6 +30,7 @@ public sealed class LlmNodeTypeDescriptionTests
                 new ParameterField(PromptName, ParameterValueKind.Text),
                 new ParameterField(ToolsName, ParameterValueKind.Texts),
                 new ParameterField(SystemPromptName, ParameterValueKind.Texts),
+                new ParameterField("ToolPorts", ParameterValueKind.MapMap),
             ],
             File.Fields);
 
@@ -91,5 +92,10 @@ public sealed class LlmNodeTypeDescriptionTests
         };
 
         public int? Integer(string name) => null;
+
+        public IReadOnlyDictionary<string, string> Mappings(string name) => new Dictionary<string, string>();
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
+            new Dictionary<string, IReadOnlyDictionary<string, string>>();
     }
 }

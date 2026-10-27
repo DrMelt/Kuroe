@@ -56,9 +56,9 @@ public sealed class EngineAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "切入", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "慢工", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "切入", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "慢工", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] },
                     { "Name": "衔接", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "切入@结论" } ] },
                     { "Name": "收官", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "衔接@结论" } ] }
                   ]
@@ -72,9 +72,9 @@ public sealed class EngineAdvanceTests
     /// <summary>两个组各自独立：甲、乙各自齐备即启动一次汇合执行。</summary>
     private const string IndependentGroupsFlow = """
         { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Nodes": [
-            { "Name": "甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-            { "Name": "乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+          { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+            { "Name": "甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+            { "Name": "乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
             { "Name": "汇合", "Kind": "Llm", "Model": "执行者", "From": [ { "甲": "甲@结论" }, { "乙": "乙@结论" } ] }
           ] }
         ] } ] }

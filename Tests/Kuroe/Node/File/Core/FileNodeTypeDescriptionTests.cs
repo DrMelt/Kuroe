@@ -19,6 +19,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(
             [
                 new ParameterField("Path", ParameterValueKind.Text),
+                new ParameterField("Variables", ParameterValueKind.Map),
                 new ParameterField("MaxChars", ParameterValueKind.Integer),
             ],
             description.Fields);
@@ -34,6 +35,7 @@ public sealed class FileNodeTypeDescriptionTests
         Assert.Equal(
             [
                 new ParameterField("Path", ParameterValueKind.Text),
+                new ParameterField("Variables", ParameterValueKind.Map),
                 new ParameterField("MaxChars", ParameterValueKind.Integer),
             ],
             description.Fields);
@@ -92,6 +94,22 @@ public sealed class FileNodeTypeDescriptionTests
     }
 
     [Fact]
+    public void Variables_are_read_for_read_and_write()
+    {
+        Dictionary<string, string> variables = new() { ["root"] = "任务路径" };
+        List<string> failures = [];
+
+        FileParameters read = Assert.IsType<FileReadNodeType>(
+            new FileReadNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters!;
+        FileParameters write = Assert.IsType<FileWriteNodeType>(
+            new FileWriteNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters!;
+
+        Assert.Empty(failures);
+        Assert.Equal(variables, read.Variables);
+        Assert.Equal(variables, write.Variables);
+    }
+
+    [Fact]
     public void Negative_MaxChars_is_reported()
     {
         List<string> failures = [];
@@ -111,13 +129,22 @@ public sealed class FileNodeTypeDescriptionTests
     }
 
     /// <summary>测试用的参数段取值：只给出 Path 与 MaxChars 字段。</summary>
-    private sealed class Reader(string? path = null, int? maxChars = null) : IParameterReader
+    private sealed class Reader(
+        string? path = null,
+        int? maxChars = null,
+        IReadOnlyDictionary<string, string>? variables = null) : IParameterReader
     {
         public string? Text(string name) => name == "Path" ? path : null;
 
         public IReadOnlyList<string> Texts(string name) => [];
 
         public int? Integer(string name) => name == "MaxChars" ? maxChars : null;
+
+        public IReadOnlyDictionary<string, string> Mappings(string name) =>
+            name == "Variables" ? variables ?? new Dictionary<string, string>() : new Dictionary<string, string>();
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
+            new Dictionary<string, IReadOnlyDictionary<string, string>>();
     }
 
     /// <summary>测试用的描述注册表：记录注册序并按名查找。</summary>

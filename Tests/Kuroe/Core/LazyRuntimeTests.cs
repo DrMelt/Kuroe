@@ -13,8 +13,8 @@ public sealed class LazyRuntimeTests
     private const string ReviewQueueFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+              { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
               { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
               { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] },
               { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "分配执行@结论" } ] }

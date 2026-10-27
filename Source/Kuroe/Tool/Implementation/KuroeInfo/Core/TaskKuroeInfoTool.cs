@@ -189,9 +189,9 @@ public sealed class TaskKuroeInfoTool : ITool
             text.AppendLine("  没有取到任何来源内容。");
         }
 
-        foreach (ContextValue value in input.Inputs)
+        foreach (InputValue value in input.Inputs)
         {
-            text.AppendLine($"  {value.Origin.Label}");
+            text.AppendLine($"  {value.Port} · {value.Origin.Label}");
             text.AppendLine($"    {OneLine(value.Text)}");
         }
 

@@ -128,6 +128,27 @@ public sealed class CommandToolTests
         Assert.Equal("模板展开后没有任何可执行的程序。", Rejected([], [], Given()));
     }
 
+    [Fact]
+    public void Expand_replaces_path_variables_before_parameters()
+    {
+        CommandToolDefinition definition = new(
+            new ToolPath("Build"),
+            "说明",
+            [],
+            [new("{root}/src", null)],
+            null,
+            5,
+            200,
+            ["root"]);
+
+        ErrorOr<IReadOnlyList<string>> argv = definition.CommandLine(
+            new ToolArguments(Given()),
+            new Dictionary<string, string> { ["root"] = "D:/task" });
+
+        Assert.False(argv.IsError);
+        Assert.Equal(["D:/task/src"], argv.Value);
+    }
+
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
     {

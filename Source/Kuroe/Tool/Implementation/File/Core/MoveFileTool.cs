@@ -1,32 +1,39 @@
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
 using File = System.IO.File;
 
-/// <summary>移动工作目录内文件或目录的工具。路径解析后必须落回工作目录内，目标已存在时拒绝。</summary>
+/// <summary>移动路径基准目录内文件或目录的工具。路径解析后必须落回工作区内，目标已存在时拒绝。</summary>
 public sealed class MoveFileTool : ITool
 {
     private readonly FileScope _scope;
 
     /// <summary>把文件或目录移动到另一个路径。</summary>
-    private static readonly ToolDefinition MoveFile = new(
+    public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/MoveFile"),
-        "把工作目录内的文件或目录移动到另一个路径。source 是现有的文件或目录，target 是移动后的完整路径，移动到同一目录下的新名字即重命名。目标已存在时拒绝，目标父目录缺失时自动创建。",
+        "把路径基准目录内的文件或目录移动到另一个路径。source 是现有的文件或目录，target 是移动后的完整路径，移动到同一目录下的新名字即重命名。目标已存在时拒绝，目标父目录缺失时自动创建。",
         [
-            new ToolParameter(new ToolName("source"), "相对工作目录的现有文件或目录路径", Required: true, Path: true),
-            new ToolParameter(new ToolName("target"), "相对工作目录的移动后完整路径", Required: true, Path: true),
-        ]);
+            new ToolParameter(new ToolName("source"), "相对路径基准目录的现有文件或目录路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
+            new ToolParameter(new ToolName("target"), "相对路径基准目录的移动后完整路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
+        ], [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用工作目录建立载体。</summary>
     public MoveFileTool(string baseDirectory)
+        : this(ToolBinding.Root(baseDirectory))
     {
-        _scope = FileTools.Scope(baseDirectory);
-        Functions = [MoveFile.Bind(Move, _scope.Paths)];
+    }
+
+    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
+    public MoveFileTool(ToolBinding binding)
+    {
+        _scope = FileTools.Scope(binding);
+        Functions = [Definition.Bind(Move, _scope.Paths)];
     }
 
     /// <summary>把文件或目录移动到工作目录内的另一个路径，目标已存在时拒绝，父目录缺失时自动创建；错误与拒绝以 ErrorOr 表达。</summary>

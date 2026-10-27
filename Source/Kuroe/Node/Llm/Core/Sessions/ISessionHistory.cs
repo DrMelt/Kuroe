@@ -44,9 +44,9 @@ internal sealed class ExecutionHistory(ExecutionInput input) : ISessionHistory
         _laidOut = true;
 
         messages.Clear();
-        foreach (ContextValue value in input.Inputs)
+        foreach (InputValue value in input.Inputs)
         {
-            messages.Add(new ChatMessage(ChatRole.User, Text(value)));
+            messages.Add(new ChatMessage(ChatRole.User, Text(value.Value)));
         }
     }
 

@@ -87,7 +87,7 @@ public sealed class ToolFilesTests
 
     /// <summary>测试用配置工具：定义与配置形态由路径给出，载体没有函数。</summary>
     private static ConfiguredTool Tool(string path) =>
-        new(new ToolDefinition(new ToolPath(path), "说明", []), path, new FakeTool());
+        new(new ToolDefinition(new ToolPath(path), "说明", []), path, _ => new FakeTool());
 
     /// <summary>测试用文件形状：装载结果由构造时给定。</summary>
     private sealed class FakeToolFile(string fileName, ErrorOr<IReadOnlyList<ConfiguredTool>> loaded) : IToolFile

@@ -20,11 +20,8 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     private int _live;
     private int _peak;
 
-    /// <summary>交回端口产出的契约工具载体，按执行换一份。</summary>
-    public PortTool? PortTool { get; set; }
-
-    /// <summary>上报无法完成的契约工具载体，按执行换一份。</summary>
-    public CannotCompleteTool? CannotCompleteTool { get; set; }
+    /// <summary>按执行创建契约工具的工厂。</summary>
+    public Func<ExecutionId, ExecutionInput, IReadOnlyList<ITool>>? ContractToolFactory { get; set; }
 
     /// <summary>声明需交回输出端口的执行节点交回的命名段。空时按执行声明的端口逐个生成：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
     public string PortValuesJson { get; set; } = string.Empty;
@@ -114,20 +111,24 @@ public sealed class FakeRunner : IExecutionRunnerFactory
             await Task.Delay(DelayFor?.Invoke(started) ?? DelayMs, cancellationToken);
 
             IReadOnlyList<Port> requiredPorts = input.RequiredPorts;
+            IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(execution, input) ?? [];
             if (requiredPorts.Count > 0 && SubmitsPorts)
             {
                 string json = PortValuesJsonFor?.Invoke(started)
                     ?? (PortValuesJson.Length > 0 ? PortValuesJson : PortValuesFor(requiredPorts));
-                _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
+                ITool portTool = Tool(contractTools, ContractTools.Port);
+                _submissions.Enqueue(Call(portTool, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 if (DoubleSubmitPorts)
                 {
-                    _submissions.Enqueue(Call(PortTool!, execution, new Dictionary<string, object?> { ["valuesJson"] = json }));
+                    _submissions.Enqueue(Call(portTool, new Dictionary<string, object?> { ["valuesJson"] = json }));
                 }
             }
 
             if (CannotComplete)
             {
-                _submissions.Enqueue(Call(CannotCompleteTool!, execution, new Dictionary<string, object?> { ["reason"] = CannotCompleteReason }));
+                _submissions.Enqueue(Call(
+                    Tool(contractTools, ContractTools.CannotComplete),
+                    new Dictionary<string, object?> { ["reason"] = CannotCompleteReason }));
             }
 
             if (FailsWhen?.Invoke(started) == true)
@@ -146,9 +147,13 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         }
     }
 
-    /// <summary>按模型调用工具的方式取回执文本：换一份绑定该执行的载体，实参按参数名给出。</summary>
-    private static string Call(IScopedTool tool, ExecutionId execution, Dictionary<string, object?> arguments) =>
-        ToolResult.Render(tool.ForExecution(execution).Functions.Single().Invoke(new ToolArguments(arguments)));
+    /// <summary>按模型调用工具的方式取回执文本，实参按参数名给出。</summary>
+    private static string Call(ITool tool, Dictionary<string, object?> arguments) =>
+        ToolResult.Render(tool.Functions.Single().Invoke(new ToolArguments(arguments)));
+
+    /// <summary>按契约路径取工具。</summary>
+    private static ITool Tool(IReadOnlyList<ITool> tools, string path) =>
+        tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
     private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner

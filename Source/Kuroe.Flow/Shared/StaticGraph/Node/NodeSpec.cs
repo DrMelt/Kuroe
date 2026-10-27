@@ -40,7 +40,7 @@ public sealed partial record NodeSpec
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
 
-    /// <summary>输入端口声明：执行节点与容器共用，容器由引用处绑定，执行节点由自身 From 绑定；
+    /// <summary>输入端口声明：执行节点与容器共用，容器的传入端口由自身 In 绑定，执行节点由自身 From 绑定；
     /// 成员用 @端口 引用容器传入端口。派发执行节点的 Text 输入端口可声明默认值，
     /// 默认值在 From 组没有连接该端口时提供内容。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
@@ -50,8 +50,8 @@ public sealed partial record NodeSpec
     /// 文件里与 <see cref="Outputs"/> 同写在一个 Outputs 数组，条目形状由节点类型决定。容器没有整份产出，一切对外内容都经声明的命名端口。</summary>
     public IReadOnlyDictionary<PortName, ContainerOutput>? ContainerOutputs { get; init; }
 
-    /// <summary>输入端口绑定：引用容器时是端口名到当前作用域可达节点引用的映射，值可以是 来源@端口 或 @更外层端口；
-    /// 执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
+    /// <summary>输入端口绑定：容器节点把声明的传入端口绑到当前作用域的来源，值可以是 来源@端口 或 @更外层端口。
+    /// 引用容器绑定库定义声明的端口，内联容器绑定自身声明的端口；执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? In { get; init; }
 
     /// <summary>上游启动组：组是一套完整的输入绑定方案，组内是输入端口到来源端口的连接，组间任一齐备即启动。

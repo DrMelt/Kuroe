@@ -27,10 +27,10 @@ internal sealed class ExecutionRunner(
         ExecutionInput input,
         CancellationToken cancellationToken)
     {
-        Session session = _sessions.ForExecution(input);
+        Session session = _sessions.ForExecution(execution, input);
 
         return await AskWithReminders(
-            text => session.AskAsync(text, execution, _journal, cancellationToken),
+            text => session.AskAsync(text, _journal, cancellationToken),
             (input.Type as LlmNodeType)?.Instruction(input) ?? string.Empty,
             () => _reminder.Text(execution));
     }

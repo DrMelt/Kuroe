@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Kuroe.Shared;
 
 namespace Kuroe.Tool.Command.Shared;
 
@@ -14,9 +15,6 @@ public static partial class CommandToolTemplate
     /// <summary>交回文本的缺省上限。</summary>
     public const int DefaultOutputLimit = 8000;
 
-    [GeneratedRegex(@"\{([^{}]+)\}", RegexOptions.CultureInvariant)]
-    private static partial Regex Placeholder();
-
     /// <summary>模板里出现的全部占位符名，按出现顺序并去重。</summary>
     public static IReadOnlyList<string> PlaceholdersOf(IEnumerable<CommandToolTemplateItem> template) =>
         [.. template.SelectMany(PlaceholdersOf).Distinct()];
@@ -26,9 +24,8 @@ public static partial class CommandToolTemplate
         [.. PlaceholdersOf(item.Text)];
 
     /// <summary>一段文字里出现的全部占位符名，按出现顺序。</summary>
-    internal static IReadOnlyList<string> PlaceholdersOf(string text) =>
-        [.. Matches(text).Select(match => match.Groups[1].Value)];
+    internal static IReadOnlyList<string> PlaceholdersOf(string text) => PathTemplate.Placeholders(text);
 
     /// <summary>一段文字里的占位符匹配，供展开按匹配位置替换。</summary>
-    internal static MatchCollection Matches(string text) => Placeholder().Matches(text);
+    internal static MatchCollection Matches(string text) => PathTemplate.Matches(text);
 }

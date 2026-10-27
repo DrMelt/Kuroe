@@ -1,37 +1,44 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
 using File = System.IO.File;
 
-/// <summary>按行号范围替换工作目录内文件内容的工具。路径解析后必须落回工作目录内，替换区间的原文须与 original 逐行一致。</summary>
+/// <summary>按行号范围替换路径基准目录内文件内容的工具。路径解析后必须落回工作区内，替换区间的原文须与 original 逐行一致。</summary>
 public sealed class PatchFileTool : ITool
 {
     private readonly FileScope _scope;
 
     /// <summary>按行号范围替换文件内容。</summary>
-    private static readonly ToolDefinition PatchFile = new(
+    public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/PatchFile"),
-        "按行号范围替换工作目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
+        "按行号范围替换路径基准目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，逐行不一致时调用被拒绝并在提示里回给实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
         [
-            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true),
+            new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("from"), "起始行号，数字，第 1 行起", Required: true),
             new ToolParameter(new ToolName("to"), "结束行号，数字", Required: true),
             new ToolParameter(new ToolName("original"), "该范围现在的原文，逐行与文件比对", Required: true),
             new ToolParameter(new ToolName("replacement"), "替换后的新内容，为空时删除该范围", Required: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-        ]);
+        ], [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用工作目录建立载体。</summary>
     public PatchFileTool(string baseDirectory)
+        : this(ToolBinding.Root(baseDirectory))
     {
-        _scope = FileTools.Scope(baseDirectory);
-        Functions = [PatchFile.Bind(Patch, _scope.Paths)];
+    }
+
+    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
+    public PatchFileTool(ToolBinding binding)
+    {
+        _scope = FileTools.Scope(binding);
+        Functions = [Definition.Bind(Patch, _scope.Paths)];
     }
 
     /// <summary>按行号范围替换文件内容，替换区间的原文须与 original 逐行一致；错误与拒绝以 ErrorOr 表达。行号从 1 起，replacement 行数可增减，为空时删除该范围，写回统一换行符并按 encoding 参数编码。</summary>

@@ -1,4 +1,6 @@
 using System.Text;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Shared;
 using Kuroe.Tool.File;
 using Xunit;
 
@@ -19,6 +21,9 @@ public sealed class FileToolTests : IDisposable
 
     /// <summary>批量读取的路径参数：一个存在的文件、一个越界的路径。</summary>
     private static readonly string[] _escapingPath = ["a.txt", ".."];
+
+    /// <summary>批量读取的路径参数：一个存在的文件、一个被拒绝的目录。</summary>
+    private static readonly string[] _deniedFiles = ["a.txt", ".kuroe/catalog.json"];
 
     [Fact]
     public void ReadFile_defaults_to_head_lines_and_notes_file_end()
@@ -74,7 +79,7 @@ public sealed class FileToolTests : IDisposable
 
             string output = Call("ReadFile", ("path", relative));
 
-            Assert.Contains("不在工作目录内", output);
+            Assert.Contains("不在工作区内", output);
         }
         finally
         {
@@ -141,7 +146,7 @@ public sealed class FileToolTests : IDisposable
         string output = Call("ReadFiles", ("paths", _escapingPath));
 
         Assert.DoesNotContain("A内容", output);
-        Assert.Contains("不在工作目录内", output);
+        Assert.Contains("不在工作区内", output);
     }
 
     [Fact]
@@ -274,7 +279,7 @@ public sealed class FileToolTests : IDisposable
 
         string output = Call("ListDirectory", ("path", ".."));
 
-        Assert.Contains("不在工作目录内", output);
+        Assert.Contains("不在工作区内", output);
     }
 
     [Fact]
@@ -337,7 +342,7 @@ public sealed class FileToolTests : IDisposable
 
         string output = Call("WriteFile", ("path", ".."), ("content", "x"));
 
-        Assert.Contains("不在工作目录内", output);
+        Assert.Contains("不在工作区内", output);
     }
 
     [Fact]
@@ -578,7 +583,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("不在工作目录内", Call("PatchFile",
+        Assert.Contains("不在工作区内", Call("PatchFile",
             ("path", ".."), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
 
         Directory.CreateDirectory(Path.Combine(_root, "dir"));
@@ -673,7 +678,7 @@ public sealed class FileToolTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        Assert.Contains("不在工作目录内", Call("GetFileInfo", ("path", "..")));
+        Assert.Contains("不在工作区内", Call("GetFileInfo", ("path", "..")));
     }
 
     [Fact]
@@ -750,8 +755,8 @@ public sealed class FileToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
 
-        Assert.Contains("不在工作目录内", Call("MoveFile", ("source", ".."), ("target", "b.txt")));
-        Assert.Contains("不在工作目录内", Call("MoveFile", ("source", "a.txt"), ("target", "../b.txt")));
+        Assert.Contains("不在工作区内", Call("MoveFile", ("source", ".."), ("target", "b.txt")));
+        Assert.Contains("不在工作区内", Call("MoveFile", ("source", "a.txt"), ("target", "../b.txt")));
         Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
     }
 
@@ -817,6 +822,137 @@ public sealed class FileToolTests : IDisposable
 
         Assert.False(Parameter(definitions, "WriteFile", "content").Path);
         Assert.False(Parameter(definitions, "ReadFile", "from").Path);
+    }
+
+    [Fact]
+    public void ReadFile_rejects_kuroe_and_git_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        Directory.CreateDirectory(Path.Combine(_root, ".git"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
+        File.WriteAllText(Path.Combine(_root, ".git", "config"), "仓库配置");
+
+        Assert.Contains("黑名单", Call("ReadFile", ("path", ".kuroe/catalog.json")));
+        Assert.Contains("黑名单", Call("ReadFile", ("path", ".git/config")));
+    }
+
+    [Fact]
+    public void ReadFiles_rejects_the_whole_call_when_one_path_is_denied()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
+
+        string output = Call("ReadFiles", ("paths", _deniedFiles));
+
+        Assert.Contains("黑名单", output);
+        Assert.DoesNotContain("A内容", output);
+    }
+
+    [Fact]
+    public void ListDirectory_and_GetFileInfo_reject_the_denied_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
+
+        Assert.Contains("黑名单", Call("ListDirectory", ("path", ".kuroe")));
+        Assert.Contains("黑名单", Call("GetFileInfo", ("path", ".kuroe/catalog.json")));
+    }
+
+    [Fact]
+    public void Write_Patch_and_Move_reject_the_denied_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        Directory.CreateDirectory(Path.Combine(_root, ".git"));
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "一\n二\n三");
+
+        Assert.Contains("黑名单", Call("WriteFile", ("path", ".git/config"), ("content", "x")));
+        Assert.Contains("黑名单", Call("PatchFile",
+            ("path", ".kuroe/catalog.json"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
+        Assert.Contains("黑名单", Call("MoveFile", ("source", "a.txt"), ("target", ".kuroe/a.txt")));
+        Assert.Contains("黑名单", Call("MoveFile", ("source", ".git/config"), ("target", "b.txt")));
+    }
+
+    [Fact]
+    public void Face_declares_the_same_deny_entries_on_every_path_parameter()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        Assert.All(
+            [
+                ("ReadFile", "path"),
+                ("ReadFiles", "paths"),
+                ("ListDirectory", "path"),
+                ("GetFileInfo", "path"),
+                ("WriteFile", "path"),
+                ("PatchFile", "path"),
+                ("MoveFile", "source"),
+                ("MoveFile", "target"),
+            ],
+            entry =>
+            {
+                ToolPathAccess access = Parameter(definitions, entry.Item1, entry.Item2).PathAccess!;
+                Assert.Equal([".kuroe", ".git"], access.Deny);
+            });
+    }
+
+    /// <summary>大小写变体在 Windows 上按路径语义同样拒绝。</summary>
+    [Fact]
+    public void Denied_paths_are_case_insensitive_on_windows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
+
+        Assert.Contains("黑名单", Call("ReadFile", ("path", ".KUROE/catalog.json")));
+    }
+
+    [Fact]
+    public void Explicit_context_reads_the_mapped_root_port()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "mapped.txt"), "映射内容");
+
+        PortName port = new("工作区");
+        ToolContext context = new(
+            new FixedPortAccess(port, _root),
+            new Dictionary<string, IReadOnlyDictionary<string, PortName>>
+            {
+                ["file/read/ReadFile"] = new Dictionary<string, PortName> { [PathVariables.RootName] = port },
+            },
+            _root,
+            default,
+            [new ToolPath("file/read/ReadFile")]);
+
+        string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"))
+            .Functions.Single()
+            .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "mapped.txt" })));
+
+        Assert.Equal("映射内容（已到文件结尾，实际返回 1 行）", output);
+    }
+
+    [Fact]
+    public void Context_without_a_mapping_rejects_the_tool_call()
+    {
+        Directory.CreateDirectory(_root);
+
+        ToolContext context = new(
+            new FixedPortAccess(new PortName("工作区"), _root),
+            new Dictionary<string, IReadOnlyDictionary<string, PortName>>(),
+            _root,
+            default,
+            []);
+
+        string output = ToolResult.Render(new ReadFileTool(context.For("file/read/ReadFile"))
+            .Functions.Single()
+            .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "a.txt" })));
+
+        Assert.Contains("路径变量 root 未映射或端口为空", output);
     }
 
     /// <summary>文件工具面的全部载体，按函数名取用其中的函数。</summary>

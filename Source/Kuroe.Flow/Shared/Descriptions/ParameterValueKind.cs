@@ -11,4 +11,10 @@ public enum ParameterValueKind
 
     /// <summary>整数值。</summary>
     Integer,
+
+    /// <summary>文本到文本的映射对象。</summary>
+    Map,
+
+    /// <summary>文本到文本映射的映射对象。</summary>
+    MapMap,
 }

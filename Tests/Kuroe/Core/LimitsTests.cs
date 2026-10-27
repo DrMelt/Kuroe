@@ -52,8 +52,8 @@ public sealed class LimitsTests
     {
         const string flow = """
             { "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-              { "Name": "整体", "Kind": "Container", "Nodes": [
-                { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+              { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Name": "接收", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "来源@结论" } ] }
               ] }
             ] } ] }
@@ -69,7 +69,7 @@ public sealed class LimitsTests
         ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "接收")
             .Executions.Single();
-        ContextValue upstream = Assert.Single(implement.Input.Inputs,
+        InputValue upstream = Assert.Single(implement.Input.Inputs,
             value => value.Origin is ExecutionSource);
 
         Assert.Equal(2001, upstream.Text.Length);

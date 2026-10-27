@@ -16,6 +16,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>

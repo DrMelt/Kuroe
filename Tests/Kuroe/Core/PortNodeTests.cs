@@ -102,8 +102,8 @@ public sealed class PortNodeTests
         const string flow = """
             {
               "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Context" }], "From": [ { "结论": "准备@结论" } ] }
                 ] }
               ] } ]
@@ -144,12 +144,8 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        PortTool tool = environment.PortTool;
-
-        // 未绑定执行的载体不写端口名，绑定执行后按该执行的声明列出
-        Assert.DoesNotContain("结论", tool.Functions.Single().Definition.Description);
         IExecution ported = environment.Runner.Started.Single(execution => execution.Input.OutputPorts.Count > 0);
-        ToolFunction declared = Assert.Single(tool.ForExecution(ported.Id).Functions);
+        ToolFunction declared = Assert.Single(environment.PortToolFor(ported.Id).Functions);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
 
@@ -233,7 +229,7 @@ public sealed class PortNodeTests
         environment.Settle(id);
 
         IExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
-        ToolFunction declared = Assert.Single(environment.PortTool.ForExecution(moved.Id).Functions);
+        ToolFunction declared = Assert.Single(environment.PortToolFor(moved.Id).Functions);
 
         Assert.Contains("本节点需要交回的端口：完成", declared.Definition.Description, StringComparison.Ordinal);
     }

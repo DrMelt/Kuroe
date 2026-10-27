@@ -13,7 +13,7 @@ public sealed class CommandRuntimeTests
 {
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
-    private static readonly NodePath BasePathSourcePath = NodePath.Of("整体", "基准");
+    private static readonly NodePath VariableSourcePath = NodePath.Of("整体", "基准");
     private static readonly PortName OutputPort = new("输出");
     private static readonly string Root = Path.GetTempPath();
 
@@ -136,7 +136,7 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
-    public void Execute_uses_the_base_path_as_the_default_directory()
+    public void Execute_uses_the_root_variable_as_the_default_directory()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         ExecutableNode node = Node(process);
@@ -149,7 +149,7 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
-    public void Execute_resolves_the_declared_directory_from_the_base_path()
+    public void Execute_resolves_the_declared_directory_from_the_root_variable()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         ExecutableNode node = Node(process, directory: "sub");
@@ -172,12 +172,12 @@ public sealed class CommandRuntimeTests
         runtime.Activate(context, Inputs(context));
 
         Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
-        Assert.Contains("Directory ../escape 不是工作区内的合法路径", runtime.TakeFailure());
+        Assert.Contains("Directory {root}/../escape 不是工作区内的合法路径", runtime.TakeFailure());
         Assert.Equal(0, process.Calls);
     }
 
     [Fact]
-    public void Base_path_outside_the_workspace_blocks_the_node()
+    public void Variable_root_outside_the_workspace_blocks_the_node()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
         ExecutableNode node = Node(process);
@@ -204,10 +204,10 @@ public sealed class CommandRuntimeTests
         Assert.Equal("abc…输出已截断", runtime.PortText(context, OutputPort));
     }
 
-    private static StubNodeContext Context(ExecutableNode node, string? basePath = null)
+    private static StubNodeContext Context(ExecutableNode node, string? rootValue = null)
     {
         StubNodeContext context = new(node);
-        context.AddSource(new SourceRuntime(BasePathSourcePath, basePath ?? Root));
+        context.AddSource(new SourceRuntime(VariableSourcePath, rootValue ?? Root));
 
         return context;
     }
@@ -229,7 +229,7 @@ public sealed class CommandRuntimeTests
             Model = null,
             Inputs =
             [
-                new InputPort(CommandNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("任务路径"), PortTypes.Text),
                 new InputPort(new PortName("触发"), PortTypes.Signal),
             ],
             Outputs = [new Port(OutputPort, PortTypes.Text)],
@@ -238,10 +238,10 @@ public sealed class CommandRuntimeTests
             [
                 new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal),
                 new FlowEdge(
-                    BasePathSourcePath,
+                    VariableSourcePath,
                     TargetPath,
                     new PortName("结果"),
-                    CommandNodePorts.BasePath,
+                    new PortName("任务路径"),
                     PortTypes.Text),
             ],
         };
@@ -250,7 +250,8 @@ public sealed class CommandRuntimeTests
     {
         Program = "dotnet",
         Arguments = ["--version"],
-        Directory = directory,
+        Directory = directory is null ? null : $"{{root}}/{directory}",
+        Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
         RootDirectory = Root,
         TimeoutSeconds = 5,
         MaxChars = maxChars,

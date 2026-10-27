@@ -20,9 +20,11 @@ public sealed class ExecutionHistoryTests
             Type = LlmNodeTypes.Create(null),
             Inputs =
             [
-                new ContextValue(
-                    new ExecutionSource(new ExecutionId(2), NodePath.Of("整体/制定计划"), new PortName("计划")),
-                    "计划产出"),
+                new InputValue(
+                    new PortName("计划"),
+                    new ContextValue(
+                        new ExecutionSource(new ExecutionId(2), NodePath.Of("整体/制定计划"), new PortName("计划")),
+                        "计划产出")),
             ],
         };
         List<ChatMessage> messages = [];

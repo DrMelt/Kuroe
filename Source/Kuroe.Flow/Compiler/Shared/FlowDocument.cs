@@ -80,7 +80,7 @@ public sealed record NodeDefinitionDocument : NodeDocument
     /// <summary>定义条目写了模型绑定对象。绑定只属于引用节点组，构造层据此报错。</summary>
     public bool HasModelBindings { get; init; }
 
-    /// <summary>定义条目写了输入端口绑定。绑定只属于引用容器，构造层据此报错。</summary>
+    /// <summary>定义条目写了输入端口绑定。库定义不接线，内联容器在流程作用域绑定自身声明的传入端口。</summary>
     public IReadOnlyDictionary<string, string>? In { get; init; }
 
     /// <summary>子节点，非空即容器。</summary>

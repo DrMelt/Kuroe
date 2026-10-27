@@ -7,33 +7,16 @@ using Kuroe.Flow.Runtime.Contract;
 namespace Kuroe.Tool.Contract;
 
 /// <summary>上报本轮无法完成的通道。载体按执行换一份，上报时才知道是哪个执行在报。</summary>
-public sealed class CannotCompleteTool : IScopedTool
+/// <remarks>按执行建立载体。</remarks>
+public sealed class CannotCompleteTool(CannotCompleteSubmitter intake, ExecutionId execution) : ITool
 {
-    private readonly CannotCompleteSubmitter _intake;
-
-    /// <summary>容器装配用的载体，尚未绑定执行。</summary>
-    public CannotCompleteTool(CannotCompleteSubmitter intake)
-    {
-        _intake = intake;
-        Functions = Declare(intake, null);
-    }
-
-    private CannotCompleteTool(CannotCompleteSubmitter intake, ExecutionId execution)
-    {
-        _intake = intake;
-        Functions = Declare(intake, execution);
-    }
-
     /// <summary>本载体的函数声明。</summary>
-    public IReadOnlyList<ToolFunction> Functions { get; }
-
-    /// <summary>换一份绑定到该执行的载体。</summary>
-    public ITool ForExecution(ExecutionId execution) => new CannotCompleteTool(_intake, execution);
+    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(intake, execution);
 
     /// <summary>把契约定义绑上上报该执行无法完成的调用体。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(CannotCompleteSubmitter intake, ExecutionId? execution) =>
+    private static IReadOnlyList<ToolFunction> Declare(CannotCompleteSubmitter intake, ExecutionId execution) =>
     [
-        ContractToolDefinitions.CannotComplete().Bind(arguments => Report(intake, execution ?? default, arguments)),
+        ContractToolDefinitions.CannotComplete().Bind(arguments => Report(intake, execution, arguments)),
     ];
 
     /// <summary>上报本轮无法完成并把上报后的本轮契约状态写成回执，错误原样交回模型。</summary>

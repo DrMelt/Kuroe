@@ -40,20 +40,18 @@ public sealed class ExecutionContractTests
         environment.Settle(id);
 
         IExecution ported = Ported(environment);
-        PortTool port = environment.PortTool;
-        CannotCompleteTool cannotComplete = environment.CannotCompleteTool;
-        StatusTool status = new(new ExecutionStatusReader(environment.Executions));
+        ITool port = environment.PortToolFor(ported.Id);
+        ITool cannotComplete = environment.CannotCompleteToolFor(ported.Id);
+        ITool status = environment.StatusToolFor(ported.Id);
 
-        IScopedTool[] tools = [port, cannotComplete, status];
+        ITool[] tools = [port, cannotComplete, status];
 
         Assert.Equal(
             [ContractTools.Port, ContractTools.CannotComplete, ContractTools.Status],
-            tools.Select(tool => Assert.Single(tool.ForExecution(ported.Id).Functions).Definition.Path.Value));
+            tools.Select(tool => Assert.Single(tool.Functions).Definition.Path.Value));
 
-        // 未绑定执行的载体不写端口名，绑定执行后按该执行的声明列出
-        Assert.DoesNotContain("结论", port.Functions.Single().Definition.Description, StringComparison.Ordinal);
         Assert.Contains("本节点需要交回的端口：结论、理由",
-            Assert.Single(port.ForExecution(ported.Id).Functions).Definition.Description, StringComparison.Ordinal);
+            Assert.Single(port.Functions).Definition.Description, StringComparison.Ordinal);
         Assert.Contains("本轮执行契约状态", Assert.Single(status.Functions).Definition.Description, StringComparison.Ordinal);
     }
 
@@ -130,8 +128,8 @@ public sealed class ExecutionContractTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        StatusTool tool = new(new ExecutionStatusReader(environment.Executions));
-        ToolFunction function = Assert.Single(tool.ForExecution(Ported(environment).Id).Functions);
+        ITool tool = environment.StatusToolFor(Ported(environment).Id);
+        ToolFunction function = Assert.Single(tool.Functions);
 
         string text = function.Invoke(new ToolArguments(new Dictionary<string, object?>())).Value;
 

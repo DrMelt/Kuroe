@@ -1,12 +1,14 @@
+using ErrorOr;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Process;
 using Kuroe.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点的运行期对象：消费引擎装入的输入，按 BasePath 解析执行目录并执行一次命令，成功时按唯一输出端口放出合并输出，失败停在阻塞。</summary>
+/// <summary>命令节点的运行期对象：消费引擎装入的输入，按路径变量解析执行目录并执行一次命令，成功时按唯一输出端口放出合并输出，失败停在阻塞。</summary>
 internal sealed class CommandRuntime(ExecutableNode executable, CommandParameters parameters, IProcessRunner process)
     : SelfDrivenRuntime(executable)
 {
@@ -58,33 +60,39 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
         return null;
     }
 
-    /// <summary>按 BasePath 输入解析执行目录，未声明 Directory 时执行目录即基准。</summary>
+    /// <summary>按路径变量解析执行目录，未声明 Directory 时执行目录即路径基准。</summary>
     private string? ResolveDirectory(NodeInputValues inputs, out string workingDirectory)
     {
         workingDirectory = string.Empty;
 
-        string? basePath = inputs.Text(CommandNodePorts.BasePath);
-        if (string.IsNullOrWhiteSpace(basePath))
+        ErrorOr<PathResolution> resolved = PathVariables.Resolve(
+            Parameters.Variables,
+            port => inputs.Text(new PortName(port)),
+            Parameters.RootDirectory);
+        if (resolved.IsError)
         {
-            return "BasePath 未连接或为空。";
-        }
-
-        if (!WorkspacePath.TryResolve(Parameters.RootDirectory, basePath, out string baseDirectory))
-        {
-            return $"BasePath {basePath} 不是工作区内的合法路径。";
+            return resolved.FirstError.Description;
         }
 
         if (Parameters.Directory is not { Length: > 0 } directory)
         {
-            workingDirectory = baseDirectory;
+            workingDirectory = resolved.Value.BaseDirectory;
 
             return null;
         }
 
-        if (!WorkspacePath.TryResolveWithin(Parameters.RootDirectory, baseDirectory, directory, out workingDirectory))
+        ErrorOr<string> expanded = PathVariables.Expand(
+            directory,
+            resolved.Value.Variables,
+            resolved.Value.BaseDirectory,
+            Parameters.RootDirectory,
+            "Directory");
+        if (expanded.IsError)
         {
-            return $"Directory {directory} 不是工作区内的合法路径。";
+            return expanded.FirstError.Description;
         }
+
+        workingDirectory = expanded.Value;
 
         return null;
     }

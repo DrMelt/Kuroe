@@ -8,7 +8,7 @@ using Microsoft.Extensions.AI;
 namespace Kuroe.Node.Llm.Tools;
 
 /// <summary>工具载体声明的函数构成的模型可调用集合，外加记录调用的包装。
-/// 每轮请求按所属执行重新取载体，使调用记录落到该执行的记录上。
+/// 载体属于一次执行，不再按请求重新绑定。
 /// 工具面按白名单给出：只给路径落在名单里的函数及其子树。JSON 承载由 <see cref="IToolJson"/> 给出。</summary>
 public sealed class ToolCollection
 {
@@ -24,6 +24,18 @@ public sealed class ToolCollection
         Names = [.. Definitions.Select(definition => definition.Path.Name)];
     }
 
+    /// <summary>按定义建立只供展示的集合，不建立任何工具载体。</summary>
+    public static ToolCollection ForDisplay(IEnumerable<ToolDefinition> definitions, IToolJson json) =>
+        new([.. definitions], json);
+
+    private ToolCollection(IReadOnlyList<ToolDefinition> definitions, IToolJson json)
+    {
+        _carriers = [];
+        _json = json;
+        Definitions = definitions;
+        Names = [.. Definitions.Select(definition => definition.Path.Name)];
+    }
+
     /// <summary>全部函数的定义，按载体与声明顺序排列，供宿主展示工具面。</summary>
     public IReadOnlyList<ToolDefinition> Definitions { get; }
 
@@ -32,13 +44,12 @@ public sealed class ToolCollection
 
     /// <summary>模型可调用的工具，请求选项由会话取用。没有声明时为空。
     /// 工具面按本轮的能力路径给出：只给路径落在名单里的函数及其子树。</summary>
-    internal IReadOnlyList<AITool> Build(ExecutionId execution, ProcessJournal journal, IReadOnlyList<ToolPath> tools)
+    internal IReadOnlyList<AITool> Build(ProcessJournal journal, IReadOnlyList<ToolPath> tools)
     {
         List<AITool> result = [];
         foreach (ITool carrier in _carriers)
         {
-            ITool bound = carrier is IScopedTool scoped ? scoped.ForExecution(execution) : carrier;
-            result.AddRange(bound.Functions
+            result.AddRange(carrier.Functions
                 .Where(function => tools.Any(entry => entry.Allows(function.Definition.Path.Value)))
                 .Select(function => new DeclaredFunction(function, journal, _json)));
         }

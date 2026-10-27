@@ -34,7 +34,7 @@ public sealed class StartPathsTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "启动" }, { "Name": "流程" }, { "Name": "目标" }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "读取路径",
                       "Kind": "Llm",
@@ -46,9 +46,9 @@ public sealed class StartPathsTests
                       ],
                       "From": [
                         {
-                          "目标": "Start@目标",
-                          "启动": "Start@启动",
-                          "流程": "Start@流程"
+                          "目标": "@目标",
+                          "启动": "@启动",
+                          "流程": "@流程"
                         }
                       ]
                     }

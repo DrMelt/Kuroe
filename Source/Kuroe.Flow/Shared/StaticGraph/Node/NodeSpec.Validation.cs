@@ -10,11 +10,7 @@ public sealed partial record NodeSpec
         CheckIdentity(context, fail);
         CheckStructure(Type?.Shape, context, fail);
         CheckWiring(context, fail);
-        if (!IsContainer)
-        {
-            CheckInterface(Type?.Shape, fail);
-        }
-
+        CheckInterface(Type?.Shape, fail);
         Spec?.Validate?.Check(fail);
     }
 }

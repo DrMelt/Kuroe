@@ -15,26 +15,35 @@ public sealed partial record NodeSpec
             fail($"输入端口 {port.Value} 重复。");
         }
 
-        foreach (PortName port in Duplicates([.. Outputs.Select(port => port.Name)]))
-        {
-            fail($"输出端口 {port.Value} 重复。");
-        }
-
         if (shape is { } declared)
         {
             foreach (InputPort port in Inputs.Where(port => !declared.InputTypes.Contains(port.Type)))
             {
                 fail($"输入端口 {port.Name.Value} 的类型只能是 {Types(declared.InputTypes)}。");
             }
+        }
 
-            foreach (string port in Outputs.Where(port => !declared.OutputTypes.Contains(port.Type)).Select(port => port.Name.Value))
+        if (shape is { Organizes: true })
+        {
+            // 容器的输出是子树绑定，默认值规则由容器类型报出
+            return;
+        }
+
+        foreach (PortName port in Duplicates([.. Outputs.Select(port => port.Name)]))
+        {
+            fail($"输出端口 {port.Value} 重复。");
+        }
+
+        if (shape is { } executable)
+        {
+            foreach (string port in Outputs.Where(port => !executable.OutputTypes.Contains(port.Type)).Select(port => port.Name.Value))
             {
-                fail($"输出端口 {port} 的类型只能是 {Types(declared.OutputTypes)}。");
+                fail($"输出端口 {port} 的类型只能是 {Types(executable.OutputTypes)}。");
             }
 
             foreach (InputPort port in Inputs.Where(port => port.Default is not null))
             {
-                if (!declared.DispatchesExecutions || port.Type != PortTypes.Text)
+                if (!executable.DispatchesExecutions || port.Type != PortTypes.Text)
                 {
                     fail($"输入端口 {port.Name.Value} 的默认值只用于派发执行的节点的 Text 输入端口。");
                 }

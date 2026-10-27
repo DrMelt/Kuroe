@@ -40,27 +40,29 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text" }] },
+              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "基准" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "版本",
                       "Kind": "Command",
                       "Program": "dotnet",
                       "Arguments": ["--version"],
-                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "输出", "Type": "Text" }]
                     },
                     {
                       "Name": "写出",
                       "Kind": "FileWrite",
-                      "Path": "out/version.txt",
-                      "Inputs": [{ "Name": "正文" }, { "Name": "BasePath" }],
-                      "From": [{ "正文": "版本@输出", "BasePath": "Start@基准" }]
+                      "Path": "{root}/out/version.txt",
+                      "Variables": { "root": "基准" },
+                      "Inputs": [{ "Name": "正文" }, { "Name": "基准" }],
+                      "From": [{ "正文": "版本@输出", "基准": "@基准" }]
                     }
                   ]
                 }
@@ -76,18 +78,19 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Value": "." }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text" }] },
+              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "缺失",
                       "Kind": "Command",
                       "Program": "kuroe-command-does-not-exist",
-                      "Inputs": [{ "Name": "BasePath" }, { "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "BasePath": "Start@基准", "触发": "Start@目标" }],
+                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
+                      "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "输出", "Type": "Text" }]
                     }
                   ]

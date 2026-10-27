@@ -13,10 +13,10 @@ public sealed class NodePathTests
     private const string ChainFlow = """
         {
           "Flows": [ { "Name": "默认", "Models": [{ "Name": "实施者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Name": "制定计划", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] },
-              { "Name": "文档组", "Kind": "Container", "Nodes": [
-                { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "Start@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+              { "Name": "制定计划", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "@目标" } ] },
+              { "Name": "文档组", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "From": [ { "目标": "@目标" } ] }
               ] }
             ] }
           ] } ]
@@ -42,9 +42,9 @@ public sealed class NodePathTests
             ] }
           ],
           "Flows": [ { "Name": "双线", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Nodes": [
-              { "Label": "甲", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } },
-              { "Label": "乙", "Use": "组", "In": { "计划": "Start@目标" }, "Models": { "执行者": "执行者" } }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+              { "Label": "甲", "Use": "组", "In": { "计划": "@目标" }, "Models": { "执行者": "执行者" } },
+              { "Label": "乙", "Use": "组", "In": { "计划": "@目标" }, "Models": { "执行者": "执行者" } }
             ] }
           ] } ]
         }

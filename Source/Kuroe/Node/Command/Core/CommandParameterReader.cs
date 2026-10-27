@@ -2,15 +2,16 @@ using Kuroe.Flow.Shared.Descriptions;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，解析基准与边界由运行期给出。</summary>
+/// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，路径变量与解析边界由运行期使用。</summary>
 internal static class CommandParameterReader
 {
-    /// <summary>读出程序、参数、执行目录、超时与输出上限，缺失或非法时经 fail 报出。</summary>
+    /// <summary>读出程序、参数、执行目录、路径变量、超时与输出上限，缺失或非法时经 fail 报出。</summary>
     internal static CommandParameters Read(
         IParameterReader values,
         Action<string> fail,
         string rootDirectory)
     {
+        IReadOnlyDictionary<string, string> variables = values.Mappings(CommandParameterNames.Variables);
         string? program = values.Text(CommandParameterNames.Program);
         if (string.IsNullOrWhiteSpace(program))
         {
@@ -44,6 +45,7 @@ internal static class CommandParameterReader
             Program = program,
             Arguments = arguments,
             Directory = string.IsNullOrWhiteSpace(directory) ? null : directory,
+            Variables = variables,
             RootDirectory = rootDirectory,
             TimeoutSeconds = timeout ?? CommandNodeTypes.DefaultTimeoutSeconds,
             MaxChars = maxChars ?? CommandNodeTypes.DefaultMaxChars,
@@ -62,6 +64,9 @@ internal static class CommandParameterNames
 
     /// <summary>执行目录字段。</summary>
     internal const string Directory = "Directory";
+
+    /// <summary>路径变量映射字段。</summary>
+    internal const string Variables = "Variables";
 
     /// <summary>等待上限秒数字段。</summary>
     internal const string TimeoutSeconds = "TimeoutSeconds";

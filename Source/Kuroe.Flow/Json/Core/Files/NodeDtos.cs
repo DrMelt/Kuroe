@@ -35,10 +35,10 @@ public sealed class NodeDto
     public int? MaxExecutions { get; set; }
 
     /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Description。
-    /// 容器的输入端口由引用处 In 绑定，执行节点的由自身 From 绑定。</summary>
+    /// 容器的传入端口由容器节点的 In 绑定，执行节点的由自身 From 绑定。</summary>
     public List<JsonElement>? Inputs { get; set; }
 
-    /// <summary>容器引用把端口绑定到当前作用域可达节点。</summary>
+    /// <summary>容器节点的传入端口绑定：端口名到当前作用域来源的映射。</summary>
     public Dictionary<string, string>? In { get; set; }
 
     /// <summary>模型选择引用：装配层执行节点写流程模型选择名，节点组容器成员写模型槽位名。</summary>

@@ -32,7 +32,7 @@ public sealed class DriverApiTests
         ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
         ExecutionId implementExecution = implement.Id;
 
-        ToolFunction submit = Assert.Single(environment.PortTool.ForExecution(implementExecution).Functions);
+        ToolFunction submit = Assert.Single(environment.PortToolFor(implementExecution).Functions);
         string receipt = ToolResult.Render(submit.Invoke(
             new ToolArguments(new Dictionary<string, object?> { ["valuesJson"] = """{ "计划": "改一下" }""" })));
 

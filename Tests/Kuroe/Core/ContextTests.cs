@@ -19,9 +19,9 @@ public sealed class ContextTests
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
 
-        ContextValue goal = Assert.Single(plan.Input.Inputs);
-        Assert.Equal("补齐 README", goal.Text);
-        Assert.IsType<StartSource>(goal.Origin);
+        InputValue goal = Assert.Single(plan.Input.Inputs);
+        Assert.Equal("补齐 README", goal.Value.Text);
+        Assert.IsType<StartSource>(goal.Value.Origin);
         Assert.Equal(ModelName.Create("fake").Value, (plan.Input.Declaration as KuroeNodeDeclaration)!.Model);
     }
 
@@ -34,9 +34,9 @@ public sealed class ContextTests
         ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
         ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
 
-        ContextValue value = Assert.Single(implement.Input.Inputs);
-        Assert.Equal("计划产出", value.Text);
-        Assert.Equal(plan.Id, Assert.IsType<ExecutionSource>(value.Origin).FromExecution);
+        InputValue value = Assert.Single(implement.Input.Inputs);
+        Assert.Equal("计划产出", value.Value.Text);
+        Assert.Equal(plan.Id, Assert.IsType<ExecutionSource>(value.Value.Origin).FromExecution);
     }
 
     [Fact]
@@ -47,9 +47,9 @@ public sealed class ContextTests
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
 
-        ContextValue seed = Assert.Single(execution.Input.Inputs);
-        Assert.Equal("固定背景", seed.Text);
-        Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Origin).Port);
+        InputValue seed = Assert.Single(execution.Input.Inputs);
+        Assert.Equal("固定背景", seed.Value.Text);
+        Assert.Equal(new PortName("背景"), Assert.IsType<StartSource>(seed.Value.Origin).Port);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class ContextTests
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
         ExecutionSnapshot execution = Implement(done);
 
-        ContextValue[] values = [.. execution.Input.Inputs];
+        InputValue[] values = [.. execution.Input.Inputs];
         Assert.Equal(["计划产出", "固定格式"], values.Select(value => value.Text));
         Assert.IsType<ExecutionSource>(values[0].Origin);
         DefaultSource fallback = Assert.IsType<DefaultSource>(values[1].Origin);
@@ -185,8 +185,8 @@ public sealed class ContextTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Name": "实施", "Kind": "Llm", "Model": "执行者",
                       "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
@@ -215,8 +215,8 @@ public sealed class ContextTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Name": "实施", "Kind": "Llm", "Model": "执行者",
                       "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
@@ -242,9 +242,9 @@ public sealed class ContextTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "准备甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "准备乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "准备甲", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "准备乙", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Name": "实施", "Kind": "Llm", "Model": "执行者", "MaxExecutions": 1,
                       "Inputs": [
@@ -277,13 +277,13 @@ public sealed class ContextTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "风格" }], "In": { "目标": "Start@目标", "风格": "Start@风格" }, "Nodes": [
                     {
                       "Name": "干活",
                       "Kind": "Llm",
                       "Model": "执行者",
                       "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
-                      "From": [{ "目标": "Start@目标", "风格": "Start@风格" }]
+                      "From": [{ "目标": "@目标", "风格": "@风格" }]
                     }
                   ]
                 }
@@ -302,8 +302,8 @@ public sealed class ContextTests
               "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "背景": "Start@背景" } ] }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }], "In": { "背景": "Start@背景" }, "Nodes": [
+                  { "Name": "干活", "Kind": "Llm", "Model": "执行者", "From": [ { "背景": "@背景" } ] }
                 ] }
               ]
             }

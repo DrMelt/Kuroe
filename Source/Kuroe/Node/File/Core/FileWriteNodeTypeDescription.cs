@@ -16,6 +16,7 @@ internal sealed class FileWriteNodeTypeDescription(string rootDirectory) : INode
     public IReadOnlyList<ParameterField> Fields { get; } =
     [
         new(FileParameterNames.Path, ParameterValueKind.Text),
+        new(FileParameterNames.Variables, ParameterValueKind.Map),
         new(FileParameterNames.MaxChars, ParameterValueKind.Integer),
     ];
 

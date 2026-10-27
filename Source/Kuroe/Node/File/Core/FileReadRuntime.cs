@@ -4,7 +4,7 @@ using IOFile = System.IO.File;
 
 namespace Kuroe.Node.File;
 
-/// <summary>文件读取节点的运行期对象：消费引擎装入的输入，按 BasePath 解析路径并读取文件，内容写入唯一的输出端口。</summary>
+/// <summary>文件读取节点的运行期对象：消费引擎装入的输入，按路径变量解析路径并读取文件，内容写入唯一的输出端口。</summary>
 internal sealed class FileReadRuntime(ExecutableNode executable, FileParameters parameters)
     : FileRuntime(executable, parameters)
 {

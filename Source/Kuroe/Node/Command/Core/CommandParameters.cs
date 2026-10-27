@@ -1,6 +1,6 @@
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点的类型专属声明：程序、参数、执行目录原文、边界根、超时与输出上限。</summary>
+/// <summary>命令节点的类型专属声明：程序、参数、执行目录原文、路径变量映射、边界根、超时与输出上限。</summary>
 public sealed record CommandParameters
 {
     /// <summary>要执行的程序，程序名或路径。</summary>
@@ -9,8 +9,11 @@ public sealed record CommandParameters
     /// <summary>传给程序的参数，逐项传入，不经 shell 解释。</summary>
     public required IReadOnlyList<string> Arguments { get; init; }
 
-    /// <summary>执行目录原文，相对基准路径解析；为空时执行目录即基准路径。</summary>
+    /// <summary>执行目录原文，可含路径变量；为空时执行目录即变量基准。</summary>
     public required string? Directory { get; init; }
+
+    /// <summary>路径变量名到输入端口名的映射。</summary>
+    public IReadOnlyDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
 
     /// <summary>工作区根目录，解析后的路径必须落在它之内。</summary>
     public required string RootDirectory { get; init; }

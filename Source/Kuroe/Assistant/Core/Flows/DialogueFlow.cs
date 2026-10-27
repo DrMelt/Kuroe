@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Shared;
 using Kuroe.Tool;
 
 namespace Kuroe.Assistant.Flows;
@@ -37,7 +38,10 @@ internal static class DialogueFlow
     /// <summary>回复端口名：回话节点的输出端口，只作环的回边驱动，也是收话节点取用它的输入端口。</summary>
     internal static PortName ReplyPort { get; } = new("完成");
 
-    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。文件工具不在此列，对话任务没有工作目录。</summary>
+    /// <summary>工作区根目录端口，由宿主在任务启动时给出。</summary>
+    internal static PortName WorkspacePort { get; } = new("工作区");
+
+    /// <summary>回话节点可用的能力白名单，写上级路径即放行整棵子树。文件只读工具可用，路径变量绑定工作区。</summary>
     internal static IReadOnlyList<ToolPath> Tools { get; } =
     [
         new ToolPath("GetLocalTime"),
@@ -66,12 +70,28 @@ internal static class DialogueFlow
                 Name.Value,
                 "内置对话：回答用户的每轮输入",
                 [new ModelDocument(RuntimeModel.Value, null, Runtime: true)],
-                [new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。")],
-                new Dictionary<string, string>(),
+                [
+                    new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。"),
+                    new PortDocument(WorkspacePort.Value, PortTypes.Text, "工作区根目录，由宿主给出。"),
+                ],
+                new Dictionary<string, string>
+                {
+                    [WorkspacePort.Value] = "WORKSPACE_PATH",
+                },
                 new NodeDefinitionDocument
                 {
                     Name = "对话",
                     Kind = "Container",
+                    Inputs =
+                    [
+                        new InputPortDocument(StartPort.Value, PortTypes.Text),
+                        new InputPortDocument(WorkspacePort.Value, PortTypes.Text),
+                    ],
+                    In = new Dictionary<string, string>
+                    {
+                        [StartPort.Value] = $"{StartNode.ReservedLabel.Value}@{StartPort.Value}",
+                        [WorkspacePort.Value] = $"{StartNode.ReservedLabel.Value}@{WorkspacePort.Value}",
+                    },
                     Nodes =
                     [
                         new NodeDefinitionDocument
@@ -93,7 +113,7 @@ internal static class DialogueFlow
                             [
                                 new FromGroupDocument(
                                 [
-                                    new FromLinkDocument(StartPort.Value, $"{StartNode.ReservedLabel.Value}@{StartPort.Value}"),
+                                    new FromLinkDocument(StartPort.Value, $"@{StartPort.Value}"),
                                     new FromLinkDocument(ReplyPort.Value, $"{ReplyNodeLabel.Value}@{ReplyPort.Value}"),
                                 ]),
                             ],
@@ -102,13 +122,14 @@ internal static class DialogueFlow
                         {
                             Name = ReplyNodeName.Value,
                             Kind = "Llm",
-                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text)],
+                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text), new InputPortDocument(WorkspacePort.Value, PortTypes.Text)],
                             Model = RuntimeModel.Value,
                             // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
                             Outputs = [new PortDocument(ReplyPort.Value, PortTypes.Signal)],
                             Parameters = new Dictionary<string, FlowValue>
                             {
                                 ["Tools"] = new FlowValue.Array([.. Tools.Select(tool => new FlowValue.Text(tool.Value))]),
+                                ["ToolPorts"] = ToolPorts(),
                                 ["SystemPrompt"] = new FlowValue.Array([.. SystemPrompt(language).Select(text => new FlowValue.Text(text))]),
                             },
                             From =
@@ -116,10 +137,25 @@ internal static class DialogueFlow
                                 new FromGroupDocument(
                                 [
                                     new FromLinkDocument(InputPort.Value, $"{InputNodeLabel.Value}@{InputPort.Value}"),
+                                    new FromLinkDocument(WorkspacePort.Value, $"@{WorkspacePort.Value}"),
                                 ]),
                             ],
                         },
                     ],
                 }),
         ]);
+
+    /// <summary>工具路径到路径变量映射的对应表，子树按上级路径给出。</summary>
+    private static FlowValue.Object ToolPorts() => new(new Dictionary<string, FlowValue>
+    {
+        ["file"] = RootPorts(),
+        ["git"] = RootPorts(),
+        ["dotnet"] = RootPorts(),
+    });
+
+    /// <summary>单个工具组的变量映射，root 指向工作区端口。</summary>
+    private static FlowValue.Object RootPorts() => new(new Dictionary<string, FlowValue>
+    {
+        [PathVariables.RootName] = new FlowValue.Text(WorkspacePort.Value),
+    });
 }

@@ -1,5 +1,8 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Process;
+using Kuroe.Tool;
 using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Shared;
 using Xunit;
@@ -128,7 +131,7 @@ public sealed class CommandToolRunnerTests
             process);
 
         Assert.True(result.IsError);
-        Assert.Contains("不在工作目录内", result.FirstError.Description, StringComparison.Ordinal);
+        Assert.Contains("不在工作区内", result.FirstError.Description, StringComparison.Ordinal);
         Assert.False(process.Called);
     }
 
@@ -151,6 +154,33 @@ public sealed class CommandToolRunnerTests
         Assert.Contains("docs/b", result.FirstError.Description, StringComparison.Ordinal);
         Assert.Contains("白名单", result.FirstError.Description, StringComparison.Ordinal);
         Assert.False(process.Called);
+    }
+
+    [Fact]
+    public void Execute_resolves_working_directory_from_the_root_variable()
+    {
+        string root = Root();
+        CommandToolDefinition definition = new(
+            new ToolPath("Execution"),
+            "说明",
+            [],
+            [new("cmd", null)],
+            "{root}/src",
+            5,
+            200,
+            ["root"]);
+        ToolBinding binding = new(
+            new FixedPortAccess(new PortName("root"), root),
+            new Dictionary<string, PortName> { ["root"] = new PortName("root") },
+            root);
+        FakeProcessRunner process = new();
+
+        ErrorOr<string> result = new CommandTool(definition, binding, process)
+            .Functions[0]
+            .Invoke(new ToolArguments(Given()));
+
+        Assert.False(result.IsError);
+        Assert.Equal(Path.GetFullPath("src", root), process.WorkingDirectory);
     }
 
     /// <summary>临时测试根目录，路径不需要实际存在。</summary>

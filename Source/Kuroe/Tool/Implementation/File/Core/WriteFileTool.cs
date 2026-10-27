@@ -1,34 +1,41 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
 using File = System.IO.File;
 
-/// <summary>把文本覆盖写入工作目录内文件的工具。路径解析后必须落回工作目录内，父目录缺失时自动创建。</summary>
+/// <summary>把文本覆盖写入路径基准目录内文件的工具。路径解析后必须落回工作区内，父目录缺失时自动创建。</summary>
 public sealed class WriteFileTool : ITool
 {
     private readonly FileScope _scope;
 
     /// <summary>覆盖写入文件。</summary>
-    private static readonly ToolDefinition WriteFile = new(
+    public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/WriteFile"),
-        "把文本覆盖写入工作目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
+        "把文本覆盖写入路径基准目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
         [
-            new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true),
+            new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
             new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
-        ]);
+        ], [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用工作目录建立载体。</summary>
     public WriteFileTool(string baseDirectory)
+        : this(ToolBinding.Root(baseDirectory))
     {
-        _scope = FileTools.Scope(baseDirectory);
-        Functions = [WriteFile.Bind(Write, _scope.Paths)];
+    }
+
+    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
+    public WriteFileTool(ToolBinding binding)
+    {
+        _scope = FileTools.Scope(binding);
+        Functions = [Definition.Bind(Write, _scope.Paths)];
     }
 
     /// <summary>把文本覆盖写入工作目录内的文件，父目录缺失时自动创建，已有文件直接覆盖；错误与拒绝以 ErrorOr 表达。编码按 encoding 参数，缺省 UTF-8 无 BOM。</summary>

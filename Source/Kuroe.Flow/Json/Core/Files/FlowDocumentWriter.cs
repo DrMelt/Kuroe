@@ -48,6 +48,9 @@ static class FlowDocumentWriter
         Inputs = WriteInputs(node.Inputs),
         Outputs = WritePorts(node.Outputs, allowValue: false),
         From = WriteFrom(node.From),
+        In = node.In is { Count: > 0 } bindings
+            ? new Dictionary<string, string>(bindings)
+            : null,
         Validate = WriteValidation(node.Validate),
         MaxExecutions = node.MaxExecutions,
         Model = node.Model,

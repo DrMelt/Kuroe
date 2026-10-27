@@ -7,11 +7,13 @@ using Kuroe.Flow.Compiler;
 using Kuroe.Flow.Compiler.Shared;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.InputChannel;
+using Kuroe.Shared;
 using Kuroe.Tests.Support;
 using Xunit;
 
@@ -76,6 +78,28 @@ public sealed class DialogueTests
         Assert.Equal(
             [ContractTools.Port, ContractTools.CannotComplete, ContractTools.Status],
             paths.Skip(DialogueFlow.Tools.Count));
+    }
+
+    /// <summary>回话节点的工作区端口由根容器的 In 从开始端口转接。</summary>
+    [Fact]
+    public void Dialogue_reply_node_receives_the_workspace_port_from_the_start_node()
+    {
+        NodeSpec reply = Members(AssistantSettings.DefaultLanguage)[1];
+        IReadOnlyList<PortRef> refs = [.. reply.From.SelectMany(group => group.Links).Select(link => link.Ref)];
+
+        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), refs);
+    }
+
+    /// <summary>回话节点把工作区端口映射到带路径变量的工具根。</summary>
+    [Fact]
+    public void Dialogue_reply_node_maps_the_workspace_port_to_tool_roots()
+    {
+        NodeSpec reply = Members(AssistantSettings.DefaultLanguage)[1];
+        LlmParameters parameters = Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(reply.Type).Parameters);
+
+        Assert.Equal(DialogueFlow.WorkspacePort.Value, parameters.ToolPorts["file"][PathVariables.RootName]);
+        Assert.Equal(DialogueFlow.WorkspacePort.Value, parameters.ToolPorts["git"][PathVariables.RootName]);
+        Assert.Equal(DialogueFlow.WorkspacePort.Value, parameters.ToolPorts["dotnet"][PathVariables.RootName]);
     }
 
     [Fact]

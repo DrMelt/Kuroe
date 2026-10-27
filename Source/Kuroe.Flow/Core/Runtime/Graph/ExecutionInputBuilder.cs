@@ -20,12 +20,13 @@ internal static class ExecutionInputBuilder
         NodeInputValues inputs,
         INodeDeclaration? declaration)
     {
-        List<ContextValue> contextInput = [];
-        List<ContextValue> values = [];
+        List<InputValue> contextInput = [];
+        List<InputValue> values = [];
         foreach (NodeInputValue input in inputs.Ordered)
         {
-            List<ContextValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
-            target.Add(Truncate(input.Value));
+            InputValue value = new(input.TargetInput, Truncate(input.Value));
+            List<InputValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
+            target.Add(value);
         }
 
         foreach (InputPort port in node.Executable.Inputs)
@@ -35,7 +36,9 @@ internal static class ExecutionInputBuilder
                 continue;
             }
 
-            values.Add(Truncate(new ContextValue(new DefaultSource(node.Path, port.Name), text)));
+            values.Add(new InputValue(
+                port.Name,
+                Truncate(new ContextValue(new DefaultSource(node.Path, port.Name), text))));
         }
 
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于取值最前

@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Tools;
 
 namespace Kuroe.Node.Llm;
 
@@ -18,6 +19,7 @@ public static class LlmNodeTypes
         OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
     };
 
-    /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。</summary>
-    public static INodeType Create(LlmParameters? parameters) => new LlmNodeType(parameters);
+    /// <summary>按类型专属声明与工具契约建出类型实例，未声明时取默认声明。</summary>
+    public static INodeType Create(LlmParameters? parameters, IToolContractCatalog? contracts = null) =>
+        new LlmNodeType(parameters, contracts);
 }

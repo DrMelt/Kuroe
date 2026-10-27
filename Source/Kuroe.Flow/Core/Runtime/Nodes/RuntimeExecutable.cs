@@ -168,7 +168,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevi
     /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，Text 语义端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
         Executable.FindPort(port) is { } declared && declared.Type.Semantics == PortSemantics.Context
-            ? Join(ContextInputs())
+            ? ContextValues.Join(ContextInputs())
             : PublishedValue(port)?.Text;
 
     /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，Text 语义端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
@@ -199,15 +199,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevi
     }
 
     /// <summary>来源执行输入侧取到的内容，按原出处给出。尚未产出时为空。</summary>
-    private IReadOnlyList<ContextValue> ContextInputs() => PublishedExecution?.Input.Inputs ?? [];
-
-    /// <summary>取值拼合为单段文本，没有内容时为空。</summary>
-    private static string? Join(IReadOnlyList<ContextValue> values)
-    {
-        string[] parts = [.. values.Select(value => value.Text).Where(text => text.Length > 0)];
-
-        return parts.Length == 0 ? null : string.Join("\n\n", parts);
-    }
+    private IReadOnlyList<ContextValue> ContextInputs() =>
+        PublishedExecution is { } execution
+            ? [.. execution.Input.Inputs.Select(value => value.Value)]
+            : [];
 
     /// <summary>按端口取已发布产出的一个返回值：只有 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
     private PortValue? PublishedValue(PortName port) =>

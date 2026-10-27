@@ -79,10 +79,10 @@ public sealed class TestEnvironment : IDisposable
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                    { "Name": "交付", "Kind": "Container", "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "制定计划@计划" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "In": { "计划": "制定计划@计划" }, "Nodes": [
+                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
                     ] }
                   ]
                 }

@@ -159,11 +159,11 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "制定计划@计划" } ] },
-                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "制定计划@计划" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Inputs": [{ "Name": "计划" }], "In": { "计划": "制定计划@计划" }, "Nodes": [
+                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] },
+                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] }
                 ] },
                 { "Name": "审阅", "Kind": "Approval", "Question": "确认两版结论", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
                 { "Name": "汇总", "Kind": "Llm", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
@@ -189,11 +189,11 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "制定计划@计划" } ] },
-                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "制定计划@计划" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Inputs": [{ "Name": "计划" }], "In": { "计划": "制定计划@计划" }, "Nodes": [
+                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] },
+                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "计划": "@计划" } ] }
                 ] },
                 { "Name": "汇总", "Kind": "Llm", "Model": "实施者", "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] }
                   ]
@@ -217,12 +217,12 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写组", "Kind": "Container", "Nodes": [
-                    { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                  { "Name": "撰写组", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                    { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                   ] },
-                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                 ] },
                 { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
                 { "Name": "汇总", "Kind": "Llm", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
@@ -247,10 +247,10 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] },
-                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                  { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                 ] },
                 { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "撰写结论" }, { "Name": "排版结论" }], "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] },
                 { "Name": "汇总", "Kind": "Llm", "Model": "实施者", "From": [ { "撰写结论": "审阅@撰写结论", "排版结论": "审阅@排版结论" } ] }
@@ -275,12 +275,12 @@ public sealed class ContainerAdvanceTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Nodes": [
-                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Nodes": [
-                  { "Name": "撰写组", "Kind": "Container", "Nodes": [
-                    { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                { "Name": "交付", "Kind": "Container", "Outputs": [{ "Name": "撰写结论", "Ref": "撰写@结论" }, { "Name": "排版结论", "Ref": "排版@结论" }], "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                  { "Name": "撰写组", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                    { "Name": "撰写", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                   ] },
-                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "Start@目标" } ] }
+                  { "Name": "排版", "Kind": "Llm", "Model": "实施者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                 ] },
                 { "Name": "汇总", "Kind": "Llm", "Model": "实施者", "From": [ { "撰写结论": "交付@撰写结论", "排版结论": "交付@排版结论" } ] }
                   ]

@@ -1,27 +1,35 @@
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>取工作目录内文件的文件系统信息的工具。路径解析后必须落回工作目录内，只受理文件。</summary>
+/// <summary>取路径基准目录内文件的文件系统信息的工具。路径解析后必须落回工作区内，只受理文件。</summary>
 public sealed class GetFileInfoTool : ITool
 {
     private readonly FileScope _scope;
 
     /// <summary>取一个文件的文件系统信息。</summary>
-    private static readonly ToolDefinition GetFileInfo = new(
+    public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/GetFileInfo"),
-        "取工作目录内一个文件的文件系统信息：字节大小、创建/修改/访问时间、只读隐藏系统归档属性。只报文件系统事实，不判断内容；目录用 ListDirectory 列出条目。",
-        [new ToolParameter(new ToolName("path"), "相对工作目录的文件路径", Required: true, Path: true)]);
+        "取路径基准目录内一个文件的文件系统信息：字节大小、创建/修改/访问时间、只读隐藏系统归档属性。只报文件系统事实，不判断内容；目录用 ListDirectory 列出条目。",
+        [new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess)],
+        [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用工作目录建立载体。</summary>
     public GetFileInfoTool(string baseDirectory)
+        : this(ToolBinding.Root(baseDirectory))
     {
-        _scope = FileTools.Scope(baseDirectory);
-        Functions = [GetFileInfo.Bind(Info, _scope.Paths)];
+    }
+
+    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
+    public GetFileInfoTool(ToolBinding binding)
+    {
+        _scope = FileTools.Scope(binding);
+        Functions = [Definition.Bind(Info, _scope.Paths)];
     }
 
     /// <summary>取一个文件的文件系统事实并渲染成文本，错误与拒绝以 ErrorOr 表达。目录不受理，提示改用 ListDirectory。</summary>

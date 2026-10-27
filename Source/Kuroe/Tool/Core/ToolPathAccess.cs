@@ -4,7 +4,7 @@ using Kuroe.Shared;
 namespace Kuroe.Tool;
 
 /// <summary>路径参数的准入规则：在路径已确认落在根目录内后，按白名单与黑名单收窄。
-/// 条目按根目录解析，匹配按目录段前缀，黑名单优先。不解析符号链接与目录联接点。</summary>
+/// 条目按根目录解析，匹配按目录段前缀，黑名单优先。不解析符号链接、目录联接点与硬链接。</summary>
 /// <param name="Allow">白名单条目，为空时不限制。</param>
 /// <param name="Deny">黑名单条目，命中即拒绝。</param>
 public sealed record ToolPathAccess(IReadOnlyList<string> Allow, IReadOnlyList<string> Deny)

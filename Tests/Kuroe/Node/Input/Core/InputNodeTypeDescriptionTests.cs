@@ -49,5 +49,10 @@ public sealed class InputNodeTypeDescriptionTests
         public IReadOnlyList<string> Texts(string name) => [];
 
         public int? Integer(string name) => null;
+
+        public IReadOnlyDictionary<string, string> Mappings(string name) => new Dictionary<string, string>();
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>
+            new Dictionary<string, IReadOnlyDictionary<string, string>>();
     }
 }

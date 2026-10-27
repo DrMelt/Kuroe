@@ -195,7 +195,10 @@ public sealed class GitToolTests
     [Fact]
     public void Tools_carry_every_definition()
     {
-        IReadOnlyList<ITool> tools = GitTools.Tools(Path.GetTempPath());
+        IReadOnlyList<ITool> tools =
+        [
+            .. GitTools.Definitions.Select(definition => new CommandTool(definition, Path.GetTempPath())),
+        ];
 
         Assert.Equal(GitTools.Definitions.Count, tools.Count);
         Assert.All(

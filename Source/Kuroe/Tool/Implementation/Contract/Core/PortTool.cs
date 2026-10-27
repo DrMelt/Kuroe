@@ -2,42 +2,21 @@ using ErrorOr;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Contract;
 
 namespace Kuroe.Tool.Contract;
 
-/// <summary>需交回输出端口的执行节点交回命名端口产出的通道。载体按执行换一份，提交时才知道是哪个执行在交。</summary>
-public sealed class PortTool : IScopedTool
+/// <summary>需交回输出端口的执行节点交回命名端口产出的通道。载体按执行建立，提交时才知道是哪个执行在交。</summary>
+/// <remarks>端口清单来自该执行的输出声明。</remarks>
+public sealed class PortTool(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports) : ITool
 {
-    private readonly PortSubmitter _intake;
-    private readonly ExecutionIndex _executions;
-
-    /// <summary>容器装配用的载体，尚未绑定执行。</summary>
-    public PortTool(PortSubmitter intake, ExecutionIndex executions)
-    {
-        _intake = intake;
-        _executions = executions;
-        Functions = Declare(intake, null, null);
-    }
-
-    private PortTool(PortSubmitter intake, ExecutionIndex executions, ExecutionId execution)
-    {
-        _intake = intake;
-        _executions = executions;
-        Functions = Declare(intake, execution, ContractPorts.DeclaredPorts(executions, execution));
-    }
-
     /// <summary>本载体的函数声明。</summary>
-    public IReadOnlyList<ToolFunction> Functions { get; }
-
-    /// <summary>换一份绑定到该执行的载体。</summary>
-    public ITool ForExecution(ExecutionId execution) => new PortTool(_intake, _executions, execution);
+    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(intake, execution, ports);
 
     /// <summary>把契约定义绑上提交该执行端口产出的调用体，有端口清单时写进说明。</summary>
-    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, ExecutionId? execution, IReadOnlyList<Port>? ports) =>
+    private static IReadOnlyList<ToolFunction> Declare(PortSubmitter intake, ExecutionId execution, IReadOnlyList<Port>? ports) =>
     [
-        ContractToolDefinitions.Port(ports).Bind(arguments => Submit(intake, execution ?? default, ports, arguments)),
+        ContractToolDefinitions.Port(ports).Bind(arguments => Submit(intake, execution, ports, arguments)),
     ];
 
     /// <summary>提交端口产出并把提交后的本轮契约状态写成回执，错误原样交回模型。</summary>

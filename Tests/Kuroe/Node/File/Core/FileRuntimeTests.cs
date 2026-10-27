@@ -13,7 +13,7 @@ public sealed class FileRuntimeTests
 {
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
-    private static readonly NodePath BasePathSourcePath = NodePath.Of("整体", "基准");
+    private static readonly NodePath VariableSourcePath = NodePath.Of("整体", "基准");
     private static readonly PortName ContentPort = new("正文");
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class FileRuntimeTests
     }
 
     [Fact]
-    public void Read_uses_the_base_path_input()
+    public void Read_uses_the_root_variable()
     {
         using TempRoot root = new();
         System.IO.Directory.CreateDirectory(root.Resolve("sub"));
@@ -80,7 +80,7 @@ public sealed class FileRuntimeTests
 
         string? failure = runtime.TakeFailure();
         Assert.NotNull(failure);
-        Assert.Contains("读取 missing.txt 失败", failure);
+        Assert.Contains("读取 {root}/missing.txt 失败", failure);
         Assert.Null(runtime.TakeFailure());
     }
 
@@ -157,11 +157,11 @@ public sealed class FileRuntimeTests
         runtime.Activate(context, Inputs(context));
 
         Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
-        Assert.Contains("Path ../escape.txt 不是工作区内的合法路径", runtime.TakeFailure());
+        Assert.Contains("Path {root}/../escape.txt 不是工作区内的合法路径", runtime.TakeFailure());
     }
 
     [Fact]
-    public void Base_path_outside_the_workspace_blocks_the_node()
+    public void Variable_root_outside_the_workspace_blocks_the_node()
     {
         using TempRoot root = new();
         ExecutableNode node = ReadNode(root, "in.txt");
@@ -242,10 +242,10 @@ public sealed class FileRuntimeTests
         Assert.Equal(content, System.IO.File.ReadAllText(root.Resolve("out.txt")));
     }
 
-    private static StubNodeContext Context(ExecutableNode node, TempRoot root, string? basePath = null)
+    private static StubNodeContext Context(ExecutableNode node, TempRoot root, string? rootValue = null)
     {
         StubNodeContext context = new(node);
-        context.AddSource(new SourceRuntime(BasePathSourcePath, basePath ?? root.DirectoryPath));
+        context.AddSource(new SourceRuntime(VariableSourcePath, rootValue ?? root.DirectoryPath));
 
         return context;
     }
@@ -270,7 +270,7 @@ public sealed class FileRuntimeTests
             Model = null,
             Inputs =
         [
-            new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+            new InputPort(new PortName("任务路径"), PortTypes.Text),
             new InputPort(new PortName("触发"), PortTypes.Signal),
         ],
             Outputs = [new Port(ContentPort, PortTypes.Text)],
@@ -278,7 +278,7 @@ public sealed class FileRuntimeTests
             Incoming =
         [
             new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal),
-            new FlowEdge(BasePathSourcePath, TargetPath, new PortName("结果"), FileNodePorts.BasePath, PortTypes.Text),
+            new FlowEdge(VariableSourcePath, TargetPath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
         ],
         };
 
@@ -295,7 +295,7 @@ public sealed class FileRuntimeTests
             Inputs =
             [
                 new InputPort(ContentPort, PortTypes.Text),
-                new InputPort(FileNodePorts.BasePath, PortTypes.Text),
+                new InputPort(new PortName("任务路径"), PortTypes.Text),
             ],
             Outputs = outputs ?? [],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
@@ -303,17 +303,18 @@ public sealed class FileRuntimeTests
             [
                 new FlowEdge(SourcePath, TargetPath, new PortName("结果"), ContentPort, PortTypes.Text),
                 new FlowEdge(
-                    BasePathSourcePath,
+                    VariableSourcePath,
                     TargetPath,
                     new PortName("结果"),
-                    FileNodePorts.BasePath,
+                    new PortName("任务路径"),
                     PortTypes.Text),
             ],
         };
 
     private static FileParameters Parameters(TempRoot root, string relative, int maxChars) => new()
     {
-        Path = relative,
+        Path = $"{{root}}/{relative}",
+        Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
         RootDirectory = root.DirectoryPath,
         MaxChars = maxChars,
     };

@@ -109,5 +109,83 @@ static class ParameterDocumentReader
 
             return null;
         }
+
+        public IReadOnlyDictionary<string, string> Mappings(string name)
+        {
+            if (!values.TryGetValue(name, out FlowValue? value) || value is FlowValue.Null)
+            {
+                return new Dictionary<string, string>();
+            }
+
+            if (value is not FlowValue.Object map)
+            {
+                fail($"字段 {name} 必须是文本对象。");
+
+                return new Dictionary<string, string>();
+            }
+
+            Dictionary<string, string> result = [];
+            foreach ((string key, FlowValue member) in map.Members)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    fail($"字段 {name} 的键不能为空。");
+                    continue;
+                }
+
+                if (member is not FlowValue.Text text || string.IsNullOrWhiteSpace(text.Value))
+                {
+                    fail($"字段 {name} 的成员 {key} 必须是非空文本。");
+                    continue;
+                }
+
+                result[key] = text.Value;
+            }
+
+            return result;
+        }
+
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name)
+        {
+            if (!values.TryGetValue(name, out FlowValue? value) || value is FlowValue.Null)
+            {
+                return new Dictionary<string, IReadOnlyDictionary<string, string>>();
+            }
+
+            if (value is not FlowValue.Object outer)
+            {
+                fail($"字段 {name} 必须是对象。");
+
+                return new Dictionary<string, IReadOnlyDictionary<string, string>>();
+            }
+
+            Dictionary<string, IReadOnlyDictionary<string, string>> result = [];
+            foreach ((string key, FlowValue member) in outer.Members)
+            {
+                if (string.IsNullOrWhiteSpace(key) || member is not FlowValue.Object map)
+                {
+                    fail($"字段 {name} 的成员 {key} 必须是文本对象。");
+                    continue;
+                }
+
+                Dictionary<string, string> inner = [];
+                foreach ((string innerKey, FlowValue innerValue) in map.Members)
+                {
+                    if (string.IsNullOrWhiteSpace(innerKey)
+                        || innerValue is not FlowValue.Text text
+                        || string.IsNullOrWhiteSpace(text.Value))
+                    {
+                        fail($"字段 {name} 的成员 {key}.{innerKey} 必须是非空文本。");
+                        continue;
+                    }
+
+                    inner[innerKey] = text.Value;
+                }
+
+                result[key] = inner;
+            }
+
+            return result;
+        }
     }
 }

@@ -10,7 +10,7 @@ namespace Kuroe;
 public sealed class KuroeComposition
 {
     private readonly IServiceCollection _services;
-    private readonly List<ITool> _tools = [];
+    private readonly List<IToolSource> _sources = [];
 
     internal KuroeComposition(
         IServiceCollection services,
@@ -28,14 +28,14 @@ public sealed class KuroeComposition
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }
 
-    /// <summary>把工具载体并入工具集并注册，按工具路径与模型调用名校验重复。失败时不注册任何载体。</summary>
-    public ErrorOr<Success> AddTools(IEnumerable<ITool> tools)
+    /// <summary>把工具源并入工具集并注册，按函数路径与模型调用名校验重复。失败时不注册任何源。</summary>
+    public ErrorOr<Success> AddToolSources(IEnumerable<IToolSource> sources)
     {
-        List<ITool> incoming = [.. tools];
-        List<ToolFunction> functions = [.. _tools.Concat(incoming).SelectMany(carrier => carrier.Functions)];
+        List<IToolSource> incoming = [.. sources];
+        List<ToolDefinition> definitions = [.. _sources.Concat(incoming).SelectMany(source => source.Definitions)];
 
-        List<ToolPath> duplicates = [.. functions
-            .GroupBy(function => function.Definition.Path)
+        List<ToolPath> duplicates = [.. definitions
+            .GroupBy(definition => definition.Path)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)];
         if (duplicates.Count > 0)
@@ -43,20 +43,20 @@ public sealed class KuroeComposition
             return duplicates.Select(path => ToolFileErrors.Duplicate(path.Value)).ToList();
         }
 
-        List<Error> conflicts = [.. functions
-            .GroupBy(function => function.Definition.Path.CallName.Value)
-            .Where(group => group.Select(function => function.Definition.Path.Value).Distinct().Count() > 1)
+        List<Error> conflicts = [.. definitions
+            .GroupBy(definition => definition.Path.CallName.Value)
+            .Where(group => group.Select(definition => definition.Path.Value).Distinct().Count() > 1)
             .Select(group => ToolFileErrors.CallNameConflict(
-                group.Key, [.. group.Select(function => function.Definition.Path.Value).Distinct()]))];
+                group.Key, [.. group.Select(definition => definition.Path.Value).Distinct()]))];
         if (conflicts.Count > 0)
         {
             return conflicts;
         }
 
-        foreach (ITool tool in incoming)
+        foreach (IToolSource source in incoming)
         {
-            _services.AddSingleton(tool);
-            _tools.Add(tool);
+            _services.AddSingleton<IToolSource>(source);
+            _sources.Add(source);
         }
 
         return Result.Success;

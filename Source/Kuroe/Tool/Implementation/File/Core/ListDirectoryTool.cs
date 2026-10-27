@@ -1,10 +1,11 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
 
-/// <summary>列出工作目录内目录条目的工具。路径解析后必须落回工作目录内。</summary>
+/// <summary>列出路径基准目录内目录条目的工具。路径解析后必须落回工作区内。</summary>
 public sealed class ListDirectoryTool : ITool
 {
     /// <summary>目录列表的条目上限，超出截断并提示。</summary>
@@ -13,19 +14,26 @@ public sealed class ListDirectoryTool : ITool
     private readonly FileScope _scope;
 
     /// <summary>列出目录的直接子项。</summary>
-    private static readonly ToolDefinition ListDirectory = new(
+    public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/ListDirectory"),
-        "列出工作目录内一个目录的直接子项。path 缺省时列出工作目录根的条目。",
-        [new ToolParameter(new ToolName("path"), "相对工作目录的目录路径，缺省为工作目录根", Path: true)]);
+        "列出路径基准目录内一个目录的直接子项。path 缺省时列出路径基准目录的条目。",
+        [new ToolParameter(new ToolName("path"), "相对路径基准目录的目录路径，缺省为路径基准目录", Path: true, PathAccess: FileTools.PathAccess)],
+        [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
     /// <summary>用工作目录建立载体。</summary>
     public ListDirectoryTool(string baseDirectory)
+        : this(ToolBinding.Root(baseDirectory))
     {
-        _scope = FileTools.Scope(baseDirectory);
-        Functions = [ListDirectory.Bind(List, _scope.Paths)];
+    }
+
+    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
+    public ListDirectoryTool(ToolBinding binding)
+    {
+        _scope = FileTools.Scope(binding);
+        Functions = [Definition.Bind(List, _scope.Paths)];
     }
 
     /// <summary>列出目录的直接子项，按名字排序并标注目录；错误与拒绝以 ErrorOr 表达。</summary>

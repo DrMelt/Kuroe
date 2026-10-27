@@ -19,6 +19,7 @@ internal sealed class CommandNodeTypeDescription(string rootDirectory, IProcessR
         new(CommandParameterNames.Program, ParameterValueKind.Text),
         new(CommandParameterNames.Arguments, ParameterValueKind.Texts),
         new(CommandParameterNames.Directory, ParameterValueKind.Text),
+        new(CommandParameterNames.Variables, ParameterValueKind.Map),
         new(CommandParameterNames.TimeoutSeconds, ParameterValueKind.Integer),
         new(CommandParameterNames.MaxChars, ParameterValueKind.Integer),
     ];

@@ -51,12 +51,7 @@ public sealed class NodeInputValues
         _values.TryGetValue(input, out IReadOnlyList<ContextValue>? values) ? values : [];
 
     /// <summary>该输入端口的文本，多段取值按绑定顺序以空行连接，没有内容时为空。</summary>
-    public string? Text(PortName input)
-    {
-        string[] parts = [.. Values(input).Select(value => value.Text).Where(text => text.Length > 0)];
-
-        return parts.Length == 0 ? null : string.Join("\n\n", parts);
-    }
+    public string? Text(PortName input) => ContextValues.Join(Values(input));
 
     /// <summary>该输入端口最近一次绑定的触发值，没有触发值的端口为 true。</summary>
     public bool Triggers(PortName input) => _triggers.GetValueOrDefault(input, true);

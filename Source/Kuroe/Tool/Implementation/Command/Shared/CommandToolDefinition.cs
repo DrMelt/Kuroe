@@ -9,9 +9,10 @@ namespace Kuroe.Tool.Command.Shared;
 /// <param name="Description">给模型的说明。</param>
 /// <param name="Parameters">参数声明。</param>
 /// <param name="Template">命令行模板，数组每一项是一个参数项。</param>
-/// <param name="Directory">命令执行目录，相对工作目录；未给时用工作目录根。</param>
+/// <param name="Directory">命令执行目录，相对执行基准；未给时执行目录即基准。</param>
 /// <param name="TimeoutSeconds">命令超时秒数。</param>
 /// <param name="OutputLimit">交回文本上限。</param>
+/// <param name="Variables">路径变量名，值由使用处的端口映射提供。</param>
 public sealed record CommandToolDefinition(
     ToolPath Path,
     string Description,
@@ -19,19 +20,29 @@ public sealed record CommandToolDefinition(
     IReadOnlyList<CommandToolTemplateItem> Template,
     string? Directory = null,
     int TimeoutSeconds = CommandToolTemplate.DefaultTimeoutSeconds,
-    int OutputLimit = CommandToolTemplate.DefaultOutputLimit)
+    int OutputLimit = CommandToolTemplate.DefaultOutputLimit,
+    IReadOnlyList<string>? Variables = null)
 {
-    /// <summary>交给工具契约的函数定义：路径、说明与参数。</summary>
-    public ToolDefinition Definition => new(Path, Description, Parameters);
+    /// <summary>路径变量名集合，未声明时为空。</summary>
+    public IReadOnlyList<string> PathVariables => Variables ?? [];
+
+    /// <summary>交给工具契约的函数定义：路径、说明、参数与变量。</summary>
+    public ToolDefinition Definition => new(Path, Description, Parameters, PathVariables);
 
     /// <summary>按模板与实参展开命令行，第一项是程序本身。返回非空表示实参缺项或模板不合法。</summary>
-    public ErrorOr<IReadOnlyList<string>> CommandLine(ToolArguments arguments)
+    public ErrorOr<IReadOnlyList<string>> CommandLine(ToolArguments arguments) =>
+        CommandLine(arguments, new Dictionary<string, string>());
+
+    /// <summary>按模板、实参与路径变量展开命令行，变量优先于同名参数声明。第一项是程序本身。</summary>
+    public ErrorOr<IReadOnlyList<string>> CommandLine(
+        ToolArguments arguments,
+        IReadOnlyDictionary<string, string> variables)
     {
         var argv = new List<string>();
 
         foreach (CommandToolTemplateItem item in Template)
         {
-            Error? rejected = ExpandItem(Parameters, arguments, item, argv);
+            Error? rejected = ExpandItem(Parameters, arguments, variables, item, argv);
             if (rejected is not null)
             {
                 return rejected.Value;
@@ -47,7 +58,12 @@ public sealed record CommandToolDefinition(
     }
 
     /// <summary>展开一个参数项。对象项的关联参数缺省时整项消失，必填仍拒绝；其余参数项按占位符展开。返回非空表示中断调用。</summary>
-    private static Error? ExpandItem(IReadOnlyList<ToolParameter> parameters, ToolArguments arguments, CommandToolTemplateItem item, List<string> argv)
+    private static Error? ExpandItem(
+        IReadOnlyList<ToolParameter> parameters,
+        ToolArguments arguments,
+        IReadOnlyDictionary<string, string> variables,
+        CommandToolTemplateItem item,
+        List<string> argv)
     {
         if (item.OmitWhenMissing is { } linkedName)
         {
@@ -65,7 +81,7 @@ public sealed record CommandToolDefinition(
             return null;
         }
 
-        return ExpandToken(parameters, arguments, item.Text, argv);
+        return ExpandToken(parameters, arguments, variables, item.Text, argv);
     }
 
     /// <summary>关联参数是否缺省：布尔参数为真才算给出，列表参数为空算缺省，文本参数未给算缺省。</summary>
@@ -76,14 +92,26 @@ public sealed record CommandToolDefinition(
         _ => arguments.Text(parameter.Name) is null,
     };
 
-    /// <summary>展开一个含占位符的参数项。展开后追加参数项，返回非空表示中断调用。</summary>
-    private static Error? ExpandToken(IReadOnlyList<ToolParameter> parameters, ToolArguments arguments, string token, List<string> argv)
+    /// <summary>展开一个含占位符的参数项。变量优先，其次才是参数声明。展开后追加参数项，返回非空表示中断调用。</summary>
+    private static Error? ExpandToken(
+        IReadOnlyList<ToolParameter> parameters,
+        ToolArguments arguments,
+        IReadOnlyDictionary<string, string> variables,
+        string token,
+        List<string> argv)
     {
         // 独立占位符：整个参数项就是 {name}。列表参数只允许这种写法。
         MatchCollection matches = CommandToolTemplate.Matches(token);
         if (matches.Count == 1 && token.StartsWith('{') && token.EndsWith('}'))
         {
             string name = matches[0].Groups[1].Value;
+            if (variables.TryGetValue(name, out string? variable))
+            {
+                argv.Add(variable);
+
+                return null;
+            }
+
             ToolParameter? parameter = parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {
@@ -114,11 +142,17 @@ public sealed record CommandToolDefinition(
             return null;
         }
 
-        // 内嵌占位符：只允许标量参数，逐个替换；可选参数缺省时该占位符按字面量保留。
+        // 内嵌占位符：变量直接替换，参数只允许标量；可选参数缺省时该占位符按字面量保留。
         string expanded = token;
         foreach (Match match in matches)
         {
             string name = match.Groups[1].Value;
+            if (variables.TryGetValue(name, out string? variable))
+            {
+                expanded = expanded.Replace(match.Value, variable, StringComparison.Ordinal);
+                continue;
+            }
+
             ToolParameter? parameter = parameters.FirstOrDefault(candidate => candidate.Name.Value == name);
             if (parameter is null)
             {

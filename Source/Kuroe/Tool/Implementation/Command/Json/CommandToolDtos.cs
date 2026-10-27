@@ -27,7 +27,10 @@ internal sealed class CommandToolDto
     /// <summary>参数声明。</summary>
     public List<CommandParameterDto>? Parameters { get; set; }
 
-    /// <summary>命令执行目录，相对工作目录；省略时用工作目录根。</summary>
+    /// <summary>路径变量名，值由使用处的端口映射提供。变量名在模板与 Directory 中以 {名字} 引用。</summary>
+    public List<string>? Variables { get; set; }
+
+    /// <summary>命令执行目录，相对路径基准；省略时用路径基准。</summary>
     public string? Directory { get; set; }
 
     /// <summary>命令超时秒数。</summary>
@@ -55,7 +58,7 @@ internal sealed class CommandParameterDto
     /// <summary>该参数是字符串列表，模型以数组给出。</summary>
     public bool List { get; set; }
 
-    /// <summary>该参数是路径，实参按执行目录解析并限制在工作目录内。</summary>
+    /// <summary>该参数是路径，实参按执行目录解析并限制在工作区内。</summary>
     public bool Path { get; set; }
 
     /// <summary>路径的白名单条目，为空时不限制。</summary>

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
+using Kuroe.Shared;
 using Kuroe.Tool.Command.Shared;
 using Kuroe.Tool.Json;
 
@@ -51,7 +52,7 @@ public sealed class CommandToolFile : IToolFile
             return definitions.ErrorsOrEmptyList;
         }
 
-        List<ConfiguredTool> configured = [.. definitions.Value.Select(definition => ToConfigured(definition, workDirectory))];
+        List<ConfiguredTool> configured = [.. definitions.Value.Select(ToConfigured)];
 
         return configured;
     }
@@ -60,9 +61,12 @@ public sealed class CommandToolFile : IToolFile
     private static string Configuration(CommandToolDefinition definition) =>
         string.Join(" ", definition.Template.Select(item => item.OmitWhenMissing is null ? item.Text : $"{item.Text}?"));
 
-    /// <summary>把定义装配成配置工具记录：定义、配置形态与运行期载体。</summary>
-    private static ConfiguredTool ToConfigured(CommandToolDefinition definition, string workDirectory) =>
-        new(definition.Definition, Configuration(definition), new CommandTool(definition, workDirectory));
+    /// <summary>把定义装配成配置工具记录：定义、配置形态与按执行创建载体的函数。</summary>
+    private static ConfiguredTool ToConfigured(CommandToolDefinition definition) =>
+        new(
+            definition.Definition,
+            Configuration(definition),
+            binding => new CommandTool(definition, binding));
 
     /// <summary>装配定义并校验，全部非法项一次给出。</summary>
     private static ErrorOr<IReadOnlyList<CommandToolDefinition>> ToDefinitions(CommandToolFileDto file, string workDirectory)
@@ -141,17 +145,27 @@ public sealed class CommandToolFile : IToolFile
             errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"TimeoutSeconds 不能超过 {CommandToolTemplate.MaxTimeoutSeconds} 秒。"));
         }
 
-        string? executionDirectory = workDirectory;
-        if (dto.Directory is { Length: > 0 })
+        ErrorOr<IReadOnlyList<string>> variables = ToVariables(dto.Name ?? "(未命名)", dto.Variables, dto.Directory);
+        if (variables.IsError)
+        {
+            errors.AddRange(variables.ErrorsOrEmptyList);
+        }
+
+        if (dto.Directory is { Length: > 0 } directory && !HasPlaceholder(directory))
         {
             try
             {
-                executionDirectory = Path.GetFullPath(dto.Directory, workDirectory);
+                string executionDirectory = Path.GetFullPath(directory, workDirectory);
+                if (!ToolPathAccess.IsUnder(workDirectory, executionDirectory))
+                {
+                    errors.Add(CommandToolErrors.Invalid(
+                        dto.Name ?? "(未命名)",
+                        $"执行目录 {dto.Directory} 必须在工作目录内。"));
+                }
             }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
             {
-                executionDirectory = null;
-                errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"Directory {dto.Directory} 无法解析为路径。"));
+                errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"Directory {directory} 无法解析为路径。"));
             }
         }
 
@@ -159,14 +173,6 @@ public sealed class CommandToolFile : IToolFile
         if (parameters.IsError)
         {
             errors.AddRange(parameters.ErrorsOrEmptyList);
-        }
-        else if (executionDirectory is not null
-            && parameters.Value.Any(parameter => parameter.Path)
-            && !ToolPathAccess.IsUnder(workDirectory, executionDirectory))
-        {
-            errors.Add(CommandToolErrors.Invalid(
-                dto.Name ?? "(未命名)",
-                $"含路径参数的工具执行目录 {dto.Directory} 必须在工作目录内。"));
         }
 
         if (errors.Count > 0)
@@ -181,8 +187,58 @@ public sealed class CommandToolFile : IToolFile
             template.Value,
             dto.Directory,
             dto.TimeoutSeconds ?? CommandToolTemplate.DefaultTimeoutSeconds,
-            dto.OutputLimit ?? CommandToolTemplate.DefaultOutputLimit);
+            dto.OutputLimit ?? CommandToolTemplate.DefaultOutputLimit,
+            variables.Value);
     }
+
+    /// <summary>读出路径变量名并并入 Directory 的占位符，校验非空、不含空白与花括号、同一工具内唯一。</summary>
+    private static ErrorOr<IReadOnlyList<string>> ToVariables(
+        string tool,
+        List<string>? names,
+        string? directory)
+    {
+        List<Error> errors = [];
+        List<string> variables = [];
+        HashSet<string> seen = [];
+
+        void Add(string name)
+        {
+            if (PathTemplate.InvalidNameReason(name) is { } reason)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, reason));
+                return;
+            }
+
+            if (!seen.Add(name))
+            {
+                return;
+            }
+
+            variables.Add(name);
+        }
+
+        foreach (string name in names ?? [])
+        {
+            if (seen.Contains(name))
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"路径变量名 {name} 重复。"));
+                continue;
+            }
+
+            Add(name);
+        }
+
+        foreach (string name in PathTemplate.Placeholders(directory ?? string.Empty))
+        {
+            Add(name);
+        }
+
+        return errors.Count > 0 ? errors : variables;
+    }
+
+    /// <summary>文本里是否含模板占位符。</summary>
+    private static bool HasPlaceholder(string text) =>
+        CommandToolTemplate.PlaceholdersOf(new CommandToolTemplateItem(text, null)).Count > 0;
 
     /// <summary>名字与可选分组拼出的工具路径，名字未给时为空。</summary>
     private static string? PathOf(CommandToolDto dto)
@@ -407,8 +463,13 @@ public sealed class CommandToolFile : IToolFile
     private static void CheckTemplate(CommandToolDefinition definition, List<Error> errors)
     {
         IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
+        IReadOnlyList<string> variables = definition.PathVariables;
         string tool = definition.Definition.Path.Value;
         List<string> placeholders = [.. CommandToolTemplate.PlaceholdersOf(definition.Template)];
+
+        errors.AddRange(variables
+            .Where(variable => parameters.Any(parameter => parameter.Name.Value == variable))
+            .Select(variable => CommandToolErrors.Invalid(tool, $"路径变量 {variable} 与参数同名。")));
 
         foreach (CommandToolTemplateItem item in definition.Template)
         {
@@ -429,8 +490,15 @@ public sealed class CommandToolFile : IToolFile
         }
 
         errors.AddRange(placeholders
-            .Where(placeholder => parameters.All(parameter => parameter.Name.Value != placeholder))
-            .Select(placeholder => CommandToolErrors.Invalid(tool, $"模板占位符 {{{placeholder}}} 没有对应的参数声明。")));
+            .Where(placeholder => !variables.Contains(placeholder)
+                && parameters.All(parameter => parameter.Name.Value != placeholder))
+            .Select(placeholder => CommandToolErrors.Invalid(tool, $"模板占位符 {{{placeholder}}} 没有对应的参数或路径变量声明。")));
+
+        IReadOnlyList<string> directoryVariables =
+            CommandToolTemplate.PlaceholdersOf(new CommandToolTemplateItem(definition.Directory ?? string.Empty, null));
+        errors.AddRange(variables
+            .Where(variable => !placeholders.Contains(variable) && !directoryVariables.Contains(variable))
+            .Select(variable => CommandToolErrors.Invalid(tool, $"路径变量 {variable} 没有被模板或 Directory 引用。")));
 
         errors.AddRange(parameters
             .Where(parameter => !parameter.Flag && !placeholders.Contains(parameter.Name.Value))

@@ -49,13 +49,13 @@ internal sealed class ExecutionDetailView(Terminal terminal)
     /// <summary>输入取值按出处分组，内容一行内截断。</summary>
     private static Table InputTable(ExecutionInput input)
     {
-        Table table = Blocks.Table(("来源", false), ("内容", true));
-        foreach (IGrouping<ContextSource, ContextValue> group in input.Inputs.GroupBy(value => value.Origin))
+        Table table = Blocks.Table(("来源 · 端口", false), ("内容", true));
+        foreach (IGrouping<ContextSource, InputValue> group in input.Inputs.GroupBy(value => value.Origin))
         {
-            foreach (ContextValue value in group)
+            foreach (InputValue value in group)
             {
                 table.AddRow(
-                    new Text(group.Key.Label, Styles.Key),
+                    new Text($"{group.Key.Label} · {value.Port}", Styles.Key),
                     new Text(ViewLabels.OneLine(value.Text, ValueLimit)));
             }
         }

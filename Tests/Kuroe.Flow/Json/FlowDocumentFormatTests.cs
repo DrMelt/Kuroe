@@ -94,8 +94,8 @@ public sealed class FlowDocumentFormatTests
               "Models": [ { "Name": "执行者", "Model": "fake" }, { "Name": "运行时", "Runtime": true } ],
               "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" } ] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Label": "副本", "Use": "计划", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  { "Label": "副本", "Use": "计划", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
                 ] }
               ]
             }

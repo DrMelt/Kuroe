@@ -209,6 +209,14 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(validation.ErrorsOrEmptyList);
         }
 
+        ErrorOr<Dictionary<PortName, PortRef>?> bindings = shape.Organizes && !scope.IsLibrary
+            ? ToBindings(document.In)
+            : (Dictionary<PortName, PortRef>?)null;
+        if (bindings.IsError)
+        {
+            errors.AddRange(bindings.ErrorsOrEmptyList);
+        }
+
         INodeType? type = ParameterDocumentReader.Read(description, document.Parameters, scope, new NodeLabel(label), errors.Add);
 
         List<NodeSpec>? children = null;
@@ -239,6 +247,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             Outputs = shape.Organizes ? [] : outputs,
             ContainerOutputs = containerOutputs.Value,
             From = from.Value,
+            In = bindings.Value,
             Model = ToModel(document.Model),
             ModelSlots = document.ModelSlots is { Count: > 0 } slots ? [.. slots.Select(slot => new ModelRef(slot))] : null,
             Nodes = children,
@@ -250,7 +259,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         };
     }
 
-    /// <summary>检查文档字段与节点形状的互斥：定义条目不写输入绑定，容器不写执行字段，模型槽位只属于节点库容器定义。</summary>
+    /// <summary>检查文档字段与节点形状的互斥：库定义不写输入绑定，容器不写执行字段，模型槽位只属于节点库容器定义。</summary>
     private static void CheckDocumentShape(
         NodeDefinitionDocument document,
         NodeTypeShape shape,
@@ -276,14 +285,9 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 Fail("容器节点不是执行节点，不支持模型选择。");
             }
 
-            if (document.In is not null)
+            if (document.In is not null && scope.IsLibrary)
             {
-                Fail("容器节点不是执行节点，不支持输入端口绑定。");
-            }
-
-            if (document.Inputs.Count > 0 && !scope.IsLibrary)
-            {
-                Fail("容器节点不能声明输入端口，端口声明属于节点库容器定义。");
+                Fail("库容器定义不接线，不能声明输入端口绑定。");
             }
 
             if (document.Validate is not null)

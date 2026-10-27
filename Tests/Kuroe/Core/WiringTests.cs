@@ -103,9 +103,9 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        IReadOnlyList<string> names = [.. provider.GetServices<ITool>()
-            .SelectMany(tool => tool.Functions)
-            .Select(function => function.Definition.Path.CallName.Value)];
+        IReadOnlyList<string> names = [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+            .Definitions
+            .Select(definition => definition.Path.CallName.Value)];
 
         Assert.Contains("file_read_ReadFile", names);
         Assert.All(names, name => Assert.Matches("^[a-zA-Z0-9_-]+$", name));
@@ -117,8 +117,8 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetServices<ITool>().SelectMany(tool => tool.Functions).Select(function => function.Definition.Path.Value)];
-
+            [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+                .Definitions.Select(definition => definition.Path.Value)];
         Assert.Contains("git/read/Status", paths);
         Assert.Contains("git/write/Restore", paths);
     }
@@ -129,7 +129,8 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         IReadOnlyList<string> paths =
-            [.. provider.GetServices<ITool>().SelectMany(tool => tool.Functions).Select(function => function.Definition.Path.Value)];
+            [.. provider.GetRequiredService<Kuroe.Node.Llm.Tools.ToolCollection>()
+                .Definitions.Select(definition => definition.Path.Value)];
 
         Assert.Contains("dotnet/read/Info", paths);
         Assert.Contains("dotnet/write/Build", paths);
@@ -150,7 +151,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<ExecutionDispatcher>());
         Assert.NotNull(provider.GetRequiredService<IExecutionStatusReader>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
-        Assert.NotEmpty(provider.GetServices<ITool>());
+        Assert.NotEmpty(provider.GetServices<IToolSource>());
     }
 
     private ServiceProvider Services()
