@@ -60,11 +60,10 @@ public sealed class ApprovalNodeTypeTests
             ])));
 
     [Fact]
-    public void Execution_config_and_model_are_rejected()
+    public void Execution_config_is_rejected()
     {
         NodeSpec node = Node([new InputPort(new PortName("计划"), PortTypes.Text)]) with
         {
-            Model = new ModelRef("规划者"),
             MaxExecutions = 3,
             Spec = new ExecutableSpec
             {
@@ -74,8 +73,7 @@ public sealed class ApprovalNodeTypeTests
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(3, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明模型选择。"));
+        Assert.Equal(2, errors.Length);
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 Validate。"));
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 MaxExecutions。"));
     }

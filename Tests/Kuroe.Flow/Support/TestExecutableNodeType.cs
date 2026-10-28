@@ -11,10 +11,17 @@ public sealed class TestExecutableNodeType : INodeType
     /// <summary>类型名。</summary>
     public NodeKind Kind => TestNodeTypes.ExecutableKind;
 
-    /// <summary>派发执行，输入输出与执行节点同形。</summary>
+    /// <summary>测试执行节点声明的静态输入端口。</summary>
+    public static PortName StaticPort { get; } = new("静态值");
+
+    /// <summary>派发执行，输入输出与执行节点同形，静态输入带测试默认值。</summary>
     public NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
+        StaticInputs =
+        [
+            new InputPort(StaticPort, PortTypes.Text, "测试静态输入。", "执行者", isStatic: true),
+        ],
         InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
         OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };

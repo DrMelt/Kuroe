@@ -267,7 +267,6 @@ public sealed class FileRuntimeTests
             Path = TargetPath,
             Type = FileReadNodeTypes.Create(Parameters(root, relative, maxChars)),
             Spec = new ExecutableSpec(),
-            Model = null,
             Inputs =
         [
             new InputPort(new PortName("任务路径"), PortTypes.Text),
@@ -291,7 +290,6 @@ public sealed class FileRuntimeTests
             Path = TargetPath,
             Type = FileWriteNodeTypes.Create(Parameters(root, relative, maxChars)),
             Spec = new ExecutableSpec(),
-            Model = null,
             Inputs =
             [
                 new InputPort(ContentPort, PortTypes.Text),

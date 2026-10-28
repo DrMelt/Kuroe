@@ -51,10 +51,6 @@ static class FlowDocumentReader
     {
         string name = dto.Name?.Trim() ?? string.Empty;
         NodeScope scope = NodeScope.Flow(name);
-        List<ModelDocument> models =
-        [
-            .. dto.Models.Select(model => new ModelDocument(model.Name ?? string.Empty, model.Model, model.Runtime ?? false)),
-        ];
 
         ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name, allowValue: true);
         if (startOutputs.IsError)
@@ -90,7 +86,7 @@ static class FlowDocumentReader
 
         return errors.Count > 0
             ? errors
-            : new FlowDocumentFlow(name, dto.Description, models, startOutputs.Value, hostStartInputs, root);
+            : new FlowDocumentFlow(name, dto.Description, startOutputs.Value, hostStartInputs, root);
     }
 
     private static ErrorOr<NodeDocument> ReadNode(NodeDto dto, NodeScope scope, List<Error> errors)
@@ -139,13 +135,10 @@ static class FlowDocumentReader
             nodeErrors.AddRange(outputs.ErrorsOrEmptyList);
         }
 
-        bool hasModelBindings = dto.Models is { ValueKind: JsonValueKind.Object };
-        ErrorOr<List<string>?> slots = hasModelBindings
-            ? (List<string>?)null
-            : ReadModelSlots(dto.Models, scope, label);
-        if (slots.IsError)
+        ErrorOr<Dictionary<string, string>?> staticBindings = ReadStatic(dto.Static, scope, label);
+        if (staticBindings.IsError)
         {
-            nodeErrors.AddRange(slots.ErrorsOrEmptyList);
+            nodeErrors.AddRange(staticBindings.ErrorsOrEmptyList);
         }
 
         ErrorOr<IReadOnlyList<FromGroupDocument>> from = ReadFrom(dto.From, scope, label);
@@ -181,9 +174,7 @@ static class FlowDocumentReader
             Kind = dto.Kind ?? string.Empty,
             Inputs = inputs.Value,
             Outputs = outputs.Value,
-            ModelSlots = slots.Value,
-            Model = dto.Model,
-            HasModelBindings = hasModelBindings,
+            Static = staticBindings.Value,
             In = dto.In,
             Nodes = children,
             Parameters = ReadParameters(dto.Parameters),
@@ -238,15 +229,10 @@ static class FlowDocumentReader
             referenceErrors.Add(scope.Node(label, "引用节点不能声明输出端口。"));
         }
 
-        if (dto.Model is not null && HasModels(dto.Models))
+        ErrorOr<Dictionary<string, string>?> staticBindings = ReadStatic(dto.Static, scope, label);
+        if (staticBindings.IsError)
         {
-            referenceErrors.Add(scope.Node(label, "引用节点不能同时声明模型与模型绑定。"));
-        }
-
-        ErrorOr<Dictionary<string, string>?> models = ReadModelBindings(dto.Models, scope, label);
-        if (models.IsError)
-        {
-            referenceErrors.AddRange(models.ErrorsOrEmptyList);
+            referenceErrors.AddRange(staticBindings.ErrorsOrEmptyList);
         }
 
         ErrorOr<IReadOnlyList<FromGroupDocument>> from = ReadFrom(dto.From, scope, label);
@@ -267,8 +253,7 @@ static class FlowDocumentReader
             Label = label,
             Use = dto.Use ?? string.Empty,
             In = dto.In,
-            Model = dto.Model,
-            Models = models.Value,
+            Static = staticBindings.Value,
             From = from.Value,
             Validate = ReadValidation(dto.Validate),
             MaxExecutions = dto.MaxExecutions,
@@ -301,6 +286,7 @@ static class FlowDocumentReader
             string? description = null;
             string? value = null;
             string? reference = null;
+            bool isStatic = false;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -376,10 +362,23 @@ static class FlowDocumentReader
                         invalid = true;
                         break;
 
+                    case "static":
+                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        {
+                            errors.Add(scope.Node(label, "输出端口的 Static 键必须是布尔值。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            isStatic = property.Value.GetBoolean();
+                        }
+
+                        break;
+
                     default:
                         errors.Add(scope.Node(label, allowValue
-                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Value。"
-                            : $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Ref。"));
+                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Value 与 Static。"
+                            : $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Ref 与 Static。"));
                         invalid = true;
                         break;
                 }
@@ -387,7 +386,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new PortDocument(name ?? string.Empty, type, description, value, reference));
+                result.Add(new PortDocument(name ?? string.Empty, type, description, value, reference, isStatic));
             }
         }
 
@@ -418,6 +417,7 @@ static class FlowDocumentReader
             PortType? type = null;
             string? description = null;
             string? defaultValue = null;
+            bool isStatic = false;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -475,8 +475,21 @@ static class FlowDocumentReader
 
                         break;
 
+                    case "static":
+                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        {
+                            errors.Add(scope.Node(label, "输入端口的 Static 键必须是布尔值。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            isStatic = property.Value.GetBoolean();
+                        }
+
+                        break;
+
                     default:
-                        errors.Add(scope.Node(label, $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description 与 Default。"));
+                        errors.Add(scope.Node(label, $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description、Default 与 Static。"));
                         invalid = true;
                         break;
                 }
@@ -484,7 +497,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new InputPortDocument(name ?? string.Empty, type, description, defaultValue));
+                result.Add(new InputPortDocument(name ?? string.Empty, type, description, defaultValue, isStatic));
             }
         }
 
@@ -499,62 +512,27 @@ static class FlowDocumentReader
             && PortTypes.TryParse(element.GetString(), out type);
     }
 
-    private static ErrorOr<List<string>?> ReadModelSlots(JsonElement? models, NodeScope scope, string label)
-    {
-        if (!HasModels(models))
-        {
-            return (List<string>?)null;
-        }
-
-        if (models!.Value.ValueKind != JsonValueKind.Array)
-        {
-            return scope.Node(label, "定义的 Models 写槽位名数组，模型绑定只属于引用节点组。");
-        }
-
-        List<string> slots = [];
-        List<Error> errors = [];
-        foreach (JsonElement entry in models.Value.EnumerateArray())
-        {
-            if (entry.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.GetString()))
-            {
-                errors.Add(scope.Node(label, "模型槽位名不能为空。"));
-                continue;
-            }
-
-            slots.Add(entry.GetString()!);
-        }
-
-        return errors.Count > 0 ? errors : slots;
-    }
-
-    private static ErrorOr<Dictionary<string, string>?> ReadModelBindings(
-        JsonElement? models,
+    private static ErrorOr<Dictionary<string, string>?> ReadStatic(
+        Dictionary<string, string>? entries,
         NodeScope scope,
         string label)
     {
-        if (!HasModels(models))
+        if (entries is not { Count: > 0 })
         {
             return (Dictionary<string, string>?)null;
         }
 
-        if (models!.Value.ValueKind != JsonValueKind.Object)
-        {
-            return scope.Node(label, "引用节点组的 Models 写槽位绑定对象，槽位声明只写容器定义。");
-        }
-
         Dictionary<string, string> bindings = [];
         List<Error> errors = [];
-        foreach (JsonProperty property in models.Value.EnumerateObject())
+        foreach ((string name, string reference) in entries)
         {
-            if (string.IsNullOrWhiteSpace(property.Name)
-                || property.Value.ValueKind != JsonValueKind.String
-                || string.IsNullOrWhiteSpace(property.Value.GetString()))
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(reference))
             {
-                errors.Add(scope.Node(label, "模型绑定键与值都不能为空。"));
+                errors.Add(scope.Node(label, "静态端口名与来源引用都不能为空。"));
                 continue;
             }
 
-            bindings[property.Name] = property.Value.GetString()!;
+            bindings[name.Trim()] = reference.Trim();
         }
 
         return errors.Count > 0 ? errors : bindings;
@@ -606,9 +584,6 @@ static class FlowDocumentReader
 
     private static ValidationDocument? ReadValidation(ValidationDto? validation) =>
         validation is null ? null : new ValidationDocument(validation.Predicate ?? string.Empty, validation.Argument);
-
-    private static bool HasModels(JsonElement? models) =>
-        models is { ValueKind: not JsonValueKind.Undefined };
 
     private static Dictionary<string, FlowValue> ReadParameters(
         IReadOnlyDictionary<string, JsonElement>? parameters) =>

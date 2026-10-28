@@ -1,6 +1,5 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
@@ -198,7 +197,7 @@ public sealed class ReadinessTests
         Path = NodePath.Of(name),
         Type = TestNodeTypes.Executable,
         Spec = new ExecutableSpec(),
-        Model = new ModelDefinition { Name = new ModelRef("执行者") },
+        Inputs = [],
         Outputs = [new Port(OutputPort, PortTypes.Text)],
         MaxExecutions = maxExecutions,
     };

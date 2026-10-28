@@ -10,14 +10,26 @@ public sealed partial record NodeSpec
     /// 类型未注册时跳过值域检查，由装配期的类型校验负责。</summary>
     public void CheckInterface(NodeTypeShape? shape, Action<string> fail)
     {
-        foreach (PortName port in Duplicates([.. Inputs.Select(port => port.Name)]))
+        IReadOnlyList<InputPort> inputs = EffectiveInputs;
+        foreach (PortName port in Duplicates([.. inputs.Select(port => port.Name)]))
         {
             fail($"输入端口 {port.Value} 重复。");
         }
 
+        foreach (InputPort fixedPort in (Type?.Shape.StaticInputs ?? [])
+            .Where(fixedPort => Inputs.Find(fixedPort.Name) is { IsStatic: false }))
+        {
+            fail($"输入端口 {fixedPort.Name.Value} 是节点类型的静态端口，不能声明为动态端口。");
+        }
+
+        foreach (InputPort port in inputs.Where(port => port.IsStatic && port.Type != PortTypes.Text))
+        {
+            fail($"静态输入端口 {port.Name.Value} 的类型只能是 Text。");
+        }
+
         if (shape is { } declared)
         {
-            foreach (InputPort port in Inputs.Where(port => !declared.InputTypes.Contains(port.Type)))
+            foreach (InputPort port in inputs.Where(port => !declared.InputTypes.Contains(port.Type)))
             {
                 fail($"输入端口 {port.Name.Value} 的类型只能是 {Types(declared.InputTypes)}。");
             }
@@ -25,7 +37,12 @@ public sealed partial record NodeSpec
 
         if (shape is { Organizes: true })
         {
-            // 容器的输出是子树绑定，默认值规则由容器类型报出
+            // 容器的输出是子树绑定，容器的静态输入由 In 绑定提供值
+            foreach (InputPort port in inputs.Where(port => port.IsStatic && port.Default is not null))
+            {
+                fail($"静态输入端口 {port.Name.Value} 在容器上不能声明默认值，值由 In 绑定提供。");
+            }
+
             return;
         }
 
@@ -41,8 +58,23 @@ public sealed partial record NodeSpec
                 fail($"输出端口 {port} 的类型只能是 {Types(executable.OutputTypes)}。");
             }
 
-            foreach (InputPort port in Inputs.Where(port => port.Default is not null))
+            foreach (Port port in Outputs.Where(port => port.IsStatic))
             {
+                fail($"输出端口 {port.Name.Value} 不能是静态端口，执行节点的产出都是动态的。");
+            }
+
+            foreach (InputPort port in inputs.Where(port => port.Default is not null))
+            {
+                if (port.IsStatic)
+                {
+                    if (string.IsNullOrWhiteSpace(port.Default))
+                    {
+                        fail($"静态输入端口 {port.Name.Value} 的默认值不能为空。");
+                    }
+
+                    continue;
+                }
+
                 if (!executable.DispatchesExecutions || port.Type != PortTypes.Text)
                 {
                     fail($"输入端口 {port.Name.Value} 的默认值只用于派发执行的节点的 Text 输入端口。");

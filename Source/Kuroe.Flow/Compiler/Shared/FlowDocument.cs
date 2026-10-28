@@ -11,28 +11,27 @@ public sealed record FlowDocument(
 public sealed record FlowDocumentFlow(
     string Name,
     string? Description,
-    IReadOnlyList<ModelDocument> Models,
     IReadOnlyList<PortDocument> StartOutputs,
     IReadOnlyDictionary<string, string> HostStartInputs,
     NodeDocument? Root);
 
-/// <summary>流程里命名的模型选择。</summary>
-public sealed record ModelDocument(string Name, string? Model, bool Runtime = false);
-
-/// <summary>输出端口条目：执行节点写 Name 与 Type，容器写 Name 与 Ref，开始端口可写 Value。</summary>
+/// <summary>输出端口条目：执行节点写 Name 与 Type，容器写 Name 与 Ref，开始端口可写 Value。
+/// Static 标记静态端口，静态端口只提供值，不进入 From、版本、就绪与触发。</summary>
 public sealed record PortDocument(
     string Name,
     PortType? Type = null,
     string? Description = null,
     string? Value = null,
-    string? Ref = null);
+    string? Ref = null,
+    bool IsStatic = false);
 
-/// <summary>输入端口条目：执行节点与容器共用。</summary>
+/// <summary>输入端口条目：执行节点与容器共用。Static 标记静态输入，值由 Static 绑定或默认值提供。</summary>
 public sealed record InputPortDocument(
     string Name,
     PortType? Type = null,
     string? Description = null,
-    string? Default = null);
+    string? Default = null,
+    bool IsStatic = false);
 
 /// <summary>输出校验条目。</summary>
 public sealed record ValidationDocument(string Predicate, string? Argument);
@@ -48,6 +47,9 @@ public abstract record NodeDocument
 {
     /// <summary>上游启动组。</summary>
     public IReadOnlyList<FromGroupDocument> From { get; init; } = [];
+
+    /// <summary>静态端口绑定：目标静态输入端口到来源引用文本。来源识别与 From、In 使用同一套作用域规则。</summary>
+    public IReadOnlyDictionary<string, string>? Static { get; init; }
 
     /// <summary>输出校验覆盖。</summary>
     public ValidationDocument? Validate { get; init; }
@@ -71,15 +73,6 @@ public sealed record NodeDefinitionDocument : NodeDocument
     /// <summary>输出端口声明，容器条目写 Ref。</summary>
     public IReadOnlyList<PortDocument> Outputs { get; init; } = [];
 
-    /// <summary>容器定义的模型槽位声明。</summary>
-    public IReadOnlyList<string>? ModelSlots { get; init; }
-
-    /// <summary>执行节点的模型选择。</summary>
-    public string? Model { get; init; }
-
-    /// <summary>定义条目写了模型绑定对象。绑定只属于引用节点组，构造层据此报错。</summary>
-    public bool HasModelBindings { get; init; }
-
     /// <summary>定义条目写了输入端口绑定。库定义不接线，内联容器在流程作用域绑定自身声明的传入端口。</summary>
     public IReadOnlyDictionary<string, string>? In { get; init; }
 
@@ -101,10 +94,4 @@ public sealed record NodeReferenceDocument : NodeDocument
 
     /// <summary>容器引用处的输入端口绑定。</summary>
     public IReadOnlyDictionary<string, string>? In { get; init; }
-
-    /// <summary>执行节点的模型选择。</summary>
-    public string? Model { get; init; }
-
-    /// <summary>容器引用处的模型槽位绑定。</summary>
-    public IReadOnlyDictionary<string, string>? Models { get; init; }
 }

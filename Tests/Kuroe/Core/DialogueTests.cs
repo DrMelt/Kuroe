@@ -1,7 +1,6 @@
 using Kuroe.Configuration.Model;
 using Kuroe.Node.Input;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Shared.Execution;
 using Kuroe.Tool;
 using Kuroe.Flow.Compiler;
 using Kuroe.Flow.Compiler.Shared;
@@ -14,7 +13,6 @@ using Kuroe.Node.Llm;
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Shared;
-using Kuroe.Tests.Support;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -80,14 +78,15 @@ public sealed class DialogueTests
             paths.Skip(DialogueFlow.Tools.Count));
     }
 
-    /// <summary>回话节点的工作区端口由根容器的 In 从开始端口转接。</summary>
+    /// <summary>回话节点的工作区静态端口由根容器的 In 从开始端口转接，节点用 Static 绑定取用。</summary>
     [Fact]
     public void Dialogue_reply_node_receives_the_workspace_port_from_the_start_node()
     {
         NodeSpec reply = Members(AssistantSettings.DefaultLanguage)[1];
-        IReadOnlyList<PortRef> refs = [.. reply.From.SelectMany(group => group.Links).Select(link => link.Ref)];
+        IReadOnlyDictionary<PortName, PortRef> statics = reply.Static ?? new Dictionary<PortName, PortRef>();
 
-        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), refs);
+        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), statics.Values);
+        Assert.True(reply.FindInput(DialogueFlow.WorkspacePort) is { IsStatic: true });
     }
 
     /// <summary>回话节点把工作区端口映射到带路径变量的工具根。</summary>
@@ -115,6 +114,18 @@ public sealed class DialogueTests
                 new ToolPath("dotnet/read"),
             ],
             DialogueFlow.Tools);
+    }
+
+    /// <summary>回话节点的模型端口绑定宿主输入 MODEL，流程文件不写模型值。</summary>
+    [Fact]
+    public void Dialogue_model_port_is_bound_to_the_host_model_input()
+    {
+        FlowDefinition flow = Build(AssistantSettings.DefaultLanguage);
+        PortName model = LlmNodeTypes.ModelPort;
+
+        Assert.True(flow.HostStartInputs.TryGetValue(model, out string? input));
+        Assert.Equal("MODEL", input);
+        Assert.Null(flow.StartOutputs.Find(model)!.Value.Value);
     }
 
     private static FlowDefinition Build(string language)

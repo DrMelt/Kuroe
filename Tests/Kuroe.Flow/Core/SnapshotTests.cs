@@ -6,6 +6,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Compiler.Compilation;
+using Kuroe.Flow.TestSupport;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
@@ -45,14 +46,16 @@ public sealed class SnapshotTests
     private static class TaskBuilder
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
-            new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"), Flow, Graph, TaskState.Running, 0,
+            new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"),
+            new HostStartValues(new Dictionary<PortName, string>()), Flow, Graph, TaskState.Running, 0,
             [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, []))],
             states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
     }
 
-    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("规划者") };
+    private static readonly IReadOnlyDictionary<PortName, StaticValue> Planner =
+        new Dictionary<PortName, StaticValue> { [TestExecutableNodeType.StaticPort] = StaticValue.Constant("规划者") };
 
-    private static readonly FlowDefinition Flow = new(new FlowName("默认"), null, [Planner],
+    private static readonly FlowDefinition Flow = new(new FlowName("默认"), null,
         [new Port(new PortName("目标"), PortTypes.Text)], new Dictionary<PortName, string>(),
         new NodeSpec
         {
@@ -60,8 +63,8 @@ public sealed class SnapshotTests
             Type = ContainerNodeTypes.Type,
             Nodes =
             [
-                new NodeSpec { Label = new NodeLabel("制定计划"), Type = TestNodeTypes.Executable, Model = Planner.Name, Spec = new ExecutableSpec() },
-                new NodeSpec { Label = new NodeLabel("实施"), Type = TestNodeTypes.Executable, Model = Planner.Name, Spec = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("制定计划"), Type = TestNodeTypes.Executable, Spec = new ExecutableSpec() },
+                new NodeSpec { Label = new NodeLabel("实施"), Type = TestNodeTypes.Executable, Spec = new ExecutableSpec() },
             ],
         });
 
@@ -76,7 +79,8 @@ public sealed class SnapshotTests
             Path = NodePath.Of("制定计划"),
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
-            Model = Planner,
+            Inputs = [],
+            StaticValues = Planner,
             Outputs = [],
             MaxExecutions = 100,
         },
@@ -85,7 +89,8 @@ public sealed class SnapshotTests
             Path = NodePath.Of("实施"),
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
-            Model = Planner,
+            Inputs = [],
+            StaticValues = Planner,
             Outputs = [],
             MaxExecutions = 100,
         },

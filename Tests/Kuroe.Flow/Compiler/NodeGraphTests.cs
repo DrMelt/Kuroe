@@ -1,8 +1,8 @@
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Flow.Compiler.Compilation;
+using Kuroe.Flow.TestSupport;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
@@ -26,7 +26,8 @@ public sealed class NodeGraphTests
                 Path = NodePath.Of("规划"),
                 Type = TestNodeTypes.Executable,
                 Spec = new ExecutableSpec(),
-                Model = Planner,
+                Inputs = [],
+                StaticValues = Planner,
                 Outputs = [],
                 MaxExecutions = 100,
             },
@@ -35,7 +36,8 @@ public sealed class NodeGraphTests
                 Path = NodePath.Of("实施"),
                 Type = TestNodeTypes.Executable,
                 Spec = new ExecutableSpec(),
-                Model = Planner,
+                Inputs = [],
+                StaticValues = Planner,
                 Outputs = [],
                 MaxExecutions = 100,
             },
@@ -48,5 +50,6 @@ public sealed class NodeGraphTests
         Assert.Throws<ArgumentException>(() => graph[NodePath.Of("检查")]);
     }
 
-    private static readonly ModelDefinition Planner = new() { Name = new ModelRef("执行者") };
+    private static readonly IReadOnlyDictionary<PortName, StaticValue> Planner =
+        new Dictionary<PortName, StaticValue> { [TestExecutableNodeType.StaticPort] = StaticValue.Constant("执行者") };
 }

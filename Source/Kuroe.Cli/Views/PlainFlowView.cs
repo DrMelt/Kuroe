@@ -3,6 +3,8 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Node.Llm;
+using Kuroe.Presentation;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;
@@ -25,11 +27,11 @@ internal static class PlainFlowView
 
         if (flows.Count > 0)
         {
-            output.Line("流程\t执行节点\t容器\t模型选择\t说明");
+            output.Line("流程\t执行节点\t容器\t说明");
             foreach (FlowDefinition flow in flows)
             {
                 (int executables, int containers) = Count(flow.RootNode);
-                output.Line($"{flow.Name.Value}\t{executables}\t{containers}\t{flow.Models.Count}\t{flow.Description ?? string.Empty}");
+                output.Line($"{flow.Name.Value}\t{executables}\t{containers}\t{flow.Description ?? string.Empty}");
             }
         }
 
@@ -55,40 +57,39 @@ internal static class PlainFlowView
         output.Line($"流程\t{compiled.Model.Name.Value}");
         output.Line($"执行节点\t{compiled.Graph.TotalExecutables}");
         output.Line($"容器\t{compiled.Graph.Containers.Count}");
-        output.Line($"模型选择\t{compiled.Model.Models.Count}");
         output.Line($"说明\t{compiled.Model.Description ?? "—"}");
         output.Line();
-        Walk(output, compiled.Graph.ChildrenOf(null), 0);
+        Walk(output, compiled.Graph.ChildrenOf(null), 0, compiled.Model.HostStartInputs);
     }
 
-    private static void Walk(CliOutput output, IReadOnlyList<GraphNode> nodes, int depth)
+    private static void Walk(CliOutput output, IReadOnlyList<GraphNode> nodes, int depth, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         string indent = new(' ', depth * 2);
         foreach (GraphNode node in nodes)
         {
-            output.Line($"{indent}{Describe(node)}");
+            output.Line($"{indent}{Describe(node, hostInputs)}");
             if (node is ContainerNode container)
             {
-                Walk(output, container.Children, depth + 1);
+                Walk(output, container.Children, depth + 1, hostInputs);
             }
         }
     }
 
-    private static string Describe(GraphNode node) => node switch
+    private static string Describe(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
     {
-        StartNode start => Start(start),
+        StartNode start => Start(start, hostInputs),
         ContainerNode container => Container(container),
-        ExecutableNode executable => Executable(executable),
+        ExecutableNode executable => Executable(executable, hostInputs),
         _ => node.Label.Value,
     };
 
-    private static string Start(StartNode start)
+    private static string Start(StartNode start, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         List<string> parts = ["Start", "开始"];
         IReadOnlyList<Port> ports = start.Outputs;
         if (ports.Count > 0)
         {
-            parts.Add($"端口 {string.Join('、', ports.Select(port => port.Name.Value))}");
+            parts.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel(hostInputs)))}");
         }
 
         return string.Join('\t', parts);
@@ -99,23 +100,35 @@ internal static class PlainFlowView
         List<string> parts = [container.Label.Value, "容器"];
         if (container.PortBindings is { Count: > 0 } bindings)
         {
-            parts.Add($"端口 {string.Join('、', bindings.Keys.Select(port => port.Value))}");
+            string[] dynamicPorts = [.. bindings.Keys
+                .Where(port => container.StaticOutputs?.Contains(port) != true)
+                .Select(port => port.Value)];
+            if (dynamicPorts.Length > 0)
+            {
+                parts.Add($"端口 {string.Join('、', dynamicPorts)}");
+            }
+        }
+
+        if (container.StaticOutputs is { Count: > 0 } statics)
+        {
+            parts.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}");
         }
 
         return string.Join('\t', parts);
     }
 
-    private static string Executable(ExecutableNode executable)
+    private static string Executable(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         List<string> parts = [executable.Label.Value, executable.Kind.Value];
-        if (executable.Model is { } model)
+        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
         {
-            parts.Add($"模型 {(model.Runtime ? "运行时" : model.Model ?? model.Name.Value)}");
+            parts.Add($"模型 {model.StaticLabel(hostInputs: hostInputs)}");
         }
 
-        if (executable.Inputs.Count > 0)
+        IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];
+        if (inputs.Count > 0)
         {
-            parts.Add($"输入 {string.Join('、', executable.Inputs.Select(port => port.Name.Value))}");
+            parts.Add($"输入 {string.Join('、', inputs.Select(port => port.Name.Value))}");
         }
 
         if (executable.Outputs.Count > 0)

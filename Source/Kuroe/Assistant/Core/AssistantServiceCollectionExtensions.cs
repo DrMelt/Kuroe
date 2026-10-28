@@ -54,7 +54,10 @@ public static class AssistantServiceCollectionExtensions
                     registry,
                     sp.GetRequiredService<FlowEngine>(),
                     sp.GetRequiredService<IExecutionTargetResolver>(),
-                    new KuroeTaskStart(sp.GetRequiredService<KuroePaths>().WorkingDirectory, null)),
+                    new KuroeTaskStart(
+                        sp.GetRequiredService<KuroePaths>().WorkingDirectory,
+                        null,
+                        sp.GetRequiredService<ModelService>())),
                 round,
                 sp.GetRequiredService<ModelService>(),
                 sp.GetRequiredService<SettingsProvider>(),

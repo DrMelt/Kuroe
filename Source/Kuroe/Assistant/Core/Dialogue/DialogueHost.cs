@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
@@ -11,7 +12,8 @@ using Kuroe.Flow.Compiler.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
-/// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。</summary>
+/// <summary>常驻对话任务的管理层宿主：持有对话任务，普通输入路由为回答并等本轮收口，无模型时报模型未选择。
+/// 模型在任务启动时写入流程，模型变化后下一次输入重建任务。</summary>
 public sealed class DialogueHost(
     TaskActions actions,
     DialogueRound rounds,
@@ -22,6 +24,7 @@ public sealed class DialogueHost(
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
+    private ModelName? _model;
 
     /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程增量与过程条目经回调送出。</summary>
     public async Task<ErrorOr<Success>> ReplyAsync(
@@ -29,12 +32,12 @@ public sealed class DialogueHost(
         Action<string>? onText = null,
         Action<JournalEntry>? onEntry = null)
     {
-        if (models.Current is null)
+        if (models.Current is not { } model)
         {
             return ModelErrors.ModelNotSelected();
         }
 
-        TaskId id = EnsureDialogue();
+        TaskId id = EnsureDialogue(model);
 
         return await rounds.AskAsync(id, null, input, onText, onEntry);
     }
@@ -47,6 +50,7 @@ public sealed class DialogueHost(
         {
             old = _dialogue;
             _dialogue = null;
+            _model = null;
         }
 
         if (old is { } id)
@@ -57,28 +61,29 @@ public sealed class DialogueHost(
         registry.ClearSettled();
     }
 
-    /// <summary>当前对话任务，不存在、已被清理或已收口时新建。助手语言在创建时读取，配置变化后重置对话重建任务生效。</summary>
-    private TaskId EnsureDialogue()
+    /// <summary>当前对话任务，不存在、已被清理、已收口或模型已变化时新建。助手语言在创建时读取，配置变化后重置对话重建任务生效。</summary>
+    private TaskId EnsureDialogue(ModelName model)
     {
         TaskId? replaced = null;
         lock (_gate)
         {
             if (_dialogue is { } current)
             {
-                if (IsUsable(current))
+                if (_model == model && IsUsable(current))
                 {
                     return current;
                 }
 
                 replaced = current;
                 _dialogue = null;
+                _model = null;
             }
         }
 
         // 被替换的旧任务先停止，转为已取消后随 ClearSettled 清出任务域
-        if (replaced is { } stale)
+        if (replaced is { } staleTask)
         {
-            actions.StopTask(stale);
+            actions.StopTask(staleTask);
         }
 
         registry.ClearSettled();
@@ -106,6 +111,7 @@ public sealed class DialogueHost(
         lock (_gate)
         {
             _dialogue = id;
+            _model = model;
         }
 
         return id;

@@ -1,7 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Tests.Support;
 using Xunit;
 
 namespace Kuroe.Tests;
@@ -196,10 +195,10 @@ public sealed class TriggerPortTests
 
     private const string TextTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "来源@结论" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "来源@结论" } ] }
             ] }
           ] } ]
         }
@@ -207,10 +206,10 @@ public sealed class TriggerPortTests
 
     private const string SignalTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "信号", "Type": "SignalTrigger" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "信号", "Type": "SignalTrigger" }], "From": [ { "信号": "来源@信号" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "信号", "Type": "SignalTrigger" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "信号", "Type": "SignalTrigger" }], "From": [ { "信号": "来源@信号" } ] }
             ] }
           ] } ]
         }
@@ -218,11 +217,11 @@ public sealed class TriggerPortTests
 
     private const string TwoPortFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "停", "Type": "TextTrigger" }, { "Name": "走", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "停下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "停": "来源@停" } ] },
-              { "Name": "走下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "走", "Type": "Text" }], "From": [ { "走": "来源@走" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "停", "Type": "TextTrigger" }, { "Name": "走", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "停下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "停": "来源@停" } ] },
+              { "Name": "走下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "走", "Type": "Text" }], "From": [ { "走": "来源@走" } ] }
             ] }
           ] } ]
         }
@@ -230,12 +229,12 @@ public sealed class TriggerPortTests
 
     private const string ParallelTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "慢来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "慢下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "慢来源@结论" } ] },
-              { "Name": "快来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "快下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "停": "快来源@停" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "慢来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "慢下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "慢来源@结论" } ] },
+              { "Name": "快来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "快下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "停", "Type": "TextTrigger" }], "From": [ { "停": "快来源@停" } ] }
             ] }
           ] } ]
         }
@@ -243,9 +242,9 @@ public sealed class TriggerPortTests
 
     private const string PlainTextFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]
         }
@@ -253,12 +252,12 @@ public sealed class TriggerPortTests
 
     private const string ContainerTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
-                { "Name": "成员", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] }
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                { "Name": "成员", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] }
               ] },
-              { "Name": "下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "箱@结论" } ] }
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "箱@结论" } ] }
             ] }
           ] } ]
         }
@@ -266,11 +265,11 @@ public sealed class TriggerPortTests
 
     private const string ApprovalTriggerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Models": [{ "Name": "执行者", "Model": "fake" }], "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-              { "Name": "来源", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] },
               { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "来源@结论" } ] },
-              { "Name": "下游", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "审阅@结论" } ] }
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "审阅@结论" } ] }
             ] }
           ] } ]
         }

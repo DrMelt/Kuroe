@@ -14,16 +14,20 @@ public sealed class NodeInputValues
     private readonly Dictionary<PortName, IReadOnlyList<ContextValue>> _values;
     private readonly IReadOnlySet<PortName> _connected;
     private readonly IReadOnlyDictionary<PortName, bool> _triggers;
+    private readonly IReadOnlyDictionary<PortName, string> _staticTexts;
 
-    /// <summary>按绑定顺序给出取值，已连接端口用于区分未连接的默认值，触发值按输入端口给出。</summary>
+    /// <summary>按绑定顺序给出取值，已连接端口用于区分未连接的默认值，触发值按输入端口给出，
+    /// 静态端口值单独给出，不并入动态取值。</summary>
     public NodeInputValues(
         IReadOnlyList<NodeInputValue> ordered,
         IReadOnlySet<PortName> connected,
-        IReadOnlyDictionary<PortName, bool>? triggers = null)
+        IReadOnlyDictionary<PortName, bool>? triggers = null,
+        IReadOnlyDictionary<PortName, string>? staticTexts = null)
     {
         _ordered = ordered;
         _connected = connected;
         _triggers = triggers ?? new Dictionary<PortName, bool>();
+        _staticTexts = staticTexts ?? new Dictionary<PortName, string>();
 
         Dictionary<PortName, List<ContextValue>> values = [];
         foreach (NodeInputValue value in ordered)
@@ -52,6 +56,16 @@ public sealed class NodeInputValues
 
     /// <summary>该输入端口的文本，多段取值按绑定顺序以空行连接，没有内容时为空。</summary>
     public string? Text(PortName input) => ContextValues.Join(Values(input));
+
+    /// <summary>该静态输入端口的文本，端口没有静态值或值未给出时为空。</summary>
+    public string? StaticText(PortName input) => _staticTexts.GetValueOrDefault(input);
+
+    /// <summary>本次激活的静态端口值表，没有静态值时为空表。</summary>
+    public IReadOnlyDictionary<PortName, string> StaticTexts => _staticTexts;
+
+    /// <summary>附加本次激活的静态端口值，没有静态值时保持原实例。</summary>
+    public NodeInputValues WithStatic(IReadOnlyDictionary<PortName, string> staticTexts) =>
+        staticTexts.Count == 0 ? this : new(_ordered, _connected, _triggers, staticTexts);
 
     /// <summary>该输入端口最近一次绑定的触发值，没有触发值的端口为 true。</summary>
     public bool Triggers(PortName input) => _triggers.GetValueOrDefault(input, true);

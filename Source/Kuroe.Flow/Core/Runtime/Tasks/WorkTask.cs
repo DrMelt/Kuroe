@@ -218,7 +218,7 @@ public sealed class WorkTask : INodeTask
             TaskProjection projection = new(Graph, Runtime.Materializer);
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => projection.State(node.Path))];
 
-            return new TaskSnapshot(Id, _title, Inputs, Flow, Graph, Summarize(),
+            return new TaskSnapshot(Id, _title, Inputs, HostValues, Flow, Graph, Summarize(),
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
                 projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }

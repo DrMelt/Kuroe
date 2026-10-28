@@ -226,7 +226,6 @@ public sealed class CommandRuntimeTests
             Path = TargetPath,
             Type = CommandNodeTypes.Create(Parameters(maxChars, directory), process),
             Spec = new ExecutableSpec(),
-            Model = null,
             Inputs =
             [
                 new InputPort(new PortName("任务路径"), PortTypes.Text),

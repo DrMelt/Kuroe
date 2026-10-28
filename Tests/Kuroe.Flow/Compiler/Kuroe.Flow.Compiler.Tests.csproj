@@ -16,6 +16,7 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compiler\Core\Kuroe.Flow.Compiler.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\Support\Kuroe.Flow.TestSupport.csproj" />
     </ItemGroup>
 

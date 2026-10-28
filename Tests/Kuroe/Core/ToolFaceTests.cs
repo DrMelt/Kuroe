@@ -2,9 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant;
 using Kuroe.Configuration.Files;
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Shared;
 using Kuroe.Tool;
-using Kuroe.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

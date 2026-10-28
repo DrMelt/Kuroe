@@ -56,19 +56,17 @@ public sealed class CommandNodeTypeTests
     public void Plain_command_node_passes() => Assert.Empty(Failures(Type, Node()));
 
     [Fact]
-    public void Model_and_validate_are_rejected()
+    public void Validate_is_rejected()
     {
         NodeSpec node = Node() with
         {
-            Model = new ModelRef("执行者"),
             Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
         };
 
         string[] errors = [.. Failures(Type, node)];
 
-        Assert.Equal(2, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("命令执行节点不启动模型执行，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("命令执行节点不启动模型执行，不能声明 Validate。"));
+        Assert.Single(errors);
+        Assert.EndsWith("命令执行节点不启动模型执行，不能声明 Validate。", errors[0]);
     }
 
     [Fact]

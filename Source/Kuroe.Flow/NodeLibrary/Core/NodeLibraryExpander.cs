@@ -40,7 +40,7 @@ public sealed class NodeLibraryExpander : IFlowExpander
                 continue;
             }
 
-            flows.Add(new FlowDefinition(flow.Name, flow.Description, flow.Models, flow.StartOutputs, flow.HostStartInputs, expanded.Value));
+            flows.Add(new FlowDefinition(flow.Name, flow.Description, flow.StartOutputs, flow.HostStartInputs, expanded.Value));
         }
 
         return errors.Count > 0 ? errors : flows;

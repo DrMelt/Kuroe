@@ -51,16 +51,12 @@ public sealed class InputNodeTypeTests
         NodeSpec node = Node(new ExecutableSpec
         {
             Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
-        }) with
-        {
-            Model = new ModelRef("规划者"),
-        };
+        });
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(2, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动执行，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("输入节点不启动执行，不能声明 Validate。"));
+        Assert.Single(errors);
+        Assert.EndsWith("输入节点不启动执行，不能声明 Validate。", errors[0]);
     }
 
     [Fact]

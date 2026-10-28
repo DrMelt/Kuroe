@@ -14,7 +14,7 @@ internal static class ContainerScope
         Action<NodeSpec, string> fail)
     {
         HashSet<NodeLabel> labels = SubtreeLabels(members, find);
-        HashSet<PortName> ports = [.. container.Inputs.Select(port => port.Name)];
+        HashSet<PortName> ports = [.. container.EffectiveInputs.Select(port => port.Name)];
         foreach (NodeSpec member in members)
         {
             foreach ((PortRef reference, string field) in References(member))
@@ -34,7 +34,7 @@ internal static class ContainerScope
         }
     }
 
-    /// <summary>成员在所属容器作用域里求值的引用：From 的连接与容器成员的 In 绑定。</summary>
+    /// <summary>成员在所属容器作用域里求值的引用：From 的连接、容器成员的 In 绑定与 Static 绑定。</summary>
     private static IEnumerable<(PortRef Reference, string Field)> References(NodeSpec member)
     {
         foreach (FromGroup group in member.From)
@@ -48,6 +48,11 @@ internal static class ContainerScope
         foreach (PortRef reference in member.In?.Values ?? [])
         {
             yield return (reference, "In");
+        }
+
+        foreach (PortRef reference in member.Static?.Values ?? [])
+        {
+            yield return (reference, "Static");
         }
     }
 

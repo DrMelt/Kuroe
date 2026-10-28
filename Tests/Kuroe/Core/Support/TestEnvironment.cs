@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -109,25 +108,27 @@ public sealed class TestEnvironment : IDisposable
     public IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool> ConfiguredTools =>
         _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool>>();
 
-    /// <summary>测试默认写入的流程文件，模型选择显式指向 fake，供按名提交的执行测试使用。</summary>
+    /// <summary>测试默认写入的流程文件，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """
         {
           "Flows": [
             {
               "Name": "默认",
-              "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Static": true }
+              ] },
+              "HostStartInputs": { "MODEL_NAME": "MODEL" },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }], "In": { "计划": "制定计划@计划" }, "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                  "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                  "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                      { "Name": "分配执行", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
                     ] }
                   ]
                 }

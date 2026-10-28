@@ -1,7 +1,9 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Node.Llm;
 using Kuroe.Pending;
 using Kuroe.Presentation;
 using Spectre.Console;
@@ -57,7 +59,18 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         if (container.PortBindings is { Count: > 0 } bindings)
         {
-            line.Add($"端口 {string.Join('、', bindings.Keys.Select(port => port.Value))}", Styles.Hint);
+            string[] dynamicPorts = [.. bindings.Keys
+                .Where(port => container.StaticOutputs?.Contains(port) != true)
+                .Select(port => port.Value)];
+            if (dynamicPorts.Length > 0)
+            {
+                line.Add($"端口 {string.Join('、', dynamicPorts)}", Styles.Hint);
+            }
+        }
+
+        if (container.StaticOutputs is { Count: > 0 } statics)
+        {
+            line.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}", Styles.Hint);
         }
 
         return line.Build();
@@ -79,9 +92,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             line.Add(ViewLabels.Of(state), ViewLabels.StyleOf(state));
         }
 
-        if (executable.Model is { } model)
+        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
         {
-            line.Add($"模型 {ViewLabels.ModelLabel(model)}", Styles.Hint);
+            line.Add($"模型 {model.StaticLabel(facts.HostValues)}", Styles.Hint);
         }
 
         if (executable.Outputs.Count > 0)
@@ -170,6 +183,8 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         public ContainerSnapshot? Container(NodePath path) =>
             _containers.TryGetValue(path, out ContainerSnapshot? container) ? container : null;
+
+        public HostStartValues HostValues => _task.HostValues;
 
         public (int Done, int Total) Progress(NodePath container)
         {

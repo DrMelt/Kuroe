@@ -74,7 +74,6 @@ public sealed class ApprovalRuntimeTests
         Path = Path,
         Type = new ApprovalNodeType(null, channel),
         Spec = new ExecutableSpec(),
-        Model = null,
         Inputs = [new InputPort(Port, PortTypes.Text)],
         Outputs = [],
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,

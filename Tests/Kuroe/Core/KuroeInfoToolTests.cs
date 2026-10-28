@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration.Files;
-using Kuroe.Shared;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Tool;
@@ -189,7 +188,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
-        Assert.Contains("模型 规划者", output);
+        Assert.Contains("模型 Start@MODEL_NAME", output);
     }
 
     [Fact]
@@ -200,11 +199,11 @@ public sealed class KuroeInfoToolTests : IDisposable
               "Flows": [
                 {
                   "Name": "默认",
-                  "Models": [ { "Name": "执行者", "Model": "fake" } ],
                   "Start": {
                     "Outputs": [
                       { "Name": "目标", "Type": "Text" },
-                      { "Name": "启动路径", "Type": "Text" }
+                      { "Name": "启动路径", "Type": "Text", "Static": true },
+                      { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
                     ]
                   },
                   "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
@@ -212,9 +211,9 @@ public sealed class KuroeInfoToolTests : IDisposable
                     {
                       "Name": "实施",
                       "Kind": "Llm",
-                      "Model": "执行者",
-                      "Inputs": [ { "Name": "目标" }, { "Name": "启动路径" } ],
-                      "From": [ { "目标": "Start@目标", "启动路径": "Start@启动路径" } ]
+                      "Static": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                      "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Static": true } ],
+                      "From": [ { "目标": "Start@目标" } ]
                     }
                   ]
                 }

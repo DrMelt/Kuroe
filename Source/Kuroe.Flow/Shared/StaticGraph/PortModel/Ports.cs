@@ -3,7 +3,7 @@ namespace Kuroe.Flow.Shared.StaticGraph.PortModel;
 /// <summary>端口表的查找、交回判定与声明文本。</summary>
 public static class Ports
 {
-    /// <summary>模型需经契约工具交回的端口类型：Text 交回内容，Signal 交回端口名或触发值；Context 由来源透传，不需要交回。
+    /// <summary>执行需经契约工具交回的端口类型：Text 交回内容，Signal 交回端口名或触发值；Context 由来源透传，不需要交回。
     /// Trigger 版与普通版同属一种语义，普通版交回时触发值恒为 true。</summary>
     public static bool RequiresSubmission(PortType type) =>
         type.Semantics is PortSemantics.Text or PortSemantics.Signal;
@@ -14,7 +14,7 @@ public static class Ports
     /// <summary>端口是否承载触发值。</summary>
     public static bool CarriesTrigger(PortType type) => type.IsTrigger;
 
-    /// <summary>输出端口表里模型需交回的端口，按声明序。</summary>
+    /// <summary>输出端口表里执行需交回的端口，按声明序。</summary>
     public static IReadOnlyList<Port> RequiringSubmission(IReadOnlyList<Port> ports) =>
         [.. ports.Where(port => RequiresSubmission(port.Type))];
 
@@ -52,4 +52,17 @@ public static class Ports
 
         return null;
     }
+
+    /// <summary>按输入端口声明显式取文本：静态端口只读静态值，动态端口只读输入值，端口未声明时为空。</summary>
+    public static string? ReadText(
+        InputPort? declaration,
+        PortName port,
+        Func<PortName, string?> staticText,
+        Func<PortName, string?> dynamicText) =>
+        declaration switch
+        {
+            { IsStatic: true } => staticText(port),
+            null => null,
+            _ => dynamicText(port),
+        };
 }

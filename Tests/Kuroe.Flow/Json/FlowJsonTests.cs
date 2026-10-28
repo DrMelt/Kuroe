@@ -18,7 +18,6 @@ public sealed class FlowJsonTests
               "flows": [
                 {
                   "name": "默认",
-                  "models": [{ "name": "执行者", "model": "fake" }],
                   "start": { "outputs": [{ "name": "目标", "type": "Text" }] },
                   "nodes": [],
                 },
@@ -31,7 +30,6 @@ public sealed class FlowJsonTests
         Assert.Empty(file.Nodes);
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Equal("默认", flow.Name);
-        Assert.Equal("fake", Assert.Single(flow.Models).Model);
         Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Start!.Outputs!).ValueKind);
     }
 
@@ -45,7 +43,6 @@ public sealed class FlowJsonTests
 
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Empty(file.Nodes);
-        Assert.Empty(flow.Models);
         Assert.Empty(flow.Nodes);
         Assert.Null(flow.Description);
         Assert.Null(flow.Start);
@@ -91,23 +88,23 @@ public sealed class FlowJsonTests
         Assert.Null(node.Use);
     }
 
-    /// <summary>JsonElement 成员保留原始形状：模型槽位声明是数组、槽位绑定是对象，端口条目是对象。</summary>
+    /// <summary>节点静态绑定按字符串映射读入，端口条目保留原始对象形状。</summary>
     [Fact]
-    public void Raw_json_members_keep_their_shape()
+    public void Static_bindings_are_read_as_a_string_map()
     {
         const string json = """
             {
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Models": ["执行者"], "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
-                { "Label": "组实例", "Use": "整体", "Models": { "执行者": "执行者" } }
+                { "Name": "整体", "Kind": "Container", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
+                { "Label": "组实例", "Use": "整体", "Static": { "MODEL_NAME": "@MODEL_NAME" } }
               ]
             }
             """;
 
         FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
 
-        Assert.Equal(JsonValueKind.Array, file.Nodes[0].Models!.Value.ValueKind);
-        Assert.Equal(JsonValueKind.Object, file.Nodes[1].Models!.Value.ValueKind);
+        Assert.Equal("Start@MODEL_NAME", file.Nodes[0].Static!["MODEL_NAME"]);
+        Assert.Equal("@MODEL_NAME", file.Nodes[1].Static!["MODEL_NAME"]);
         Assert.Equal(JsonValueKind.Object, Assert.Single(file.Nodes[0].Outputs!).ValueKind);
     }
 

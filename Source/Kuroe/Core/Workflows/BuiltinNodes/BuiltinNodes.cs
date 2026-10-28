@@ -9,9 +9,6 @@ namespace Kuroe.Workflows.BuiltinNodes;
 /// <summary>内置节点定义：随程序注册进节点库，可被文件定义的同类节点同名覆盖。</summary>
 internal static class BuiltinNodes
 {
-    /// <summary>内置容器成员「实施」的模型槽位名，绑定由引用处的模型绑定提供。</summary>
-    internal static ModelRef ExecutorSlot { get; } = new("执行者");
-
     /// <summary>规划节点的计划输出端口名，也是容器承接计划的输入端口名。</summary>
     internal static PortName PlanPort { get; } = new("计划");
 
@@ -44,17 +41,27 @@ internal static class BuiltinNodes
         Spec = new ExecutableSpec(),
     };
 
-    /// <summary>交付容器：接一份计划，由成员按计划实施。实施节点的模型是槽位名，由引用处的模型绑定提供。</summary>
+    /// <summary>交付容器：接一份计划，由成员按计划实施。模型由静态输入端口提供，引用处的 In 绑定来源。</summary>
     private static readonly NodeSpec DeliveryContainerDefinition = NodeSpec.Define(new NodeName("交付")) with
     {
         Type = ContainerNodeTypes.Type,
-        Inputs = [new InputPort(PlanPort, PortTypes.Text, "待实施的计划，来自规划节点。")],
-        ModelSlots = [ExecutorSlot],
+        Inputs =
+        [
+            new InputPort(PlanPort, PortTypes.Text, "待实施的计划，来自规划节点。"),
+            new InputPort(
+                LlmNodeTypes.ModelPort,
+                PortTypes.Text,
+                "实施使用的模型名，由宿主在任务启动时给出。",
+                isStatic: true),
+        ],
         Nodes =
         [
             NodeSpec.Reference(new NodeLabel("实施"), new NodeName("执行")) with
             {
-                Model = ExecutorSlot,
+                Static = new Dictionary<PortName, PortRef>
+                {
+                    [LlmNodeTypes.ModelPort] = PortRef.Bound(LlmNodeTypes.ModelPort),
+                },
                 From = [new FromGroup([new FromLink(TaskPort, PortRef.Bound(PlanPort))])],
             },
         ],

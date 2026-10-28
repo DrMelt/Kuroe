@@ -5,10 +5,6 @@ namespace Kuroe.Flow.Shared.StaticGraph.Flow;
 /// <summary>流程与流程装配的错误构造。</summary>
 public static class FlowErrors
 {
-    /// <summary>一条流程里某个模型选择的错误。</summary>
-    public static Error Model(string flow, string model, string message) =>
-        Error.Validation(FlowErrorCodes.FlowNode, $"流程 {flow} 的模型选择 {model}：{message}");
-
     /// <summary>一条流程整体的错误。</summary>
     public static Error Body(string flow, string message) =>
         Error.Validation(FlowErrorCodes.FlowBody, $"流程 {flow}：{message}");

@@ -15,6 +15,9 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
     /// <summary>本节点的类型专属声明。</summary>
     private CommandParameters Parameters { get; } = parameters;
 
+    /// <summary>提交时锁定的执行节点定义。</summary>
+    private ExecutableNode Executable => (ExecutableNode)Node;
+
     /// <inheritdoc/>
     protected override string Action => "执行";
 
@@ -67,7 +70,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
 
         ErrorOr<PathResolution> resolved = PathVariables.Resolve(
             Parameters.Variables,
-            port => inputs.Text(new PortName(port)),
+            port => PortText(inputs, new PortName(port)),
             Parameters.RootDirectory);
         if (resolved.IsError)
         {
@@ -96,6 +99,10 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
 
         return null;
     }
+
+    /// <summary>按端口声明显式取端口文本：静态端口只读静态值，动态端口只读输入值。</summary>
+    private string? PortText(NodeInputValues inputs, PortName port) =>
+        Ports.ReadText(Executable.FindInput(port), port, inputs.StaticText, inputs.Text);
 
     /// <summary>输出按声明上限截断，0 表示不限制。</summary>
     private string Limit(string text) =>

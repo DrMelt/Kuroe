@@ -137,12 +137,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(catalog.Value);
         services.AddSingleton<IInputChannel>(inputs);
         services.AddSingleton<IInputDelivery>(inputs);
-        services.AddSingleton<IModelSettings>(settings.Value);
         services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
-        services.AddSingleton<IHostTaskStart>(new KuroeTaskStart(paths.WorkingDirectory, taskDirectory.Value));
+        services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
+            paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
         services.AddSingleton(configuredTools.Value);
 
@@ -175,8 +175,7 @@ public static class ServiceCollectionExtensions
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
-            sp.GetRequiredService<IModelAccess>(),
-            sp.GetRequiredService<IModelSettings>()));
+            sp.GetRequiredService<IModelAccess>()));
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));

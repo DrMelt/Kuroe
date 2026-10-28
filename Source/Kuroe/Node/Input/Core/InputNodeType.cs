@@ -37,7 +37,6 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
             }
         }
 
-        Reject(node.Model is not null, "输入节点不启动执行，不能声明模型选择。");
         Reject(spec.Validate is not null, "输入节点不启动执行，不能声明 Validate。");
         Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
     }

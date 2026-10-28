@@ -27,7 +27,7 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
 
         ErrorOr<PathResolution> resolved = PathVariables.Resolve(
             Parameters.Variables,
-            port => inputs.Text(new PortName(port)),
+            port => PortText(inputs, new PortName(port)),
             Parameters.RootDirectory);
         if (resolved.IsError)
         {
@@ -49,4 +49,8 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
 
         return null;
     }
+
+    /// <summary>按端口声明显式取端口文本：静态端口只读静态值，动态端口只读输入值。</summary>
+    private string? PortText(NodeInputValues inputs, PortName port) =>
+        Ports.ReadText(Executable.FindInput(port), port, inputs.StaticText, inputs.Text);
 }

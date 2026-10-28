@@ -4,13 +4,12 @@ using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Configuration.Files;
 using Kuroe.Configuration.Model;
-using Kuroe.Node.Llm;
 using Kuroe.Shared.Configuration;
 
 namespace Kuroe.Configuration;
 
 /// <summary>偏好配置的唯一生效点：绑定用户层节点树、校验改动、替换当前快照。凭据不在这里，见 <see cref="Catalogs.CatalogService"/>。</summary>
-public sealed class SettingsProvider : IModelSettings, ISettingsView
+public sealed class SettingsProvider : ISettingsView
 {
     private readonly KuroePaths _paths;
     private readonly UserSettingsStore _store;
@@ -24,8 +23,6 @@ public sealed class SettingsProvider : IModelSettings, ISettingsView
 
     /// <summary>当前生效的配置。呈现由 <see cref="Sections"/> 给出，改动只经 Set 与 Clear。</summary>
     internal KuroeSettings Current { get; private set; }
-
-    ModelName? IModelSettings.Model => Current.Runtime.Model;
 
     /// <summary>用户层偏好文件的绝对路径。</summary>
     public string UserSettingsFile => _paths.UserSettingsFile;

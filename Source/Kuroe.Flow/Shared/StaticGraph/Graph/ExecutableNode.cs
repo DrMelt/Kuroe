@@ -1,4 +1,3 @@
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
@@ -16,11 +15,12 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行配置：输出校验与执行上限，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Spec { get; init; }
 
-    /// <summary>引用的模型选择解析结果：输入节点不启动执行，为空。</summary>
-    public required ModelDefinition? Model { get; init; }
+    /// <summary>装载期折叠后的静态端口值：静态输入端口名到值来源。宿主来源在任务启动时解析，
+    /// 解析结果与动态输入分开存放，按端口声明显式取值。</summary>
+    public IReadOnlyDictionary<PortName, StaticValue>? StaticValues { get; init; }
 
-    /// <summary>执行节点的输入端口表：名字、类型与默认值，类型决定来源产出如何进入本节点。</summary>
-    public IReadOnlyList<InputPort> Inputs { get; init; } = [];
+    /// <summary>执行节点的输入端口表：名字、类型、默认值与静态标记，类型决定来源产出如何进入本节点。</summary>
+    public required IReadOnlyList<InputPort> Inputs { get; init; }
 
     /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }
@@ -37,9 +37,32 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxExecutions = 100;
 
-    /// <summary>需经契约工具交回的输出端口：Text 与 Signal，未声明即不要求模型交回。</summary>
+    /// <summary>需经契约工具交回的输出端口：Text 与 Signal，未声明即不要求执行交回。</summary>
     public IReadOnlyList<Port> RequiredPorts => Ports.RequiringSubmission(Outputs);
 
     /// <summary>按名字取端口声明，未声明时为空。</summary>
     public Port? FindPort(PortName name) => Outputs.Find(name);
+
+    /// <summary>按名字取输入端口声明，未声明时为空。</summary>
+    public InputPort? FindInput(PortName name) => Inputs.Find(name);
+
+    /// <summary>把静态输入的折叠结果解析成端口到文本的表，宿主值缺失或为空的项不进入结果。</summary>
+    public IReadOnlyDictionary<PortName, string> ResolveStaticTexts(Func<PortName, string?> host)
+    {
+        if (StaticValues is not { Count: > 0 } values)
+        {
+            return new Dictionary<PortName, string>();
+        }
+
+        Dictionary<PortName, string> texts = [];
+        foreach ((PortName port, StaticValue value) in values)
+        {
+            if (value.Resolve(host) is { Length: > 0 } text)
+            {
+                texts[port] = text;
+            }
+        }
+
+        return texts;
+    }
 }

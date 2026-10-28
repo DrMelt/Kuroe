@@ -42,22 +42,6 @@ public sealed class TaskActions(
             return inputErrors;
         }
 
-        // 不启动执行的节点不需要宿主声明；开始直连的派发节点要求声明可解析
-        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
-        {
-            if (graph[edge.Target] is not ExecutableNode target
-                || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
-            {
-                continue;
-            }
-
-            ErrorOr<INodeDeclaration> declaration = _targets.For(target);
-            if (declaration.IsError)
-            {
-                return declaration.ErrorsOrEmptyList;
-            }
-        }
-
         string taskTitle = TaskTitle.Compose(inputs, flow.Model.Name, title);
 
         while (true)
@@ -78,6 +62,22 @@ public sealed class TaskActions(
             if (CheckHostValues(hostInputs, hostValues.Value) is { Count: > 0 } hostErrors)
             {
                 return hostErrors;
+            }
+
+            // 不启动执行的节点不需要宿主声明；开始直连的派发节点在宿主值就绪后再要求声明可解析
+            foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
+            {
+                if (graph[edge.Target] is not ExecutableNode target
+                    || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
+                {
+                    continue;
+                }
+
+                ErrorOr<INodeDeclaration> declaration = _targets.For(target, hostValues.Value);
+                if (declaration.IsError)
+                {
+                    return declaration.ErrorsOrEmptyList;
+                }
             }
 
             WorkTask task = _registry.Add(

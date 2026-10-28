@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Kuroe.Cli.Tests.Support;
+
 using Xunit;
 
 namespace Kuroe.Cli.Tests;

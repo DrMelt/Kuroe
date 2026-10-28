@@ -40,13 +40,13 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Static": true }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "版本",
                       "Kind": "Command",
@@ -61,8 +61,9 @@ public sealed class CommandNodeTests
                       "Kind": "FileWrite",
                       "Path": "{root}/out/version.txt",
                       "Variables": { "root": "基准" },
-                      "Inputs": [{ "Name": "正文" }, { "Name": "基准" }],
-                      "From": [{ "正文": "版本@输出", "基准": "@基准" }]
+                      "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Static": true }],
+                      "Static": { "基准": "@基准" },
+                      "From": [{ "正文": "版本@输出" }]
                     }
                   ]
                 }
@@ -78,8 +79,7 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
               "Nodes": [
                 {
                   "Name": "整体",

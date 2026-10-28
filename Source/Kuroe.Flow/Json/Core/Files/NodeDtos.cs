@@ -41,11 +41,8 @@ public sealed class NodeDto
     /// <summary>容器节点的传入端口绑定：端口名到当前作用域来源的映射。</summary>
     public Dictionary<string, string>? In { get; set; }
 
-    /// <summary>模型选择引用：装配层执行节点写流程模型选择名，节点组容器成员写模型槽位名。</summary>
-    public string? Model { get; set; }
-
-    /// <summary>模型槽位：容器定义写槽位名数组声明，引用节点组写槽位名到本流程模型选择名的对象绑定。</summary>
-    public JsonElement? Models { get; set; }
+    /// <summary>静态端口绑定：目标静态输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 From、In 一致。</summary>
+    public Dictionary<string, string>? Static { get; set; }
 
     /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
     [JsonExtensionData]
@@ -75,6 +72,9 @@ public sealed class PortEntryDto
 
     /// <summary>输入端口的默认值，来源组没有连接该端口时提供内容。</summary>
     public string? Default { get; set; }
+
+    /// <summary>静态端口标记。静态输入只从 Static 绑定或默认值取值，静态输出只供下游 Static 绑定读取。</summary>
+    public bool? Static { get; set; }
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>

@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Node;
 
-/// <summary>输出校验谓词：决定模型产出是否合格。</summary>
+/// <summary>输出校验谓词：决定执行产出是否合格。</summary>
 public enum ValidationPredicate
 {
     /// <summary>产出非空。</summary>
@@ -22,7 +22,7 @@ public enum ValidationPredicate
     Pattern,
 }
 
-/// <summary>执行节点的输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
+/// <summary>执行节点的输出校验：收口时校验执行产出，不通过则节点阻塞待返工。</summary>
 public sealed record OutputValidation(ValidationPredicate Predicate, string? Argument)
 {
     /// <summary>检查输出校验的取值边界。</summary>

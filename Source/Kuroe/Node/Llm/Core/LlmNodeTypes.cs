@@ -10,11 +10,18 @@ public static class LlmNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Llm");
 
-    /// <summary>Llm 类型的静态形状：派发执行，输入与输出端口取文本、上下文与信号，Text 与 Signal 另有 Trigger 版，
-    /// Trigger 版交回时携带是否触发下游的布尔值。</summary>
+    /// <summary>模型名静态输入端口，由宿主在任务启动时给出。</summary>
+    public static PortName ModelPort { get; } = new("MODEL_NAME");
+
+    /// <summary>Llm 类型的静态形状：派发执行，模型是类型声明的静态输入，输入与输出端口取文本、上下文与信号，
+    /// Text 与 Signal 另有 Trigger 版，Trigger 版交回时携带是否触发下游的布尔值。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
+        StaticInputs =
+        [
+            new InputPort(ModelPort, PortTypes.Text, "执行使用的模型名，由宿主在任务启动时给出。", isStatic: true),
+        ],
         InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
         OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
     };

@@ -17,6 +17,9 @@ public sealed record ContainerNode : GraphNode
     /// <summary>命名输出端口到子树内成员端口的映射，编译期解析成成员路径。未声明时为空。</summary>
     public required IReadOnlyDictionary<PortName, NodePort>? PortBindings { get; init; }
 
+    /// <summary>静态输出端口名：静态输出只供下游 Static 绑定读取，不进入 From、版本与就绪。未声明时为空。</summary>
+    public IReadOnlySet<PortName>? StaticOutputs { get; init; }
+
     /// <summary>输入侧方案：一组绑定覆盖全部直接子节点。</summary>
     public NodeInputPlan Plan => NodeInputPlan.Of(Children);
 }

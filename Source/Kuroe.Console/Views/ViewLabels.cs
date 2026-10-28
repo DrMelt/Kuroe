@@ -1,7 +1,6 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Pending;
 using Kuroe.Presentation;
@@ -88,10 +87,6 @@ internal static class ViewLabels
     public static string Elapsed(TimeSpan span) => InfoLabels.Elapsed(span);
 
     public static string Clock(DateTimeOffset? at) => InfoLabels.Clock(at);
-
-    /// <summary>模型选择的展示：固定模型给模型名，运行时模型给出标记。</summary>
-    public static string ModelLabel(ModelDefinition model) =>
-        model.Runtime ? "运行时" : model.Model ?? model.Name.Value;
 
     /// <summary>把多行文本压成一行，超过长度时截断并加省略号。</summary>
     public static string OneLine(string text, int limit)

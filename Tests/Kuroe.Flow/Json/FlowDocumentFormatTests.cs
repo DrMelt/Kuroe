@@ -23,17 +23,18 @@ public sealed class FlowDocumentFormatTests
         NodeReferenceDocument reference = Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes!));
         Assert.Equal("副本", reference.Label);
         Assert.Equal("计划", reference.Use);
-        Assert.Equal("执行者", reference.Model);
+        Assert.Equal("Start@MODEL_NAME", reference.Static!["MODEL_NAME"]);
     }
 
     [Fact]
-    public void Write_keeps_parameters_and_runtime_model()
+    public void Write_keeps_parameters_and_static_model()
     {
         FlowDocument document = Ok(Format.Read(Flow));
         string text = Ok(Format.Write(document));
 
         Assert.Contains("\"Prompt\": \"写出计划\"", text);
-        Assert.Contains("\"Runtime\": true", text);
+        Assert.Contains("\"Static\"", text);
+        Assert.Contains("\"MODEL_NAME\": \"Start@MODEL_NAME\"", text);
         Assert.Contains("\"Label\": \"副本\"", text);
         Assert.DoesNotContain("\": null", text);
 
@@ -91,11 +92,10 @@ public sealed class FlowDocumentFormatTests
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" }, { "Name": "运行时", "Runtime": true } ],
-              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" } ] },
+              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true } ] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                  { "Label": "副本", "Use": "计划", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
+                  { "Label": "副本", "Use": "计划", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
                 ] }
               ]
             }

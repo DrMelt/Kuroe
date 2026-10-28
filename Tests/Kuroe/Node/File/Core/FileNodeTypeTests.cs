@@ -81,15 +81,13 @@ public sealed class FileNodeTypeTests
     {
         NodeSpec node = ReadNode() with
         {
-            Model = new ModelRef("执行者"),
             Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
         };
 
         string[] errors = [.. Failures(ReadType, node)];
 
-        Assert.Equal(2, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("文件读取节点不启动执行，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("文件读取节点不启动执行，不能声明 Validate。"));
+        Assert.Single(errors);
+        Assert.EndsWith("文件读取节点不启动执行，不能声明 Validate。", errors[0]);
     }
 
     [Fact]
@@ -97,15 +95,13 @@ public sealed class FileNodeTypeTests
     {
         NodeSpec node = WriteNode() with
         {
-            Model = new ModelRef("执行者"),
             Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
         };
 
         string[] errors = [.. Failures(WriteType, node)];
 
-        Assert.Equal(2, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("文件写入节点不启动执行，不能声明模型选择。"));
-        Assert.Contains(errors, error => error.EndsWith("文件写入节点不启动执行，不能声明 Validate。"));
+        Assert.Single(errors);
+        Assert.EndsWith("文件写入节点不启动执行，不能声明 Validate。", errors[0]);
     }
 
     [Fact]

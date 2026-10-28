@@ -12,11 +12,11 @@ namespace Kuroe.Flow.Compiler.Validation;
 /// 一条流程内的错误一次给全。</summary>
 internal static class FlowRules
 {
-    /// <summary>校验一条流程并给出执行视图：模型规则、图编译与图规则按固定顺序执行。类型规则由节点持有的类型描述承担。</summary>
+    /// <summary>校验一条流程并给出执行视图：流程层规则、图编译与图规则按固定顺序执行。类型规则由节点持有的类型描述承担。</summary>
     internal static ErrorOr<NodeGraph> ValidateAndCompile(FlowDefinition flow)
     {
         List<Error> errors = [];
-        ValidateModel(flow, errors);
+        ValidateFlow(flow, errors);
         if (errors.Count > 0)
         {
             return errors;
@@ -34,39 +34,19 @@ internal static class FlowRules
         return errors.Count > 0 ? errors : compiled.Value;
     }
 
-    /// <summary>模型层规则：开始入口、模型选择与节点树。引用解析与图规则在具体图上判定。</summary>
-    internal static void ValidateModel(FlowDefinition flow, List<Error> errors)
+    /// <summary>流程层规则：开始入口与节点树。引用解析、静态折叠与图规则在具体图上判定。</summary>
+    internal static void ValidateFlow(FlowDefinition flow, List<Error> errors)
     {
-        var modelNames = new HashSet<ModelRef>();
-        foreach (ModelRef name in flow.Models.Select(model => model.Name))
-        {
-            if (string.IsNullOrWhiteSpace(name.Value))
-            {
-                errors.Add(FlowErrors.Model(flow.Name.Value, "(未命名)", "模型选择名不能为空。"));
-            }
-            else if (!modelNames.Add(name))
-            {
-                errors.Add(FlowErrors.Model(flow.Name.Value, name.Value, "模型选择名重复。"));
-            }
-        }
-
-        foreach (ModelDefinition model in flow.Models)
-        {
-            if (model.Runtime && model.Model is not null)
-            {
-                errors.Add(FlowErrors.Model(flow.Name.Value, model.Name.Value, "运行时模型与固定模型不能同时声明。"));
-            }
-        }
-
         CheckStart(flow, errors);
-        CheckTree(flow.RootNode, modelNames, NodeScope.Flow(flow.Name.Value), errors);
+        CheckTree(flow.RootNode, NodeScope.Flow(flow.Name.Value), errors);
     }
 
     /// <summary>图层规则：环、可达性与边来源。</summary>
     internal static void ValidateGraph(NodeGraph graph, NodeScope scope, List<Error> errors) =>
         CheckShape(graph, scope, errors);
 
-    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入，其余端口必须带 Value。宿主输入只能绑定已声明且不带 Value 的端口。</summary>
+    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入；静态端口必须有 Value 或宿主输入绑定。
+    /// 宿主输入只能绑定已声明且不带 Value 的端口。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
@@ -94,6 +74,12 @@ internal static class FlowRules
             if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
+            }
+
+            if (port.IsStatic && port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value,
+                    $"静态开始端口 {port.Name} 必须有 Value 或宿主输入绑定。"));
             }
         }
 
@@ -140,10 +126,9 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>递归校验标识、容器形状、模型选择与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
+    /// <summary>递归校验标识、容器形状、静态绑定与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
     private static void CheckTree(
         NodeSpec node,
-        HashSet<ModelRef> modelNames,
         NodeScope scope,
         List<Error> errors)
     {
@@ -169,7 +154,7 @@ internal static class FlowRules
             {
                 foreach (NodeSpec child in children)
                 {
-                    CheckTree(child, modelNames, scope, errors);
+                    CheckTree(child, scope, errors);
                 }
             }
         }
@@ -186,19 +171,6 @@ internal static class FlowRules
             }
             else if (shape is { Organizes: false })
             {
-                // 不派发执行的类型不需要模型选择
-                if (shape.DispatchesExecutions)
-                {
-                    if (node.Model is not { } model)
-                    {
-                        errors.Add(scope.Node(node.Label.Value, "执行节点必须声明模型选择。"));
-                    }
-                    else if (!modelNames.Contains(model))
-                    {
-                        errors.Add(scope.Node(node.Label.Value, $"引用的模型选择 {model.Value} 不存在。"));
-                    }
-                }
-
                 definition!.Validate(node, scope, errors.Add);
             }
         }
@@ -216,11 +188,13 @@ internal static class FlowRules
             return;
         }
 
-        var declared = new HashSet<PortName>([.. node.Inputs.Select(port => port.Name)]);
-        var required = new HashSet<PortName>([.. node.Inputs.Where(port => port.Default is null).Select(port => port.Name)]);
-        if (declared.Count > 0 && node.From.Count == 0)
+        IReadOnlyList<InputPort> inputs = node.EffectiveInputs;
+        var required = new HashSet<PortName>([.. inputs
+            .Where(port => !port.IsStatic && port.Default is null)
+            .Select(port => port.Name)]);
+        if (required.Count > 0 && node.From.Count == 0)
         {
-            errors.Add(scope.Node(node.Label.Value, "声明输入端口的节点必须至少给出一组 From 启动条件。"));
+            errors.Add(scope.Node(node.Label.Value, "声明动态输入端口的节点必须至少给出一组 From 启动条件。"));
         }
 
         foreach (FromGroup group in node.From)
@@ -228,7 +202,12 @@ internal static class FlowRules
             var covered = new HashSet<PortName>();
             foreach (PortName input in group.Links.Select(link => link.Input))
             {
-                if (declared.Count > 0 && !declared.Contains(input))
+                if (node.FindInput(input) is { IsStatic: true })
+                {
+                    errors.Add(scope.Node(node.Label.Value,
+                        $"From 不能连接静态输入端口 {input}，静态输入用 Static 绑定。"));
+                }
+                else if (node.Inputs.Count > 0 && node.FindInput(input) is null)
                 {
                     errors.Add(scope.Node(node.Label.Value,
                         $"From 连接的目标输入端口 {input} 没有在节点上声明。"));
@@ -262,17 +241,35 @@ internal static class FlowRules
 
             foreach ((PortName port, NodePort target) in bindings)
             {
-                if (graph[target.Node] is not ExecutableNode member)
-                {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不是执行节点，无法取产出。"));
-                    continue;
-                }
-
                 if (!target.Node.IsUnder(container.Path))
                 {
                     errors.Add(scope.Node(container.Path.Value,
                         $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不在容器 {container.Path} 的子树里。"));
+                    continue;
+                }
+
+                GraphNode bound = graph[target.Node];
+                if (container.StaticOutputs?.Contains(port) == true)
+                {
+                    bool valid = bound switch
+                    {
+                        ExecutableNode executable => executable.FindInput(target.Port) is { IsStatic: true },
+                        ContainerNode nested => nested.StaticOutputs?.Contains(target.Port) == true,
+                        _ => false,
+                    };
+                    if (!valid)
+                    {
+                        errors.Add(scope.Node(container.Path.Value,
+                            $"静态输出端口 {port.Value} 的绑定目标 {target.Node} 的 {target.Port.Value} 不是静态端口。"));
+                    }
+
+                    continue;
+                }
+
+                if (bound is not ExecutableNode member)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不是执行节点，无法取产出。"));
                     continue;
                 }
 
@@ -293,9 +290,14 @@ internal static class FlowRules
         // 开始是流程级来源，不受容器封装限制
         if (source is StartNode start)
         {
-            if (start.FindPort(edge.SourcePort) is null)
+            if (start.FindPort(edge.SourcePort) is not { } port)
             {
                 errors.Add(scope.Node(target.Path.Value, $"节点 {StartNode.ReservedLabel} 没有输出端口 {edge.SourcePort.Value}。"));
+            }
+            else if (port.IsStatic)
+            {
+                errors.Add(scope.Node(target.Path.Value,
+                    $"静态开始端口 {edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
             }
 
             return;
@@ -307,6 +309,12 @@ internal static class FlowRules
             if (container.PortBindings?.ContainsKey(edge.SourcePort) != true)
             {
                 errors.Add(scope.Node(target.Path.Value, $"容器 {container.Path} 没有输出端口 {edge.SourcePort.Value}。"));
+            }
+
+            if (container.StaticOutputs?.Contains(edge.SourcePort) == true)
+            {
+                errors.Add(scope.Node(target.Path.Value,
+                    $"静态输出端口 {edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
             }
 
             if (edge.Type == PortTypes.Context)

@@ -1,11 +1,9 @@
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
-using Kuroe.Tool.Json;
 using Kuroe.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +43,11 @@ public sealed class ToolFactoryTests
                 new InputValue(new PortName("任务路径"), Value("任务值")),
                 new InputValue(new PortName("项目路径"), Value("项目值")),
             ],
+            InputPorts =
+            [
+                new InputPort(new PortName("任务路径"), PortTypes.Text),
+                new InputPort(new PortName("项目路径"), PortTypes.Text),
+            ],
         };
 
         IReadOnlyList<ITool> tools = new KuroeToolFactory([source], "C:/workspace")
@@ -56,6 +59,53 @@ public sealed class ToolFactoryTests
 
         Assert.Equal("任务值", parent.Binding.Variable("root"));
         Assert.Equal("项目值", child.Binding.Variable("project"));
+    }
+
+    [Fact]
+    public void A_static_port_reads_only_the_static_value()
+    {
+        CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
+        ExecutionInput input = ToolInput(staticPort: true, "任务值", "动态值");
+
+        CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
+            new KuroeToolFactory([source], "C:/workspace").Create(new ExecutionId(1), input)));
+
+        Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
+    }
+
+    [Fact]
+    public void A_dynamic_port_reads_only_the_input_value()
+    {
+        CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
+        ExecutionInput input = ToolInput(staticPort: false, "静态值", "动态值");
+
+        CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
+            new KuroeToolFactory([source], "C:/workspace").Create(new ExecutionId(1), input)));
+
+        Assert.Equal("动态值", tool.Binding.Variable(PathVariables.RootName));
+    }
+
+    private static ExecutionInput ToolInput(bool staticPort, string staticText, string inputText)
+    {
+        PortName port = new("任务路径");
+        LlmParameters parameters = new()
+        {
+            Tools = [new ToolPath("group")],
+            ToolPorts = new Dictionary<string, IReadOnlyDictionary<string, string>>
+            {
+                ["group"] = new Dictionary<string, string> { [PathVariables.RootName] = port.Value },
+            },
+        };
+
+        return new ExecutionInput
+        {
+            Task = new TaskId(1),
+            Node = NodePath.Of("流程", "节点"),
+            Type = new LlmNodeType(parameters),
+            Inputs = [new InputValue(port, Value(inputText))],
+            InputPorts = [new InputPort(port, PortTypes.Text, isStatic: staticPort)],
+            StaticTexts = new Dictionary<PortName, string> { [port] = staticText },
+        };
     }
 
     private static ContextValue Value(string text) =>

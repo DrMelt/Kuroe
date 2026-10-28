@@ -31,7 +31,10 @@ internal static class ExecutionInputBuilder
 
         foreach (InputPort port in node.Executable.Inputs)
         {
-            if (inputs.Connected(port.Name) || port.Type != PortTypes.Text || port.Default is not { Length: > 0 } text)
+            if (port.IsStatic
+                || inputs.Connected(port.Name)
+                || port.Type != PortTypes.Text
+                || port.Default is not { Length: > 0 } text)
             {
                 continue;
             }
@@ -52,6 +55,8 @@ internal static class ExecutionInputBuilder
             Declaration = declaration,
             ExecutionCount = node.Executions + 1,
             Inputs = values,
+            InputPorts = node.Executable.Inputs,
+            StaticTexts = inputs.StaticTexts,
             OutputPorts = node.Executable.Outputs,
         };
     }

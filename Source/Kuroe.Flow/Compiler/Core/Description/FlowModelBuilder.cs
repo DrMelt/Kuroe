@@ -66,15 +66,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     private ErrorOr<FlowDefinition> BuildFlow(FlowName name, FlowDocumentFlow flow, List<Error> errors)
     {
         NodeScope scope = NodeScope.Flow(name.Value);
-        List<ModelDefinition> models =
-        [
-            .. flow.Models.Select(model => new ModelDefinition
-            {
-                Name = new ModelRef(model.Name),
-                Model = string.IsNullOrWhiteSpace(model.Model) ? null : model.Model.Trim(),
-                Runtime = model.Runtime,
-            }),
-        ];
 
         ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(flow.StartOutputs, scope, StartNode.ReservedLabel.Value, allowValue: true);
         if (startOutputs.IsError)
@@ -102,7 +93,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             hostStartInputs[new PortName(port)] = input;
         }
 
-        return new FlowDefinition(name, flow.Description, models, startOutputs.Value, hostStartInputs, root.Value);
+        return new FlowDefinition(name, flow.Description, startOutputs.Value, hostStartInputs, root.Value);
     }
 
     private ErrorOr<NodeSpec> ToNode(NodeDocument document, NodeScope scope, List<Error> errors) => document switch
@@ -133,10 +124,10 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(bindings.ErrorsOrEmptyList);
         }
 
-        ErrorOr<Dictionary<ModelRef, ModelRef>?> models = ToModelBindings(document.Models, scope, label);
-        if (models.IsError)
+        ErrorOr<Dictionary<PortName, PortRef>?> staticBindings = ToBindings(document.Static);
+        if (staticBindings.IsError)
         {
-            errors.AddRange(models.ErrorsOrEmptyList);
+            errors.AddRange(staticBindings.ErrorsOrEmptyList);
         }
 
         if (errors.Count > 0)
@@ -150,8 +141,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             Validate = validation.Value,
             MaxExecutions = document.MaxExecutions,
             In = bindings.Value,
-            Model = ToModel(document.Model),
-            Models = models.Value,
+            Static = staticBindings.Value,
         };
     }
 
@@ -217,6 +207,12 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(bindings.ErrorsOrEmptyList);
         }
 
+        ErrorOr<Dictionary<PortName, PortRef>?> staticBindings = ToBindings(document.Static);
+        if (staticBindings.IsError)
+        {
+            errors.AddRange(staticBindings.ErrorsOrEmptyList);
+        }
+
         INodeType? type = ParameterDocumentReader.Read(description, document.Parameters, scope, new NodeLabel(label), errors.Add);
 
         List<NodeSpec>? children = null;
@@ -248,8 +244,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             ContainerOutputs = containerOutputs.Value,
             From = from.Value,
             In = bindings.Value,
-            Model = ToModel(document.Model),
-            ModelSlots = document.ModelSlots is { Count: > 0 } slots ? [.. slots.Select(slot => new ModelRef(slot))] : null,
+            Static = staticBindings.Value,
             Nodes = children,
             Validate = validation.Value,
             MaxExecutions = shape.Organizes ? document.MaxExecutions : null,
@@ -259,7 +254,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         };
     }
 
-    /// <summary>检查文档字段与节点形状的互斥：库定义不写输入绑定，容器不写执行字段，模型槽位只属于节点库容器定义。</summary>
+    /// <summary>检查文档字段与节点形状的互斥：库定义不写输入绑定，容器不写执行字段。</summary>
     private static void CheckDocumentShape(
         NodeDefinitionDocument document,
         NodeTypeShape shape,
@@ -280,11 +275,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 Fail("容器节点不是执行节点，不支持 From。");
             }
 
-            if (document.Model is not null)
-            {
-                Fail("容器节点不是执行节点，不支持模型选择。");
-            }
-
             if (document.In is not null && scope.IsLibrary)
             {
                 Fail("库容器定义不接线，不能声明输入端口绑定。");
@@ -293,17 +283,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             if (document.Validate is not null)
             {
                 Fail("容器节点不是执行节点，不支持 Validate。");
-            }
-
-            if (document.HasModelBindings)
-            {
-                Fail(scope.IsLibrary
-                    ? "容器定义的模型槽位写槽位名数组。"
-                    : "内联容器不声明模型槽位与模型绑定，槽位声明只属于节点库容器定义。");
-            }
-            else if (document.ModelSlots is not null && !scope.IsLibrary)
-            {
-                Fail("内联容器不声明模型槽位与模型绑定，槽位声明只属于节点库容器定义。");
             }
 
             return;
@@ -317,11 +296,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         if (document.In is not null)
         {
             Fail("执行节点不写输入端口绑定，接线一律经 From。");
-        }
-
-        if (document.HasModelBindings || document.ModelSlots is not null)
-        {
-            Fail("执行节点不声明模型槽位与模型绑定，槽位声明只属于容器定义。");
         }
     }
 
@@ -341,7 +315,12 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
-            result.Add(new InputPort(name.Value, entry.Type ?? PortTypes.Text, ToDescription(entry.Description), entry.Default));
+            result.Add(new InputPort(
+                name.Value,
+                entry.Type ?? PortTypes.Text,
+                ToDescription(entry.Description),
+                entry.Default,
+                entry.IsStatic));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -377,7 +356,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     }
 
     private static IReadOnlyList<Port> ForwardedPorts(IReadOnlyList<InputPort> inputs) =>
-        [.. inputs.Select(input => new Port(input.Name, input.Type, input.Description))];
+        [.. inputs.Where(input => !input.IsStatic)
+            .Select(input => new Port(input.Name, input.Type, input.Description))];
 
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(
         IReadOnlyList<PortDocument> entries,
@@ -414,7 +394,18 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
-            result.Add(new Port(name.Value, type, ToDescription(entry.Description), allowValue ? entry.Value : null));
+            if (!allowValue && entry.IsStatic)
+            {
+                errors.Add(scope.Node(nodeLabel, "执行节点输出端口不能是静态端口，静态端口只属于开始端口与容器输出。"));
+                continue;
+            }
+
+            result.Add(new Port(
+                name.Value,
+                type,
+                ToDescription(entry.Description),
+                allowValue ? entry.Value : null,
+                entry.IsStatic));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -460,7 +451,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
-            if (!result.TryAdd(name.Value, new ContainerOutput(reference.Value, ToDescription(entry.Description))))
+            if (!result.TryAdd(name.Value,
+                new ContainerOutput(reference.Value, ToDescription(entry.Description), entry.IsStatic)))
             {
                 errors.Add(scope.Node(nodeLabel, $"容器输出端口 {name.Value.Value} 重复。"));
             }
@@ -569,32 +561,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return errors.Count > 0 ? errors : result;
     }
 
-    private static ErrorOr<Dictionary<ModelRef, ModelRef>?> ToModelBindings(
-        IReadOnlyDictionary<string, string>? models,
-        NodeScope scope,
-        string nodeLabel)
-    {
-        if (models is not { Count: > 0 })
-        {
-            return (Dictionary<ModelRef, ModelRef>?)null;
-        }
-
-        Dictionary<ModelRef, ModelRef> result = [];
-        List<Error> errors = [];
-        foreach ((string key, string value) in models)
-        {
-            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
-            {
-                errors.Add(scope.Node(nodeLabel, "模型绑定键与值都不能为空。"));
-                continue;
-            }
-
-            result[new ModelRef(key)] = new ModelRef(value);
-        }
-
-        return errors.Count > 0 ? errors : result;
-    }
-
     private static ErrorOr<OutputValidation?> ToValidation(ValidationDocument? validation)
     {
         if (validation is null)
@@ -615,9 +581,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             : Error.Validation(FlowErrorCodes.FlowNode,
                 $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {validation.Predicate}。");
     }
-
-    private static ModelRef? ToModel(string? model) =>
-        string.IsNullOrWhiteSpace(model) ? null : new ModelRef(model);
 
     private static string? ToDescription(string? description) =>
         string.IsNullOrWhiteSpace(description) ? null : description.Trim();

@@ -9,19 +9,19 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                { "Name": "制定计划", "Kind": "Llm", "Model": "规划者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                  "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Name": "审阅", "Kind": "Approval", "Question": "确认计划", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
-                { "Name": "分配执行", "Kind": "Llm", "Model": "执行者", "Tools": ["GetLocalTime"], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] }
+                { "Name": "分配执行", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] }
                   ]
                 }
               ]
@@ -36,15 +36,17 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "用户输入", "Kind": "Input", "Question": "请补充需要的背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "用户输入@回答" } ] }
                   ]
                 }
               ]
@@ -59,13 +61,15 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "输入分支",
                       "Kind": "Container",
@@ -78,12 +82,12 @@ public static class TestFlows
                       "Name": "审查分支",
                       "Kind": "Container",
                       "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }],
-                      "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
-                        { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+                      "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                        { "Name": "准备", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                       ]
                     },
                     { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论" }], "From": [ { "结论": "审查分支@结论" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "输入分支@回答", "结论": "审阅@结论" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "输入分支@回答", "结论": "审阅@结论" } ] }
                   ]
                 }
               ]
@@ -120,16 +124,18 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "准备", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "结论": "准备@结论" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "回答": "用户输入@回答" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "用户输入@回答" } ] }
                   ]
                 }
               ]
@@ -144,15 +150,17 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "收话", "Kind": "Input", "Question": "请说", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
-                    { "Name": "回话", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
+                    { "Name": "回话", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
                   ]
                 }
               ]
@@ -166,16 +174,18 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "分析", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }], "Prompt": "给出结论与理由", "From": [ { "目标": "@目标" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "分析@结论" } ] },
-                    { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "理由": "分析@理由" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "分析", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }], "Prompt": "给出结论与理由", "From": [ { "目标": "@目标" } ] },
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "分析@结论" } ] },
+                    { "Name": "复盘", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "理由": "分析@理由" } ] }
                   ]
                 }
               ]
@@ -190,15 +200,17 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "动手", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "完成", "Type": "Signal" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "收尾", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "标记" }], "From": [ { "标记": "动手@完成" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "动手", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "完成", "Type": "Signal" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "收尾", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "标记" }], "From": [ { "标记": "动手@完成" } ] }
                   ]
                 }
               ]
@@ -213,15 +225,17 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "准备", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Inputs": [{ "Name": "结论" }, { "Name": "上下文", "Type": "Context" }], "From": [ { "结论": "准备@结论", "上下文": "准备@结论" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "准备", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论" }, { "Name": "上下文", "Type": "Context" }], "From": [ { "结论": "准备@结论", "上下文": "准备@结论" } ] }
                   ]
                 }
               ]
@@ -236,19 +250,18 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [
-                { "Name": "规划者", "Model": "fake" },
-                { "Name": "执行者", "Model": "fake" }
-              ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "制定", "Kind": "Llm", "Model": "规划者", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "计划": "制定@计划" } ] },
-                    { "Name": "汇报", "Kind": "Llm", "Model": "执行者", "From": [ { "上下文": "实施@上下文" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "制定", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "计划": "制定@计划" } ] },
+                    { "Name": "汇报", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "上下文": "实施@上下文" } ] }
                   ]
                 }
               ]
@@ -263,14 +276,16 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "实施", "Kind": "Llm", "Model": "执行者", "SystemPrompt": ["固定背景一", "固定背景二"], "From": [ { "目标": "@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "SystemPrompt": ["固定背景一", "固定背景二"], "From": [ { "目标": "@目标" } ] }
                   ]
                 }
               ]
@@ -287,14 +302,13 @@ public static class TestFlows
             {
               "Name": "交付",
               "Kind": "Container",
-              "Models": ["执行者"],
-              "Inputs": [{ "Name": "计划" }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
               "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }, { "Name": "理由", "Ref": "实施@理由" }],
               "Nodes": [
                 {
                   "Label": "实施",
                   "Use": "允许工具",
-                  "Model": "执行者",
+                  "Static": { "MODEL_NAME": "@MODEL_NAME" },
                   "From": [ { "计划": "@计划" } ]
                 }
               ]
@@ -303,21 +317,22 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Model": "执行者", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Label": "交付",
                       "Use": "交付",
-                      "In": { "计划": "制定计划@计划" },
-                      "Models": { "执行者": "执行者" }
+                      "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" }
                     },
-                    { "Name": "复盘", "Kind": "Llm", "Model": "执行者", "From": [ { "结论": "交付@结论" } ] }
+                    { "Name": "复盘", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "交付@结论" } ] }
                   ]
                 }
               ]

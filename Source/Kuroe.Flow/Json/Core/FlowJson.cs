@@ -17,7 +17,6 @@ namespace Kuroe.Flow.Json;
 [JsonSerializable(typeof(FlowFileDto))]
 [JsonSerializable(typeof(PortEntryDto))]
 [JsonSerializable(typeof(string))]
-[JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class FlowJson : JsonSerializerContext
 {

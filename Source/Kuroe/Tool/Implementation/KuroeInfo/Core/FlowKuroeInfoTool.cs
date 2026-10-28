@@ -76,7 +76,7 @@ public sealed class FlowKuroeInfoTool : ITool
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
         IEnumerable<Port> startPorts = found.Value.StartOutputs;
-        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => StartPort(port, found.Value.HostStartInputs)))}");
+        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => port.StartLabel(found.Value.HostStartInputs)))}");
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {
@@ -105,9 +105,10 @@ public sealed class FlowKuroeInfoTool : ITool
             else if (node.Nodes is { Count: > 0 })
             {
                 text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{node.EffectiveKind.Value}节点）");
-                if (node.Inputs.Count > 0)
+                IReadOnlyList<InputPort> ports = node.EffectiveInputs;
+                if (ports.Count > 0)
                 {
-                    text.AppendLine($"    传入端口 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+                    text.AppendLine($"    传入端口 {string.Join("、", ports.Select(port => port.Label()))}");
                 }
 
                 if (node.ContainerOutputs is { Count: > 0 } outs)
@@ -120,18 +121,15 @@ public sealed class FlowKuroeInfoTool : ITool
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>展开节点上的模型引用，未绑定为空。</summary>
-    private static string NodeModel(NodeSpec node) => node.Model is { } model ? model.Value : "未绑定";
-
-    /// <summary>开始端口的展示：绑定宿主输入时写宿主输入名，带固定值时写出值。</summary>
-    private static string StartPort(Port port, IReadOnlyDictionary<PortName, string> hostInputs)
+    /// <summary>展开节点上的模型静态端口绑定，未绑定时给未绑定。</summary>
+    private static string NodeModel(NodeSpec node)
     {
-        if (hostInputs.TryGetValue(port.Name, out string? input))
+        if (node.Static is { } bindings && bindings.TryGetValue(LlmNodeTypes.ModelPort, out PortRef reference))
         {
-            return $"{port.Name}←{input}";
+            return reference.Display;
         }
 
-        return port.Value is { Length: > 0 } value ? $"{port.Name}={value}" : port.Name.Value;
+        return node.FindInput(LlmNodeTypes.ModelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
     }
 
     /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
@@ -144,9 +142,10 @@ public sealed class FlowKuroeInfoTool : ITool
             parts.Add($"工具 {string.Join("、", tools)}");
         }
 
-        if (node.Inputs.Count > 0)
+        IReadOnlyList<InputPort> inputs = [.. node.EffectiveInputs.Where(port => !port.IsStatic)];
+        if (inputs.Count > 0)
         {
-            parts.Add($"输入 {string.Join("、", node.Inputs.Select(port => port.Label()))}");
+            parts.Add($"输入 {string.Join("、", inputs.Select(port => port.Label()))}");
         }
 
         if (node.From.Count > 0)

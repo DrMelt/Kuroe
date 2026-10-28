@@ -1,5 +1,6 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Tests.Support;
+
 using Xunit;
 
 namespace Kuroe.Cli.Tests;
@@ -75,10 +76,9 @@ public sealed class FlowCommandTests
           "Flows": [
             {
               "Name": "可运行",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
               "Nodes": [
-                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
               ]
             },
             {

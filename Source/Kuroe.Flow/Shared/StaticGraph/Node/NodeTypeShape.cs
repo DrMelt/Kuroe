@@ -21,6 +21,9 @@ public sealed record NodeTypeShape
     /// <summary>不需环外来源即可在环内启动，作周期外源。</summary>
     public bool StartsUnaided { get; init; }
 
+    /// <summary>类型自行声明的静态输入端口，作者无需在 Inputs 中重复声明。</summary>
+    public IReadOnlyList<InputPort> StaticInputs { get; init; } = [];
+
     /// <summary>允许的输入端口类型。</summary>
     public IReadOnlyList<PortType> InputTypes { get; init; } = [];
 

@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Node.Llm;
 using Kuroe.Presentation;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
@@ -85,13 +86,13 @@ internal sealed class FlowBrowser(
             Blocks.Fields(
                 ("执行节点", new Text(compiled.Graph.TotalExecutables.ToString())),
                 ("容器", new Text(compiled.Graph.Containers.Count.ToString())),
-                ("模型选择", new Text(compiled.Model.Models.Count.ToString())),
                 ("说明", new Text(
                     compiled.Model.Description is { Length: > 0 } description ? description : "—",
                     Styles.Hint)))));
 
         terminal.NewLine();
-        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(), Line));
+        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(),
+            node => Line(node, compiled.Model.HostStartInputs)));
     }
 
     /// <summary>从文件导入流程与节点库，同名覆盖。</summary>
@@ -140,7 +141,6 @@ internal sealed class FlowBrowser(
             ("流程", false),
             ("执行节点", false),
             ("容器", false),
-            ("模型选择", false),
             ("说明", true));
 
         foreach (FlowDefinition flow in all)
@@ -150,28 +150,27 @@ internal sealed class FlowBrowser(
                 new Text(flow.Name.Value, Styles.Key),
                 new Text(executables.ToString()),
                 new Text(containers.ToString()),
-                new Text(flow.Models.Count.ToString()),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
         terminal.Write(Blocks.Section(BoxKind.View, $"流程 {all.Count} 条", table));
     }
 
-    private static Paragraph Line(GraphNode node) => node switch
+    private static Paragraph Line(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
     {
-        StartNode start => StartLine(start),
+        StartNode start => StartLine(start, hostInputs),
         ContainerNode container => ContainerLine(container),
-        ExecutableNode executable => ExecutableLine(executable),
+        ExecutableNode executable => ExecutableLine(executable, hostInputs),
         _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
     };
 
-    private static Paragraph StartLine(StartNode start)
+    private static Paragraph StartLine(StartNode start, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
         IReadOnlyList<Port> ports = start.Outputs;
         if (ports.Count > 0)
         {
-            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel()))}", Styles.Hint);
+            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel(hostInputs)))}", Styles.Hint);
         }
 
         return line.Build();
@@ -182,23 +181,35 @@ internal sealed class FlowBrowser(
         ViewLine line = new ViewLine().Add(container.Label.Value, Styles.Key).Add("容器", Styles.Hint);
         if (container.PortBindings is { Count: > 0 } bindings)
         {
-            line.Add($"端口 {string.Join('、', bindings.Keys.Select(port => port.Value))}", Styles.Hint);
+            string[] dynamicPorts = [.. bindings.Keys
+                .Where(port => container.StaticOutputs?.Contains(port) != true)
+                .Select(port => port.Value)];
+            if (dynamicPorts.Length > 0)
+            {
+                line.Add($"端口 {string.Join('、', dynamicPorts)}", Styles.Hint);
+            }
+        }
+
+        if (container.StaticOutputs is { Count: > 0 } statics)
+        {
+            line.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}", Styles.Hint);
         }
 
         return line.Build();
     }
 
-    private static Paragraph ExecutableLine(ExecutableNode executable)
+    private static Paragraph ExecutableLine(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         ViewLine line = new ViewLine().Add(executable.Label.Value, Styles.Key).Add(executable.Kind.Value, Styles.Hint);
-        if (executable.Model is { } model)
+        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
         {
-            line.Add($"模型 {ViewLabels.ModelLabel(model)}", Styles.Hint);
+            line.Add($"模型 {model.StaticLabel(hostInputs: hostInputs)}", Styles.Hint);
         }
 
-        if (executable.Inputs.Count > 0)
+        IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];
+        if (inputs.Count > 0)
         {
-            line.Add($"输入 {string.Join('、', executable.Inputs.Select(port => port.Label()))}", Styles.Hint);
+            line.Add($"输入 {string.Join('、', inputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
         if (executable.Outputs.Count > 0)

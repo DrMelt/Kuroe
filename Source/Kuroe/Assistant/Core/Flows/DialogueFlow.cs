@@ -3,8 +3,10 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
+using Kuroe.Workflows.Tasks;
 
 namespace Kuroe.Assistant.Flows;
 
@@ -17,16 +19,13 @@ internal static class DialogueFlow
     /// <summary>开始入口的输出端口名：任务的初始输入由此进入流程。</summary>
     internal static PortName StartPort { get; } = new("目标");
 
-    /// <summary>运行时模型选择名：执行时取宿主当前选中的模型。</summary>
-    internal static ModelRef RuntimeModel { get; } = new("运行时");
-
     /// <summary>收话节点的节点名，环的挂点。</summary>
     internal static NodeName InputNodeName { get; } = new("收话");
 
     /// <summary>收话节点的标签。</summary>
     internal static NodeLabel InputNodeLabel { get; } = new(InputNodeName.Value);
 
-    /// <summary>回话节点的节点名，面向运行时模型的一问一答。</summary>
+    /// <summary>回话节点的节点名，面向任务模型的一问一答。</summary>
     internal static NodeName ReplyNodeName { get; } = new("回话");
 
     /// <summary>回话节点的标签。</summary>
@@ -62,21 +61,28 @@ internal static class DialogueFlow
         $"使用「{language}」语言母语者语言风格回答。",
     ];
 
-    /// <summary>内置对话流程：回话面向运行时模型解析，随模型选择切换即时生效。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
+    /// <summary>内置对话流程：回话使用宿主在对话任务启动时给出的模型。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
     internal static FlowDocument Build(string language) => new(
         [],
         [
             new FlowDocumentFlow(
                 Name.Value,
                 "内置对话：回答用户的每轮输入",
-                [new ModelDocument(RuntimeModel.Value, null, Runtime: true)],
                 [
                     new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。"),
-                    new PortDocument(WorkspacePort.Value, PortTypes.Text, "工作区根目录，由宿主给出。"),
+                    new PortDocument(WorkspacePort.Value, PortTypes.Text, "工作区根目录，由宿主给出。", null, null, true),
+                    new PortDocument(
+                        LlmNodeTypes.ModelPort.Value,
+                        PortTypes.Text,
+                        "执行使用的模型名，由宿主在任务启动时给出。",
+                        null,
+                        null,
+                        true),
                 ],
                 new Dictionary<string, string>
                 {
-                    [WorkspacePort.Value] = "WORKSPACE_PATH",
+                    [WorkspacePort.Value] = StartSources.Workspace,
+                    [LlmNodeTypes.ModelPort.Value] = StartSources.Model,
                 },
                 new NodeDefinitionDocument
                 {
@@ -85,12 +91,14 @@ internal static class DialogueFlow
                     Inputs =
                     [
                         new InputPortDocument(StartPort.Value, PortTypes.Text),
-                        new InputPortDocument(WorkspacePort.Value, PortTypes.Text),
+                        new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true),
+                        new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, IsStatic: true),
                     ],
                     In = new Dictionary<string, string>
                     {
                         [StartPort.Value] = $"{StartNode.ReservedLabel.Value}@{StartPort.Value}",
                         [WorkspacePort.Value] = $"{StartNode.ReservedLabel.Value}@{WorkspacePort.Value}",
+                        [LlmNodeTypes.ModelPort.Value] = $"{StartNode.ReservedLabel.Value}@{LlmNodeTypes.ModelPort.Value}",
                     },
                     Nodes =
                     [
@@ -122,8 +130,12 @@ internal static class DialogueFlow
                         {
                             Name = ReplyNodeName.Value,
                             Kind = "Llm",
-                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text), new InputPortDocument(WorkspacePort.Value, PortTypes.Text)],
-                            Model = RuntimeModel.Value,
+                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text), new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true)],
+                            Static = new Dictionary<string, string>
+                            {
+                                [LlmNodeTypes.ModelPort.Value] = $"@{LlmNodeTypes.ModelPort.Value}",
+                                [WorkspacePort.Value] = $"@{WorkspacePort.Value}",
+                            },
                             // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
                             Outputs = [new PortDocument(ReplyPort.Value, PortTypes.Signal)],
                             Parameters = new Dictionary<string, FlowValue>
@@ -137,7 +149,6 @@ internal static class DialogueFlow
                                 new FromGroupDocument(
                                 [
                                     new FromLinkDocument(InputPort.Value, $"{InputNodeLabel.Value}@{InputPort.Value}"),
-                                    new FromLinkDocument(WorkspacePort.Value, $"@{WorkspacePort.Value}"),
                                 ]),
                             ],
                         },

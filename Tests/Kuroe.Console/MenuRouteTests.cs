@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
@@ -554,14 +555,13 @@ public sealed class MenuRouteTests
           "Flows": [
             {
               "Name": "备用",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                    { "Name": "唯一步骤", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "@目标" } ] }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "唯一步骤", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
                   ]
                 }
               ]

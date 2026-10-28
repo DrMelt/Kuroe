@@ -8,4 +8,7 @@ public static class StartSources
 
     /// <summary>本次任务的工作目录。</summary>
     public const string Task = "TASK_WORK_PATH";
+
+    /// <summary>任务启动时宿主当前选中的模型名。</summary>
+    public const string Model = "MODEL";
 }

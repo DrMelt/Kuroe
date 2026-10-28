@@ -4,12 +4,12 @@ using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
-using Kuroe.Tests.Support;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>流程声明的宿主开始输入：HostStartInputs 绑定到 WORKSPACE_PATH 与 TASK_WORK_PATH，由任务启动时给出，不接受提交输入。</summary>
+/// <summary>流程声明的宿主开始输入：HostStartInputs 绑定到 WORKSPACE_PATH 与 TASK_WORK_PATH，开始端口为静态端口，
+/// 由容器静态转发并绑定到执行节点，值在任务启动时给出，不接受提交输入。</summary>
 public sealed class StartPathsTests
 {
     /// <summary>执行节点取开始的目标与两个宿主输入。</summary>
@@ -18,12 +18,12 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": {
                 "Outputs": [
                   { "Name": "目标", "Type": "Text" },
-                  { "Name": "启动", "Type": "Text" },
-                  { "Name": "流程", "Type": "Text" }
+                  { "Name": "启动", "Type": "Text", "Static": true },
+                  { "Name": "流程", "Type": "Text", "Static": true },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
                 ]
               },
               "HostStartInputs": {
@@ -34,21 +34,19 @@ public sealed class StartPathsTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "启动" }, { "Name": "流程" }, { "Name": "目标" }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "启动", "Type": "Text", "Static": true }, { "Name": "流程", "Type": "Text", "Static": true }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "读取路径",
                       "Kind": "Llm",
-                      "Model": "执行者",
+                      "Static": { "MODEL_NAME": "@MODEL_NAME", "启动": "@启动", "流程": "@流程" },
                       "Inputs": [
                         { "Name": "目标" },
-                        { "Name": "启动" },
-                        { "Name": "流程" }
+                        { "Name": "启动", "Type": "Text", "Static": true },
+                        { "Name": "流程", "Type": "Text", "Static": true }
                       ],
                       "From": [
                         {
-                          "目标": "@目标",
-                          "启动": "@启动",
-                          "流程": "@流程"
+                          "目标": "@目标"
                         }
                       ]
                     }
@@ -61,7 +59,7 @@ public sealed class StartPathsTests
         """;
 
     [Fact]
-    public void Host_paths_reach_the_execution_inputs()
+    public void Host_paths_reach_the_execution_static_inputs()
     {
         using TestEnvironment environment = TestEnvironment.Create(FixedPortFlow);
 
@@ -71,8 +69,12 @@ public sealed class StartPathsTests
         string taskDirectory = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
 
         Assert.Equal(TaskState.Done, task.State);
-        Assert.Contains(execution.Input.Inputs, value => value.Text == environment.Root);
-        Assert.Contains(execution.Input.Inputs, value => value.Text == taskDirectory);
+        Assert.Contains(execution.Input.InputPorts, port => port.IsStatic);
+        Assert.NotNull(task.HostValues.Text(new PortName("启动")));
+        Assert.Contains(execution.Input.StaticTexts, value => value.Value == environment.Root);
+        Assert.Contains(execution.Input.StaticTexts, value => value.Value == taskDirectory);
+        Assert.DoesNotContain(execution.Input.Inputs, value => value.Text == environment.Root);
+        Assert.DoesNotContain(execution.Input.Inputs, value => value.Text == taskDirectory);
     }
 
     [Fact]
@@ -92,5 +94,65 @@ public sealed class StartPathsTests
         Assert.True(submitted.IsError);
         Assert.Equal(FlowErrorCodes.TaskInput, submitted.FirstError.Code);
         Assert.Equal("开始端口 启动 由宿主提供，不接受提交输入。", submitted.FirstError.Description);
+    }
+
+    /// <summary>任务目录经静态端口转发到文件写入节点，相对路径落在本次任务目录下。</summary>
+    private const string TaskPathFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "任务目录", "Type": "Text", "Static": true },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+              ] },
+              "HostStartInputs": { "任务目录": "TASK_WORK_PATH" },
+              "Nodes": [
+                {
+                  "Name": "整体",
+                  "Kind": "Container",
+                  "Inputs": [
+                    { "Name": "目标" },
+                    { "Name": "任务目录", "Type": "Text", "Static": true },
+                    { "Name": "MODEL_NAME", "Type": "Text", "Static": true }
+                  ],
+                  "In": { "目标": "Start@目标", "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
+                  "Nodes": [
+                    {
+                      "Name": "实施",
+                      "Kind": "Llm",
+                      "Static": { "MODEL_NAME": "@MODEL_NAME" },
+                      "Outputs": [{ "Name": "正文", "Type": "Text" }],
+                      "From": [{ "目标": "@目标" }]
+                    },
+                    {
+                      "Name": "保存",
+                      "Kind": "FileWrite",
+                      "Path": "{root}/out/result.txt",
+                      "Variables": { "root": "任务目录" },
+                      "Inputs": [{ "Name": "正文" }, { "Name": "任务目录", "Type": "Text", "Static": true }],
+                      "Static": { "任务目录": "@任务目录" },
+                      "From": [{ "正文": "实施@正文" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    [Fact]
+    public void A_static_task_path_is_the_base_of_file_nodes()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TaskPathFlow);
+
+        TaskId id = environment.Submit("写入任务目录");
+        TaskSnapshot done = environment.Settle(id);
+        string taskDirectory = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Equal("正文产出", File.ReadAllText(Path.Combine(taskDirectory, "out", "result.txt")));
     }
 }

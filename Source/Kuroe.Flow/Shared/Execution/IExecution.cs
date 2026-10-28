@@ -20,7 +20,7 @@ public interface IExecution
     /// <summary>取消本次执行，进行中的一轮请求随之结束。</summary>
     void Cancel();
 
-    /// <summary>模型输出的一段文本，按到达顺序给出。收口后不再触发。</summary>
+    /// <summary>执行输出的一段文本，按到达顺序给出。收口后不再触发。</summary>
     event Action<string>? TextEmitted;
 
     /// <summary>一条需要即时呈现的过程记录。收口后不再触发。</summary>

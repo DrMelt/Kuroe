@@ -59,7 +59,7 @@ public sealed partial record NodeSpec
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 模型逐执行交回 Text 与 Signal 端口值，引用处不能修改声明。</summary>
+    /// 执行逐次交回 Text 与 Signal 端口值，引用处不能修改声明。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
@@ -71,14 +71,18 @@ public sealed partial record NodeSpec
     /// <summary>有序子节点，非空即容器。容器自身不执行，成员产出齐备时作汇合点。</summary>
     public IReadOnlyList<NodeSpec>? Nodes { get; init; }
 
-    /// <summary>模型选择引用：装配层执行节点写本流程的模型选择名，节点组容器成员写模型槽位名，由引用处的模型绑定解析。</summary>
-    public ModelRef? Model { get; init; }
+    /// <summary>静态端口绑定：目标静态输入端口到来源引用。来源识别与 From、In 使用同一套作用域规则，静态来源必须是静态端口。
+    /// 静态绑定不进入 From、版本、就绪与触发，装载期折叠出值来源。</summary>
+    public IReadOnlyDictionary<PortName, PortRef>? Static { get; init; }
 
-    /// <summary>引用节点组时的模型槽位绑定：槽位名到本流程模型选择名的映射，未绑定的槽位在展开时报错。</summary>
-    public IReadOnlyDictionary<ModelRef, ModelRef>? Models { get; init; }
+    /// <summary>生效输入端口表：作者声明的输入加节点类型声明的静态输入。作者声明同名端口时以作者声明为准。</summary>
+    public IReadOnlyList<InputPort> EffectiveInputs =>
+        Type?.Shape.StaticInputs is { Count: > 0 } statics
+            ? [.. Inputs, .. statics.Where(staticPort => Inputs.All(input => input.Name != staticPort.Name))]
+            : Inputs;
 
-    /// <summary>容器定义声明的模型槽位：成员用 <see cref="Model"/> 写槽位名，引用处用 <see cref="Models"/> 绑定到流程模型选择名，按声明序。只有节点库容器定义声明，装配层内联容器与引用节点为空。</summary>
-    public IReadOnlyList<ModelRef>? ModelSlots { get; init; }
+    /// <summary>按名字取生效输入端口声明，未声明时为空。</summary>
+    public InputPort? FindInput(PortName name) => EffectiveInputs.Find(name);
 
     /// <summary>执行配置，非空即执行节点或输入节点，只有派发执行的类型会用到其中的执行方式。</summary>
     public ExecutableSpec? Spec { get; init; }

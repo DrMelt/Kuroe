@@ -90,7 +90,7 @@ internal sealed class TaskRuntime : INodeContext
     {
         if (Graph.PlanOf(node.Path) is not { } plan)
         {
-            return NodeInputValues.Empty;
+            return WithStatic(node.Executable, NodeInputValues.Empty);
         }
 
         int group = node.RerunRequested && node.LastInputGroup is { } last
@@ -99,7 +99,7 @@ internal sealed class TaskRuntime : INodeContext
 
         if (group < 0 || group >= plan.Groups.Count)
         {
-            return NodeInputValues.Empty;
+            return WithStatic(node.Executable, NodeInputValues.Empty);
         }
 
         node.RecordInputGroup(group);
@@ -108,8 +108,12 @@ internal sealed class TaskRuntime : INodeContext
         node.ClearRerun();
         node.Consume(plan, this);
 
-        return inputs;
+        return WithStatic(node.Executable, inputs);
     }
+
+    /// <summary>把执行节点的静态端口值附加到本次激活的输入。</summary>
+    private NodeInputValues WithStatic(ExecutableNode node, NodeInputValues inputs) =>
+        inputs.WithStatic(node.ResolveStaticTexts(_task.HostValues.Text));
 
     // ---- 发布与作废 ----
 
@@ -340,6 +344,11 @@ internal sealed class TaskRuntime : INodeContext
 
                 inputs = NodeInputValues.From(plan.Groups[index], this);
                 node.RecordInputGroup(index);
+            }
+
+            if (node.Node is ExecutableNode declared)
+            {
+                inputs = WithStatic(declared, inputs);
             }
 
             long revision = node.Revision;

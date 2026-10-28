@@ -1,4 +1,3 @@
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
@@ -95,7 +94,7 @@ public sealed class NodePortTests
         Path = NodePath.Of("实施"),
         Type = new StubNodeType(new NodeKind("Executable")),
         Spec = new ExecutableSpec(),
-        Model = new ModelDefinition { Name = new ModelRef("执行者") },
+        Inputs = [],
         Outputs = outputs,
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,
     };

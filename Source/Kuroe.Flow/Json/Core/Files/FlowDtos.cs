@@ -13,7 +13,7 @@ public sealed class FlowFileDto
     public List<FlowDto> Flows { get; set; } = [];
 }
 
-/// <summary>文件里的一条流程：开始入口的输出端口、命名的模型选择与装配树。</summary>
+/// <summary>文件里的一条流程：开始入口的输出端口与装配树。</summary>
 public sealed class FlowDto
 {
     /// <summary>流程名。</summary>
@@ -21,9 +21,6 @@ public sealed class FlowDto
 
     /// <summary>流程说明。</summary>
     public string? Description { get; set; }
-
-    /// <summary>命名的模型选择。</summary>
-    public List<ModelDto> Models { get; set; } = [];
 
     /// <summary>开始入口的输出端口，条目形状与节点输出端口一致。</summary>
     public StartDto? Start { get; set; }
@@ -40,17 +37,4 @@ public sealed class StartDto
 {
     /// <summary>开始端口的条目，按声明序。</summary>
     public List<JsonElement>? Outputs { get; set; }
-}
-
-/// <summary>文件里的一个模型选择定义。</summary>
-public sealed class ModelDto
-{
-    /// <summary>本流程内引用的模型选择名。</summary>
-    public string? Name { get; set; }
-
-    /// <summary>模型名，未写或为运行时选择时为空。</summary>
-    public string? Model { get; set; }
-
-    /// <summary>运行时模型：执行时取宿主当前选中的模型，与 Model 互斥。</summary>
-    public bool? Runtime { get; set; }
 }

@@ -33,7 +33,6 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType
             }
         }
 
-        Reject(node.Model is not null, "文件写入节点不启动执行，不能声明模型选择。");
         Reject(spec.Validate is not null, "文件写入节点不启动执行，不能声明 Validate。");
 
         IReadOnlySet<string> variablePorts = FilePathVariables.Validate(node, Parameters, message =>

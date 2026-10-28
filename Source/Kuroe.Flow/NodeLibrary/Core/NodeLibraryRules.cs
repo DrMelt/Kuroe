@@ -24,7 +24,7 @@ internal static class NodeLibraryRules
             {
                 if (node.Nodes is { Count: > 0 } members)
                 {
-                    CheckContainer(node, members, byName, errors, checkSlots: true);
+                    CheckContainer(node, members, byName, errors);
                 }
             }
             else
@@ -38,10 +38,6 @@ internal static class NodeLibraryRules
 
     /// <summary>节点持有的类型形状，引用节点为空。</summary>
     private static NodeTypeShape? ShapeOf(NodeSpec node) => node.Type?.Shape;
-
-    /// <summary>节点类型名，未声明类型的节点为空。</summary>
-    private static string KindName(NodeSpec node) =>
-        node.Kind is { } kind ? kind.Value : string.Empty;
 
     private static Dictionary<NodeName, NodeSpec> ValidateDefinitions(
         IReadOnlyList<NodeSpec> definitions,
@@ -82,49 +78,16 @@ internal static class NodeLibraryRules
 
                 node.Check(NodeRuleContext.LibraryDefinition, message =>
                     errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
-
-                ValidateModelSlots(node, errors);
             }
             else
             {
                 node.Check(NodeRuleContext.LibraryDefinition, message =>
                     errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
-
-                if (node.ModelSlots is not null)
-                {
-                    errors.Add(NodeScope.Library.Node(node.Label.Value, "执行节点不声明模型槽位，槽位声明只属于容器。"));
-                }
-
-                if (ShapeOf(node) is { DispatchesExecutions: false })
-                {
-                    if (node.Model is not null)
-                    {
-                        errors.Add(NodeScope.Library.Node(node.Label.Value,
-                            $"{KindName(node)}成员不启动执行，不声明模型槽位。"));
-                    }
-                }
-                else
-                {
-                    if (node.Model is not null)
-                    {
-                        errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不声明模型，模型由使用处输入。"));
-                    }
-
-                    if (node.Models is not null)
-                    {
-                        errors.Add(NodeScope.Library.Node(node.Label.Value, "库执行定义不写模型绑定，绑定只属于引用节点组。"));
-                    }
-                }
             }
         }
 
         return byName;
     }
-
-    /// <summary>模型槽位声明的形状：名字非空且不重复。</summary>
-    private static void ValidateModelSlots(NodeSpec node, List<Error> errors) =>
-        node.CheckModelSlots(message =>
-            errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
 
     /// <summary>执行节点库叶子的库层限制：端口与类型规则由 NodeSpec 承担，这里只拒绝非执行节点声明多个输出端口。</summary>
     private static void CheckLeaf(NodeSpec node, List<Error> errors) => ValidateInterface(node, errors);
@@ -138,14 +101,12 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。
-    /// checkSlots 只在节点库容器定义层为真，槽位声明与使用一致按定义整棵子树核对一次，内联子容器沿外层声明。</summary>
+    /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
     private static void CheckContainer(
         NodeSpec container,
         IReadOnlyList<NodeSpec> members,
         Dictionary<NodeName, NodeSpec> byName,
-        List<Error> errors,
-        bool checkSlots)
+        List<Error> errors)
     {
         NodeSpec? find(NodeName name) => byName.GetValueOrDefault(name);
         HashSet<NodeLabel> subtreeLabels = ContainerScope.SubtreeLabels(members, find);
@@ -153,12 +114,15 @@ internal static class NodeLibraryRules
         var subtreeOutputs = new Dictionary<NodeLabel, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
+        var subtreeStatics = new Dictionary<NodeLabel, IReadOnlySet<PortName>>();
+        CollectSubtreeStaticPorts(members, byName, subtreeStatics);
+
         var contextless = new HashSet<NodeLabel>();
         CollectContextless(members, byName, contextless);
 
         if (container.ContainerOutputs is { } outs)
         {
-            CheckContainerOutputs(container, outs, subtreeLabels, subtreeOutputs, contextless, errors);
+            CheckContainerOutputs(container, outs, subtreeLabels, subtreeOutputs, subtreeStatics, contextless, errors);
         }
 
         var literalLabels = new HashSet<NodeLabel>();
@@ -167,105 +131,25 @@ internal static class NodeLibraryRules
         ContainerScope.Check(container, members, find, (member, message) =>
             errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
 
-        if (checkSlots)
-        {
-            CheckModelSlots(container, members, container.ModelSlots ?? [], byName, errors);
-        }
-
         foreach (NodeSpec member in members)
         {
             member.Type?.Validate(member, NodeScope.Library, errors.Add);
             CheckMember(member, byName, errors);
-            CheckMemberModel(member, byName, errors);
+            member.CheckStatic(message =>
+                errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
+            if (member.Spec is not null)
+            {
+                member.CheckStaticCoverage(message =>
+                    errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
+            }
+
             member.CheckInterface(ShapeOf(member), message =>
                 errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
             ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
             {
-                CheckContainer(member, member.Nodes, byName, errors, checkSlots: false);
+                CheckContainer(member, member.Nodes, byName, errors);
             }
-        }
-    }
-
-    /// <summary>容器槽位声明与使用一致：成员引用的槽位必须已声明，声明的槽位必须被引用，
-    /// 引用子容器的绑定键覆盖被引用定义的声明。</summary>
-    private static void CheckModelSlots(
-        NodeSpec container,
-        IReadOnlyList<NodeSpec> members,
-        IReadOnlyList<ModelRef> declared,
-        Dictionary<NodeName, NodeSpec> byName,
-        List<Error> errors)
-    {
-        var used = new HashSet<ModelRef>();
-        CollectSlotUsage(members, byName, used);
-
-        foreach (ModelRef slot in used.Where(slot => !declared.Contains(slot)))
-        {
-            errors.Add(NodeScope.Library.Node(container.Label.Value, $"成员使用的模型槽位 {slot} 未在容器上声明。"));
-        }
-
-        foreach (ModelRef slot in declared.Where(slot => !used.Contains(slot)))
-        {
-            errors.Add(NodeScope.Library.Node(container.Label.Value, $"声明的模型槽位 {slot} 未被成员使用。"));
-        }
-
-        foreach (NodeSpec member in members)
-        {
-            if (member.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
-            {
-                CheckGroupBinding(member, referenced, errors);
-            }
-        }
-    }
-
-    /// <summary>收集子树引用的模型槽位：执行成员写自己的槽位，内联子容器递归，引用子容器取绑定值。
-    /// 被引用定义内部的槽位属于它自己的声明，不在此收集。</summary>
-    private static void CollectSlotUsage(
-        IReadOnlyList<NodeSpec> nodes,
-        Dictionary<NodeName, NodeSpec> byName,
-        HashSet<ModelRef> used)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            if (node.Nodes is { Count: > 0 })
-            {
-                CollectSlotUsage(node.Nodes, byName, used);
-                continue;
-            }
-
-            if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? referenced) && referenced.Nodes is { Count: > 0 })
-            {
-                foreach (ModelRef bound in node.Models?.Values ?? [])
-                {
-                    used.Add(bound);
-                }
-
-                continue;
-            }
-
-            if (node.Model is { } slot)
-            {
-                used.Add(slot);
-            }
-        }
-    }
-
-    /// <summary>引用子容器的模型绑定：键必须覆盖被引用定义声明的槽位，不能绑定声明以外的槽位。</summary>
-    private static void CheckGroupBinding(
-        NodeSpec member,
-        NodeSpec definition,
-        List<Error> errors)
-    {
-        IReadOnlyList<ModelRef> slots = definition.ModelSlots ?? [];
-        var bound = new HashSet<ModelRef>(member.Models?.Keys ?? []);
-        foreach (ModelRef slot in slots.Where(slot => !bound.Contains(slot)))
-        {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, $"引用节点组未绑定模型槽位 {slot}。"));
-        }
-
-        foreach (ModelRef slot in bound.Where(slot => !slots.Contains(slot)))
-        {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, $"模型槽位 {slot} 不在容器 {definition.Label} 上。"));
         }
     }
 
@@ -293,6 +177,34 @@ internal static class NodeLibraryRules
         }
     }
 
+    /// <summary>收集子树内成员声明的静态端口：执行节点取静态输入，容器取静态输出。被引用节点取定义上的声明。</summary>
+    private static void CollectSubtreeStaticPorts(
+        IReadOnlyList<NodeSpec> nodes,
+        Dictionary<NodeName, NodeSpec> byName,
+        Dictionary<NodeLabel, IReadOnlySet<PortName>> statics)
+    {
+        foreach (NodeSpec node in nodes)
+        {
+            NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition)
+                ? definition
+                : node;
+            HashSet<PortName> ports = declared.Nodes is { Count: > 0 }
+                ? [.. (declared.ContainerOutputs ?? new Dictionary<PortName, ContainerOutput>())
+                    .Where(pair => pair.Value.IsStatic)
+                    .Select(pair => pair.Key)]
+                : [.. declared.EffectiveInputs.Where(port => port.IsStatic).Select(port => port.Name)];
+            if (ports.Count > 0)
+            {
+                statics[node.Label] = ports;
+            }
+
+            if (node.Nodes is { Count: > 0 } children)
+            {
+                CollectSubtreeStaticPorts(children, byName, statics);
+            }
+        }
+    }
+
     /// <summary>收集子树内不产出上下文端口的节点标签，上下文端口绑定不允许落在这些节点上。
     /// 判断按类型的输出端口值域，组织子节点的类型不在此列。</summary>
     private static void CollectContextless(
@@ -316,13 +228,14 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>容器输出端口：绑定目标必须落在子树内且是执行节点，绑定的端口必须是目标声明的端口，
+    /// <summary>容器输出端口：绑定目标必须落在子树内。动态输出取执行节点的输出端口，静态输出取成员的静态端口，
     /// 上下文端口不落在不产出上下文端口的节点上。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
         IReadOnlyDictionary<PortName, ContainerOutput> outs,
         HashSet<NodeLabel> subtreeLabels,
         Dictionary<NodeLabel, IReadOnlyList<Port>> subtreeOutputs,
+        Dictionary<NodeLabel, IReadOnlySet<PortName>> subtreeStatics,
         HashSet<NodeLabel> contextless,
         List<Error> errors)
     {
@@ -341,6 +254,18 @@ internal static class NodeLibraryRules
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
                     $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不在容器 {container.Label} 的子树里。"));
+                continue;
+            }
+
+            if (output.IsStatic)
+            {
+                if (!subtreeStatics.TryGetValue(sourceLabel, out IReadOnlySet<PortName>? staticPorts)
+                    || !staticPorts.Contains(target.Port))
+                {
+                    errors.Add(NodeScope.Library.Node(container.Label.Value,
+                        $"静态输出端口 {port.Value} 的绑定目标 {target.Display} 无法取用，目标成员必须声明了静态端口 {target.Port.Value}。"));
+                }
+
                 continue;
             }
 
@@ -424,70 +349,4 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>节点组内成员的模型来源：执行成员写模型槽位名，组内节点的模型从引用处绑定输入，不设全局模型引用。
-    /// 引用不存在的定义只由 CheckMember 报错，这里不叠加槽位消息。</summary>
-    private static void CheckMemberModel(
-        NodeSpec member,
-        Dictionary<NodeName, NodeSpec> byName,
-        List<Error> errors)
-    {
-        if (member.Nodes is { Count: > 0 })
-        {
-            if (member.Model is not null || member.Models is not null || member.ModelSlots is not null)
-            {
-                errors.Add(NodeScope.Library.Node(member.Label.Value, "内联容器成员不声明模型、模型槽位与模型绑定。"));
-            }
-
-            return;
-        }
-
-        if (member.Use is { } use)
-        {
-            if (!byName.TryGetValue(use, out NodeSpec? referenced))
-            {
-                return;
-            }
-
-            if (referenced.Nodes is { Count: > 0 })
-            {
-                if (member.Model is not null)
-                {
-                    errors.Add(NodeScope.Library.Node(member.Label.Value, "引用节点组的成员不声明模型，节点组内节点的模型用 Models 绑定。"));
-                }
-
-                return;
-            }
-
-            if (ShapeOf(referenced) is { DispatchesExecutions: false })
-            {
-                if (member.Model is not null)
-                {
-                    errors.Add(NodeScope.Library.Node(member.Label.Value,
-                        $"引用{KindName(referenced)}成员的节点不声明模型槽位。"));
-                }
-
-                return;
-            }
-        }
-        else if (ShapeOf(member) is { DispatchesExecutions: false })
-        {
-            if (member.Model is not null)
-            {
-                errors.Add(NodeScope.Library.Node(member.Label.Value,
-                    $"{KindName(member)}成员不启动执行，不声明模型槽位。"));
-            }
-
-            return;
-        }
-
-        if (member.Model is null)
-        {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, "节点组内执行成员必须声明模型槽位，模型从引用处绑定输入。"));
-        }
-
-        if (member.Models is not null)
-        {
-            errors.Add(NodeScope.Library.Node(member.Label.Value, "执行成员不写模型绑定，绑定只属于引用节点组。"));
-        }
-    }
 }

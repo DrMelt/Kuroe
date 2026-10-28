@@ -9,10 +9,9 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
               "Nodes": [
-                { "Name": "实施", "Kind": "Llm", "Model": "执行者", "From": [ { "目标": "Start@目标" } ] }
+                { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
               ]
             }
           ]
@@ -25,13 +24,12 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
               "Nodes": [
                 {
                   "Name": "实施",
                   "Kind": "Llm",
-                  "Model": "执行者",
+                  "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
                   "Inputs": [ { "Name": "目标" }, { "Name": "风格" } ],
                   "From": [ { "目标": "Start@目标", "风格": "Start@风格" } ]
                 }
@@ -47,11 +45,11 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
               "Start": {
                 "Outputs": [
                   { "Name": "目标", "Type": "Text" },
-                  { "Name": "启动路径", "Type": "Text" }
+                  { "Name": "启动路径", "Type": "Text", "Static": true },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
                 ]
               },
               "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
@@ -59,9 +57,9 @@ internal static class CliFlows
                 {
                   "Name": "实施",
                   "Kind": "Llm",
-                  "Model": "执行者",
-                  "Inputs": [ { "Name": "目标" }, { "Name": "启动路径" } ],
-                  "From": [ { "目标": "Start@目标", "启动路径": "Start@启动路径" } ]
+                  "Static": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                  "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Static": true } ],
+                  "From": [ { "目标": "Start@目标" } ]
                 }
               ]
             }
@@ -75,13 +73,12 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Models": [ { "Name": "执行者", "Model": "fake" } ],
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
               "Nodes": [
                 {
                   "Name": "实施",
                   "Kind": "Llm",
-                  "Model": "执行者",
+                  "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
                   "Outputs": [ { "Name": "结果", "Type": "Text" } ],
                   "From": [ { "目标": "Start@目标" } ]
                 }

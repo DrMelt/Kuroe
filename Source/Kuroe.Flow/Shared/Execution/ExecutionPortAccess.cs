@@ -10,5 +10,6 @@ public sealed class ExecutionPortAccess(ExecutionInput input) : IPortAccess
     public IReadOnlyList<Port> Outputs => input.OutputPorts;
 
     /// <inheritdoc/>
-    public string? Text(PortName port) => input.Text(port);
+    public string? Text(PortName port) =>
+        Ports.ReadText(input.InputPorts.Find(port), port, input.StaticText, input.Text);
 }

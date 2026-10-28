@@ -1,15 +1,15 @@
+using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.Execution.Process;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Assistant.Dialogue;
 using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、语言变化后重置才按新系统指令重建、回复文本经过程播发送给观察者。</summary>
+/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、语言变化后重置才按新系统指令重建、模型变化后下一轮重建、回复文本经过程播发送给观察者。</summary>
 public sealed class DialogueHostTests
 {
     [Fact]
@@ -74,6 +74,29 @@ public sealed class DialogueHostTests
         Assert.Equal(3, prompts.Count);
         Assert.Contains("使用「中文」语言母语者语言风格回答。", prompts[1], StringComparison.Ordinal);
         Assert.Contains("使用「English」语言母语者语言风格回答。", prompts[2], StringComparison.Ordinal);
+    }
+
+    /// <summary>模型变化后下一轮重建对话任务，新任务用新模型并从第一轮开始。</summary>
+    [Fact]
+    public async Task Model_change_rebuilds_the_dialogue_task_with_the_new_model()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        List<(string Model, int Round)> rounds = [];
+        environment.Runner.Reply = execution =>
+        {
+            rounds.Add(((execution.Input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? string.Empty,
+                execution.Input.ExecutionCount));
+            return "回复";
+        };
+
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
+        environment.Catalog.AddModel(ModelName.Create("second").Value, ProviderName.Create("test").Value).ThrowIfError();
+        environment.Models.Select(ModelName.Create("second").Value).ThrowIfError();
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
+
+        Assert.False(first.IsError, ErrorText(first));
+        Assert.False(second.IsError, ErrorText(second));
+        Assert.Equal([("fake", 1), ("second", 1)], rounds);
     }
 
     /// <summary>回话节点只声明 Signal 输出端口，一轮回答仍要交回这个端口，未交回即不推进。</summary>

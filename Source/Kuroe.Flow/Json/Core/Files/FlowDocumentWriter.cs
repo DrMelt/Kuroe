@@ -18,15 +18,6 @@ static class FlowDocumentWriter
     {
         Name = flow.Name,
         Description = flow.Description,
-        Models =
-        [
-            .. flow.Models.Select(model => new ModelDto
-            {
-                Name = model.Name,
-                Model = model.Model,
-                Runtime = model.Runtime ? true : null,
-            }),
-        ],
         Start = new StartDto { Outputs = WritePorts(flow.StartOutputs, allowValue: true) },
         HostStartInputs = flow.HostStartInputs.Count > 0
             ? new Dictionary<string, string>(flow.HostStartInputs)
@@ -53,10 +44,7 @@ static class FlowDocumentWriter
             : null,
         Validate = WriteValidation(node.Validate),
         MaxExecutions = node.MaxExecutions,
-        Model = node.Model,
-        Models = node.ModelSlots is { Count: > 0 } slots
-            ? JsonSerializer.SerializeToElement(new List<string>(slots), FlowJson.Default.ListString)
-            : null,
+        Static = WriteStatic(node.Static),
         Nodes = node.Nodes is { Count: > 0 } children ? [.. children.Select(WriteNode)] : null,
         Parameters = WriteParameters(node.Parameters),
     };
@@ -69,11 +57,7 @@ static class FlowDocumentWriter
         Validate = WriteValidation(node.Validate),
         MaxExecutions = node.MaxExecutions,
         In = node.In is { Count: > 0 } bindings ? new Dictionary<string, string>(bindings) : null,
-        Model = node.Model,
-        Models = node.Models is { Count: > 0 } models
-            ? JsonSerializer.SerializeToElement(
-                new Dictionary<string, string>(models), FlowJson.Default.DictionaryStringString)
-            : null,
+        Static = WriteStatic(node.Static),
     };
 
     private static List<JsonElement>? WritePorts(IReadOnlyList<PortDocument> ports, bool allowValue)
@@ -93,6 +77,7 @@ static class FlowDocumentWriter
                     Description = port.Description,
                     Value = allowValue ? port.Value : null,
                     Ref = port.Ref,
+                    Static = port.IsStatic ? true : null,
                 },
                 FlowJson.Default.PortEntryDto)),
         ];
@@ -114,6 +99,7 @@ static class FlowDocumentWriter
                     Type = input.Type?.Name,
                     Description = input.Description,
                     Default = input.Default,
+                    Static = input.IsStatic ? true : null,
                 },
                 FlowJson.Default.PortEntryDto)),
         ];
@@ -133,6 +119,9 @@ static class FlowDocumentWriter
                 FlowJson.Default.DictionaryStringString)),
         ];
     }
+
+    private static Dictionary<string, string>? WriteStatic(IReadOnlyDictionary<string, string>? bindings) =>
+        bindings is { Count: > 0 } ? new Dictionary<string, string>(bindings) : null;
 
     private static ValidationDto? WriteValidation(ValidationDocument? validation) =>
         validation is null ? null : new ValidationDto { Predicate = validation.Predicate, Argument = validation.Argument };
