@@ -201,9 +201,9 @@ internal sealed class FlowBrowser(
     private static Paragraph ExecutableLine(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         ViewLine line = new ViewLine().Add(executable.Label.Value, Styles.Key).Add(executable.Kind.Value, Styles.Hint);
-        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
+        if (executable.StaticLabel(LlmNodeTypes.ModelPort, hostInputs) is { } model)
         {
-            line.Add($"模型 {model.StaticLabel(hostInputs: hostInputs)}", Styles.Hint);
+            line.Add($"模型 {model}", Styles.Hint);
         }
 
         IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];

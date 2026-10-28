@@ -36,7 +36,9 @@ public sealed class TriggerNodeTests
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
-        environment.Wait(id, snapshot => RoundCount(snapshot, "回话") == 1);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0
+            && environment.Runner.Started.Any(execution =>
+                execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 1));
         ExecutionSnapshot first = environment.Runner.Started
             .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 1)
             .Snapshot();

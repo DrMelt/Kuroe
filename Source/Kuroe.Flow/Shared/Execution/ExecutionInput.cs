@@ -4,9 +4,9 @@ using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.Execution;
 
-/// <summary>一次执行的输入：节点身份、轮次、本轮各输入端口取到的内容、静态输入文本与节点声明。
-/// 启动的执行只用这里声明的内容，不继承任何未声明的历史。</summary>
-public sealed record ExecutionInput
+/// <summary>一次执行的输入：节点身份、轮次、本轮各输入端口取到的内容、执行可读的端口文本与节点声明。
+/// 启动的执行只用这里声明的内容，不继承任何未声明的历史。输入端口文本统一经 <see cref="Texts"/> 读取。</summary>
+public sealed record ExecutionInput : IPortTexts
 {
     /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }
@@ -24,21 +24,14 @@ public sealed record ExecutionInput
     public int ExecutionCount { get; init; } = 1;
 
     /// <summary>本轮各输入端口取到的内容：Context 输入端口的取值在最前，其余按生效组内连接序，
-    /// 未连接的默认值按输入声明序追加，信号输入不取内容。</summary>
+    /// 未连接的默认值按输入声明序追加，信号输入不取内容。文本经 <see cref="Texts"/> 读取。</summary>
     public IReadOnlyList<InputValue> Inputs { get; init; } = [];
 
-    /// <summary>本节点的输入端口声明：静态与动态端口的取值来源按它判定。</summary>
-    public IReadOnlyList<InputPort> InputPorts { get; init; } = [];
+    /// <summary>本轮执行可读的端口文本表：动态值、静态值与默认值都已装配，未声明的端口不在其中。</summary>
+    public IReadOnlyDictionary<PortName, string> Texts { get; init; } = new Dictionary<PortName, string>();
 
-    /// <summary>任务启动时解析后的静态输入文本：端口名到值，未给出时为空。</summary>
-    public IReadOnlyDictionary<PortName, string> StaticTexts { get; init; } = new Dictionary<PortName, string>();
-
-    /// <summary>某个输入端口的文本，多段按绑定顺序以空行连接，没有内容时为空。</summary>
-    public string? Text(PortName port) =>
-        ContextValues.Join(Inputs.Where(value => value.Port == port).Select(value => value.Value));
-
-    /// <summary>某个静态输入端口的文本，没有值时为空。</summary>
-    public string? StaticText(PortName port) => StaticTexts.GetValueOrDefault(port);
+    /// <summary>某个输入端口的文本，未装配时为空。</summary>
+    public string? Text(PortName port) => Texts.GetValueOrDefault(port);
 
     /// <summary>节点声明的输出端口，未声明时为空。</summary>
     public IReadOnlyList<Port> OutputPorts { get; init; } = [];

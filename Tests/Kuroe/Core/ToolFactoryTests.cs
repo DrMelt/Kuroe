@@ -43,11 +43,11 @@ public sealed class ToolFactoryTests
                 new InputValue(new PortName("任务路径"), Value("任务值")),
                 new InputValue(new PortName("项目路径"), Value("项目值")),
             ],
-            InputPorts =
-            [
-                new InputPort(new PortName("任务路径"), PortTypes.Text),
-                new InputPort(new PortName("项目路径"), PortTypes.Text),
-            ],
+            Texts = new Dictionary<PortName, string>
+            {
+                [new PortName("任务路径")] = "任务值",
+                [new PortName("项目路径")] = "项目值",
+            },
         };
 
         IReadOnlyList<ITool> tools = new KuroeToolFactory([source], "C:/workspace")
@@ -103,8 +103,7 @@ public sealed class ToolFactoryTests
             Node = NodePath.Of("流程", "节点"),
             Type = new LlmNodeType(parameters),
             Inputs = [new InputValue(port, Value(inputText))],
-            InputPorts = [new InputPort(port, PortTypes.Text, isStatic: staticPort)],
-            StaticTexts = new Dictionary<PortName, string> { [port] = staticText },
+            Texts = new Dictionary<PortName, string> { [port] = staticPort ? staticText : inputText },
         };
     }
 

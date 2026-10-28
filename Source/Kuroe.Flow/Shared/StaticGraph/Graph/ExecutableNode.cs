@@ -15,9 +15,8 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行配置：输出校验与执行上限，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Spec { get; init; }
 
-    /// <summary>装载期折叠后的静态端口值：静态输入端口名到值来源。宿主来源在任务启动时解析，
-    /// 解析结果与动态输入分开存放，按端口声明显式取值。</summary>
-    public IReadOnlyDictionary<PortName, StaticValue>? StaticValues { get; init; }
+    /// <summary>静态输入端口到来源端口的绑定。来源在运行期沿绑定链解析，编译期只校验与落定绑定。</summary>
+    public IReadOnlyDictionary<PortName, NodePort>? StaticBindings { get; init; }
 
     /// <summary>执行节点的输入端口表：名字、类型、默认值与静态标记，类型决定来源产出如何进入本节点。</summary>
     public required IReadOnlyList<InputPort> Inputs { get; init; }
@@ -45,24 +44,4 @@ public sealed record ExecutableNode : GraphNode
 
     /// <summary>按名字取输入端口声明，未声明时为空。</summary>
     public InputPort? FindInput(PortName name) => Inputs.Find(name);
-
-    /// <summary>把静态输入的折叠结果解析成端口到文本的表，宿主值缺失或为空的项不进入结果。</summary>
-    public IReadOnlyDictionary<PortName, string> ResolveStaticTexts(Func<PortName, string?> host)
-    {
-        if (StaticValues is not { Count: > 0 } values)
-        {
-            return new Dictionary<PortName, string>();
-        }
-
-        Dictionary<PortName, string> texts = [];
-        foreach ((PortName port, StaticValue value) in values)
-        {
-            if (value.Resolve(host) is { Length: > 0 } text)
-            {
-                texts[port] = text;
-            }
-        }
-
-        return texts;
-    }
 }

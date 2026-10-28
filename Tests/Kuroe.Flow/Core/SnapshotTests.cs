@@ -47,13 +47,10 @@ public sealed class SnapshotTests
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"),
-            new HostStartValues(new Dictionary<PortName, string>()), Flow, Graph, TaskState.Running, 0,
-            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, []))],
+            PortTexts.Empty, Flow, Graph, TaskState.Running, 0,
+            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, PortTexts.Empty, []))],
             states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
     }
-
-    private static readonly IReadOnlyDictionary<PortName, StaticValue> Planner =
-        new Dictionary<PortName, StaticValue> { [TestExecutableNodeType.StaticPort] = StaticValue.Constant("规划者") };
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null,
         [new Port(new PortName("目标"), PortTypes.Text)], new Dictionary<PortName, string>(),
@@ -80,7 +77,6 @@ public sealed class SnapshotTests
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
             Inputs = [],
-            StaticValues = Planner,
             Outputs = [],
             MaxExecutions = 100,
         },
@@ -90,7 +86,6 @@ public sealed class SnapshotTests
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
             Inputs = [],
-            StaticValues = Planner,
             Outputs = [],
             MaxExecutions = 100,
         },

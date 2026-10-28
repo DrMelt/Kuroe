@@ -220,7 +220,7 @@ internal sealed class TaskDriver(
                     return;
                 }
 
-                ErrorOr<INodeDeclaration> declaration = targetResolver.For(executable, task.HostValues);
+                ErrorOr<INodeDeclaration> declaration = targetResolver.For(executable, inputs.StaticTexts);
                 if (declaration.IsError)
                 {
                     node.ReleaseActive();

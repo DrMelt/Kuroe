@@ -50,7 +50,6 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
         return null;
     }
 
-    /// <summary>按端口声明显式取端口文本：静态端口只读静态值，动态端口只读输入值。</summary>
-    private string? PortText(NodeInputValues inputs, PortName port) =>
-        Ports.ReadText(Executable.FindInput(port), port, inputs.StaticText, inputs.Text);
+    /// <summary>按输入端口取文本：静态端口给静态值，动态端口给输入值。</summary>
+    private static string? PortText(NodeInputValues inputs, PortName port) => inputs.Text(port);
 }

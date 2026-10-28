@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Compiler.Compilation;
 /// <summary>把流程树编译成执行视图：开始是唯一来源，节点以从根到本节点的路径标识，容器登记直接子节点，
 /// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
 /// 引用按作用域链解析成路径：从引用者所在容器逐层向外，先看该层的直接子节点，再看该层子树，定义内引用因此可以指向子树的成员。
-/// 要求已通过 FlowRules 校验，静态绑定与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
+/// 要求已通过 FlowRules 校验，静态绑定引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
 internal sealed class FlowCompilation
 {
     /// <summary>报错作用域，引用解析与结构问题按它给出流程级错误。</summary>
@@ -17,9 +17,6 @@ internal sealed class FlowCompilation
 
     /// <summary>开始入口的输出端口，开始不在展开后的节点树里，它的端口声明来自流程。</summary>
     private readonly IReadOnlyList<Port> _startOutputs;
-
-    /// <summary>开始端口到宿主输入名的绑定，静态开始端口的宿主来源按它判定。</summary>
-    private readonly IReadOnlyDictionary<PortName, string> _hostStartInputs;
 
     /// <summary>编译中收集的错误，引用无法解析时不抛出，交调用方按普通校验错误处理。</summary>
     private readonly List<Error> _errors = [];
@@ -32,11 +29,9 @@ internal sealed class FlowCompilation
 
     private FlowCompilation(
         IReadOnlyList<Port> startOutputs,
-        IReadOnlyDictionary<PortName, string> hostStartInputs,
         NodeScope scope)
     {
         _startOutputs = startOutputs;
-        _hostStartInputs = hostStartInputs;
         _scope = scope;
     }
 
@@ -49,7 +44,7 @@ internal sealed class FlowCompilation
 
     private static ErrorOr<NodeGraph> Compile(FlowDefinition flow, NodeScope scope)
     {
-        var compiler = new FlowCompilation(flow.StartOutputs, flow.HostStartInputs, scope);
+        var compiler = new FlowCompilation(flow.StartOutputs, scope);
         compiler._roots.Add(Build(flow.RootNode, parent: null));
 
         return compiler.Assemble();
@@ -63,16 +58,12 @@ internal sealed class FlowCompilation
         public Pending? Parent { get; } = parent;
         public List<Pending> Children { get; } = [];
         public Dictionary<PortName, NodePort> Bindings { get; } = [];
-        public Dictionary<PortName, StaticRef> StaticRefs { get; } = [];
-        public Dictionary<PortName, StaticValue> StaticValues { get; } = [];
+        public Dictionary<PortName, NodePort> StaticBindings { get; } = [];
         public HashSet<PortName> StaticOutputs { get; } = [];
 
         /// <summary>编译出的节点记录，子树编译完成后填入。</summary>
         public GraphNode? Node { get; set; }
     }
-
-    /// <summary>一条静态绑定的来源：来源路径与来源端口。</summary>
-    private readonly record struct StaticRef(NodePath Source, PortName Port);
 
     /// <summary>按先根序建出编译期的节点树：路径是父路径加本节点标签，层级由树给出，不靠标签前缀。</summary>
     private static Pending Build(NodeSpec spec, Pending? parent)
@@ -103,7 +94,6 @@ internal sealed class FlowCompilation
     private ErrorOr<NodeGraph> Assemble()
     {
         LinkEdges();
-        FoldStaticValues();
 
         List<Pending> order = [.. Flatten(_roots)];
         foreach (Pending pending in Enumerable.Reverse(order))
@@ -184,7 +174,7 @@ internal sealed class FlowCompilation
 
             if (SourceOf(label, pending, "Static") is { } source)
             {
-                pending.StaticRefs[target] = new StaticRef(source, reference.Port);
+                pending.StaticBindings[target] = new NodePort(source, reference.Port);
             }
         }
     }
@@ -215,204 +205,6 @@ internal sealed class FlowCompilation
 
             pending.Bindings[port] = new NodePort(member.Path, output.Ref.Port);
         }
-    }
-
-    /// <summary>把所有静态输入折叠成值来源。来源必须是静态端口；常量在装载期给出，宿主开始端口在任务启动时解析。</summary>
-    private void FoldStaticValues()
-    {
-        foreach (Pending pending in Flatten(_roots))
-        {
-            if (pending.Entry.Spec is null)
-            {
-                continue;
-            }
-
-            foreach (InputPort input in pending.Entry.EffectiveInputs.Where(port => port.IsStatic))
-            {
-                if (pending.StaticRefs.TryGetValue(input.Name, out StaticRef reference))
-                {
-                    if (ResolveStaticRef(reference, []) is { } value)
-                    {
-                        pending.StaticValues[input.Name] = value;
-                    }
-
-                    continue;
-                }
-
-                if (pending.Entry.Static?.ContainsKey(input.Name) == true)
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(input.Default))
-                {
-                    pending.StaticValues[input.Name] = StaticValue.Constant(input.Default);
-                    continue;
-                }
-
-                _errors.Add(_scope.Node(pending.Path.Value,
-                    $"静态输入端口 {input.Name.Value} 没有绑定来源或默认值。"));
-            }
-        }
-    }
-
-    /// <summary>求一条静态绑定的值来源。开始端口给常量或宿主端口，容器静态输出沿绑定下钻，执行节点没有静态输出。</summary>
-    private StaticValue? ResolveStaticRef(StaticRef reference, HashSet<StaticRef> visiting)
-    {
-        StaticRef key = reference;
-        if (!visiting.Add(key))
-        {
-            _errors.Add(_scope.Node(reference.Source.Value, $"静态端口 {reference.Port} 形成环。"));
-            return null;
-        }
-
-        try
-        {
-            if (reference.Source == StartPath)
-            {
-                Port? port = _startOutputs.Find(reference.Port);
-                if (port is null)
-                {
-                    _errors.Add(_scope.Node(reference.Source.Value, $"开始没有输出端口 {reference.Port}。"));
-                    return null;
-                }
-
-                Port declared = port.Value;
-                if (!declared.IsStatic)
-                {
-                    _errors.Add(_scope.Node(reference.Source.Value,
-                        $"开始端口 {reference.Port} 不是静态端口。"));
-                    return null;
-                }
-
-                if (declared.Value is { Length: > 0 } value)
-                {
-                    return StaticValue.Constant(value);
-                }
-
-                if (_hostStartInputs.ContainsKey(reference.Port))
-                {
-                    return StaticValue.Host(reference.Port);
-                }
-
-                _errors.Add(_scope.Node(reference.Source.Value,
-                    $"静态开始端口 {reference.Port} 没有 Value 或宿主输入绑定。"));
-                return null;
-            }
-
-            Pending? source = FindByPath(reference.Source);
-            if (source is null)
-            {
-                _errors.Add(_scope.Node(reference.Source.Value, $"静态来源 {reference.Source} 不在流程里。"));
-                return null;
-            }
-
-            return source.Entry.Spec is not null
-                ? MissingStaticOutput(reference)
-                : ContainerStaticValue(source, reference.Port, visiting);
-        }
-        finally
-        {
-            visiting.Remove(key);
-        }
-    }
-
-    /// <summary>求容器静态输出的值来源：输出必须绑定到子树的静态端口。</summary>
-    private StaticValue? ContainerStaticValue(Pending container, PortName port, HashSet<StaticRef> visiting)
-    {
-        if (!container.StaticOutputs.Contains(port))
-        {
-            _errors.Add(_scope.Node(container.Path.Value,
-                $"容器 {container.Path} 没有静态输出端口 {port}。"));
-            return null;
-        }
-
-        if (!container.Bindings.TryGetValue(port, out NodePort target))
-        {
-            _errors.Add(_scope.Node(container.Path.Value,
-                $"容器静态输出端口 {port} 没有绑定目标。"));
-            return null;
-        }
-
-        return StaticPortValue(FindByPath(target.Node), target.Port, visiting);
-    }
-
-    /// <summary>求子树静态端口的值来源：执行节点取静态输入，容器取静态输出。</summary>
-    private StaticValue? StaticPortValue(Pending? node, PortName port, HashSet<StaticRef> visiting)
-    {
-        if (node is null)
-        {
-            _errors.Add(_scope.Node(port.Value, $"静态端口 {port} 的目标不在流程里。"));
-            return null;
-        }
-
-        StaticRef key = new(node.Path, port);
-        if (!visiting.Add(key))
-        {
-            _errors.Add(_scope.Node(node.Path.Value, $"静态端口 {port} 形成环。"));
-            return null;
-        }
-
-        try
-        {
-            if (node.Entry.Spec is not null)
-            {
-                InputPort? input = node.Entry.EffectiveInputs.Find(port);
-                if (input is not { } declared || !declared.IsStatic)
-                {
-                    _errors.Add(_scope.Node(node.Path.Value,
-                        $"静态输出端口的目标 {port} 不是静态输入。"));
-                    return null;
-                }
-
-                if (node.StaticRefs.TryGetValue(port, out StaticRef reference))
-                {
-                    return ResolveStaticRef(reference, visiting);
-                }
-
-                if (!string.IsNullOrWhiteSpace(declared.Default))
-                {
-                    return StaticValue.Constant(declared.Default);
-                }
-
-                _errors.Add(_scope.Node(node.Path.Value,
-                    $"静态输入端口 {port} 没有绑定来源或默认值。"));
-                return null;
-            }
-
-            return ContainerStaticValue(node, port, visiting);
-        }
-        finally
-        {
-            visiting.Remove(key);
-        }
-    }
-
-    /// <summary>执行节点没有静态输出端口。</summary>
-    private StaticValue? MissingStaticOutput(StaticRef reference)
-    {
-        _errors.Add(_scope.Node(reference.Source.Value,
-            $"执行节点 {reference.Source} 的输出端口 {reference.Port} 不是静态端口。"));
-        return null;
-    }
-
-    /// <summary>按路径在编译期节点树里定位节点。</summary>
-    private Pending? FindByPath(NodePath path)
-    {
-        IReadOnlyList<Pending> level = _roots;
-        Pending? current = null;
-        foreach (NodeLabel label in path.Levels)
-        {
-            current = level.FirstOrDefault(node => node.Entry.Label == label);
-            if (current is null)
-            {
-                return null;
-            }
-
-            level = current.Children;
-        }
-
-        return current;
     }
 
     /// <summary>登记一条边：边表按登记顺序，入出边由执行视图在构造时挂到节点上。</summary>
@@ -491,7 +283,7 @@ internal sealed class FlowCompilation
             Spec = spec,
             Inputs = entry.EffectiveInputs,
             Outputs = entry.Outputs,
-            StaticValues = pending.StaticValues.Count > 0 ? pending.StaticValues : null,
+            StaticBindings = pending.StaticBindings.Count > 0 ? pending.StaticBindings : null,
             MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
         };
     }

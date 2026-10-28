@@ -34,7 +34,7 @@ internal static class FlowRules
         return errors.Count > 0 ? errors : compiled.Value;
     }
 
-    /// <summary>流程层规则：开始入口与节点树。引用解析、静态折叠与图规则在具体图上判定。</summary>
+    /// <summary>流程层规则：开始入口与节点树。引用解析、静态绑定与图规则在具体图上判定。</summary>
     internal static void ValidateFlow(FlowDefinition flow, List<Error> errors)
     {
         CheckStart(flow, errors);
@@ -282,6 +282,22 @@ internal static class FlowRules
         }
     }
 
+    /// <summary>执行节点静态输入的来源链：绑定必须是静态端口，链必须到达开始端口或执行节点的默认值。</summary>
+    private static void CheckStaticBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        foreach (ExecutableNode executable in graph.ExecutableNodes)
+        {
+            foreach (InputPort input in executable.Inputs.Where(port => port.IsStatic))
+            {
+                StaticResolution resolution = StaticSources.Resolve(graph, executable.Path, input.Name);
+                if (resolution.Error is { } error)
+                {
+                    errors.Add(scope.Node(resolution.Node.Value, error));
+                }
+            }
+        }
+    }
+
     /// <summary>一条边的来源侧校验：来源端口必须声明存在，容器成员不能被容器外直接引用，Context 输入来源必须产出上下文端口。</summary>
     private static void CheckEdgeSource(NodeGraph graph, FlowEdge edge, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
@@ -395,6 +411,7 @@ internal static class FlowRules
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
         CheckContainerBindings(graph, scope, errors);
+        CheckStaticBindings(graph, scope, errors);
 
         foreach (FlowEdge edge in graph.Edges)
         {

@@ -52,17 +52,4 @@ public static class Ports
 
         return null;
     }
-
-    /// <summary>按输入端口声明显式取文本：静态端口只读静态值，动态端口只读输入值，端口未声明时为空。</summary>
-    public static string? ReadText(
-        InputPort? declaration,
-        PortName port,
-        Func<PortName, string?> staticText,
-        Func<PortName, string?> dynamicText) =>
-        declaration switch
-        {
-            { IsStatic: true } => staticText(port),
-            null => null,
-            _ => dynamicText(port),
-        };
 }

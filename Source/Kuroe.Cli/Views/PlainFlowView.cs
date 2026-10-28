@@ -120,9 +120,9 @@ internal static class PlainFlowView
     private static string Executable(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
     {
         List<string> parts = [executable.Label.Value, executable.Kind.Value];
-        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
+        if (executable.StaticLabel(LlmNodeTypes.ModelPort, hostInputs) is { } model)
         {
-            parts.Add($"模型 {model.StaticLabel(hostInputs: hostInputs)}");
+            parts.Add($"模型 {model}");
         }
 
         IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];

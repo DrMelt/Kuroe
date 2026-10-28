@@ -30,11 +30,12 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
         }
     }
 
-    /// <summary>把已定号、已备好宿主开始值的任务加入本域。</summary>
+    /// <summary>把已定号、已备好开始端口文本与静态端口解析的任务加入本域。</summary>
     internal WorkTask Add(
         TaskId id,
         StartInputs inputs,
-        HostStartValues hostValues,
+        IPortTexts startTexts,
+        StaticPortValues staticPorts,
         CompiledFlow flow,
         string title,
         Action<string>? onText,
@@ -42,7 +43,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, int firstTaskId = 1)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, hostValues, flow.Model, flow.Graph, title, onText, onEntry);
+            WorkTask task = new(this, id, inputs, startTexts, staticPorts, flow.Model, flow.Graph, title, onText, onEntry);
             _tasks.Add(task);
 
             return task;

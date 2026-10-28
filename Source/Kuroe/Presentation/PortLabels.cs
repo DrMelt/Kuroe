@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
 using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
@@ -43,26 +43,35 @@ public static class PortLabels
         return port.IsStatic ? $"{text}·静态" : text;
     }
 
-    /// <summary>静态值来源的展示：常量给值；宿主来源在任务内给实际值，流程视图给宿主输入名。</summary>
+    /// <summary>静态端口绑定来源的展示：成员路径@端口。直接绑定开始端口且该端口有宿主输入名时附上输入名。</summary>
     public static string StaticLabel(
-        this StaticValue value,
-        HostStartValues? hostValues = null,
+        this NodePort binding,
         IReadOnlyDictionary<PortName, string>? hostInputs = null)
     {
-        string? text = value.Text ?? (value.HostPort is { } port ? hostValues?.Text(port) : null);
-        if (text is { Length: > 0 })
+        string text = $"{binding.Node}@{binding.Port.Value}";
+        if (hostInputs is not null
+            && binding.Node.Depth == 1
+            && binding.Node.Label == StartNode.ReservedLabel
+            && hostInputs.TryGetValue(binding.Port, out string? input))
         {
-            return text;
+            text = $"{text}←{input}";
         }
 
-        if (value.HostPort is not { } hostPort)
+        return text;
+    }
+
+    /// <summary>执行节点静态端口的展示：有绑定给绑定来源，没有绑定时给默认值，都没有时为空。</summary>
+    public static string? StaticLabel(
+        this ExecutableNode executable,
+        PortName port,
+        IReadOnlyDictionary<PortName, string>? hostInputs = null)
+    {
+        if (executable.StaticBindings?.TryGetValue(port, out NodePort binding) == true)
         {
-            return "未绑定";
+            return binding.StaticLabel(hostInputs);
         }
 
-        return hostInputs is not null && hostInputs.TryGetValue(hostPort, out string? input)
-            ? $"宿主 {input}"
-            : "宿主";
+        return executable.FindInput(port) is { IsStatic: true, Default: { Length: > 0 } value } ? value : null;
     }
 
     /// <summary>端口的展示：普通 Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>

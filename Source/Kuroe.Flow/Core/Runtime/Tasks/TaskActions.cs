@@ -25,7 +25,7 @@ public sealed class TaskActions(
     private readonly IExecutionTargetResolver _targets = targets;
     private readonly IHostTaskStart _host = host;
 
-    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取宿主开始输入值，再建任务并启动推进。
+    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取注入的开始端口值，再建任务并启动推进。
     /// 任务号被宿主资源占用时换下一个任务号重来。onText 与 onEntry 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
@@ -48,23 +48,24 @@ public sealed class TaskActions(
         {
             TaskId id = _registry.Allocate();
 
-            ErrorOr<HostStartValues> hostValues = _host.Prepare(id, hostInputs, flow.Model.Name, taskTitle);
-            if (hostValues.IsError)
+            ErrorOr<IPortTexts> startTexts = _host.Prepare(id, hostInputs, flow.Model.Name, taskTitle);
+            if (startTexts.IsError)
             {
-                if (hostValues.FirstError.Type == ErrorType.Conflict)
+                if (startTexts.FirstError.Type == ErrorType.Conflict)
                 {
                     continue;
                 }
 
-                return hostValues.ErrorsOrEmptyList;
+                return startTexts.ErrorsOrEmptyList;
             }
 
-            if (CheckHostValues(hostInputs, hostValues.Value) is { Count: > 0 } hostErrors)
+            if (CheckStartTexts(hostInputs, startTexts.Value) is { Count: > 0 } startErrors)
             {
-                return hostErrors;
+                return startErrors;
             }
 
-            // 不启动执行的节点不需要宿主声明；开始直连的派发节点在宿主值就绪后再要求声明可解析
+            // 不启动执行的节点不需要宿主声明；开始直连的派发节点在开始端口值就绪后再要求声明可解析
+            StaticPortValues staticPorts = new(graph, startTexts.Value);
             foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
             {
                 if (graph[edge.Target] is not ExecutableNode target
@@ -73,7 +74,7 @@ public sealed class TaskActions(
                     continue;
                 }
 
-                ErrorOr<INodeDeclaration> declaration = _targets.For(target, hostValues.Value);
+                ErrorOr<INodeDeclaration> declaration = _targets.For(target, staticPorts.For(target));
                 if (declaration.IsError)
                 {
                     return declaration.ErrorsOrEmptyList;
@@ -83,7 +84,8 @@ public sealed class TaskActions(
             WorkTask task = _registry.Add(
                 id,
                 inputs,
-                hostValues.Value,
+                startTexts.Value,
+                staticPorts,
                 flow,
                 taskTitle,
                 onText,
@@ -136,9 +138,9 @@ public sealed class TaskActions(
     }
 
     /// <summary>宿主必须为每个绑定端口给出非空值。</summary>
-    private static List<Error> CheckHostValues(
+    private static List<Error> CheckStartTexts(
         IReadOnlyDictionary<PortName, string> hostInputs,
-        HostStartValues values)
+        IPortTexts values)
     {
         List<Error> errors = [];
         foreach (PortName port in hostInputs.Keys)

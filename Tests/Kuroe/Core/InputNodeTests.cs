@@ -165,8 +165,8 @@ public sealed class InputNodeTests
         ExecutableNode input = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
         ExecutableNode implement = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
 
-        Assert.Null(input.StaticValues);
-        Assert.NotNull(implement.StaticValues);
+        Assert.Null(input.StaticBindings);
+        Assert.NotNull(implement.StaticBindings);
     }
 
     [Fact]

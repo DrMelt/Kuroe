@@ -25,7 +25,8 @@ public sealed class WorkTask : INodeTask
         TaskRegistry registry,
         TaskId id,
         StartInputs inputs,
-        HostStartValues hostValues,
+        IPortTexts startTexts,
+        StaticPortValues staticPorts,
         FlowDefinition flow,
         INodeGraph graph,
         string title,
@@ -35,7 +36,8 @@ public sealed class WorkTask : INodeTask
         Registry = registry;
         Id = id;
         Inputs = inputs;
-        HostValues = hostValues;
+        StartTexts = startTexts;
+        StaticPorts = staticPorts;
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
@@ -55,8 +57,11 @@ public sealed class WorkTask : INodeTask
     /// <summary>提交时按开始端口给出的输入。</summary>
     public StartInputs Inputs { get; }
 
-    /// <summary>任务启动时的宿主开始输入值，绑定到宿主输入名的端口按它取值。</summary>
-    internal HostStartValues HostValues { get; }
+    /// <summary>任务启动时注入的开始端口文本，绑定到宿主输入名的端口按它取值。</summary>
+    internal IPortTexts StartTexts { get; }
+
+    /// <summary>提交时预解析的静态端口文本，任务内全部静态读取共用。</summary>
+    internal StaticPortValues StaticPorts { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }
@@ -211,14 +216,14 @@ public sealed class WorkTask : INodeTask
 
             List<ExecutableSnapshot> executables =
             [
-                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node,
+                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node, Runtime.StaticPorts.For(node),
                     [.. _executions.Where(execution => execution.Input.Node == node.Path).Select(execution => executions[execution.Id])])),
             ];
 
             TaskProjection projection = new(Graph, Runtime.Materializer);
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => projection.State(node.Path))];
 
-            return new TaskSnapshot(Id, _title, Inputs, HostValues, Flow, Graph, Summarize(),
+            return new TaskSnapshot(Id, _title, Inputs, StartTexts, Flow, Graph, Summarize(),
                 _executions.Count(execution => execution.IsLive), executables, executableStates,
                 projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }

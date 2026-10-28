@@ -20,7 +20,7 @@ public sealed class KuroeTaskStart(
     ModelService models) : IHostTaskStart
 {
     /// <summary>校验绑定后准备任务目录并给出每个绑定端口的值。未知输入名、缺少模型选择与当前任务域不支持的任务目录在准备前拒绝。</summary>
-    public ErrorOr<HostStartValues> Prepare(
+    public ErrorOr<IPortTexts> Prepare(
         TaskId id,
         IReadOnlyDictionary<PortName, string> bindings,
         FlowName flow,
@@ -76,6 +76,6 @@ public sealed class KuroeTaskStart(
             }
         }
 
-        return new HostStartValues(values);
+        return new PortTexts(values);
     }
 }

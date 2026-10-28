@@ -57,16 +57,18 @@ public sealed class NodeInputValuesTests
     }
 
     [Fact]
-    public void Static_texts_stay_out_of_dynamic_values()
+    public void Static_texts_are_read_through_text_and_stay_out_of_dynamic_values()
     {
         PortName staticPort = new("静态");
         NodeInputValues values = new([], new HashSet<PortName>());
 
-        NodeInputValues withStatic = values.WithStatic(new Dictionary<PortName, string> { [staticPort] = "静态值" });
+        NodeInputValues withStatic = values.WithStatic(
+            new PortTexts(new Dictionary<PortName, string> { [staticPort] = "静态值" }));
 
-        Assert.Equal("静态值", withStatic.StaticText(staticPort));
-        Assert.Null(withStatic.Text(staticPort));
-        Assert.Equal("静态值", withStatic.StaticTexts[staticPort]);
+        Assert.Equal("静态值", withStatic.Text(staticPort));
+        Assert.Null(withStatic.Text(new PortName("动态")));
+        Assert.Empty(withStatic.Values(staticPort));
+        Assert.Equal("静态值", withStatic.StaticTexts.Text(staticPort));
     }
 
     [Fact]
@@ -74,26 +76,20 @@ public sealed class NodeInputValuesTests
     {
         NodeInputValues values = new([], new HashSet<PortName>());
 
-        Assert.Same(values, values.WithStatic(new Dictionary<PortName, string>()));
+        Assert.Same(values, values.WithStatic(PortTexts.Empty));
     }
 
     [Fact]
-    public void Read_text_uses_the_port_declaration()
+    public void Text_reads_a_static_port_through_the_same_entry()
     {
-        PortName staticPort = new("静态");
-        PortName dynamicPort = new("动态");
+        PortName port = new("路径");
 
-        Assert.Equal("静态值", Ports.ReadText(
-            new InputPort(staticPort, PortTypes.Text, isStatic: true),
-            staticPort,
-            _ => "静态值",
-            _ => "动态值"));
-        Assert.Equal("动态值", Ports.ReadText(
-            new InputPort(dynamicPort, PortTypes.Text),
-            dynamicPort,
-            _ => "静态值",
-            _ => "动态值"));
-        Assert.Null(Ports.ReadText(null, dynamicPort, _ => "静态值", _ => "动态值"));
+        NodeInputValues values = new(
+            [new NodeInputValue(port, PortTypes.Text, Value("动态值"))],
+            new HashSet<PortName> { port },
+            staticTexts: new PortTexts(new Dictionary<PortName, string> { [port] = "静态值" }));
+
+        Assert.Equal("静态值", values.Text(port));
     }
 
     private static ContextValue Value(string text) => new(new StartSource(Content), text);

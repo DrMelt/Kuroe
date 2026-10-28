@@ -10,7 +10,7 @@ public sealed record TaskSnapshot(
     TaskId Id,
     string Title,
     StartInputs Inputs,
-    HostStartValues HostValues,
+    IPortTexts StartTexts,
     FlowDefinition Flow,
     INodeGraph Graph,
     TaskState State,

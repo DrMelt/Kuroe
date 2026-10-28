@@ -16,6 +16,7 @@ internal sealed class TaskRuntime : INodeContext
 {
     private readonly WorkTask _task;
     private readonly NodeMaterializer _materializer;
+    private readonly StaticPortValues _staticPorts;
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
@@ -24,7 +25,8 @@ internal sealed class TaskRuntime : INodeContext
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _materializer = new NodeMaterializer(task.Graph, task.Inputs, task.HostValues, this);
+        _materializer = new NodeMaterializer(task.Graph, task.Inputs, task.StartTexts, this);
+        _staticPorts = task.StaticPorts;
         // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
         _ = _materializer.Get(Graph.Start.Path);
     }
@@ -34,6 +36,9 @@ internal sealed class TaskRuntime : INodeContext
 
     /// <summary>运行期节点物化器，快照投影按它读已实例化节点。</summary>
     internal NodeMaterializer Materializer => _materializer;
+
+    /// <summary>任务内的静态端口解析，执行目标解析与激活输入共用。</summary>
+    internal StaticPortValues StaticPorts => _staticPorts;
 
     /// <summary>按节点路径取运行时节点对象，未实例化时按图定义实例化。读写要求持有 Gate。</summary>
     public NodeRuntime this[NodePath path] => _materializer.Get(path);
@@ -111,9 +116,9 @@ internal sealed class TaskRuntime : INodeContext
         return WithStatic(node.Executable, inputs);
     }
 
-    /// <summary>把执行节点的静态端口值附加到本次激活的输入。</summary>
+    /// <summary>把执行节点的静态端口文本附加到本次激活的输入。</summary>
     private NodeInputValues WithStatic(ExecutableNode node, NodeInputValues inputs) =>
-        inputs.WithStatic(node.ResolveStaticTexts(_task.HostValues.Text));
+        inputs.WithStatic(_staticPorts.For(node));
 
     // ---- 发布与作废 ----
 

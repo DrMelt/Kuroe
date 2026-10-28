@@ -69,10 +69,9 @@ public sealed class StartPathsTests
         string taskDirectory = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
 
         Assert.Equal(TaskState.Done, task.State);
-        Assert.Contains(execution.Input.InputPorts, port => port.IsStatic);
-        Assert.NotNull(task.HostValues.Text(new PortName("启动")));
-        Assert.Contains(execution.Input.StaticTexts, value => value.Value == environment.Root);
-        Assert.Contains(execution.Input.StaticTexts, value => value.Value == taskDirectory);
+        Assert.NotNull(task.StartTexts.Text(new PortName("启动")));
+        Assert.Equal(environment.Root, execution.Input.Text(new PortName("启动")));
+        Assert.Equal(taskDirectory, execution.Input.Text(new PortName("流程")));
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Text == environment.Root);
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Text == taskDirectory);
     }

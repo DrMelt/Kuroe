@@ -65,12 +65,16 @@ public sealed class NodeLibraryTests
 
         CompiledFlow first = environment.Flows.FindCompiled(new FlowName("甲")).ThrowIfError();
         ExecutableNode firstImplement = first.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
-        Assert.Equal("执行者", firstImplement.StaticValues![LlmNodeTypes.ModelPort].Text);
+        Assert.Equal("执行者", StaticText(first, firstImplement, LlmNodeTypes.ModelPort));
 
         CompiledFlow second = environment.Flows.FindCompiled(new FlowName("乙")).ThrowIfError();
         ExecutableNode secondImplement = second.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
-        Assert.Equal("实施者", secondImplement.StaticValues![LlmNodeTypes.ModelPort].Text);
+        Assert.Equal("实施者", StaticText(second, secondImplement, LlmNodeTypes.ModelPort));
     }
+
+    /// <summary>按编译视图取执行节点静态端口的值，没有开始端口值。</summary>
+    private static string? StaticText(CompiledFlow flow, ExecutableNode node, PortName port) =>
+        new StaticPortValues(flow.Graph, PortTexts.Empty).For(node).Text(port);
 
     [Fact]
     public void Unknown_reference_reports_the_missing_definition()

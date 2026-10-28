@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Node;
 
-/// <summary>静态端口规则：绑定目标必须是已声明的静态输入，无绑定与默认值的静态输入不能成立。来源在装载期折叠时校验。</summary>
+/// <summary>静态端口规则：绑定目标必须是已声明的静态输入，无绑定与默认值的静态输入不能成立。来源在装载期校验。</summary>
 public sealed partial record NodeSpec
 {
     /// <summary>检查静态绑定的目标，逐条经 fail 报出。容器的字段限制由接线规则判定。</summary>

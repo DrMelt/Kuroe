@@ -18,7 +18,7 @@ public sealed class KuroeTaskStartTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<HostStartValues> values = Start(environment).Prepare(
+        ErrorOr<IPortTexts> values = Start(environment).Prepare(
             new TaskId(1),
             new Dictionary<PortName, string> { [Model] = StartSources.Model },
             new FlowName("默认"),
@@ -34,7 +34,7 @@ public sealed class KuroeTaskStartTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Models.Unselect().ThrowIfError();
 
-        ErrorOr<HostStartValues> values = Start(environment).Prepare(
+        ErrorOr<IPortTexts> values = Start(environment).Prepare(
             new TaskId(1),
             new Dictionary<PortName, string> { [Model] = StartSources.Model },
             new FlowName("默认"),
@@ -49,7 +49,7 @@ public sealed class KuroeTaskStartTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        ErrorOr<HostStartValues> values = Start(environment).Prepare(
+        ErrorOr<IPortTexts> values = Start(environment).Prepare(
             new TaskId(1),
             new Dictionary<PortName, string> { [Model] = "NOPE" },
             new FlowName("默认"),

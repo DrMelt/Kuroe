@@ -92,9 +92,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             line.Add(ViewLabels.Of(state), ViewLabels.StyleOf(state));
         }
 
-        if (executable.StaticValues is { } values && values.TryGetValue(LlmNodeTypes.ModelPort, out StaticValue model))
+        if ((facts.StaticText(executable.Path, LlmNodeTypes.ModelPort) ?? executable.StaticLabel(LlmNodeTypes.ModelPort)) is { } model)
         {
-            line.Add($"模型 {model.StaticLabel(facts.HostValues)}", Styles.Hint);
+            line.Add($"模型 {model}", Styles.Hint);
         }
 
         if (executable.Outputs.Count > 0)
@@ -159,6 +159,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         private readonly Dictionary<NodePath, IReadOnlyList<ExecutionSnapshot>> _executions;
         private readonly Dictionary<NodePath, ContainerSnapshot> _containers;
         private readonly Dictionary<NodePath, PendingNode> _waiting;
+        private readonly Dictionary<NodePath, IPortTexts> _staticTexts;
         private readonly TaskSnapshot _task;
 
         public Facts(TaskSnapshot task, PendingService pendings)
@@ -167,6 +168,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             _states = task.ExecutableStates.ToDictionary(state => state.Node, state => state.State);
             _executions = task.Executables.ToDictionary(node => node.Executable.Path, node => node.Executions);
             _containers = task.Containers.ToDictionary(container => container.Path);
+            _staticTexts = task.Executables.ToDictionary(node => node.Executable.Path, node => node.StaticTexts);
             _waiting = pendings.Pending(task.Id) is { IsError: false } found
                 ? found.Value.ToDictionary(node => node.Node)
                 : [];
@@ -184,7 +186,10 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         public ContainerSnapshot? Container(NodePath path) =>
             _containers.TryGetValue(path, out ContainerSnapshot? container) ? container : null;
 
-        public HostStartValues HostValues => _task.HostValues;
+        public string? StaticText(NodePath node, PortName port) =>
+            _staticTexts.TryGetValue(node, out IPortTexts? texts)
+                ? texts.Text(port)
+                : null;
 
         public (int Done, int Total) Progress(NodePath container)
         {

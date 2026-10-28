@@ -4,6 +4,7 @@ using Kuroe.Flow.Compiler.Validation;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Node;
@@ -13,7 +14,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Compiler.Tests;
 
-/// <summary>静态端口链路：展开保留静态输出，容器静态输出取成员静态输入，宿主开始端口保留为任务启动来源，错误来源与 From 连接静态端口被拒绝。</summary>
+/// <summary>静态端口链路：展开保留静态输出，容器静态输出取成员静态输入，开始端口绑定保留为来源，错误来源与 From 连接静态端口被拒绝。</summary>
 public sealed class StaticPortTests
 {
     private static readonly PortName Goal = new("目标");
@@ -21,7 +22,7 @@ public sealed class StaticPortTests
     private static readonly PortName Result = new("结论");
     private static readonly PortName Model = TestExecutableNodeType.StaticPort;
 
-    /// <summary>容器静态输出转发成员静态输入，下游节点折叠出开始端口的值。</summary>
+    /// <summary>容器静态输出转发成员静态输入，下游节点运行期解析出开始端口的值。</summary>
     [Fact]
     public void Container_static_output_forwards_member_static_input()
     {
@@ -42,7 +43,30 @@ public sealed class StaticPortTests
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        Assert.Equal("fake", check.StaticValues![Model].Text);
+        Assert.Equal("fake", StaticText(compiled.Value, check, Model));
+    }
+
+    /// <summary>静态端口视图只含静态输入，动态输入不进入视图。</summary>
+    [Fact]
+    public void Static_view_contains_only_static_inputs()
+    {
+        NodeSpec library = DeliveryDefinition();
+        NodeSpec executable = ExecutionDefinition();
+        FlowDefinition flow = FlowWithStaticOutput();
+
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
+            .Expand([flow], [], [library, executable]);
+        Assert.False(expanded.IsError,
+            string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        IPortTexts view = new StaticPortValues(compiled.Value, PortTexts.Empty).For(check);
+
+        Assert.Equal("fake", view.Text(Model));
+        Assert.Null(view.Text(Goal));
     }
 
     /// <summary>From 连接静态输入端口报出专用错误。</summary>
@@ -89,7 +113,7 @@ public sealed class StaticPortTests
             Inputs = [new InputPort(Goal)],
             Outputs = [new Port(Result, PortTypes.Text)],
             Spec = new ExecutableSpec(),
-            From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+            From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
         };
 
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -112,7 +136,7 @@ public sealed class StaticPortTests
                             [Model] = PortRef.Named(new NodeLabel("来源"), Result),
                         },
                         Spec = new ExecutableSpec(),
-                        From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+                        From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
                     },
                 ],
             });
@@ -148,9 +172,9 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains($"静态开始端口 {Model} 必须有 Value 或宿主输入绑定"));
     }
 
-    /// <summary>静态开始端口绑定宿主输入时，折叠结果保留宿主端口，值在任务启动时解析。</summary>
+    /// <summary>静态开始端口绑定宿主输入时保留为来源绑定，取值在任务启动后由注入的端口文本给出。</summary>
     [Fact]
-    public void Host_bound_static_start_port_compiles_to_a_host_source()
+    public void Externally_bound_static_start_port_keeps_a_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
             [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, IsStatic: true)],
@@ -182,9 +206,17 @@ public sealed class StaticPortTests
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        StaticValue source = check.StaticValues![Model];
-        Assert.Null(source.Text);
-        Assert.Equal(Model, source.HostPort);
+        Assert.Equal(new NodePort(new NodePath([StartNode.ReservedLabel]), Model), check.StaticBindings![Model]);
+        Assert.Equal("fake", StaticText(
+            compiled.Value,
+            check,
+            Model,
+            new PortTexts(new Dictionary<PortName, string> { [Model] = "fake" })));
+        Assert.Equal("other", StaticText(
+            compiled.Value,
+            check,
+            Model,
+            new PortTexts(new Dictionary<PortName, string> { [Model] = "other" })));
     }
 
     /// <summary>静态开始端口不进入 From，即使它绑定了宿主输入。</summary>
@@ -354,9 +386,9 @@ public sealed class StaticPortTests
             error => error.Description.Contains($"端口 {Model} 没有绑定"));
     }
 
-    /// <summary>执行节点静态输入的默认值在装载期折叠为常量来源。</summary>
+    /// <summary>执行节点静态输入的默认值在读取端口时解析。</summary>
     [Fact]
-    public void Static_input_default_folds_to_a_constant()
+    public void Static_input_default_resolves_at_access()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
             [new Port(Goal, PortTypes.Text)],
@@ -379,8 +411,17 @@ public sealed class StaticPortTests
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        Assert.Equal("执行者", check.StaticValues![TestExecutableNodeType.StaticPort].Text);
+        Assert.Null(check.StaticBindings);
+        Assert.Equal("执行者", StaticText(compiled.Value, check, TestExecutableNodeType.StaticPort));
     }
+
+    /// <summary>按编译视图与注入的开始端口文本取静态端口值。</summary>
+    private static string? StaticText(
+        NodeGraph graph,
+        ExecutableNode node,
+        PortName port,
+        IPortTexts? startTexts = null) =>
+        new StaticPortValues(graph, startTexts ?? PortTexts.Empty).For(node).Text(port);
 
     private sealed class StaticContainerType : INodeType
     {

@@ -27,7 +27,6 @@ public sealed class NodeGraphTests
                 Type = TestNodeTypes.Executable,
                 Spec = new ExecutableSpec(),
                 Inputs = [],
-                StaticValues = Planner,
                 Outputs = [],
                 MaxExecutions = 100,
             },
@@ -37,7 +36,6 @@ public sealed class NodeGraphTests
                 Type = TestNodeTypes.Executable,
                 Spec = new ExecutableSpec(),
                 Inputs = [],
-                StaticValues = Planner,
                 Outputs = [],
                 MaxExecutions = 100,
             },
@@ -49,7 +47,4 @@ public sealed class NodeGraphTests
         Assert.Equal(NodePath.Of("实施"), graph[NodePath.Of("实施")].Path);
         Assert.Throws<ArgumentException>(() => graph[NodePath.Of("检查")]);
     }
-
-    private static readonly IReadOnlyDictionary<PortName, StaticValue> Planner =
-        new Dictionary<PortName, StaticValue> { [TestExecutableNodeType.StaticPort] = StaticValue.Constant("执行者") };
 }

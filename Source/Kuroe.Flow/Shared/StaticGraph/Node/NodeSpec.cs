@@ -72,7 +72,7 @@ public sealed partial record NodeSpec
     public IReadOnlyList<NodeSpec>? Nodes { get; init; }
 
     /// <summary>静态端口绑定：目标静态输入端口到来源引用。来源识别与 From、In 使用同一套作用域规则，静态来源必须是静态端口。
-    /// 静态绑定不进入 From、版本、就绪与触发，装载期折叠出值来源。</summary>
+    /// 静态绑定不进入 From、版本、就绪与触发，运行期沿绑定链取值。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? Static { get; init; }
 
     /// <summary>生效输入端口表：作者声明的输入加节点类型声明的静态输入。作者声明同名端口时以作者声明为准。</summary>

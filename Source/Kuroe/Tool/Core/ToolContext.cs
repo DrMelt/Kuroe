@@ -71,5 +71,6 @@ public sealed class FixedPortAccess(PortName fixedPort, string text) : IPortAcce
     public IReadOnlyList<Port> Outputs => [];
 
     /// <inheritdoc/>
-    public string? Text(PortName port) => port == fixedPort ? text : null;
+    public IReadOnlyDictionary<PortName, string> Texts { get; } =
+        new Dictionary<PortName, string> { [fixedPort] = text };
 }
