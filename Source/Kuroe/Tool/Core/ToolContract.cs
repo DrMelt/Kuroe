@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.Tools;
+namespace Kuroe.Tool;
 
 /// <summary>工具的装载期契约：工具路径与路径变量名。流程编译按它校验节点映射。</summary>
 /// <param name="Path">工具在工具层级里的完整路径。</param>
