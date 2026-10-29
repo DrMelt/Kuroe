@@ -1,5 +1,4 @@
 using Kuroe.Shared;
-using Kuroe.Tool.Command;
 using Kuroe.Tool.Command.Shared;
 using Kuroe.Tool.Dotnet.Read;
 using Kuroe.Tool.Dotnet.Write;

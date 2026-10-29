@@ -1,5 +1,3 @@
-using ErrorOr;
-using Kuroe.Shared;
 using Xunit;
 
 namespace Kuroe.Shared.Tests;

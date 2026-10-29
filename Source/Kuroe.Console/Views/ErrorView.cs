@@ -2,7 +2,6 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Shared;
 
 namespace Kuroe.Console.Views;

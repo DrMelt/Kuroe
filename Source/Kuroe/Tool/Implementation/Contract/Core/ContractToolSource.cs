@@ -1,5 +1,4 @@
 using Kuroe.Flow.Runtime.Contract;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Tool.Contract;
 

@@ -1,4 +1,3 @@
-using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Node.Llm.Tools;
 
 /// <summary>执行节点与模型之间的契约定义：交回产出、上报无法完成与查看本轮状态三个工具的路径。

@@ -1,4 +1,3 @@
-using Kuroe.Tool.Source;
 using Xunit;
 
 namespace Kuroe.Tool.Source.Tests;
