@@ -48,7 +48,7 @@ public sealed class FlowIsolationTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
         string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, Mixed);
+        File.WriteAllText(file, TestFlowDocument.Normalize(Mixed));
         try
         {
             NodeTypeDescriptionRegistry types = new();

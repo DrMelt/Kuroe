@@ -99,17 +99,26 @@ internal sealed class TaskRuntime : INodeContext
             return WithStatic(node.Executable, NodeInputValues.Empty);
         }
 
-        int group = node.RerunRequested && node.LastInputGroup is { } last
-            ? last
-            : plan.DrivenGroup(node, this) ?? node.LastInputGroup ?? 0;
-
-        if (group < 0 || group >= plan.Groups.Count)
+        if (plan.StartsAtTaskStart)
         {
+            node.AddActive();
+            node.ClearRerun();
+            node.Consume(plan, this);
+
             return WithStatic(node.Executable, NodeInputValues.Empty);
         }
 
-        node.RecordInputGroup(group);
-        NodeInputValues inputs = NodeInputValues.From(plan.Groups[group], this);
+        int? group = node.RerunRequested && node.LastInputGroup is { } last
+            ? last
+            : plan.DrivenGroup(node, this) ?? node.LastInputGroup;
+
+        if (group is not { } index || index < 0 || index >= plan.Groups.Count)
+        {
+            throw new InvalidOperationException($"节点 {node.Path} 没有可用的启动组，不能启动执行。");
+        }
+
+        node.RecordInputGroup(index);
+        NodeInputValues inputs = NodeInputValues.From(plan.Groups[index], this);
         node.AddActive();
         node.ClearRerun();
         node.Consume(plan, this);
@@ -328,28 +337,35 @@ internal sealed class TaskRuntime : INodeContext
                     return new EvaluateResult([]);
                 }
 
-                // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
-                if (ConsumeSuppressed(node, progress, plan) && plan.DrivenGroup(progress, this) is null)
+                if (plan.StartsAtTaskStart && progress.Executions == 0)
                 {
-                    return new EvaluateResult([]);
+                    inputs = NodeInputValues.Empty;
                 }
-
-                if (!plan.Ready(progress, this))
+                else
                 {
-                    return new EvaluateResult([]);
+                    // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
+                    if (ConsumeSuppressed(node, progress, plan) && plan.DrivenGroup(progress, this) is null)
+                    {
+                        return new EvaluateResult([]);
+                    }
+
+                    if (!plan.Ready(progress, this))
+                    {
+                        return new EvaluateResult([]);
+                    }
+
+                    int? group = progress.ForceRerun && node.LastInputGroup is { } last
+                        ? last
+                        : plan.DrivenGroup(progress, this) ?? plan.AvailableGroup(this);
+
+                    if (group is not { } index || index < 0 || index >= plan.Groups.Count)
+                    {
+                        return new EvaluateResult([]);
+                    }
+
+                    inputs = NodeInputValues.From(plan.Groups[index], this);
+                    node.RecordInputGroup(index);
                 }
-
-                int? group = progress.ForceRerun && node.LastInputGroup is { } last
-                    ? last
-                    : plan.DrivenGroup(progress, this) ?? plan.AvailableGroup(this);
-
-                if (group is not { } index || index < 0 || index >= plan.Groups.Count)
-                {
-                    return new EvaluateResult([]);
-                }
-
-                inputs = NodeInputValues.From(plan.Groups[index], this);
-                node.RecordInputGroup(index);
             }
 
             if (node.Node is ExecutableNode declared)
@@ -462,9 +478,13 @@ internal sealed class TaskRuntime : INodeContext
         IReadOnlyList<NodePath> Notify,
         NodeInputValues? Inputs = null);
 
-    /// <summary>任务启动的第一批：开始已放行，由它的直连下游起步。返回前全部实例化。</summary>
+    /// <summary>任务启动的第一批：开始已放行，由它的直连下游与静态输入启动的节点起步。返回前全部实例化。</summary>
     public IReadOnlyList<NodePath> Roots() =>
-        [.. Graph.Outgoing(Graph.Start.Path).Select(edge => _materializer.Get(edge.Target).Path)];
+        [.. Graph.Outgoing(Graph.Start.Path).Select(edge => _materializer.Get(edge.Target).Path),
+            .. Graph.ExecutableNodes
+                .Where(node => node.Plan is { StartsAtTaskStart: true })
+                .Select(node => _materializer.Get(node.Path).Path)];
+
 
     /// <summary>一个返工目标：停住的节点，与它要重跑的节点。自驱型节点的失败目标与自身相同。</summary>
     public readonly record struct ReworkTarget(NodePath Blocked, NodePath Node);

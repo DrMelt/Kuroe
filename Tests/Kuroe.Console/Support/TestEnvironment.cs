@@ -98,7 +98,7 @@ public sealed class TestEnvironment : IDisposable
         if (flowsText is not null)
         {
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
-            File.WriteAllText(paths.FlowsFile, flowsText);
+            File.WriteAllText(paths.FlowsFile, LegacyFlow.Normalize(flowsText));
         }
 
         var services = new ServiceCollection();

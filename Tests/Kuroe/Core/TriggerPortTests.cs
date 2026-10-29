@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>Trigger 版端口：交回触发值，启动组按值决定是否启动；普通端口不能设置触发值。</summary>
+/// <summary>触发端口：交回触发值，启动组按值决定是否启动；不承载触发的端口不能给出触发位。</summary>
 public sealed class TriggerPortTests
 {
     /// <summary>TextTrigger 为 false 时下游组被消耗但不启动，节点保持待办并记录信息。</summary>
@@ -178,6 +178,97 @@ public sealed class TriggerPortTests
             error.Description.Contains("输出端口 回答 的类型只能是 Text", StringComparison.Ordinal));
     }
 
+    /// <summary>普通 Text 端口配置触发后可以交回 false，下游组被消耗但不启动。</summary>
+    [Fact]
+    public void Text_port_with_trigger_configuration_can_silence_downstream()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TextConfiguredTriggerFlow);
+        environment.Runner.PortValuesJsonFor = execution => SourceValues(execution)
+            ? """{ "结论": { "text": "暂不触发", "trigger": false } }"""
+            : null;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot snapshot = environment.Wait(id, current =>
+            current.State == TaskState.Done && HasTriggerInfo(current));
+
+        Assert.Empty(Executions(snapshot, "下游"));
+    }
+
+    /// <summary>Signal 端口默认承载触发，交回 false 时下游不启动。</summary>
+    [Fact]
+    public void Signal_port_can_silence_downstream_with_false()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(SignalFlow);
+        environment.Runner.PortValuesJsonFor = execution => SourceValues(execution)
+            ? """{ "信号": false }"""
+            : null;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot snapshot = environment.Wait(id, current =>
+            current.State == TaskState.Done && HasTriggerInfo(current));
+
+        Assert.Empty(Executions(snapshot, "下游"));
+    }
+
+    /// <summary>容器输出不承载触发时忽略成员的 false，下游照常启动。</summary>
+    [Fact]
+    public void Container_output_without_trigger_configuration_ignores_member_false()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ContainerPlainOutputFlow);
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value == "成员"
+            ? """{ "结论": { "text": "箱内停用", "trigger": false } }"""
+            : null;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Settle(id);
+
+        ExecutionSnapshot downstream = Assert.Single(Executions(done, "下游"));
+        Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内停用");
+    }
+
+    /// <summary>容器输出配置触发时转发成员的 false，下游组被消耗但不启动。</summary>
+    [Fact]
+    public void Container_output_with_trigger_configuration_forwards_member_false()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ContainerTriggeredOutputFlow);
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value == "成员"
+            ? """{ "结论": { "text": "箱内停用", "trigger": false } }"""
+            : null;
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot snapshot = environment.Wait(id, current =>
+            current.State == TaskState.Done && HasTriggerInfo(current));
+
+        Assert.Empty(Executions(snapshot, "下游"));
+    }
+
+    /// <summary>开始端口不能配置触发。</summary>
+    [Fact]
+    public void Start_port_cannot_carry_trigger()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text", "Trigger": true },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+              ] }, "Nodes": [
+                { "Name": "整体", "Kind": "Container",
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                  "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                  "Nodes": [
+                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+                  ] }
+              ] } ]
+            }
+            """;
+
+        var result = TestEnvironment.TryCreate(flow);
+
+        Assert.True(result.IsError);
+        Assert.Contains(result.ErrorsOrEmptyList, error =>
+            error.Description.Contains("开始端口 目标 不能使用触发", StringComparison.Ordinal));
+    }
+
     /// <summary>本轮过程记录里是否已有触发抑制的信息条目。</summary>
     private static bool HasTriggerInfo(TaskSnapshot snapshot) =>
         snapshot.Journal.Any(entry =>
@@ -253,10 +344,58 @@ public sealed class TriggerPortTests
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Type": "TextTrigger", "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                 { "Name": "成员", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "目标": "@目标" } ] }
               ] },
               { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }], "From": [ { "结论": "箱@结论" } ] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    private const string TextConfiguredTriggerFlow = """
+        {
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "结论": "来源@结论" } ] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    private const string SignalFlow = """
+        {
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "来源", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "信号", "Type": "Signal" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "信号", "Type": "Signal" }], "From": [ { "信号": "来源@信号" } ] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    private const string ContainerPlainOutputFlow = """
+        {
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Type": "Text", "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                { "Name": "成员", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "目标": "@目标" } ] }
+              ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "结论": "箱@结论" } ] }
+            ] }
+          ] } ]
+        }
+        """;
+
+    private const string ContainerTriggeredOutputFlow = """
+        {
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "箱", "Kind": "Container", "Outputs": [{ "Name": "结论", "Type": "Text", "Trigger": true, "Ref": "成员@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                { "Name": "成员", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "目标": "@目标" } ] }
+              ] },
+              { "Name": "下游", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "结论", "Type": "Text", "Trigger": true }], "From": [ { "结论": "箱@结论" } ] }
             ] }
           ] } ]
         }

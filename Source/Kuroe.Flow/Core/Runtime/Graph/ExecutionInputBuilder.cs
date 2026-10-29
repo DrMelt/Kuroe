@@ -6,8 +6,9 @@ using Kuroe.Flow.Runtime.Nodes;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
-/// <summary>为执行节点装配执行输入：按节点层级装入的输入取各输入端口的取值与出处，未连接的 Text 默认端口追加声明值。
-/// Context 输入端口的取值置于最前，其余按组内连接序。</summary>
+/// <summary>为执行节点装配执行输入：按输入端口的执行角色决定内容与配置，动态取值与常量取值使用同一份出处结构。
+/// Content 端口进入内容输入，Configuration 端口只进入文本视图，Control 端口只参与启动。
+/// Context 内容端口置于内容输入最前，其余按组内连接序。</summary>
 internal static class ExecutionInputBuilder
 {
     /// <summary>单条取值文本的上限。</summary>
@@ -25,16 +26,38 @@ internal static class ExecutionInputBuilder
         Dictionary<PortName, List<ContextValue>> textValues = [];
         foreach (NodeInputValue input in inputs.Ordered)
         {
+            InputPort? declared = node.Executable.FindInput(input.TargetInput);
+            if (declared is { } control && control.Role == InputRole.Control)
+            {
+                continue;
+            }
+
             InputValue value = new(input.TargetInput, Truncate(input.Value));
-            List<InputValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
-            target.Add(value);
+            if (declared is not { } role || role.Role == InputRole.Content)
+            {
+                List<InputValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
+                target.Add(value);
+            }
+
             AddText(textValues, value);
         }
 
         foreach (InputPort port in node.Executable.Inputs)
         {
-            if (port.IsStatic
-                || inputs.Connected(port.Name)
+            if (port.IsStatic)
+            {
+                if (port.Role == InputRole.Content
+                    && inputs.StaticTexts.Text(port.Name) is { } constant)
+                {
+                    values.Add(new InputValue(
+                        port.Name,
+                        Truncate(new ContextValue(new ConstantSource(node.Path, port.Name), constant))));
+                }
+
+                continue;
+            }
+
+            if (inputs.Connected(port.Name)
                 || port.Type != PortTypes.Text
                 || port.Default is not { Length: > 0 } text)
             {
@@ -44,14 +67,18 @@ internal static class ExecutionInputBuilder
             InputValue value = new(
                 port.Name,
                 Truncate(new ContextValue(new DefaultSource(node.Path, port.Name), text)));
-            values.Add(value);
+            if (port.Role == InputRole.Content)
+            {
+                values.Add(value);
+            }
+
             AddText(textValues, value);
         }
 
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于取值最前
         values.InsertRange(0, contextInput);
 
-        // 端口文本与取值来自同一份截断结果，静态端口优先
+        // 端口文本与取值来自同一份截断结果，常量端口优先
         Dictionary<PortName, string> texts = new(inputs.StaticTexts.Texts);
         foreach ((PortName port, List<ContextValue> list) in textValues)
         {
@@ -70,7 +97,7 @@ internal static class ExecutionInputBuilder
             ExecutionCount = node.Executions + 1,
             Inputs = values,
             Texts = texts,
-            OutputPorts = node.Executable.Outputs,
+            OutputPorts = [.. node.Executable.Outputs.Where(port => !port.IsConstant)],
         };
     }
 

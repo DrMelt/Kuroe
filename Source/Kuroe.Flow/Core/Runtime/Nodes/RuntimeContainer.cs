@@ -9,7 +9,10 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// <summary>一个容器在任务内的运行时对象：容器定义与内容版本。容器不执行、不启动执行，
 /// 内容齐备与内容版本按输入侧方案随成员推进刷新。状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeContainer(ContainerNode container, INodeContext context, IConsumedRevisionStore? consumed = null) : NodeRuntime(container), IInputProgress
+internal sealed class RuntimeContainer(
+    ContainerNode container,
+    INodeContext context,
+    IConsumedRevisionStore? consumed = null) : NodeRuntime(container), IInputProgress
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
@@ -67,26 +70,30 @@ internal sealed class RuntimeContainer(ContainerNode container, INodeContext con
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>按输出端口取单段文本：声明的命名端口按绑定转发成员产出，其余端口为空。成员未实例化、未放行或端口未交回时为空。</summary>
+    /// <summary>按输出端口取单段文本：动态端口按绑定转发成员产出。常量端口由静态解析读取，不进入运行时。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        MemberOf(port) is { } member ? member.Node.PortText(context, member.Port) : null;
+        DynamicMemberOf(port) is { } member
+            ? member.Node.PortText(context, member.Port)
+            : null;
 
-    /// <summary>按输出端口取产出：声明的输出端口按绑定转发成员取值，出处改指容器的命名端口。容器没有整份产出，一切对外内容都经声明端口。</summary>
+    /// <summary>按输出端口取产出：动态端口按绑定转发成员取值，出处改指容器的命名端口。常量端口不进入运行时。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && MemberOf(port) is { } member
+        Released && DynamicMemberOf(port) is { } member
             ? [.. member.Node.OutputValues(context, member.Port)
                 .Select(value => value with { Origin = new ContainerPortSource(Path, port) })]
             : [];
 
-    /// <summary>输出端口绑定到的成员运行期对象与成员端口，未声明该端口或成员未实例化时为空。</summary>
-    private (NodeRuntime Node, PortName Port)? MemberOf(PortName port) =>
-        Container.PortBindings is { } bindings
+    /// <summary>输出端口绑定到的成员运行期对象与成员端口，常量端口、未声明该端口或成员未实例化时为空。</summary>
+    private (NodeRuntime Node, PortName Port)? DynamicMemberOf(PortName port) =>
+        Container.FindPort(port) is { IsConstant: false }
+        && Container.OutputBindings is { } bindings
         && bindings.TryGetValue(port, out NodePort target)
         && context.Materialized(target.Node) is { } member
             ? (member, target.Port)
             : null;
 
-    /// <summary>按输出端口转发成员端口的触发值；未放行或未声明端口时按触发处理。</summary>
+    /// <summary>按输出端口配置转发成员端口的触发值：端口不承载触发、未放行或未声明来源时按触发处理。</summary>
     public override bool Triggers(PortName port) =>
-        Released && MemberOf(port) is { } member && member.Node.Triggers(member.Port);
+        Container.FindPort(port) is not { Trigger: true }
+        || Released && DynamicMemberOf(port) is { } member && member.Node.Triggers(member.Port);
 }

@@ -15,8 +15,5 @@ public sealed record StartNode : GraphNode
     public static NodeLabel ReservedLabel => NodeLabel.ReservedStart;
 
     /// <summary>输出端口表：至少一个 Text 端口，不带值的端口至少一个，输出提交时按该端口给出的输入，其余端口带固定值。</summary>
-    public required IReadOnlyList<Port> Outputs { get; init; }
-
-    /// <summary>按名字取端口，未声明时为空。</summary>
-    public Port? FindPort(PortName name) => Outputs.Find(name);
+    public override IReadOnlyList<Port> Outputs { get; init; } = [];
 }

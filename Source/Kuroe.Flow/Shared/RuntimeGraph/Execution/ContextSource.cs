@@ -50,6 +50,13 @@ public sealed record DefaultSource(NodePath Node, PortName Port) : ContextSource
     public override string Label => $"节点「{Node}」的端口「{Port}」默认值";
 }
 
+/// <summary>执行节点输入端口从常量绑定或常量输出取得的值。</summary>
+public sealed record ConstantSource(NodePath Node, PortName Port) : ContextSource
+{
+    /// <inheritdoc/>
+    public override string Label => $"节点「{Node}」的常量端口「{Port}」";
+}
+
 /// <summary>不派发执行的节点自身在某个输出端口上的产出，如文件读取节点读到的内容。</summary>
 public sealed record NodeSource(NodePath Node, PortName Port) : ContextSource
 {

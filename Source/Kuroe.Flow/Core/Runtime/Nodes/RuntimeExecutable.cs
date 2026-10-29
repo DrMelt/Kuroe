@@ -14,7 +14,9 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevisionStore? consumed = null) : NodeRuntime(executable), IInputProgress
+internal sealed class RuntimeExecutable(
+    ExecutableNode executable,
+    IConsumedRevisionStore? consumed = null) : NodeRuntime(executable), IInputProgress
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
@@ -127,6 +129,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevi
         PublishedExecution = execution;
         Submission? kept = _submissions.GetValueOrDefault(execution.Id);
         _submissions.Clear();
+
         if (kept is not null)
         {
             _submissions[execution.Id] = kept;
@@ -187,10 +190,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevi
             : [];
     }
 
-    /// <summary>Trigger 版输出端口的最近一次产出是否触发下游，其余端口恒触发。</summary>
+    /// <summary>承载触发的输出端口的最近一次产出是否触发下游，其余端口恒触发。</summary>
     public override bool Triggers(PortName port)
     {
-        if (Executable.FindPort(port) is not { Type.IsTrigger: true })
+        if (Executable.FindPort(port) is not { Trigger: true })
         {
             return true;
         }

@@ -96,11 +96,6 @@ public static partial class NodeSpecRules
                 fail("执行节点库定义不绑定输入端口，接线从引用处提供。");
             }
 
-            if (node.ContainerOutputs is { Count: > 0 })
-            {
-                fail("库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Type。");
-            }
-
             if (node.Static is not null)
             {
                 fail("执行节点库定义的静态端口由引用处绑定，不能写 Static。");

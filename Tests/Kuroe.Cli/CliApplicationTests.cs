@@ -47,7 +47,7 @@ public sealed class CliApplicationTests
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, ".kuroe"));
-        await File.WriteAllTextAsync(Path.Combine(root, ".kuroe", "flows.json"), CliFlows.Done);
+        await File.WriteAllTextAsync(Path.Combine(root, ".kuroe", "flows.json"), LegacyFlow.Normalize(CliFlows.Done));
         try
         {
             StringWriter output = new();

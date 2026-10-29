@@ -50,9 +50,32 @@ public sealed class NodeInputPlanTests
     public void Plan_binding_carries_the_target_input()
     {
         FlowEdge edge = new(NodePath.Of("甲"), NodePath.Of("乙"), new PortName("结果"), new PortName("目标"), PortTypes.Text);
-        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [edge]);
+        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [edge], []);
 
         InputBinding binding = Assert.Single(Assert.Single(plan.Groups).Bindings);
         Assert.Equal(new PortName("目标"), binding.TargetInput);
+    }
+
+    [Fact]
+    public void Only_static_inputs_make_a_plan_start_without_dynamic_source()
+    {
+        NodeInputPlan plan = NodeInputPlan.Of(
+            new ExecutableSpec(),
+            [],
+            [new InputPort(new PortName("配置"), PortTypes.Text, isStatic: true)]);
+
+        Assert.True(plan.StartsAtTaskStart);
+        Assert.Empty(plan.Groups);
+    }
+
+    [Fact]
+    public void Dynamic_inputs_do_not_start_without_a_source()
+    {
+        NodeInputPlan plan = NodeInputPlan.Of(
+            new ExecutableSpec(),
+            [],
+            [new InputPort(new PortName("目标"), PortTypes.Text)]);
+
+        Assert.False(plan.StartsAtTaskStart);
     }
 }

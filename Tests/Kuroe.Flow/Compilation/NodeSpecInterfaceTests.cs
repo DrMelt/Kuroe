@@ -58,7 +58,6 @@ public sealed class NodeSpecInterfaceTests
             {
                 Organizes = true,
                 InputTypes = [PortTypes.Text],
-                StaticInputs = [new InputPort(Input, PortTypes.Text, isStatic: true)],
             }),
             Inputs = [new InputPort(Input, PortTypes.Text, isStatic: true, defaultValue: "固定值")],
             Nodes = [NodeSpec.Define(new NodeName("成员"))],
@@ -70,24 +69,16 @@ public sealed class NodeSpecInterfaceTests
     }
 
     [Fact]
-    public void Type_static_input_cannot_be_declared_dynamic()
+    public void Dynamic_output_with_value_is_rejected()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
-            Type = new TestNodeType(new NodeKind("Executable"), new NodeTypeShape
-            {
-                DispatchesExecutions = true,
-                InputTypes = [PortTypes.Text],
-                OutputTypes = [PortTypes.Text],
-                StaticInputs = [new InputPort(Input, PortTypes.Text, isStatic: true)],
-            }),
+            Type = TestNodeTypes.PlainExecutable,
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(Input, PortTypes.Text)],
+            Outputs = [new Port(new PortName("输出"), PortTypes.Text, value: "固定")],
         };
 
-        Assert.Equal(
-            ["输入端口 输入 是节点类型的静态端口，不能声明为动态端口。"],
-            Errors(node, node.Type?.Shape));
+        Assert.Equal(["动态输出端口 输出 不能写 Value。"], Errors(node, node.Type?.Shape));
     }
 
     [Fact]
@@ -98,11 +89,12 @@ public sealed class NodeSpecInterfaceTests
             Type = new TestNodeType(new NodeKind("Executable"), new NodeTypeShape
             {
                 DispatchesExecutions = true,
-                InputTypes = [PortTypes.Text, PortTypes.Signal],
+                InputTypes = [PortTypes.Text, PortTypes.Context],
                 OutputTypes = [PortTypes.Text],
             }),
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(Input, PortTypes.Signal, isStatic: true)],
+            Inputs = [new InputPort(Input, PortTypes.Context, isStatic: true)],
+            Outputs = [new Port(new PortName("输出"), PortTypes.Text, isConstant: true, value: "固定")],
         };
 
         Assert.Equal(

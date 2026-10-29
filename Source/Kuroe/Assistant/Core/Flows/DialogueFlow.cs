@@ -130,7 +130,12 @@ internal static class DialogueFlow
                         {
                             Name = ReplyNodeName.Value,
                             Kind = "Llm",
-                            Inputs = [new InputPortDocument(InputPort.Value, PortTypes.Text), new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true)],
+                            Inputs =
+                            [
+                                new InputPortDocument(InputPort.Value, PortTypes.Text),
+                                new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true),
+                                new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, IsStatic: true),
+                            ],
                             Static = new Dictionary<string, string>
                             {
                                 [LlmNodeTypes.ModelPort.Value] = $"@{LlmNodeTypes.ModelPort.Value}",

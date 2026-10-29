@@ -51,7 +51,7 @@ public sealed class SnapshotTests
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"),
             PortTexts.Empty, Flow, Graph, TaskState.Running, 0,
-            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, PortTexts.Empty, []))],
+            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, PortTexts.Empty, PortTexts.Empty, []))],
             states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
     }
 

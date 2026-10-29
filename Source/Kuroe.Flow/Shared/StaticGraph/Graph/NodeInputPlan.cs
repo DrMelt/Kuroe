@@ -5,12 +5,13 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>输入侧的一条绑定：从来源节点的一个端口取值，进入本节点的一个输入端口。
-/// 信号语义只以新版本驱动启动，不取内容；Trigger 版还携带触发值。</summary>
+/// 信号语义只以新版本驱动启动，不取内容；承载触发的绑定还携带触发值。</summary>
 public sealed record InputBinding(
     NodePath Source,
     PortName? Port,
     PortType? Type = null,
-    PortName? TargetInput = null)
+    PortName? TargetInput = null,
+    bool Trigger = false)
 {
     /// <summary>节点级绑定，用于容器按成员整体推进内容版本。</summary>
     public static InputBinding Node(NodePath source) => new(source, null);
@@ -18,8 +19,8 @@ public sealed record InputBinding(
     /// <summary>是否信号语义，组内有信号绑定时只认信号来源的新版本。</summary>
     public bool Signal => Type?.Semantics == PortSemantics.Signal;
 
-    /// <summary>是否为 Trigger 版端口，启动组按该端口的触发值决定是否启动。</summary>
-    public bool CarriesTrigger => Type is { } type && PortRules.CarriesTrigger(type);
+    /// <summary>是否为触发绑定，启动组按该端口的触发值决定是否启动。</summary>
+    public bool CarriesTrigger => Trigger;
 
     /// <summary>已消费版本的键。</summary>
     public ConsumptionKey Key => new(Source, Port);
@@ -46,18 +47,32 @@ public sealed record NodeInputPlan
     /// <summary>执行次数上限。</summary>
     public int MaxExecutions { get; init; } = ExecutableNode.DefaultMaxExecutions;
 
-    /// <summary>执行节点的方案：入边按组聚合。</summary>
-    public static NodeInputPlan Of(ExecutableSpec spec, IReadOnlyList<FlowEdge> incoming) => new()
-    {
-        Groups =
+    /// <summary>启动方式：动态来源驱动或任务启动时从常量输入执行一次。</summary>
+    public NodeStartMode StartMode { get; init; } = NodeStartMode.Driven;
+
+    /// <summary>是否在任务启动时从常量输入执行一次。</summary>
+    public bool StartsAtTaskStart => StartMode == NodeStartMode.StaticAtTaskStart;
+
+    /// <summary>执行节点的方案：入边按组聚合，全部输入静态且没有入边时从静态输入启动一次。</summary>
+    public static NodeInputPlan Of(
+        ExecutableSpec spec,
+        IReadOnlyList<FlowEdge> incoming,
+        IReadOnlyList<InputPort> inputs) => new()
+        {
+            Groups =
         [
             .. incoming
                 .GroupBy(edge => edge.Group)
                 .OrderBy(group => group.Key)
-                .Select(group => new InputGroup([.. group.Select(Binding)])),
+                .Select(group => new InputGroup([.. group.Select(edge => Binding(edge, inputs))])),
         ],
-        MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
-    };
+            MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
+            StartMode = incoming.Count == 0
+            && inputs.Count > 0
+            && inputs.All(port => port.IsStatic)
+                ? NodeStartMode.StaticAtTaskStart
+                : NodeStartMode.Driven,
+        };
 
     /// <summary>容器的方案：一组绑定覆盖全部直接子节点，成员产出齐备且版本有变化即推进内容版本。</summary>
     public static NodeInputPlan Of(IReadOnlyList<GraphNode> children) => new()
@@ -69,7 +84,8 @@ public sealed record NodeInputPlan
         MaxExecutions = int.MaxValue,
     };
 
-    /// <summary>一条边在方案里的绑定：来源端口、目标输入端口与类型随边落定。</summary>
-    private static InputBinding Binding(FlowEdge edge) =>
-        new(edge.Source, edge.SourcePort, edge.Type, edge.TargetInput);
+    /// <summary>一条边在方案里的绑定：来源端口、目标输入端口与类型随边落定，触发方式取目标输入端口的配置。</summary>
+    private static InputBinding Binding(FlowEdge edge, IReadOnlyList<InputPort> inputs) =>
+        new(edge.Source, edge.SourcePort, edge.Type, edge.TargetInput,
+            inputs.Find(edge.TargetInput)?.Trigger ?? false);
 }

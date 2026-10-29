@@ -115,7 +115,7 @@ public sealed class TestEnvironment : IDisposable
               "Name": "默认",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "MODEL_NAME", "Type": "Text", "Static": true }
+                { "Name": "MODEL_NAME", "Type": "Text", "Constant": true }
               ] },
               "HostStartInputs": { "MODEL_NAME": "MODEL" },
               "Nodes": [
@@ -125,9 +125,9 @@ public sealed class TestEnvironment : IDisposable
                   "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
                   "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "制定计划", "Kind": "Llm", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
+                      { "Name": "分配执行", "Kind": "Llm", "Inputs": [{ "Name": "计划", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
                     ] }
                   ]
                 }
@@ -151,7 +151,7 @@ public sealed class TestEnvironment : IDisposable
         if (flowsText is not null)
         {
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
-            File.WriteAllText(paths.FlowsFile, flowsText);
+            File.WriteAllText(paths.FlowsFile, TestFlowDocument.Normalize(flowsText));
         }
 
         var services = new ServiceCollection();
@@ -193,8 +193,23 @@ public sealed class TestEnvironment : IDisposable
         Submit(StartInputs.Single(new PortName("目标"), goal), flow);
 
     /// <summary>按开始输入表提交任务，未点名时用测试默认写入的那条流程。</summary>
-    public TaskId Submit(StartInputs inputs, FlowName? flow = null) =>
-        Tasks.Submit(inputs, flow ?? new FlowName("默认"), null).ThrowIfError().Id;
+    public TaskId Submit(StartInputs inputs, FlowName? flow = null)
+    {
+        FlowName name = flow ?? new FlowName("默认");
+        ErrorOr<TaskSnapshot> submitted = Tasks.Submit(inputs, name, null);
+        if (submitted.IsSuccess)
+        {
+            return submitted.Value.Id;
+        }
+
+        FlowFailure? failure = Flows.Failures.FirstOrDefault(candidate => candidate.Name == name);
+        if (failure is not null)
+        {
+            throw new InvalidOperationException(string.Join("；", failure.Errors.Select(error => error.Description)));
+        }
+
+        return submitted.ThrowIfError().Id;
+    }
 
     public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();
 

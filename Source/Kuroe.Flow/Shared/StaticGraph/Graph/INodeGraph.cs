@@ -53,6 +53,6 @@ public interface INodeGraph
     /// <summary>节点类型的形状，开始为空。</summary>
     NodeTypeShape? ShapeOf(NodePath path);
 
-    /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。</summary>
+    /// <summary>来源节点某输出端口声明的类型，未声明按 Text。</summary>
     PortType TypeOf(NodePath node, PortName port);
 }

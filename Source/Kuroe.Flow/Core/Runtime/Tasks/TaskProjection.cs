@@ -3,13 +3,17 @@ using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>任务快照的只读投影：按已实例化节点读出执行节点与容器的一刻状态。
 /// 投影不实例化节点，未实例化的节点按默认待办报告。</summary>
-internal sealed class TaskProjection(INodeGraph graph, NodeMaterializer materializer)
+internal sealed class TaskProjection(
+    INodeGraph graph,
+    NodeMaterializer materializer,
+    StaticPortValues staticPorts)
 {
     /// <summary>节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。</summary>
     public ExecutableStateSnapshot State(NodePath path) => materializer.Find(path)?.Snapshot()
@@ -23,7 +27,11 @@ internal sealed class TaskProjection(INodeGraph graph, NodeMaterializer material
         {
             snapshots.Add(materializer.Find(container.Path) is RuntimeContainer runtime
                 ? Of(runtime)
-                : new ContainerSnapshot(container.Path, ActivityState(container), ChildPaths(container)));
+                : new ContainerSnapshot(
+                    container.Path,
+                    ActivityState(container),
+                    ChildPaths(container),
+                    staticPorts.ConstantsFor(container)));
         }
 
         return snapshots;
@@ -46,7 +54,11 @@ internal sealed class TaskProjection(INodeGraph graph, NodeMaterializer material
             state = ActivityState(container.Container);
         }
 
-        return new ContainerSnapshot(container.Path, state, ChildPaths(container.Container));
+        return new ContainerSnapshot(
+            container.Path,
+            state,
+            ChildPaths(container.Container),
+            staticPorts.ConstantsFor(container.Container));
     }
 
     /// <summary>容器的直接子节点路径，先根序。</summary>

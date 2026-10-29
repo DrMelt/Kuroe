@@ -99,7 +99,7 @@ internal static class NodeExpander
                     Type = definition.Type,
                     Inputs = definition.Inputs,
                     Nodes = members,
-                    ContainerOutputs = ResolveContainerOutputs(definition.ContainerOutputs, childEnv, scope, errors),
+                    Outputs = ResolveOutputs(definition.Outputs, childEnv, scope, errors),
                     MaxExecutions = node.MaxExecutions,
                 };
             }
@@ -144,7 +144,7 @@ internal static class NodeExpander
                 Inputs = node.Inputs,
                 From = ResolveAll(node.From, env, scope, errors),
                 Static = ResolveStatic(node.Static, env, scope, errors),
-                ContainerOutputs = ResolveContainerOutputs(node.ContainerOutputs, childEnv, scope, errors),
+                Outputs = ResolveOutputs(node.Outputs, childEnv, scope, errors),
                 MaxExecutions = node.MaxExecutions,
                 Nodes = expanded,
             };
@@ -290,24 +290,14 @@ internal static class NodeExpander
         return bound;
     }
 
-    /// <summary>容器输出端口的实例化：绑定值按原文保留，引用在编译期按作用域解析，说明原样保留。</summary>
-    private static Dictionary<PortName, ContainerOutput>? ResolveContainerOutputs(
-        IReadOnlyDictionary<PortName, ContainerOutput>? outs,
+    /// <summary>容器输出端口的实例化：引用在本容器的绑定域里解析，固定值与说明原样保留。</summary>
+    private static IReadOnlyList<Port> ResolveOutputs(
+        IReadOnlyList<Port> outputs,
         Env? env,
         NodeScope scope,
-        List<Error> errors)
-    {
-        if (outs is not { Count: > 0 })
-        {
-            return null;
-        }
-
-        return outs.ToDictionary(
-            entry => entry.Key,
-            entry => new ContainerOutput(
-                ResolveRef(entry.Value.Ref, env, scope, errors),
-                entry.Value.Description,
-                entry.Value.IsStatic));
-    }
+        List<Error> errors) =>
+        [.. outputs.Select(output => output.Ref is { } reference
+            ? output with { Ref = ResolveRef(reference, env, scope, errors) }
+            : output)];
 
 }

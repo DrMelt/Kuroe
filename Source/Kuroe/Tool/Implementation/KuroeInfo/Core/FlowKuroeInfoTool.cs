@@ -114,9 +114,9 @@ public sealed class FlowKuroeInfoTool : ITool
                     text.AppendLine($"    传入端口 {string.Join("、", ports.Select(port => port.Label()))}");
                 }
 
-                if (node.ContainerOutputs is { Count: > 0 } outs)
+                if (node.Outputs.Count > 0)
                 {
-                    text.AppendLine($"    输出端口 {string.Join("、", outs.Select(entry => DescribeOutput(entry.Key, entry.Value)))}");
+                    text.AppendLine($"    输出端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
                 }
             }
         }
@@ -173,12 +173,6 @@ public sealed class FlowKuroeInfoTool : ITool
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
     }
-
-    /// <summary>容器输出端口的展示：写转发目标，说明存在时写在末尾。</summary>
-    private static string DescribeOutput(PortName port, ContainerOutput output) =>
-        output.Description is { Length: > 0 } description
-            ? $"{port.Value} ← {output.Ref.Display}：{description}"
-            : $"{port.Value} ← {output.Ref.Display}";
 
     /// <summary>递归收集流程里的全部执行节点标签。</summary>
     private static IEnumerable<NodeLabel> Flatten(NodeSpec node)

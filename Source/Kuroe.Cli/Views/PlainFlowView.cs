@@ -98,20 +98,9 @@ internal static class PlainFlowView
     private static string Container(ContainerNode container)
     {
         List<string> parts = [container.Label.Value, "容器"];
-        if (container.PortBindings is { Count: > 0 } bindings)
+        if (container.Outputs.Count > 0)
         {
-            string[] dynamicPorts = [.. bindings.Keys
-                .Where(port => container.StaticOutputs?.Contains(port) != true)
-                .Select(port => port.Value)];
-            if (dynamicPorts.Length > 0)
-            {
-                parts.Add($"端口 {string.Join('、', dynamicPorts)}");
-            }
-        }
-
-        if (container.StaticOutputs is { Count: > 0 } statics)
-        {
-            parts.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}");
+            parts.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}");
         }
 
         return string.Join('\t', parts);
@@ -133,7 +122,7 @@ internal static class PlainFlowView
 
         if (executable.Outputs.Count > 0)
         {
-            parts.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Name.Value))}");
+            parts.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}");
         }
 
         if (executable.MaxExecutions != ExecutableNode.DefaultMaxExecutions)

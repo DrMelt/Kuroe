@@ -12,4 +12,7 @@ public static class TestNodeTypes
 
     /// <summary>测试用的执行节点类型实例。</summary>
     public static INodeType Executable { get; } = new TestExecutableNodeType();
+
+    /// <summary>测试用的执行节点类型实例，不带静态输入，用于只验证执行与接线规则的节点。</summary>
+    public static INodeType PlainExecutable { get; } = new TestExecutableNodeType(withContractInput: false);
 }

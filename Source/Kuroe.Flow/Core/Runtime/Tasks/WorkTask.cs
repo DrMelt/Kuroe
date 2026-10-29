@@ -216,11 +216,14 @@ public sealed class WorkTask : INodeTask
 
             List<ExecutableSnapshot> executables =
             [
-                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(node, Runtime.StaticPorts.For(node),
+                .. Graph.ExecutableNodes.Select(node => new ExecutableSnapshot(
+                    node,
+                    Runtime.StaticPorts.For(node),
+                    Runtime.StaticPorts.ConstantsFor(node),
                     [.. _executions.Where(execution => execution.Input.Node == node.Path).Select(execution => executions[execution.Id])])),
             ];
 
-            TaskProjection projection = new(Graph, Runtime.Materializer);
+            TaskProjection projection = new(Graph, Runtime.Materializer, Runtime.StaticPorts);
             List<ExecutableStateSnapshot> executableStates = [.. Graph.ExecutableNodes.Select(node => projection.State(node.Path))];
 
             return new TaskSnapshot(Id, _title, Inputs, StartTexts, Flow, Graph, Summarize(),

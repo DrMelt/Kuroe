@@ -15,6 +15,7 @@ public static class InputNodeTypes
     public static NodeTypeShape Shape { get; } = new()
     {
         StartsUnaided = true,
+        AcceptsInferredInputs = true,
         InputTypes = [PortTypes.Text, PortTypes.Signal],
         OutputTypes = [PortTypes.Text],
     };

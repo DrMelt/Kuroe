@@ -7,10 +7,11 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Tool.Contract;
 
 /// <summary>输出端口交回的命名段：把模型给的 JSON 对象按端口声明解析成端口值，不合法时给出一条可回给模型的原因。
-/// Text 与 Signal 交回原有形态；TextTrigger 接受文本或带 text 与 trigger 的对象，SignalTrigger 接受布尔值或带 trigger 的对象。</summary>
+/// 不承载触发的端口只接受内容形态；承载触发的 Text 端口接受文本或带 text 与 trigger 的对象，
+/// 承载触发的 Signal 端口接受布尔值或带 trigger 的对象。</summary>
 internal static class PortValues
 {
-    /// <summary>解析端口名到端口值的 JSON 对象，取值形态按声明类型判定。</summary>
+    /// <summary>解析端口名到端口值的 JSON 对象，取值形态按端口配置判定。</summary>
     public static ErrorOr<IReadOnlyDictionary<string, PortValue>> Parse(string valuesJson, IReadOnlyList<Port>? declared)
     {
         if (declared is not { Count: > 0 })
@@ -55,10 +56,10 @@ internal static class PortValues
         return result;
     }
 
-    /// <summary>按端口类型读取一个取值。普通端口只接受原有形态；TextTrigger 接受文本或带 text 与 trigger 的对象，SignalTrigger 接受布尔值或带 trigger 的对象。</summary>
+    /// <summary>按端口配置读取一个取值。不承载触发的端口只接受内容形态；承载触发的端口按数据语义读取。</summary>
     private static ErrorOr<PortValue> Read(Port port, JsonElement element)
     {
-        if (!port.Type.IsTrigger)
+        if (!port.Trigger)
         {
             if (element.ValueKind is JsonValueKind.String or JsonValueKind.Null)
             {

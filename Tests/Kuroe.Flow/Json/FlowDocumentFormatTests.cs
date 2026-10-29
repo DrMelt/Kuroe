@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;
@@ -33,7 +34,7 @@ public sealed class FlowDocumentFormatTests
         string text = Ok(Format.Write(document));
 
         Assert.Contains("\"Prompt\": \"写出计划\"", text);
-        Assert.Contains("\"Static\"", text);
+        Assert.Contains("\"Constant\"", text);
         Assert.Contains("\"MODEL_NAME\": \"Start@MODEL_NAME\"", text);
         Assert.Contains("\"Label\": \"副本\"", text);
         Assert.DoesNotContain("\": null", text);
@@ -60,6 +61,74 @@ public sealed class FlowDocumentFormatTests
 
         Assert.Contains("\"Type\": \"TextTrigger\"", text);
         Assert.Contains("\"Type\": \"SignalTrigger\"", text);
+        Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
+    }
+
+    [Fact]
+    public void Input_role_and_explicit_trigger_round_trip()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Nodes": [
+                  { "Name": "来源", "Kind": "Llm",
+                    "Inputs": [
+                      { "Name": "配置", "Type": "Text", "Static": true, "Role": "Configuration" },
+                      { "Name": "信号", "Type": "Signal", "Trigger": false }
+                    ],
+                    "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
+                    "Outputs": [
+                      { "Name": "结论", "Type": "Text", "Trigger": true },
+                      { "Name": "完成", "Type": "Signal" }
+                    ] }
+                ] }
+              ] } ]
+            }
+            """;
+
+        FlowDocument document = Ok(Format.Read(flow));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
+        NodeDefinitionDocument source = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes!));
+        InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
+        InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
+        Assert.Equal(InputRole.Configuration, configured.Role);
+        Assert.Null(configured.Trigger);
+        Assert.False(signal.Trigger);
+        Assert.True(source.Outputs[0].Trigger);
+        Assert.Null(source.Outputs[1].Trigger);
+
+        string text = Ok(Format.Write(document));
+        Assert.Contains("\"Role\": \"Configuration\"", text);
+        Assert.Contains("\"Trigger\": false", text);
+        Assert.Contains("\"Trigger\": true", text);
+        Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
+    }
+
+    [Fact]
+    public void Output_entries_share_value_and_ref_shape_on_all_nodes()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Outputs": [
+                  { "Name": "配置", "Type": "Text", "Value": "固定", "Constant": true }
+                ], "Nodes": [
+                  { "Name": "配置节点", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
+                    "Outputs": [{ "Name": "资料", "Type": "Text", "Ref": "@MODEL_NAME", "Constant": true }] }
+                ] }
+              ] } ]
+            }
+            """;
+
+        FlowDocument document = Ok(Format.Read(flow));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
+        PortDocument output = Assert.Single(root.Outputs);
+        Assert.Equal("固定", output.Value);
+        Assert.True(output.IsConstant);
+
+        string text = Ok(Format.Write(document));
+        Assert.Contains("\"Value\": \"固定\"", text);
+        Assert.Contains("\"Ref\": \"@MODEL_NAME\"", text);
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
@@ -92,7 +161,7 @@ public sealed class FlowDocumentFormatTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true } ] },
+              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true } ] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
                   { "Label": "副本", "Use": "计划", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }

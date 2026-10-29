@@ -10,8 +10,8 @@ static class ContractToolDefinitions
     public static ToolDefinition Port(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
         new ToolPath(ContractTools.Port),
         "提交本执行节点命名输出端口的值。valuesJson 是端口名到值的 JSON 对象，端口必须与需交回的端口一一对应。"
-        + "Text 端口给文本；Signal 端口给空文本或端口名；TextTrigger 端口给文本，或带 text 与 trigger 的对象；"
-        + "SignalTrigger 端口给 true 或 false，或带 trigger 的对象。trigger 省略时为 true，false 表示本次产出只被下游启动组消耗、不触发下游节点。",
+        + "Text 端口给文本；Signal 端口给空文本或端口名；承载触发的 Text 端口给文本，或带 text 与 trigger 的对象；"
+        + "承载触发的 Signal 端口给 true 或 false，或带 trigger 的对象。trigger 省略时为 true，false 表示本次产出只被下游启动组消耗、不触发下游节点。",
         [new ToolParameter(new ToolName("valuesJson"), "端口名到值的 JSON 对象，端口必须与需交回的端口一一对应", Required: true)]), ports);
 
     /// <summary>上报本轮无法完成的工具定义。</summary>

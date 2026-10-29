@@ -8,8 +8,21 @@ namespace Kuroe.Presentation;
 /// <summary>端口与上游连接的展示名。</summary>
 public static class PortLabels
 {
-    /// <summary>输出端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
-    public static string Label(this Port port) => Format(port.Name, port.Type, port.Description);
+    /// <summary>输出端口的展示：Text 端口只写名字，其余标出类型；固定值、引用来源与静态标记附后，说明存在时写在末尾。</summary>
+    public static string Label(this Port port)
+    {
+        string text = Format(port.Name, port.Type, port.Description);
+        if (port.Value is { Length: > 0 } value)
+        {
+            text = $"{text}={value}";
+        }
+        else if (port.Ref is { } reference)
+        {
+            text = $"{text}←{reference.Display}";
+        }
+
+        return port.IsConstant ? $"{text}·常量" : text;
+    }
 
     /// <summary>输入端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾，默认值附后，静态端口标出静态。</summary>
     public static string Label(this InputPort port)
@@ -30,7 +43,7 @@ public static class PortLabels
     public static string Label(this FromGroup group) =>
         string.Join("、", group.Links.Select(link => link.Label()));
 
-    /// <summary>开始端口的展示：带固定值时写出端口与值，绑定宿主输入时附宿主输入名，静态端口标出静态。</summary>
+    /// <summary>开始端口的展示：带固定值时写出端口与值，绑定宿主输入时附宿主输入名，常量端口标出常量。</summary>
     public static string StartLabel(
         this Port port,
         IReadOnlyDictionary<PortName, string>? hostInputs = null)
@@ -41,7 +54,7 @@ public static class PortLabels
             text = $"{text}←{input}";
         }
 
-        return port.IsStatic ? $"{text}·静态" : text;
+        return port.IsConstant ? $"{text}·常量" : text;
     }
 
     /// <summary>静态端口绑定来源的展示：成员路径@端口。直接绑定开始端口且该端口有宿主输入名时附上输入名。</summary>

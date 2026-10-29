@@ -52,10 +52,11 @@ static class FlowDocumentReader
         string name = dto.Name?.Trim() ?? string.Empty;
         NodeScope scope = NodeScope.Flow(name);
 
-        ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name, allowValue: true);
+        ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name);
         if (startOutputs.IsError)
         {
-            return startOutputs.ErrorsOrEmptyList;
+            errors.AddRange(startOutputs.ErrorsOrEmptyList);
+            return errors;
         }
 
         Dictionary<string, string> hostStartInputs = [];
@@ -129,7 +130,7 @@ static class FlowDocumentReader
             nodeErrors.AddRange(inputs.ErrorsOrEmptyList);
         }
 
-        ErrorOr<IReadOnlyList<PortDocument>> outputs = ReadPorts(dto.Outputs, scope, label, allowValue: false);
+        ErrorOr<IReadOnlyList<PortDocument>> outputs = ReadPorts(dto.Outputs, scope, label);
         if (outputs.IsError)
         {
             nodeErrors.AddRange(outputs.ErrorsOrEmptyList);
@@ -263,8 +264,7 @@ static class FlowDocumentReader
     private static ErrorOr<IReadOnlyList<PortDocument>> ReadPorts(
         List<JsonElement>? entries,
         NodeScope scope,
-        string label,
-        bool allowValue)
+        string label)
     {
         if (entries is not { Count: > 0 })
         {
@@ -277,7 +277,7 @@ static class FlowDocumentReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(label, "输出端口条目必须是带 Name 与 Type 的对象，说明写 Description。"));
+                errors.Add(scope.Node(label, "输出端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
                 continue;
             }
 
@@ -286,7 +286,8 @@ static class FlowDocumentReader
             string? description = null;
             string? value = null;
             string? reference = null;
-            bool isStatic = false;
+            bool isConstant = false;
+            bool? trigger = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -334,7 +335,7 @@ static class FlowDocumentReader
                     case "ref":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "容器输出端口的 Ref 键必须是 成员@端口 引用。"));
+                            errors.Add(scope.Node(label, "输出端口的 Ref 键必须是 来源@端口 或 @端口 引用。"));
                             invalid = true;
                         }
                         else
@@ -344,10 +345,10 @@ static class FlowDocumentReader
 
                         break;
 
-                    case "value" when allowValue:
+                    case "value":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "开始端口的 Value 键必须是文本。"));
+                            errors.Add(scope.Node(label, "输出端口的 Value 键必须是文本。"));
                             invalid = true;
                         }
                         else
@@ -357,28 +358,35 @@ static class FlowDocumentReader
 
                         break;
 
-                    case "value":
-                        errors.Add(scope.Node(label, "输出端口不认识键 Value，Value 只属于开始端口。"));
-                        invalid = true;
-                        break;
-
-                    case "static":
+                    case "constant":
                         if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Static 键必须是布尔值。"));
+                            errors.Add(scope.Node(label, "输出端口的 Constant 键必须是布尔值。"));
                             invalid = true;
                         }
                         else
                         {
-                            isStatic = property.Value.GetBoolean();
+                            isConstant = property.Value.GetBoolean();
+                        }
+
+                        break;
+
+                    case "trigger":
+                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        {
+                            errors.Add(scope.Node(label, "输出端口的 Trigger 键必须是布尔值。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            trigger = property.Value.GetBoolean();
                         }
 
                         break;
 
                     default:
-                        errors.Add(scope.Node(label, allowValue
-                            ? $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Value 与 Static。"
-                            : $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Ref 与 Static。"));
+                        errors.Add(scope.Node(label,
+                            $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Value、Ref、Constant 与 Trigger。"));
                         invalid = true;
                         break;
                 }
@@ -386,7 +394,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new PortDocument(name ?? string.Empty, type, description, value, reference, isStatic));
+                result.Add(new PortDocument(name ?? string.Empty, type, description, value, reference, isConstant, trigger));
             }
         }
 
@@ -418,6 +426,8 @@ static class FlowDocumentReader
             string? description = null;
             string? defaultValue = null;
             bool isStatic = false;
+            bool? trigger = null;
+            InputRole? role = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -488,8 +498,35 @@ static class FlowDocumentReader
 
                         break;
 
+                    case "trigger":
+                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        {
+                            errors.Add(scope.Node(label, "输入端口的 Trigger 键必须是布尔值。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            trigger = property.Value.GetBoolean();
+                        }
+
+                        break;
+
+                    case "role":
+                        if (!TryInputRole(property.Value, out InputRole parsedRole))
+                        {
+                            errors.Add(scope.Node(label, "输入端口的 Role 应为 Content、Configuration 或 Control。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            role = parsedRole;
+                        }
+
+                        break;
+
                     default:
-                        errors.Add(scope.Node(label, $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description、Default 与 Static。"));
+                        errors.Add(scope.Node(label,
+                            $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description、Default、Static、Role 与 Trigger。"));
                         invalid = true;
                         break;
                 }
@@ -497,7 +534,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new InputPortDocument(name ?? string.Empty, type, description, defaultValue, isStatic));
+                result.Add(new InputPortDocument(name ?? string.Empty, type, description, defaultValue, isStatic, role, trigger));
             }
         }
 
@@ -510,6 +547,14 @@ static class FlowDocumentReader
 
         return element.ValueKind == JsonValueKind.String
             && PortTypes.TryParse(element.GetString(), out type);
+    }
+
+    private static bool TryInputRole(JsonElement element, out InputRole role)
+    {
+        role = default;
+
+        return element.ValueKind == JsonValueKind.String
+            && Enum.TryParse(element.GetString(), ignoreCase: true, out role);
     }
 
     private static ErrorOr<Dictionary<string, string>?> ReadStatic(

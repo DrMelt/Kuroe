@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Json.Files;
 
@@ -17,7 +18,7 @@ static class FlowDocumentWriter
     {
         Name = flow.Name,
         Description = flow.Description,
-        Start = new StartDto { Outputs = WritePorts(flow.StartOutputs, allowValue: true) },
+        Start = new StartDto { Outputs = WritePorts(flow.StartOutputs) },
         HostStartInputs = flow.HostStartInputs.Count > 0
             ? new Dictionary<string, string>(flow.HostStartInputs)
             : null,
@@ -36,7 +37,7 @@ static class FlowDocumentWriter
         Name = node.Name,
         Kind = node.Kind,
         Inputs = WriteInputs(node.Inputs),
-        Outputs = WritePorts(node.Outputs, allowValue: false),
+        Outputs = WritePorts(node.Outputs),
         From = WriteFrom(node.From),
         In = node.In is { Count: > 0 } bindings
             ? new Dictionary<string, string>(bindings)
@@ -59,7 +60,7 @@ static class FlowDocumentWriter
         Static = WriteStatic(node.Static),
     };
 
-    private static List<JsonElement>? WritePorts(IReadOnlyList<PortDocument> ports, bool allowValue)
+    private static List<JsonElement>? WritePorts(IReadOnlyList<PortDocument> ports)
     {
         if (ports.Count == 0)
         {
@@ -74,9 +75,10 @@ static class FlowDocumentWriter
                     Name = port.Name,
                     Type = port.Type?.Name,
                     Description = port.Description,
-                    Value = allowValue ? port.Value : null,
+                    Value = port.Value,
                     Ref = port.Ref,
-                    Static = port.IsStatic ? true : null,
+                    Constant = port.IsConstant ? true : null,
+                    Trigger = ExplicitTrigger(port.Trigger, port.Type),
                 },
                 FlowJson.Default.PortEntryDto)),
         ];
@@ -99,6 +101,8 @@ static class FlowDocumentWriter
                     Description = input.Description,
                     Default = input.Default,
                     Static = input.IsStatic ? true : null,
+                    Role = input.Role?.ToString(),
+                    Trigger = ExplicitTrigger(input.Trigger, input.Type),
                 },
                 FlowJson.Default.PortEntryDto)),
         ];
@@ -118,6 +122,14 @@ static class FlowDocumentWriter
                 FlowJson.Default.DictionaryStringString)),
         ];
     }
+
+    /// <summary>端口配置与类型默认值一致时省略 Trigger，保留显式覆盖。</summary>
+    private static bool? ExplicitTrigger(bool? trigger, PortType? type) =>
+        trigger is { } value && value != DefaultTrigger(type) ? value : null;
+
+    /// <summary>端口类型的默认触发配置：Trigger 版与 Signal 语义默认为 true，未写类型按 Text。</summary>
+    private static bool DefaultTrigger(PortType? type) =>
+        type is { } declared && (declared.IsTrigger || declared.Semantics == PortSemantics.Signal);
 
     private static Dictionary<string, string>? WriteStatic(IReadOnlyDictionary<string, string>? bindings) =>
         bindings is { Count: > 0 } ? new Dictionary<string, string>(bindings) : null;

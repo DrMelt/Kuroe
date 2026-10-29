@@ -15,7 +15,6 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json;
 using Kuroe.Node.Llm;
-
 using Kuroe.Workflows.Flows;
 using Xunit;
 
@@ -92,7 +91,7 @@ public sealed class NodeLibraryTests
     public void Import_keeps_library_and_reference_shape_on_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "library.json"), LibraryFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "library.json"), TestFlowDocument.Normalize(LibraryFlow));
 
         FlowImport imported = environment.Flows.Import("library.json").ThrowIfError();
         Assert.Contains(imported.Notes, note => note.Contains("节点库"));
@@ -125,7 +124,7 @@ public sealed class NodeLibraryTests
     public void Builtin_node_stays_usable_and_unwritten_when_file_defines_its_own()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "builtin.json"), BuiltinReferenceFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "builtin.json"), TestFlowDocument.Normalize(BuiltinReferenceFlow));
 
         environment.Flows.Import("builtin.json").ThrowIfError();
 
@@ -156,7 +155,7 @@ public sealed class NodeLibraryTests
     public void Import_rejects_duplicated_flow_names()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "duplicated.json"), DuplicateImportedFlows);
+        File.WriteAllText(Path.Combine(environment.Root, "duplicated.json"), TestFlowDocument.Normalize(DuplicateImportedFlows));
 
         ErrorOr<FlowImport> imported = environment.Flows.Import("duplicated.json");
 
@@ -206,13 +205,13 @@ public sealed class NodeLibraryTests
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Spec = new ExecutableSpec() }],
             }));
 
-    /// <summary>库容器定义不写执行节点的输出端口与输出校验，校验阶段拒绝。</summary>
+    /// <summary>库容器定义的输出必须有来源，且不能声明输出校验。</summary>
     [Fact]
     public void Library_container_with_execution_fields_is_rejected() =>
         Assert.Equal(
             [
-                "节点库定义 干活组：库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。",
                 "节点库定义 干活组：库容器定义不声明 Validate，输出校验只属于执行节点。",
+                "节点库定义 干活组：输出端口 结论 必须写 Value 或 Ref。",
             ],
             LibraryErrors(new NodeSpec
             {
@@ -222,20 +221,6 @@ public sealed class NodeLibraryTests
                 Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", isStatic: true)], Spec = new ExecutableSpec() }],
-            }));
-
-    /// <summary>库执行定义不写容器输出端口，那属于容器定义。</summary>
-    [Fact]
-    public void Library_executable_with_container_out_is_rejected() =>
-        Assert.Equal(
-            ["节点库定义 干活库：库执行定义不声明容器输出端口，执行节点输出端口条目写 Name 与 Type。"],
-            LibraryErrors(new NodeSpec
-            {
-                Name = new NodeName("干活库"),
-                Label = new NodeLabel("干活库"),
-                Type = LlmNodeTypes.Create(null),
-                Spec = new ExecutableSpec(),
-                ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [new PortName("结论")] = new(PortRef.Named(new NodeLabel("干活"), new PortName("结论"))) },
             }));
 
     /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出。</summary>
@@ -254,7 +239,7 @@ public sealed class NodeLibraryTests
     public void Import_rejects_flow_referencing_library_node_outside_the_file()
     {
         using TestEnvironment environment = TestEnvironment.Create(LibraryFlow);
-        File.WriteAllText(Path.Combine(environment.Root, "reuse.json"), LibraryReferenceOnlyFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "reuse.json"), TestFlowDocument.Normalize(LibraryReferenceOnlyFlow));
 
         ErrorOr<FlowImport> imported = environment.Flows.Import("reuse.json");
 
@@ -271,7 +256,7 @@ public sealed class NodeLibraryTests
     public void Import_reports_new_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), ExtraFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), TestFlowDocument.Normalize(ExtraFlow));
 
         FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
@@ -283,7 +268,7 @@ public sealed class NodeLibraryTests
     public void Import_reports_overwritten_flow()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), OverwritingFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), TestFlowDocument.Normalize(OverwritingFlow));
 
         FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
@@ -416,13 +401,13 @@ public sealed class NodeLibraryTests
 
     [InlineData(LibraryPortOnInput, "最多一个输出端口")]
     [InlineData(LibraryQuestionOnText, "字段 Question 不属于 Llm 节点")]
-    [InlineData(LibraryContainerWithOutputs, "容器输出端口不认识键 Type")]
+    [InlineData(LibraryContainerWithOutputs, "输出端口 结论 必须写 Value 或 Ref")]
     [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口")]
     [InlineData(LibraryContainerOutMissingMember, "不在容器 交付 的子树里")]
-    [InlineData(LibraryContainerOutBadPort, "无法取用")]
-    [InlineData(LibraryContainerOutSubContainer, "不是执行节点")]
-    [InlineData(LibraryContainerOutInputContext, "不能作为上下文端口来源")]
-    [InlineData(LeafWithOut, "执行节点的输出端口条目写 Name 与 Type，不写 Ref")]
+    [InlineData(LibraryContainerOutBadPort, "没有输出端口 不存在")]
+    [InlineData(LibraryContainerOutSubContainer, "没有输出端口 结论")]
+    [InlineData(LibraryContainerOutInputContext, "类型必须与绑定目标")]
+    [InlineData(LeafWithOut, "缺少 @")]
     [InlineData(ReferenceWithOut, "引用节点不能声明输出端口")]
     [InlineData(AssemblyContainerOut, "没有输出端口")]
     [InlineData(LibraryNameWithAt, "节点名不能含 @")]

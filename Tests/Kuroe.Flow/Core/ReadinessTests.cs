@@ -145,7 +145,7 @@ public sealed class ReadinessTests
         NodeInputPlan plan = Plan(graph, "节点2");
         FakeSources sources = new();
         RecordingStore store = new();
-        RuntimeExecutable node = new(target, store);
+        RuntimeExecutable node = new(target, consumed: store);
 
         sources.Of("节点1").Publish();
         node.Consume(plan, sources);

@@ -91,6 +91,14 @@ public sealed class FlowRuleTests
                 [ContextPort("目标")], new Dictionary<PortName, string>(), Container("整体", Exec("干活", new ExecutableSpec()) with { From = [] }))));
 
     [Fact]
+    public void From_target_is_inferred_as_a_text_content_input()
+    {
+        NodeSpec node = Exec("干活", new ExecutableSpec());
+
+        Assert.NotNull(node.FindInput(PN("目标")));
+    }
+
+    [Fact]
     public void Start_with_constant_port_is_accepted() =>
         Assert.Empty(Errors(StartFlow([StartOutput, P("背景") with { Value = "固定背景" }])));
 
@@ -210,15 +218,15 @@ public sealed class FlowRuleTests
                     Text("实施") with { From = [Ref("分析", "不存在")] }))));
 
     [Fact]
-    public void Context_input_from_container_is_rejected() =>
+    public void Context_input_from_text_output_is_rejected() =>
         Assert.Equal(
-            [
-                MemberError("实施", "容器 整体/箱子 没有输出端口 结论。"),
-                MemberError("实施", "Context 输入来源 整体/箱子 必须是非输入执行节点。"),
-            ],
+            [MemberError("实施", "Context 输入来源 整体/箱子 必须产出 Context 端口，实际来源端口 结论 是 Text。")],
             Errors(Flow(
                 Container("整体",
-                    Container("箱子", Text("干活") with { Outputs = [P("结论")] }),
+                    Container("箱子", Text("干活") with { Outputs = [P("结论")] }) with
+                    {
+                        Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("干活"), PN("结论")) }],
+                    },
                     Text("实施") with { Inputs = [In("结论", PortTypes.Context)], From = [Context("箱子", "结论")] }))));
 
     [Fact]
@@ -274,7 +282,7 @@ public sealed class FlowRuleTests
     public void Signal_driver_is_accepted() =>
         Assert.Empty(Errors(Flow(
             Container("整体",
-                Text("放行") with { Outputs = [P("结论")] },
+                Text("放行") with { Outputs = [P("结论"), new Port(new PortName("信号"), PortTypes.Signal)] },
                 Exec("实施", new ExecutableSpec()) with
                 {
                     Inputs = [In("结论"), In("批准", PortTypes.Signal)],
@@ -282,20 +290,20 @@ public sealed class FlowRuleTests
                     [
                         new([
                             new FromLink(new PortName("结论"), PortRef.Named(new NodeLabel("放行"), new PortName("结论"))),
-                            new FromLink(new PortName("批准"), PortRef.Named(new NodeLabel("放行"), new PortName("结论"))),
+                            new FromLink(new PortName("批准"), PortRef.Named(new NodeLabel("放行"), new PortName("信号"))),
                         ]),
                     ],
                 }))));
 
     [Fact]
-    public void Container_out_bound_to_sub_container_is_rejected() =>
+    public void Container_out_bound_to_sub_container_without_the_port_is_rejected() =>
         Assert.Equal(
-            [NodeError("整体/交付", "容器输出端口 结果 的绑定目标 整体/交付/撰写组 不是执行节点，无法取产出。")],
+            [NodeError("整体/交付", "输出端口 结果 的来源节点 整体/交付/撰写组 没有输出端口 结论。")],
             Errors(Flow(
                 Container("整体",
                     Container("交付", Container("撰写组", Text("撰写") with { Outputs = [P("结论")] })) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结果")] = new(PortRef.Named(new NodeLabel("撰写组"), PN("结论"))) },
+                        Outputs = [P("结果") with { Ref = PortRef.Named(new NodeLabel("撰写组"), PN("结论")) }],
                     }))));
 
     [Fact]
@@ -323,7 +331,7 @@ public sealed class FlowRuleTests
                 Container("整体",
                     Container("交付", Text("撰写") with { Outputs = [P("结论")], From = [Ref("交付", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("撰写"), PN("结论"))) },
+                        Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("撰写"), PN("结论")) }],
                     }))));
 
     [Fact]
@@ -339,7 +347,7 @@ public sealed class FlowRuleTests
                         Text("撰写") with { Outputs = [P("结论")], From = [Ref("交付", "结论")] },
                         Text("排版")) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("撰写"), PN("结论"))) },
+                        Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("撰写"), PN("结论")) }],
                     }))));
 
     [Fact]
@@ -354,11 +362,11 @@ public sealed class FlowRuleTests
                 Container("整体",
                     Container("容器甲", Text("甲") with { Outputs = [P("结论")], From = [Ref("容器乙", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("甲"), PN("结论"))) },
+                        Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("甲"), PN("结论")) }],
                     },
                     Container("容器乙", Text("乙") with { Outputs = [P("结论")], From = [Ref("容器甲", "结论")] }) with
                     {
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput> { [PN("结论")] = new(PortRef.Named(new NodeLabel("乙"), PN("结论"))) },
+                        Outputs = [P("结论") with { Ref = PortRef.Named(new NodeLabel("乙"), PN("结论")) }],
                     }))));
 
     /// <summary>每套绑定方案都必须覆盖不带默认值的输入端口：两套方案任一齐备即启动，规则接受这种写法。</summary>
@@ -487,7 +495,7 @@ public sealed class FlowRuleTests
     {
         return NodeSpec.Define(new NodeName(name)) with
         {
-            Type = TestNodeTypes.Executable,
+            Type = TestNodeTypes.PlainExecutable,
             Spec = spec,
             From = [StartRef()],
         };
@@ -498,7 +506,7 @@ public sealed class FlowRuleTests
     {
         return NodeSpec.Reference(new NodeLabel(label), new NodeName(use)) with
         {
-            Type = TestNodeTypes.Executable,
+            Type = TestNodeTypes.PlainExecutable,
             Spec = new ExecutableSpec(),
             From = [StartRef()],
         };

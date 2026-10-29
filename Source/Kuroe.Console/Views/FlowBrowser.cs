@@ -178,20 +178,9 @@ internal sealed class FlowBrowser(
     private static Paragraph ContainerLine(ContainerNode container)
     {
         ViewLine line = new ViewLine().Add(container.Label.Value, Styles.Key).Add("容器", Styles.Hint);
-        if (container.PortBindings is { Count: > 0 } bindings)
+        if (container.Outputs.Count > 0)
         {
-            string[] dynamicPorts = [.. bindings.Keys
-                .Where(port => container.StaticOutputs?.Contains(port) != true)
-                .Select(port => port.Value)];
-            if (dynamicPorts.Length > 0)
-            {
-                line.Add($"端口 {string.Join('、', dynamicPorts)}", Styles.Hint);
-            }
-        }
-
-        if (container.StaticOutputs is { Count: > 0 } statics)
-        {
-            line.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
         return line.Build();

@@ -70,21 +70,8 @@ internal static class NodeLibraryRules
 
             byName[name] = node;
 
-            if (ShapeOf(node) is { Organizes: true })
-            {
-                if (node.Outputs.Count > 0)
-                {
-                    errors.Add(NodeScope.Library.Node(node.Label.Value, "库容器定义不声明执行节点输出端口，容器输出端口条目写 Name 与 Ref。"));
-                }
-
-                node.Check(NodeRuleContext.LibraryDefinition, message =>
-                    errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
-            }
-            else
-            {
-                node.Check(NodeRuleContext.LibraryDefinition, message =>
-                    errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
-            }
+            node.Check(NodeRuleContext.LibraryDefinition, message =>
+                errors.Add(NodeScope.Library.Node(node.Label.Value, message)));
         }
 
         return byName;
@@ -115,15 +102,9 @@ internal static class NodeLibraryRules
         var subtreeOutputs = new Dictionary<NodeLabel, IReadOnlyList<Port>>();
         CollectSubtreeOutputs(members, byName, subtreeOutputs);
 
-        var subtreeStatics = new Dictionary<NodeLabel, IReadOnlySet<PortName>>();
-        CollectSubtreeStaticPorts(members, byName, subtreeStatics);
-
-        var contextless = new HashSet<NodeLabel>();
-        CollectContextless(members, byName, contextless);
-
-        if (container.ContainerOutputs is { } outs)
+        if (container.Outputs.Count > 0)
         {
-            CheckContainerOutputs(container, outs, subtreeLabels, subtreeOutputs, subtreeStatics, contextless, errors);
+            CheckContainerOutputs(container, subtreeLabels, subtreeOutputs, errors);
         }
 
         var literalLabels = new HashSet<NodeLabel>();
@@ -154,7 +135,7 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内全部执行节点的输出端口表，供容器输出端口的绑定目标校验。被引用执行节点取定义上的端口表。</summary>
+    /// <summary>收集子树内全部节点的输出端口表，供容器输出端口的绑定目标校验。被引用节点取定义上的端口表。</summary>
     private static void CollectSubtreeOutputs(
         IReadOnlyList<NodeSpec> nodes,
         Dictionary<NodeName, NodeSpec> byName,
@@ -162,13 +143,12 @@ internal static class NodeLibraryRules
     {
         foreach (NodeSpec node in nodes)
         {
-            if (node.Spec is not null)
+            NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition)
+                ? definition
+                : node;
+            if (declared.Outputs.Count > 0)
             {
-                outputs[node.Label] = node.Outputs;
-            }
-            else if (node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) && definition.Spec is not null)
-            {
-                outputs[node.Label] = definition.Outputs;
+                outputs[node.Label] = declared.Outputs;
             }
 
             if (node.Nodes is { Count: > 0 })
@@ -178,116 +158,52 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>收集子树内成员声明的静态端口：执行节点取静态输入，容器取静态输出。被引用节点取定义上的声明。</summary>
-    private static void CollectSubtreeStaticPorts(
-        IReadOnlyList<NodeSpec> nodes,
-        Dictionary<NodeName, NodeSpec> byName,
-        Dictionary<NodeLabel, IReadOnlySet<PortName>> statics)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition)
-                ? definition
-                : node;
-            HashSet<PortName> ports = declared.Nodes is { Count: > 0 }
-                ? [.. (declared.ContainerOutputs ?? new Dictionary<PortName, ContainerOutput>())
-                    .Where(pair => pair.Value.IsStatic)
-                    .Select(pair => pair.Key)]
-                : [.. declared.EffectiveInputs.Where(port => port.IsStatic).Select(port => port.Name)];
-            if (ports.Count > 0)
-            {
-                statics[node.Label] = ports;
-            }
-
-            if (node.Nodes is { Count: > 0 } children)
-            {
-                CollectSubtreeStaticPorts(children, byName, statics);
-            }
-        }
-    }
-
-    /// <summary>收集子树内不产出上下文端口的节点标签，上下文端口绑定不允许落在这些节点上。
-    /// 判断按类型的输出端口值域，组织子节点的类型不在此列。</summary>
-    private static void CollectContextless(
-        IReadOnlyList<NodeSpec> nodes,
-        Dictionary<NodeName, NodeSpec> byName,
-        HashSet<NodeLabel> contextless)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            NodeSpec declared = node.Use is { } use && byName.TryGetValue(use, out NodeSpec? definition) ? definition : node;
-            if (ShapeOf(declared) is { Organizes: false } shape
-                && !shape.OutputTypes.Any(type => type.Semantics == PortSemantics.Context))
-            {
-                contextless.Add(node.Label);
-            }
-
-            if (node.Nodes is { Count: > 0 })
-            {
-                CollectContextless(node.Nodes, byName, contextless);
-            }
-        }
-    }
-
-    /// <summary>容器输出端口：绑定目标必须落在子树内。动态输出取执行节点的输出端口，静态输出取成员的静态端口，
-    /// 上下文端口不落在不产出上下文端口的节点上。</summary>
+    /// <summary>容器输出端口：有 Ref 时目标必须落在子树内，端口必须存在且常量性与类型一致；固定值输出不需要目标。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
-        IReadOnlyDictionary<PortName, ContainerOutput> outs,
         HashSet<NodeLabel> subtreeLabels,
         Dictionary<NodeLabel, IReadOnlyList<Port>> subtreeOutputs,
-        Dictionary<NodeLabel, IReadOnlySet<PortName>> subtreeStatics,
-        HashSet<NodeLabel> contextless,
         List<Error> errors)
     {
-        foreach ((PortName port, ContainerOutput output) in outs)
+        foreach (Port output in container.Outputs)
         {
-            PortRef target = output.Ref;
+            if (output.Ref is not { } target)
+            {
+                continue;
+            }
+
             if (target.Source is not { } sourceLabel)
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标不能是对绑定端口的引用。"));
+                    $"容器输出端口 {output.Name.Value} 的 Ref 必须写 成员@端口。"));
                 continue;
             }
 
-            // 绑定目标必须落在子树内且是执行节点：上下文端口透出装配上下文，Text 与 Signal 端口透出交回段
             if (!subtreeLabels.Contains(sourceLabel))
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不在容器 {container.Label} 的子树里。"));
+                    $"容器输出端口 {output.Name.Value} 的绑定目标 {target.Display} 不在容器 {container.Label} 的子树里。"));
                 continue;
             }
 
-            if (output.IsStatic)
-            {
-                if (!subtreeStatics.TryGetValue(sourceLabel, out IReadOnlySet<PortName>? staticPorts)
-                    || !staticPorts.Contains(target.Port))
-                {
-                    errors.Add(NodeScope.Library.Node(container.Label.Value,
-                        $"静态输出端口 {port.Value} 的绑定目标 {target.Display} 无法取用，目标成员必须声明了静态端口 {target.Port.Value}。"));
-                }
-
-                continue;
-            }
-
-            if (!subtreeOutputs.TryGetValue(sourceLabel, out IReadOnlyList<Port>? memberPorts))
+            if (!subtreeOutputs.TryGetValue(sourceLabel, out IReadOnlyList<Port>? memberPorts)
+                || memberPorts.Find(target.Port) is not { } memberPort)
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不是执行节点，无法取产出。"));
+                    $"容器输出端口 {output.Name.Value} 的绑定目标 {target.Display} 没有输出端口 {target.Port.Value}。"));
                 continue;
             }
 
-            if (memberPorts.Find(target.Port) is not { } memberPort)
+            if (memberPort.IsConstant != output.IsConstant)
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 无法取用，目标必须是执行节点且声明了端口 {target.Port.Value}。"));
-                continue;
+                    $"容器输出端口 {output.Name.Value} 的常量性必须与绑定目标 {target.Display} 一致。"));
             }
 
-            if (memberPort.Type.Semantics == PortSemantics.Context && contextless.Contains(sourceLabel))
+            if (memberPort.Type != output.Type)
             {
                 errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {port.Value} 的绑定目标 {target.Display} 不产出上下文端口，不能作为上下文端口来源。"));
+                    $"容器输出端口 {output.Name.Value} 的类型必须与绑定目标 {target.Display} 的类型一致。"));
             }
         }
     }

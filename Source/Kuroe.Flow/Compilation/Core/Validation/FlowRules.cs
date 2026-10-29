@@ -47,7 +47,7 @@ internal static class FlowRules
     internal static void ValidateGraph(NodeGraph graph, NodeScope scope, List<Error> errors) =>
         CheckShape(graph, scope, errors);
 
-    /// <summary>开始入口的静态规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入；静态端口必须有 Value 或宿主输入绑定。
+    /// <summary>开始入口的规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入；常量端口必须有 Value 或宿主输入绑定。
     /// 宿主输入只能绑定已声明且不带 Value 的端口。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
@@ -73,15 +73,25 @@ internal static class FlowRules
 
             declared[port.Name] = port;
 
+            if (port.Ref is not null)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 不能写 Ref。"));
+            }
+
+            if (port.Trigger)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 不能使用触发。"));
+            }
+
             if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
             }
 
-            if (port.IsStatic && port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))
+            if (port.IsConstant && port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"静态开始端口 {port.Name} 必须有 Value 或宿主输入绑定。"));
+                    $"常量开始端口 {port.Name} 必须有 Value 或宿主输入绑定。"));
             }
         }
 
@@ -128,7 +138,7 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>递归校验标识、容器形状、静态绑定与容器输出端口。引用解析与图规则在展平后的图上校验。</summary>
+    /// <summary>递归校验标识、容器形状、静态绑定与统一输出端口。引用解析与图规则在展平后的图上校验。</summary>
     private static void CheckTree(
         NodeSpec node,
         NodeScope scope,
@@ -148,16 +158,9 @@ internal static class FlowRules
 
             CheckSiblings(children, scope, errors);
 
-            if (!HasExecutable(children))
+            foreach (NodeSpec child in children)
             {
-                errors.Add(scope.Node(node.Label.Value, "容器里至少要有一个执行节点。"));
-            }
-            else
-            {
-                foreach (NodeSpec child in children)
-                {
-                    CheckTree(child, scope, errors);
-                }
+                CheckTree(child, scope, errors);
             }
         }
         else if (node.Spec is not null)
@@ -190,7 +193,7 @@ internal static class FlowRules
             return;
         }
 
-        IReadOnlyList<InputPort> inputs = node.EffectiveInputs;
+        IReadOnlyList<InputPort> inputs = node.DeclaredInputs;
         var required = new HashSet<PortName>([.. inputs
             .Where(port => !port.IsStatic && port.Default is null)
             .Select(port => port.Name)]);
@@ -209,7 +212,7 @@ internal static class FlowRules
                     errors.Add(scope.Node(node.Label.Value,
                         $"From 不能连接静态输入端口 {input}，静态输入用 Static 绑定。"));
                 }
-                else if (node.Inputs.Count > 0 && node.FindInput(input) is null)
+                else if (node.FindInput(input) is null)
                 {
                     errors.Add(scope.Node(node.Label.Value,
                         $"From 连接的目标输入端口 {input} 没有在节点上声明。"));
@@ -231,67 +234,74 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>容器输出端口绑定与来源端口在展平后的图上校验：绑定目标必须是容器子树内声明该端口的执行节点。</summary>
-    private static void CheckContainerBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
+    /// <summary>输出端口绑定在展平后的图上校验：来源必须是本节点静态输入或子树内成员输出，常量性与类型一致。</summary>
+    private static void CheckOutputBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        foreach (ContainerNode container in graph.Containers)
+        foreach (GraphNode node in graph.Nodes)
         {
-            if (container.PortBindings is not { Count: > 0 } bindings)
+            foreach (Port output in node.Outputs)
             {
-                continue;
-            }
-
-            foreach ((PortName port, NodePort target) in bindings)
-            {
-                if (!target.Node.IsUnder(container.Path))
+                if (output.Ref is null)
                 {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不在容器 {container.Path} 的子树里。"));
                     continue;
                 }
 
-                GraphNode bound = graph[target.Node];
-                if (container.StaticOutputs?.Contains(port) == true)
+                if (node.OutputBindings?.TryGetValue(output.Name, out NodePort target) != true)
                 {
-                    bool valid = bound switch
+                    errors.Add(scope.Node(node.Path.Value,
+                        $"输出端口 {output.Name.Value} 没有解析到来源。"));
+                    continue;
+                }
+
+                if (target.Node == node.Path)
+                {
+                    if (node.FindInput(target.Port) is not { IsStatic: true })
                     {
-                        ExecutableNode executable => executable.FindInput(target.Port) is { IsStatic: true },
-                        ContainerNode nested => nested.StaticOutputs?.Contains(target.Port) == true,
-                        _ => false,
-                    };
-                    if (!valid)
-                    {
-                        errors.Add(scope.Node(container.Path.Value,
-                            $"静态输出端口 {port.Value} 的绑定目标 {target.Node} 的 {target.Port.Value} 不是静态端口。"));
+                        errors.Add(scope.Node(node.Path.Value,
+                            $"输出端口 {output.Name.Value} 的来源 {target.Port.Value} 不是本节点的静态输入。"));
                     }
 
                     continue;
                 }
 
-                if (bound is not ExecutableNode member)
+                if (!target.Node.IsUnder(node.Path))
                 {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标 {target.Node} 不是执行节点，无法取产出。"));
+                    errors.Add(scope.Node(node.Path.Value,
+                        $"输出端口 {output.Name.Value} 的来源 {target.Node} 不在节点 {node.Path} 的子树里。"));
                     continue;
                 }
 
-                if (member.FindPort(target.Port) is null)
+                GraphNode bound = graph[target.Node];
+                if (bound.FindPort(target.Port) is not { } memberPort)
                 {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输出端口 {port.Value} 的绑定目标节点 {target.Node} 没有输出端口 {target.Port.Value}。"));
+                    errors.Add(scope.Node(node.Path.Value,
+                        $"输出端口 {output.Name.Value} 的来源节点 {target.Node} 没有输出端口 {target.Port.Value}。"));
+                    continue;
+                }
+
+                if (memberPort.IsConstant != output.IsConstant)
+                {
+                    errors.Add(scope.Node(node.Path.Value,
+                        $"输出端口 {output.Name.Value} 的常量性必须与来源 {target.Node}@{target.Port} 一致。"));
+                }
+
+                if (memberPort.Type != output.Type)
+                {
+                    errors.Add(scope.Node(node.Path.Value,
+                        $"输出端口 {output.Name.Value} 的类型必须与来源 {target.Node}@{target.Port} 一致。"));
                 }
             }
         }
     }
 
-    /// <summary>执行节点静态输入的来源链：绑定必须是静态端口，链必须到达开始端口或执行节点的默认值。</summary>
+    /// <summary>静态输入的来源链：链必须到达开始端口、常量输出、字面量或默认值。</summary>
     private static void CheckStaticBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        foreach (ExecutableNode executable in graph.ExecutableNodes)
+        foreach (ExecutableNode node in graph.ExecutableNodes)
         {
-            foreach (InputPort input in executable.Inputs.Where(port => port.IsStatic))
+            foreach (InputPort input in node.Inputs.Where(port => port.IsStatic))
             {
-                StaticResolution resolution = StaticSources.Resolve(graph, executable.Path, input.Name);
+                StaticResolution resolution = StaticSources.ResolveInput(graph, node.Path, input.Name);
                 if (resolution.Error is { } error)
                 {
                     errors.Add(scope.Node(resolution.Node.Value, error));
@@ -300,79 +310,45 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>一条边的来源侧校验：来源端口必须声明存在，容器成员不能被容器外直接引用，Context 输入来源必须产出上下文端口。</summary>
+    /// <summary>一条边的来源侧校验：来源端口必须声明存在且为动态端口，成员不能被容器外直接引用，来源类型与目标输入一致。</summary>
     private static void CheckEdgeSource(NodeGraph graph, FlowEdge edge, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
         GraphNode source = graph[edge.Source];
-
-        // 开始是流程级来源，不受容器封装限制
-        if (source is StartNode start)
+        if (source.FindPort(edge.SourcePort) is not { } port)
         {
-            if (start.FindPort(edge.SourcePort) is not { } port)
-            {
-                errors.Add(scope.Node(target.Path.Value, $"节点 {StartNode.ReservedLabel} 没有输出端口 {edge.SourcePort.Value}。"));
-            }
-            else if (port.IsStatic)
-            {
-                errors.Add(scope.Node(target.Path.Value,
-                    $"静态开始端口 {edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
-            }
-
+            errors.Add(scope.Node(target.Path.Value, $"节点 {edge.Source} 没有输出端口 {edge.SourcePort.Value}。"));
             return;
         }
 
-        // 容器对外只经 Outputs 声明端口，没有整份产出
-        if (source is ContainerNode container)
+        if (port.IsConstant)
         {
-            if (container.PortBindings?.ContainsKey(edge.SourcePort) != true)
-            {
-                errors.Add(scope.Node(target.Path.Value, $"容器 {container.Path} 没有输出端口 {edge.SourcePort.Value}。"));
-            }
-
-            if (container.StaticOutputs?.Contains(edge.SourcePort) == true)
-            {
-                errors.Add(scope.Node(target.Path.Value,
-                    $"静态输出端口 {edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
-            }
-
-            if (edge.Type == PortTypes.Context)
-            {
-                errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {container.Path} 必须是非输入执行节点。"));
-            }
-
+            errors.Add(scope.Node(target.Path.Value,
+                $"常量输出端口 {source.Path}@{edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
             return;
         }
 
-        if (source is not ExecutableNode executable)
+        if (edge.Type == PortTypes.Context && !SupportsContext(graph, source, port))
         {
-            return;
+            errors.Add(scope.Node(target.Path.Value,
+                $"Context 输入来源 {source.Path} 必须产出 Context 端口，实际来源端口 {edge.SourcePort.Value} 是 {port.Type}。"));
         }
 
-        if (executable.FindPort(edge.SourcePort) is null)
-        {
-            errors.Add(scope.Node(target.Path.Value, $"节点 {executable.Path} 没有输出端口 {edge.SourcePort.Value}。"));
-        }
-
-        if (!Visible(executable.Path, target.Path))
+        if (source is ExecutableNode executable && !Visible(executable.Path, target.Path))
         {
             errors.Add(scope.Node(target.Path.Value,
                 $"不能从容器外直接引用容器内成员或端口 {executable.Path}，容器对外只暴露输出端口。"));
         }
-
-        if (edge.Type == PortTypes.Context)
-        {
-            CheckContextSource(graph, executable, target, scope, errors);
-        }
     }
 
-    /// <summary>Context 输入的来源规则：必须是非输入执行节点，产出 Context 端口。</summary>
-    private static void CheckContextSource(NodeGraph graph, ExecutableNode source, ExecutableNode target, NodeScope scope, List<Error> errors)
+    /// <summary>来源是否能提供上下文：开始恒可提供，执行节点按类型的输出值域，容器按声明的输出端口。</summary>
+    private static bool SupportsContext(NodeGraph graph, GraphNode source, Port port) => source switch
     {
-        if (graph.ShapeOf(source.Path) is { Organizes: false } shape && !shape.OutputTypes.Contains(PortTypes.Context))
-        {
-            errors.Add(scope.Node(target.Path.Value, $"Context 输入来源 {source.Path} 不产出上下文端口。"));
-        }
-    }
+        StartNode => true,
+        ExecutableNode executable => graph.ShapeOf(executable.Path) is { Organizes: false } shape
+            && shape.OutputTypes.Any(type => type.Semantics == PortSemantics.Context),
+        ContainerNode => port.Type.Semantics == PortSemantics.Context,
+        _ => false,
+    };
 
     /// <summary>来源是否对目标可见：目标的祖先容器链上有一层直接包含来源，同层成员可见，更深容器的成员对容器外不可见。</summary>
     private static bool Visible(NodePath source, NodePath target) =>
@@ -387,32 +363,13 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>子树里是否至少有一个执行节点。</summary>
-    private static bool HasExecutable(IReadOnlyList<NodeSpec> nodes)
-    {
-        foreach (NodeSpec node in nodes)
-        {
-            if (node.Spec is not null)
-            {
-                return true;
-            }
-
-            if (node.Nodes is { Count: > 0 } children && HasExecutable(children))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /// <summary>展平后的图规则：见环合法性、从开始的可达性与组间来源端口不重复。执行直接按边推进。</summary>
     private static void CheckShape(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         CheckLoops(graph, scope, errors);
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
-        CheckContainerBindings(graph, scope, errors);
+        CheckOutputBindings(graph, scope, errors);
         CheckStaticBindings(graph, scope, errors);
 
         foreach (FlowEdge edge in graph.Edges)
@@ -442,13 +399,20 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>可达性规则：开始是唯一来源，每个执行节点都必须能从开始沿引用边到达，否则永远不会被触发。
-    /// 容器是成员的汇合点，成员与子容器全部可达时容器才可达，引用容器的下游随之可达。</summary>
+    /// <summary>可达性规则：开始是唯一外部来源，全部输入静态且没有入边的执行节点在任务启动即可启动；
+    /// 其余执行节点必须能从这些初始来源沿引用边到达。容器是成员的汇合点，成员全部可达时容器才可达。</summary>
     private static void CheckReachability(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         var reached = new HashSet<NodePath> { graph.Start.Path };
         var queue = new Queue<NodePath>();
         queue.Enqueue(graph.Start.Path);
+        foreach (ExecutableNode executable in graph.ExecutableNodes
+            .Where(node => node.Plan is { StartsAtTaskStart: true })
+            .Where(node => reached.Add(node.Path)))
+        {
+            queue.Enqueue(executable.Path);
+        }
+
         while (true)
         {
             // reached.Add 兼作去重判定：首次到达的节点才入队

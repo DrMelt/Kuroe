@@ -21,8 +21,12 @@ public sealed record NodeTypeShape
     /// <summary>不需环外来源即可在环内启动，作周期外源。</summary>
     public bool StartsUnaided { get; init; }
 
-    /// <summary>类型自行声明的静态输入端口，作者无需在 Inputs 中重复声明。</summary>
-    public IReadOnlyList<InputPort> StaticInputs { get; init; } = [];
+    /// <summary>节点执行契约声明的输入端口。流程未声明同名端口时作为默认声明，声明同名端口时以流程声明覆盖。
+    /// 契约端口的角色与常量要求由节点类型规则继续校验，不把执行契约固定成图侧唯一配置。</summary>
+    public IReadOnlyList<InputPort> ContractInputs { get; init; } = [];
+
+    /// <summary>是否接受 From 目标引入未声明的 Text 内容输入。只对端口集合开放的节点类型成立。</summary>
+    public bool AcceptsInferredInputs { get; init; }
 
     /// <summary>允许的输入端口类型。</summary>
     public IReadOnlyList<PortType> InputTypes { get; init; } = [];

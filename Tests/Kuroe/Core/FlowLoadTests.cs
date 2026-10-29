@@ -124,9 +124,7 @@ public sealed class FlowLoadTests
     public void Referenced_container_port_missing_is_rejected() =>
         Assert.Equal(
         [
-            "流程 默认 的节点 整体/交付/实施：从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。",
-            "流程 默认 的节点 整体/复盘：从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。",
-            "流程 默认 的节点 整体/复盘：容器 整体/交付 没有输出端口 不存在。",
+            "流程 默认 的节点 整体/复盘：节点 整体/交付 没有输出端口 不存在。",
         ], Errors(ContainerOutPortMissing));
 
     [Fact]
@@ -145,7 +143,7 @@ public sealed class FlowLoadTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-map-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
         string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, StructuralFlow);
+        File.WriteAllText(file, TestFlowDocument.Normalize(StructuralFlow));
         try
         {
             FlowStore store = new(file, root, Format, Format);
@@ -176,7 +174,7 @@ public sealed class FlowLoadTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-params-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
         string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, TestFlows.ReviewFlow);
+        File.WriteAllText(file, TestFlowDocument.Normalize(TestFlows.ReviewFlow));
         try
         {
             FlowStore store = new(file, root, Format, Format);
@@ -202,7 +200,7 @@ public sealed class FlowLoadTests
         Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("默认"));
 
         string source = Path.Combine(Path.GetTempPath(), $"kuroe-flow-{Guid.NewGuid():N}.json");
-        File.WriteAllText(source, TwoCustomFlows);
+        File.WriteAllText(source, TestFlowDocument.Normalize(TwoCustomFlows));
         try
         {
             FlowImport imported = environment.Flows.Import(source).ThrowIfError();
@@ -222,7 +220,7 @@ public sealed class FlowLoadTests
     public void Loop_with_input_node_loads()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "loop.json"), LoopWithInputNode);
+        File.WriteAllText(Path.Combine(environment.Root, "loop.json"), TestFlowDocument.Normalize(LoopWithInputNode));
 
         environment.Flows.Import("loop.json").ThrowIfError();
 
@@ -250,7 +248,7 @@ public sealed class FlowLoadTests
     public void Import_resolves_a_relative_path_against_the_work_directory()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), SingleFunnelFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "extra.json"), TestFlowDocument.Normalize(SingleFunnelFlow));
 
         FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
@@ -263,14 +261,14 @@ public sealed class FlowLoadTests
     public void Port_descriptions_survive_load_and_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "ports.json"), PortDescriptions);
+        File.WriteAllText(Path.Combine(environment.Root, "ports.json"), TestFlowDocument.Normalize(PortDescriptions));
 
         environment.Flows.Import("ports.json").ThrowIfError();
 
         // 展开后的容器实例保留声明的传入端口、输出端口与成员端口，说明都随声明带过来
         NodeSpec container = environment.Flows.Find(new FlowName("端口说明")).ThrowIfError().RootNode.Nodes![0];
         Assert.Equal("待实施的条目拆分", container.Inputs.Single(input => input.Name.Value == "计划").Description);
-        Assert.Equal("透出的结论", container.ContainerOutputs![new PortName("结论")].Description);
+        Assert.Equal("透出的结论", container.Outputs.Single(port => port.Name == new PortName("结论")).Description);
         Assert.Equal("最终结论", container.Nodes![0].Outputs.Single().Description);
 
         string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
@@ -284,7 +282,7 @@ public sealed class FlowLoadTests
     public void Start_port_value_survives_load_and_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "start.json"), StartWithValueFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "start.json"), TestFlowDocument.Normalize(StartWithValueFlow));
 
         environment.Flows.Import("start.json").ThrowIfError();
 
@@ -297,15 +295,15 @@ public sealed class FlowLoadTests
     }
 
     [Fact]
-    public void Value_on_node_output_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 干活：输出端口不认识键 Value，Value 只属于开始端口。"], Errors(NodeOutputWithValue));
+    public void Value_on_dynamic_node_output_is_rejected() =>
+        Assert.Equal(["流程 默认 的节点 干活：动态输出端口 结论 不能写 Value。"], Errors(NodeOutputWithValue));
 
     /// <summary>输入端口默认值随声明载入，保存后仍写在文件里。</summary>
     [Fact]
     public void Input_default_survives_load_and_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "input-default.json"), InputDefaultFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "input-default.json"), TestFlowDocument.Normalize(InputDefaultFlow));
 
         environment.Flows.Import("input-default.json").ThrowIfError();
 
@@ -319,7 +317,7 @@ public sealed class FlowLoadTests
     [Fact]
     public void Value_on_node_input_is_rejected() =>
         Assert.Equal(
-            ["流程 默认 的节点 干活：输入端口不认识键 Value，条目写 Name、Type、Description、Default 与 Static。"],
+            ["流程 默认 的节点 干活：输入端口不认识键 Value，条目写 Name、Type、Description、Default、Static、Role 与 Trigger。"],
             Errors(NodeInputWithValue));
 
     /// <summary>定义条目写了标签，节点名与标签的写位置互斥。</summary>
@@ -602,18 +600,18 @@ public sealed class FlowLoadTests
 
     private const string ContainerOutPortMissing = """
         { "Nodes": [
-            { "Name": "允许工具", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
+            { "Name": "允许工具", "Kind": "Llm", "Inputs": [{ "Name": "目标" }], "Outputs": [{ "Name": "结论", "Type": "Text" }] },
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
-              "Outputs": [{ "Name": "结论", "Ref": "实施@结论" }],
-              "Nodes": [ { "Label": "实施", "Use": "允许工具", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ]
+              "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Outputs": [{ "Name": "结论", "Type": "Text", "Ref": "实施@结论" }],
+              "Nodes": [ { "Label": "实施", "Use": "允许工具", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ]
             }
           ],
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "@MODEL_NAME" } },
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Label": "交付", "Use": "交付", "In": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" } },
               { "Name": "复盘", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "不存在": "交付@不存在" } ] }
             ] }
           ] } ]
@@ -642,7 +640,7 @@ public sealed class FlowLoadTests
 
     private const string ReferenceContainerFrom = """
         {
-          "Nodes": [ { "Name": "组", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Name": "做", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ] } ],
+          "Nodes": [ { "Name": "组", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Name": "做", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定", "Static": true }] } ] } ],
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Label": "组实例", "Use": "组", "In": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "做": "做@结论" } ] }
@@ -1084,7 +1082,7 @@ public sealed class FlowLoadTests
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json)
     {
-        ErrorOr<FlowDocument> content = Format.Read(json);
+        ErrorOr<FlowDocument> content = Format.Read(TestFlowDocument.Normalize(json));
         if (content.IsError)
         {
             return [.. content.ErrorsOrEmptyList.Select(error => error.Description)];

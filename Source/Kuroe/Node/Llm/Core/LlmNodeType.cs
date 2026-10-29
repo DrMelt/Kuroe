@@ -33,7 +33,19 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
-        if (spec.Validate is not null && !node.Outputs.Any(port => PortRules.CarriesText(port.Type)))
+        if (node.FindInput(LlmNodeTypes.ModelPort) is not { IsStatic: true, Role: InputRole.Configuration } model)
+        {
+            fail(scope.Node(node.Label.Value,
+                $"Llm 节点必须声明静态输入端口 {LlmNodeTypes.ModelPort.Value}，作为执行使用的模型配置。"));
+        }
+        else if (model.Type != PortTypes.Text)
+        {
+            fail(scope.Node(node.Label.Value,
+                $"Llm 节点的模型输入 {LlmNodeTypes.ModelPort.Value} 类型只能是 Text。"));
+        }
+
+        if (spec.Validate is not null
+            && !node.Outputs.Any(port => !port.IsConstant && PortRules.CarriesText(port.Type)))
         {
             fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明文本语义的输出端口，校验对象是端口产出。"));
         }

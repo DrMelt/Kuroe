@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Compilation.Tests;
 
-/// <summary>静态端口链路：展开保留静态输出，容器静态输出取成员静态输入，开始端口绑定保留为来源，错误来源与 From 连接静态端口被拒绝。</summary>
+/// <summary>静态输入与常量输出链路：展开保留常量输出，容器常量输出取成员常量输出，开始端口绑定保留为来源，错误来源被拒绝。</summary>
 public sealed class StaticPortTests
 {
     private static readonly PortName Goal = new("目标");
@@ -22,9 +22,9 @@ public sealed class StaticPortTests
     private static readonly PortName Result = new("结论");
     private static readonly PortName Model = TestExecutableNodeType.StaticPort;
 
-    /// <summary>容器静态输出转发成员静态输入，下游节点运行期解析出开始端口的值。</summary>
+    /// <summary>容器常量输出转发成员常量输出，下游节点运行期解析出开始端口的值。</summary>
     [Fact]
-    public void Container_static_output_forwards_member_static_input()
+    public void Container_static_output_forwards_member_static_output()
     {
         NodeSpec library = DeliveryDefinition();
         NodeSpec executable = ExecutionDefinition();
@@ -37,7 +37,7 @@ public sealed class StaticPortTests
         FlowDefinition tree = Assert.Single(expanded.Value);
 
         NodeSpec delivery = tree.RootNode.Nodes!.Single(node => node.Label.Value == "交付");
-        Assert.True(delivery.ContainerOutputs![Model].IsStatic);
+        Assert.True(delivery.Outputs.Single(port => port.Name == Model).IsConstant);
 
         ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(tree);
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -74,7 +74,7 @@ public sealed class StaticPortTests
     public void From_cannot_connect_a_static_input()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", IsStatic: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
@@ -117,7 +117,7 @@ public sealed class StaticPortTests
         };
 
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", IsStatic: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
@@ -141,15 +141,15 @@ public sealed class StaticPortTests
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains("输出端口 结论 不是静态端口"));
+        Assert.Contains(Errors(flow), error => error.Contains("输出端口 结论 不是常量端口"));
     }
 
-    /// <summary>静态开始端口没有 Value 也没有宿主输入绑定时报错。</summary>
+    /// <summary>常量开始端口没有 Value 也没有宿主输入绑定时报错。</summary>
     [Fact]
     public void Static_start_port_requires_a_value_or_host_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, IsStatic: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, isConstant: true)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
@@ -169,15 +169,15 @@ public sealed class StaticPortTests
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains($"静态开始端口 {Model} 必须有 Value 或宿主输入绑定"));
+        Assert.Contains(Errors(flow), error => error.Contains($"常量开始端口 {Model} 必须有 Value 或宿主输入绑定"));
     }
 
-    /// <summary>静态开始端口绑定宿主输入时保留为来源绑定，取值在任务启动后由注入的端口文本给出。</summary>
+    /// <summary>常量开始端口绑定宿主输入时保留为来源绑定，取值在任务启动后由注入的端口文本给出。</summary>
     [Fact]
     public void Externally_bound_static_start_port_keeps_a_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, IsStatic: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, isConstant: true)],
             new Dictionary<PortName, string> { [Model] = "MODEL" },
             NodeSpec.Define(new NodeName("整体")) with
             {
@@ -219,12 +219,12 @@ public sealed class StaticPortTests
             new PortTexts(new Dictionary<PortName, string> { [Model] = "other" })));
     }
 
-    /// <summary>静态开始端口不进入 From，即使它绑定了宿主输入。</summary>
+    /// <summary>常量开始端口不能进入 From，只能作为 Static 绑定的来源。</summary>
     [Fact]
-    public void Static_start_port_cannot_feed_from()
+    public void Constant_start_port_cannot_feed_from()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", IsStatic: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("检查")) with
             {
@@ -234,7 +234,7 @@ public sealed class StaticPortTests
                 From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Model))])],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains($"静态开始端口 {Model} 不进入 From"));
+        Assert.Contains(Errors(flow), error => error.Contains($"常量输出端口 Start@{Model} 不进入 From"));
     }
 
     /// <summary>开始端口只写 Value 不写 Static 时仍不是静态端口，静态绑定读取时报错。</summary>
@@ -268,7 +268,7 @@ public sealed class StaticPortTests
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
 
         Assert.Contains(Errors(Assert.Single(expanded.Value)),
-            error => error.Contains($"开始端口 {Model} 不是静态端口"));
+            error => error.Contains($"开始端口 {Model} 不是常量端口"));
     }
 
     /// <summary>静态绑定形成环时编译报错。</summary>
@@ -286,16 +286,17 @@ public sealed class StaticPortTests
                     NodeSpec.Define(new NodeName("交付")) with
                     {
                         Type = ContainerNodeTypes.Type,
-                        ContainerOutputs = new Dictionary<PortName, ContainerOutput>
-                        {
-                            [Model] = new ContainerOutput(PortRef.Named(new NodeLabel("检查"), Model), IsStatic: true),
-                        },
+                        Outputs =
+                        [
+                            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("检查"), Model)),
+                        ],
                         Nodes =
                         [
                             NodeSpec.Define(new NodeName("检查")) with
                             {
                                 Type = TestNodeTypes.Executable,
                                 Inputs = [new InputPort(Goal)],
+                                Outputs = [new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Bound(Model))],
                                 Static = new Dictionary<PortName, PortRef>
                                 {
                                     [Model] = PortRef.Named(new NodeLabel("交付"), Model),
@@ -313,12 +314,12 @@ public sealed class StaticPortTests
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains($"静态端口 {Model} 形成环"));
+        Assert.Contains(Errors(flow), error => error.Contains($"端口 {Model} 的来源形成环"));
     }
 
-    /// <summary>容器静态输出绑定执行节点的动态输出时报错。</summary>
+    /// <summary>容器常量输出绑定执行节点的动态输出时报错。</summary>
     [Fact]
-    public void Container_static_output_must_bind_a_static_port()
+    public void Container_static_output_must_bind_a_static_output()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
             [new Port(Goal, PortTypes.Text)],
@@ -327,10 +328,10 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal)],
-                ContainerOutputs = new Dictionary<PortName, ContainerOutput>
-                {
-                    [Model] = new ContainerOutput(PortRef.Named(new NodeLabel("目标"), Result), IsStatic: true),
-                },
+                Outputs =
+                [
+                    new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("目标"), Result)),
+                ],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("目标")) with
@@ -349,7 +350,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains("不是静态端口"));
+        Assert.Contains(Errors(flow), error => error.Contains("常量性必须与来源"));
     }
 
     /// <summary>容器类型声明的静态输入必须由引用处绑定。</summary>
@@ -362,7 +363,7 @@ public sealed class StaticPortTests
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = new StaticContainerType(),
-                Inputs = [new InputPort(Goal)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
                 In = new Dictionary<PortName, PortRef>
                 {
                     [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
@@ -431,10 +432,6 @@ public sealed class StaticPortTests
         {
             Organizes = true,
             InputTypes = [PortTypes.Text],
-            StaticInputs =
-            [
-                new InputPort(TestExecutableNodeType.StaticPort, PortTypes.Text, isStatic: true),
-            ],
         };
 
         public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
@@ -446,7 +443,11 @@ public sealed class StaticPortTests
     {
         Type = TestNodeTypes.Executable,
         Inputs = [new InputPort(Plan)],
-        Outputs = [new Port(Result, PortTypes.Text)],
+        Outputs =
+        [
+            new Port(Result, PortTypes.Text),
+            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Bound(Model)),
+        ],
         Spec = new ExecutableSpec(),
     };
 
@@ -454,10 +455,10 @@ public sealed class StaticPortTests
     {
         Type = ContainerNodeTypes.Type,
         Inputs = [new InputPort(Plan), new InputPort(Model, PortTypes.Text, isStatic: true)],
-        ContainerOutputs = new Dictionary<PortName, ContainerOutput>
-        {
-            [Model] = new ContainerOutput(PortRef.Named(new NodeLabel("实施"), Model), IsStatic: true),
-        },
+        Outputs =
+        [
+            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("实施"), Model)),
+        ],
         Nodes =
         [
             NodeSpec.Reference(new NodeLabel("实施"), new NodeName("执行")) with
@@ -471,7 +472,7 @@ public sealed class StaticPortTests
     private static FlowDefinition FlowWithStaticOutput() => new(
         new FlowName("默认"),
         null,
-        [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", IsStatic: true)],
+        [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
         new Dictionary<PortName, string>(),
         NodeSpec.Define(new NodeName("整体")) with
         {

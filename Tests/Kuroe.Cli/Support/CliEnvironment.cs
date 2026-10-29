@@ -27,7 +27,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
         string config = Path.Combine(root, ".kuroe");
         Directory.CreateDirectory(config);
-        File.WriteAllText(Path.Combine(config, "flows.json"), flowsJson);
+        File.WriteAllText(Path.Combine(config, "flows.json"), LegacyFlow.Normalize(flowsJson));
 
         ErrorOr<CliSession> created = CliSession.Create(
             root,

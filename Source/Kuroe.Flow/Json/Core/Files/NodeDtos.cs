@@ -19,8 +19,8 @@ public sealed class NodeDto
     /// <summary>引用的节点库定义名。</summary>
     public string? Use { get; set; }
 
-    /// <summary>节点输出端口表：条目形状由节点类型决定。执行节点与输入节点写 Name 与 Type；
-    /// 容器写 Name 与 Ref，Ref 写 成员@端口。</summary>
+    /// <summary>节点输出端口表：所有节点共用。条目写 Name 与可选 Type、Description、Value、Ref、Constant、Trigger；
+    /// 容器按 Ref 写 成员@端口，执行节点按 Ref 写自身静态输入，常量输出可写 Value。</summary>
     public List<JsonElement>? Outputs { get; set; }
 
     /// <summary>上游启动组：数组元素是一个组，组内是输入端口名到来源端口引用的映射，值写 @端口 或 来源@端口。
@@ -51,29 +51,38 @@ public sealed class NodeDto
     public List<NodeDto>? Nodes { get; set; }
 }
 
-/// <summary>端口的对象形状：输出端口写 Name 与 Type，容器输出端口写 Name 与 Ref，输入端口写 Name 与可选 Type、Default，键名与读侧一致。</summary>
+/// <summary>端口的对象形状：输出端口与输入端口共用条目，输出写 Constant，输入写 Static。</summary>
 public sealed class PortEntryDto
 {
     /// <summary>端口名。</summary>
     public string? Name { get; set; }
 
-    /// <summary>端口类型名，取值由端口类型注册表决定。输入端口的 Type 未写时按 Text；节点输出端口必填，容器输出端口不写 Type。</summary>
+    /// <summary>端口类型名，取值由端口类型注册表决定。未写时按 Text。</summary>
     public string? Type { get; set; }
 
-    /// <summary>容器输出端口的转发目标，写 成员@端口。</summary>
+    /// <summary>输出端口的来源引用，写 成员@端口、来源@端口 或 @本节点输入。</summary>
     public string? Ref { get; set; }
 
     /// <summary>端口承载内容的说明，未写时为空。</summary>
     public string? Description { get; set; }
 
-    /// <summary>开始端口的固定值，带值时固定输出该值，未写时承接提交时按该端口给出的输入。</summary>
+    /// <summary>常量输出端口的固定值，未写时由 Ref 提供来源。</summary>
     public string? Value { get; set; }
 
     /// <summary>输入端口的默认值，来源组没有连接该端口时提供内容。</summary>
     public string? Default { get; set; }
 
-    /// <summary>静态端口标记。静态输入只从 Static 绑定或默认值取值，静态输出只供下游 Static 绑定读取。</summary>
+    /// <summary>输出端口的常量标记。值由定义确定，只供 Static 读取。</summary>
+    public bool? Constant { get; set; }
+
+    /// <summary>输出端口的触发标记。动态产出按交回值决定是否触发下游。</summary>
+    public bool? Trigger { get; set; }
+
+    /// <summary>输入端口的静态标记。静态输入只从 Static 绑定或默认值取值。</summary>
     public bool? Static { get; set; }
+
+    /// <summary>输入端口的执行角色，取值 Content、Configuration 或 Control。</summary>
+    public string? Role { get; set; }
 }
 
 /// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>

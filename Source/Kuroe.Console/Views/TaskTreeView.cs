@@ -23,7 +23,11 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     public void Print(TaskSnapshot task)
     {
         Facts facts = new(task, _pendings);
-        _terminal.Write(NodeTree.Build(task.Graph, Header(), node => Line(facts, node), node => Details(facts, node)));
+        _terminal.Write(NodeTree.Build(
+            task.Graph,
+            Header(),
+            node => Line(facts, node),
+            node => Details(facts, node)));
     }
 
     private static Paragraph Header() => new ViewLine().Add("节点", Styles.Hint).Build();
@@ -60,20 +64,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             .Add(ViewLabels.Of(state), ViewLabels.StyleOf(state))
             .Add($"成员 {done}/{total} 完成", Styles.Hint);
 
-        if (container.PortBindings is { Count: > 0 } bindings)
+        if (container.Outputs.Count > 0)
         {
-            string[] dynamicPorts = [.. bindings.Keys
-                .Where(port => container.StaticOutputs?.Contains(port) != true)
-                .Select(port => port.Value)];
-            if (dynamicPorts.Length > 0)
-            {
-                line.Add($"端口 {string.Join('、', dynamicPorts)}", Styles.Hint);
-            }
-        }
-
-        if (container.StaticOutputs is { Count: > 0 } statics)
-        {
-            line.Add($"静态 {string.Join('、', statics.Select(port => port.Value))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
         return line.Build();
@@ -102,7 +95,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         if (executable.Outputs.Count > 0)
         {
-            line.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Name.Value))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
         if (executable.Type.Shape.DispatchesExecutions)
@@ -127,9 +120,34 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
     private static IEnumerable<IRenderable> Details(Facts facts, GraphNode node)
     {
+        if (node is ContainerNode container)
+        {
+            foreach (PortName name in container.Outputs
+                .Where(port => port.IsConstant)
+                .Select(port => port.Name))
+            {
+                if (facts.ContainerConstantText(container.Path, name) is { Length: > 0 } text)
+                {
+                    yield return new ViewLine().Add($"{name.Value}={text}", Styles.Hint).Build();
+                }
+            }
+
+            yield break;
+        }
+
         if (node is not ExecutableNode executable)
         {
             yield break;
+        }
+
+        foreach (PortName name in executable.Outputs
+            .Where(port => port.IsConstant)
+            .Select(port => port.Name))
+        {
+            if (facts.ConstantText(executable.Path, name) is { Length: > 0 } text)
+            {
+                yield return new ViewLine().Add($"{name.Value}={text}", Styles.Hint).Build();
+            }
         }
 
         foreach (ExecutionSnapshot execution in facts.Executions(executable.Path).OrderBy(execution => execution.Id.Value))
@@ -163,6 +181,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         private readonly Dictionary<NodePath, ContainerSnapshot> _containers;
         private readonly Dictionary<NodePath, PendingNode> _waiting;
         private readonly Dictionary<NodePath, IPortTexts> _staticTexts;
+        private readonly Dictionary<NodePath, IPortTexts> _constantTexts;
         private readonly TaskSnapshot _task;
 
         public Facts(TaskSnapshot task, PendingService pendings)
@@ -172,6 +191,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             _executions = task.Executables.ToDictionary(node => node.Executable.Path, node => node.Executions);
             _containers = task.Containers.ToDictionary(container => container.Path);
             _staticTexts = task.Executables.ToDictionary(node => node.Executable.Path, node => node.StaticTexts);
+            _constantTexts = task.Executables.ToDictionary(node => node.Executable.Path, node => node.ConstantTexts);
             _waiting = pendings.Pending(task.Id) is { IsError: false } found
                 ? found.Value.ToDictionary(node => node.Node)
                 : [];
@@ -193,6 +213,14 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             _staticTexts.TryGetValue(node, out IPortTexts? texts)
                 ? texts.Text(port)
                 : null;
+
+        public string? ConstantText(NodePath node, PortName port) =>
+            _constantTexts.TryGetValue(node, out IPortTexts? texts)
+                ? texts.Text(port)
+                : null;
+
+        public string? ContainerConstantText(NodePath container, PortName port) =>
+            Container(container)?.ConstantTexts.Text(port);
 
         public (int Done, int Total) Progress(NodePath container)
         {

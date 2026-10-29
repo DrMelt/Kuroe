@@ -92,7 +92,7 @@ public sealed class ModelResolutionTests
         new StartNode
         {
             Path = StartPath,
-            Outputs = [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, IsStatic: true)],
+            Outputs = [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, isConstant: true)],
         },
         new ExecutableNode
         {

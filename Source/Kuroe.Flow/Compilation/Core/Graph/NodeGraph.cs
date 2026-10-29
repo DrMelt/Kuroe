@@ -91,14 +91,9 @@ public sealed class NodeGraph : INodeGraph
         _ => null,
     };
 
-    /// <summary>来源节点某端口声明的类型，容器与未声明按 Text。供边规则按类型校验。</summary>
+    /// <summary>来源节点某输出端口声明的类型，未声明按 Text。供边规则按类型校验。</summary>
     public PortType TypeOf(NodePath node, PortName port) =>
-        this[node] switch
-        {
-            ExecutableNode executable => executable.FindPort(port)?.Type ?? PortTypes.Text,
-            StartNode start => start.FindPort(port)?.Type ?? PortTypes.Text,
-            _ => PortTypes.Text,
-        };
+        this[node].FindPort(port)?.Type ?? PortTypes.Text;
 
     /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。
     /// 容器与执行节点带上自己的入出边，输入侧方案由节点按入边算出。</summary>

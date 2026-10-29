@@ -316,7 +316,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
         string file = Path.Combine(cli.Environment.Root, "extra.json");
-        File.WriteAllText(file, ImportedFlow);
+        File.WriteAllText(file, LegacyFlow.Normalize(ImportedFlow));
 
         cli.Flows.Import(file);
 
@@ -333,7 +333,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
         string file = Path.Combine(cli.Environment.Root, "extra.json");
-        File.WriteAllText(file, ImportedFlow);
+        File.WriteAllText(file, LegacyFlow.Normalize(ImportedFlow));
 
         // 流程库非空时依次是刷新、查看详情与导入
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);

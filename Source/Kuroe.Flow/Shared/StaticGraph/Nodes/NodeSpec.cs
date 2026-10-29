@@ -46,11 +46,6 @@ public sealed record NodeSpec
     /// 默认值在 From 组没有连接该端口时提供内容。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>容器输出端口：端口名到子树内成员引用的映射，值可写 成员标签@端口 精确取成员命名段。
-    /// 属于容器定义与装配层内联容器，引用处不能修改；下游执行节点经 From 按端口消费。
-    /// 文件里与 <see cref="Outputs"/> 同写在一个 Outputs 数组，条目形状由节点类型决定。容器没有整份产出，一切对外内容都经声明的命名端口。</summary>
-    public IReadOnlyDictionary<PortName, ContainerOutput>? ContainerOutputs { get; init; }
-
     /// <summary>输入端口绑定：容器节点把声明的传入端口绑到当前作用域的来源，值可以是 来源@端口 或 @更外层端口。
     /// 引用容器绑定库定义声明的端口，内联容器绑定自身声明的端口；执行节点不写 In，接线一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? In { get; init; }
@@ -59,8 +54,8 @@ public sealed record NodeSpec
     /// 取用方式由输入端口的声明决定。库执行定义不写接线，由引用处注入；库容器成员与装配层节点自身声明。</summary>
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
-    /// <summary>执行节点的输出端口表：名字与类型。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 执行逐次交回 Text 与 Signal 端口值，引用处不能修改声明。</summary>
+    /// <summary>输出端口表：所有节点共用。类型在编译期落定产出形态与消费方式，引用处按名字消费。
+    /// 执行节点逐次交回动态 Text 与 Signal 端口值，常量输出由 Value 或常量来源提供；容器输出由子树来源提供。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
@@ -72,15 +67,40 @@ public sealed record NodeSpec
     /// <summary>有序子节点，非空即容器。容器自身不执行，成员产出齐备时作汇合点。</summary>
     public IReadOnlyList<NodeSpec>? Nodes { get; init; }
 
-    /// <summary>静态端口绑定：目标静态输入端口到来源引用。来源识别与 From、In 使用同一套作用域规则，静态来源必须是静态端口。
+    /// <summary>静态输入绑定：目标静态输入端口到来源引用。来源识别与 From、In 使用同一套作用域规则，来源必须是常量输出或开始端口。
     /// 静态绑定不进入 From、版本、就绪与触发，运行期沿绑定链取值。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? Static { get; init; }
 
-    /// <summary>生效输入端口表：作者声明的输入加节点类型声明的静态输入。作者声明同名端口时以作者声明为准。</summary>
-    public IReadOnlyList<InputPort> EffectiveInputs =>
-        Type?.Shape.StaticInputs is { Count: > 0 } statics
-            ? [.. Inputs, .. statics.Where(staticPort => Inputs.All(input => input.Name != staticPort.Name))]
+    /// <summary>声明输入端口表：流程声明优先，节点执行契约补上未声明的端口。</summary>
+    public IReadOnlyList<InputPort> DeclaredInputs =>
+        Type?.Shape.ContractInputs is { Count: > 0 } contract
+            ? [.. Inputs, .. contract.Where(port => Inputs.All(input => input.Name != port.Name))]
             : Inputs;
+
+    /// <summary>生效输入端口表：声明输入加 From 目标引入的内容端口。From 目标只在类型允许推断时补成 Text 内容输入。</summary>
+    public IReadOnlyList<InputPort> EffectiveInputs
+    {
+        get
+        {
+            IReadOnlyList<InputPort> declared = DeclaredInputs;
+            if (Type?.Shape.AcceptsInferredInputs != true || From.Count == 0)
+            {
+                return declared;
+            }
+
+            HashSet<PortName> names = [.. declared.Select(port => port.Name)];
+            List<InputPort> inferred = [];
+            foreach (PortName name in From
+                .SelectMany(group => group.Links)
+                .Select(link => link.Input)
+                .Where(name => names.Add(name)))
+            {
+                inferred.Add(new InputPort(name, PortTypes.Text));
+            }
+
+            return inferred.Count > 0 ? [.. declared, .. inferred] : declared;
+        }
+    }
 
     /// <summary>按名字取生效输入端口声明，未声明时为空。</summary>
     public InputPort? FindInput(PortName name) => EffectiveInputs.Find(name);

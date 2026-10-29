@@ -60,7 +60,6 @@ internal sealed class FlowGraphCompiler
         public List<Pending> Children { get; } = [];
         public Dictionary<PortName, NodePort> Bindings { get; } = [];
         public Dictionary<PortName, NodePort> StaticBindings { get; } = [];
-        public HashSet<PortName> StaticOutputs { get; } = [];
 
         /// <summary>编译出的节点记录，子树编译完成后填入。</summary>
         public GraphNode? Node { get; set; }
@@ -71,17 +70,6 @@ internal sealed class FlowGraphCompiler
     {
         var pending = new Pending(spec, parent is null ? new NodePath([spec.Label]) : parent.Path.Append(spec.Label), parent);
         parent?.Children.Add(pending);
-
-        if (spec.ContainerOutputs is { Count: > 0 } outputs)
-        {
-            foreach ((PortName port, ContainerOutput output) in outputs)
-            {
-                if (output.IsStatic)
-                {
-                    pending.StaticOutputs.Add(port);
-                }
-            }
-        }
 
         foreach (NodeSpec child in spec.Nodes ?? [])
         {
@@ -99,7 +87,9 @@ internal sealed class FlowGraphCompiler
         List<Pending> order = [.. Flatten(_roots)];
         foreach (Pending pending in Enumerable.Reverse(order))
         {
-            pending.Node = pending.Entry.Nodes is { Count: > 0 } ? NewContainer(pending) : NewExecutable(pending);
+            pending.Node = pending.Entry.Nodes is { Count: > 0 }
+                ? NewContainer(pending)
+                : NewExecutable(pending);
         }
 
         return _errors.Count > 0
@@ -107,7 +97,7 @@ internal sealed class FlowGraphCompiler
             : new NodeGraph([NewStart(), .. order.Select(pending => pending.Node!)], _edges);
     }
 
-    /// <summary>把 From 启动组与容器输出端口绑定解析成路径，落定全部边。</summary>
+    /// <summary>把 From 启动组、静态绑定与输出端口来源解析成路径，落定全部边。</summary>
     private void LinkEdges()
     {
         foreach (Pending pending in Flatten(_roots))
@@ -116,10 +106,9 @@ internal sealed class FlowGraphCompiler
             {
                 LinkExecutable(pending);
                 LinkStatic(pending);
-                continue;
             }
 
-            LinkContainerOutputs(pending);
+            LinkOutputs(pending);
         }
     }
 
@@ -143,9 +132,14 @@ internal sealed class FlowGraphCompiler
                     continue;
                 }
 
-                PortType type = PortRules.Find(pending.Entry.Inputs, link.Input)?.Type ?? PortTypes.Text;
+                if (PortRules.Find(pending.Entry.EffectiveInputs, link.Input) is not { } input)
+                {
+                    _errors.Add(_scope.Node(pending.Path.Value,
+                        $"From 连接的目标输入端口 {link.Input} 没有在节点上声明。"));
+                    continue;
+                }
 
-                AddEdge(from, pending.Path, link.Ref.Port, link.Input, type, groupIndex);
+                AddEdge(from, pending.Path, link.Ref.Port, link.Input, input.Type, groupIndex);
             }
 
             groupIndex++;
@@ -180,31 +174,30 @@ internal sealed class FlowGraphCompiler
         }
     }
 
-    /// <summary>容器输出端口的名字引用解析成成员路径，端口名按声明原样保留。解析失败时给出错误。</summary>
-    private void LinkContainerOutputs(Pending pending)
+    /// <summary>输出端口的来源解析成内部端口路径：@端口 指向本节点输入，成员@端口 指向直接子节点输出。</summary>
+    private void LinkOutputs(Pending pending)
     {
-        if (pending.Entry.ContainerOutputs is not { Count: > 0 } outputs)
+        foreach (Port output in pending.Entry.Outputs)
         {
-            return;
-        }
-
-        foreach ((PortName port, ContainerOutput output) in outputs)
-        {
-            if (output.Ref.Source is not { } label)
+            if (output.Ref is not { } reference)
             {
-                _errors.Add(_scope.Node(pending.Path.Value,
-                    $"容器输出端口 {port} 的绑定是对绑定端口的引用，绑定目标写成目标成员标签。"));
+                continue;
+            }
+
+            if (reference.Source is not { } label)
+            {
+                pending.Bindings[output.Name] = new NodePort(pending.Path, reference.Port);
                 continue;
             }
 
             if (ResolveIn(pending.Children, label) is not { } member)
             {
                 _errors.Add(_scope.Node(pending.Path.Value,
-                    $"容器输出端口 {port} 的绑定目标 {label} 不在容器 {pending.Path} 的子树里。"));
+                    $"输出端口 {output.Name} 的目标 {reference.Display} 不在节点 {pending.Path} 的子树里。"));
                 continue;
             }
 
-            pending.Bindings[port] = new NodePort(member.Path, output.Ref.Port);
+            pending.Bindings[output.Name] = new NodePort(member.Path, reference.Port);
         }
     }
 
@@ -285,11 +278,12 @@ internal sealed class FlowGraphCompiler
             Inputs = entry.EffectiveInputs,
             Outputs = entry.Outputs,
             StaticBindings = pending.StaticBindings.Count > 0 ? pending.StaticBindings : null,
+            OutputBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
             MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
         };
     }
 
-    /// <summary>容器节点：类型与直接子节点落定，命名输出端口绑定一并挂上。</summary>
+    /// <summary>容器节点：类型、端口与直接子节点落定，输出端口绑定一并挂上。</summary>
     private static ContainerNode NewContainer(Pending pending)
     {
         List<GraphNode> children = [.. pending.Children.Select(child => child.Node!)];
@@ -299,8 +293,9 @@ internal sealed class FlowGraphCompiler
             Path = pending.Path,
             Type = TypeOf(pending.Entry),
             Children = children,
-            PortBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
-            StaticOutputs = pending.StaticOutputs.Count > 0 ? pending.StaticOutputs : null,
+            Inputs = pending.Entry.EffectiveInputs,
+            Outputs = pending.Entry.Outputs,
+            OutputBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
         };
     }
 

@@ -20,10 +20,13 @@ public sealed record ExecutableNode : GraphNode
     public IReadOnlyDictionary<PortName, NodePort>? StaticBindings { get; init; }
 
     /// <summary>执行节点的输入端口表：名字、类型、默认值与静态标记，类型决定来源产出如何进入本节点。</summary>
-    public required IReadOnlyList<InputPort> Inputs { get; init; }
+    public override IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>执行节点的输出端口表：名字与类型，类型决定产出形态与消费方式。</summary>
-    public required IReadOnlyList<Port> Outputs { get; init; }
+    /// <summary>执行节点的输出端口表：名字、类型与来源。常量输出不参与执行交回。</summary>
+    public override IReadOnlyList<Port> Outputs { get; init; } = [];
+
+    /// <summary>输出端口到内部来源端口的绑定：常量输出来源是本节点的静态输入。未声明来源时为空。</summary>
+    public override IReadOnlyDictionary<PortName, NodePort>? OutputBindings { get; init; }
 
     /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。审批节点不启动执行，不限次数。</summary>
     public required int MaxExecutions { get; init; }
@@ -32,17 +35,11 @@ public sealed record ExecutableNode : GraphNode
     public IReadOnlyList<FlowEdge> Incoming { get; init; } = [];
 
     /// <summary>输入侧方案，由自身声明与入边算出。不需来源即可挂起的类型没有方案，它们不按就绪判定。</summary>
-    public NodeInputPlan? Plan => Type.Shape.StartsUnaided ? null : NodeInputPlan.Of(Spec, Incoming);
+    public NodeInputPlan? Plan => Type.Shape.StartsUnaided ? null : NodeInputPlan.Of(Spec, Incoming, Inputs);
 
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxExecutions = 100;
 
-    /// <summary>需经契约工具交回的输出端口：Text 与 Signal，未声明即不要求执行交回。</summary>
+    /// <summary>需经契约工具交回的输出端口：动态 Text 与 Signal，未声明即不要求执行交回。</summary>
     public IReadOnlyList<Port> RequiredPorts => PortRules.RequiringSubmission(Outputs);
-
-    /// <summary>按名字取端口声明，未声明时为空。</summary>
-    public Port? FindPort(PortName name) => Outputs.Find(name);
-
-    /// <summary>按名字取输入端口声明，未声明时为空。</summary>
-    public InputPort? FindInput(PortName name) => Inputs.Find(name);
 }

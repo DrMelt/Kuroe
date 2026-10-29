@@ -14,14 +14,15 @@ public static class LlmNodeTypes
     /// <summary>模型名静态输入端口，由宿主在任务启动时给出。</summary>
     public static PortName ModelPort { get; } = new("MODEL_NAME");
 
-    /// <summary>Llm 类型的静态形状：派发执行，模型是类型声明的静态输入，输入与输出端口取文本、上下文与信号，
-    /// Text 与 Signal 另有 Trigger 版，Trigger 版交回时携带是否触发下游的布尔值。</summary>
+    /// <summary>Llm 类型的静态形状：派发执行，输入与输出端口取文本、上下文与信号，
+    /// Text 与 Signal 可配置触发，触发交回时携带是否触发下游的布尔值。模型端口由流程声明，类型规则要求它是常量配置。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
-        StaticInputs =
+        AcceptsInferredInputs = true,
+        ContractInputs =
         [
-            new InputPort(ModelPort, PortTypes.Text, "执行使用的模型名，由宿主在任务启动时给出。", isStatic: true),
+            new InputPort(ModelPort, PortTypes.Text, "执行使用的模型名，由任务启动时给出。", isStatic: true),
         ],
         InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
         OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],

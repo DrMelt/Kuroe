@@ -26,7 +26,11 @@ internal static class BuiltinNodes
         {
             Prompt = "把目标写成可实施的计划，逐项给出要做什么与验收标准。",
         }),
-        Inputs = [new InputPort(GoalPort, PortTypes.Text, "要规划的任务目标。")],
+        Inputs =
+        [
+            new InputPort(GoalPort, PortTypes.Text, "要规划的任务目标。"),
+            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", isStatic: true),
+        ],
         Outputs = [new Port(PlanPort, PortTypes.Text, "目标对应的实施计划。")],
         Spec = new ExecutableSpec(),
     };
@@ -38,7 +42,11 @@ internal static class BuiltinNodes
         {
             Tools = [new ToolPath("GetLocalTime")],
         }),
-        Inputs = [new InputPort(TaskPort, PortTypes.Text, "待实施的计划，来自规划节点。")],
+        Inputs =
+        [
+            new InputPort(TaskPort, PortTypes.Text, "待实施的计划，来自规划节点。"),
+            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", isStatic: true),
+        ],
         Spec = new ExecutableSpec(),
     };
 

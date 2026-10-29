@@ -26,7 +26,7 @@ public sealed class FlowCommandTests
     public async Task Flow_add_imports_only_compilable_flows()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), Mixed);
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), LegacyFlow.Normalize(Mixed));
         StringWriter output = new();
         StringWriter error = new();
 

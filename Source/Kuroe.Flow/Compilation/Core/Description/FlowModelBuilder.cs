@@ -71,7 +71,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     {
         NodeScope scope = NodeScope.Flow(name.Value);
 
-        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(flow.StartOutputs, scope, StartNode.ReservedLabel.Value, allowValue: true);
+        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(flow.StartOutputs, scope, StartNode.ReservedLabel.Value);
         if (startOutputs.IsError)
         {
             errors.AddRange(startOutputs.ErrorsOrEmptyList);
@@ -179,16 +179,23 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             return errors;
         }
 
-        IReadOnlyList<Port> outputs = shape.Organizes
-            ? []
-            : ToOutputs(document, shape, inputs.Value, scope, label, errors);
-
-        ErrorOr<Dictionary<PortName, ContainerOutput>?> containerOutputs = shape.Organizes
-            ? ToContainerOutputs(document.Outputs, scope, label)
-            : (Dictionary<PortName, ContainerOutput>?)null;
-        if (containerOutputs.IsError)
+        IReadOnlyList<Port> outputs;
+        if (shape.Organizes)
         {
-            errors.AddRange(containerOutputs.ErrorsOrEmptyList);
+            ErrorOr<IReadOnlyList<Port>> parsed = ToPorts(document.Outputs, scope, label);
+            if (parsed.IsError)
+            {
+                errors.AddRange(parsed.ErrorsOrEmptyList);
+                outputs = [];
+            }
+            else
+            {
+                outputs = parsed.Value;
+            }
+        }
+        else
+        {
+            outputs = ToOutputs(document, shape, inputs.Value, scope, label, errors);
         }
 
         ErrorOr<IReadOnlyList<FromGroup>> from = ToFrom(document.From, scope, label);
@@ -244,8 +251,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             Label = new NodeLabel(label),
             Type = type,
             Inputs = inputs.Value,
-            Outputs = shape.Organizes ? [] : outputs,
-            ContainerOutputs = containerOutputs.Value,
+            Outputs = outputs,
             From = from.Value,
             In = bindings.Value,
             Static = staticBindings.Value,
@@ -254,7 +260,11 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             MaxExecutions = shape.Organizes ? document.MaxExecutions : null,
             Spec = shape.Organizes
                 ? null
-                : new ExecutableSpec { Validate = validation.Value, MaxExecutions = document.MaxExecutions },
+                : new ExecutableSpec
+                {
+                    Validate = validation.Value,
+                    MaxExecutions = document.MaxExecutions,
+                },
         };
     }
 
@@ -324,7 +334,9 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 entry.Type ?? PortTypes.Text,
                 ToDescription(entry.Description),
                 entry.Default,
-                entry.IsStatic));
+                entry.IsStatic,
+                entry.Role,
+                entry.Trigger));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -348,7 +360,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             return ForwardedPorts(inputs);
         }
 
-        ErrorOr<IReadOnlyList<Port>> parsed = ToPorts(document.Outputs, scope, nodeLabel, allowValue: false);
+        ErrorOr<IReadOnlyList<Port>> parsed = ToPorts(document.Outputs, scope, nodeLabel);
         if (parsed.IsError)
         {
             errors.AddRange(parsed.ErrorsOrEmptyList);
@@ -361,13 +373,12 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 
     private static IReadOnlyList<Port> ForwardedPorts(IReadOnlyList<InputPort> inputs) =>
         [.. inputs.Where(input => !input.IsStatic)
-            .Select(input => new Port(input.Name, input.Type, input.Description))];
+            .Select(input => new Port(input.Name, input.Type, input.Description, trigger: input.Trigger))];
 
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(
         IReadOnlyList<PortDocument> entries,
         NodeScope scope,
-        string nodeLabel,
-        bool allowValue)
+        string nodeLabel)
     {
         List<Port> result = [];
         List<Error> errors = [];
@@ -380,86 +391,33 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 continue;
             }
 
-            if (entry.Ref is not null)
+            if (entry.Value is not null && entry.Ref is not null)
             {
-                errors.Add(scope.Node(nodeLabel, "执行节点的输出端口条目写 Name 与 Type，不写 Ref。"));
+                errors.Add(scope.Node(nodeLabel, $"输出端口 {name.Value.Value} 不能同时写 Value 与 Ref。"));
                 continue;
             }
 
-            if (entry.Type is not { } type)
+            PortRef? reference = null;
+            if (entry.Ref is { } refText)
             {
-                errors.Add(scope.Node(nodeLabel, "输出端口的 Type 不能省略，必须是已注册的端口类型名。"));
-                continue;
-            }
+                ErrorOr<PortRef> parsed = ParsePortRef(refText);
+                if (parsed.IsError)
+                {
+                    errors.Add(scope.Node(nodeLabel, parsed.FirstError.Description));
+                    continue;
+                }
 
-            if (!allowValue && entry.Value is not null)
-            {
-                errors.Add(scope.Node(nodeLabel, "输出端口不认识键 Value，Value 只属于开始端口。"));
-                continue;
-            }
-
-            if (!allowValue && entry.IsStatic)
-            {
-                errors.Add(scope.Node(nodeLabel, "执行节点输出端口不能是静态端口，静态端口只属于开始端口与容器输出。"));
-                continue;
+                reference = parsed.Value;
             }
 
             result.Add(new Port(
                 name.Value,
-                type,
+                entry.Type ?? PortTypes.Text,
                 ToDescription(entry.Description),
-                allowValue ? entry.Value : null,
-                entry.IsStatic));
-        }
-
-        return errors.Count > 0 ? errors : result;
-    }
-
-    private static ErrorOr<Dictionary<PortName, ContainerOutput>?> ToContainerOutputs(
-        IReadOnlyList<PortDocument> entries,
-        NodeScope scope,
-        string nodeLabel)
-    {
-        if (entries.Count == 0)
-        {
-            return (Dictionary<PortName, ContainerOutput>?)null;
-        }
-
-        Dictionary<PortName, ContainerOutput> result = [];
-        List<Error> errors = [];
-        foreach (PortDocument entry in entries)
-        {
-            ErrorOr<PortName> name = PortName.Create(entry.Name);
-            if (name.IsError)
-            {
-                errors.AddRange(name.ErrorsOrEmptyList);
-                continue;
-            }
-
-            if (entry.Type is not null)
-            {
-                errors.Add(scope.Node(nodeLabel, "容器输出端口不认识键 Type，条目写 Name、Ref 与 Description。"));
-                continue;
-            }
-
-            if (entry.Ref is not { } refText)
-            {
-                errors.Add(scope.Node(nodeLabel, "容器输出端口的 Ref 不能省略，写 成员@端口。"));
-                continue;
-            }
-
-            ErrorOr<PortRef> reference = ParsePortRef(refText);
-            if (reference.IsError)
-            {
-                errors.AddRange(reference.ErrorsOrEmptyList);
-                continue;
-            }
-
-            if (!result.TryAdd(name.Value,
-                new ContainerOutput(reference.Value, ToDescription(entry.Description), entry.IsStatic)))
-            {
-                errors.Add(scope.Node(nodeLabel, $"容器输出端口 {name.Value.Value} 重复。"));
-            }
+                entry.Value,
+                entry.IsConstant,
+                reference,
+                entry.Trigger));
         }
 
         return errors.Count > 0 ? errors : result;

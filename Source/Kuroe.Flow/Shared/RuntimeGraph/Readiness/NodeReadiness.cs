@@ -32,10 +32,12 @@ public static class NodeReadiness
         return null;
     }
 
-    /// <summary>是否可启动：执行次数未达上限，且有重跑意图或存在驱动来源有新版本的齐备组。</summary>
+    /// <summary>是否可启动：执行次数未达上限，且有重跑意图、静态输入启动条件或存在驱动来源有新版本的齐备组。</summary>
     public static bool Ready(this NodeInputPlan plan, IInputProgress progress, IReadinessSources sources) =>
         progress.Executions < plan.MaxExecutions
-        && (progress.ForceRerun || plan.DrivenGroup(progress, sources) is not null);
+        && (progress.ForceRerun
+            || plan.StartsAtTaskStart && progress.Executions == 0
+            || plan.DrivenGroup(progress, sources) is not null);
 
     /// <summary>第一个由来源新版本驱动且未被 Trigger 抑制的齐备组序号，没有这样的组时为空。</summary>
     public static int? DrivenGroup(this NodeInputPlan plan, IInputProgress progress, IReadinessSources sources)

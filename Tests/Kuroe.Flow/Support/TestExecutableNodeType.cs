@@ -7,22 +7,22 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.TestSupport;
 
 /// <summary>测试用的执行节点类型：派发执行，端口取值域与执行节点一致，不接受任何类型专属声明。</summary>
-public sealed class TestExecutableNodeType : INodeType, INodeTypeValidation
+public sealed class TestExecutableNodeType(bool withContractInput = true) : INodeType, INodeTypeValidation
 {
     /// <summary>类型名。</summary>
     public NodeKind Kind => TestNodeTypes.ExecutableKind;
 
-    /// <summary>测试执行节点声明的静态输入端口。</summary>
+    /// <summary>测试执行节点使用的静态输入端口名。</summary>
     public static PortName StaticPort { get; } = new("静态值");
 
-    /// <summary>派发执行，输入输出与执行节点同形，静态输入带测试默认值。</summary>
+    /// <summary>测试执行节点类型不预置输入端口，端口由节点声明给出。</summary>
     public NodeTypeShape Shape { get; } = new()
     {
         DispatchesExecutions = true,
-        StaticInputs =
-        [
-            new InputPort(StaticPort, PortTypes.Text, "测试静态输入。", "执行者", isStatic: true),
-        ],
+        AcceptsInferredInputs = true,
+        ContractInputs = withContractInput
+            ? [new InputPort(StaticPort, PortTypes.Text, "测试静态输入。", "执行者", isStatic: true)]
+            : [],
         InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
         OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
