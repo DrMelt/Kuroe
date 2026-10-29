@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -19,14 +19,10 @@ public sealed record InputBinding(
     public bool Signal => Type?.Semantics == PortSemantics.Signal;
 
     /// <summary>是否为 Trigger 版端口，启动组按该端口的触发值决定是否启动。</summary>
-    public bool CarriesTrigger => Type is { } type && Ports.CarriesTrigger(type);
+    public bool CarriesTrigger => Type is { } type && PortRules.CarriesTrigger(type);
 
     /// <summary>已消费版本的键。</summary>
     public ConsumptionKey Key => new(Source, Port);
-
-    /// <summary>这一绑定是否触发下游。普通端口与节点级绑定恒触发。</summary>
-    public bool Triggers(ISourceState source) =>
-        !CarriesTrigger || Port is not { } port || source.Triggers(port);
 }
 
 /// <summary>输入侧的一个启动组：组内绑定全部可用时组齐备，组间任一齐备即可启动。
@@ -38,15 +34,11 @@ public sealed record InputGroup(IReadOnlyList<InputBinding> Bindings)
 
     /// <summary>组内的信号绑定。</summary>
     public IEnumerable<InputBinding> Signals => Bindings.Where(binding => binding.Signal);
-
-    /// <summary>组内是否存在触发值为 false 的 Trigger 绑定。</summary>
-    public bool Suppressed(IReadinessSources sources) =>
-        Bindings.Any(binding => !binding.Triggers(sources.Source(binding.Source)));
 }
 
 /// <summary>节点输入侧的编译期方案：启动组与执行次数上限。
-/// 方案在编译期由执行视图一次算出，判定只读它，不再反复扫图。</summary>
-public sealed partial record NodeInputPlan
+/// 方案在编译期由执行视图一次算出，就绪判定由运行期读取它，不再反复扫图。</summary>
+public sealed record NodeInputPlan
 {
     /// <summary>启动组，按 From 的组序。</summary>
     public IReadOnlyList<InputGroup> Groups { get; init; } = [];

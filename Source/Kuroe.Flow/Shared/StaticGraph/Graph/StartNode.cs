@@ -1,5 +1,5 @@
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -9,10 +9,10 @@ namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 public sealed record StartNode : GraphNode
 {
     /// <summary>保留的节点名，节点库定义的名字不得与之相同。</summary>
-    public static NodeName ReservedName { get; } = new("Start");
+    public static NodeName ReservedName => NodeName.ReservedStart;
 
     /// <summary>保留的节点标签，流程内的节点标签不得与之相同。</summary>
-    public static NodeLabel ReservedLabel { get; } = new(ReservedName.Value);
+    public static NodeLabel ReservedLabel => NodeLabel.ReservedStart;
 
     /// <summary>输出端口表：至少一个 Text 端口，不带值的端口至少一个，输出提交时按该端口给出的输入，其余端口带固定值。</summary>
     public required IReadOnlyList<Port> Outputs { get; init; }

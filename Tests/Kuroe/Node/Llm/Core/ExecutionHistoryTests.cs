@@ -1,6 +1,5 @@
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Node.Llm.Sessions;
 using Microsoft.Extensions.AI;
 using Xunit;

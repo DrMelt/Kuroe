@@ -1,5 +1,5 @@
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
 namespace Kuroe.Flow.InputChannel.Shared;
 

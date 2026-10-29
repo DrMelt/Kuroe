@@ -1,5 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -37,7 +38,7 @@ public sealed record ExecutableNode : GraphNode
     public const int DefaultMaxExecutions = 100;
 
     /// <summary>需经契约工具交回的输出端口：Text 与 Signal，未声明即不要求执行交回。</summary>
-    public IReadOnlyList<Port> RequiredPorts => Ports.RequiringSubmission(Outputs);
+    public IReadOnlyList<Port> RequiredPorts => PortRules.RequiringSubmission(Outputs);
 
     /// <summary>按名字取端口声明，未声明时为空。</summary>
     public Port? FindPort(PortName name) => Outputs.Find(name);

@@ -1,16 +1,18 @@
 using ErrorOr;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.NodeTypes;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Input;
 
 /// <summary>输入节点类型：不启动执行，依赖齐备后停在待输入，用户回答即产出放行下游。
 /// 外部输入协议是建运行期对象所需的运行期依赖，随类型实例带到运行期对象，节点的执行经它声明接收与接受交付。</summary>
-public sealed class InputNodeType(InputParameters? parameters, IInputChannel channel) : INodeType, IQuestionNodeType
+public sealed class InputNodeType(InputParameters? parameters, IInputChannel channel) : INodeType, INodeTypeValidation, INodeRuntimeFactory, IQuestionNodeType
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public InputParameters? Parameters { get; } = parameters;

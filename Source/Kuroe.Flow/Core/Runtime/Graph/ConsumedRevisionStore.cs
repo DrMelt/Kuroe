@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Graph;

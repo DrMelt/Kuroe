@@ -1,7 +1,10 @@
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Process;
 using Xunit;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
@@ -216,7 +219,7 @@ public sealed class CommandRuntimeTests
         NodeInputValues.From(context.Plan(TargetPath)!.Groups[0], context);
 
     private static CommandRuntime Runtime(ExecutableNode node, StubNodeContext context) =>
-        Assert.IsType<CommandRuntime>(node.Type.Create(node, context));
+        Assert.IsType<CommandRuntime>(((INodeRuntimeFactory)node.Type).Create(node, context));
 
     private static ExecutableNode Node(
         FakeProcessRunner process,

@@ -1,5 +1,5 @@
-using Kuroe.Flow.Shared.Descriptions;
-using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Node.Input;
 using Xunit;
 

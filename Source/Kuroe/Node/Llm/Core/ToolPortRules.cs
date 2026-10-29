@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Shared;
 using Kuroe.Tool;
 
@@ -53,7 +54,7 @@ internal static class ToolPortRules
                 {
                     Report($"工具 {key} 的路径变量 {variable} 映射到未声明的输入端口 {portName}。");
                 }
-                else if (!Ports.CarriesText(port.Value.Type))
+                else if (!PortRules.CarriesText(port.Value.Type))
                 {
                     Report($"工具 {key} 的路径变量 {variable} 映射到的输入端口 {portName} 必须是 Text。");
                 }

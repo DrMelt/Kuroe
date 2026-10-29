@@ -1,9 +1,12 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Input;
@@ -74,7 +77,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     /// <summary>按输出端口取回答文本，端口不是 Text 语义或尚未回答时为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
         executable.Outputs.Find(port) is { } declared
-        && Ports.CarriesText(declared.Type)
+        && PortRules.CarriesText(declared.Type)
         && _answer is { Length: > 0 } answer
             ? answer
             : null;
@@ -83,7 +86,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
         Released
         && executable.Outputs.Find(port) is { } declared
-        && Ports.CarriesText(declared.Type)
+        && PortRules.CarriesText(declared.Type)
         && _answer is { Length: > 0 } answer
             ? [new ContextValue(new InputSource(Path, port), answer)]
             : [];

@@ -1,15 +1,16 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立，类型专属声明封在实例里。</summary>
-public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null) : INodeType
+public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null) : INodeType, INodeTypeValidation
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public LlmParameters? Parameters { get; } = parameters;
@@ -32,7 +33,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
-        if (spec.Validate is not null && !node.Outputs.Any(port => Ports.CarriesText(port.Type)))
+        if (spec.Validate is not null && !node.Outputs.Any(port => PortRules.CarriesText(port.Type)))
         {
             fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明文本语义的输出端口，校验对象是端口产出。"));
         }
@@ -65,7 +66,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<Port> outputs)
     {
         List<ToolPath> paths = [.. Parameters?.Tools ?? []];
-        if (outputs.Any(port => Ports.RequiresSubmission(port.Type)))
+        if (outputs.Any(port => PortRules.RequiresSubmission(port.Type)))
         {
             paths.Add(new ToolPath(ContractTools.Port));
         }

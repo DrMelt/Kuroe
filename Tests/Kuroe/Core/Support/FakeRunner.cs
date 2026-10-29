@@ -1,10 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
 
 namespace Kuroe.Tests.Support;
 
@@ -50,7 +49,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     private static string PortValuesFor(IReadOnlyList<Port> ports)
     {
         string body = string.Join(", ", ports.Select(port =>
-            $"\"{port.Name.Value}\": \"{(Ports.CarriesText(port.Type) ? $"{port.Name.Value}产出" : string.Empty)}\""));
+            $"\"{port.Name.Value}\": \"{(PortRules.CarriesText(port.Type) ? $"{port.Name.Value}产出" : string.Empty)}\""));
         return "{ " + body + " }";
     }
 

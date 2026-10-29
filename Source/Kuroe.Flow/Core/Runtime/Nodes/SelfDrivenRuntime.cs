@@ -1,8 +1,11 @@
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Nodes;
@@ -100,13 +103,13 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
 
     /// <summary>按输出端口取单段文本：只有 Text 语义端口承载内容，未成功产出时为空。</summary>
     public override string? PortText(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        Released && executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
             ? _content
             : null;
 
     /// <summary>按输出端口取产出：Text 语义端口给出本次产出的文本，出处指向本节点。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        Released && executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
         && _content is { Length: > 0 } content
             ? [new ContextValue(new NodeSource(Path, port), content)]
             : [];

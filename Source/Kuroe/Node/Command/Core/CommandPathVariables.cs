@@ -1,5 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Shared;
 
 namespace Kuroe.Node.Command;
@@ -23,7 +24,7 @@ internal static class CommandPathVariables
         {
             InputPort? port = node.Inputs.Find(new PortName(portName));
 
-            return port is null ? null : Ports.CarriesText(port.Value.Type);
+            return port is null ? null : PortRules.CarriesText(port.Value.Type);
         }))
         {
             report(error);

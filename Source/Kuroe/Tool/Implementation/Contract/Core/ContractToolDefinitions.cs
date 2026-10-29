@@ -1,5 +1,5 @@
 using Kuroe.Node.Llm.Tools;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Tool.Contract;
 
@@ -30,5 +30,5 @@ static class ContractToolDefinitions
     private static ToolDefinition WithPorts(ToolDefinition definition, IReadOnlyList<Port>? ports) =>
         ports is null
             ? definition
-            : definition with { Description = $"{definition.Description}本节点需要交回的端口：{Ports.List(ports)}。" };
+            : definition with { Description = $"{definition.Description}本节点需要交回的端口：{PortRules.List(ports)}。" };
 }

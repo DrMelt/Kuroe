@@ -34,10 +34,10 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\InputChannel\Core\Kuroe.Flow.InputChannel.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Core\Kuroe.Flow.Json.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compiler\Shared\Kuroe.Flow.Compiler.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compiler\Core\Kuroe.Flow.Compiler.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
     </ItemGroup>
 

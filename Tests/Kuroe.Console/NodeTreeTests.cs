@@ -1,5 +1,5 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Spectre.Console;

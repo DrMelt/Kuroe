@@ -1,12 +1,13 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.NodeType.Container;
 
 /// <summary>容器类型：组织成员并限定作用域，自身不执行，成员齐备即汇合。引擎内置，运行期对象由引擎建立。</summary>
-internal sealed class ContainerNodeType : INodeType
+internal sealed class ContainerNodeType : INodeType, INodeTypeValidation
 {
     /// <summary>类型名。</summary>
     public NodeKind Kind => ContainerNodeTypes.Name;

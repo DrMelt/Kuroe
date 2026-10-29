@@ -1,12 +1,13 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.TestSupport;
 
 /// <summary>测试用的执行节点类型：派发执行，端口取值域与执行节点一致，不接受任何类型专属声明。</summary>
-public sealed class TestExecutableNodeType : INodeType
+public sealed class TestExecutableNodeType : INodeType, INodeTypeValidation
 {
     /// <summary>类型名。</summary>
     public NodeKind Kind => TestNodeTypes.ExecutableKind;

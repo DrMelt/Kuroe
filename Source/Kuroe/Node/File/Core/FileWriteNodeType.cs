@@ -1,15 +1,16 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件写入节点类型：不启动执行，激活时按路径变量解析路径，把唯一的内容 Text 输入写入文件。</summary>
-public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType
+public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, INodeTypeValidation, INodeRuntimeFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileParameters? Parameters { get; } = parameters;
@@ -37,7 +38,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType
 
         IReadOnlySet<string> variablePorts = FilePathVariables.Validate(node, Parameters, message =>
             fail(scope.Node(node.Label.Value, message)));
-        Reject(node.Inputs.Count(port => Ports.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)) != 1,
+        Reject(node.Inputs.Count(port => PortRules.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)) != 1,
             "文件写入节点必须声明一个 Text 输入端口，写入内容取自它。");
 
         Reject(node.Outputs.Count > 1, "文件写入节点最多声明一个输出端口。");

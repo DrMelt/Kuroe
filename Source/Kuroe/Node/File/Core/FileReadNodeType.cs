@@ -1,15 +1,16 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件读取节点类型：不启动执行，激活时按路径变量解析路径并读取文件内容，写入唯一的输出端口。</summary>
-public sealed class FileReadNodeType(FileParameters? parameters) : INodeType
+public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, INodeTypeValidation, INodeRuntimeFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileParameters? Parameters { get; } = parameters;
@@ -39,7 +40,7 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType
 
         IReadOnlySet<string> variablePorts = FilePathVariables.Validate(node, Parameters, message =>
             fail(scope.Node(node.Label.Value, message)));
-        Reject(node.Inputs.Any(port => Ports.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)),
+        Reject(node.Inputs.Any(port => PortRules.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)),
             "文件读取节点的 Text 输入必须是路径变量端口。");
 
         Reject(node.Outputs.Count != 1, "文件读取节点必须声明一个输出端口，读取内容写入该端口。");

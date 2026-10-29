@@ -1,5 +1,5 @@
+using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Node;
 
 namespace Kuroe;
 

@@ -1,6 +1,5 @@
-using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Console.Tests.Support;
 
@@ -12,9 +11,4 @@ internal sealed class StubNodeType(NodeKind kind) : INodeType
 
     /// <summary>静态形状，取默认。</summary>
     public NodeTypeShape Shape { get; } = new();
-
-    /// <summary>类型规则，替身没有约束。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
-    {
-    }
 }

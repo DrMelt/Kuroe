@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Tool.Contract;
 
@@ -7,5 +7,5 @@ internal static class ContractPorts
 {
     /// <summary>该执行需交回的输出端口，没有时为空。</summary>
     internal static IReadOnlyList<Port>? DeclaredPorts(IReadOnlyList<Port> outputs) =>
-        Ports.RequiringSubmission(outputs) is { Count: > 0 } required ? required : null;
+        PortRules.RequiringSubmission(outputs) is { Count: > 0 } required ? required : null;
 }

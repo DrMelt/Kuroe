@@ -1,5 +1,5 @@
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests;

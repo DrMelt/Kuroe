@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests;
@@ -44,16 +44,5 @@ public sealed class PortTypeTests
         Assert.Throws<InvalidOperationException>(() => PortTypes.Register("Audit", PortSemantics.Text));
         Assert.Throws<ArgumentException>(() => PortTypes.Register("AuditTrigger", PortSemantics.Text));
         Assert.Throws<ArgumentException>(() => PortTypes.Register(" ", PortSemantics.Text));
-    }
-
-    [Fact]
-    public void Submission_covers_text_and_signal_semantics()
-    {
-        Assert.True(Ports.RequiresSubmission(PortTypes.Text));
-        Assert.True(Ports.RequiresSubmission(PortTypes.TextTrigger));
-        Assert.True(Ports.RequiresSubmission(PortTypes.SignalTrigger));
-        Assert.False(Ports.RequiresSubmission(PortTypes.Context));
-        Assert.True(Ports.CarriesText(PortTypes.TextTrigger));
-        Assert.False(Ports.CarriesText(PortTypes.SignalTrigger));
     }
 }

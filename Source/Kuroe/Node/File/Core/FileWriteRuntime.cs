@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
@@ -41,7 +41,7 @@ internal sealed class FileWriteRuntime(ExecutableNode executable, FileParameters
     {
         HashSet<string> variablePorts = [.. Parameters.Variables.Values];
         InputPort? port = Executable.Inputs.FirstOrDefault(candidate =>
-            Ports.CarriesText(candidate.Type) && !variablePorts.Contains(candidate.Name.Value));
+            PortRules.CarriesText(candidate.Type) && !variablePorts.Contains(candidate.Name.Value));
 
         return port is { } content ? inputs.Text(content.Name) ?? string.Empty : string.Empty;
     }

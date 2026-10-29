@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Flow;
 

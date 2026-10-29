@@ -1,9 +1,13 @@
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Nodes;
@@ -206,7 +210,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable, IConsumedRevi
 
     /// <summary>按端口取已发布产出的一个返回值：只有 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
     private PortValue? PublishedValue(PortName port) =>
-        Executable.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        Executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
         && PublishedExecution is { } execution
         && SubmittedPorts(execution.Id) is { } values
         && values.TryGetValue(port, out PortValue value)

@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Shared;
 using Spectre.Console.Testing;
 using Xunit;

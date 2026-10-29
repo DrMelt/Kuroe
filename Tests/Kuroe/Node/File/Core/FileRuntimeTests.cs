@@ -1,8 +1,11 @@
-using Kuroe.Flow.Shared.Execution;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Xunit;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
@@ -254,10 +257,10 @@ public sealed class FileRuntimeTests
         NodeInputValues.From(context.Plan(TargetPath)!.Groups[0], context);
 
     private static FileReadRuntime ReadRuntime(ExecutableNode node, StubNodeContext context) =>
-        Assert.IsType<FileReadRuntime>(node.Type.Create(node, context));
+        Assert.IsType<FileReadRuntime>(((INodeRuntimeFactory)node.Type).Create(node, context));
 
     private static FileWriteRuntime WriteRuntime(ExecutableNode node, StubNodeContext context) =>
-        Assert.IsType<FileWriteRuntime>(node.Type.Create(node, context));
+        Assert.IsType<FileWriteRuntime>(((INodeRuntimeFactory)node.Type).Create(node, context));
 
     private static ExecutableNode ReadNode(
         TempRoot root,

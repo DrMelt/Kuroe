@@ -1,4 +1,5 @@
-using Kuroe.Flow.Shared.StaticGraph.Node;
+using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.NodeType.Container;
 

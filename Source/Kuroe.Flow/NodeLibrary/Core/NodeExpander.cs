@@ -1,8 +1,9 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.NodeLibrary;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的 In 在所在作用域建立绑定域，成员的 From、In 与 Static 引用都在该绑定域里取 @端口。
 /// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>

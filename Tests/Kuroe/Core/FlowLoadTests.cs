@@ -1,14 +1,15 @@
 using ErrorOr;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 
 using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.Compiler;
+using Kuroe.Flow.Compilation;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Xunit;

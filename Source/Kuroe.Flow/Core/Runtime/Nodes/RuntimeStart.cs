@@ -1,7 +1,10 @@
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
@@ -35,7 +38,7 @@ internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortText
     }
 
     private string? Text(PortName port) =>
-        node.FindPort(port) is { } declared && Ports.CarriesText(declared.Type)
+        node.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
             ? declared.Value ?? _startTexts.Text(port) ?? _inputs.Text(port)
             : null;
 }

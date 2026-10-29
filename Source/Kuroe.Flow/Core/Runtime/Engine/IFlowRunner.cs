@@ -1,5 +1,5 @@
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.Model;
 
 namespace Kuroe.Flow.Runtime.Engine;
 

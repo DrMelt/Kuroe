@@ -23,7 +23,7 @@
         <ProjectReference Include="..\Kuroe\Presentation\Kuroe.Presentation.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Flow\Compiler\Shared\Kuroe.Flow.Compiler.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>
 

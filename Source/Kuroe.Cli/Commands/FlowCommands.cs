@@ -25,7 +25,7 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        ErrorOr<Kuroe.Flow.Compiler.Shared.CompiledFlow> found = session.Flows.FindCompiled(parsed.Value);
+        ErrorOr<CompiledFlow> found = session.Flows.FindCompiled(parsed.Value);
         if (found.IsError)
         {
             output.Report(found.ErrorsOrEmptyList);

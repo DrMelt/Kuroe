@@ -1,9 +1,9 @@
 using ApiHub.Shared.Models;
 using Kuroe.Console.Views;
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 using Spectre.Console.Testing;
 using Xunit;

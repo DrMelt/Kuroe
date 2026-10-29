@@ -1,16 +1,17 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Node;
-using Kuroe.Flow.Shared.StaticGraph.PortModel;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Process;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点类型：不派发模型执行，激活时按路径变量解析执行目录并执行一次命令，把合并输出写入唯一的输出端口。</summary>
-public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process) : INodeType
+public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process) : INodeType, INodeTypeValidation, INodeRuntimeFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandParameters? Parameters { get; } = parameters;
@@ -43,7 +44,7 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
 
         IReadOnlySet<string> variablePorts = CommandPathVariables.Validate(node, Parameters, message =>
             fail(scope.Node(node.Label.Value, message)));
-        Reject(node.Inputs.Any(port => Ports.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)),
+        Reject(node.Inputs.Any(port => PortRules.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)),
             "命令执行节点的 Text 输入必须是路径变量端口。");
 
         Reject(node.Outputs.Count != 1, "命令执行节点必须声明一个输出端口，命令输出写入该端口。");

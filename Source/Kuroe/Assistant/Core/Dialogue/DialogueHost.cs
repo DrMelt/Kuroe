@@ -4,11 +4,10 @@ using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.Shared.Execution;
-using Kuroe.Flow.Shared.Execution.Process;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Compiler.Shared;
+using Kuroe.Flow.Compilation.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
