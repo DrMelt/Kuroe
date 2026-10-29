@@ -197,7 +197,7 @@ internal sealed class TaskBrowser(
             terminal.NewLine();
 
             Item picked = Choose("选择任务",
-                [.. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), SubmitItem, ClearItem, Refresh, Exit]);
+                [Refresh, .. snapshots.Select(task => new Item(TaskLabel(task), "task", task.Id)), SubmitItem, ClearItem, Exit]);
             switch (picked.Action)
             {
                 case "exit" or "back":
@@ -234,14 +234,13 @@ internal sealed class TaskBrowser(
             overview.Print(task);
             terminal.NewLine();
 
-            List<Item> items = [.. task.Executables.SelectMany(node => node.Executions)
+            List<Item> items = [Refresh, .. task.Executables.SelectMany(node => node.Executions)
                 .OrderBy(execution => execution.Id.Value)
                 .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id))];
             AddTaskActions(items, task);
             items.Add(new Item("* 改任务标题", "rename", Task: id));
             items.Add(new Item("≡ 查看节点树", "tree", Task: id));
             items.Add(new Item("≡ 查看过程记录", "journal", Task: id));
-            items.Add(Refresh);
             items.Add(Back);
 
             Item picked = Choose("任务内", items);
@@ -374,7 +373,7 @@ internal sealed class TaskBrowser(
             executionView.Print(task, snapshot);
             terminal.NewLine();
 
-            List<Item> items = [.. snapshot.Input.Inputs
+            List<Item> items = [Refresh, .. snapshot.Input.Inputs
                 .Where(value => value.Origin.FromExecution is not null)
                 .Select(value => new Item($"↑ {value.Origin.Label}", "execution", Execution: value.Origin.FromExecution))
                 .DistinctBy(item => item.Execution)];
@@ -384,7 +383,6 @@ internal sealed class TaskBrowser(
                 items.Add(new Item("× 取消该执行", "stopExecution", Execution: executionId));
             }
 
-            items.Add(Refresh);
             items.Add(Back);
 
             Item picked = Choose("执行详情", items);

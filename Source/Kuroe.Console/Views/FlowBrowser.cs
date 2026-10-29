@@ -38,14 +38,13 @@ internal sealed class FlowBrowser(
                 Print(all);
                 terminal.NewLine();
 
-                List<Item> items = [];
+                List<Item> items = [Refresh];
                 if (all.Count > 0)
                 {
                     items.Add(new Item("≡ 查看流程详情", "show"));
                 }
 
                 items.Add(new Item("+ 导入流程", "import"));
-                items.Add(Refresh);
                 items.Add(Back);
 
                 Item picked = terminal.Choose("流程操作", items, item => item.Label, Back);

@@ -250,9 +250,13 @@ public sealed class MenuRouteTests
 
         cli.Flows.Browse();
 
-        Assert.Contains("流程 1 条", cli.Output.Output);
-        Assert.Contains("默认", cli.Output.Output);
-        Assert.Contains("执行节点", cli.Output.Output);
+        string output = cli.Output.Output;
+        Assert.Contains("流程 1 条", output);
+        Assert.Contains("默认", output);
+        Assert.Contains("执行节点", output);
+        Assert.True(
+            output.IndexOf("~ 刷新", StringComparison.Ordinal) < output.IndexOf("≡ 查看流程详情", StringComparison.Ordinal),
+            output);
     }
 
     [Fact]
@@ -274,6 +278,7 @@ public sealed class MenuRouteTests
     public void Flow_detail_page_refreshes_and_returns_to_the_flow_menu()
     {
         using ConsoleSession cli = new();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -330,7 +335,8 @@ public sealed class MenuRouteTests
         string file = Path.Combine(cli.Environment.Root, "extra.json");
         File.WriteAllText(file, ImportedFlow);
 
-        // 流程库非空时首项是查看详情，导入是第二项
+        // 流程库非空时依次是刷新、查看详情与导入
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -491,14 +497,19 @@ public sealed class MenuRouteTests
 
         cli.Settings.Browse();
 
-        Assert.Contains("Runtime:LogLevel", cli.Output.Output);
-        Assert.Contains("用户层未设置", cli.Output.Output);
+        string output = cli.Output.Output;
+        Assert.Contains("Runtime:LogLevel", output);
+        Assert.Contains("用户层未设置", output);
+        Assert.True(
+            output.IndexOf("~ 刷新", StringComparison.Ordinal) < output.IndexOf("Runtime:LogLevel · ", StringComparison.Ordinal),
+            output);
     }
 
     [Fact]
     public void Settings_menu_writes_a_new_value_for_the_selected_entry()
     {
         using ConsoleSession cli = new();
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);

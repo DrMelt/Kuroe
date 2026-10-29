@@ -40,6 +40,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -71,6 +72,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.FixedStartFlow);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -96,6 +98,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.MultiStartFlow);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -225,6 +228,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
         cli.Output.Input.PushKey(ConsoleKey.End);
@@ -232,10 +236,17 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Browse();
 
-        Assert.Contains("任务 1 个", cli.Output.Output);
-        Assert.Contains("── 主菜单 › 任务 › 任务 #1 目标 ", cli.Output.Output);
-        Assert.Contains("查看节点树", cli.Output.Output);
-        Assert.DoesNotContain("├", cli.Output.Output);
+        string output = cli.Output.Output;
+        Assert.Contains("任务 1 个", output);
+        Assert.Contains("── 主菜单 › 任务 › 任务 #1 目标 ", output);
+        Assert.Contains("查看节点树", output);
+        Assert.DoesNotContain("├", output);
+
+        int menu = output.IndexOf("选择任务", StringComparison.Ordinal);
+        Assert.True(
+            menu >= 0
+            && output.IndexOf("~ 刷新", menu, StringComparison.Ordinal) < output.IndexOf("#1 目标 · ", menu, StringComparison.Ordinal),
+            output);
     }
 
     [Fact]
@@ -245,7 +256,9 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
         cli.Output.Input.PushKey(ConsoleKey.Escape);
@@ -271,9 +284,10 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.End);
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 4; i++)
         {
             cli.Output.Input.PushKey(ConsoleKey.UpArrow);
         }
@@ -301,9 +315,10 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.End);
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 4; i++)
         {
             cli.Output.Input.PushKey(ConsoleKey.UpArrow);
         }
@@ -328,7 +343,9 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Answer).Count == 2);
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
@@ -354,6 +371,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new();
 
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.Enter);

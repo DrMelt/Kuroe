@@ -27,7 +27,7 @@ internal sealed class SettingsBrowser(
                 PrintConfig();
                 terminal.NewLine();
 
-                List<Item> items = [.. Entries().Select(entry => new Item(EntryLabel(entry), "edit", entry)), Refresh, Back];
+                List<Item> items = [Refresh, .. Entries().Select(entry => new Item(EntryLabel(entry), "edit", entry)), Back];
                 Item picked = terminal.Choose("设置项", items, item => item.Label, Back);
                 if (picked.Action == "back")
                 {
