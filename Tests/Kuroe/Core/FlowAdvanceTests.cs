@@ -168,16 +168,16 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Pause_while_waiting_rejects_input_until_resume()
+    public async Task Pause_while_waiting_rejects_input_until_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        environment.Settle(id);
+        await environment.SettleAsync(id);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Tasks.Pause(id).ThrowIfError();
-        Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
+        Assert.Equal(TaskState.Paused, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Paused)).State);
 
         ErrorOr<Success> rejected = environment.Pendings.Approve(id);
         Assert.True(rejected.IsError);
@@ -186,7 +186,7 @@ public sealed class FlowAdvanceTests
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Pendings.Approve(id).ThrowIfError();
 
-        Assert.Equal(TaskState.Done, environment.Settle(id).State);
+        Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public sealed class FlowAdvanceTests
         environment.Runner.DelayMs = 20000;
 
         TaskId id = environment.Submit("补齐 README");
-        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+        await environment.WaitAsync(id, snapshot => snapshot.LiveExecutions > 0);
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
         await environment.Tasks.ShutdownAsync();

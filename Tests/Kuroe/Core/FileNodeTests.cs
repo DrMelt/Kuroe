@@ -22,13 +22,13 @@ public sealed class FileNodeTests
     }
 
     [Fact]
-    public void Read_content_enters_the_downstream_execution_input()
+    public async Task Read_content_enters_the_downstream_execution_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadThenLlmFlow);
-        File.WriteAllText(Path.Combine(environment.Root, "in.txt"), "文件内容");
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "in.txt"), "文件内容");
 
         TaskId id = environment.Submit("读取后实施");
-        environment.Settle(id);
+        await environment.SettleAsync(id);
 
         IExecution started = environment.Runner.Started
             .Single(execution => execution.Input.Node.Value == "整体/实施");

@@ -78,7 +78,7 @@ public sealed class TaskDomainTests
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
         IExecution dialogue = Assert.Single(environment.Runner.Started);
         TaskId id = environment.Submit("目标");
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.False(reply.IsError);
         Assert.Equal(1, dialogue.Id.Value);
@@ -97,7 +97,7 @@ public sealed class TaskDomainTests
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("你好", null);
         TaskId id = environment.Submit("目标");
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = await environment.SettleAsync(id);
         ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("再问", null);
 
         Assert.False(first.IsError);

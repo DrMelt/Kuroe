@@ -17,6 +17,7 @@ using Kuroe.Shared;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
@@ -244,13 +245,14 @@ public static class ServiceCollectionExtensions
         TaskRegistry taskRegistry,
         ExecutionIndex executions)
     {
+        TaskSnapshotReader taskReader = new(taskRegistry);
         PortSubmitter portSubmitter = new(executions);
         CannotCompleteSubmitter cannotCompleteSubmitter = new(executions);
         ExecutionStatusReader statusReader = new(executions);
 
         List<IToolSource> sources =
         [
-            new KuroeInfoToolSource(taskRegistry, new ToolCatalogView(catalog, models), flows, settings),
+            new KuroeInfoToolSource(taskReader, new ToolCatalogView(catalog, models), flows, settings),
             new ContractToolSource(portSubmitter, cannotCompleteSubmitter, statusReader),
         ];
 
@@ -262,8 +264,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(executions);
         services.AddSingleton(taskRegistry);
+        services.AddSingleton<ITaskReader>(taskReader);
         services.AddSingleton(portSubmitter);
+        services.AddSingleton<IPortSubmitter>(portSubmitter);
         services.AddSingleton(cannotCompleteSubmitter);
+        services.AddSingleton<ICannotCompleteSubmitter>(cannotCompleteSubmitter);
         services.AddSingleton(statusReader);
         services.AddSingleton<IExecutionStatusReader>(statusReader);
         services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(

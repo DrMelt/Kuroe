@@ -40,7 +40,7 @@ public sealed class InputNodeTests
     }
 
     [Fact]
-    public void Answer_feeds_downstream_execution_input()
+    public async Task Answer_feeds_downstream_execution_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
 
@@ -48,7 +48,7 @@ public sealed class InputNodeTests
         WaitForInputs(environment, id, 1);
 
         environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = await environment.SettleAsync(id);
 
         ExecutionSnapshot implement = done.Executables
             .Single(entry => entry.Executable.Label.Value == "实施")

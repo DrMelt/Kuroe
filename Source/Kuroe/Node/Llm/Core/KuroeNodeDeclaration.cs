@@ -4,4 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 namespace Kuroe.Node.Llm;
 
 /// <summary>宿主对执行节点的声明：本节点执行时使用的模型。</summary>
-public sealed record KuroeNodeDeclaration(ModelName Model) : INodeDeclaration;
+public sealed record KuroeNodeDeclaration(ModelName Model) : INodeDeclaration
+{
+    string? INodeDeclaration.Model => Model.Value;
+}

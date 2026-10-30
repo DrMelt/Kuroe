@@ -24,6 +24,9 @@
         <ProjectReference Include="..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Time\Core\Kuroe.Tool.Time.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Dotnet\Core\Kuroe.Tool.Dotnet.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\File\Core\Kuroe.Tool.File.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Git\Core\Kuroe.Tool.Git.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Command\Json\Kuroe.Tool.Command.Json.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Contract\Core\Kuroe.Tool.Contract.csproj" />

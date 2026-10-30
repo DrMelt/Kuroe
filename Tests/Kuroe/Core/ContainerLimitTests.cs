@@ -23,13 +23,13 @@ public sealed class ContainerLimitTests
 
     /// <summary>容器统一上限到点后，组内失败的执行节点停驻且返工不放行。</summary>
     [Fact]
-    public void Container_limit_blocks_failed_member_at_limit()
+    public async Task Container_limit_blocks_failed_member_at_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleExecutionContainerFlow);
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot blocked = environment.Settle(id);
+        TaskSnapshot blocked = await environment.SettleAsync(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);

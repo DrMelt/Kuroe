@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 
 namespace Kuroe.Tests.Support;
@@ -44,6 +43,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
     /// <summary>按执行差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
     public Func<IExecution, int>? DelayFor { get; set; }
+
+    /// <summary>按执行决定何时放行，返回的任务完成前执行保持运行。设置后优先于 <see cref="DelayMs"/> 与 <see cref="DelayFor"/>。</summary>
+    public Func<IExecution, Task>? HoldFor { get; set; }
 
     /// <summary>按声明的端口生成提交文本：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static string PortValuesFor(IReadOnlyList<Port> ports)
@@ -106,7 +108,14 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         {
             Emits?.Invoke(started, journal);
 
-            await Task.Delay(DelayFor?.Invoke(started) ?? DelayMs, cancellationToken);
+            if (HoldFor is { } hold)
+            {
+                await hold(started).WaitAsync(cancellationToken);
+            }
+            else
+            {
+                await Task.Delay(DelayFor?.Invoke(started) ?? DelayMs, cancellationToken);
+            }
 
             IReadOnlyList<Port> requiredPorts = input.RequiredPorts;
             IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(execution, input) ?? [];

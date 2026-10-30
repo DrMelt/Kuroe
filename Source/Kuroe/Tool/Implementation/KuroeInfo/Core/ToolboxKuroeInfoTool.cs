@@ -1,6 +1,5 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Presentation;
 using Kuroe.Tool.Json;
 
 namespace Kuroe.Tool.KuroeInfo;

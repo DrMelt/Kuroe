@@ -24,7 +24,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "ListTasks");
 
         Assert.Contains($"#{id.Short}", output);
@@ -36,7 +36,7 @@ public sealed class KuroeInfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
 
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
     }
@@ -48,7 +48,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         environment.Runner.Reply = _ => "回复你好";
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
 
         Assert.False(reply.IsError);
         Assert.Contains("还没有任务", Call(tool, "ListTasks"));
@@ -61,7 +61,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("写一段百字以内的欢迎致辞");
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
 
         Assert.Contains($"#{id.Short}", output);
@@ -76,20 +76,20 @@ public sealed class KuroeInfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
 
         Assert.Contains(expected, Call(tool, "GetTask", ("taskId", taskId)));
     }
 
     [Fact]
-    public void GetExecution_describes_execution_and_process()
+    public async Task GetExecution_describes_execution_and_process()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         TaskId id = environment.Submit("做一个测试任务");
-        environment.Settle(id);
+        await environment.SettleAsync(id);
 
         ExecutionId executionId = environment.Snapshot(id).Executables.SelectMany(node => node.Executions).First().Id;
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));
 
         Assert.Contains(executionId.ToString(), output);
@@ -97,19 +97,19 @@ public sealed class KuroeInfoToolTests : IDisposable
     }
 
     [Fact]
-    public void GetExecution_renders_tool_entry_with_indented_detail()
+    public async Task GetExecution_renders_tool_entry_with_indented_detail()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Emits = (_, journal) =>
             journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
         TaskId id = environment.Submit("做一个测试任务");
-        environment.Settle(id);
+        await environment.SettleAsync(id);
 
         ExecutionId executionId = environment.Snapshot(id).Executables
             .SelectMany(node => node.Executions)
             .First()
             .Id;
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()))
             .Replace("\r", string.Empty);
 
@@ -122,7 +122,7 @@ public sealed class KuroeInfoToolTests : IDisposable
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
 
         Assert.Contains("执行号要写成数字", Call(tool, "GetExecution", ("executionId", "x")));
         Assert.Contains("没有执行", Call(tool, "GetExecution", ("executionId", "99")));
@@ -147,7 +147,7 @@ public sealed class KuroeInfoToolTests : IDisposable
             .First(execution => execution.State == ExecutionState.Running)
             .Id;
 
-        TaskKuroeInfoTool tool = new(environment.Registry);
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
 
         Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));

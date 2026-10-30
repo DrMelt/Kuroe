@@ -1,7 +1,6 @@
 <Solution>
     <Project Path="Source/Kuroe/Shared/Kuroe.Shared.csproj" />
     <Project Path="Source/Kuroe/Process/Core/Kuroe.Process.csproj" />
-    <Project Path="Source/Kuroe/Presentation/Kuroe.Presentation.csproj" />
     <Project Path="Source/Kuroe/Tool/Core/Kuroe.Tool.csproj" />
     <Project Path="Source/Kuroe/Tool/Json/Kuroe.Tool.Json.csproj" />
     <Project Path="Source/Kuroe/Tool/FileAccess/Core/Kuroe.Tool.FileAccess.csproj" />

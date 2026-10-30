@@ -1,10 +1,8 @@
-using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Runtime.Tasks;
 
-namespace Kuroe.Presentation;
+namespace Kuroe.Flow.Shared.Display;
 
 /// <summary>库与宿主共用的状态与时间展示名。</summary>
 public static class InfoLabels

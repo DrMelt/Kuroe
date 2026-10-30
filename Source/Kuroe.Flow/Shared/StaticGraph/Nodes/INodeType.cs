@@ -12,4 +12,10 @@ public interface INodeType
 
     /// <summary>静态形状。</summary>
     NodeTypeShape Shape { get; }
+
+    /// <summary>类型用于取模型名的静态端口，没有时为 null。</summary>
+    PortName? ModelPort => null;
+
+    /// <summary>类型提供给信息查询的属性，按展示顺序。</summary>
+    IReadOnlyList<NodeAttribute> Attributes => [];
 }

@@ -27,19 +27,16 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         }
 
         WorkTask task = found.Value;
-        (NodePath? Output, int Baseline) = task.UnderLock(() =>
+        NodePath? output = task.UnderLock(() =>
         {
             INodeTask access = task;
-            NodePath? output = access.Graph.ExecutableNodes
+            return access.Graph.ExecutableNodes
                 .Where(node => access.Graph.ShapeOf(node.Path) is { DispatchesExecutions: true })
                 .Select(node => node.Path)
                 .FirstOrDefault();
-
-            return (output, task.Executions.Count);
         });
-        int executionBaseline = Baseline;
 
-        if (Output is not { } target)
+        if (output is not { } target)
         {
             return [PendingErrors.NoDialogueTarget()];
         }
@@ -52,56 +49,74 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
 
         var outcome = new TaskCompletionSource<ErrorOr<Success>>(TaskCreationOptions.RunContinuationsAsynchronously);
         Execution? round = null;
+        int boundary = 0;
+        Action unsubscribeAttached = () => { };
+        Action unsubscribeSettled = () => { };
 
-        // 观察者先于回答挂上：本轮执行可能紧接回答就收口，晚挂会漏掉通知
-        Action unsubscribeAttached = task.SubscribeExecutionAttached(execution =>
+        // 观察者先于回答挂上：本轮执行可能紧接回答就收口，晚挂会漏掉通知。
+        // 边界与订阅在同一任务锁内建立，旧执行的通知一律忽略。
+        task.UnderLock(() =>
         {
-            if (execution.Input.Node != target)
-            {
-                return;
-            }
+            boundary = task.Executions.Count == 0
+                ? 0
+                : task.Executions.Max(execution => execution.Id.Value);
 
-            if (task.UnderLock(() => task.Executions.TakeWhile(candidate => !ReferenceEquals(candidate, execution)).Count() < executionBaseline))
+            unsubscribeAttached = task.SubscribeExecutionAttached(execution =>
             {
-                return;
-            }
+                if (execution.Id.Value <= boundary || execution.Input.Node != target)
+                {
+                    return;
+                }
 
-            task.UnderLock(() =>
-            {
-                round = execution;
+                bool accepted = task.UnderLock(() =>
+                {
+                    if (round is not null)
+                    {
+                        return false;
+                    }
 
-                return true;
+                    round = execution;
+                    return true;
+                });
+
+                if (!accepted)
+                {
+                    return;
+                }
+
+                if (onText is { } textObserver)
+                {
+                    execution.TextEmitted += textObserver;
+                }
+
+                if (onEntry is { } entryObserver)
+                {
+                    execution.EntryEmitted += entryObserver;
+                }
             });
 
-            if (onText is { } textObserver)
+            unsubscribeSettled = task.SubscribeExecutionSettled(execution =>
             {
-                execution.TextEmitted += textObserver;
-            }
+                if (execution.Id.Value <= boundary || execution.Input.Node != target)
+                {
+                    return;
+                }
 
-            if (onEntry is { } entryObserver)
-            {
-                execution.EntryEmitted += entryObserver;
-            }
-        });
-        Action unsubscribeSettled = task.SubscribeExecutionSettled(execution =>
-        {
-            if (execution.Input.Node != target)
-            {
-                return;
-            }
+                if (!task.UnderLock(() => ReferenceEquals(round, execution)))
+                {
+                    return;
+                }
 
-            if (task.UnderLock(() => task.Executions.TakeWhile(candidate => !ReferenceEquals(candidate, execution)).Count() < executionBaseline))
-            {
-                return;
-            }
+                if (execution.State == ExecutionState.Succeeded)
+                {
+                    outcome.TrySetResult(Result.Success);
+                    return;
+                }
 
-            if (execution.State == ExecutionState.Succeeded)
-            {
-                outcome.TrySetResult(Result.Success);
-                return;
-            }
+                outcome.TrySetResult(PendingErrors.RoundFailed([.. execution.Snapshot().Failures]));
+            });
 
-            outcome.TrySetResult(PendingErrors.RoundFailed([.. execution.Snapshot().Failures]));
+            return true;
         });
         try
         {
@@ -120,11 +135,16 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                         return await outcome.Task;
                     }
 
-                    // 本轮产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口；
-                    // 任务不再推进时不会再回到等待，本轮结果仍然成立
-                    if (task.State != TaskState.Running || Answering(id))
+                    // 本轮产出已定，等反馈复位完成、任务回到等待再返回，避免下一轮回答撞上复位窗口。
+                    // Done 可能是挂点评估前的瞬态，只有 Completed 才表示任务真正结束。
+                    if (Answering(id) || task.Completed)
                     {
                         return await outcome.Task;
+                    }
+
+                    if (task.State is TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
+                    {
+                        return [PendingErrors.DialogueSettled(task.State)];
                     }
                 }
                 else
@@ -132,8 +152,8 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                     TaskState state = task.State;
                     bool started = task.UnderLock(() => round is not null);
 
-                    // 本轮执行已挂上时结果由它的收口给出，未挂上才按任务状态判定收口
-                    if (!started && state is (TaskState.Blocked or TaskState.Terminated or TaskState.Done))
+                    // 本轮执行已挂上时结果由它的收口给出，未挂上才按任务状态判定收口。
+                    if (!started && (task.Completed || state is TaskState.Blocked or TaskState.Terminated or TaskState.Paused))
                     {
                         return [PendingErrors.DialogueSettled(state)];
                     }
@@ -150,7 +170,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
     }
 
     /// <summary>等任务停在一个待回答的节点上：提交后推进循环异步把挂点评估出来，过早回答命中不了输入节点。
-    /// Done 可能是挂点评估前的瞬态，真收口由 DialogueHost 重建兜底，这里只拦截阻塞。</summary>
+    /// Done 可能是挂点评估前的瞬态，只有 Completed 才表示任务真正结束。</summary>
     private async Task<ErrorOr<Success>> WaitForAnsweringAsync(WorkTask task)
     {
         while (true)
@@ -161,7 +181,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
             }
 
             TaskState state = task.State;
-            if (state is TaskState.Blocked or TaskState.Terminated)
+            if (task.Completed || state is TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
             {
                 return [PendingErrors.DialogueSettled(state)];
             }

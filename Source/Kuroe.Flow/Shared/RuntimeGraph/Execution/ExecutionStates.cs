@@ -1,6 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-
-namespace Kuroe.Flow.Runtime;
+namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 /// <summary>状态的展示名与终态判定。</summary>
 public static class ExecutionStates

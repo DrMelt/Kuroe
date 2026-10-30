@@ -1,19 +1,16 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Node.Llm;
-using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Presentation;
 
 namespace Kuroe.Tool.KuroeInfo;
 
 /// <summary>任务与执行的状态查询工具。只读，不产生状态改动。</summary>
 public sealed class TaskKuroeInfoTool : ITool
 {
-    private readonly TaskRegistry _registry;
+    private readonly ITaskReader _registry;
 
     /// <summary>详情里最近呈现的记录数。</summary>
     private const int JournalLimit = 10;
@@ -43,7 +40,7 @@ public sealed class TaskKuroeInfoTool : ITool
         [new ToolParameter(new ToolName("executionId"), "要查看的执行号", Required: true)]);
 
     /// <summary>用任务与执行的索引建立载体。</summary>
-    public TaskKuroeInfoTool(TaskRegistry registry)
+    public TaskKuroeInfoTool(ITaskReader registry)
     {
         _registry = registry;
         Functions =
@@ -85,13 +82,13 @@ public sealed class TaskKuroeInfoTool : ITool
             return ToolErrors.Argument("任务号不能为空。");
         }
 
-        ErrorOr<WorkTask> found = _registry.FindByReference(text.Trim());
+        ErrorOr<TaskSnapshot> found = _registry.FindByReference(text.Trim());
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        return DescribeTask(found.Value.Snapshot());
+        return DescribeTask(found.Value);
     }
 
     /// <summary>按执行号查看详情，执行号非法或不存在时返回拒绝错误。</summary>
@@ -103,20 +100,20 @@ public sealed class TaskKuroeInfoTool : ITool
             return ToolErrors.Argument($"执行号要写成数字，收到 {text ?? "空"}。");
         }
 
-        ErrorOr<Execution> found = _registry.FindExecution(new ExecutionId(id));
+        ErrorOr<ExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        ExecutionSnapshot execution = found.Value.Snapshot();
-        ErrorOr<WorkTask> owner = _registry.Find(execution.Input.Task);
+        ExecutionSnapshot execution = found.Value;
+        ErrorOr<TaskSnapshot> owner = _registry.Find(execution.Input.Task);
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;
         }
 
-        return DescribeExecution(owner.Value.Snapshot(), execution);
+        return DescribeExecution(owner.Value, execution);
     }
 
     /// <summary>任务的完整详情文本。</summary>
@@ -173,7 +170,7 @@ public sealed class TaskKuroeInfoTool : ITool
         var text = new StringBuilder();
         text.AppendLine($"{execution.Id} · {input.Node} · 第 {input.ExecutionCount} 轮");
         text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}"
-            + $" · 模型 {(input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)"}");
+            + $" · 模型 {input.Declaration?.Model ?? "(未声明)"}");
         text.AppendLine($"状态 {InfoLabels.State(execution)}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");

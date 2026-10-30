@@ -9,26 +9,35 @@ namespace Kuroe.Tests;
 public sealed class EngineAdvanceTests
 {
     [Fact]
-    public void Downstream_starts_while_unrelated_slow_execution_is_running()
+    public async Task Downstream_starts_while_unrelated_slow_execution_is_running()
     {
         using TestEnvironment environment = TestEnvironment.Create(SlowParallelFlow);
-        environment.Runner.DelayFor = execution => execution.Input.Node.Label.Value == "慢工" ? 500 : 10;
+        TaskCompletionSource<bool> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        environment.Runner.HoldFor = execution =>
+            execution.Input.Node.Label.Value == "慢工" ? release.Task : Task.CompletedTask;
 
         TaskId id = environment.Submit("并行推进");
 
-        // 慢执行的下游链末端已启动，慢执行自身应尚未收口
-        environment.Wait(id, snapshot => snapshot.Executables.Any(node =>
-            node.Executable.Label.Value == "收官" && node.Executions.Count > 0));
+        try
+        {
+            // 慢执行的下游链末端已启动，慢执行自身应尚未收口
+            await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
+                node.Executable.Label.Value == "收官" && node.Executions.Count > 0));
 
-        Assert.Contains(environment.Registry.LiveExecutions(), execution => execution.Input.Node.Label.Value == "慢工");
+            Assert.Contains(environment.Registry.LiveExecutions(), execution => execution.Input.Node.Label.Value == "慢工");
+        }
+        finally
+        {
+            release.TrySetResult(true);
+        }
 
-        Assert.Equal(TaskState.Done, environment.Settle(id).State);
+        Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
     }
 
     /// <summary>多组各自独立的汇合：前一个来源先发布拉起汇合执行，后一个来源在执行在跑时发布，
     /// 其通知因活跃屏障丢失时，汇合执行收口后必须补评估重新启动，否则任务停在运行态。</summary>
     [Fact]
-    public void Groups_advance_past_interleaved_source_release()
+    public async Task Groups_advance_past_interleaved_source_release()
     {
         using TestEnvironment environment = TestEnvironment.Create(IndependentGroupsFlow);
         environment.Runner.DelayMs = 30;
@@ -36,7 +45,7 @@ public sealed class EngineAdvanceTests
         for (int i = 0; i < 10; i++)
         {
             TaskId id = environment.Submit("补齐 README");
-            TaskSnapshot done = environment.Settle(id);
+            TaskSnapshot done = await environment.SettleAsync(id);
 
             Assert.Equal(TaskState.Done, done.State);
             Assert.NotEmpty(done.Executables[2].Executions);

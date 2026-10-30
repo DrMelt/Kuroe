@@ -181,8 +181,10 @@ public sealed class DialogueHostTests
             Assert.False(reply.IsError, ErrorText(reply));
         }
 
-        Assert.Equal(8, observer.Texts.Count);
-        Assert.Equal("回复8", observer.Texts[^1]);
+        Assert.Equal(
+            [.. Enumerable.Range(1, 8).Select(round => $"回复{round}")],
+            observer.Texts);
+        Assert.Single(environment.Runner.Started.Select(execution => execution.Input.Task).Distinct());
     }
 
     [Fact]

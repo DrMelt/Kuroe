@@ -153,8 +153,8 @@ public sealed class WorkTask : INodeTask
     /// <summary>捕获待处理目标，没有推进循环时为空。</summary>
     internal SchedulerSeed CaptureSeed() => SeedSource?.Invoke() ?? new SchedulerSeed([]);
 
-    /// <summary>任务是否已走完，由推进循环退出时置位。</summary>
-    internal bool Completed
+    /// <summary>任务推进循环已退出，任务真正走完。瞬态的 Done 快照不代表此值为真。</summary>
+    public bool Completed
     {
         get
         {

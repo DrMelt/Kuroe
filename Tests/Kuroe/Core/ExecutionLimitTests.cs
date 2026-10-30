@@ -65,7 +65,7 @@ public sealed class ExecutionLimitTests
 
     /// <summary>环迭代触发的新来源版本被上限拦截：上限低于自然停止点时，修订不再被审查新版本重启。</summary>
     [Fact]
-    public void Loop_stops_restarting_at_limit()
+    public async Task Loop_stops_restarting_at_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(LoopWithLimitFlow);
         environment.Runner.Reply = execution => execution.Input.Node.Label.Value == "审查" ? "审查通过" : "产出";
@@ -76,7 +76,7 @@ public sealed class ExecutionLimitTests
         };
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.Executables.Single(node => node.Executable.Label == new NodeLabel("修订")).Executions);

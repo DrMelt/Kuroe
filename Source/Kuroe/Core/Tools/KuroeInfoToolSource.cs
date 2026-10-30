@@ -1,5 +1,5 @@
-using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Shared.Configuration;
 using Kuroe.Tool;
@@ -9,7 +9,7 @@ namespace Kuroe.Tools;
 
 /// <summary>核心状态查询工具源：任务、目录、流程与设置四组查询工具。任一定义放行时创建全部载体。</summary>
 internal sealed class KuroeInfoToolSource(
-    TaskRegistry tasks,
+    ITaskReader tasks,
     ICatalogView catalog,
     IFlowCatalog flows,
     ISettingsView settings) : IToolSource

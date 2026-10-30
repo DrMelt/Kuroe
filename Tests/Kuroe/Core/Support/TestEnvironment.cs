@@ -14,7 +14,6 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
-using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;
@@ -34,6 +33,7 @@ public sealed class TestEnvironment : IDisposable
         _provider = provider;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
+        TaskReader = provider.GetRequiredService<ITaskReader>();
         Executions = provider.GetRequiredService<ExecutionIndex>();
         runner.Executions = Executions;
         Tasks = provider.GetRequiredService<TaskService>();
@@ -51,6 +51,9 @@ public sealed class TestEnvironment : IDisposable
     public FakeRunner Runner { get; }
 
     public TaskRegistry Registry { get; }
+
+    /// <summary>任务索引的只读快照面，信息查询工具使用。</summary>
+    public ITaskReader TaskReader { get; }
 
     /// <summary>全部任务域共享的执行索引。</summary>
     public ExecutionIndex Executions { get; }
@@ -221,7 +224,14 @@ public sealed class TestEnvironment : IDisposable
         string.Join("、", snapshot.ExecutableStates.Select(state => $"{state.Node} {state.State}"));
 
     /// <summary>等到任务满足条件为止，超时即失败。</summary>
-    public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 5000)
+    public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 30000) =>
+        WaitAsync(id, condition, milliseconds).GetAwaiter().GetResult();
+
+    /// <summary>等到任务满足条件为止，超时即失败。等待期间让出测试线程。</summary>
+    public async Task<TaskSnapshot> WaitAsync(
+        TaskId id,
+        Func<TaskSnapshot, bool> condition,
+        int milliseconds = 30000)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(milliseconds);
         while (true)
@@ -237,14 +247,18 @@ public sealed class TestEnvironment : IDisposable
                 throw new TimeoutException($"任务 {id} 未在 {milliseconds} 毫秒内满足条件，状态 {snapshot.State}、执行节点 [{NodeStates(snapshot)}]。");
             }
 
-            Thread.Sleep(20);
+            await Task.Delay(20).ConfigureAwait(false);
         }
     }
 
     /// <summary>等执行侧不再有任何在跑或待推进的执行。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
-    public TaskSnapshot Settle(TaskId id)
+    public TaskSnapshot Settle(TaskId id, int milliseconds = 30000) =>
+        SettleAsync(id, milliseconds).GetAwaiter().GetResult();
+
+    /// <summary>等执行侧不再有任何在跑或待推进的执行。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
+    public async Task<TaskSnapshot> SettleAsync(TaskId id, int milliseconds = 30000)
     {
-        DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(milliseconds);
         bool previous = false;
         while (true)
         {
@@ -267,7 +281,7 @@ public sealed class TestEnvironment : IDisposable
             }
 
             previous = waiting;
-            Thread.Sleep(20);
+            await Task.Delay(20).ConfigureAwait(false);
         }
     }
 

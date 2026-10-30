@@ -196,7 +196,7 @@ public sealed class ValidationAdvanceTests
     }
 
     [Fact]
-    public void Container_source_waits_and_resumes_with_revision()
+    public async Task Container_source_waits_and_resumes_with_revision()
     {
         using TestEnvironment environment = TestEnvironment.Create(ContainerGateFlow);
         environment.Runner.Reply = execution => execution.Input.Node.Label.Value switch
@@ -213,14 +213,14 @@ public sealed class ValidationAdvanceTests
         };
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot blocked = environment.Settle(id);
+        TaskSnapshot blocked = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("甲")).State);
         Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("闸门")).Executions);
 
         environment.Tasks.Rework(id).ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("甲")).Executions.Count);

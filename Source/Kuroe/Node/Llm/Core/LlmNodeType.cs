@@ -4,7 +4,6 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Node.Llm.Tools;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
@@ -23,6 +22,29 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
 
     /// <summary>Llm 类型的静态形状。</summary>
     public NodeTypeShape Shape => LlmNodeTypes.Shape;
+
+    /// <summary>模型名静态输入端口。</summary>
+    public PortName? ModelPort => LlmNodeTypes.ModelPort;
+
+    /// <summary>节点声明的工具与系统指令块，供信息查询展示。</summary>
+    public IReadOnlyList<NodeAttribute> Attributes
+    {
+        get
+        {
+            List<NodeAttribute> attributes = [];
+            if (Parameters?.Tools is { Count: > 0 } tools)
+            {
+                attributes.Add(new NodeAttribute("工具", string.Join("、", tools)));
+            }
+
+            if (Parameters?.SystemPrompt is { Count: > 0 } blocks)
+            {
+                attributes.Add(new NodeAttribute("系统指令", $"{blocks.Count} 块"));
+            }
+
+            return attributes;
+        }
+    }
 
     /// <summary>Llm 类型的规则：执行上限与输出校验的组合约束。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)

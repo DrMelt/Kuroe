@@ -1,6 +1,4 @@
-using Kuroe.Tool;
-
-namespace Kuroe.Presentation;
+namespace Kuroe.Tool;
 
 /// <summary>工具参数的展示名。</summary>
 public static class ToolParameterLabels

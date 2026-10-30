@@ -6,8 +6,6 @@ using Kuroe.Flow.Shared.NodeTypes;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Node.Llm;
-using Kuroe.Presentation;
 
 namespace Kuroe.Tool.KuroeInfo;
 
@@ -127,22 +125,26 @@ public sealed class FlowKuroeInfoTool : ITool
     /// <summary>展开节点上的模型静态端口绑定，未绑定时给未绑定。</summary>
     private static string NodeModel(NodeSpec node)
     {
-        if (node.Static is { } bindings && bindings.TryGetValue(LlmNodeTypes.ModelPort, out PortRef reference))
+        if (node.Type?.ModelPort is not { } modelPort)
+        {
+            return "未绑定";
+        }
+
+        if (node.Static is { } bindings && bindings.TryGetValue(modelPort, out PortRef reference))
         {
             return reference.Display;
         }
 
-        return node.FindInput(LlmNodeTypes.ModelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
+        return node.FindInput(modelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
     }
 
-    /// <summary>节点要求：工具、输入端口、上游启动组、提问、输出端口与系统指令。</summary>
+    /// <summary>节点要求：类型属性、输入端口、上游启动组、提问与输出端口。</summary>
     private static string Requirement(NodeSpec node)
     {
-        LlmParameters? parameters = (node.Type as LlmNodeType)?.Parameters;
         List<string> parts = [];
-        if (parameters?.Tools is { Count: > 0 } tools)
+        foreach (NodeAttribute attribute in node.Type?.Attributes ?? [])
         {
-            parts.Add($"工具 {string.Join("、", tools)}");
+            parts.Add($"{attribute.Name} {attribute.Value}");
         }
 
         IReadOnlyList<InputPort> inputs = [.. node.EffectiveInputs.Where(port => !port.IsStatic)];
@@ -164,11 +166,6 @@ public sealed class FlowKuroeInfoTool : ITool
         if (node.Outputs.Count > 0)
         {
             parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
-        }
-
-        if (parameters?.SystemPrompt is { Count: > 0 } blocks)
-        {
-            parts.Add($"系统指令 {blocks.Count} 块");
         }
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
