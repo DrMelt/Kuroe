@@ -1,7 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Kuroe.Storage;
+using Kuroe.Flow.Persistence.FileSystem;
 
 namespace Kuroe.Configuration.Files;
 

@@ -11,9 +11,10 @@
 
     <ItemGroup>
         
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Json\Core\Kuroe.Flow.Json.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Json\Core\Kuroe.Flow.Json.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\Support\Kuroe.Flow.TestSupport.csproj" />
     </ItemGroup>
 </Project>

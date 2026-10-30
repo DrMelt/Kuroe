@@ -1,5 +1,6 @@
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -12,7 +13,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 
 /// <summary>自驱型节点的运行期基类：激活时消费引擎装入的输入并产出一次，成功后推进版本，失败停在阻塞等待返工。
 /// 产出是唯一的文本内容，按声明为 Text 的输出端口放出。读写都要求持有任务 Gate。</summary>
-public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime(executable), IInputProgress
+public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode(executable), IInputProgress
 {
     private readonly ConsumedRevisionStore _consumed = new();
     private string? _content;
@@ -113,6 +114,41 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : NodeRuntime
         && _content is { Length: > 0 } content
             ? [new ContextValue(new NodeSource(Path, port), content)]
             : [];
+
+    /// <summary>捕获自驱节点的产出、失败与执行计数。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() =>
+        new SelfDrivenNodeCheckpoint(
+            Path,
+            new NodeCommonCheckpoint(
+                Revision,
+                LastInputGroup,
+                _consumed.CaptureCheckpoint(),
+                [],
+                _failure is not null,
+                _retry),
+            _executions,
+            _content,
+            _failure,
+            _failureTaken,
+            _retry);
+
+    /// <summary>从检查点恢复自驱节点的产出、失败与执行计数。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+        if (checkpoint is not SelfDrivenNodeCheckpoint selfDriven)
+        {
+            throw new ArgumentException($"自驱节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+        }
+
+        RestoreLastInputGroup(selfDriven.Common.LastInputGroup);
+        _consumed.RestoreCheckpoint(selfDriven.Common.Consumed);
+        _revision = selfDriven.Common.Revision;
+        _executions = selfDriven.Executions;
+        _content = selfDriven.Content;
+        _failure = selfDriven.Failure;
+        _failureTaken = selfDriven.FailureTaken;
+        _retry = selfDriven.Retry;
+    }
 
     /// <summary>节点在快照里的一刻状态：失败为阻塞，成功为完成。</summary>
     public override ExecutableStateSnapshot Snapshot()

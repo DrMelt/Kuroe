@@ -38,7 +38,7 @@ internal sealed class TaskBrowser(
     private static readonly Item Exit = new("× 退出浏览", "exit");
     private static readonly Item Refresh = new("~ 刷新", "refresh");
     private static readonly Item SubmitItem = new("+ 提交任务", "submit");
-    private static readonly Item ClearItem = new("- 清理已完成与已取消的任务", "clear");
+    private static readonly Item ClearItem = new("- 清理已完成与已终止的任务", "clear");
 
     public void Browse()
     {
@@ -63,8 +63,12 @@ internal sealed class TaskBrowser(
         list.Print([task]);
     }
 
-    /// <summary>丢掉已完成或已取消的内存任务。</summary>
-    public void Clear() => terminal.Ok($"已丢掉 {registry.ClearSettled()} 个任务。");
+    /// <summary>丢掉已完成或已终止的内存任务，同时删除检查点。</summary>
+    public void Clear()
+    {
+        int count = tasks.ClearSettled().Count;
+        terminal.Ok($"已丢掉 {count} 个任务。");
+    }
 
     /// <summary>改任务标题。</summary>
     public void Rename(TaskId id, string title) => results.Report(tasks.Rename(id, title), "已改标题。");
@@ -79,8 +83,14 @@ internal sealed class TaskBrowser(
     /// <summary>返工被阻塞的节点。</summary>
     public void Rework(TaskId id) => results.Report(tasks.Rework(id), $"{id} 已返工。");
 
-    /// <summary>取消任务。</summary>
-    public void StopTask(TaskId id) => results.Report(tasks.StopTask(id), $"{id} 已取消。");
+    /// <summary>暂停任务。</summary>
+    public void Pause(TaskId id) => results.Report(tasks.Pause(id), $"{id} 已暂停。");
+
+    /// <summary>恢复暂停的任务。</summary>
+    public void Resume(TaskId id) => results.Report(tasks.Resume(id), $"{id} 已恢复。");
+
+    /// <summary>终止任务。</summary>
+    public void StopTask(TaskId id) => results.Report(tasks.StopTask(id), $"{id} 已终止。");
 
     /// <summary>取消单个执行。</summary>
     public void StopExecution(ExecutionId id) => results.Report(tasks.StopExecution(id), $"{id} 已取消。");
@@ -277,6 +287,14 @@ internal sealed class TaskBrowser(
                     Rework(id);
                     break;
 
+                case "pauseTask":
+                    Pause(id);
+                    break;
+
+                case "resumeTask":
+                    Resume(id);
+                    break;
+
                 case "stopTask":
                     ConfirmStopTask(id);
                     break;
@@ -419,10 +437,10 @@ internal sealed class TaskBrowser(
             : (owner.Value.Snapshot(), snapshot);
     }
 
-    /// <summary>取消整个任务不可恢复，选择后要求再次确认，默认停在保留任务的选项。</summary>
+    /// <summary>终止整个任务不可恢复，选择后要求再次确认，默认停在保留任务的选项。</summary>
     private void ConfirmStopTask(TaskId id)
     {
-        if (Confirmation.Ask(terminal, $"取消{id}？", "× 确认取消整个任务", "← 返回，保留任务"))
+        if (Confirmation.Ask(terminal, $"终止{id}？", "× 确认终止整个任务", "← 返回，保留任务"))
         {
             StopTask(id);
         }
@@ -430,8 +448,16 @@ internal sealed class TaskBrowser(
 
     private void AddTaskActions(List<Item> items, TaskSnapshot task)
     {
-        if (task.State is TaskState.Done or TaskState.Canceled)
+        if (task.State is TaskState.Done or TaskState.Terminated)
         {
+            return;
+        }
+
+        if (task.State == TaskState.Paused)
+        {
+            items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
+            items.Add(new Item("× 终止整个任务", "stopTask", Task: task.Id));
+
             return;
         }
 
@@ -454,7 +480,8 @@ internal sealed class TaskBrowser(
             items.Add(new Item("* 返工被阻塞的节点", "rework", Task: task.Id));
         }
 
-        items.Add(new Item("× 取消整个任务", "stopTask", Task: task.Id));
+        items.Add(new Item("Ⅱ 暂停任务", "pauseTask", Task: task.Id));
+        items.Add(new Item("× 终止整个任务", "stopTask", Task: task.Id));
     }
 
     private Item Choose(string title, IReadOnlyList<Item> items) =>
@@ -464,6 +491,6 @@ internal sealed class TaskBrowser(
         $"{execution.Input.Node} · {ViewLabels.ExecutionLabel(execution)}";
 
     private static string TaskLabel(TaskSnapshot task) =>
-        $"#{task.Id.Value} {task.Title} · {ViewLabels.Of(task.State)}";
+        $"#{task.Id.Short} {task.Title} · {ViewLabels.Of(task.State)}";
 }
 

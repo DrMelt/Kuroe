@@ -1,4 +1,6 @@
 using ErrorOr;
+using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -121,9 +123,9 @@ public sealed class FlowAdvanceTests
         environment.Tasks.StopTask(id).ThrowIfError();
         TaskSnapshot canceled = environment.Settle(id);
 
-        Assert.Equal(TaskState.Canceled, canceled.State);
+        Assert.Equal(TaskState.Terminated, canceled.State);
         Assert.DoesNotContain(canceled.ExecutableStates, state => state.State == NodeState.Blocked);
-        Assert.Equal(1, environment.Registry.ClearSettled());
+        Assert.Single(environment.Registry.ClearSettled());
     }
 
     [Fact]
@@ -137,9 +139,106 @@ public sealed class FlowAdvanceTests
         environment.Tasks.StopTask(id).ThrowIfError();
 
         TaskSnapshot canceled = environment.Settle(id);
-        Assert.Equal(TaskState.Canceled, canceled.State);
+        Assert.Equal(TaskState.Terminated, canceled.State);
         Assert.Equal(0, canceled.LiveExecutions);
     }
+    [Fact]
+    public void Pause_interrupts_running_execution_and_resume_waits_for_rework()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.DelayMs = 20000;
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+
+        environment.Tasks.Pause(id).ThrowIfError();
+
+        TaskSnapshot paused = environment.Wait(id, snapshot => snapshot.State == TaskState.Paused && snapshot.LiveExecutions == 0);
+        Assert.Contains(
+            paused.Executables.SelectMany(node => node.Executions),
+            execution => execution.State == ExecutionState.Interrupted);
+
+        environment.Tasks.Resume(id).ThrowIfError();
+        Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
+
+        environment.Runner.DelayMs = 0;
+        environment.Tasks.Rework(id).ThrowIfError();
+
+        Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
+    }
+
+    [Fact]
+    public void Pause_while_waiting_rejects_input_until_resume()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
+
+        environment.Tasks.Pause(id).ThrowIfError();
+        Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
+
+        ErrorOr<Success> rejected = environment.Pendings.Approve(id);
+        Assert.True(rejected.IsError);
+        Assert.Equal(FlowErrorCodes.TaskPaused, rejected.FirstError.Code);
+
+        environment.Tasks.Resume(id).ThrowIfError();
+        environment.Pendings.Approve(id).ThrowIfError();
+
+        Assert.Equal(TaskState.Done, environment.Settle(id).State);
+    }
+
+    [Fact]
+    public void Done_task_cannot_pause_or_terminate()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+
+        TaskId id = environment.Submit("补齐 README");
+        Assert.Equal(TaskState.Done, environment.Settle(id).State);
+
+        ErrorOr<Success> paused = environment.Tasks.Pause(id);
+        Assert.True(paused.IsError);
+        Assert.Equal(FlowErrorCodes.TaskDoneCannotPause, paused.FirstError.Code);
+
+        ErrorOr<Success> terminated = environment.Tasks.StopTask(id);
+        Assert.True(terminated.IsError);
+        Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
+    }
+
+    [Fact]
+    public void Active_task_cannot_resume()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.DelayMs = 20000;
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+
+        ErrorOr<Success> resumed = environment.Tasks.Resume(id);
+        Assert.True(resumed.IsError);
+        Assert.Equal(FlowErrorCodes.TaskNotPaused, resumed.FirstError.Code);
+
+        environment.Tasks.StopTask(id).ThrowIfError();
+    }
+
+    [Fact]
+    public async Task Shutdown_keeps_control_state_and_interrupts_executions()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.DelayMs = 20000;
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
+
+        await environment.Tasks.ShutdownAsync();
+
+        Assert.Equal(TaskLifecycle.Active, task.Lifecycle);
+        Assert.Contains(task.Executions, execution => execution.State == ExecutionState.Interrupted);
+    }
+
+
 
     [Fact]
     public void Approve_one_approval_keeps_the_other_waiting()

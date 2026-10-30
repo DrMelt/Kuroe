@@ -14,8 +14,12 @@ namespace Kuroe.Tests;
 public sealed class InputNodeTests
 {
     /// <summary>等待全部输入节点停驻后返回快照。</summary>
-    private static TaskSnapshot WaitForInputs(TestEnvironment environment, TaskId id, int count) =>
+    private static TaskSnapshot WaitForInputs(TestEnvironment environment, TaskId id, int count)
+    {
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count == count);
+
+        return environment.Snapshot(id);
+    }
 
     [Fact]
     public void Input_node_parks_until_answered_then_releases_downstream()
@@ -219,8 +223,8 @@ public sealed class InputNodeTests
 
         environment.Tasks.StopTask(id).ThrowIfError();
 
-        TaskSnapshot canceled = environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
-        Assert.Equal(TaskState.Canceled, canceled.State);
+        TaskSnapshot canceled = environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
+        Assert.Equal(TaskState.Terminated, canceled.State);
     }
 
     [Fact]
@@ -232,11 +236,11 @@ public sealed class InputNodeTests
         WaitForInputs(environment, id, 2);
 
         environment.Tasks.StopTask(id).ThrowIfError();
-        environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
         ErrorOr<Success> answered = environment.Pendings.Answer(id, null, "甲");
         Assert.True(answered.IsError);
-        Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("已取消，无法回答"));
+        Assert.Contains(answered.ErrorsOrEmptyList, error => error.Description.Contains("已终止，无法回答"));
     }
 
     [Fact]

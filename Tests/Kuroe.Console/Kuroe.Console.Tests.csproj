@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Shared\Kuroe.Flow.Persistence.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Console\Kuroe.Console.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />

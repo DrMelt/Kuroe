@@ -1,8 +1,10 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -13,8 +15,8 @@ namespace Kuroe.Node.Input;
 
 /// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext context)
-    : NodeRuntime(executable), IInputProgress
+internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext nodeContext)
+    : RuntimeNode(executable), IInputProgress
 {
     private readonly ConsumedRevisionStore _consumed = new();
     private string? _answer;
@@ -50,7 +52,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     {
         _canceled = true;
         _waiting = false;
-        channel.Decline(context, Path);
+        channel.Decline(nodeContext, Path);
     }
 
     /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。输入节点不消费来源取值。</summary>
@@ -90,6 +92,33 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
         && _answer is { Length: > 0 } answer
             ? [new ContextValue(new InputSource(Path, port), answer)]
             : [];
+
+    /// <summary>捕获回答与等待状态。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() =>
+        new InputNodeCheckpoint(
+            Path,
+            new NodeCommonCheckpoint(Revision, LastInputGroup, _consumed.CaptureCheckpoint(), [], false, false),
+            _answer,
+            _waiting);
+
+    /// <summary>恢复回答与等待状态，等待中的节点重新声明接收外部输入。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+        if (checkpoint is not InputNodeCheckpoint state)
+        {
+            throw new ArgumentException($"输入节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+        }
+
+        RestoreLastInputGroup(state.Common.LastInputGroup);
+        _consumed.RestoreCheckpoint(state.Common.Consumed);
+        _revision = state.Common.Revision;
+        _answer = state.Answer;
+        _waiting = state.Waiting;
+        if (_waiting && !_canceled)
+        {
+            channel.Accept(nodeContext, Path, Deliver);
+        }
+    }
 
     /// <summary>输入节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot()

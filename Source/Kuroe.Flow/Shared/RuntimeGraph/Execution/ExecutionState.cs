@@ -17,4 +17,7 @@ public enum ExecutionState
 
     /// <summary>被取消。</summary>
     Canceled,
+
+    /// <summary>因任务暂停或进程退出而中断。</summary>
+    Interrupted,
 }

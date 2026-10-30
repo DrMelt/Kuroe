@@ -5,6 +5,7 @@ using Kuroe.Assistant;
 using Kuroe.Console;
 using Kuroe.Console.Views;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Persistence.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -90,6 +91,12 @@ static async Task<int> RunAsync(string? workDirectory)
 
     using var provider = services.BuildServiceProvider(
         new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+    TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();
+    foreach (TaskLoadFailure failure in loaded.Failures)
+    {
+        errors.Report(failure.Errors);
+    }
 
     await provider.GetRequiredService<Repl>().RunAsync();
 

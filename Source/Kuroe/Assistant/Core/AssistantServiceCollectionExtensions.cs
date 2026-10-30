@@ -56,7 +56,9 @@ public static class AssistantServiceCollectionExtensions
                     new KuroeTaskStart(
                         sp.GetRequiredService<KuroePaths>().WorkingDirectory,
                         null,
-                        sp.GetRequiredService<ModelService>())),
+                        sp.GetRequiredService<ModelService>()),
+                    // 对话任务自有任务域，任务键不占用用户任务域的序列
+                    new GuidTaskIdSource()),
                 round,
                 sp.GetRequiredService<ModelService>(),
                 sp.GetRequiredService<SettingsProvider>(),

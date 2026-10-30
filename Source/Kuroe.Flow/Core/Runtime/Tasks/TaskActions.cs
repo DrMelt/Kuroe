@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -17,12 +18,18 @@ public sealed class TaskActions(
     TaskRegistry registry,
     IFlowRunner driver,
     IExecutionTargetResolver targets,
-    IHostTaskStart host)
+    IHostTaskStart host,
+    ITaskIdSource ids,
+    IFlowSnapshotSource? snapshots = null,
+    ITaskCheckpointCoordinator? checkpoints = null)
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
     private readonly IExecutionTargetResolver _targets = targets;
     private readonly IHostTaskStart _host = host;
+    private readonly ITaskIdSource _ids = ids;
+    private readonly IFlowSnapshotSource? _snapshots = snapshots;
+    private readonly ITaskCheckpointCoordinator? _checkpoints = checkpoints;
 
     /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取注入的开始端口值，再建任务并启动推进。
     /// 任务号被宿主资源占用时换下一个任务号重来。onText 与 onEntry 收到该任务全部执行的过程事件。</summary>
@@ -43,60 +50,67 @@ public sealed class TaskActions(
 
         string taskTitle = TaskTitle.Compose(inputs, flow.Model.Name, title);
 
-        while (true)
+        TaskId id = _ids.Next();
+
+        FlowSnapshot? flowSnapshot = null;
+        if (_snapshots is { } snapshotSource)
         {
-            TaskId id = _registry.Allocate();
-
-            ErrorOr<IPortTexts> startTexts = _host.Prepare(id, hostInputs, flow.Model.Name, taskTitle);
-            if (startTexts.IsError)
+            ErrorOr<FlowSnapshot> captured = snapshotSource.Capture(flow.Model.Name);
+            if (captured.IsError)
             {
-                if (startTexts.FirstError.Type == ErrorType.Conflict)
-                {
-                    continue;
-                }
-
-                return startTexts.ErrorsOrEmptyList;
+                return captured.ErrorsOrEmptyList;
             }
 
-            if (CheckStartTexts(hostInputs, startTexts.Value) is { Count: > 0 } startErrors)
-            {
-                return startErrors;
-            }
-
-            // 不启动执行的节点不需要宿主声明；开始直连的派发节点在开始端口值就绪后再要求声明可解析
-            StaticPortValues staticPorts = new(graph, startTexts.Value);
-            foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
-            {
-                if (graph[edge.Target] is not ExecutableNode target
-                    || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
-                {
-                    continue;
-                }
-
-                ErrorOr<INodeDeclaration> declaration = _targets.For(target, staticPorts.For(target));
-                if (declaration.IsError)
-                {
-                    return declaration.ErrorsOrEmptyList;
-                }
-            }
-
-            WorkTask task = _registry.Add(
-                id,
-                inputs,
-                startTexts.Value,
-                staticPorts,
-                flow,
-                taskTitle,
-                onText,
-                onEntry);
-
-            lock (task.Gate)
-            {
-                _driver.Start(task);
-            }
-
-            return task.Snapshot();
+            flowSnapshot = captured.Value;
         }
+
+        ErrorOr<IPortTexts> startTexts = _host.Prepare(id, hostInputs, flow.Model.Name, taskTitle);
+        if (startTexts.IsError)
+        {
+            return startTexts.ErrorsOrEmptyList;
+        }
+
+        if (CheckStartTexts(hostInputs, startTexts.Value) is { Count: > 0 } startErrors)
+        {
+            return startErrors;
+        }
+
+        // 不启动执行的节点不需要宿主声明；开始直连的派发节点在开始端口值就绪后再要求声明可解析
+        StaticPortValues staticPorts = new(graph, startTexts.Value);
+        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
+        {
+            if (graph[edge.Target] is not ExecutableNode target
+                || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
+            {
+                continue;
+            }
+
+            ErrorOr<INodeDeclaration> declaration = _targets.For(target, staticPorts.For(target));
+            if (declaration.IsError)
+            {
+                return declaration.ErrorsOrEmptyList;
+            }
+        }
+
+        WorkTask task = _registry.Add(
+            id,
+            inputs,
+            startTexts.Value,
+            staticPorts,
+            flow,
+            taskTitle,
+            onText,
+            onEntry);
+        task.FlowSnapshot = flowSnapshot;
+
+        lock (task.Gate)
+        {
+            _driver.Start(task);
+        }
+
+        Persist(task.Id);
+
+        return task.Snapshot();
     }
 
     /// <summary>开始输入必须逐个覆盖不带固定值且未绑定宿主输入的开始端口，且只落在用户端口上。</summary>
@@ -158,6 +172,70 @@ public sealed class TaskActions(
         return errors;
     }
 
+    /// <summary>标记任务状态已变并同步写盘，关键状态变化立即落盘。</summary>
+    private void Persist(TaskId id)
+    {
+        if (_checkpoints is not { } coordinator)
+        {
+            return;
+        }
+
+        coordinator.MarkDirty(id);
+        coordinator.FlushAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。要求任务未完成且未终止。</summary>
+    public ErrorOr<Success> Pause(TaskId id)
+    {
+        ErrorOr<WorkTask> found = _registry.Find(id);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        WorkTask task = found.Value;
+        lock (task.Gate)
+        {
+            ErrorOr<Success> paused = task.Pause();
+            if (paused.IsError)
+            {
+                return paused;
+            }
+
+            _driver.Pause(task);
+        }
+
+        Persist(task.Id);
+
+        return Result.Success;
+    }
+
+    /// <summary>恢复暂停的任务：推进循环重新取待处理目标。</summary>
+    public ErrorOr<Success> Resume(TaskId id)
+    {
+        ErrorOr<WorkTask> found = _registry.Find(id);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        WorkTask task = found.Value;
+        lock (task.Gate)
+        {
+            ErrorOr<Success> resumed = task.Resume();
+            if (resumed.IsError)
+            {
+                return resumed;
+            }
+
+            _driver.ResumeTask(task);
+        }
+
+        Persist(task.Id);
+
+        return Result.Success;
+    }
+
     /// <summary>改任务标题。</summary>
     public ErrorOr<Success> Rename(TaskId id, string title)
     {
@@ -168,6 +246,7 @@ public sealed class TaskActions(
         }
 
         found.Value.Title = title;
+        Persist(found.Value.Id);
 
         return Result.Success;
     }
@@ -185,6 +264,16 @@ public sealed class TaskActions(
         int reworked;
         lock (task.Gate)
         {
+            if (task.Lifecycle == TaskLifecycle.Terminated)
+            {
+                return [TaskErrors.Terminated(id)];
+            }
+
+            if (task.Lifecycle == TaskLifecycle.Paused)
+            {
+                return [TaskErrors.Paused(id)];
+            }
+
             reworked = _driver.Rework(task);
         }
 
@@ -192,6 +281,8 @@ public sealed class TaskActions(
         {
             return [TaskErrors.NotBlocked(id)];
         }
+
+        Persist(id);
 
         return Result.Success;
     }
@@ -215,7 +306,7 @@ public sealed class TaskActions(
         return Result.Success;
     }
 
-    /// <summary>取消任务：在跑的执行全部取消，未走完的执行节点不再推进。</summary>
+    /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进，之后不可恢复。</summary>
     public ErrorOr<Success> StopTask(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
@@ -224,15 +315,43 @@ public sealed class TaskActions(
             return found.ErrorsOrEmptyList;
         }
 
-        WorkTask task = found.Value;
-        lock (task.Gate)
+        ErrorOr<Success> stopped = _driver.Cancel(found.Value);
+        if (!stopped.IsError)
         {
-            _driver.Cancel(task);
+            Persist(found.Value.Id);
         }
 
-        return Result.Success;
+        return stopped;
     }
 
-    /// <summary>退出时取消全部任务与执行并等待收口。</summary>
-    public Task ShutdownAsync() => _driver.ShutdownAsync();
+    /// <summary>丢掉已完成或已终止的任务，同时删除它们的检查点。</summary>
+    public IReadOnlyList<TaskId> ClearSettled()
+    {
+        IReadOnlyList<TaskId> cleared = _registry.ClearSettled();
+        if (_checkpoints is { } coordinator)
+        {
+            foreach (TaskId id in cleared)
+            {
+                coordinator.Remove(id);
+            }
+        }
+
+        return cleared;
+    }
+
+    /// <summary>退出时先写全部任务检查点，再中断任务与执行并等待收口。</summary>
+    public async Task ShutdownAsync()
+    {
+        if (_checkpoints is { } coordinator)
+        {
+            foreach (TaskId id in _registry.Ids())
+            {
+                coordinator.MarkDirty(id);
+            }
+
+            await coordinator.FlushAsync().ConfigureAwait(false);
+        }
+
+        await _driver.ShutdownAsync().ConfigureAwait(false);
+    }
 }

@@ -4,6 +4,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -22,11 +23,13 @@ namespace Kuroe.Console.Tests.Support;
 public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
+    private readonly bool _deleteOnDispose;
 
-    private TestEnvironment(string root, ServiceProvider provider, FakeRunner runner)
+    private TestEnvironment(string root, ServiceProvider provider, FakeRunner runner, bool deleteOnDispose)
     {
         Root = root;
         _provider = provider;
+        _deleteOnDispose = deleteOnDispose;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
@@ -88,9 +91,19 @@ public sealed class TestEnvironment : IDisposable
         """;
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
-    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true)
+    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true) =>
+        TryCreateAt(
+            Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N")),
+            flowsJson,
+            seedCatalog);
+
+    /// <summary>在指定工作目录装配，用于跨会话重载检查点。</summary>
+    public static ErrorOr<TestEnvironment> TryCreateAt(
+        string root,
+        string? flowsJson = null,
+        bool seedCatalog = true,
+        bool deleteOnDispose = true)
     {
-        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
 
         KuroePaths paths = KuroePaths.At(root);
@@ -119,7 +132,9 @@ public sealed class TestEnvironment : IDisposable
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
         services.AddSingleton<IExecutionRunnerFactory>(runner);
+        services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ITaskRestoreService>().Restore();
 
         if (seedCatalog)
         {
@@ -129,11 +144,15 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
-        return new TestEnvironment(root, provider, runner);
+        return new TestEnvironment(root, provider, runner, deleteOnDispose);
     }
 
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
         TryCreate(flowsJson, seedCatalog).ThrowIfError();
+
+    /// <summary>在指定工作目录装配，用于跨会话重载检查点。</summary>
+    public static TestEnvironment CreateAt(string root, string? flowsJson = null, bool seedCatalog = true) =>
+        TryCreateAt(root, flowsJson, seedCatalog, deleteOnDispose: false).ThrowIfError();
 
     /// <summary>按 目标 端口提交任务，未点名时用测试默认写入的那条流程。</summary>
     public TaskId Submit(string goal, FlowName? flow = null) =>
@@ -179,7 +198,7 @@ public sealed class TestEnvironment : IDisposable
         {
             TaskSnapshot snapshot = Snapshot(id);
             if (snapshot.LiveExecutions == 0
-                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled)
+                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
             {
                 return snapshot;
             }
@@ -217,7 +236,10 @@ public sealed class TestEnvironment : IDisposable
 
         try
         {
-            System.IO.Directory.Delete(Root, recursive: true);
+            if (_deleteOnDispose)
+            {
+                System.IO.Directory.Delete(Root, recursive: true);
+            }
         }
         catch (IOException)
         {

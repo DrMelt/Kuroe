@@ -33,7 +33,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
             _settled[execution.Id] = settled;
             if (_stopping)
             {
-                execution.MarkCanceled();
+                execution.MarkInterrupted("进程退出。");
                 dropped.Add(execution);
             }
             else
@@ -61,14 +61,14 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
 
         foreach (Execution execution in dropped)
         {
-            execution.MarkCanceled();
+            execution.MarkInterrupted("进程退出。");
         }
 
         Settle(dropped);
 
         foreach ((Execution execution, Task _) in live)
         {
-            execution.Cancel();
+            execution.Interrupt("进程退出。");
         }
 
         await Task.WhenAll(live.Select(entry => entry.Task));
@@ -82,7 +82,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
             Execution execution = _queue.Dequeue();
             if (execution.CancellationToken.IsCancellationRequested)
             {
-                execution.MarkCanceled();
+                execution.MarkCanceledOrInterrupted();
                 dropped.Add(execution);
                 continue;
             }
@@ -112,7 +112,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
         }
         catch (OperationCanceledException)
         {
-            execution.MarkCanceled();
+            execution.MarkCanceledOrInterrupted();
         }
         catch (Exception ex)
         {

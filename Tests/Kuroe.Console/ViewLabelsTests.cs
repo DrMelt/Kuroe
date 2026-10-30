@@ -18,8 +18,9 @@ public sealed class ViewLabelsTests
     {
         Assert.Equal("执行中", ViewLabels.Of(TaskState.Running));
         Assert.Equal("已阻塞", ViewLabels.Of(TaskState.Blocked));
+        Assert.Equal("已暂停", ViewLabels.Of(TaskState.Paused));
         Assert.Equal("已完成", ViewLabels.Of(TaskState.Done));
-        Assert.Equal("已取消", ViewLabels.Of(TaskState.Canceled));
+        Assert.Equal("已终止", ViewLabels.Of(TaskState.Terminated));
     }
 
     [Fact]
@@ -66,7 +67,8 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Success, ViewLabels.StyleOf(TaskState.Done));
         Assert.Equal(Styles.Key, ViewLabels.StyleOf(TaskState.Running));
         Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.Blocked));
-        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Canceled));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(TaskState.Paused));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(TaskState.Terminated));
     }
 
     [Fact]
@@ -85,6 +87,7 @@ public sealed class ViewLabelsTests
         Assert.Equal(Styles.Error, ViewLabels.StyleOf(ExecutionState.Failed));
         Assert.Equal(Styles.Key, ViewLabels.StyleOf(ExecutionState.Running));
         Assert.Equal(Styles.Hint, ViewLabels.StyleOf(ExecutionState.Canceled));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(ExecutionState.Interrupted));
     }
 
     [Fact]

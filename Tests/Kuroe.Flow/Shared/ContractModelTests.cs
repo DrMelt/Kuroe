@@ -10,7 +10,7 @@ public sealed class ContractModelTests
     [Fact]
     public void Ids_render_for_the_human_reader()
     {
-        Assert.Equal("任务 #3", new TaskId(3).ToString());
+        Assert.Equal("任务 00000003", new TaskId(3).ToString());
         Assert.Equal("执行 #7", new ExecutionId(7).ToString());
     }
 

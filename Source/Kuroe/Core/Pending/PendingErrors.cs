@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
@@ -27,10 +28,15 @@ public static class PendingErrors
         ? Error.Validation("Task.Approve", $"{task} 没有等待批准的审批节点。")
         : Error.Validation("Task.Answer", $"{task} 没有等待回答的输入节点。");
 
-    /// <summary>任务已取消，外部输入无处交付。</summary>
-    public static Error Canceled(TaskId task, PendingKind kind) => kind == PendingKind.Approve
-        ? Error.Conflict("Task.Approve", $"{task} 已取消，无法批准。")
-        : Error.Conflict("Task.Answer", $"{task} 已取消，无法回答。");
+    /// <summary>任务已终止，外部输入无处交付。</summary>
+    public static Error Terminated(TaskId task, PendingKind kind) => kind == PendingKind.Approve
+        ? Error.Conflict("Task.Approve", $"{task} 已终止，无法批准。")
+        : Error.Conflict("Task.Answer", $"{task} 已终止，无法回答。");
+
+    /// <summary>任务已暂停，外部输入要等恢复后再交付。</summary>
+    public static Error Paused(TaskId task, PendingKind kind) => kind == PendingKind.Approve
+        ? Error.Conflict(FlowErrorCodes.TaskPaused, $"{task} 已暂停，无法批准。")
+        : Error.Conflict(FlowErrorCodes.TaskPaused, $"{task} 已暂停，无法回答。");
 
     /// <summary>多个节点等待回答，必须指定节点路径。</summary>
     public static Error AmbiguousInput(TaskId task, int count) => Error.Validation(

@@ -1,4 +1,6 @@
+using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
@@ -74,7 +76,7 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
 /// <summary>测试用的来源运行期对象：按输出端口给出固定文本。</summary>
 internal sealed class SourceRuntime(NodePath path, string content)
-    : NodeRuntime(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
+    : RuntimeNode(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
 {
     public override bool Released => true;
 
@@ -90,4 +92,12 @@ internal sealed class SourceRuntime(NodePath path, string content)
 
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
         [new ContextValue(new StartSource(port), content)];
+
+    /// <summary>测试来源没有需要持久化的状态。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() => null;
+
+    /// <summary>测试来源没有需要恢复的状态。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+    }
 }

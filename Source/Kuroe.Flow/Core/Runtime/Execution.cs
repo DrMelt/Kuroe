@@ -1,4 +1,6 @@
 using ErrorOr;
+using Kuroe.Flow.Runtime.Process;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime;
@@ -15,12 +17,48 @@ public sealed class Execution : IExecution
     private DateTimeOffset? _startedAt;
     private DateTimeOffset? _finishedAt;
     private readonly List<string> _failures = [];
+    private bool _interruptRequested;
+    private string _interruptReason = "已中断。";
 
     internal Execution(ExecutionId id, ExecutionInput input)
     {
         Id = id;
         Input = input;
         CreatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private Execution(ExecutionId id, ExecutionInput input, DateTimeOffset createdAt)
+    {
+        Id = id;
+        Input = input;
+        CreatedAt = createdAt;
+    }
+
+    /// <summary>从检查点恢复一次已收口的执行。未收口的执行记为已中断。</summary>
+    internal static Execution Restore(ExecutionCheckpoint checkpoint, ExecutionInput input)
+    {
+        Execution execution = new(checkpoint.Id, input, checkpoint.CreatedAt);
+        execution.RestoreState(checkpoint);
+
+        return execution;
+    }
+
+    /// <summary>恢复状态与历史，未收口的执行记为已中断。</summary>
+    private void RestoreState(ExecutionCheckpoint checkpoint)
+    {
+        bool live = checkpoint.State.IsLive();
+        _state = live ? ExecutionState.Interrupted : checkpoint.State;
+        _progress = checkpoint.Progress;
+        _startedAt = checkpoint.StartedAt;
+        _finishedAt = live ? DateTimeOffset.UtcNow : checkpoint.FinishedAt;
+        _failures.AddRange(checkpoint.Failures);
+        if (live)
+        {
+            _failures.Add("进程退出前未收口。");
+        }
+
+        _journal = new RestoredProcessJournal(checkpoint.Journal, checkpoint.DroppedEntries);
+        _cancellation.Dispose();
     }
 
     /// <summary>执行标识。</summary>
@@ -139,6 +177,48 @@ public sealed class Execution : IExecution
 
     internal void MarkCanceled() => Settle(ExecutionState.Canceled, ["已取消。"]);
 
+    /// <summary>请求中断本次执行，进行中的一轮请求随之结束。要求持有任务 Gate。</summary>
+    internal void Interrupt(string reason = "已中断。")
+    {
+        lock (_gate)
+        {
+            if (_state.IsSettled())
+            {
+                return;
+            }
+
+            _interruptRequested = true;
+            _interruptReason = reason;
+            _cancellation.Cancel();
+        }
+    }
+
+    /// <summary>按中断请求收口：请求过中断记为已中断，否则记为已取消。</summary>
+    internal void MarkCanceledOrInterrupted()
+    {
+        ExecutionState state;
+        string reason;
+        lock (_gate)
+        {
+            state = _interruptRequested ? ExecutionState.Interrupted : ExecutionState.Canceled;
+            reason = _interruptRequested ? _interruptReason : "已取消。";
+        }
+
+        Settle(state, [reason]);
+    }
+
+    /// <summary>直接记为已中断，用于未进入执行的排队项与退出时的丢弃项。</summary>
+    internal void MarkInterrupted(string reason = "已中断。")
+    {
+        lock (_gate)
+        {
+            _interruptRequested = true;
+            _interruptReason = reason;
+        }
+
+        Settle(ExecutionState.Interrupted, [reason]);
+    }
+
     /// <summary>进入终态并记下失败原因，只认第一次。</summary>
     private void Settle(ExecutionState state, string[] failures)
     {
@@ -218,6 +298,32 @@ public sealed class Execution : IExecution
 
         return new ExecutionSnapshot(Id, Input, state, progress, CreatedAt, startedAt, finishedAt,
             failures, journal?.Entries ?? [], journal?.DroppedEntries ?? 0);
+    }
+
+    /// <summary>捕获本次执行的状态与历史。</summary>
+    internal ExecutionCheckpoint CaptureCheckpoint()
+    {
+        ExecutionSnapshot snapshot = Snapshot();
+
+        return new ExecutionCheckpoint(
+            snapshot.Id,
+            snapshot.Input.Node,
+            snapshot.Input.ExecutionCount,
+            snapshot.State,
+            snapshot.Progress,
+            snapshot.CreatedAt,
+            snapshot.StartedAt,
+            snapshot.FinishedAt,
+            snapshot.Failures,
+            snapshot.Journal,
+            snapshot.DroppedEntries,
+            [
+                .. snapshot.Input.Inputs.Select(value => new InputValueCheckpoint(
+                    value.Port,
+                    CheckpointSources.Write(value.Origin),
+                    value.Text)),
+            ],
+            snapshot.Input.Texts);
     }
 
     /// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>

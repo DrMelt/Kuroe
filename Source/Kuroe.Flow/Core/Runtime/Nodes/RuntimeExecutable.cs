@@ -1,5 +1,6 @@
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -16,7 +17,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
 internal sealed class RuntimeExecutable(
     ExecutableNode executable,
-    IConsumedRevisionStore? consumed = null) : NodeRuntime(executable), IInputProgress
+    IConsumedRevisionStore? consumed = null) : RuntimeNode(executable), IInputProgress
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
@@ -216,6 +217,52 @@ internal sealed class RuntimeExecutable(
         && values.TryGetValue(port, out PortValue value)
             ? value
             : null;
+
+    /// <summary>捕获执行节点的状态、执行计数与已发布产出。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint()
+    {
+        IReadOnlyDictionary<PortName, PortValue> ports =
+            PublishedExecution is { } published
+                ? _submissions.GetValueOrDefault(published.Id)?.Ports ?? new Dictionary<PortName, PortValue>()
+                : new Dictionary<PortName, PortValue>();
+
+        return new ExecutableNodeCheckpoint(
+            Path,
+            new NodeCommonCheckpoint(
+                Revision,
+                LastInputGroup,
+                _consumed.CaptureCheckpoint(),
+                [.. _reworkTargets],
+                Blocked,
+                RerunRequested),
+            Executions,
+            PublishedExecution?.Id,
+            ports);
+    }
+
+    /// <summary>从检查点恢复执行节点状态与已发布产出。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+        if (checkpoint is not ExecutableNodeCheckpoint state)
+        {
+            throw new ArgumentException($"执行节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+        }
+
+        RestoreLastInputGroup(state.Common.LastInputGroup);
+        _consumed.RestoreCheckpoint(state.Common.Consumed);
+        _stamp = state.Common.Revision;
+        Executions = state.Executions;
+        _reworkTargets.Clear();
+        _reworkTargets.AddRange(state.Common.ReworkTargets);
+        Blocked = state.Common.Blocked;
+        _rerunRequested = state.Common.RerunRequested;
+        PublishedExecution = state.PublishedExecution is { } id ? context.Execution(id) as Execution : null;
+        _submissions.Clear();
+        if (PublishedExecution is { } published && state.PublishedPorts.Count > 0)
+        {
+            _submissions[published.Id] = new Submission(Ports: state.PublishedPorts);
+        }
+    }
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot()

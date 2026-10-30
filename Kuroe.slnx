@@ -23,8 +23,12 @@
     <Project Path="Source/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/Core/Kuroe.Flow.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.csproj" />
-    <Project Path="Source/Kuroe.Flow/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Json/Core/Kuroe.Flow.Json.csproj" />
+    <Project Path="Source/Kuroe.Flow/Compilation/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Shared/Kuroe.Flow.Persistence.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Core/Kuroe.Flow.Persistence.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/FileSystem/Kuroe.Flow.Persistence.FileSystem.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Json/Kuroe.Flow.Persistence.Json.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeType/Container/Core/Kuroe.Flow.NodeType.Container.csproj" />
     <Project Path="Source/Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Shared/Kuroe.Flow.InputChannel.Shared.csproj" />
@@ -51,6 +55,10 @@
     <Project Path="Tests/Kuroe.Flow/Core/Kuroe.Flow.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Compilation/Kuroe.Flow.Compilation.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Json/Kuroe.Flow.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Shared/Kuroe.Flow.Persistence.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Core/Kuroe.Flow.Persistence.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Json/Kuroe.Flow.Persistence.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/FileSystem/Kuroe.Flow.Persistence.FileSystem.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/InputChannel/Kuroe.Flow.InputChannel.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Input/Core/Kuroe.Node.Input.Tests.csproj" />

@@ -66,7 +66,9 @@ public sealed class StartPathsTests
         TaskId id = environment.Submit("整理目录");
         TaskSnapshot task = environment.Settle(id);
         IExecution execution = Assert.Single(environment.Runner.Started);
-        string taskDirectory = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
+        string taskDirectory = Assert.Single(
+            Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")),
+            path => Path.GetFileName(path) != ".checkpoints");
 
         Assert.Equal(TaskState.Done, task.State);
         Assert.NotNull(task.StartTexts.Text(new PortName("启动")));
@@ -149,7 +151,9 @@ public sealed class StartPathsTests
 
         TaskId id = environment.Submit("写入任务目录");
         TaskSnapshot done = environment.Settle(id);
-        string taskDirectory = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
+        string taskDirectory = Assert.Single(
+            Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")),
+            path => Path.GetFileName(path) != ".checkpoints");
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal("正文产出", File.ReadAllText(Path.Combine(taskDirectory, "out", "result.txt")));

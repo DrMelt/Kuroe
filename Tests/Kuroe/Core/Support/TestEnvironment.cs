@@ -4,6 +4,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -137,11 +138,11 @@ public sealed class TestEnvironment : IDisposable
         }
         """;
 
-    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。</summary>
-    internal static KuroeCoreOptions Options => new() { RegisterNodeTypes = TestTypeFiles.RegisterAll };
+    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。默认不写检查点，持久化用例显式打开。</summary>
+    internal static KuroeCoreOptions Options => new() { RegisterNodeTypes = TestTypeFiles.RegisterAll, PersistTasks = false };
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
-    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true)
+    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true, bool persistTasks = false)
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
@@ -158,7 +159,7 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, Options);
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, Options with { PersistTasks = persistTasks });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
@@ -172,7 +173,9 @@ public sealed class TestEnvironment : IDisposable
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
         services.AddSingleton<IExecutionRunnerFactory>(runner);
+        services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ITaskRestoreService>().Restore();
 
         if (seedCatalog)
         {
@@ -185,8 +188,8 @@ public sealed class TestEnvironment : IDisposable
         return new TestEnvironment(root, provider, runner);
     }
 
-    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
-        TryCreate(flowsJson, seedCatalog).ThrowIfError();
+    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true, bool persistTasks = false) =>
+        TryCreate(flowsJson, seedCatalog, persistTasks).ThrowIfError();
 
     /// <summary>按 目标 端口提交任务，未点名时用测试默认写入的那条流程。</summary>
     public TaskId Submit(string goal, FlowName? flow = null) =>
@@ -247,7 +250,7 @@ public sealed class TestEnvironment : IDisposable
         {
             TaskSnapshot snapshot = Snapshot(id);
             if (snapshot.LiveExecutions == 0
-                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled)
+                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
             {
                 return snapshot;
             }

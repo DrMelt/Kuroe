@@ -1,3 +1,4 @@
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -27,6 +28,20 @@ public sealed class ConsumedRevisionStore : IConsumedRevisionStore
         foreach (InputGroup group in plan.Groups)
         {
             Record(group, sources);
+        }
+    }
+
+    /// <summary>已消费版本的持久形态，按登记顺序。</summary>
+    public IReadOnlyList<ConsumedRevisionCheckpoint> CaptureCheckpoint() =>
+        [.. _revisions.Select(pair => new ConsumedRevisionCheckpoint(pair.Key.Source, pair.Key.Port, pair.Value))];
+
+    /// <summary>从检查点回填已消费版本，覆盖现有登记。</summary>
+    public void RestoreCheckpoint(IReadOnlyList<ConsumedRevisionCheckpoint> consumed)
+    {
+        _revisions.Clear();
+        foreach (ConsumedRevisionCheckpoint entry in consumed)
+        {
+            _revisions[new ConsumptionKey(entry.Source, entry.Port)] = entry.Revision;
         }
     }
 }

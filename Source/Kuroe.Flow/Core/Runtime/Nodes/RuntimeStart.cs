@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -10,7 +11,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 
 /// <summary>开始节点在任务内的运行时对象：任务启动即已放行，产出是提交时按端口给出的输入，带固定值的端口给配置里的值，
 /// 绑定到宿主输入名的端口给任务启动时注入的值。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
-internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortTexts startTexts) : NodeRuntime(node)
+internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortTexts startTexts) : RuntimeNode(node)
 {
     /// <summary>提交时按端口给出的输入，不带固定值的端口的产出。</summary>
     private readonly StartInputs _inputs = inputs;
@@ -34,6 +35,14 @@ internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortText
             : [];
 
     public override void Cancel()
+    {
+    }
+
+    /// <summary>开始节点的产出由任务开始输入重建，不单独持久化。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() => null;
+
+    /// <summary>开始节点没有需要从检查点恢复的状态。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
     {
     }
 

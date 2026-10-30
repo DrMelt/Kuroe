@@ -33,7 +33,7 @@ internal sealed class TaskListView(Terminal terminal, PendingService pendings)
         {
             List<PendingNode> waiting = _pendings.Pending(task.Id) is { IsError: false } found ? found.Value : [];
             table.AddRow(
-                new Text($"#{task.Id.Value}", Styles.Key),
+                new Text($"#{task.Id.Short}", Styles.Key),
                 new Text(ViewLabels.OneLine(task.Title, TitleLimit)),
                 new Text(task.Flow.Name.Value),
                 new Text(ViewLabels.Clock(task.CreatedAt), Styles.Hint),

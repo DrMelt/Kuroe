@@ -88,12 +88,12 @@ internal sealed class Repl(
         }
     }
 
-    /// <summary>退出会取消全部任务，选择后要求再次确认，默认停在返回主菜单的选项。</summary>
+    /// <summary>退出会中断全部任务并保存未完成任务，选择后要求再次确认，默认停在返回主菜单的选项。</summary>
     private bool ConfirmExit()
     {
         using (terminal.Exclusive())
         {
-            return Confirmation.Ask(terminal, "退出并取消全部任务？", "× 确认退出", "← 返回主菜单");
+            return Confirmation.Ask(terminal, "退出程序？未完成的任务会保存为暂停", "× 确认退出", "← 返回主菜单");
         }
     }
 }

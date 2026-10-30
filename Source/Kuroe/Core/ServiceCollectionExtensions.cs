@@ -10,10 +10,12 @@ using Kuroe.Node.Llm.Tools;
 using Kuroe.Node.Command;
 using Kuroe.Node.File;
 using Kuroe.Flow.Compilation.Description;
+using Kuroe.Flow.Persistence.Json;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
@@ -25,9 +27,12 @@ using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Tasks;
+using Kuroe.Flow.Persistence.FileSystem;
 using Kuroe.Tools;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Persistence;
+using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Shared;
@@ -139,6 +144,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
+        services.AddSingleton<IFlowSnapshotSource>(flows.Value);
+        services.AddSingleton<IFlowSnapshotCompiler>(flows.Value);
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
@@ -148,7 +155,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(modelService);
 
         ExecutionIndex executions = new();
-        TaskRegistry taskRegistry = new(executions, taskDirectory.Value.NextTaskNumber);
+        TaskRegistry taskRegistry = new(executions);
         ErrorOr<Success> registered = RegisterTools(
             services,
             composition,
@@ -170,6 +177,17 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
+        services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
+        services.AddSingleton<ITaskCheckpointCodec>(new TaskCheckpointCodec());
+        services.AddSingleton<ITaskCheckpointStore>(sp => new FileTaskCheckpointStore(
+            paths.CheckpointsDirectory,
+            sp.GetRequiredService<ITaskCheckpointCodec>()));
+        services.AddSingleton<ITaskLeaseStore>(new FileTaskLeaseStore(paths.CheckpointsDirectory));
+        services.AddSingleton<ITaskRestorer>(new TaskRestorer(taskRegistry));
+        services.AddSingleton<ITaskCheckpointSource>(new TaskCheckpointSource(taskRegistry));
+        services.AddSingleton<ITaskCheckpointCoordinator>(sp => new TaskCheckpointCoordinator(
+            sp.GetRequiredService<ITaskCheckpointSource>(),
+            sp.GetRequiredService<ITaskCheckpointStore>()));
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
@@ -177,12 +195,25 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
+        services.AddSingleton<IFlowRunner>(sp => sp.GetRequiredService<FlowEngine>());
+        services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
+            taskRegistry,
+            sp.GetRequiredService<ITaskRestorer>(),
+            sp.GetRequiredService<IFlowRunner>()));
+        services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
+            sp.GetRequiredService<ITaskCheckpointStore>(),
+            sp.GetRequiredService<IFlowSnapshotCompiler>(),
+            sp.GetRequiredService<ITaskLeaseStore>(),
+            sp.GetRequiredService<ITaskRestoreRuntime>()));
         services.AddSingleton(sp => new TaskService(
             new TaskActions(
                 taskRegistry,
                 sp.GetRequiredService<FlowEngine>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
-                sp.GetRequiredService<IHostTaskStart>()),
+                sp.GetRequiredService<IHostTaskStart>(),
+                sp.GetRequiredService<ITaskIdSource>(),
+                coreOptions.PersistTasks ? flows.Value : null,
+                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskCheckpointCoordinator>() : null),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(
             taskRegistry,

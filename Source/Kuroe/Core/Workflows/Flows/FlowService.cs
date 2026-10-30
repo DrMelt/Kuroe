@@ -1,6 +1,8 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Workflows.Flows.Files;
@@ -8,7 +10,7 @@ using Kuroe.Workflows.Flows.Files;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>运行期的流程模板集合。描述文档是授权来源，编译结果是运行期来源，落盘交给 FlowStore。</summary>
-public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog
+public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapshotSource, IFlowSnapshotCompiler
 {
     private readonly FlowStore _store;
     private readonly IReadOnlyList<NodeSpec> _builtins;
@@ -116,6 +118,45 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog
 
             return failure is null ? [FlowErrors.FlowNotFound(name.Value)] : [.. failure.Errors];
         }
+    }
+
+    ErrorOr<FlowSnapshot> IFlowSnapshotSource.Capture(FlowName name)
+    {
+        lock (_gate)
+        {
+            FlowDocumentFlow? flow = _document.Flows.FirstOrDefault(candidate => candidate.Name == name.Value);
+            if (flow is null)
+            {
+                return [FlowErrors.FlowNotFound(name.Value)];
+            }
+
+            ErrorOr<string> text = _store.Render(new FlowDocument(_document.Nodes, [flow]));
+
+            return text.IsError ? text.ErrorsOrEmptyList : new FlowSnapshot(name, text.Value);
+        }
+    }
+
+    ErrorOr<CompiledFlow> IFlowSnapshotCompiler.Compile(FlowSnapshot snapshot)
+    {
+        ErrorOr<FlowDocument> document = _store.ReadText(snapshot.Document);
+        if (document.IsError)
+        {
+            return [Error.Failure(
+                FlowErrorCodes.CheckpointFlowSnapshot,
+                $"流程快照不合法：{document.FirstError.Description}")];
+        }
+
+        ErrorOr<CompileResult> compiled = Compile(document.Value, _builtins, _compiler);
+        if (compiled.IsError)
+        {
+            return compiled.ErrorsOrEmptyList;
+        }
+
+        CompiledFlow? flow = compiled.Value.Flows.FirstOrDefault(candidate => candidate.Model.Name == snapshot.Name);
+
+        return flow is null
+            ? [Error.Failure(FlowErrorCodes.CheckpointFlowSnapshot, $"流程快照中没有流程 {snapshot.Name}。")]
+            : flow;
     }
 
     /// <summary>从文件导入流程：严格模式任一流程不合法即整体不生效；宽容模式只保存可编译流程，丢弃不可编译流程并逐条说明。</summary>

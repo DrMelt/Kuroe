@@ -1,4 +1,7 @@
+using ErrorOr;
 using Kuroe.Flow.Runtime.Process;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -19,7 +22,8 @@ public sealed class WorkTask : INodeTask
     private readonly Action<JournalEntry>? _onEntry;
     private string _title;
     private DateTimeOffset _lastActivityAt;
-    private bool _canceled;
+    private TaskLifecycle _lifecycle = TaskLifecycle.Active;
+    private bool _completed;
 
     internal WorkTask(
         TaskRegistry registry,
@@ -48,8 +52,124 @@ public sealed class WorkTask : INodeTask
         _title = title;
     }
 
+    private WorkTask(
+        TaskRegistry registry,
+        TaskId id,
+        StartInputs inputs,
+        IPortTexts startTexts,
+        StaticPortValues staticPorts,
+        FlowDefinition flow,
+        INodeGraph graph,
+        string title,
+        DateTimeOffset createdAt,
+        DateTimeOffset lastActivityAt,
+        Action<string>? onText,
+        Action<JournalEntry>? onEntry)
+    {
+        Registry = registry;
+        Id = id;
+        Inputs = inputs;
+        StartTexts = startTexts;
+        StaticPorts = staticPorts;
+        Flow = flow;
+        Graph = graph;
+        Runtime = new TaskRuntime(this);
+        _createdAt = createdAt;
+        _lastActivityAt = lastActivityAt;
+        _onText = onText;
+        _onEntry = onEntry;
+        _title = title;
+    }
+
+    /// <summary>从检查点恢复任务。未完成任务恢复为暂停，完成的任务保持完成，终止的任务保持终止。</summary>
+    internal static WorkTask Restore(
+        TaskRegistry registry,
+        TaskCheckpoint checkpoint,
+        CompiledFlow flow,
+        IPortTexts startTexts,
+        StaticPortValues staticPorts,
+        IReadOnlyList<Execution> executions,
+        Action<string>? onText = null,
+        Action<JournalEntry>? onEntry = null)
+    {
+        WorkTask task = new(
+            registry,
+            checkpoint.Identity.Id,
+            checkpoint.Start.Inputs,
+            startTexts,
+            staticPorts,
+            flow.Model,
+            flow.Graph,
+            checkpoint.Identity.Title,
+            checkpoint.Identity.CreatedAt,
+            checkpoint.Identity.LastActivityAt,
+            onText,
+            onEntry);
+
+        task.Journal.Restore(checkpoint.Journal.Entries, checkpoint.Journal.DroppedEntries);
+        task.FlowSnapshot = checkpoint.Flow;
+        task._executions.AddRange(executions);
+        task.Runtime.Restore(checkpoint.Nodes);
+        foreach (NodePath node in executions
+            .Where(execution => execution.State == ExecutionState.Interrupted)
+            .Select(execution => execution.Input.Node))
+        {
+            task.Runtime.Executable(node).EnterBlocked([node]);
+        }
+
+        task._lifecycle = task.DetermineRestoredLifecycle(checkpoint);
+
+        return task;
+    }
+
+    /// <summary>终止保持终止，已完成保持完成，其余未完成任务恢复为暂停。</summary>
+    private TaskLifecycle DetermineRestoredLifecycle(TaskCheckpoint checkpoint)
+    {
+        if (checkpoint.Lifecycle == TaskLifecycle.Terminated)
+        {
+            return TaskLifecycle.Terminated;
+        }
+
+        _completed = checkpoint.Completed;
+
+        return _completed ? TaskLifecycle.Active : TaskLifecycle.Paused;
+    }
+
     /// <summary>任务标识。</summary>
     public TaskId Id { get; }
+
+    /// <summary>任务创建时刻。</summary>
+    public DateTimeOffset CreatedAt => _createdAt;
+
+    /// <summary>最近活动时刻。</summary>
+    internal DateTimeOffset LastActivityAt => _lastActivityAt;
+
+    /// <summary>提交时锁定的流程快照，写检查点时使用。</summary>
+    internal FlowSnapshot? FlowSnapshot { get; set; }
+
+    /// <summary>推进循环给出的待处理目标，写检查点时使用。</summary>
+    internal Func<SchedulerSeed>? SeedSource { get; set; }
+
+    /// <summary>捕获待处理目标，没有推进循环时为空。</summary>
+    internal SchedulerSeed CaptureSeed() => SeedSource?.Invoke() ?? new SchedulerSeed([]);
+
+    /// <summary>任务是否已走完，由推进循环退出时置位。</summary>
+    internal bool Completed
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return _completed;
+            }
+        }
+    }
+
+    /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
+    internal void MarkCompleted() => _completed = true;
+
+    /// <summary>通知任务已走完，写检查点由任务域决定。</summary>
+    internal void NotifyCompleted() => Registry.ReportCompleted(this);
 
     /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>
     internal TaskRegistry Registry { get; }
@@ -131,7 +251,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>提交顺序排列的执行，宿主对话功能读数用。仅在持有 <see cref="Gate"/> 时读写。</summary>
     public IReadOnlyList<Execution> Executions => _executions;
 
-    /// <summary>任务的整体状态，由取消标记、执行节点状态与在跑的执行汇总得出。</summary>
+    /// <summary>任务的整体状态，由控制状态、执行节点状态与在跑的执行汇总得出。</summary>
     public TaskState State
     {
         get
@@ -142,12 +262,35 @@ public sealed class WorkTask : INodeTask
             }
         }
     }
-    /// <summary>要求持有 <see cref="Gate"/>。任务状态由取消标记、执行节点状态与在跑的执行汇总得出，不单独维护。</summary>
+
+    /// <summary>任务的控制状态，暂停与终止只经内部状态迁移改动。</summary>
+    public TaskLifecycle Lifecycle
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return _lifecycle;
+            }
+        }
+    }
+
+    /// <summary>要求持有 <see cref="Gate"/>。控制状态优先于执行与节点状态。</summary>
     private TaskState Summarize()
     {
-        if (_canceled)
+        if (_lifecycle == TaskLifecycle.Terminated)
         {
-            return TaskState.Canceled;
+            return TaskState.Terminated;
+        }
+
+        if (_lifecycle == TaskLifecycle.Paused)
+        {
+            return TaskState.Paused;
+        }
+
+        if (_completed)
+        {
+            return TaskState.Done;
         }
 
         if (_executions.Any(execution => execution.IsLive))
@@ -163,10 +306,63 @@ public sealed class WorkTask : INodeTask
         return Runtime.HasWork ? TaskState.Running : TaskState.Done;
     }
 
-    /// <summary>任务被取消：在跑的执行与执行节点状态一并终止。要求持有 <see cref="Gate"/>。</summary>
-    internal void Cancel()
+    /// <summary>暂停任务：不再启动新的执行，等待中的在跑执行由推进器中断。要求持有 <see cref="Gate"/>。</summary>
+    internal ErrorOr<Success> Pause()
     {
-        _canceled = true;
+        if (_lifecycle == TaskLifecycle.Terminated)
+        {
+            return [TaskErrors.Terminated(Id)];
+        }
+
+        if (_lifecycle == TaskLifecycle.Paused)
+        {
+            return [TaskErrors.AlreadyPaused(Id)];
+        }
+
+        if (Summarize() == TaskState.Done)
+        {
+            return [TaskErrors.DoneCannotPause(Id)];
+        }
+
+        _lifecycle = TaskLifecycle.Paused;
+        _lastActivityAt = DateTimeOffset.UtcNow;
+
+        return Result.Success;
+    }
+
+    /// <summary>恢复暂停的任务，之后由推进器重新取待处理目标。要求持有 <see cref="Gate"/>。</summary>
+    internal ErrorOr<Success> Resume()
+    {
+        if (_lifecycle == TaskLifecycle.Terminated)
+        {
+            return [TaskErrors.Terminated(Id)];
+        }
+
+        if (_lifecycle == TaskLifecycle.Active)
+        {
+            return [TaskErrors.NotPaused(Id)];
+        }
+
+        _lifecycle = TaskLifecycle.Active;
+        _lastActivityAt = DateTimeOffset.UtcNow;
+
+        return Result.Success;
+    }
+
+    /// <summary>终止任务：在跑的执行与执行节点状态一并终止。要求持有 <see cref="Gate"/>。</summary>
+    internal ErrorOr<Success> Terminate()
+    {
+        if (_lifecycle == TaskLifecycle.Terminated)
+        {
+            return [TaskErrors.Terminated(Id)];
+        }
+
+        if (Summarize() == TaskState.Done)
+        {
+            return [TaskErrors.DoneCannotTerminate(Id)];
+        }
+
+        _lifecycle = TaskLifecycle.Terminated;
         foreach (Execution execution in _executions.Where(execution => execution.IsLive))
         {
             execution.Cancel();
@@ -174,6 +370,8 @@ public sealed class WorkTask : INodeTask
 
         Runtime.Cancel();
         _lastActivityAt = DateTimeOffset.UtcNow;
+
+        return Result.Success;
     }
 
     /// <summary>记下一个启动的执行。要求持有 <see cref="Gate"/>。</summary>

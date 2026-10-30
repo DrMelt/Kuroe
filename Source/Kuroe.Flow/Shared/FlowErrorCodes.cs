@@ -32,4 +32,49 @@ public static class FlowErrorCodes
 
     /// <summary>导入的文件按自身装配失败。</summary>
     public const string FlowImport = "Flow.Import";
+
+    /// <summary>任务已暂停，不能交付外部输入或发起推进动作。</summary>
+    public const string TaskPaused = "Task.Paused";
+
+    /// <summary>任务未暂停。</summary>
+    public const string TaskNotPaused = "Task.NotPaused";
+
+    /// <summary>任务已暂停。</summary>
+    public const string TaskAlreadyPaused = "Task.AlreadyPaused";
+
+    /// <summary>任务已完成，不能暂停。</summary>
+    public const string TaskDoneCannotPause = "Task.DoneCannotPause";
+
+    /// <summary>任务已完成，不能终止。</summary>
+    public const string TaskDoneCannotTerminate = "Task.DoneCannotTerminate";
+
+    /// <summary>任务已终止。</summary>
+    public const string TaskTerminated = "Task.Terminated";
+
+    /// <summary>任务不可恢复。</summary>
+    public const string TaskNotResumable = "Task.NotResumable";
+
+    /// <summary>检查点版本不受支持。</summary>
+    public const string CheckpointVersion = "Checkpoint.Version";
+
+    /// <summary>检查点格式不合法。</summary>
+    public const string CheckpointFormat = "Checkpoint.Format";
+
+    /// <summary>流程快照无法编译。</summary>
+    public const string CheckpointFlowSnapshot = "Checkpoint.FlowSnapshot";
+
+    /// <summary>检查点与流程图的节点集合不一致。</summary>
+    public const string CheckpointGraphMismatch = "Checkpoint.GraphMismatch";
+
+    /// <summary>检查点节点状态与图节点类型不一致。</summary>
+    public const string CheckpointNodeMismatch = "Checkpoint.NodeMismatch";
+
+    /// <summary>检查点读取失败。</summary>
+    public const string CheckpointRead = "Checkpoint.Read";
+
+    /// <summary>任务租约被其他进程持有。</summary>
+    public const string TaskLease = "Task.Lease";
+
+    /// <summary>检查点写入失败。</summary>
+    public const string CheckpointWrite = "Checkpoint.Write";
 }

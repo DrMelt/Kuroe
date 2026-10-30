@@ -1,5 +1,6 @@
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
@@ -12,7 +13,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 internal sealed class RuntimeContainer(
     ContainerNode container,
     INodeContext context,
-    IConsumedRevisionStore? consumed = null) : NodeRuntime(container), IInputProgress
+    IConsumedRevisionStore? consumed = null) : RuntimeNode(container), IInputProgress
 {
     /// <summary>提交时锁定的容器定义，不可变。</summary>
     public ContainerNode Container { get; } = container;
@@ -69,6 +70,25 @@ internal sealed class RuntimeContainer(
 
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
+
+    /// <summary>捕获容器的内容版本与已消费版本。内容是否齐备由成员状态推导。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() =>
+        new ContainerNodeCheckpoint(
+            Path,
+            new NodeCommonCheckpoint(Revision, LastInputGroup, _consumed.CaptureCheckpoint(), [], false, false));
+
+    /// <summary>从检查点恢复容器的内容版本与已消费版本。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+        if (checkpoint is not ContainerNodeCheckpoint state)
+        {
+            throw new ArgumentException($"容器 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+        }
+
+        RestoreLastInputGroup(state.Common.LastInputGroup);
+        _consumed.RestoreCheckpoint(state.Common.Consumed);
+        _revision = (int)state.Common.Revision;
+    }
 
     /// <summary>按输出端口取单段文本：动态端口按绑定转发成员产出。常量端口由静态解析读取，不进入运行时。</summary>
     public override string? PortText(INodeContext context, PortName port) =>

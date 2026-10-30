@@ -32,9 +32,10 @@ public sealed class TaskDomainTests
         TaskId id = environment.Submit("修复登录超时");
 
         Assert.False(reply.IsError);
-        Assert.Equal(1, id.Value);
-        string created = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
-        Assert.Equal("0001-默认-修复登录超时", Path.GetFileName(created));
+        Assert.Equal(new TaskId(1), id);
+        string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
+        string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".checkpoints");
+        Assert.Equal($"{id.Value}-默认-修复登录超时", Path.GetFileName(created));
     }
 
     [Fact]
@@ -59,12 +60,12 @@ public sealed class TaskDomainTests
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
-        int cleared = environment.Registry.ClearSettled();
+        IReadOnlyList<TaskId> cleared = environment.Registry.ClearSettled();
         ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
 
         Assert.False(first.IsError);
         Assert.False(second.IsError);
-        Assert.Equal(0, cleared);
+        Assert.Empty(cleared);
         Assert.Equal(2, environment.Runner.Started.Count);
     }
 
@@ -101,7 +102,7 @@ public sealed class TaskDomainTests
 
         Assert.False(first.IsError);
         Assert.False(second.IsError);
-        Assert.Equal(1, id.Value);
+        Assert.Equal(new TaskId(1), id);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(2, environment.Runner.Started.Count(execution => execution.Input.Node.Label.Value == "回话"));
     }

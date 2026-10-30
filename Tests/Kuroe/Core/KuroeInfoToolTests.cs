@@ -27,7 +27,7 @@ public sealed class KuroeInfoToolTests : IDisposable
         TaskKuroeInfoTool tool = new(environment.Registry);
         string output = Call(tool, "ListTasks");
 
-        Assert.Contains($"#{id.Value}", output);
+        Assert.Contains($"#{id.Short}", output);
         Assert.Contains("写一段百字以内的欢迎致辞", output);
     }
 
@@ -64,14 +64,14 @@ public sealed class KuroeInfoToolTests : IDisposable
         TaskKuroeInfoTool tool = new(environment.Registry);
         string output = Call(tool, "GetTask", ("taskId", id.Value.ToString()));
 
-        Assert.Contains($"#{id.Value}", output);
+        Assert.Contains($"#{id.Short}", output);
         Assert.Contains("写一段百字以内的欢迎致辞", output);
         Assert.Contains("输入 目标：", output);
     }
 
     [Theory]
-    [InlineData("x", "任务号要写成数字")]
-    [InlineData("99", "没有任务 #99")]
+    [InlineData("x", "没有任务 x")]
+    [InlineData("99", "没有任务 99")]
     public void GetTask_rejects_bad_arguments(string taskId, string expected)
     {
         using TestEnvironment environment = TestEnvironment.Create();

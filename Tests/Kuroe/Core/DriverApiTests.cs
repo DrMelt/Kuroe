@@ -18,7 +18,7 @@ public sealed class DriverApiTests
         environment.Tasks.Rename(id, "文档补齐").ThrowIfError();
 
         Assert.Equal("文档补齐", environment.Snapshot(id).Title);
-        Assert.Equal(1, environment.Registry.ClearSettled());
+        Assert.Single(environment.Registry.ClearSettled());
         Assert.Empty(environment.Registry.Snapshots());
     }
 

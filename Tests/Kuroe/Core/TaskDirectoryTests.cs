@@ -7,70 +7,79 @@ using Xunit;
 
 namespace Kuroe.Tests;
 
-/// <summary>任务工作目录的命名、续号与建立时机。</summary>
+/// <summary>任务工作目录的命名与建立。</summary>
 public sealed class TaskDirectoryTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Prepare_names_the_directory_with_task_number_flow_and_title()
+    public void Prepare_names_the_directory_with_task_key_flow_and_title()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
+        TaskId id = new(3);
 
-        string prepared = directory.Prepare(new TaskId(3), new FlowName("审阅"), "修复登录超时").ThrowIfError();
+        string prepared = directory.Prepare(id, new FlowName("审阅"), "修复登录超时").ThrowIfError();
 
         string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal("0003-审阅-修复登录超时", Path.GetFileName(created));
+        Assert.Equal($"{id.Value}-审阅-修复登录超时", Path.GetFileName(created));
         Assert.Equal(created, prepared);
+        Assert.Single(Directory.GetDirectories(_root, $"{id.Value}-*"));
     }
 
     [Fact]
     public void Invalid_characters_are_replaced_and_the_flow_segment_keeps_no_hyphen()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
+        TaskId id = new(7);
 
-        directory.Prepare(new TaskId(7), new FlowName("合/同-审阅"), "修复: 登录?").ThrowIfError();
+        directory.Prepare(id, new FlowName("合/同-审阅"), "修复: 登录?").ThrowIfError();
 
         string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal("0007-合_同_审阅-修复_ 登录", Path.GetFileName(created));
+        Assert.Equal($"{id.Value}-合_同_审阅-修复_ 登录", Path.GetFileName(created));
     }
 
     [Fact]
     public void Title_segment_keeps_hyphens()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
+        TaskId id = new(1);
 
-        directory.Prepare(new TaskId(1), new FlowName("默认"), "修复-a-b").ThrowIfError();
+        directory.Prepare(id, new FlowName("默认"), "修复-a-b").ThrowIfError();
 
         string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal("0001-默认-修复-a-b", Path.GetFileName(created));
+        Assert.Equal($"{id.Value}-默认-修复-a-b", Path.GetFileName(created));
     }
 
     [Fact]
     public void Segments_are_truncated_by_character_without_splitting_surrogates()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
+        TaskId id = new(1);
         string flow = new('流', 25);
         string title = new string('目', 39) + "😀" + new string('后', 5);
 
-        directory.Prepare(new TaskId(1), new FlowName(flow), title).ThrowIfError();
+        directory.Prepare(id, new FlowName(flow), title).ThrowIfError();
 
         string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal($"0001-{new string('流', 20)}-{new string('目', 39)}😀", Path.GetFileName(created));
+        Assert.Equal($"{id.Value}-{new string('流', 20)}-{new string('目', 39)}😀", Path.GetFileName(created));
     }
 
     [Fact]
-    public void Existing_task_numbers_give_the_next_number()
+    public void Old_numbered_directories_are_ignored()
     {
         Directory.CreateDirectory(_root);
         Directory.CreateDirectory(Path.Combine(_root, "0002-审阅-甲"));
         Directory.CreateDirectory(Path.Combine(_root, "0010-审阅-乙"));
-        Directory.CreateDirectory(Path.Combine(_root, "0001"));
-        Directory.CreateDirectory(Path.Combine(_root, "说明"));
 
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
+        TaskId id = new(5);
 
-        Assert.Equal(11, directory.NextTaskNumber);
+        string prepared = directory.Prepare(id, new FlowName("默认"), "目标").ThrowIfError();
+
+        Assert.Equal(Path.Combine(_root, $"{id.Value}-默认-目标"), prepared);
+        Assert.Equal(3, Directory.GetDirectories(_root).Length);
+        Assert.Null(directory.Find(new TaskId(999)));
+        Assert.Equal(prepared, directory.Find(id));
     }
 
     [Fact]
@@ -108,13 +117,14 @@ public sealed class TaskDirectoryTests : IDisposable
 
         TaskId id = environment.Submit("修复登录超时");
 
-        string created = Assert.Single(Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")));
-        Assert.Equal("0001-默认-修复登录超时", Path.GetFileName(created));
-        Assert.Equal(1, id.Value);
+        string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
+        string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".checkpoints");
+        Assert.Equal($"{id.Value}-默认-修复登录超时", Path.GetFileName(created));
+        Assert.Equal(new TaskId(1), id);
     }
 
     [Fact]
-    public void An_occupied_task_number_moves_to_the_next_free_number()
+    public void Old_task_directories_do_not_affect_a_new_submission()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
@@ -122,8 +132,8 @@ public sealed class TaskDirectoryTests : IDisposable
 
         TaskId id = environment.Submit("修复登录超时");
 
-        Assert.Equal(2, id.Value);
-        Assert.Equal(2, Directory.GetDirectories(tasks).Length);
+        Assert.Equal(2, Directory.GetDirectories(tasks).Count(path => Path.GetFileName(path) != ".checkpoints"));
+        Assert.NotNull(Directory.GetDirectories(tasks, $"{id.Value}-*").FirstOrDefault());
     }
 
     [Fact]

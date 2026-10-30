@@ -34,7 +34,7 @@ internal static class ViewLabels
     {
         TaskState.Done => Styles.Success,
         TaskState.Running => Styles.Key,
-        TaskState.Blocked => Styles.Warning,
+        TaskState.Blocked or TaskState.Paused => Styles.Warning,
         _ => Styles.Hint,
     };
 

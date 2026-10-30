@@ -39,6 +39,9 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState
     /// <summary>记下本次激活使用的输入侧组序号。</summary>
     public void RecordInputGroup(int group) => LastInputGroup = group;
 
+    /// <summary>恢复上一次激活使用的输入侧组序号。</summary>
+    protected void RestoreLastInputGroup(int? group) => LastInputGroup = group;
+
     /// <summary>节点被激活：派发型节点由引擎按就绪条件启动执行，其余类型消费引擎装入的输入。</summary>
     public virtual void Activate(INodeContext context, NodeInputValues inputs)
     {

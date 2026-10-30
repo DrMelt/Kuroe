@@ -58,7 +58,7 @@ internal sealed class CliSession : IAsyncDisposable
         var services = new ServiceCollection();
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
             paths.Value,
-            new KuroeCoreOptions { AllowFlowFailures = true });
+            new KuroeCoreOptions { AllowFlowFailures = true, PersistTasks = false });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
@@ -82,7 +82,7 @@ internal sealed class CliSession : IAsyncDisposable
         return new CliSession(provider);
     }
 
-    /// <summary>取消全部任务并等待收口，随后释放容器。</summary>
+    /// <summary>中断全部任务并等待收口，随后释放容器。</summary>
     public async ValueTask DisposeAsync()
     {
         try

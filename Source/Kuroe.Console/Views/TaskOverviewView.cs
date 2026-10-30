@@ -20,6 +20,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
         [
             .. task.Inputs.Values.Select(input => ($"输入 {input.Port}", (IRenderable)new Text(input.Text))),
             ("流程", new Text(task.Flow.Name.Value)),
+            ("任务键", new Text(task.Id.Value, Styles.Hint)),
             ("状态", new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State))),
             ("创建时间", new Text(ViewLabels.Clock(task.CreatedAt), Styles.Hint)),
             ("最近活动", new Text(ViewLabels.Clock(task.LastActivityAt), Styles.Hint)),

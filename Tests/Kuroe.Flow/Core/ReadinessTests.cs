@@ -1,3 +1,4 @@
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -220,6 +221,12 @@ public sealed class ReadinessTests
         }
 
         public void Record(NodeInputPlan plan, IReadinessSources sources) => Recorded = plan;
+
+        public IReadOnlyList<ConsumedRevisionCheckpoint> CaptureCheckpoint() => [];
+
+        public void RestoreCheckpoint(IReadOnlyList<ConsumedRevisionCheckpoint> consumed)
+        {
+        }
     }
 
     /// <summary>判定用的来源侧：按节点路径给出放行状态与版本，未登记时建一个未放行的。</summary>

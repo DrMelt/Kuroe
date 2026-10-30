@@ -90,9 +90,16 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
     {
         TaskSnapshot snapshot = await WaitAsync(task.Id);
         output.EnsureLine();
-        if (snapshot.State == TaskState.Canceled)
+        if (snapshot.State == TaskState.Terminated)
         {
-            output.ErrorLine($"任务 {task.Id} 已取消。");
+            output.ErrorLine($"任务 {task.Id} 已终止。");
+
+            return ExitCodes.Failure;
+        }
+
+        if (snapshot.State == TaskState.Paused)
+        {
+            output.ErrorLine($"任务 {task.Id} 已暂停。");
 
             return ExitCodes.Failure;
         }
@@ -123,7 +130,7 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
 
             TaskSnapshot snapshot = found.Value.Snapshot();
             if (snapshot.LiveExecutions == 0
-                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Canceled)
+                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
             {
                 return snapshot;
             }

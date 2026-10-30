@@ -34,7 +34,7 @@ public sealed class TaskKuroeInfoTool : ITool
     private static readonly ToolDefinition GetTask = new(
         new ToolPath("KuroeInfo/GetTask"),
         "查看指定用户任务的详情：目标、流程、执行节点状态与执行列表。",
-        [new ToolParameter(new ToolName("taskId"), "要查看的任务号", Required: true)]);
+        [new ToolParameter(new ToolName("taskId"), "要查看的任务键，可用完整键或末尾 8 位", Required: true)]);
 
     /// <summary>查看执行详情的函数定义。</summary>
     private static readonly ToolDefinition GetExecution = new(
@@ -67,7 +67,7 @@ public sealed class TaskKuroeInfoTool : ITool
         foreach (TaskSnapshot task in tasks)
         {
             int total = task.Executables.Sum(node => node.Executions.Count);
-            text.AppendLine($"#{task.Id.Value} · {task.Title} · {InfoLabels.Of(task.State)}"
+            text.AppendLine($"#{task.Id.Short} · {task.Title} · {InfoLabels.Of(task.State)}"
                 + $" · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
                 + $" · {task.LiveExecutions} 个执行在跑 / {total} 已派"
                 + $" · 最近 {InfoLabels.Clock(task.LastActivityAt)}");
@@ -80,12 +80,12 @@ public sealed class TaskKuroeInfoTool : ITool
     private ErrorOr<string> ShowTask(ToolArguments arguments)
     {
         string? text = arguments.Text(new ToolName("taskId"));
-        if (text is null || !int.TryParse(text, out int id) || id <= 0)
+        if (string.IsNullOrWhiteSpace(text))
         {
-            return ToolErrors.Argument($"任务号要写成数字，收到 {text ?? "空"}。");
+            return ToolErrors.Argument("任务号不能为空。");
         }
 
-        ErrorOr<WorkTask> found = _registry.Find(new TaskId(id));
+        ErrorOr<WorkTask> found = _registry.FindByReference(text.Trim());
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
@@ -123,7 +123,7 @@ public sealed class TaskKuroeInfoTool : ITool
     private static string DescribeTask(TaskSnapshot task)
     {
         var text = new StringBuilder();
-        text.AppendLine($"{task.Id} · {task.Title} · 状态：{InfoLabels.Of(task.State)}");
+        text.AppendLine($"#{task.Id.Short} · {task.Title} · 状态：{InfoLabels.Of(task.State)}");
         foreach (StartInput input in task.Inputs.Values)
         {
             text.AppendLine($"输入 {input.Port}：{input.Text}");

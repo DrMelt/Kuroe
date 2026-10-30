@@ -35,7 +35,7 @@ public sealed class ConcurrencyTests
             Assert.Equal(2, done.Executables.Sum(node => node.Executions.Count));
         }
 
-        Assert.Equal(3, environment.Registry.ClearSettled());
+        Assert.Equal(3, environment.Registry.ClearSettled().Count);
     }
 
     /// <summary>两个并行执行节点同取开始入口，可同时在跑。</summary>

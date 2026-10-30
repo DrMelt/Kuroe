@@ -56,6 +56,17 @@ internal sealed class Journal
         }
     }
 
+    /// <summary>从检查点恢复记录与已丢弃条数，覆盖现有记录。</summary>
+    public void Restore(IReadOnlyList<JournalEntry> entries, int dropped)
+    {
+        lock (_gate)
+        {
+            _entries.Clear();
+            _entries.AddRange(entries);
+            _dropped = dropped;
+        }
+    }
+
     /// <summary>要求持有 <see cref="_gate"/>。</summary>
     private void AppendCore(JournalEntry entry)
     {

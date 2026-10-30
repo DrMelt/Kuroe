@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -13,7 +14,7 @@ namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>按图驱动的执行推进：激活、发布、返工与会合。节点状态在运行时节点对象上，这里是图算法面。
 /// 启动条件按节点输入侧方案一处判定，来源侧读数不创建节点。所有方法都要求调用者持有所属任务的 Gate。</summary>
-internal sealed class TaskRuntime : INodeContext
+internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
 {
     private readonly WorkTask _task;
     private readonly NodeMaterializer _materializer;
@@ -58,6 +59,19 @@ internal sealed class TaskRuntime : INodeContext
 
     /// <summary>某节点的输入侧方案，开始与不参与就绪判定的节点为空。</summary>
     public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);
+
+    /// <summary>按检查点恢复节点状态。容器先于成员恢复，路径深度升序。</summary>
+    internal void Restore(IReadOnlyList<NodeCheckpoint> nodes)
+    {
+        foreach (NodeCheckpoint checkpoint in nodes.OrderBy(node => node.Path.Depth))
+        {
+            ((INodeCheckpointSource)this[checkpoint.Path]).RestoreCheckpoint(checkpoint, this);
+        }
+    }
+
+    /// <summary>按执行号取已恢复的执行，节点恢复已发布产出时使用。</summary>
+    IExecution? INodeRestoreContext.Execution(ExecutionId id) =>
+        _task.Executions.FirstOrDefault(execution => execution.Id == id);
 
     /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
     public NodeRuntime Runtime(NodePath node) => this[node];

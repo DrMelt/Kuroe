@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json.Shared;
-using Kuroe.Storage;
+using Kuroe.Flow.Persistence.FileSystem;
 
 namespace Kuroe.Workflows.Flows.Files;
 
@@ -64,6 +64,12 @@ sealed class FlowStore(string file, string baseDirectory, IFlowFormatReader read
             return [FlowFileErrors.Write(_file, ex.Message)];
         }
     }
+
+    /// <summary>把描述文档写成文本，不落盘。检查点快照使用。</summary>
+    public ErrorOr<string> Render(FlowDocument document) => writer.Write(document);
+
+    /// <summary>从文本读出描述文档，不落盘。检查点编译使用。</summary>
+    public ErrorOr<FlowDocument> ReadText(string text) => reader.Read(text);
 
     /// <summary>从指定文件读取描述文档，供导入使用。</summary>
     public ErrorOr<FlowDocument> Read(string path)

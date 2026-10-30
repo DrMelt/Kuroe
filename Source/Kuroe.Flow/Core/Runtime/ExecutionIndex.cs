@@ -23,6 +23,16 @@ public sealed class ExecutionIndex
         }
     }
 
+    /// <summary>登记一个从检查点恢复的执行，推进下一次执行号。</summary>
+    internal void Restore(WorkTask owner, Execution execution)
+    {
+        lock (_gate)
+        {
+            _entries[execution.Id] = new Entry(execution, owner);
+            _nextExecution = Math.Max(_nextExecution, execution.Id.Value + 1);
+        }
+    }
+
     /// <summary>按执行号取执行，不存在时返回错误。</summary>
     public ErrorOr<Execution> Find(ExecutionId id)
     {

@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\..\Kuroe.Flow\Persistence\Shared\Kuroe.Flow.Persistence.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />

@@ -56,9 +56,14 @@ public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, II
         WorkTask task = found.Value;
         ErrorOr<List<NodePath>> accepted = task.UnderLock<ErrorOr<List<NodePath>>>(() =>
         {
-            if (task.State is TaskState.Canceled)
+            if (task.Lifecycle == TaskLifecycle.Terminated)
             {
-                return [PendingErrors.Canceled(id, kind)];
+                return [PendingErrors.Terminated(id, kind)];
+            }
+
+            if (task.Lifecycle == TaskLifecycle.Paused)
+            {
+                return [PendingErrors.Paused(id, kind)];
             }
 
             List<NodePath> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind).Select(entry => entry.Node)];
@@ -96,7 +101,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, II
             return accepted.ErrorsOrEmptyList;
         }
 
-        runner.Resume(task, accepted.Value);
+        runner.Advance(task, accepted.Value);
 
         return Result.Success;
     }

@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
     </ItemGroup>
 
 </Project>

@@ -79,7 +79,7 @@ public sealed class DialogueHost(
             }
         }
 
-        // 被替换的旧任务先停止，转为已取消后随 ClearSettled 清出任务域
+        // 被替换的旧任务先终止，随 ClearSettled 清出任务域
         if (replaced is { } staleTask)
         {
             actions.StopTask(staleTask);

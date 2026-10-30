@@ -1,11 +1,15 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Approval;
@@ -15,9 +19,9 @@ namespace Kuroe.Node.Approval;
 internal sealed class ApprovalRuntime(
     ExecutableNode executable,
     IInputChannel channel,
-    INodeContext context,
+    INodeContext nodeContext,
     IConsumedRevisionStore? consumed = null)
-    : NodeRuntime(executable), IInputProgress
+    : RuntimeNode(executable), IInputProgress
 {
     /// <summary>停驻时装入的输入，放行后按同名输出端口放出。</summary>
     private NodeInputValues _inputs = NodeInputValues.Empty;
@@ -44,7 +48,7 @@ internal sealed class ApprovalRuntime(
     {
         _canceled = true;
         _awaiting = false;
-        channel.Decline(context, Path);
+        channel.Decline(nodeContext, Path);
     }
 
     long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
@@ -85,6 +89,65 @@ internal sealed class ApprovalRuntime(
 
     /// <summary>按输出端口放出停驻时记录的触发值，未放行时按触发处理。</summary>
     public override bool Triggers(PortName port) => !Released || _inputs.Triggers(port);
+
+    /// <summary>捕获停驻输入、待批准状态与放行代数。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() =>
+        new ApprovalNodeCheckpoint(
+            Path,
+            new NodeCommonCheckpoint(Revision, LastInputGroup, _consumed.CaptureCheckpoint(), [], false, false),
+            new NodeInputValuesCheckpoint(
+                [
+                    .. _inputs.Ordered.Select(item => new NodeInputValueCheckpoint(
+                        item.TargetInput,
+                        item.Type.Name,
+                        new InputValueCheckpoint(
+                            item.TargetInput,
+                            CheckpointSources.Write(item.Value.Origin),
+                            item.Value.Text))),
+                ],
+                [.. _inputs.Texts.Keys],
+                _inputs.Texts.Keys.ToDictionary(port => port, port => _inputs.Triggers(port)),
+                new Dictionary<PortName, string>(_inputs.StaticTexts.Texts)),
+            _awaiting);
+
+    /// <summary>恢复停驻输入与待批准状态，待批准节点重新声明接收外部输入。</summary>
+    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    {
+        if (checkpoint is not ApprovalNodeCheckpoint state)
+        {
+            throw new ArgumentException($"审批节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+        }
+
+        RestoreLastInputGroup(state.Common.LastInputGroup);
+        _consumed.RestoreCheckpoint(state.Common.Consumed);
+        _revision = state.Common.Revision;
+        _awaiting = state.Awaiting;
+        _inputs = ReadInputs(state.Inputs);
+        if (_awaiting && !_canceled)
+        {
+            channel.Accept(nodeContext, Path, _ => Approve());
+        }
+    }
+
+    /// <summary>从检查点重建停驻输入。</summary>
+    private NodeInputValues ReadInputs(NodeInputValuesCheckpoint state)
+    {
+        List<NodeInputValue> ordered = [];
+        foreach (NodeInputValueCheckpoint item in state.Ordered)
+        {
+            PortType type = executable.FindInput(item.Target)?.Type ?? PortTypes.Text;
+            ordered.Add(new NodeInputValue(
+                item.Target,
+                type,
+                new ContextValue(CheckpointSources.Read(item.Value.Origin), item.Value.Text)));
+        }
+
+        return new NodeInputValues(
+            ordered,
+            state.Connected.ToHashSet(),
+            state.Triggers,
+            new PortTexts(state.StaticTexts));
+    }
 
     /// <summary>审批节点在快照里的一刻状态。</summary>
     public override ExecutableStateSnapshot Snapshot() => new(Path, State);

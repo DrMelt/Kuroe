@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shared\Kuroe.Flow.Persistence.Shared.csproj" />
+        <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

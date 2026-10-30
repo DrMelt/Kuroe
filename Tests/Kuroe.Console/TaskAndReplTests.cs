@@ -20,7 +20,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Submit(new FlowName("默认"), "补齐 README");
 
-        Assert.Contains("已提交 任务 #1", cli.Output.Output);
+        Assert.Contains("已提交 任务 00000001", cli.Output.Output);
         Assert.Single(cli.Environment.Registry.Snapshots());
     }
 
@@ -62,7 +62,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("plain", blocks[3]);
         Assert.Contains("readme", blocks[4]);
         Assert.Contains("plain", blocks[4]);
-        Assert.Contains("已提交 任务 #1", output);
+        Assert.Contains("已提交 任务 00000001", output);
         TaskSnapshot task = cli.Environment.Snapshot(new TaskId(1));
         Assert.Equal(["readme", "plain"], task.Inputs.Values.Select(input => input.Text));
     }
@@ -89,7 +89,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("固定", output);
         Assert.Contains("风格", output);
         Assert.Contains("简洁", output);
-        Assert.Contains("已提交 任务 #1", output);
+        Assert.Contains("已提交 任务 00000001", output);
         Assert.Equal("readme", cli.Environment.Snapshot(new TaskId(1)).Inputs.Values.Single().Text);
     }
 
@@ -154,7 +154,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.ShowJournal(new TaskId(1));
 
         Assert.Contains("过程记录", cli.Output.Output);
-        Assert.Contains("── 主菜单 › 任务 › 任务 #1 目标 › 过程记录", cli.Output.Output);
+        Assert.Contains("── 主菜单 › 任务 › 任务 00000001 目标 › 过程记录", cli.Output.Output);
         Assert.Contains("← 返回上一级", cli.Output.Output);
         Assert.DoesNotContain("├", cli.Output.Output);
     }
@@ -169,7 +169,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.ShowTree(new TaskId(1));
 
-        Assert.Contains("── 主菜单 › 任务 › 任务 #1 目标 › 节点树", cli.Output.Output);
+        Assert.Contains("── 主菜单 › 任务 › 任务 00000001 目标 › 节点树", cli.Output.Output);
         Assert.Contains("← 返回上一级", cli.Output.Output);
         Assert.Contains("├", cli.Output.Output);
     }
@@ -206,14 +206,14 @@ public sealed partial class TaskAndReplTests
 
         string output = cli.Output.Output;
         Assert.Contains("任务 1 个", output);
-        Assert.Contains("── 主菜单 › 任务 › 任务 #1 目标 ", output);
+        Assert.Contains("── 主菜单 › 任务 › 任务 00000001 目标 ", output);
         Assert.Contains("查看节点树", output);
         Assert.DoesNotContain("├", output);
 
         int menu = output.IndexOf("选择任务", StringComparison.Ordinal);
         Assert.True(
             menu >= 0
-            && output.IndexOf("~ 刷新", menu, StringComparison.Ordinal) < output.IndexOf("#1 目标 · ", menu, StringComparison.Ordinal),
+            && output.IndexOf("~ 刷新", menu, StringComparison.Ordinal) < output.IndexOf("#00000001 目标 · ", menu, StringComparison.Ordinal),
             output);
     }
 
@@ -239,7 +239,7 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("概要", cli.Output.Output);
 
         string[] taskPages = [.. cli.Output.Output.Replace("\r", string.Empty).Split('\n')
-            .Where(line => line.StartsWith("── 主菜单 › 任务 › 任务 #1 目标 ", StringComparison.Ordinal))
+            .Where(line => line.StartsWith("── 主菜单 › 任务 › 任务 00000001 目标 ", StringComparison.Ordinal))
             .Where(line => !line.Contains("› 执行 #1", StringComparison.Ordinal))];
         Assert.Equal(2, taskPages.Length);
     }
@@ -268,8 +268,8 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Browse();
 
-        Assert.Contains("取消任务 #1？", cli.Output.Output);
-        Assert.Contains("确认取消整个任务", cli.Output.Output);
+        Assert.Contains("终止任务 00000001？", cli.Output.Output);
+        Assert.Contains("确认终止整个任务", cli.Output.Output);
         Assert.Equal(TaskState.Running, cli.Environment.Snapshot(new TaskId(1)).State);
 
         cli.Tasks.StopTask(new TaskId(1));
@@ -300,8 +300,8 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Browse();
 
-        Assert.Contains("确认取消整个任务", cli.Output.Output);
-        Assert.Equal(TaskState.Canceled, cli.Environment.Snapshot(new TaskId(1)).State);
+        Assert.Contains("确认终止整个任务", cli.Output.Output);
+        Assert.Equal(TaskState.Terminated, cli.Environment.Snapshot(new TaskId(1)).State);
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Browse();
 
-        Assert.Contains("已提交 任务 #1", cli.Output.Output);
+        Assert.Contains("已提交 任务 00000001", cli.Output.Output);
         Assert.Equal("menu-submit", Assert.Single(cli.Environment.Registry.Snapshots()).Title);
     }
 
@@ -381,7 +381,7 @@ public sealed partial class TaskAndReplTests
 
         string row = cli.Output.Output
             .Split('\n')
-            .Last(line => line.Contains("#1 ") && MyRegex().IsMatch(line));
+            .Last(line => line.Contains("#00000001 ") && MyRegex().IsMatch(line));
         Assert.Contains("待处理", cli.Output.Output);
         Assert.Matches(@"执行中\s+1\s+\d{2}:\d{2}:\d{2}", row);
         Assert.DoesNotContain("整体/审阅", cli.Output.Output);
@@ -443,7 +443,7 @@ public sealed partial class TaskAndReplTests
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(TaskState.Running, parked.State);
-        Assert.Contains("任务 #1 已批准，继续下一步。", cli.Output.Output);
+        Assert.Contains("任务 00000001 已批准，继续下一步。", cli.Output.Output);
     }
 
     [Fact]
@@ -507,7 +507,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Answer(new TaskId(1), null, "补充多语言");
 
-        Assert.Contains("任务 #1 已收到回答，继续下一步。", cli.Output.Output);
+        Assert.Contains("任务 00000001 已收到回答，继续下一步。", cli.Output.Output);
     }
 
     [Fact]
@@ -532,11 +532,11 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Rework(new TaskId(1));
 
-        Assert.Contains("任务 #1 已返工。", cli.Output.Output);
+        Assert.Contains("任务 00000001 已返工。", cli.Output.Output);
     }
 
     [Fact]
-    public void Task_stop_cancels_the_task()
+    public void Task_stop_terminates_the_task()
     {
         using ConsoleSession cli = new();
         cli.Environment.Runner.DelayMs = 20000;
@@ -545,9 +545,42 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.StopTask(new TaskId(1));
 
-        Assert.Contains("任务 #1 已取消。", cli.Output.Output);
-        Assert.Equal(TaskState.Canceled, cli.Environment.Snapshot(new TaskId(1)).State);
+        Assert.Contains("任务 00000001 已终止。", cli.Output.Output);
+        Assert.Equal(TaskState.Terminated, cli.Environment.Snapshot(new TaskId(1)).State);
     }
+
+    [Fact]
+    public void Task_browser_offers_pause_then_resume()
+    {
+        using ConsoleSession cli = new();
+        cli.Environment.Runner.DelayMs = 20000;
+        cli.Tasks.Submit(new FlowName("默认"), "长任务");
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
+
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Tasks.Browse();
+
+        Assert.Contains("暂停任务", cli.Output.Output);
+
+        cli.Tasks.Pause(new TaskId(1));
+        cli.Environment.Wait(new TaskId(1), snapshot => snapshot.State == TaskState.Paused);
+
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+        cli.Output.Input.PushKey(ConsoleKey.End);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Tasks.Browse();
+
+        Assert.Contains("恢复任务", cli.Output.Output);
+
+        cli.Tasks.StopTask(new TaskId(1));
+    }
+
 
     [Fact]
     public void Task_stop_execution_cancels_a_single_execution()
@@ -584,7 +617,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.StopTask(new TaskId(1));
 
         Assert.False(reply.IsError);
-        Assert.Contains("没有任务 #1", cli.ErrorsOut.Output);
+        Assert.Contains("没有任务 00000001", cli.ErrorsOut.Output);
     }
 
     [Fact]
@@ -703,7 +736,7 @@ public sealed partial class TaskAndReplTests
 
         await cli.Repl.RunAsync();
 
-        Assert.Contains("退出并取消全部任务？", cli.Output.Output);
+        Assert.Contains("退出程序？未完成的任务会保存为暂停", cli.Output.Output);
         Assert.Contains("← 返回主菜单", cli.Output.Output);
         Assert.Contains("× 确认退出", cli.Output.Output);
     }

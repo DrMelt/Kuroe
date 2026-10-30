@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -11,7 +12,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Engine;
 
 /// <summary>一个任务的推进循环：激活目标去重入队后逐个评估，执行异步派发不阻塞循环，
-/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与返工意图经 Resume 与 Rework 从这里入队重新评估，
+/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与返工意图经 Advance 与 Rework 从这里入队重新评估，
 /// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
 internal sealed class TaskDriver(
     WorkTask task,
@@ -21,9 +22,11 @@ internal sealed class TaskDriver(
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
     private readonly HashSet<NodePath> _queued = [];
+    private readonly HashSet<NodePath> _processing = [];
     private TaskCompletionSource? _signal;
     private int _inflight;
     private bool _stop;
+    private int _resumeVersion;
 
     /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
     public Task Loop { get; private set; } = Task.CompletedTask;
@@ -41,10 +44,28 @@ internal sealed class TaskDriver(
         Loop = Task.Run(RunAsync);
     }
 
+    /// <summary>从检查点启动推进循环：调度种子入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
+    public void Restore(IReadOnlyList<NodePath> seed)
+    {
+        Enqueue(seed);
+        Loop = Task.Run(RunAsync);
+    }
+
     /// <summary>产出已变的目标入队，由推进循环重新评估。</summary>
-    public void Resume(IReadOnlyList<NodePath> targets)
+    public void Advance(IReadOnlyList<NodePath> targets)
     {
         Enqueue(targets);
+    }
+
+    /// <summary>此刻尚未处理的目标：排队中、已入队未取批与正在评估的节点，按首次出现顺序去重。</summary>
+    public SchedulerSeed CaptureSeed()
+    {
+        lock (_gate)
+        {
+            List<NodePath> targets = [.. _pending, .. _queued, .. _processing];
+
+            return new SchedulerSeed([.. targets.Distinct()]);
+        }
     }
 
     /// <summary>返工语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
@@ -53,23 +74,80 @@ internal sealed class TaskDriver(
         Enqueue(targets.Select(target => target.Node));
     }
 
-    /// <summary>停止推进循环：取消任务停掉全部执行，唤醒挂起点后主循环按停止位退出。</summary>
-    public void Stop()
+    /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
+    public void Pause()
     {
+        foreach (Execution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
+        {
+            execution.Interrupt("任务已暂停。");
+        }
+    }
+
+    /// <summary>恢复推进：唤醒推进循环重新取待处理目标。要求持有任务 Gate。</summary>
+    public void ResumeTask()
+    {
+        lock (_gate)
+        {
+            _resumeVersion++;
+            _signal?.TrySetResult();
+        }
+    }
+
+    /// <summary>任务当前是否暂停。暂停状态只在任务对象上，推进器只读它。</summary>
+    private bool IsPaused() => task.UnderLock(() => task.Lifecycle == TaskLifecycle.Paused);
+
+    /// <summary>终止任务：取消任务状态与在跑的执行，唤醒挂起点后主循环按停止位退出。要求持有任务 Gate。</summary>
+    public ErrorOr<Success> Stop()
+    {
+        ErrorOr<Success> result;
         lock (task.Gate)
         {
-            task.Cancel();
+            result = task.Terminate();
+        }
+
+        if (result.IsError)
+        {
+            return result;
         }
 
         lock (_gate)
         {
             _stop = true;
+            _pending.Clear();
+            _queued.Clear();
+            _processing.Clear();
             _signal?.TrySetResult();
+        }
+
+        return result;
+    }
+
+    /// <summary>退出时中断推进：保留任务控制状态与节点状态，中断在跑的执行并让主循环退出。</summary>
+    public void InterruptForShutdown()
+    {
+        Execution[] live;
+        lock (task.Gate)
+        {
+            lock (_gate)
+            {
+                _stop = true;
+                _pending.Clear();
+                _queued.Clear();
+                _processing.Clear();
+                _signal?.TrySetResult();
+            }
+
+            live = [.. task.Executions.Where(execution => execution.IsLive)];
+        }
+
+        foreach (Execution execution in live)
+        {
+            execution.Interrupt("进程退出。");
         }
     }
 
     /// <summary>推进循环：取整批待激活节点逐个评估，执行异步派发不阻塞循环，新目标即时入队下一轮。
-    /// 队列空且无在途派发时按停止位与任务终态退出，否则挂起等信号。</summary>
+    /// 暂停时不取批，队列空且无在途派发时按停止位与任务终态退出，否则挂起等信号。</summary>
     private async Task RunAsync()
     {
         try
@@ -77,14 +155,19 @@ internal sealed class TaskDriver(
             while (true)
             {
                 List<NodePath> batch = [];
+                bool paused = IsPaused();
                 lock (_gate)
                 {
-                    while (_pending.TryDequeue(out NodePath node))
+                    if (!_stop && !paused)
                     {
-                        batch.Add(node);
-                    }
+                        while (_pending.TryDequeue(out NodePath node))
+                        {
+                            batch.Add(node);
+                            _processing.Add(node);
+                        }
 
-                    _queued.Clear();
+                        _queued.Clear();
+                    }
                 }
 
                 if (batch.Count > 0)
@@ -92,6 +175,10 @@ internal sealed class TaskDriver(
                     foreach (NodePath node in batch)
                     {
                         Activate(node);
+                        lock (_gate)
+                        {
+                            _processing.Remove(node);
+                        }
                     }
 
                     continue;
@@ -108,7 +195,7 @@ internal sealed class TaskDriver(
                     bool done;
                     lock (task.Gate)
                     {
-                        done = task.State is TaskState.Done or TaskState.Canceled;
+                        done = task.State is TaskState.Done or TaskState.Terminated;
                     }
 
                     lock (_gate)
@@ -122,32 +209,28 @@ internal sealed class TaskDriver(
                     break;
                 }
 
-                var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                bool recheck;
+                bool waiting = IsPaused() && !_stop;
+                int version;
                 lock (_gate)
                 {
-                    // 挂起判定与入队之间可能又有目标，队列非空则不去挂起重新取批。
-                    // 停止位单独不足挂起：在途执行仍多，收口回调会逐个唤醒，无需空转
-                    recheck = _pending.Count > 0;
-                    if (!recheck)
-                    {
-                        _signal = gate;
-                    }
+                    version = _resumeVersion;
                 }
 
-                if (recheck)
+                await WaitForSignalAsync(
+                        waiting
+                            ? () => _stop || _resumeVersion != version
+                            : () => _pending.Count > 0)
+                    .ConfigureAwait(false);
+            }
+
+            if (task.UnderLock(() => task.State == TaskState.Done))
+            {
+                lock (task.Gate)
                 {
-                    continue;
+                    task.MarkCompleted();
                 }
 
-                await gate.Task.ConfigureAwait(false);
-                lock (_gate)
-                {
-                    if (ReferenceEquals(_signal, gate))
-                    {
-                        _signal = null;
-                    }
-                }
+                task.NotifyCompleted();
             }
         }
         catch (Exception ex)
@@ -155,11 +238,61 @@ internal sealed class TaskDriver(
             task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的推进异常：{ex.Message}"));
         }
     }
+    /// <summary>挂起推进循环，直到给定条件在锁内成立或被信号唤醒。设置信号后再判定，避免判定与挂起之间丢唤醒。</summary>
+    private async Task WaitForSignalAsync(Func<bool> ready)
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool proceed;
+        lock (_gate)
+        {
+            _signal = gate;
+            proceed = ready();
+            if (proceed && ReferenceEquals(_signal, gate))
+            {
+                _signal = null;
+            }
+        }
+
+        if (proceed)
+        {
+            return;
+        }
+
+        await gate.Task.ConfigureAwait(false);
+        lock (_gate)
+        {
+            if (ReferenceEquals(_signal, gate))
+            {
+                _signal = null;
+            }
+        }
+    }
+
+
 
     /// <summary>一个节点收到评估意图：输入节点重新挂起等回答，审批节点按就绪停在待批准，其余按就绪条件启动一次执行。
     /// 启动的执行异步派发由收口回调处理，通知的下游即时入队。</summary>
     private void Activate(NodePath name)
     {
+        bool paused = IsPaused();
+        bool stopped;
+        lock (_gate)
+        {
+            stopped = _stop;
+        }
+
+        if (stopped)
+        {
+            return;
+        }
+
+        if (paused)
+        {
+            Enqueue([name]);
+
+            return;
+        }
+
         List<NodePath> notify = [];
         NodeRuntime node;
         NodeInputValues? inputs;
@@ -212,9 +345,10 @@ internal sealed class TaskDriver(
         {
             ExecutableNode executable = node.Executable;
             Execution? execution;
+            bool paused = false;
             lock (task.Gate)
             {
-                if (task.State == TaskState.Canceled)
+                if (task.Lifecycle == TaskLifecycle.Terminated)
                 {
                     node.ReleaseActive();
                     return;
@@ -234,11 +368,17 @@ internal sealed class TaskDriver(
                     task,
                     ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value));
                 task.Attach(execution);
+                paused = task.Lifecycle == TaskLifecycle.Paused;
             }
 
             if (execution is null)
             {
                 return;
+            }
+
+            if (paused)
+            {
+                execution.Interrupt("任务已暂停。");
             }
 
             try
@@ -289,18 +429,26 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>去重入队待激活的执行节点路径，评估幂等不会重复派发。</summary>
+    /// <summary>去重入队待激活的执行节点路径，评估幂等不会重复派发。暂停时不唤醒循环，恢复后统一取批。</summary>
     private void Enqueue(IEnumerable<NodePath> nodes)
     {
+        bool paused = IsPaused();
         bool shouldWake;
         lock (_gate)
         {
+            if (_stop)
+            {
+                return;
+            }
+
             shouldWake = false;
             foreach (NodePath node in nodes.Where(n => _queued.Add(n)))
             {
                 _pending.Enqueue(node);
                 shouldWake = true;
             }
+
+            shouldWake &= !paused;
         }
 
         if (shouldWake)

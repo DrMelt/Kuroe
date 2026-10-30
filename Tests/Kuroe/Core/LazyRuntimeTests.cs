@@ -83,7 +83,7 @@ public sealed class LazyRuntimeTests
         environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Tasks.StopTask(id).ThrowIfError();
-        environment.Wait(id, snapshot => snapshot.State == TaskState.Canceled);
+        environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         NodeRuntime late = task.Context.Runtime(task.Context.Graph.PathOf("实施"));
