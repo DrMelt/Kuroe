@@ -21,9 +21,9 @@ public sealed class StartPathsTests
               "Start": {
                 "Outputs": [
                   { "Name": "目标", "Type": "Text" },
-                  { "Name": "启动", "Type": "Text", "Static": true },
-                  { "Name": "流程", "Type": "Text", "Static": true },
-                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+                  { "Name": "启动", "Type": "Text", "Constant": true },
+                  { "Name": "流程", "Type": "Text", "Constant": true },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
                 ]
               },
               "HostStartInputs": {
@@ -103,8 +103,8 @@ public sealed class StartPathsTests
               "Name": "默认",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "任务目录", "Type": "Text", "Static": true },
-                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+                { "Name": "任务目录", "Type": "Text", "Constant": true },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
               ] },
               "HostStartInputs": { "任务目录": "TASK_WORK_PATH" },
               "Nodes": [

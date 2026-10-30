@@ -115,7 +115,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
@@ -155,7 +155,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
@@ -193,7 +193,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
@@ -234,7 +234,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
@@ -323,7 +323,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {
@@ -354,7 +354,7 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {

@@ -39,7 +39,7 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
               "Nodes": [
                 {

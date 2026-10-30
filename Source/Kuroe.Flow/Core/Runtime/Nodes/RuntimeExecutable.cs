@@ -193,15 +193,13 @@ internal sealed class RuntimeExecutable(
     /// <summary>承载触发的输出端口的最近一次产出是否触发下游，其余端口恒触发。</summary>
     public override bool Triggers(PortName port)
     {
-        if (Executable.FindPort(port) is not { Trigger: true })
-        {
-            return true;
-        }
+        PortValue? value = PublishedExecution is { } execution
+            && SubmittedPorts(execution.Id) is { } values
+            && values.TryGetValue(port, out PortValue found)
+                ? found
+                : null;
 
-        return PublishedExecution is not { } execution
-            || SubmittedPorts(execution.Id) is not { } values
-            || !values.TryGetValue(port, out PortValue value)
-            || value.Fires;
+        return TriggerRules.Output(Executable.FindPort(port), value);
     }
 
     /// <summary>来源执行输入侧取到的内容，按原出处给出。尚未产出时为空。</summary>

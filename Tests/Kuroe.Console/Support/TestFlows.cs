@@ -9,7 +9,7 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -32,7 +32,7 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -54,7 +54,7 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -92,7 +92,7 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "整体",
@@ -122,7 +122,7 @@ public static class TestFlows
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "风格", "Type": "Text", "Value": "简洁" },
-                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "实施",
@@ -165,7 +165,7 @@ public static class TestFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "整体",

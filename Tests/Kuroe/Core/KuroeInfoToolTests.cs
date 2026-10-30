@@ -202,8 +202,8 @@ public sealed class KuroeInfoToolTests : IDisposable
                   "Start": {
                     "Outputs": [
                       { "Name": "目标", "Type": "Text" },
-                      { "Name": "启动路径", "Type": "Text", "Static": true },
-                      { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+                      { "Name": "启动路径", "Type": "Text", "Constant": true },
+                      { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
                     ]
                   },
                   "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },

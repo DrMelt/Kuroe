@@ -116,23 +116,6 @@ public sealed partial class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_tree_view_prints_only_the_node_tree()
-    {
-        using ConsoleSession cli = new();
-        cli.Tasks.Submit(new FlowName("默认"), "补齐 README");
-        cli.Environment.Settle(new TaskId(1));
-
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
-
-        Assert.Contains("节点", output.Output);
-        Assert.DoesNotContain('┌', output.Output);
-        Assert.DoesNotContain("目标：", output.Output);
-        Assert.DoesNotContain("流程：", output.Output);
-        Assert.DoesNotContain("最近", output.Output);
-    }
-
-    [Fact]
     public void Task_overview_prints_the_executions()
     {
         using ConsoleSession cli = new();
@@ -204,21 +187,6 @@ public sealed partial class TaskAndReplTests
         Assert.Contains("├", output.Output);
         Assert.Contains("└", output.Output);
         Assert.Contains("待批准：确认计划", output.Output);
-    }
-
-    [Fact]
-    public void Task_tree_view_leaves_the_journal_out()
-    {
-        using ConsoleSession cli = new();
-        cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Settle(new TaskId(1));
-
-        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
-
-        Assert.Contains("节点", output.Output);
-        Assert.Contains("已完成", output.Output);
-        Assert.DoesNotContain("过程记录", output.Output);
     }
 
     [Fact]

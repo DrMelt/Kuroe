@@ -93,7 +93,13 @@ internal sealed class RuntimeContainer(
             : null;
 
     /// <summary>按输出端口配置转发成员端口的触发值：端口不承载触发、未放行或未声明来源时按触发处理。</summary>
-    public override bool Triggers(PortName port) =>
-        Container.FindPort(port) is not { Trigger: true }
-        || Released && DynamicMemberOf(port) is { } member && member.Node.Triggers(member.Port);
+    public override bool Triggers(PortName port)
+    {
+        if (Released && DynamicMemberOf(port) is { } member)
+        {
+            return TriggerRules.Container(Container.FindPort(port), true, member.Node.Triggers(member.Port));
+        }
+
+        return TriggerRules.Container(Container.FindPort(port), false, false);
+    }
 }

@@ -105,7 +105,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Start_port_label_includes_its_fixed_value()
     {
-        Port port = new(new PortName("风格"), PortTypes.Text, Value: "技术文档风格");
+        Port port = new(new PortName("风格"), PortTypes.Text, value: "技术文档风格");
 
         Assert.Equal("风格=技术文档风格", port.StartLabel());
     }

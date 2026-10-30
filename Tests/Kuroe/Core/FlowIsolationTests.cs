@@ -48,7 +48,7 @@ public sealed class FlowIsolationTests
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
         string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, TestFlowDocument.Normalize(Mixed));
+        File.WriteAllText(file, Mixed);
         try
         {
             NodeTypeDescriptionRegistry types = new();
@@ -71,7 +71,7 @@ public sealed class FlowIsolationTests
           "Flows": [
             {
               "Name": "可运行",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
               ]

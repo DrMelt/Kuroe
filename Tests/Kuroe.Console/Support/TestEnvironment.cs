@@ -68,7 +68,7 @@ public sealed class TestEnvironment : IDisposable
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Constant": true }] },
               "HostStartInputs": { "MODEL_NAME": "MODEL" },
               "Nodes": [
                 {
@@ -98,7 +98,7 @@ public sealed class TestEnvironment : IDisposable
         if (flowsText is not null)
         {
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
-            File.WriteAllText(paths.FlowsFile, LegacyFlow.Normalize(flowsText));
+            File.WriteAllText(paths.FlowsFile, flowsText);
         }
 
         var services = new ServiceCollection();

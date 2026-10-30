@@ -9,7 +9,7 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
               ]
@@ -24,7 +24,7 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "实施",
@@ -48,8 +48,8 @@ internal static class CliFlows
               "Start": {
                 "Outputs": [
                   { "Name": "目标", "Type": "Text" },
-                  { "Name": "启动路径", "Type": "Text", "Static": true },
-                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }
+                  { "Name": "启动路径", "Type": "Text", "Constant": true },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
                 ]
               },
               "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
@@ -73,7 +73,7 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 {
                   "Name": "实施",

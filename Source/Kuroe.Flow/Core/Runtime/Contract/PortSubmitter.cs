@@ -42,31 +42,16 @@ public sealed class PortSubmitter(ExecutionIndex executions)
         lock (task.Gate)
         {
             IReadOnlyList<Port> declared = task.Runtime.Executable(execution.Input.Node).Executable.RequiredPorts;
-            if (declared.Count == 0)
-            {
-                return Error.Validation("Tool.Argument", "该节点没有需要交回的输出端口。");
-            }
-
             RuntimeExecutable node = task.Runtime.Node(execution);
             if (node.SubmittedPorts(execution.Id) is not null)
             {
                 return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
             }
 
-            HashSet<PortName> expected = [.. declared.Select(port => port.Name)];
-            if (!expected.SetEquals(parsed.Keys))
+            ErrorOr<Success> valid = PortSubmissionRules.Validate(declared, parsed);
+            if (valid.IsError)
             {
-                return Error.Validation("Tool.Argument", $"端口必须与需交回的端口一一对应，应提交 {string.Join('、', expected)}。");
-            }
-
-            if (BlankTextPort(declared, parsed) is { } blank)
-            {
-                return [ContractErrors.Ports($"端口 {blank} 的产出为空")];
-            }
-
-            if (TriggerOnSilentPort(declared, parsed) is { } silent)
-            {
-                return [ContractErrors.Ports($"端口 {silent} 不承载触发值，不能给出触发位")];
+                return valid.ErrorsOrEmptyList;
             }
 
             node.CollectPorts(execution.Id, parsed);
@@ -74,19 +59,4 @@ public sealed class PortSubmitter(ExecutionIndex executions)
             return ExecutionStatusReader.Of(task, execution);
         }
     }
-
-    /// <summary>交回空文本的 Text 语义端口名，按声明序取第一个；Signal 端口不承载内容，给出的取值不作产出。</summary>
-    private static PortName? BlankTextPort(IReadOnlyList<Port> declared, IReadOnlyDictionary<PortName, PortValue> values) =>
-        declared
-            .Where(port => port.Type.Semantics == PortSemantics.Text
-                && string.IsNullOrWhiteSpace(values.GetValueOrDefault(port.Name).Text))
-            .Select(port => (PortName?)port.Name)
-            .FirstOrDefault();
-
-    /// <summary>不承载触发的端口给出不触发值时命中的端口名，按声明序取第一个。</summary>
-    private static PortName? TriggerOnSilentPort(IReadOnlyList<Port> declared, IReadOnlyDictionary<PortName, PortValue> values) =>
-        declared
-            .Where(port => !port.Trigger && !values.GetValueOrDefault(port.Name).Fires)
-            .Select(port => (PortName?)port.Name)
-            .FirstOrDefault();
 }

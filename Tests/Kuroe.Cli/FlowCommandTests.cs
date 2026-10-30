@@ -26,7 +26,7 @@ public sealed class FlowCommandTests
     public async Task Flow_add_imports_only_compilable_flows()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), LegacyFlow.Normalize(Mixed));
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), Mixed);
         StringWriter output = new();
         StringWriter error = new();
 
@@ -76,7 +76,7 @@ public sealed class FlowCommandTests
           "Flows": [
             {
               "Name": "可运行",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Static": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
               "Nodes": [
                 { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
               ]
