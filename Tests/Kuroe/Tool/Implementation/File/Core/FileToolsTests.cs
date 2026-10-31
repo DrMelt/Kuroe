@@ -12,18 +12,6 @@ public sealed class FileToolsTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
-    /// <summary>批量读取的路径参数：两个存在的文件。</summary>
-    private static readonly string[] _twoFiles = ["a.txt", "b.txt"];
-
-    /// <summary>批量读取的路径参数：一个存在、一个缺失的文件。</summary>
-    private static readonly string[] _missingFile = ["a.txt", "missing.txt"];
-
-    /// <summary>批量读取的路径参数：一个存在的文件、一个越界的路径。</summary>
-    private static readonly string[] _escapingPath = ["a.txt", ".."];
-
-    /// <summary>批量读取的路径参数：一个存在的文件、一个被拒绝的目录。</summary>
-    private static readonly string[] _deniedFiles = ["a.txt", ".kuroe/catalog.json"];
-
     [Fact]
     public void ReadFile_defaults_to_head_lines_and_notes_file_end()
     {
@@ -97,55 +85,6 @@ public sealed class FileToolsTests : IDisposable
         Assert.StartsWith(new string('a', 10), output);
         Assert.EndsWith("…内容已截断", output);
         Assert.Equal(8006, output.Length);
-    }
-
-    [Fact]
-    public void ReadFiles_merges_multiple_files_in_order()
-    {
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
-        File.WriteAllText(Path.Combine(_root, "b.txt"), "B内容");
-
-        string output = Call("ReadFiles", ("paths", _twoFiles));
-
-        Assert.Contains("=== a.txt ===", output);
-        Assert.Contains("A内容", output);
-        Assert.Contains("=== b.txt ===", output);
-        Assert.Contains("B内容", output);
-        Assert.True(output.IndexOf("A内容", StringComparison.Ordinal) < output.IndexOf("B内容", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void ReadFiles_rejects_empty_or_missing_paths()
-    {
-        Directory.CreateDirectory(_root);
-
-        Assert.Contains("缺少参数 paths", Call("ReadFiles"));
-        Assert.Contains("缺少参数 paths", Call("ReadFiles", ("paths", Array.Empty<string>())));
-    }
-
-    [Fact]
-    public void ReadFiles_keeps_other_entries_when_one_fails()
-    {
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
-
-        string output = Call("ReadFiles", ("paths", _missingFile));
-
-        Assert.Contains("A内容", output);
-        Assert.Contains("missing.txt 不存在", output);
-    }
-
-    [Fact]
-    public void ReadFiles_rejects_escaping_entry_before_reading()
-    {
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
-
-        string output = Call("ReadFiles", ("paths", _escapingPath));
-
-        Assert.DoesNotContain("A内容", output);
-        Assert.Contains("不在工作区内", output);
     }
 
     [Fact]
@@ -390,23 +329,6 @@ public sealed class FileToolsTests : IDisposable
 
         Assert.Contains("encoding 只支持", output);
         Assert.False(File.Exists(Path.Combine(_root, "bad.txt")));
-    }
-
-    [Fact]
-    public void ReadFiles_truncates_when_total_exceeds_limit()
-    {
-        Directory.CreateDirectory(_root);
-        for (int i = 0; i < 5; i++)
-        {
-            File.WriteAllText(Path.Combine(_root, $"{i}.txt"), new string('x', 9000));
-        }
-
-        string[] paths = [.. Enumerable.Range(0, 5).Select(i => $"{i}.txt")];
-        string output = Call("ReadFiles", ("paths", paths));
-
-        Assert.Contains("批量读取已截断", output);
-        Assert.Contains("=== 0.txt ===", output);
-        Assert.DoesNotContain("=== 4.txt ===", output);
     }
 
     [Fact]
@@ -787,7 +709,7 @@ public sealed class FileToolsTests : IDisposable
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
-        string[] readFunctions = ["ReadFile", "ReadFiles", "ListDirectory", "GetFileInfo"];
+        string[] readFunctions = ["ReadFile", "ListDirectory", "GetFileInfo"];
         string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile"];
         foreach (string name in readFunctions)
         {
@@ -809,7 +731,6 @@ public sealed class FileToolsTests : IDisposable
         Assert.All(
             [
                 ("ReadFile", "path"),
-                ("ReadFiles", "paths"),
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
@@ -833,19 +754,6 @@ public sealed class FileToolsTests : IDisposable
 
         Assert.Contains("黑名单", Call("ReadFile", ("path", ".kuroe/catalog.json")));
         Assert.Contains("黑名单", Call("ReadFile", ("path", ".git/config")));
-    }
-
-    [Fact]
-    public void ReadFiles_rejects_the_whole_call_when_one_path_is_denied()
-    {
-        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "A内容");
-        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
-
-        string output = Call("ReadFiles", ("paths", _deniedFiles));
-
-        Assert.Contains("黑名单", output);
-        Assert.DoesNotContain("A内容", output);
     }
 
     [Fact]
@@ -881,7 +789,6 @@ public sealed class FileToolsTests : IDisposable
         Assert.All(
             [
                 ("ReadFile", "path"),
-                ("ReadFiles", "paths"),
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
@@ -959,7 +866,6 @@ public sealed class FileToolsTests : IDisposable
     [
         new ReadFileTool(_root),
         new ListDirectoryTool(_root),
-        new ReadFilesTool(_root),
         new WriteFileTool(_root),
         new PatchFileTool(_root),
         new MoveFileTool(_root),

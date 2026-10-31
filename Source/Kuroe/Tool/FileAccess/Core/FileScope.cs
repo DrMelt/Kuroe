@@ -77,13 +77,6 @@ public sealed class FileScope(string root, string boundary, string rootName, str
         return file.IsError ? file.ErrorsOrEmptyList : ReadLines(file.Value, path, from, to);
     }
 
-    /// <summary>读取根目录内整个文件的内容，按字符上限截断。listFunction 是提示里指出的列目录函数名。</summary>
-    public ErrorOr<string> ReadWhole(string path, string listFunction)
-    {
-        ErrorOr<string> file = ExistingFile(path, listFunction);
-        return file.IsError ? file.ErrorsOrEmptyList : ReadAll(file.Value, path);
-    }
-
     /// <summary>取根目录内文件的文件系统事实，只受理文件。listFunction 是提示里指出的列目录函数名。</summary>
     public ErrorOr<FileDetails> Inspect(string path, string listFunction)
     {
@@ -180,33 +173,6 @@ public sealed class FileScope(string root, string boundary, string rootName, str
             }
 
             return content;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return ToolErrors.ReadFailed($"读取 {path} 失败：{ex.Message}");
-        }
-    }
-
-    /// <summary>读取整个文件，按字符上限截断。</summary>
-    private static ErrorOr<string> ReadAll(string fullPath, string path)
-    {
-        try
-        {
-            using StreamReader reader = new(fullPath);
-            char[] buffer = new char[OutputLimit + 1];
-            int offset = 0;
-            while (offset < buffer.Length)
-            {
-                int read = reader.Read(buffer, offset, buffer.Length - offset);
-                if (read == 0)
-                {
-                    break;
-                }
-
-                offset += read;
-            }
-
-            return Truncate(new string(buffer, 0, offset));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

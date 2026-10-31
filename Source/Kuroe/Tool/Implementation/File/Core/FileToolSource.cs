@@ -7,7 +7,6 @@ public sealed class FileToolSource : ToolSource
     [
         new(ReadFileTool.Definition, binding => new ReadFileTool(binding)),
         new(ListDirectoryTool.Definition, binding => new ListDirectoryTool(binding)),
-        new(ReadFilesTool.Definition, binding => new ReadFilesTool(binding)),
         new(GetFileInfoTool.Definition, binding => new GetFileInfoTool(binding)),
         new(WriteFileTool.Definition, binding => new WriteFileTool(binding)),
         new(PatchFileTool.Definition, binding => new PatchFileTool(binding)),
