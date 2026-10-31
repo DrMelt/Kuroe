@@ -19,7 +19,7 @@ public sealed class NodeDto
     /// <summary>引用的节点库定义名。</summary>
     public string? Use { get; set; }
 
-    /// <summary>节点输出端口表：所有节点共用。条目写 Name 与可选 Type、Description、Value、Ref、Constant、Trigger；
+    /// <summary>节点输出端口表：所有节点共用。条目写 Name 与可选 Type、Description、Value、Ref、Trigger；
     /// 容器按 Ref 写 成员@端口，执行节点按 Ref 写自身静态输入，常量输出可写 Value。</summary>
     public List<JsonElement>? Outputs { get; set; }
 
@@ -33,9 +33,12 @@ public sealed class NodeDto
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
     public int? MaxExecutions { get; set; }
 
-    /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Description。
-    /// 容器的传入端口由容器节点的 In 绑定，执行节点的由自身 From 绑定。</summary>
+    /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Mode、Description、Default、Role。
+    /// 容器的传入端口由容器节点的 In 绑定，执行节点的由自身 From 绑定。Mode 为 Constant 时是静态输入。</summary>
     public List<JsonElement>? Inputs { get; set; }
+
+    /// <summary>产出模式：Repeated 逐次发布，Once 首次发布后冻结。</summary>
+    public string? Emission { get; set; }
 
     /// <summary>容器节点的传入端口绑定：端口名到当前作用域来源的映射。</summary>
     public Dictionary<string, string>? In { get; set; }
@@ -51,7 +54,7 @@ public sealed class NodeDto
     public List<NodeDto>? Nodes { get; set; }
 }
 
-/// <summary>端口的对象形状：输出端口与输入端口共用条目，输出写 Constant，输入写 Static。</summary>
+/// <summary>端口的对象形状：输出端口与输入端口共用条目。Type 写类型名，Mode 写 Plain、Trigger 或 Constant。</summary>
 public sealed class PortEntryDto
 {
     /// <summary>端口名。</summary>
@@ -60,26 +63,20 @@ public sealed class PortEntryDto
     /// <summary>端口类型名，取值由端口类型注册表决定。未写时按 Text。</summary>
     public string? Type { get; set; }
 
+    /// <summary>端口模式：Plain、Trigger 或 Constant。未写时按类型默认模式。</summary>
+    public string? Mode { get; set; }
+
     /// <summary>输出端口的来源引用，写 成员@端口、来源@端口 或 @本节点输入。</summary>
     public string? Ref { get; set; }
 
     /// <summary>端口承载内容的说明，未写时为空。</summary>
     public string? Description { get; set; }
 
-    /// <summary>常量输出端口的固定值，未写时由 Ref 提供来源。</summary>
+    /// <summary>常量输出端口的固定值，未写时由 Ref 或 Once 执行产出提供来源。</summary>
     public string? Value { get; set; }
 
     /// <summary>输入端口的默认值，来源组没有连接该端口时提供内容。</summary>
     public string? Default { get; set; }
-
-    /// <summary>输出端口的常量标记。值由定义确定，只供 Static 读取。</summary>
-    public bool? Constant { get; set; }
-
-    /// <summary>输出端口的触发标记。动态产出按交回值决定是否触发下游。</summary>
-    public bool? Trigger { get; set; }
-
-    /// <summary>输入端口的静态标记。静态输入只从 Static 绑定或默认值取值。</summary>
-    public bool? Static { get; set; }
 
     /// <summary>输入端口的执行角色，取值 Content、Configuration 或 Control。</summary>
     public string? Role { get; set; }

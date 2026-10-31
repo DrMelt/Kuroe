@@ -4,12 +4,12 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Compilation.Shared.Validation;
 
-/// <summary>节点接口的静态规则：输入与输出端口名在同一节点内唯一，端口类型落在类型形状给出的值域，
-/// 输出按 Value、Ref 与 Constant 判定来源。流程校验与节点库校验共用这一份，报错出口由调用方给出。</summary>
+/// <summary>节点接口的静态规则：输入与输出端口名在同一节点内唯一，端口类型落在类型形状的值域，模式落在类型注册支持范围，
+/// 输出按 Value、Ref 与运行期常量判定来源。流程校验与节点库校验共用这一份，报错出口由调用方给出。</summary>
 public static partial class NodeSpecRules
 {
     /// <summary>逐条检查一个节点的端口声明，每条错误经 fail 报出。shape 给出端口类型值域与推进方式，
-    /// 类型未注册时跳过值域检查，由装配期的类型校验负责。</summary>
+    /// 端口模式由类型注册声明支持范围。</summary>
     public static void CheckInterface(
         this NodeSpec node,
         NodeTypeShape? shape,
@@ -23,14 +23,9 @@ public static partial class NodeSpecRules
             fail($"输入端口 {port.Value} 重复。");
         }
 
-        foreach (InputPort port in inputs.Where(port => port.IsStatic && port.Type != PortTypes.Text))
+        foreach (InputPort port in inputs.Where(port => !PortTypes.Supports(port.Type, port.Mode)))
         {
-            fail($"静态输入端口 {port.Name.Value} 的类型只能是 Text。");
-        }
-
-        foreach (InputPort port in inputs.Where(port => port.IsStatic && port.Trigger))
-        {
-            fail($"静态输入端口 {port.Name.Value} 不能使用触发。");
+            fail($"输入端口 {port.Name.Value} 的类型 {port.Type} 不支持模式 {port.Mode}。");
         }
 
         foreach (InputPort port in inputs.Where(port => port.Role == InputRole.Control && port.IsStatic))
@@ -38,9 +33,10 @@ public static partial class NodeSpecRules
             fail($"控制输入端口 {port.Name.Value} 不能是静态输入。");
         }
 
-        foreach (InputPort port in inputs.Where(port => port.Trigger && port.Type.Semantics == PortSemantics.Context))
+        foreach (InputPort port in inputs.Where(port =>
+            port.IsStatic && port.Type.Semantics == PortSemantics.Signal && port.Role != InputRole.Configuration))
         {
-            fail($"Context 输入端口 {port.Name.Value} 不能使用触发。");
+            fail($"Signal 静态输入端口 {port.Name.Value} 只能作为配置。");
         }
 
         if (shape is { } declared)
@@ -64,9 +60,16 @@ public static partial class NodeSpecRules
             fail($"输出端口 {port.Value} 重复。");
         }
 
+        foreach (Port port in node.Outputs.Where(port => !PortTypes.Supports(port.Type, port.Mode)))
+        {
+            fail($"输出端口 {port.Name.Value} 的类型 {port.Type} 不支持模式 {port.Mode}。");
+        }
+
         if (shape is { } declaredOutput)
         {
-            foreach (string port in node.Outputs.Where(port => !declaredOutput.OutputTypes.Contains(port.Type)).Select(port => port.Name.Value))
+            foreach (string port in node.Outputs
+                .Where(port => !declaredOutput.OutputTypes.Contains(port.Type))
+                .Select(port => port.Name.Value))
             {
                 fail($"输出端口 {port} 的类型只能是 {Types(declaredOutput.OutputTypes)}。");
             }
@@ -75,15 +78,36 @@ public static partial class NodeSpecRules
         foreach (Port port in node.Outputs)
         {
             CheckOutputSource(node, port, organizes, fail);
+        }
 
-            if (port.IsConstant && port.Trigger)
+        NodeEmission emission = node.Spec?.Emission ?? NodeEmission.Repeated;
+        bool runtimeConstant = !organizes
+            && node.Outputs.Any(port => port.IsConstant && port.Value is null && port.Ref is null);
+        if (runtimeConstant && emission != NodeEmission.Once)
+        {
+            fail("运行期常量输出需要节点声明 Emission 为 Once。");
+        }
+
+        if (emission == NodeEmission.Once)
+        {
+            if (organizes)
             {
-                fail($"常量输出端口 {port.Name.Value} 不能使用触发。");
+                fail("容器不能声明 Emission。");
             }
 
-            if (port.Trigger && port.Type.Semantics == PortSemantics.Context)
+            if (!runtimeConstant)
             {
-                fail($"Context 输出端口 {port.Name.Value} 不能使用触发。");
+                fail("Emission 为 Once 的节点至少要有一个由执行产出的常量输出。");
+            }
+
+            if (node.Outputs.Any(port => !port.IsConstant))
+            {
+                fail("Emission 为 Once 的节点的输出必须都是常量端口。");
+            }
+
+            if (node.From.Count > 0 || node.EffectiveInputs.Any(port => !port.IsStatic))
+            {
+                fail("Emission 为 Once 的节点不能声明动态输入或 From。");
             }
         }
 
@@ -135,11 +159,6 @@ public static partial class NodeSpecRules
 
         if (port.IsConstant)
         {
-            if (port.Type != PortTypes.Text)
-            {
-                fail($"常量输出端口 {name} 的类型只能是 Text。");
-            }
-
             if (port.Value is { } value)
             {
                 if (string.IsNullOrWhiteSpace(value))
@@ -152,7 +171,11 @@ public static partial class NodeSpecRules
 
             if (port.Ref is not { } reference)
             {
-                fail($"常量输出端口 {name} 必须写 Value 或 Ref。");
+                if (organizes)
+                {
+                    fail($"容器常量输出端口 {name} 必须写 Value 或 Ref。");
+                }
+
                 return;
             }
 

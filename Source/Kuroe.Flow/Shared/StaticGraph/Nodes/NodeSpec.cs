@@ -55,8 +55,11 @@ public sealed record NodeSpec
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>输出端口表：所有节点共用。类型在编译期落定产出形态与消费方式，引用处按名字消费。
-    /// 执行节点逐次交回动态 Text 与 Signal 端口值，常量输出由 Value 或常量来源提供；容器输出由子树来源提供。</summary>
+    /// 执行节点逐次交回动态 Text 与 Signal 端口值，常量输出由 Value、常量来源或 Once 节点唯一一次执行提供；容器输出由子树来源提供。</summary>
     public IReadOnlyList<Port> Outputs { get; init; } = [];
+
+    /// <summary>产出模式的覆盖声明：引用执行节点时可覆盖库定义的产出模式，展开后并入执行配置。容器不使用。</summary>
+    public NodeEmission? Emission { get; init; }
 
     /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
     public OutputValidation? Validate { get; init; }

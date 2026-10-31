@@ -58,5 +58,5 @@ public sealed class TriggerRulesTests
 
     private static Port Text() => new(Conclusion, PortTypes.Text);
 
-    private static Port TriggerText() => new(Conclusion, PortTypes.Text, trigger: true);
+    private static Port TriggerText() => new(Conclusion, PortTypes.Text, mode: PortMode.Trigger);
 }

@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Compilation.Shared;
@@ -16,27 +17,26 @@ public sealed record FlowDocumentFlow(
     IReadOnlyDictionary<string, string> HostStartInputs,
     NodeDocument? Root);
 
-/// <summary>输出端口条目：所有节点共用。Type 省略时按 Text；Value 是固定值，Ref 是同一节点内部作用域中的来源端口，两者互斥。
-/// Constant 标记常量端口，值由定义确定，只供 Static 读取，不进入 From。</summary>
+/// <summary>输出端口条目：所有节点共用。Type 省略时按 Text，Mode 省略时按类型默认模式。Value 是固定值，Ref 是同一节点内部作用域中的来源端口，两者互斥。
+/// Mode 取 Plain、Trigger 或 Constant，支持范围由端口类型注册声明。Constant 端口的值在任务内确定一次，只供 Static 读取，不进入 From；
+/// 没有 Value 与 Ref 时由 Emission 为 Once 的节点执行产出。</summary>
 public sealed record PortDocument(
     string Name,
     PortType? Type = null,
+    PortMode? Mode = null,
     string? Description = null,
     string? Value = null,
-    string? Ref = null,
-    bool IsConstant = false,
-    bool? Trigger = null);
+    string? Ref = null);
 
-/// <summary>输入端口条目：执行节点与容器共用。Static 标记常量输入，值由 Static 绑定或默认值提供。
-/// Role 是执行角色，Trigger 是动态绑定是否使用触发门控。</summary>
+/// <summary>输入端口条目：执行节点与容器共用。Mode 省略时按类型默认模式，Constant 表示静态输入，值由 Static 绑定或默认值提供。
+/// Role 是执行角色。</summary>
 public sealed record InputPortDocument(
     string Name,
     PortType? Type = null,
+    PortMode? Mode = null,
     string? Description = null,
     string? Default = null,
-    bool IsStatic = false,
-    InputRole? Role = null,
-    bool? Trigger = null);
+    InputRole? Role = null);
 
 /// <summary>输出校验条目。</summary>
 public sealed record ValidationDocument(string Predicate, string? Argument);
@@ -58,6 +58,9 @@ public abstract record NodeDocument
 
     /// <summary>输出校验覆盖。</summary>
     public ValidationDocument? Validate { get; init; }
+
+    /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>
+    public NodeEmission? Emission { get; init; }
 
     /// <summary>执行次数上限。</summary>
     public int? MaxExecutions { get; init; }

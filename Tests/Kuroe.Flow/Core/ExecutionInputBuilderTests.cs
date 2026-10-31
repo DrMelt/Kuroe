@@ -52,7 +52,7 @@ public sealed class ExecutionInputBuilderTests
         [
             new InputPort(Content),
             new InputPort(Fallback, PortTypes.Text, defaultValue: fallback),
-            new InputPort(Static, PortTypes.Text, isStatic: true),
+            new InputPort(Static, PortTypes.Text, mode: PortMode.Constant),
         ],
         Outputs = [],
         MaxExecutions = ExecutableNode.DefaultMaxExecutions,

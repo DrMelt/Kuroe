@@ -17,8 +17,8 @@ public static class ApprovalNodeTypes
         AwaitsApproval = true,
         AcceptsInferredInputs = true,
         DerivesOutputsFromInputs = true,
-        InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
-        OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
+        InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
     /// <summary>按类型专属声明建出类型实例，未声明时取默认声明。外部输入协议是建运行期对象所需的运行期依赖，由装配处给出。</summary>

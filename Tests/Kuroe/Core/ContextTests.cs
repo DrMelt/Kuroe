@@ -176,12 +176,12 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
@@ -202,12 +202,12 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
                       "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
@@ -228,12 +228,12 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "准备甲", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Name": "准备乙", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     {
@@ -262,12 +262,12 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "干活",
                       "Kind": "Llm",
@@ -289,9 +289,9 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "背景": "Start@背景", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "背景": "Start@背景", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                   { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "背景": "@背景" } ] }
                 ] }
               ]

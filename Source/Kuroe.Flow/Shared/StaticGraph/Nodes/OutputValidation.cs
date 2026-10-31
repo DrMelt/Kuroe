@@ -68,10 +68,13 @@ public sealed record OutputValidation(ValidationPredicate Predicate, string? Arg
         }
     }
 
-    /// <summary>端口产出是否满足校验。按声明序拼接 Text 端口后按谓词判断。</summary>
-    public bool Passes(IReadOnlyList<Port> outputs, IReadOnlyDictionary<PortName, string>? values)
+    /// <summary>端口产出是否满足校验。按声明序拼接可交回的文本端口与运行期常量端口后按谓词判断。</summary>
+    public bool Passes(
+        IReadOnlyList<Port> outputs,
+        IReadOnlyDictionary<PortName, string>? values,
+        NodeEmission emission = NodeEmission.Repeated)
     {
-        string? result = Join(outputs, values);
+        string? result = Join(outputs, emission, values);
 
         return Predicate switch
         {
@@ -84,8 +87,11 @@ public sealed record OutputValidation(ValidationPredicate Predicate, string? Arg
         };
     }
 
-    /// <summary>按声明顺序拼接 Text 端口值，端口未全部交回时为空。</summary>
-    private static string? Join(IReadOnlyList<Port> outputs, IReadOnlyDictionary<PortName, string>? values)
+    /// <summary>按声明顺序拼接文本端口与运行期常量端口值，端口未全部交回时为空。</summary>
+    private static string? Join(
+        IReadOnlyList<Port> outputs,
+        NodeEmission emission,
+        IReadOnlyDictionary<PortName, string>? values)
     {
         if (values is null)
         {
@@ -93,7 +99,9 @@ public sealed record OutputValidation(ValidationPredicate Predicate, string? Arg
         }
 
         string[] parts = [.. outputs
-            .Where(port => !port.IsConstant && PortRules.CarriesText(port.Type))
+            .Where(port => port.IsConstant
+                ? PortRules.IsRuntimeConstant(port, emission)
+                : PortRules.CarriesText(port.Type))
             .Select(port => values.GetValueOrDefault(port.Name))
             .Where(value => value is { Length: > 0 })
             .Cast<string>()];

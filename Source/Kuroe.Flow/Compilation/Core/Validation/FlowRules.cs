@@ -47,8 +47,8 @@ internal static class FlowRules
     internal static void ValidateGraph(NodeGraph graph, NodeScope scope, List<Error> errors) =>
         CheckShape(graph, scope, errors);
 
-    /// <summary>开始入口的规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入；常量端口必须有 Value 或宿主输入绑定。
-    /// 宿主输入只能绑定已声明且不带 Value 的端口。</summary>
+    /// <summary>开始入口的规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入。动态端口只能是 Text 或 Signal，常量端口可以使用任意类型。
+    /// 宿主输入只能绑定已声明且不带 Value 的端口；常量端口没有 Value 与宿主绑定时由提交输入给值。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
@@ -61,9 +61,17 @@ internal static class FlowRules
         Dictionary<PortName, Port> declared = [];
         foreach (Port port in flow.StartOutputs)
         {
-            if (port.Type != PortTypes.Text)
+            if (!PortTypes.Supports(port.Type, port.Mode))
             {
-                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的类型只能是 Text。"));
+                errors.Add(FlowErrors.Body(flow.Name.Value,
+                    $"开始端口 {port.Name} 的类型 {port.Type} 不支持模式 {port.Mode}。"));
+            }
+
+            if (port.Mode != PortMode.Constant
+                && port.Type.Semantics is not (PortSemantics.Text or PortSemantics.Signal))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value,
+                    $"开始端口 {port.Name} 的动态类型只能是 Text 或 Signal，常量端口可以使用任意类型。"));
             }
 
             if (!names.Add(port.Name))
@@ -86,12 +94,6 @@ internal static class FlowRules
             if (port.Value is { } value && string.IsNullOrWhiteSpace(value))
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
-            }
-
-            if (port.IsConstant && port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))
-            {
-                errors.Add(FlowErrors.Body(flow.Name.Value,
-                    $"常量开始端口 {port.Name} 必须有 Value 或宿主输入绑定。"));
             }
         }
 
@@ -367,6 +369,7 @@ internal static class FlowRules
     private static void CheckShape(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         CheckLoops(graph, scope, errors);
+        CheckStaticCycles(graph, scope, errors);
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
         CheckOutputBindings(graph, scope, errors);
@@ -399,15 +402,16 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>可达性规则：开始是唯一外部来源，全部输入静态且没有入边的执行节点在任务启动即可启动；
-    /// 其余执行节点必须能从这些初始来源沿引用边到达。容器是成员的汇合点，成员全部可达时容器才可达。</summary>
+    /// <summary>可达性规则：开始是唯一外部来源；全部输入静态、没有入边且不依赖运行期常量的执行节点在任务启动即可启动；
+    /// 其余执行节点必须能从这些初始来源沿引用边或常量依赖到达。容器是成员的汇合点，成员全部可达时容器才可达。</summary>
     private static void CheckReachability(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         var reached = new HashSet<NodePath> { graph.Start.Path };
         var queue = new Queue<NodePath>();
         queue.Enqueue(graph.Start.Path);
         foreach (ExecutableNode executable in graph.ExecutableNodes
-            .Where(node => node.Plan is { StartsAtTaskStart: true })
+            .Where(node => graph.PlanOf(node.Path) is { StaticOnly: true })
+            .Where(node => !graph.StaticDependencies.Any(dependency => dependency.Target == node.Path))
             .Where(node => reached.Add(node.Path)))
         {
             queue.Enqueue(executable.Path);
@@ -418,7 +422,11 @@ internal static class FlowRules
             // reached.Add 兼作去重判定：首次到达的节点才入队
             while (queue.TryDequeue(out NodePath current))
             {
-                foreach (NodePath next in graph.Outgoing(current).Select(edge => edge.Target).Where(reached.Add))
+                foreach (NodePath next in graph.Outgoing(current).Select(edge => edge.Target)
+                    .Concat(graph.StaticDependencies
+                        .Where(dependency => dependency.Source == current)
+                        .Select(dependency => dependency.Target))
+                    .Where(reached.Add))
                 {
                     queue.Enqueue(next);
                 }
@@ -442,7 +450,47 @@ internal static class FlowRules
             .FirstOrDefault() ?? " 开始入口";
         foreach (ExecutableNode executable in graph.ExecutableNodes.Where(node => !reached.Contains(node.Path)))
         {
-            errors.Add(scope.Node(executable.Path.Value, $"从开始不可达，不会被触发，请用 From 接到来源节点或{entry}。"));
+            errors.Add(scope.Node(executable.Path.Value,
+                $"从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与{entry}。"));
+        }
+    }
+
+    /// <summary>常量依赖环：静态输入沿常量来源逐级等待，形成环时环内节点永远等不到值。</summary>
+    private static void CheckStaticCycles(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        Dictionary<NodePath, List<NodePath>> outgoing = graph.StaticDependencies
+            .GroupBy(dependency => dependency.Source)
+            .ToDictionary(group => group.Key, group => group.Select(dependency => dependency.Target).Distinct().ToList());
+        Dictionary<NodePath, int> incoming = graph.ExecutableNodes.ToDictionary(node => node.Path, _ => 0);
+        foreach (StaticDependency dependency in graph.StaticDependencies
+            .Where(dependency => incoming.ContainsKey(dependency.Target)))
+        {
+            incoming[dependency.Target]++;
+        }
+
+        Queue<NodePath> ready = new([.. incoming.Where(pair => pair.Value == 0).Select(pair => pair.Key)]);
+        int resolved = 0;
+        while (ready.TryDequeue(out NodePath current))
+        {
+            resolved++;
+            foreach (NodePath next in outgoing.GetValueOrDefault(current) ?? [])
+            {
+                if (incoming.TryGetValue(next, out int count))
+                {
+                    count--;
+                    incoming[next] = count;
+                    if (count == 0)
+                    {
+                        ready.Enqueue(next);
+                    }
+                }
+            }
+        }
+
+        if (resolved < incoming.Count)
+        {
+            string members = string.Join('、', incoming.Where(pair => pair.Value > 0).Select(pair => pair.Key.Value));
+            errors.Add(FlowErrors.Body(scope.Name, $"常量依赖形成环：{members}。"));
         }
     }
 

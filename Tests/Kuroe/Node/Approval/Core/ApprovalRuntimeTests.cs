@@ -58,7 +58,7 @@ public sealed class ApprovalRuntimeTests
         ApprovalRuntime runtime = Assert.IsType<ApprovalRuntime>(
             new ApprovalNodeType(null, channel).Create(Node(channel), context));
         NodeInputValues inputs = new(
-            [new NodeInputValue(Port, PortTypes.TextTrigger, new ContextValue(new StartSource(Port), "内容"))],
+            [new NodeInputValue(Port, PortTypes.Text, new ContextValue(new StartSource(Port), "内容"))],
             new HashSet<PortName> { Port },
             new Dictionary<PortName, bool> { [Port] = false });
 

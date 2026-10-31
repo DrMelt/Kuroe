@@ -86,7 +86,7 @@ public sealed class FlowRuleTests
     [Fact]
     public void Start_with_non_data_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认：开始端口 目标 的类型只能是 Text。"],
+            ["流程 默认：开始端口 目标 的动态类型只能是 Text 或 Signal，常量端口可以使用任意类型。"],
             Errors(new FlowDefinition(new FlowName("默认"), null,
                 [ContextPort("目标")], new Dictionary<PortName, string>(), Container("整体", Exec("干活", new ExecutableSpec()) with { From = [] }))));
 
@@ -172,13 +172,21 @@ public sealed class FlowRuleTests
     public void Node_unreachable_from_start_is_rejected() =>
         Assert.Equal(
             [
-                MemberError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                MemberError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
-                    Exec("干活", new ExecutableSpec()) with { From = [] },
-                    Exec("收尾", new ExecutableSpec()) with { From = [] }))));
+                    Exec("干活", new ExecutableSpec()) with
+                    {
+                        From = [],
+                        Inputs = [new InputPort(PN("目标"), PortTypes.Text, defaultValue: "默认")],
+                    },
+                    Exec("收尾", new ExecutableSpec()) with
+                    {
+                        From = [],
+                        Inputs = [new InputPort(PN("目标"), PortTypes.Text, defaultValue: "默认")],
+                    }))));
 
     [Fact]
     public void Two_context_ports_are_rejected() =>
@@ -311,8 +319,8 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [
                 MemberError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                MemberError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                MemberError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -325,7 +333,7 @@ public sealed class FlowRuleTests
             [
                 MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
                 MemberError("交付/撰写", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -339,7 +347,7 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [
                 MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
-                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -355,8 +363,8 @@ public sealed class FlowRuleTests
         Assert.Equal(
             [
                 NodeError("整体/容器乙/乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                NodeError("整体/容器甲/甲", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
-                NodeError("整体/容器乙/乙", "从开始不可达，不会被触发，请用 From 接到来源节点或 Start@目标。"),
+                NodeError("整体/容器甲/甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                NodeError("整体/容器乙/乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
             ],
             Errors(Flow(
                 Container("整体",

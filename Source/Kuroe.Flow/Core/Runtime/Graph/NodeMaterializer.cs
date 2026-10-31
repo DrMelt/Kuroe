@@ -2,7 +2,6 @@ using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
@@ -12,8 +11,7 @@ namespace Kuroe.Flow.Runtime.Graph;
 /// 容器的直接子节点登记在容器上，根级节点由这里持有。取消后迟实例化的节点创建即取消。</summary>
 internal sealed class NodeMaterializer(
     INodeGraph graph,
-    StartInputs inputs,
-    IPortTexts startTexts,
+    IPortTexts startPorts,
     INodeContext context)
 {
     /// <summary>已实例化的根级节点：开始与流程根节点。容器的直接子节点由容器自己持有。</summary>
@@ -99,7 +97,7 @@ internal sealed class NodeMaterializer(
     private NodeRuntime Create(NodePath path) =>
         graph[path] switch
         {
-            StartNode start => new RuntimeStart(start, inputs, startTexts),
+            StartNode start => new RuntimeStart(start, startPorts),
             ExecutableNode executable when executable.Type.Shape.DispatchesExecutions =>
                 new RuntimeExecutable(executable),
             ContainerNode container when container.Type.Shape.Organizes =>

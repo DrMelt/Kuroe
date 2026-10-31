@@ -67,9 +67,9 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
         }
 
         if (spec.Validate is not null
-            && !node.Outputs.Any(port => !port.IsConstant && PortRules.CarriesText(port.Type)))
+            && !node.Outputs.Any(port => PortRules.RequiresSubmission(port, spec.Emission)))
         {
-            fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明文本语义的输出端口，校验对象是端口产出。"));
+            fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明可交回的产出端口，校验对象是端口产出。"));
         }
 
         ToolPortRules.Validate(Parameters, node, Contracts, scope, fail);
@@ -100,7 +100,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<Port> outputs)
     {
         List<ToolPath> paths = [.. Parameters?.Tools ?? []];
-        if (outputs.Any(port => PortRules.RequiresSubmission(port.Type)))
+        if (outputs.Any(port => port.Mode == PortMode.Constant || PortRules.RequiresSubmission(port.Type)))
         {
             paths.Add(new ToolPath(ContractTools.Port));
         }

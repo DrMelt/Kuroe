@@ -6,6 +6,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
@@ -13,8 +14,9 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>按图驱动的执行推进：激活、发布、返工与会合。节点状态在运行时节点对象上，这里是图算法面。
-/// 启动条件按节点输入侧方案一处判定，来源侧读数不创建节点。所有方法都要求调用者持有所属任务的 Gate。</summary>
-internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
+/// 启动条件按节点输入侧方案判定，不参与方案的节点在评估时按图上的常量依赖单独挡住。来源侧读数不创建节点。
+/// 所有方法都要求调用者持有所属任务的 Gate。</summary>
+internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeConstantSource
 {
     private readonly WorkTask _task;
     private readonly NodeMaterializer _materializer;
@@ -27,8 +29,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _materializer = new NodeMaterializer(task.Graph, task.Inputs, task.StartTexts, this);
-        _staticPorts = task.StaticPorts;
+        _materializer = new NodeMaterializer(task.Graph, task.StartPorts, this);
+        _staticPorts = new StaticPortValues(task.Graph, task.StartPorts, this);
         // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
         _ = _materializer.Get(Graph.Start.Path);
     }
@@ -84,9 +86,20 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
     /// <summary>已实例化的执行节点，按执行节点表顺序。判定与展示按它读数，不创建节点。</summary>
     private IEnumerable<RuntimeExecutable> MaterializedExecutables() => _materializer.Executables();
 
+    /// <summary>节点唯一一次执行产出的常量是否已就绪。发布后保留，任务取消后不再读取。</summary>
+    bool IRuntimeConstantSource.Available(NodePath node, PortName port) =>
+        Materialized(node) is RuntimeExecutable { PublishedExecution: not null, Canceled: false } runtime
+        && runtime.Executable.FindPort(port) is not null;
+
+    /// <summary>取节点唯一一次执行产出的常量文本，节点尚未发布或已取消时为空。</summary>
+    string? IRuntimeConstantSource.Text(NodePath node, PortName port) =>
+        Materialized(node) is RuntimeExecutable { PublishedExecution: not null, Canceled: false } runtime
+            ? runtime.PortText(this, port)
+            : null;
+
     // ---- 就绪判定 ----
 
-    /// <summary>派发执行的节点还有没有待启动的执行：节点侧状态先过，再按输入侧方案判定齐备与驱动。</summary>
+    /// <summary>派发执行的节点还有没有待启动的执行：按输入侧方案判定静态依赖、齐备与驱动。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
         if (node.HasActive || node.Canceled || node.Blocked)
@@ -94,7 +107,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
             return false;
         }
 
-        return Graph.PlanOf(node.Path) is { } plan && plan.Ready(node, this);
+        return Graph.PlanOf(node.Path) is { } plan
+            && plan.Ready(node, this);
     }
 
     /// <summary>执行节点方案上的执行次数上限，输入节点没有方案，也就没有上限。</summary>
@@ -113,7 +127,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
             return WithStatic(node.Executable, NodeInputValues.Empty);
         }
 
-        if (plan.StartsAtTaskStart)
+        if (plan.StaticOnly)
         {
             node.AddActive();
             node.ClearRerun();
@@ -146,18 +160,27 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
 
     // ---- 发布与作废 ----
 
-    /// <summary>作废已发表产出并刷新祖先容器，返工起点用它让下游重新等待。</summary>
+    /// <summary>作废执行节点的产出并刷新祖先容器，返工起点用它让下游重新等待。已发布的 Once 节点不重跑。</summary>
     private void InvalidateNode(RuntimeExecutable node)
     {
-        // 版本驱动的节点没有“未产出”这一状态可回退，作废即记下一次强制重启
+        if (Frozen(node.Path))
+        {
+            return;
+        }
+
         node.RequestRerun();
         node.Invalidate();
         RefreshContainers(node.Path);
     }
 
-    /// <summary>作废已发表产出或清除自驱型节点的失败，宿主返工入口按节点路径定位节点。</summary>
+    /// <summary>作废已发表产出或清除自驱型节点的失败，宿主返工入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
     public void Invalidate(NodePath node)
     {
+        if (Frozen(node))
+        {
+            return;
+        }
+
         NodeRuntime runtime = _materializer.Get(node);
         if (runtime is RuntimeExecutable executable)
         {
@@ -209,9 +232,19 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         Graph.ExecutableNodes.Any(executable => Materialized(executable.Path) switch
         {
             RuntimeExecutable node => node.HasActive || CanStart(node),
-            NodeRuntime node => node.AwaitingInput || Drivable(node),
+            NodeRuntime node => node.AwaitingInput || Drivable(node) || StaticStartable(node),
             _ => Startable(executable),
         });
+
+    /// <summary>已实例化的静态输入节点是否等待激活：静态依赖已发布、输入尚未产出，取消与阻塞时不等待。</summary>
+    private bool StaticStartable(NodeRuntime node) =>
+        node.Node is ExecutableNode
+        && !node.Canceled
+        && !node.Released
+        && node.Snapshot().State != NodeState.Blocked
+        && node is IInputProgress progress
+        && Graph.PlanOf(node.Path) is { StaticOnly: true } plan
+        && plan.Ready(progress, this);
 
     /// <summary>已实例化的非派发节点当前是否有重跑意图或可由来源新版本驱动。</summary>
     private bool Drivable(NodeRuntime node) =>
@@ -222,9 +255,10 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
     /// <summary>尚未实例化的执行节点是否已具启动条件：与启动判定共用同一实现，未实例化的来源按未放行求值。
     /// 未实例化说明推进循环还没把它激活。</summary>
     private bool Startable(ExecutableNode executable) =>
-        Graph.PlanOf(executable.Path) is { } plan && plan.Ready(IdleProgress, this);
+        Graph.PlanOf(executable.Path) is { } plan
+        && plan.Ready(IdleProgress, this);
 
-    /// <summary>给定节点的产出已变，要重新评估的目标：取下游并刷新祖先容器，去重保持顺序。要求持有 Gate。</summary>
+    /// <summary>给定节点的产出已变，要重新评估的目标：取下游、刷新祖先容器与静态依赖它的节点，去重保持顺序。要求持有 Gate。</summary>
     public IReadOnlyList<NodePath> Notify(IReadOnlyList<NodePath> nodes)
     {
         List<NodePath> notify = [];
@@ -232,6 +266,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         {
             notify.AddRange(Downstream(node));
             notify.AddRange(RefreshContainers(node));
+            notify.AddRange(Graph.StaticDependents(node));
         }
 
         return [.. notify.Distinct()];
@@ -273,7 +308,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         IReadOnlyDictionary<PortName, string>? outputs = node.SubmittedPorts(execution.Id)?
             .ToDictionary(pair => pair.Key, pair => pair.Value.Text ?? string.Empty);
         if (executable.Spec.Validate is { } validation
-            && !validation.Passes(executable.Outputs, outputs))
+            && !validation.Passes(executable.Outputs, outputs, executable.Spec.Emission))
         {
             execution.MarkUncollected("输出校验不通过，本步未收口。");
 
@@ -307,12 +342,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         _task.Journal.AppendError($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。");
     }
 
-    /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标并入通知。</summary>
+    /// <summary>产出发布后的共同收口：把祖先容器临近齐备的出边目标与依赖该节点的静态目标并入通知。</summary>
     private SettlePlan Settled(RuntimeExecutable node, IReadOnlyList<NodePath> downstream)
     {
         IReadOnlyList<NodePath> containers = RefreshContainers(node.Path);
 
-        return new SettlePlan([.. downstream, .. containers]);
+        return new SettlePlan([.. downstream, .. containers, .. Graph.StaticDependents(node.Path)]);
     }
 
     // ---- 推进评估 ----
@@ -327,6 +362,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         }
 
         if (shape.Organizes)
+        {
+            return new EvaluateResult([]);
+        }
+
+        if (Graph.StaticDependencies.Any(dependency =>
+            dependency.Target == node.Path && !State(dependency.Source).Released))
         {
             return new EvaluateResult([]);
         }
@@ -351,7 +392,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
                     return new EvaluateResult([]);
                 }
 
-                if (plan.StartsAtTaskStart && progress.Executions == 0)
+                if (plan.StaticOnly && progress.Executions == 0)
                 {
                     inputs = NodeInputValues.Empty;
                 }
@@ -492,11 +533,18 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         IReadOnlyList<NodePath> Notify,
         NodeInputValues? Inputs = null);
 
-    /// <summary>任务启动的第一批：开始已放行，由它的直连下游与静态输入启动的节点起步。返回前全部实例化。</summary>
+    /// <summary>任务启动的第一批：开始已放行，由它的直连下游与静态输入就绪后启动的节点起步。返回前全部实例化。
+    /// 恢复时已发布的运行期常量会让等待它的节点一并入队，动态来源未就绪的节点由启动判定挡住。</summary>
     public IReadOnlyList<NodePath> Roots() =>
         [.. Graph.Outgoing(Graph.Start.Path).Select(edge => _materializer.Get(edge.Target).Path),
             .. Graph.ExecutableNodes
-                .Where(node => node.Plan is { StartsAtTaskStart: true })
+                .Where(node => Graph.PlanOf(node.Path) is { StaticOnly: true })
+                .Where(Startable)
+                .Select(node => _materializer.Get(node.Path).Path),
+            .. Graph.ExecutableNodes
+                .Where(node => Graph.PlanOf(node.Path) is { } plan
+                    && plan.StaticDependencies.Count > 0
+                    && plan.StaticDependencies.All(dependency => State(dependency.Source).Released))
                 .Select(node => _materializer.Get(node.Path).Path)];
 
 
@@ -511,7 +559,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         {
             foreach (NodePath target in node.ReworkTargets)
             {
-                if (AtLimit(Executable(target)))
+                if (AtLimit(Executable(target)) || Frozen(target))
                 {
                     continue;
                 }
@@ -522,7 +570,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
 
         foreach (NodeRuntime node in _materializer.Materialized)
         {
-            if (node is not RuntimeExecutable && node.Snapshot().State == NodeState.Blocked)
+            if (node is not RuntimeExecutable
+                && node.Snapshot().State == NodeState.Blocked)
             {
                 targets.Add(new ReworkTarget(node.Path, node.Path));
             }
@@ -530,6 +579,13 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
 
         return targets;
     }
+
+    /// <summary>节点是否已经产出过内容。</summary>
+    private bool HasPublished(NodePath node) => State(node).Revision > 0;
+
+    /// <summary>已发布的 Once 节点冻结，不再返工或作废。</summary>
+    private bool Frozen(NodePath node) =>
+        HasPublished(node) && Graph[node] is ExecutableNode { Spec.Emission: NodeEmission.Once };
 
     /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。自驱型节点没有目标表，失败由 <see cref="Invalidate"/> 清除。</summary>
     public void Unblock(NodePath node, IReadOnlyList<NodePath> handled)
@@ -548,10 +604,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext
         public long Revision => 0;
     }
 
-    /// <summary>未实例化节点的进展：没有已消费版本、没有执行次数。</summary>
+    /// <summary>未实例化节点的进展：没有已消费版本、没有执行次数、没有产出。</summary>
     private sealed class UnmaterializedProgress : IInputProgress
     {
         public bool ForceRerun => false;
+
+        public bool Published => false;
 
         public long ConsumedRevision(ConsumptionKey key) => 0;
 

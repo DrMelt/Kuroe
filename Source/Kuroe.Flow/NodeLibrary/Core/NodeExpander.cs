@@ -86,6 +86,11 @@ internal static class NodeExpander
 
             if (definition.Nodes is { Count: > 0 })
             {
+                if (node.Emission is not null)
+                {
+                    errors.Add(scope.Node(node.Label.Value, "容器节点不是执行节点，不支持 Emission。"));
+                }
+
                 node.CheckWiring(NodeRuleContext.Reference, message =>
                     errors.Add(scope.Node(node.Label.Value, message)), container: true);
 
@@ -116,6 +121,7 @@ internal static class NodeExpander
                 Inputs = definition.Inputs,
                 Spec = librarySpec with
                 {
+                    Emission = node.Emission ?? librarySpec.Emission,
                     Validate = node.Validate ?? librarySpec.Validate,
                     MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions, currentLimit),
                 },

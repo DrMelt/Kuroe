@@ -59,7 +59,7 @@ public sealed class NodeSpecInterfaceTests
                 Organizes = true,
                 InputTypes = [PortTypes.Text],
             }),
-            Inputs = [new InputPort(Input, PortTypes.Text, isStatic: true, defaultValue: "固定值")],
+            Inputs = [new InputPort(Input, PortTypes.Text, mode: PortMode.Constant, defaultValue: "固定值")],
             Nodes = [NodeSpec.Define(new NodeName("成员"))],
         };
 
@@ -82,7 +82,7 @@ public sealed class NodeSpecInterfaceTests
     }
 
     [Fact]
-    public void Static_input_must_be_text()
+    public void Static_input_accepts_non_text_types()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
@@ -93,12 +93,30 @@ public sealed class NodeSpecInterfaceTests
                 OutputTypes = [PortTypes.Text],
             }),
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(Input, PortTypes.Context, isStatic: true)],
-            Outputs = [new Port(new PortName("输出"), PortTypes.Text, isConstant: true, value: "固定")],
+            Inputs = [new InputPort(Input, PortTypes.Context, mode: PortMode.Constant)],
+            Outputs = [new Port(new PortName("输出"), PortTypes.Text, value: "固定", mode: PortMode.Constant)],
+        };
+
+        Assert.Empty(Errors(node, node.Type?.Shape));
+    }
+
+    [Fact]
+    public void Port_mode_must_be_supported_by_its_type()
+    {
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Type = new TestNodeType(new NodeKind("Executable"), new NodeTypeShape
+            {
+                DispatchesExecutions = true,
+                InputTypes = [PortTypes.Context],
+                OutputTypes = [PortTypes.Text],
+            }),
+            Spec = new ExecutableSpec(),
+            Inputs = [new InputPort(Input, PortTypes.Context, mode: PortMode.Trigger)],
         };
 
         Assert.Equal(
-            ["静态输入端口 输入 的类型只能是 Text。"],
+            ["输入端口 输入 的类型 Context 不支持模式 Trigger。"],
             Errors(node, node.Type?.Shape));
     }
 

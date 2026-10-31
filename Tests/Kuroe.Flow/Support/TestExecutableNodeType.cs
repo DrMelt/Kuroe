@@ -21,7 +21,7 @@ public sealed class TestExecutableNodeType(bool withContractInput = true) : INod
         DispatchesExecutions = true,
         AcceptsInferredInputs = true,
         ContractInputs = withContractInput
-            ? [new InputPort(StaticPort, PortTypes.Text, "测试静态输入。", "执行者", isStatic: true)]
+            ? [new InputPort(StaticPort, PortTypes.Text, "测试静态输入。", "执行者", mode: PortMode.Constant)]
             : [],
         InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
         OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],

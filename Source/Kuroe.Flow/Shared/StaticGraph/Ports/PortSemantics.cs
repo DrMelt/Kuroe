@@ -1,6 +1,6 @@
 namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 
-/// <summary>端口语义：端口承载什么产出，以及这份产出怎么被取用。端口类型注册时按语义产生普通版与 Trigger 版。</summary>
+/// <summary>端口语义：端口承载什么产出，以及这份产出怎么被取用。端口类型的支持模式由类型注册声明。</summary>
 public enum PortSemantics
 {
     /// <summary>文本：产出按序注入目标输入，参与齐备判定。</summary>

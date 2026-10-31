@@ -41,6 +41,7 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
 
         Reject(spec.Validate is not null, "输入节点不启动执行，不能声明 Validate。");
         Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
+        Reject(node.Outputs.Any(port => port.Trigger), "输入节点不启动执行，输出端口不能使用触发。");
     }
 
     /// <summary>输入节点的运行期对象。</summary>

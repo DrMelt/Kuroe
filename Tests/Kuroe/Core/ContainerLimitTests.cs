@@ -41,12 +41,12 @@ public sealed class ContainerLimitTests
     private const string ReferenceContainerLimitFlow = """
         {
           "Nodes": [
-            { "Name": "干活组", "Kind": "Container", "MaxExecutions": 3, "Inputs": [{ "Name": "入口" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "干活组", "Kind": "Container", "MaxExecutions": 3, "Inputs": [{ "Name": "入口" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "入口": "@入口" } ] }
             ] }
           ],
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Label": "较重", "Use": "干活组", "MaxExecutions": 5, "In": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } },
               { "Label": "较轻", "Use": "干活组", "In": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } }
             ] }
@@ -56,8 +56,8 @@ public sealed class ContainerLimitTests
 
     private const string SingleExecutionContainerFlow = """
         {
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "MaxExecutions": 1, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "MaxExecutions": 1, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]

@@ -49,9 +49,11 @@ internal static class ExecutionInputBuilder
                 if (port.Role == InputRole.Content
                     && inputs.StaticTexts.Text(port.Name) is { } constant)
                 {
-                    values.Add(new InputValue(
+                    InputValue constantValue = new(
                         port.Name,
-                        Truncate(new ContextValue(new ConstantSource(node.Path, port.Name), constant))));
+                        Truncate(new ContextValue(new ConstantSource(node.Path, port.Name), constant)));
+                    List<InputValue> target = port.Type.Semantics == PortSemantics.Context ? contextInput : values;
+                    target.Add(constantValue);
                 }
 
                 continue;
@@ -97,7 +99,7 @@ internal static class ExecutionInputBuilder
             ExecutionCount = node.Executions + 1,
             Inputs = values,
             Texts = texts,
-            OutputPorts = [.. node.Executable.Outputs.Where(port => !port.IsConstant)],
+            OutputPorts = node.Executable.SubmittablePorts,
         };
     }
 

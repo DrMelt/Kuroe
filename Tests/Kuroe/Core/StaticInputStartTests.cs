@@ -63,17 +63,17 @@ public sealed class StaticInputStartTests
           "Flows": [ { "Name": "默认",
             "Start": { "Outputs": [
               { "Name": "目标", "Type": "Text" },
-              { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+              { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
             ] },
             "Nodes": [
               { "Name": "整体", "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                 "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "配置", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
-                    "Outputs": [{ "Name": "资料", "Type": "Text", "Constant": true, "Ref": "@MODEL_NAME" }] },
+                    "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] },
                   { "Name": "使用", "Kind": "Llm",
-                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Static": true }],
+                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Mode": "Constant" }],
                     "Static": { "MODEL_NAME": "@MODEL_NAME", "资料": "配置@资料" },
                     "From": [ { "目标": "@目标" } ] }
                 ] }
@@ -86,23 +86,23 @@ public sealed class StaticInputStartTests
           "Flows": [ { "Name": "默认",
             "Start": { "Outputs": [
               { "Name": "目标", "Type": "Text" },
-              { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+              { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
             ] },
             "Nodes": [
               { "Name": "外层", "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                 "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "整体", "Kind": "Container",
-                    "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                    "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                     "In": { "MODEL_NAME": "@MODEL_NAME" },
-                    "Outputs": [{ "Name": "配置", "Type": "Text", "Constant": true, "Ref": "配置@资料" }],
+                    "Outputs": [{ "Name": "配置", "Type": "Text", "Mode": "Constant", "Ref": "配置@资料" }],
                     "Nodes": [
                       { "Name": "配置", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
-                        "Outputs": [{ "Name": "资料", "Type": "Text", "Constant": true, "Ref": "@MODEL_NAME" }] }
+                        "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] }
                     ] },
                   { "Name": "使用", "Kind": "Llm",
-                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Static": true }],
+                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Mode": "Constant" }],
                     "Static": { "MODEL_NAME": "@MODEL_NAME", "资料": "整体@配置" },
                     "From": [ { "目标": "@目标" } ] }
                 ] }
@@ -115,17 +115,17 @@ public sealed class StaticInputStartTests
           "Flows": [ { "Name": "默认",
             "Start": { "Outputs": [
               { "Name": "目标", "Type": "Text" },
-              { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+              { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
             ] },
             "Nodes": [
               { "Name": "整体", "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                 "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "配置", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
-                    "Outputs": [{ "Name": "资料", "Type": "Text", "Constant": true, "Ref": "@MODEL_NAME" }] },
+                    "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] },
                   { "Name": "使用", "Kind": "Llm",
-                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Static": true }],
+                    "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Mode": "Constant" }],
                     "Static": { "MODEL_NAME": "@MODEL_NAME", "资料": "配置@资料" },
                     "From": [ { "目标": "@目标" } ] }
                 ] }

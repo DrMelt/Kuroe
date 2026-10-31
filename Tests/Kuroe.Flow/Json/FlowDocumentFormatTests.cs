@@ -34,7 +34,7 @@ public sealed class FlowDocumentFormatTests
         string text = Ok(Format.Write(document));
 
         Assert.Contains("\"Prompt\": \"写出计划\"", text);
-        Assert.Contains("\"Constant\"", text);
+        Assert.Contains("\"Mode\": \"Constant\"", text);
         Assert.Contains("\"MODEL_NAME\": \"Start@MODEL_NAME\"", text);
         Assert.Contains("\"Label\": \"副本\"", text);
         Assert.DoesNotContain("\": null", text);
@@ -49,8 +49,8 @@ public sealed class FlowDocumentFormatTests
             {
               "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Nodes": [
-                  { "Name": "来源", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "TextTrigger" }, { "Name": "信号", "Type": "SignalTrigger" }] },
-                  { "Name": "下游", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "TextTrigger" }, { "Name": "信号", "Type": "SignalTrigger" }] }
+                  { "Name": "来源", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }, { "Name": "信号", "Type": "Signal", "Mode": "Trigger" }] },
+                  { "Name": "下游", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }, { "Name": "信号", "Type": "Signal", "Mode": "Trigger" }] }
                 ] }
               ] } ]
             }
@@ -59,8 +59,9 @@ public sealed class FlowDocumentFormatTests
         FlowDocument document = Ok(Format.Read(flow));
         string text = Ok(Format.Write(document));
 
-        Assert.Contains("\"Type\": \"TextTrigger\"", text);
-        Assert.Contains("\"Type\": \"SignalTrigger\"", text);
+        Assert.Contains("\"Mode\": \"Trigger\"", text);
+        Assert.Contains("\"Type\": \"Text\"", text);
+        Assert.Contains("\"Type\": \"Signal\"", text);
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
@@ -73,12 +74,12 @@ public sealed class FlowDocumentFormatTests
                 { "Name": "整体", "Kind": "Container", "Nodes": [
                   { "Name": "来源", "Kind": "Llm",
                     "Inputs": [
-                      { "Name": "配置", "Type": "Text", "Static": true, "Role": "Configuration" },
-                      { "Name": "信号", "Type": "Signal", "Trigger": false }
+                      { "Name": "配置", "Type": "Text", "Mode": "Constant", "Role": "Configuration" },
+                      { "Name": "信号", "Type": "Signal", "Mode": "Plain" }
                     ],
                     "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
                     "Outputs": [
-                      { "Name": "结论", "Type": "Text", "Trigger": true },
+                      { "Name": "结论", "Type": "Text", "Mode": "Trigger" },
                       { "Name": "完成", "Type": "Signal" }
                     ] }
                 ] }
@@ -92,15 +93,16 @@ public sealed class FlowDocumentFormatTests
         InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
         InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
         Assert.Equal(InputRole.Configuration, configured.Role);
-        Assert.Null(configured.Trigger);
-        Assert.False(signal.Trigger);
-        Assert.True(source.Outputs[0].Trigger);
-        Assert.Null(source.Outputs[1].Trigger);
+        Assert.Equal(PortMode.Constant, configured.Mode);
+        Assert.Equal(PortMode.Plain, signal.Mode);
+        Assert.Equal(PortMode.Trigger, source.Outputs[0].Mode);
+        Assert.Null(source.Outputs[1].Mode);
 
         string text = Ok(Format.Write(document));
         Assert.Contains("\"Role\": \"Configuration\"", text);
-        Assert.Contains("\"Trigger\": false", text);
-        Assert.Contains("\"Trigger\": true", text);
+        Assert.Contains("\"Mode\": \"Constant\"", text);
+        Assert.Contains("\"Mode\": \"Plain\"", text);
+        Assert.Contains("\"Mode\": \"Trigger\"", text);
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
@@ -111,10 +113,10 @@ public sealed class FlowDocumentFormatTests
             {
               "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Outputs": [
-                  { "Name": "配置", "Type": "Text", "Value": "固定", "Constant": true }
+                  { "Name": "配置", "Type": "Text", "Mode": "Constant", "Value": "固定" }
                 ], "Nodes": [
                   { "Name": "配置节点", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
-                    "Outputs": [{ "Name": "资料", "Type": "Text", "Ref": "@MODEL_NAME", "Constant": true }] }
+                    "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] }
                 ] }
               ] } ]
             }
@@ -124,12 +126,29 @@ public sealed class FlowDocumentFormatTests
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
         PortDocument output = Assert.Single(root.Outputs);
         Assert.Equal("固定", output.Value);
-        Assert.True(output.IsConstant);
+        Assert.Equal(PortTypes.Text, output.Type);
+        Assert.Equal(PortMode.Constant, output.Mode);
 
         string text = Ok(Format.Write(document));
         Assert.Contains("\"Value\": \"固定\"", text);
         Assert.Contains("\"Ref\": \"@MODEL_NAME\"", text);
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
+    }
+
+    [Fact]
+    public void Read_rejects_the_old_constant_field()
+    {
+        ErrorOr<FlowDocument> document = Format.Read("""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
+                { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "配置", "Type": "Text", "Constant": true }] }
+              ] } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("输出端口不认识键 Constant"));
     }
 
     [Fact]
@@ -161,7 +180,7 @@ public sealed class FlowDocumentFormatTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true } ] },
+              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
                   { "Label": "副本", "Use": "计划", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }

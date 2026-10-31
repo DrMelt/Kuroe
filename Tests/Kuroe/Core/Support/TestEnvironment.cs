@@ -119,19 +119,19 @@ public sealed class TestEnvironment : IDisposable
               "Name": "默认",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "MODEL_NAME", "Type": "Text", "Constant": true }
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
               ] },
               "HostStartInputs": { "MODEL_NAME": "MODEL" },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                   "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                   "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
-                      { "Name": "分配执行", "Kind": "Llm", "Inputs": [{ "Name": "计划", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
+                    { "Name": "制定计划", "Kind": "Llm", "Inputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                    { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
+                      { "Name": "分配执行", "Kind": "Llm", "Inputs": [{ "Name": "计划", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Tools": ["GetLocalTime"], "From": [ { "计划": "@计划" } ] }
                     ] }
                   ]
                 }

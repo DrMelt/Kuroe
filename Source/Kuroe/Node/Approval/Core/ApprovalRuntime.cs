@@ -57,6 +57,8 @@ internal sealed class ApprovalRuntime(
 
     int IInputProgress.Executions => 0;
 
+    bool IInputProgress.Published => _revision > 0;
+
     bool IInputProgress.ForceRerun => false;
 
     /// <summary>装入本次输入并声明接收外部输入：停驻时保存输入端口取值，批准后按同名输出端口放出。已停驻或已取消时不再停驻。</summary>

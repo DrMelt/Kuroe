@@ -1,9 +1,11 @@
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 
 /// <summary>输入侧的就绪判定：纯函数读取方案与运行期状态，不改状态。
-/// 组间任一齐备即启动，组内全部齐备；达到执行次数上限后不再启动。Trigger 绑定为 false 的组不驱动。</summary>
+/// 组间任一齐备即启动，组内全部齐备；静态输入绑定的运行期常量全部发布后才进入启动判定；
+/// Once 节点发布后不再启动；达到执行次数上限后不再启动。Trigger 绑定为 false 的组不驱动。</summary>
 public static class NodeReadiness
 {
     /// <summary>这一绑定是否触发下游。普通端口与节点级绑定恒触发。</summary>
@@ -32,11 +34,14 @@ public static class NodeReadiness
         return null;
     }
 
-    /// <summary>是否可启动：执行次数未达上限，且有重跑意图、静态输入启动条件或存在驱动来源有新版本的齐备组。</summary>
+    /// <summary>是否可启动：静态依赖全部发布、Once 节点尚未发布、执行次数未达上限，
+    /// 且有重跑意图、静态输入启动条件或存在驱动来源有新版本的齐备组。</summary>
     public static bool Ready(this NodeInputPlan plan, IInputProgress progress, IReadinessSources sources) =>
-        progress.Executions < plan.MaxExecutions
+        plan.StaticDependencies.All(dependency => sources.Source(dependency.Source).Released)
+        && (plan.Emission != NodeEmission.Once || !progress.Published)
+        && progress.Executions < plan.MaxExecutions
         && (progress.ForceRerun
-            || plan.StartsAtTaskStart && progress.Executions == 0
+            || plan.StaticOnly && progress.Executions == 0
             || plan.DrivenGroup(progress, sources) is not null);
 
     /// <summary>第一个由来源新版本驱动且未被 Trigger 抑制的齐备组序号，没有这样的组时为空。</summary>

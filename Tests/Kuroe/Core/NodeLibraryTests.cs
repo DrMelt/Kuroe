@@ -113,7 +113,7 @@ public sealed class NodeLibraryTests
         JsonElement modelInput = libraryContainer.GetProperty("Inputs")
             .EnumerateArray()
             .Single(input => input.GetProperty("Name").GetString() == "MODEL_NAME");
-        Assert.True(modelInput.GetProperty("Static").GetBoolean());
+        Assert.Equal("Constant", modelInput.GetProperty("Mode").GetString());
 
         JsonElement reference = saved.RootElement.GetProperty("Flows")[0].GetProperty("Nodes")[0].GetProperty("Nodes")[1];
         Assert.Equal("@MODEL_NAME", reference.GetProperty("In").GetProperty("MODEL_NAME").GetString());
@@ -181,7 +181,7 @@ public sealed class NodeLibraryTests
                 Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 MaxExecutions = 0,
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", isStatic: true)], Spec = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
     /// <summary>库容器定义必须声明子节点，缺子节点在库校验阶段拒绝。</summary>
@@ -220,7 +220,7 @@ public sealed class NodeLibraryTests
                 Type = ContainerNodeTypes.Type,
                 Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
                 Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
-                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", isStatic: true)], Spec = new ExecutableSpec() }],
+                Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
     /// <summary>流程名与库作用域名相同时错误仍按流程作用域给出。</summary>
@@ -450,7 +450,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
@@ -459,12 +459,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -482,7 +482,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "计划", "Default": "固定计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划", "Default": "固定计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
@@ -491,12 +491,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -515,7 +515,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "计划" }, { "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
@@ -524,12 +524,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                     { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -548,7 +548,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "干活库", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "外来@结论" } ] }
               ]
@@ -575,10 +575,10 @@ public sealed class NodeLibraryTests
         {
           "Nodes": [
             { "Name": "执行", "Kind": "Llm" },
-            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] }
+            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] }
           ],
           "Flows": [
-            { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
+            { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
           ]
         }
         """;
@@ -588,19 +588,19 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "规划", "Kind": "Llm", "Outputs": [{ "Name": "计划", "Type": "Text" }] },
             { "Name": "执行", "Kind": "Llm" },
-            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
             ] }
           ],
           "Flows": [
             {
               "Name": "双线",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                 { "Label": "制定A", "Use": "规划", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
                 { "Label": "制定B", "Use": "规划", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
                 { "Label": "交付A", "Use": "交付", "In": { "计划": "制定A@计划", "MODEL_NAME": "@MODEL_NAME" } },
@@ -618,7 +618,7 @@ public sealed class NodeLibraryTests
           "Nodes": [
             { "Name": "执行", "Kind": "Llm" },
             { "Name": "交付", "Kind": "Container",
-              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ] }
@@ -628,10 +628,10 @@ public sealed class NodeLibraryTests
               "Name": "甲",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "MODEL_NAME", "Type": "Text", "Value": "执行者", "Constant": true }
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "执行者" }
               ] },
               "Nodes": [ { "Name": "整体", "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                 "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
@@ -642,10 +642,10 @@ public sealed class NodeLibraryTests
               "Name": "乙",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "MODEL_NAME", "Type": "Text", "Value": "实施者", "Constant": true }
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "实施者" }
               ] },
               "Nodes": [ { "Name": "整体", "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
                 "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
@@ -689,18 +689,18 @@ public sealed class NodeLibraryTests
     private const string UnboundPort = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
+          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
         ] }
         """;
 
     private const string PortNotDeclared = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "来源": "@来源" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "来源": "@来源" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
+          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "MODEL_NAME": "Start@MODEL_NAME" } } ] }
         ] }
         """;
 
@@ -716,9 +716,9 @@ public sealed class NodeLibraryTests
     private const string UnknownPortBinding = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
-          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "来源": "制定计划@计划", "MODEL_NAME": "Start@MODEL_NAME" } } ] }
+          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Label": "交付", "Use": "交付", "In": { "来源": "制定计划@计划", "MODEL_NAME": "Start@MODEL_NAME" } } ] }
         ] }
         """;
 
@@ -727,7 +727,7 @@ public sealed class NodeLibraryTests
         """;
 
     private const string ContainerWithFrom = """
-        { "Nodes": [ { "Name": "组", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "From": [ { "x": "x" } ], "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ] } ], "Flows": [] }
+        { "Nodes": [ { "Name": "组", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "x": "x" } ], "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ] } ], "Flows": [] }
         """;
 
     private const string ReferenceWithInputs = """
@@ -738,7 +738,7 @@ public sealed class NodeLibraryTests
 
     private const string LeafWithInputs = """
         { "Nodes": [], "Flows": [
-          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "计划" }] } ] } ] }
+          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "计划" }] } ] } ] }
         ] }
         """;
 
@@ -757,7 +757,7 @@ public sealed class NodeLibraryTests
     private const string ReferenceContainerFrom = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] } ] }
         ], "Flows": [
           { "Name": "默认", "Nodes": [ { "Label": "交付", "Use": "交付", "From": [ { "计划": "制定计划@计划" } ] } ] }
         ] }
@@ -767,22 +767,22 @@ public sealed class NodeLibraryTests
         {
           "Nodes": [
             { "Name": "执行", "Kind": "Llm" },
-            { "Name": "内层", "Kind": "Container", "Inputs": [{ "Name": "内部" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "内层", "Kind": "Container", "Inputs": [{ "Name": "内部" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "内部": "@内部" } ] }
             ] },
-            { "Name": "外层", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "外层", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Label": "里", "Use": "内层", "In": { "内部": "@目标", "MODEL_NAME": "@MODEL_NAME" } }
             ] }
           ],
           "Flows": [
             {
               "Name": "透传",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Label": "交付", "Use": "外层", "In": { "目标": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -798,19 +798,19 @@ public sealed class NodeLibraryTests
         {
           "Nodes": [
             { "Name": "分析", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text" }] },
-            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "输入" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "输入" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Label": "实施", "Use": "分析", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "输入": "@输入" } ] }
             ] }
           ],
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Label": "来源", "Use": "分析", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
                     { "Label": "交付", "Use": "交付", "In": { "输入": "来源@结论", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -823,16 +823,16 @@ public sealed class NodeLibraryTests
 
     private const string DuplicateImportedFlows = """
         { "Flows": [
-          { "Name": "重复", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] },
-          { "Name": "重复", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] }
+          { "Name": "重复", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] },
+          { "Name": "重复", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] } ] }
         ] }
         """;
 
     /// <summary>只写流程，引用的节点库定义不在文件里，按文件自身装配会报缺定义。</summary>
     private const string LibraryReferenceOnlyFlow = """
         { "Flows": [
-          { "Name": "复用", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          { "Name": "复用", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Label": "干活", "Use": "外部库", "Static": { "MODEL_NAME": "@MODEL_NAME" } }
             ] }
           ] }
@@ -848,9 +848,9 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ] }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ] }
               ]
             }
           ]
@@ -866,12 +866,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "内置引用",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Label": "定计划", "Use": "准备", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
                     { "Label": "交付", "Use": "交付", "In": { "计划": "定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -885,8 +885,8 @@ public sealed class NodeLibraryTests
     /// <summary>一条新名字的流程，可独立装配。</summary>
     private const string ExtraFlow = """
         { "Flows": [
-          { "Name": "额外", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          { "Name": "额外", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             ] }
           ] }
@@ -896,8 +896,8 @@ public sealed class NodeLibraryTests
     /// <summary>一条与测试自带流程同名的流程，可独立装配。</summary>
     private const string OverwritingFlow = """
         { "Flows": [
-          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             ] }
           ] }
@@ -908,10 +908,10 @@ public sealed class NodeLibraryTests
         {
           "Nodes": [
             { "Name": "执行", "Kind": "Llm" },
-            { "Name": "内层", "Kind": "Container", "Inputs": [{ "Name": "内部" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "内层", "Kind": "Container", "Inputs": [{ "Name": "内部" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "内部": "@内部" } ] }
             ] },
-            { "Name": "外层", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "入口" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+            { "Name": "外层", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "入口" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
               { "Name": "目标条目", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "入口": "@入口" } ] },
               { "Label": "里", "Use": "内层", "In": { "内部": "目标条目@结论", "MODEL_NAME": "@MODEL_NAME" } }
             ] }
@@ -919,12 +919,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                 { "Name": "规划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Label": "交付", "Use": "外层", "In": { "目标": "规划@计划", "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -958,7 +958,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Label": "实施", "Use": "允许工具", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
@@ -968,12 +968,12 @@ public sealed class NodeLibraryTests
             {
               "Name": "单线交付",
               "Description": "制定计划、复用交付",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                 { "Name": "制定计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "把目标写成可实施的计划。", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                 { "Label": "交付", "Use": "交付", "In": { "计划": "制定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
@@ -998,12 +998,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "目标": "@目标" } ] },
                     { "Label": "审查实例", "Use": "审查", "Static": { "MODEL_NAME": "@MODEL_NAME" },
                       "From": [ { "上下文": "计划@上下文" } ] }
@@ -1029,12 +1029,12 @@ public sealed class NodeLibraryTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] },
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
               "Nodes": [
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
                     { "Label": "审查实例", "Use": "审查", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ],
                       "Validate": { "Predicate": "NonEmpty" } }
@@ -1054,7 +1054,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "组",
               "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [ { "Label": "甲", "Use": "审查", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ]
             }
           ],
@@ -1084,7 +1084,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "组",
               "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [ { "Label": "甲", "Use": "审查", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ]
             }
           ],
@@ -1114,7 +1114,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Name": "甲", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "局外@结论" } ] }
               ]
@@ -1145,7 +1145,7 @@ public sealed class NodeLibraryTests
             {
               "Name": "交付",
               "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }],
+              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
               "Nodes": [
                 { "Name": "甲", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
@@ -1194,7 +1194,7 @@ public sealed class NodeLibraryTests
     private const string MemberReferenceWithOutputs = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
             { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }] }
           ] }
         ], "Flows": [] }
@@ -1208,7 +1208,7 @@ public sealed class NodeLibraryTests
     /// <summary>库容器成员标签含 @，与端口引用分隔符冲突，装配校验拒绝。</summary>
     private const string MemberNameWithAt = """
         { "Nodes": [
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Name": "甲@乙", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Name": "甲@乙", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" } } ] }
         ], "Flows": [] }
         """;
 
@@ -1270,14 +1270,14 @@ public sealed class NodeLibraryTests
     private const string ReferenceWithOut = """
         { "Nodes": [
           { "Name": "执行", "Kind": "Llm" },
-          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "实施" }] } ] }
+          { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [ { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "实施" }] } ] }
         ], "Flows": [] }
         """;
 
     /// <summary>装配层内联容器声明输出端口，绑定目标端口必须被成员声明。</summary>
     private const string AssemblyContainerOut = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }] }, "Nodes": [
-          { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "实施@不存在" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ] }
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
+          { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "实施@不存在" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [ { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ] }
         ] } ] }
         """;
 

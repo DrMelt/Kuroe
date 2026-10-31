@@ -6,6 +6,6 @@ public enum NodeStartMode
     /// <summary>由动态来源的新版本驱动启动组。</summary>
     Driven,
 
-    /// <summary>输入全部来自常量，任务启动时执行一次。</summary>
-    StaticAtTaskStart,
+    /// <summary>输入全部来自常量，静态输入就绪后执行一次。</summary>
+    StaticOnly,
 }

@@ -21,9 +21,9 @@ public sealed class StartPathsTests
               "Start": {
                 "Outputs": [
                   { "Name": "目标", "Type": "Text" },
-                  { "Name": "启动", "Type": "Text", "Constant": true },
-                  { "Name": "流程", "Type": "Text", "Constant": true },
-                  { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+                  { "Name": "启动", "Type": "Text", "Mode": "Constant" },
+                  { "Name": "流程", "Type": "Text", "Mode": "Constant" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
                 ]
               },
               "HostStartInputs": {
@@ -34,15 +34,15 @@ public sealed class StartPathsTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "启动", "Type": "Text", "Static": true }, { "Name": "流程", "Type": "Text", "Static": true }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Static": true }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "读取路径",
                       "Kind": "Llm",
                       "Static": { "MODEL_NAME": "@MODEL_NAME", "启动": "@启动", "流程": "@流程" },
                       "Inputs": [
                         { "Name": "目标" },
-                        { "Name": "启动", "Type": "Text", "Static": true },
-                        { "Name": "流程", "Type": "Text", "Static": true }
+                        { "Name": "启动", "Type": "Text", "Mode": "Constant" },
+                        { "Name": "流程", "Type": "Text", "Mode": "Constant" }
                       ],
                       "From": [
                         {
@@ -105,8 +105,8 @@ public sealed class StartPathsTests
               "Name": "默认",
               "Start": { "Outputs": [
                 { "Name": "目标", "Type": "Text" },
-                { "Name": "任务目录", "Type": "Text", "Constant": true },
-                { "Name": "MODEL_NAME", "Type": "Text", "Value": "fake", "Constant": true }
+                { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
               "HostStartInputs": { "任务目录": "TASK_WORK_PATH" },
               "Nodes": [
@@ -115,8 +115,8 @@ public sealed class StartPathsTests
                   "Kind": "Container",
                   "Inputs": [
                     { "Name": "目标" },
-                    { "Name": "任务目录", "Type": "Text", "Static": true },
-                    { "Name": "MODEL_NAME", "Type": "Text", "Static": true }
+                    { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
+                    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                   ],
                   "In": { "目标": "Start@目标", "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
                   "Nodes": [
@@ -132,7 +132,7 @@ public sealed class StartPathsTests
                       "Kind": "FileWrite",
                       "Path": "{root}/out/result.txt",
                       "Variables": { "root": "任务目录" },
-                      "Inputs": [{ "Name": "正文" }, { "Name": "任务目录", "Type": "Text", "Static": true }],
+                      "Inputs": [{ "Name": "正文" }, { "Name": "任务目录", "Type": "Text", "Mode": "Constant" }],
                       "Static": { "任务目录": "@任务目录" },
                       "From": [{ "正文": "实施@正文" }]
                     }

@@ -19,12 +19,11 @@ public sealed class TaskRegistry(ExecutionIndex executions)
     /// <summary>一个任务走完的通知，检查点协调据此写终态。</summary>
     internal event Action<WorkTask>? Completed;
 
-    /// <summary>把已定键、已备好开始端口文本与静态端口解析的任务加入本域。</summary>
+    /// <summary>把已定键、已备好开始端口文本的任务加入本域。</summary>
     internal WorkTask Add(
         TaskId id,
         StartInputs inputs,
         IPortTexts startTexts,
-        StaticPortValues staticPorts,
         CompiledFlow flow,
         string title,
         Action<string>? onText,
@@ -32,7 +31,7 @@ public sealed class TaskRegistry(ExecutionIndex executions)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, startTexts, staticPorts, flow.Model, flow.Graph, title, onText, onEntry);
+            WorkTask task = new(this, id, inputs, startTexts, flow.Model, flow.Graph, title, onText, onEntry);
             _tasks[task.Id.Value] = task;
 
             return task;

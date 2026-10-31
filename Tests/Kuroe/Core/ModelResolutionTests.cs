@@ -92,14 +92,14 @@ public sealed class ModelResolutionTests
         new StartNode
         {
             Path = StartPath,
-            Outputs = [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, isConstant: true)],
+            Outputs = [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, mode: PortMode.Constant)],
         },
         new ExecutableNode
         {
             Path = NodePath.Of("干活"),
             Type = LlmNodeTypes.Create(null),
             Spec = new ExecutableSpec(),
-            Inputs = declare ? [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, isStatic: true)] : [],
+            Inputs = declare ? [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, mode: PortMode.Constant)] : [],
             StaticBindings = bind
                 ? new Dictionary<PortName, NodePort> { [LlmNodeTypes.ModelPort] = new NodePort(StartPath, LlmNodeTypes.ModelPort) }
                 : null,

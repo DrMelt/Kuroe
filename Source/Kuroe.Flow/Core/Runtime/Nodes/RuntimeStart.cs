@@ -3,21 +3,17 @@ using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
-/// <summary>开始节点在任务内的运行时对象：任务启动即已放行，产出是提交时按端口给出的输入，带固定值的端口给配置里的值，
-/// 绑定到宿主输入名的端口给任务启动时注入的值。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
-internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortTexts startTexts) : RuntimeNode(node)
+/// <summary>开始节点在任务内的运行时对象：任务启动即已放行，产出是任务启动时确定的开始端口值，
+/// 固定值、宿主输入与提交输入共用同一份解析。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
+internal sealed class RuntimeStart(StartNode node, IPortTexts startPorts) : RuntimeNode(node)
 {
-    /// <summary>提交时按端口给出的输入，不带固定值的端口的产出。</summary>
-    private readonly StartInputs _inputs = inputs;
-
-    /// <summary>任务启动时注入的开始端口文本，绑定到宿主输入名的端口的产出。</summary>
-    private readonly IPortTexts _startTexts = startTexts;
+    /// <summary>任务启动时确定的开始端口文本，固定值、宿主输入与提交输入按端口给出。</summary>
+    private readonly IPortTexts _startPorts = startPorts;
 
     public override bool Released => true;
 
@@ -25,7 +21,7 @@ internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortText
 
     public override bool Canceled => false;
 
-    /// <summary>按端口取输入：带固定值的端口给该值，绑定到宿主输入名的端口给注入值，其余 Text 端口给提交的输入，未声明端口无产出。</summary>
+    /// <summary>按端口取任务启动时确定的文本，未声明端口或既非 Text 也非常量端口时无产出。</summary>
     public override string? PortText(INodeContext context, PortName port) => Text(port);
 
     /// <summary>按端口取初始输入消息，出处指向流程起点。</summary>
@@ -47,7 +43,7 @@ internal sealed class RuntimeStart(StartNode node, StartInputs inputs, IPortText
     }
 
     private string? Text(PortName port) =>
-        node.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
-            ? declared.Value ?? _startTexts.Text(port) ?? _inputs.Text(port)
+        node.FindPort(port) is { } declared && (declared.IsConstant || PortRules.CarriesText(declared.Type))
+            ? _startPorts.Text(port)
             : null;
 }

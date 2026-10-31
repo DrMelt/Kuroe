@@ -143,6 +143,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         {
             From = from.Value,
             Validate = validation.Value,
+            Emission = document.Emission,
             MaxExecutions = document.MaxExecutions,
             In = bindings.Value,
             Static = staticBindings.Value,
@@ -262,6 +263,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 ? null
                 : new ExecutableSpec
                 {
+                    Emission = document.Emission ?? NodeEmission.Repeated,
                     Validate = validation.Value,
                     MaxExecutions = document.MaxExecutions,
                 },
@@ -299,6 +301,11 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 Fail("容器节点不是执行节点，不支持 Validate。");
             }
 
+            if (document.Emission is not null)
+            {
+                Fail("容器节点不是执行节点，不支持 Emission。");
+            }
+
             return;
         }
 
@@ -334,9 +341,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 entry.Type ?? PortTypes.Text,
                 ToDescription(entry.Description),
                 entry.Default,
-                entry.IsStatic,
-                entry.Role,
-                entry.Trigger));
+                entry.Mode,
+                entry.Role));
         }
 
         return errors.Count > 0 ? errors : result;
@@ -373,7 +379,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
 
     private static IReadOnlyList<Port> ForwardedPorts(IReadOnlyList<InputPort> inputs) =>
         [.. inputs.Where(input => !input.IsStatic)
-            .Select(input => new Port(input.Name, input.Type, input.Description, trigger: input.Trigger))];
+            .Select(input => new Port(input.Name, input.Type, input.Description, mode: input.Mode))];
 
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(
         IReadOnlyList<PortDocument> entries,
@@ -415,9 +421,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 entry.Type ?? PortTypes.Text,
                 ToDescription(entry.Description),
                 entry.Value,
-                entry.IsConstant,
                 reference,
-                entry.Trigger));
+                entry.Mode));
         }
 
         return errors.Count > 0 ? errors : result;

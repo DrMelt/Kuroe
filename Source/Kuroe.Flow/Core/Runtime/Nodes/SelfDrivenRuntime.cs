@@ -45,6 +45,8 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
 
     int IInputProgress.Executions => _executions;
 
+    bool IInputProgress.Published => _revision > 0;
+
     bool IInputProgress.ForceRerun => _retry;
 
     /// <summary>随任务进入取消态，之后不再激活。</summary>

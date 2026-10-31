@@ -71,7 +71,7 @@ public sealed class RuntimeExecutableTests
             Type = TestNodeTypes.Executable,
             Spec = new ExecutableSpec(),
             Inputs = [],
-            Outputs = [new Port(Conclusion, PortTypes.Text, trigger: true)],
+            Outputs = [new Port(Conclusion, PortTypes.Text, mode: PortMode.Trigger)],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
         };
         Execution execution = new(new ExecutionId(1), new ExecutionInput

@@ -74,7 +74,7 @@ public sealed class PortSubmissionRulesTests
     public void Trigger_port_accepts_a_false_trigger()
     {
         ErrorOr<Success> result = PortSubmissionRules.Validate(
-            [new Port(Conclusion, PortTypes.Text, trigger: true)],
+            [new Port(Conclusion, PortTypes.Text, mode: PortMode.Trigger)],
             Values((Conclusion, new PortValue("内容", false))));
 
         Assert.False(result.IsError);

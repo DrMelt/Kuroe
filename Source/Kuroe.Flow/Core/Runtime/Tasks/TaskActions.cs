@@ -75,12 +75,13 @@ public sealed class TaskActions(
             return startErrors;
         }
 
-        // 不启动执行的节点不需要宿主声明；开始直连的派发节点在开始端口值就绪后再要求声明可解析
-        StaticPortValues staticPorts = new(graph, startTexts.Value);
+        // 不启动执行的节点不需要宿主声明；开始直连的派发节点在静态值全部就绪后再要求声明可解析
+        StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, inputs));
         foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
         {
             if (graph[edge.Target] is not ExecutableNode target
-                || graph.ShapeOf(target.Path) is { DispatchesExecutions: false })
+                || graph.ShapeOf(target.Path) is { DispatchesExecutions: false }
+                || !staticPorts.FullyResolved(target))
             {
                 continue;
             }
@@ -96,7 +97,6 @@ public sealed class TaskActions(
             id,
             inputs,
             startTexts.Value,
-            staticPorts,
             flow,
             taskTitle,
             onText,

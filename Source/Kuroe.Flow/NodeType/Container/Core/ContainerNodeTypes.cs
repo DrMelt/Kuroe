@@ -14,8 +14,8 @@ public static class ContainerNodeTypes
     public static NodeTypeShape Shape { get; } = new()
     {
         Organizes = true,
-        InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
-        OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
+        InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
     /// <summary>容器描述实例，全引擎共用一份。</summary>

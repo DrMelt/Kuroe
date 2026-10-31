@@ -7,10 +7,10 @@ namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 /// <summary>端口与上游连接的展示名。</summary>
 public static class PortLabels
 {
-    /// <summary>输出端口的展示：Text 端口只写名字，其余标出类型；固定值、引用来源与静态标记附后，说明存在时写在末尾。</summary>
+    /// <summary>输出端口的展示：普通 Text 端口只写名字，其余标出类型与模式；固定值与引用来源附后，说明存在时写在末尾。</summary>
     public static string Label(this Port port)
     {
-        string text = Format(port.Name, port.Type, port.Description);
+        string text = Format(port.Name, port.Type, port.Mode, port.Description);
         if (port.Value is { Length: > 0 } value)
         {
             text = $"{text}={value}";
@@ -20,19 +20,19 @@ public static class PortLabels
             text = $"{text}←{reference.Display}";
         }
 
-        return port.IsConstant ? $"{text}·常量" : text;
+        return text;
     }
 
-    /// <summary>输入端口的展示：Text 端口只写名字，其余标出类型，说明存在时写在末尾，默认值附后，静态端口标出静态。</summary>
+    /// <summary>输入端口的展示：普通 Text 端口只写名字，其余标出类型与模式，说明存在时写在末尾，默认值附后。</summary>
     public static string Label(this InputPort port)
     {
-        string text = Format(port.Name, port.Type, port.Description);
+        string text = Format(port.Name, port.Type, port.Mode, port.Description);
         if (port.Default is { Length: > 0 } value)
         {
             text = $"{text}，默认 {value}";
         }
 
-        return port.IsStatic ? $"{text}·静态" : text;
+        return text;
     }
 
     /// <summary>一条上游连接的展示：输入名与来源端口。</summary>
@@ -87,10 +87,18 @@ public static class PortLabels
         return executable.FindInput(port) is { IsStatic: true, Default: { Length: > 0 } value } ? value : null;
     }
 
-    /// <summary>端口的展示：普通 Text 端口只写名字，其余标出类型，说明存在时写在末尾。</summary>
-    private static string Format(PortName name, PortType type, string? description)
+    /// <summary>端口的展示：普通 Text 端口只写名字，非 Text 标出类型，常量与 Text 触发标出模式，说明存在时写在末尾。</summary>
+    private static string Format(PortName name, PortType type, PortMode mode, string? description)
     {
         string label = type == PortTypes.Text ? name.Value : $"{name.Value}·{type}";
+        if (mode == PortMode.Constant)
+        {
+            label = $"{label}·常量";
+        }
+        else if (mode == PortMode.Trigger && type == PortTypes.Text)
+        {
+            label = $"{label}·触发";
+        }
 
         return description is { Length: > 0 } text ? $"{label}：{text}" : label;
     }

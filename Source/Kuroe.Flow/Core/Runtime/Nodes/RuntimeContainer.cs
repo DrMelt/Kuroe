@@ -66,6 +66,8 @@ internal sealed class RuntimeContainer(
 
     int IInputProgress.Executions => 0;
 
+    bool IInputProgress.Published => _revision > 0;
+
     bool IInputProgress.ForceRerun => false;
 
     /// <summary>随任务进入取消态。</summary>
@@ -105,7 +107,7 @@ internal sealed class RuntimeContainer(
 
     /// <summary>输出端口绑定到的成员运行期对象与成员端口，常量端口、未声明该端口或成员未实例化时为空。</summary>
     private (NodeRuntime Node, PortName Port)? DynamicMemberOf(PortName port) =>
-        Container.FindPort(port) is { IsConstant: false }
+        Container.FindPort(port) is { } declared && !declared.IsConstant
         && Container.OutputBindings is { } bindings
         && bindings.TryGetValue(port, out NodePort target)
         && context.Materialized(target.Node) is { } member

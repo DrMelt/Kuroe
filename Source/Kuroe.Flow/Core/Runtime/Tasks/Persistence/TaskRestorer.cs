@@ -19,7 +19,6 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
         try
         {
             PortTexts startTexts = new(checkpoint.Start.StartTexts);
-            StaticPortValues staticPorts = new(flow.Graph, startTexts);
             List<Execution> restored = [];
             foreach (ExecutionCheckpoint saved in checkpoint.Executions)
             {
@@ -33,7 +32,7 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
                 restored.Add(Execution.Restore(saved, BuildInput(checkpoint.Identity.Id, node, saved)));
             }
 
-            WorkTask task = WorkTask.Restore(_registry, checkpoint, flow, startTexts, staticPorts, restored);
+            WorkTask task = WorkTask.Restore(_registry, checkpoint, flow, startTexts, restored);
             foreach (Execution execution in task.Executions)
             {
                 _registry.RestoreExecution(task, execution);
@@ -62,7 +61,7 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
                     new ContextValue(CheckpointSources.Read(value.Origin), value.Text))),
             ],
             Texts = saved.Texts,
-            OutputPorts = [.. node.Outputs.Where(port => !port.IsConstant)],
+            OutputPorts = node.SubmittablePorts,
         };
     }
 }

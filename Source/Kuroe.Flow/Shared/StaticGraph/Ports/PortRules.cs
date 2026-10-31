@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 
 /// <summary>端口表的查找、交回判定与声明文本。</summary>
@@ -9,12 +10,30 @@ public static class PortRules
     public static bool RequiresSubmission(PortType type) =>
         type.Semantics is PortSemantics.Text or PortSemantics.Signal;
 
+    /// <summary>输出端口是否需要执行交回：动态端口按类型判定，常量端口只在由执行产出时交回。</summary>
+    public static bool RequiresSubmission(Port port, NodeEmission emission) =>
+        port.Mode == PortMode.Constant
+            ? IsRuntimeConstant(port, emission)
+            : RequiresSubmission(port.Type);
+
     /// <summary>端口是否承载文本内容。</summary>
     public static bool CarriesText(PortType type) => type.Semantics == PortSemantics.Text;
 
-    /// <summary>输出端口表里执行需交回的动态端口，按声明序。</summary>
-    public static IReadOnlyList<Port> RequiringSubmission(IReadOnlyList<Port> ports) =>
-        [.. ports.Where(port => !port.IsConstant && RequiresSubmission(port.Type))];
+    /// <summary>常量端口是否由执行产出：常量端口没有固定值与来源引用，且节点产出模式为首次发布后冻结。</summary>
+    public static bool IsRuntimeConstant(Port port, NodeEmission emission) =>
+        port.Mode == PortMode.Constant && port.Value is null && port.Ref is null && emission == NodeEmission.Once;
+
+    /// <summary>输出端口表里执行需交回的端口，按声明序。</summary>
+    public static IReadOnlyList<Port> RequiringSubmission(IReadOnlyList<Port> ports, NodeEmission emission) =>
+        [.. ports.Where(port => RequiresSubmission(port, emission))];
+
+    /// <summary>执行可交回的端口，按声明序：全部动态端口与运行期常量端口。</summary>
+    public static IReadOnlyList<Port> SubmittablePorts(IReadOnlyList<Port> ports, NodeEmission emission) =>
+        [.. ports.Where(port => port.Mode != PortMode.Constant || IsRuntimeConstant(port, emission))];
+
+    /// <summary>可交回端口表里本轮必须交回的端口：动态 Text 与 Signal，以及全部运行期常量端口。</summary>
+    public static IReadOnlyList<Port> RequiredFromSubmittable(IReadOnlyList<Port> ports) =>
+        [.. ports.Where(port => port.Mode == PortMode.Constant || RequiresSubmission(port.Type))];
 
     /// <summary>端口声明的清单，按声明序，有说明写 端口名：说明。</summary>
     public static string List(IEnumerable<Port> ports) => string.Join('、', ports.Select(Describe));
@@ -51,3 +70,4 @@ public static class PortRules
         return null;
     }
 }
+

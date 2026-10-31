@@ -5,15 +5,19 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Compilation.Graph;
 
-/// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上，
-/// 依赖以显式边表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进。
-/// 树与边在编译期落定，与节点相关的边在构造时挂到节点上，输入侧方案由节点按自身入边算出，读取按路径逐段下钻。</summary>
+/// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上。
+/// 依赖由 From 边与静态输入指向的运行期常量依赖共同表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进。
+/// 树与边在编译期落定，与节点相关的边在构造时挂到节点上，静态来源与输入侧方案由执行视图在构造期解析。</summary>
 public sealed class NodeGraph : INodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
+    private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _staticInputs = [];
+    private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _constantOutputs = [];
+    private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _staticDependents = [];
+    private readonly Dictionary<NodePath, NodeInputPlan> _plans = [];
 
     /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，边两端必须落在节点表里。
-    /// 与节点相关的边在构造时挂到节点上：出边落在来源，入边落在执行节点。</summary>
+    /// 与节点相关的边在构造时挂到节点上：出边落在来源，入边落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
     {
         Start = nodes[0] as StartNode
@@ -25,6 +29,9 @@ public sealed class NodeGraph : INodeGraph
         Containers = [.. Nodes.OfType<ContainerNode>()];
 
         CheckTree(nodes.Count);
+        StaticDependencies = ResolveStaticDependencies();
+        BuildDependents();
+        BuildPlans();
     }
 
     /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
@@ -41,6 +48,9 @@ public sealed class NodeGraph : INodeGraph
 
     /// <summary>依赖边。</summary>
     public IReadOnlyList<FlowEdge> Edges { get; }
+
+    /// <summary>常量依赖：目标节点的静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
+    public IReadOnlyList<StaticDependency> StaticDependencies { get; }
 
     /// <summary>节点数，执行节点与容器一起算。</summary>
     public int Count => Nodes.Count;
@@ -75,10 +85,28 @@ public sealed class NodeGraph : INodeGraph
     /// <summary>来源的出边，按编译顺序。</summary>
     public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => this[source].Outgoing;
 
+    /// <summary>依赖某来源节点运行期常量的执行节点路径，按执行节点表顺序。</summary>
+    public IReadOnlyList<NodePath> StaticDependents(NodePath source) =>
+        _staticDependents.GetValueOrDefault(source) ?? [];
+
+    /// <summary>执行节点某静态输入的结构解析结果，未声明或未解析时为空。</summary>
+    public StaticResolution? StaticInputResolution(NodePath node, PortName port) =>
+        _staticInputs.TryGetValue(node, out IReadOnlyDictionary<PortName, StaticResolution>? inputs)
+        && inputs.TryGetValue(port, out StaticResolution resolution)
+            ? resolution
+            : null;
+
+    /// <summary>节点某常量输出的结构解析结果，未声明或未解析时为空。</summary>
+    public StaticResolution? ConstantResolution(NodePath node, PortName port) =>
+        _constantOutputs.TryGetValue(node, out IReadOnlyDictionary<PortName, StaticResolution>? outputs)
+        && outputs.TryGetValue(port, out StaticResolution resolution)
+            ? resolution
+            : null;
+
     /// <summary>节点的输入侧方案，开始与不需来源即可挂起的类型为空。</summary>
     public NodeInputPlan? PlanOf(NodePath path) => this[path] switch
     {
-        ExecutableNode executable => executable.Plan,
+        ExecutableNode => _plans.GetValueOrDefault(path),
         ContainerNode container => container.Plan,
         _ => null,
     };
@@ -96,7 +124,7 @@ public sealed class NodeGraph : INodeGraph
         this[node].FindPort(port)?.Type ?? PortTypes.Text;
 
     /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。
-    /// 容器与执行节点带上自己的入出边，输入侧方案由节点按入边算出。</summary>
+    /// 容器与执行节点带上自己的入出边，输入侧方案由执行视图在静态解析后生成。</summary>
     private static GraphNode Finalize(GraphNode node, IReadOnlyList<FlowEdge> edges) => node switch
     {
         StartNode start => start with { Outgoing = [.. edges.Where(edge => edge.Source == start.Path)] },
@@ -112,6 +140,67 @@ public sealed class NodeGraph : INodeGraph
         },
         _ => node,
     };
+
+    /// <summary>按静态绑定链找出运行期常量依赖，并登记每个静态输入与常量输出的结构解析结果。</summary>
+    private IReadOnlyList<StaticDependency> ResolveStaticDependencies()
+    {
+        List<StaticDependency> dependencies = [];
+        foreach (ExecutableNode executable in ExecutableNodes)
+        {
+            Dictionary<PortName, StaticResolution> inputs = executable.Inputs
+                .Where(port => port.IsStatic)
+                .Select(input => (input.Name, Resolution: StaticSources.ResolveInput(this, executable.Path, input.Name)))
+                .ToDictionary(entry => entry.Name, entry => entry.Resolution);
+            dependencies.AddRange(inputs.Values
+                .Where(resolution => resolution.Kind == StaticSourceKind.RuntimeConstant)
+                .Select(resolution => new StaticDependency(resolution.Node, resolution.Port, executable.Path)));
+
+            if (inputs.Count > 0)
+            {
+                _staticInputs[executable.Path] = inputs;
+            }
+        }
+
+        foreach (GraphNode node in Nodes)
+        {
+            Dictionary<PortName, StaticResolution> constants = node.Outputs
+                .Where(port => port.IsConstant)
+                .ToDictionary(port => port.Name, port => StaticSources.ResolveOutput(this, node.Path, port.Name));
+
+            if (constants.Count > 0)
+            {
+                _constantOutputs[node.Path] = constants;
+            }
+        }
+
+        return [.. dependencies.Distinct()];
+    }
+
+    /// <summary>按来源建立运行期常量依赖的反查，目标保持执行节点表顺序。</summary>
+    private void BuildDependents()
+    {
+        foreach (IGrouping<NodePath, StaticDependency> group in StaticDependencies.GroupBy(dependency => dependency.Source))
+        {
+            _staticDependents[group.Key] = [.. group.Select(dependency => dependency.Target).Distinct()];
+        }
+    }
+
+    /// <summary>生成执行节点的输入侧方案，静态依赖与产出模式一并落定。</summary>
+    private void BuildPlans()
+    {
+        foreach (ExecutableNode executable in ExecutableNodes)
+        {
+            if (executable.Type.Shape.StartsUnaided)
+            {
+                continue;
+            }
+
+            IReadOnlyList<StaticDependency> dependencies =
+                [.. StaticDependencies.Where(dependency => dependency.Target == executable.Path)];
+            _plans[executable.Path] =
+                NodeInputPlan.Of(executable.Spec, executable.Incoming, executable.Inputs, dependencies);
+        }
+    }
 
     /// <summary>节点与它已重建的子树，先根序。</summary>
     private static IEnumerable<GraphNode> Flattened(GraphNode node) =>

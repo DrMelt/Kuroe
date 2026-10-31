@@ -74,19 +74,19 @@ public sealed class StaticPortTests
     public void From_cannot_connect_a_static_input()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = ContainerNodeTypes.Type,
-                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 In = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
-                        Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                        Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                         Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Named(StartNode.ReservedLabel, Model) },
                         Spec = new ExecutableSpec(),
                         From =
@@ -117,12 +117,12 @@ public sealed class StaticPortTests
         };
 
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = ContainerNodeTypes.Type,
-                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 In = RootBindings(),
                 Nodes =
                 [
@@ -144,17 +144,17 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains("输出端口 结论 不是常量端口"));
     }
 
-    /// <summary>常量开始端口没有 Value 也没有宿主输入绑定时报错。</summary>
+    /// <summary>常量开始端口没有 Value 与宿主绑定时由提交输入给值，静态绑定在任务启动后解析到该值。</summary>
     [Fact]
-    public void Static_start_port_requires_a_value_or_host_binding()
+    public void Static_start_port_without_value_or_host_binding_takes_submitted_text()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, isConstant: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, mode: PortMode.Constant)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = ContainerNodeTypes.Type,
-                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 In = RootBindings(),
                 Nodes =
                 [
@@ -162,14 +162,27 @@ public sealed class StaticPortTests
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Named(StartNode.ReservedLabel, Model) },
+                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                         Spec = new ExecutableSpec(),
                         From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
                     },
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains($"常量开始端口 {Model} 必须有 Value 或宿主输入绑定"));
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
+            .Expand([flow], [], []);
+        Assert.False(expanded.IsError,
+            string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        Assert.Equal("提交值", StaticText(
+            compiled.Value,
+            check,
+            Model,
+            new PortTexts(new Dictionary<PortName, string> { [Model] = "提交值" })));
     }
 
     /// <summary>常量开始端口绑定宿主输入时保留为来源绑定，取值在任务启动后由注入的端口文本给出。</summary>
@@ -177,12 +190,12 @@ public sealed class StaticPortTests
     public void Externally_bound_static_start_port_keeps_a_binding()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, isConstant: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, mode: PortMode.Constant)],
             new Dictionary<PortName, string> { [Model] = "MODEL" },
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = ContainerNodeTypes.Type,
-                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 In = RootBindings(),
                 Nodes =
                 [
@@ -224,7 +237,7 @@ public sealed class StaticPortTests
     public void Constant_start_port_cannot_feed_from()
     {
         FlowDefinition flow = new(new FlowName("默认"), null,
-            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
             new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("检查")) with
             {
@@ -288,7 +301,7 @@ public sealed class StaticPortTests
                         Type = ContainerNodeTypes.Type,
                         Outputs =
                         [
-                            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("检查"), Model)),
+                            new Port(Model, PortTypes.Text, reference: PortRef.Named(new NodeLabel("检查"), Model), mode: PortMode.Constant),
                         ],
                         Nodes =
                         [
@@ -296,7 +309,7 @@ public sealed class StaticPortTests
                             {
                                 Type = TestNodeTypes.Executable,
                                 Inputs = [new InputPort(Goal)],
-                                Outputs = [new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Bound(Model))],
+                                Outputs = [new Port(Model, PortTypes.Text, reference: PortRef.Bound(Model), mode: PortMode.Constant)],
                                 Static = new Dictionary<PortName, PortRef>
                                 {
                                     [Model] = PortRef.Named(new NodeLabel("交付"), Model),
@@ -330,7 +343,7 @@ public sealed class StaticPortTests
                 Inputs = [new InputPort(Goal)],
                 Outputs =
                 [
-                    new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("目标"), Result)),
+                    new Port(Model, PortTypes.Text, reference: PortRef.Named(new NodeLabel("目标"), Result), mode: PortMode.Constant),
                 ],
                 Nodes =
                 [
@@ -350,7 +363,7 @@ public sealed class StaticPortTests
                 ],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains("常量性必须与来源"));
+        Assert.Contains("常量性必须与来源", string.Join("；", Errors(flow)));
     }
 
     /// <summary>容器类型声明的静态输入必须由引用处绑定。</summary>
@@ -363,7 +376,7 @@ public sealed class StaticPortTests
             NodeSpec.Define(new NodeName("整体")) with
             {
                 Type = new StaticContainerType(),
-                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 In = new Dictionary<PortName, PortRef>
                 {
                     [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
@@ -416,6 +429,151 @@ public sealed class StaticPortTests
         Assert.Equal("执行者", StaticText(compiled.Value, check, TestExecutableNodeType.StaticPort));
     }
 
+    /// <summary>运行期常量输出要求节点没有动态输入，带 From 的执行节点声明常量输出时报错。</summary>
+    [Fact]
+    public void Runtime_constant_output_requires_a_static_only_node()
+    {
+        FlowDefinition flow = new(new FlowName("默认"), null,
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
+                In = RootBindings(),
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("检查")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
+                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                        Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
+                        Spec = new ExecutableSpec { Emission = NodeEmission.Once },
+                        From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+                    },
+                ],
+            });
+
+        Assert.Contains(Errors(flow),
+            error => error.Contains("Emission 为 Once 的节点不能声明动态输入或 From"));
+    }
+
+    /// <summary>两个节点互相绑定对方的运行期常量时报出常量依赖环。</summary>
+    [Fact]
+    public void Runtime_constant_dependency_cycle_is_rejected()
+    {
+        PortName source = new("来源");
+        NodeSpec Node(string name, string other) => NodeSpec.Define(new NodeName(name)) with
+        {
+            Type = TestNodeTypes.Executable,
+            Inputs = [new InputPort(source, PortTypes.Text, mode: PortMode.Constant)],
+            Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
+            Static = new Dictionary<PortName, PortRef>
+            {
+                [source] = PortRef.Named(new NodeLabel(other), Result),
+            },
+            Spec = new ExecutableSpec { Emission = NodeEmission.Once },
+        };
+
+        FlowDefinition flow = new(new FlowName("默认"), null,
+            [new Port(Goal, PortTypes.Text)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Nodes = [Node("甲", "乙"), Node("乙", "甲")],
+            });
+
+        Assert.Contains(Errors(flow), error => error.Contains("常量依赖形成环"));
+    }
+    /// <summary>Once 节点可以声明多个运行期常量输出，一次执行全部交回。</summary>
+    [Fact]
+    public void Runtime_constant_node_can_declare_multiple_outputs()
+    {
+        FlowDefinition flow = new(new FlowName("默认"), null,
+            [new Port(Goal, PortTypes.Text)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("检查")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Outputs =
+                        [
+                            new Port(Result, PortTypes.Text, mode: PortMode.Constant),
+                            new Port(new PortName("附注"), PortTypes.Context, mode: PortMode.Constant),
+                        ],
+                        Spec = new ExecutableSpec { Emission = NodeEmission.Once },
+                    },
+                ],
+            });
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        Assert.Equal(2, check.RequiredPorts.Count);
+    }
+
+    /// <summary>逐次发布的节点不能声明没有来源的常量输出。</summary>
+    [Fact]
+    public void Repeated_node_cannot_produce_a_runtime_constant()
+    {
+        FlowDefinition flow = new(new FlowName("默认"), null,
+            [new Port(Goal, PortTypes.Text)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("检查")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
+                        Spec = new ExecutableSpec(),
+                    },
+                ],
+            });
+
+        Assert.Contains(Errors(flow), error => error.Contains("运行期常量输出需要节点声明 Emission 为 Once"));
+    }
+
+    /// <summary>运行期常量节点没有输入时仍按静态就绪启动，执行上限保持配置值。</summary>
+    [Fact]
+    public void Runtime_constant_node_can_have_no_inputs()
+    {
+        FlowDefinition flow = new(new FlowName("默认"), null,
+            [new Port(Goal, PortTypes.Text)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("检查")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
+                        Spec = new ExecutableSpec { Emission = NodeEmission.Once, MaxExecutions = 5 },
+                    },
+                ],
+            });
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(flow);
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
+        Assert.Equal(5, check.MaxExecutions);
+        Assert.True(compiled.Value.PlanOf(check.Path) is { StaticOnly: true });
+    }
+
+
+
     /// <summary>按编译视图与注入的开始端口文本取静态端口值。</summary>
     private static string? StaticText(
         NodeGraph graph,
@@ -446,7 +604,7 @@ public sealed class StaticPortTests
         Outputs =
         [
             new Port(Result, PortTypes.Text),
-            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Bound(Model)),
+            new Port(Model, PortTypes.Text, reference: PortRef.Bound(Model), mode: PortMode.Constant),
         ],
         Spec = new ExecutableSpec(),
     };
@@ -454,10 +612,10 @@ public sealed class StaticPortTests
     private static NodeSpec DeliveryDefinition() => NodeSpec.Define(new NodeName("交付")) with
     {
         Type = ContainerNodeTypes.Type,
-        Inputs = [new InputPort(Plan), new InputPort(Model, PortTypes.Text, isStatic: true)],
+        Inputs = [new InputPort(Plan), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
         Outputs =
         [
-            new Port(Model, PortTypes.Text, isConstant: true, reference: PortRef.Named(new NodeLabel("实施"), Model)),
+            new Port(Model, PortTypes.Text, reference: PortRef.Named(new NodeLabel("实施"), Model), mode: PortMode.Constant),
         ],
         Nodes =
         [
@@ -472,12 +630,12 @@ public sealed class StaticPortTests
     private static FlowDefinition FlowWithStaticOutput() => new(
         new FlowName("默认"),
         null,
-        [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, null, "fake", isConstant: true)],
+        [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
         new Dictionary<PortName, string>(),
         NodeSpec.Define(new NodeName("整体")) with
         {
             Type = ContainerNodeTypes.Type,
-            Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, isStatic: true)],
+            Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
             In = RootBindings(),
             Nodes =
             [

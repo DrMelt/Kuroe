@@ -69,15 +69,13 @@ internal static class DialogueFlow
                 Name.Value,
                 "内置对话：回答用户的每轮输入",
                 [
-                    new PortDocument(StartPort.Value, PortTypes.Text, "任务的初始输入，提交时给出。"),
-                    new PortDocument(WorkspacePort.Value, PortTypes.Text, "工作区根目录，由宿主给出。", null, null, true),
+                    new PortDocument(StartPort.Value, PortTypes.Text, Description: "任务的初始输入，提交时给出。"),
+                    new PortDocument(WorkspacePort.Value, PortTypes.Text, PortMode.Constant, "工作区根目录，由宿主给出。"),
                     new PortDocument(
                         LlmNodeTypes.ModelPort.Value,
                         PortTypes.Text,
-                        "执行使用的模型名，由宿主在任务启动时给出。",
-                        null,
-                        null,
-                        true),
+                        PortMode.Constant,
+                        "执行使用的模型名，由宿主在任务启动时给出。"),
                 ],
                 new Dictionary<string, string>
                 {
@@ -91,8 +89,8 @@ internal static class DialogueFlow
                     Inputs =
                     [
                         new InputPortDocument(StartPort.Value, PortTypes.Text),
-                        new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true),
-                        new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, IsStatic: true),
+                        new InputPortDocument(WorkspacePort.Value, PortTypes.Text, Mode: PortMode.Constant),
+                        new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, Mode: PortMode.Constant),
                     ],
                     In = new Dictionary<string, string>
                     {
@@ -133,8 +131,8 @@ internal static class DialogueFlow
                             Inputs =
                             [
                                 new InputPortDocument(InputPort.Value, PortTypes.Text),
-                                new InputPortDocument(WorkspacePort.Value, PortTypes.Text, IsStatic: true),
-                                new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, IsStatic: true),
+                                new InputPortDocument(WorkspacePort.Value, PortTypes.Text, Mode: PortMode.Constant),
+                                new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, Mode: PortMode.Constant),
                             ],
                             Static = new Dictionary<string, string>
                             {

@@ -36,7 +36,7 @@ public sealed class NodeSpecStaticTests
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(Input, isStatic: true)],
+            Inputs = [new InputPort(Input, mode: PortMode.Constant)],
         };
 
         Assert.Equal(
@@ -50,7 +50,7 @@ public sealed class NodeSpecStaticTests
         NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
         {
             Spec = new ExecutableSpec(),
-            Inputs = [new InputPort(Input, isStatic: true, defaultValue: "固定值")],
+            Inputs = [new InputPort(Input, mode: PortMode.Constant, defaultValue: "固定值")],
         };
 
         Assert.Empty(Errors(node.CheckStaticCoverage));

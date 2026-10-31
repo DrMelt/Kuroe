@@ -73,14 +73,14 @@ internal static class PortValues
 
         if (port.Type.Semantics == PortSemantics.Text)
         {
-            return ReadTextTrigger(port, element);
+            return ReadTriggeredText(port, element);
         }
 
-        return ReadSignalTrigger(port, element);
+        return ReadTriggeredSignal(port, element);
     }
 
-    /// <summary>TextTrigger 取值：字符串即触发，对象同时给 text 与 trigger。</summary>
-    private static ErrorOr<PortValue> ReadTextTrigger(Port port, JsonElement element)
+    /// <summary>Text 触发端口取值：字符串即触发，对象同时给 text 与 trigger。</summary>
+    private static ErrorOr<PortValue> ReadTriggeredText(Port port, JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.String)
         {
@@ -120,8 +120,8 @@ internal static class PortValues
         return new PortValue(text, trigger);
     }
 
-    /// <summary>SignalTrigger 取值：布尔值即触发值，对象写 trigger，空值按 true。</summary>
-    private static ErrorOr<PortValue> ReadSignalTrigger(Port port, JsonElement element)
+    /// <summary>Signal 触发端口取值：布尔值即触发值，对象写 trigger，空值按 true。</summary>
+    private static ErrorOr<PortValue> ReadTriggeredSignal(Port port, JsonElement element)
     {
         if (element.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {

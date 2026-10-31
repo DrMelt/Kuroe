@@ -30,7 +30,6 @@ public sealed class WorkTask : INodeTask
         TaskId id,
         StartInputs inputs,
         IPortTexts startTexts,
-        StaticPortValues staticPorts,
         FlowDefinition flow,
         INodeGraph graph,
         string title,
@@ -41,7 +40,7 @@ public sealed class WorkTask : INodeTask
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
-        StaticPorts = staticPorts;
+        StartPorts = new StartPortValues(graph.Start, startTexts, inputs);
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
@@ -57,7 +56,6 @@ public sealed class WorkTask : INodeTask
         TaskId id,
         StartInputs inputs,
         IPortTexts startTexts,
-        StaticPortValues staticPorts,
         FlowDefinition flow,
         INodeGraph graph,
         string title,
@@ -70,7 +68,7 @@ public sealed class WorkTask : INodeTask
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
-        StaticPorts = staticPorts;
+        StartPorts = new StartPortValues(graph.Start, startTexts, inputs);
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
@@ -87,7 +85,6 @@ public sealed class WorkTask : INodeTask
         TaskCheckpoint checkpoint,
         CompiledFlow flow,
         IPortTexts startTexts,
-        StaticPortValues staticPorts,
         IReadOnlyList<Execution> executions,
         Action<string>? onText = null,
         Action<JournalEntry>? onEntry = null)
@@ -97,7 +94,6 @@ public sealed class WorkTask : INodeTask
             checkpoint.Identity.Id,
             checkpoint.Start.Inputs,
             startTexts,
-            staticPorts,
             flow.Model,
             flow.Graph,
             checkpoint.Identity.Title,
@@ -180,8 +176,8 @@ public sealed class WorkTask : INodeTask
     /// <summary>任务启动时注入的开始端口文本，绑定到宿主输入名的端口按它取值。</summary>
     internal IPortTexts StartTexts { get; }
 
-    /// <summary>提交时预解析的静态端口文本，任务内全部静态读取共用。</summary>
-    internal StaticPortValues StaticPorts { get; }
+    /// <summary>任务启动时确定的开始端口值，固定值、宿主输入与提交输入按端口解析。</summary>
+    internal IPortTexts StartPorts { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>
     public FlowDefinition Flow { get; }

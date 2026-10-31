@@ -29,7 +29,7 @@ internal static class BuiltinNodes
         Inputs =
         [
             new InputPort(GoalPort, PortTypes.Text, "要规划的任务目标。"),
-            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", isStatic: true),
+            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", mode: PortMode.Constant),
         ],
         Outputs = [new Port(PlanPort, PortTypes.Text, "目标对应的实施计划。")],
         Spec = new ExecutableSpec(),
@@ -45,7 +45,7 @@ internal static class BuiltinNodes
         Inputs =
         [
             new InputPort(TaskPort, PortTypes.Text, "待实施的计划，来自规划节点。"),
-            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", isStatic: true),
+            new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, "执行使用的模型名。", mode: PortMode.Constant),
         ],
         Spec = new ExecutableSpec(),
     };
@@ -61,7 +61,7 @@ internal static class BuiltinNodes
                 LlmNodeTypes.ModelPort,
                 PortTypes.Text,
                 "实施使用的模型名，由宿主在任务启动时给出。",
-                isStatic: true),
+                mode: PortMode.Constant),
         ],
         Nodes =
         [

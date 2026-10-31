@@ -158,6 +158,8 @@ internal sealed class RuntimeExecutable(
 
     int IInputProgress.Executions => Executions;
 
+    bool IInputProgress.Published => PublishedExecution is not null;
+
     bool IInputProgress.ForceRerun => RerunRequested;
 
     /// <summary>一个已启动的执行终结，在跑数减一。</summary>
@@ -172,16 +174,30 @@ internal sealed class RuntimeExecutable(
     /// <summary>记下新启动的执行。</summary>
     public void AddActive() => Active++;
 
-    /// <summary>按输出端口取单段文本：Context 端口给来源执行输入侧内容的拼合，Text 语义端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
-    public override string? PortText(INodeContext context, PortName port) =>
-        Executable.FindPort(port) is { } declared && declared.Type.Semantics == PortSemantics.Context
+    /// <summary>按输出端口取单段文本：常量端口取已发布那次交回的端口值，动态 Context 端口给来源执行输入侧内容的拼合，
+    /// 动态 Text 端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
+    public override string? PortText(INodeContext context, PortName port)
+    {
+        if (Executable.FindPort(port) is not { } declared)
+        {
+            return null;
+        }
+
+        return !declared.IsConstant && declared.Type.Semantics == PortSemantics.Context
             ? ContextValues.Join(ContextInputs())
             : PublishedValue(port)?.Text;
+    }
 
-    /// <summary>按输出端口取产出：Context 端口把来源执行输入侧取到的内容按原出处给出，Text 语义端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
+    /// <summary>按输出端口取产出：常量端口给已发布那次交回的端口值，动态 Context 端口把来源执行输入侧取到的内容按原出处给出，
+    /// 动态 Text 端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
     public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port)
     {
-        if (Executable.FindPort(port) is { } declared && declared.Type.Semantics == PortSemantics.Context)
+        if (Executable.FindPort(port) is not { } declared)
+        {
+            return [];
+        }
+
+        if (!declared.IsConstant && declared.Type.Semantics == PortSemantics.Context)
         {
             return ContextInputs();
         }
@@ -209,9 +225,10 @@ internal sealed class RuntimeExecutable(
             ? [.. execution.Input.Inputs.Select(value => value.Value)]
             : [];
 
-    /// <summary>按端口取已发布产出的一个返回值：只有 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
+    /// <summary>按端口取已发布产出的一个返回值：常量端口与 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
     private PortValue? PublishedValue(PortName port) =>
-        Executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
+        Executable.FindPort(port) is { } declared
+        && (declared.IsConstant || PortRules.CarriesText(declared.Type))
         && PublishedExecution is { } execution
         && SubmittedPorts(execution.Id) is { } values
         && values.TryGetValue(port, out PortValue value)

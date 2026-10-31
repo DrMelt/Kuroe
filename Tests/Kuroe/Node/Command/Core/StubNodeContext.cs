@@ -14,6 +14,7 @@ namespace Kuroe.Node.Command.Tests;
 internal sealed class StubNodeContext(ExecutableNode node) : INodeContext
 {
     private readonly ExecutableNode _node = node;
+    private readonly NodeInputPlan _plan = NodeInputPlan.Of(node.Spec, node.Incoming, node.Inputs, []);
     private readonly Dictionary<NodePath, NodeRuntime> _sources = [];
 
     public INodeGraph Graph { get; } = new StubGraph(node);
@@ -21,7 +22,7 @@ internal sealed class StubNodeContext(ExecutableNode node) : INodeContext
     /// <summary>登记一个来源运行期对象，供节点读取输入内容。</summary>
     public void AddSource(NodeRuntime runtime) => _sources[runtime.Path] = runtime;
 
-    public NodeInputPlan? Plan(NodePath node) => node == _node.Path ? _node.Plan : null;
+    public NodeInputPlan? Plan(NodePath node) => node == _node.Path ? _plan : null;
 
     public NodeRuntime Runtime(NodePath node) => _sources[node];
 
@@ -41,6 +42,8 @@ internal sealed class ReleasedSource : ISourceState
 /// <summary>测试用的执行视图：只回答目标节点的入边与输入侧方案。</summary>
 internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 {
+    private readonly NodeInputPlan _plan = NodeInputPlan.Of(node.Spec, node.Incoming, node.Inputs, []);
+
     public IReadOnlyList<GraphNode> Nodes => [node];
 
     public StartNode Start => throw new NotSupportedException();
@@ -50,6 +53,8 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
     public IReadOnlyList<ContainerNode> Containers => [];
 
     public IReadOnlyList<FlowEdge> Edges => node.Incoming;
+
+    public IReadOnlyList<StaticDependency> StaticDependencies => [];
 
     public int Count => 1;
 
@@ -65,9 +70,15 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
     public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => [];
 
+    public IReadOnlyList<NodePath> StaticDependents(NodePath source) => [];
+
+    public StaticResolution? StaticInputResolution(NodePath node, PortName port) => null;
+
+    public StaticResolution? ConstantResolution(NodePath node, PortName port) => null;
+
     public IReadOnlyList<NodePath> ExecutablesIn(NodePath source) => [node.Path];
 
-    public NodeInputPlan? PlanOf(NodePath path) => node.Plan;
+    public NodeInputPlan? PlanOf(NodePath path) => _plan;
 
     public NodeTypeShape? ShapeOf(NodePath path) => node.Type.Shape;
 

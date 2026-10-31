@@ -22,10 +22,10 @@ public static class LlmNodeTypes
         AcceptsInferredInputs = true,
         ContractInputs =
         [
-            new InputPort(ModelPort, PortTypes.Text, "执行使用的模型名，由任务启动时给出。", isStatic: true),
+            new InputPort(ModelPort, PortTypes.Text, "执行使用的模型名，由任务启动时给出。", mode: PortMode.Constant),
         ],
-        InputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
-        OutputTypes = [PortTypes.Text, PortTypes.TextTrigger, PortTypes.Context, PortTypes.Signal, PortTypes.SignalTrigger],
+        InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };
 
     /// <summary>按类型专属声明与工具契约建出类型实例，未声明时取默认声明。</summary>

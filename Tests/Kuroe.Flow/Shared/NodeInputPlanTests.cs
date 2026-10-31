@@ -50,7 +50,7 @@ public sealed class NodeInputPlanTests
     public void Plan_binding_carries_the_target_input()
     {
         FlowEdge edge = new(NodePath.Of("甲"), NodePath.Of("乙"), new PortName("结果"), new PortName("目标"), PortTypes.Text);
-        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [edge], []);
+        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [edge], [], []);
 
         InputBinding binding = Assert.Single(Assert.Single(plan.Groups).Bindings);
         Assert.Equal(new PortName("目标"), binding.TargetInput);
@@ -62,9 +62,19 @@ public sealed class NodeInputPlanTests
         NodeInputPlan plan = NodeInputPlan.Of(
             new ExecutableSpec(),
             [],
-            [new InputPort(new PortName("配置"), PortTypes.Text, isStatic: true)]);
+            [new InputPort(new PortName("配置"), PortTypes.Text, mode: PortMode.Constant)],
+            []);
 
-        Assert.True(plan.StartsAtTaskStart);
+        Assert.True(plan.StaticOnly);
+        Assert.Empty(plan.Groups);
+    }
+
+    [Fact]
+    public void No_inputs_are_static_ready()
+    {
+        NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [], [], []);
+
+        Assert.True(plan.StaticOnly);
         Assert.Empty(plan.Groups);
     }
 
@@ -74,8 +84,9 @@ public sealed class NodeInputPlanTests
         NodeInputPlan plan = NodeInputPlan.Of(
             new ExecutableSpec(),
             [],
-            [new InputPort(new PortName("目标"), PortTypes.Text)]);
+            [new InputPort(new PortName("目标"), PortTypes.Text)],
+            []);
 
-        Assert.False(plan.StartsAtTaskStart);
+        Assert.False(plan.StaticOnly);
     }
 }

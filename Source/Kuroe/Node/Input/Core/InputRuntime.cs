@@ -45,6 +45,8 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
 
     int IInputProgress.Executions => 0;
 
+    bool IInputProgress.Published => _revision > 0;
+
     bool IInputProgress.ForceRerun => false;
 
     /// <summary>随任务进入取消态并撤销接收声明。</summary>

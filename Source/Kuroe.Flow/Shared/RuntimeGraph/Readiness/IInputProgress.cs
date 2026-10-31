@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 
-/// <summary>判定要读的目标自身状态：已消费版本、执行次数与重跑意图。</summary>
+/// <summary>判定要读的目标自身状态：已消费版本、执行次数、产出发布与重跑意图。</summary>
 public interface IInputProgress
 {
     /// <summary>某来源端口绑定已消费的版本，未消费过为零。</summary>
@@ -13,6 +13,9 @@ public interface IInputProgress
 
     /// <summary>已启动的执行数。</summary>
     int Executions { get; }
+
+    /// <summary>是否已经发布过产出。</summary>
+    bool Published { get; }
 
     /// <summary>返工作废后要求越过就绪条件重启一次。</summary>
     bool ForceRerun { get; }

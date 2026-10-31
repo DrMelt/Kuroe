@@ -37,7 +37,7 @@ public sealed record InputGroup(IReadOnlyList<InputBinding> Bindings)
     public IEnumerable<InputBinding> Signals => Bindings.Where(binding => binding.Signal);
 }
 
-/// <summary>节点输入侧的编译期方案：启动组与执行次数上限。
+/// <summary>节点输入侧的编译期方案：产出模式、启动组、静态依赖与执行次数上限。
 /// 方案在编译期由执行视图一次算出，就绪判定由运行期读取它，不再反复扫图。</summary>
 public sealed record NodeInputPlan
 {
@@ -47,17 +47,24 @@ public sealed record NodeInputPlan
     /// <summary>执行次数上限。</summary>
     public int MaxExecutions { get; init; } = ExecutableNode.DefaultMaxExecutions;
 
-    /// <summary>启动方式：动态来源驱动或任务启动时从常量输入执行一次。</summary>
+    /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>
+    public NodeEmission Emission { get; init; } = NodeEmission.Repeated;
+
+    /// <summary>静态输入的运行期常量依赖，产出未发布时节点不启动。</summary>
+    public IReadOnlyList<StaticDependency> StaticDependencies { get; init; } = [];
+
+    /// <summary>启动方式：动态来源驱动或静态输入就绪后执行一次。</summary>
     public NodeStartMode StartMode { get; init; } = NodeStartMode.Driven;
 
-    /// <summary>是否在任务启动时从常量输入执行一次。</summary>
-    public bool StartsAtTaskStart => StartMode == NodeStartMode.StaticAtTaskStart;
+    /// <summary>是否全部输入静态且没有动态启动组，静态输入就绪后执行一次。没有输入时静态输入集合为空，同样就绪。</summary>
+    public bool StaticOnly => StartMode == NodeStartMode.StaticOnly;
 
-    /// <summary>执行节点的方案：入边按组聚合，全部输入静态且没有入边时从静态输入启动一次。</summary>
+    /// <summary>执行节点的方案：入边按组聚合，全部输入静态且没有入边时静态输入就绪后执行一次。</summary>
     public static NodeInputPlan Of(
         ExecutableSpec spec,
         IReadOnlyList<FlowEdge> incoming,
-        IReadOnlyList<InputPort> inputs) => new()
+        IReadOnlyList<InputPort> inputs,
+        IReadOnlyList<StaticDependency> staticDependencies) => new()
         {
             Groups =
         [
@@ -67,10 +74,11 @@ public sealed record NodeInputPlan
                 .Select(group => new InputGroup([.. group.Select(edge => Binding(edge, inputs))])),
         ],
             MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
+            Emission = spec.Emission,
+            StaticDependencies = staticDependencies,
             StartMode = incoming.Count == 0
-            && inputs.Count > 0
             && inputs.All(port => port.IsStatic)
-                ? NodeStartMode.StaticAtTaskStart
+                ? NodeStartMode.StaticOnly
                 : NodeStartMode.Driven,
         };
 

@@ -44,10 +44,16 @@ internal sealed class TaskDriver(
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>从检查点启动推进循环：调度种子入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
+    /// <summary>从检查点启动推进循环：调度种子与当前已就绪的根节点一并入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
     public void Restore(IReadOnlyList<NodePath> seed)
     {
-        Enqueue(seed);
+        List<NodePath> roots;
+        lock (task.Gate)
+        {
+            roots = [.. task.Runtime.Roots()];
+        }
+
+        Enqueue([.. seed, .. roots]);
         Loop = Task.Run(RunAsync);
     }
 

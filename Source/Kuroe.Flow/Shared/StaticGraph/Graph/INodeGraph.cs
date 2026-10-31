@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>流程编译出的执行视图的只读面：节点以从根到本节点的路径标识，开始是固定来源，
-/// 执行节点与容器在同一棵树上，依赖以显式边表达。节点表、树遍历与输入侧方案由实现给出，读取方只依赖这里。</summary>
+/// 执行节点与容器在同一棵树上，依赖由 From 边与静态输入的运行期常量依赖共同表达。节点表、树遍历与输入侧方案由实现给出，读取方只依赖这里。</summary>
 public interface INodeGraph
 {
     /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
@@ -22,6 +22,9 @@ public interface INodeGraph
 
     /// <summary>依赖边。</summary>
     IReadOnlyList<FlowEdge> Edges { get; }
+
+    /// <summary>常量依赖：目标节点的静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
+    IReadOnlyList<StaticDependency> StaticDependencies { get; }
 
     /// <summary>节点数，执行节点与容器一起算。</summary>
     int Count { get; }
@@ -43,6 +46,15 @@ public interface INodeGraph
 
     /// <summary>来源的出边，按编译顺序。</summary>
     IReadOnlyList<FlowEdge> Outgoing(NodePath source);
+
+    /// <summary>依赖某来源节点运行期常量的执行节点路径，按执行节点表顺序。</summary>
+    IReadOnlyList<NodePath> StaticDependents(NodePath source);
+
+    /// <summary>执行节点某静态输入的结构解析结果，未声明或未解析时为空。</summary>
+    StaticResolution? StaticInputResolution(NodePath node, PortName port);
+
+    /// <summary>节点某常量输出的结构解析结果，未声明或未解析时为空。</summary>
+    StaticResolution? ConstantResolution(NodePath node, PortName port);
 
     /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器给全部成员，执行节点给自身。</summary>
     IReadOnlyList<NodePath> ExecutablesIn(NodePath source);

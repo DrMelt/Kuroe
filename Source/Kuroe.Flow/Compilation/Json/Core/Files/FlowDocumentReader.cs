@@ -3,6 +3,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Json.Files;
@@ -148,6 +149,8 @@ static class FlowDocumentReader
             nodeErrors.AddRange(from.ErrorsOrEmptyList);
         }
 
+        NodeEmission? emission = ReadEmission(dto, scope, label, nodeErrors);
+
         List<NodeDocument>? children = null;
         if (dto.Nodes is { Count: > 0 } childDtos)
         {
@@ -181,6 +184,7 @@ static class FlowDocumentReader
             Parameters = ReadParameters(dto.Parameters),
             From = from.Value,
             Validate = ReadValidation(dto.Validate),
+            Emission = emission,
             MaxExecutions = dto.MaxExecutions,
         };
     }
@@ -242,6 +246,8 @@ static class FlowDocumentReader
             referenceErrors.AddRange(from.ErrorsOrEmptyList);
         }
 
+        NodeEmission? emission = ReadEmission(dto, scope, label, referenceErrors);
+
         if (referenceErrors.Count > 0)
         {
             errors.AddRange(referenceErrors);
@@ -257,8 +263,25 @@ static class FlowDocumentReader
             Static = staticBindings.Value,
             From = from.Value,
             Validate = ReadValidation(dto.Validate),
+            Emission = emission,
             MaxExecutions = dto.MaxExecutions,
         };
+    }
+
+    private static NodeEmission? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
+    {
+        if (dto.Emission is not { Length: > 0 } text)
+        {
+            return null;
+        }
+
+        if (Enum.TryParse(text, ignoreCase: true, out NodeEmission emission))
+        {
+            return emission;
+        }
+
+        errors.Add(scope.Node(label, "节点的 Emission 应为 Repeated 或 Once。"));
+        return null;
     }
 
     private static ErrorOr<IReadOnlyList<PortDocument>> ReadPorts(
@@ -283,11 +306,10 @@ static class FlowDocumentReader
 
             string? name = null;
             PortType? type = null;
+            PortMode? mode = null;
             string? description = null;
             string? value = null;
             string? reference = null;
-            bool isConstant = false;
-            bool? trigger = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -358,35 +380,22 @@ static class FlowDocumentReader
 
                         break;
 
-                    case "constant":
-                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    case "mode":
+                        if (!TryPortMode(property.Value, out PortMode parsedMode))
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Constant 键必须是布尔值。"));
+                            errors.Add(scope.Node(label, "输出端口的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
                         }
                         else
                         {
-                            isConstant = property.Value.GetBoolean();
-                        }
-
-                        break;
-
-                    case "trigger":
-                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-                        {
-                            errors.Add(scope.Node(label, "输出端口的 Trigger 键必须是布尔值。"));
-                            invalid = true;
-                        }
-                        else
-                        {
-                            trigger = property.Value.GetBoolean();
+                            mode = parsedMode;
                         }
 
                         break;
 
                     default:
                         errors.Add(scope.Node(label,
-                            $"输出端口不认识键 {property.Name}，条目写 Name、Type、Description、Value、Ref、Constant 与 Trigger。"));
+                            $"输出端口不认识键 {property.Name}，条目写 Name、Type、Mode、Description、Value 与 Ref。"));
                         invalid = true;
                         break;
                 }
@@ -394,7 +403,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new PortDocument(name ?? string.Empty, type, description, value, reference, isConstant, trigger));
+                result.Add(new PortDocument(name ?? string.Empty, type, mode, description, value, reference));
             }
         }
 
@@ -423,10 +432,9 @@ static class FlowDocumentReader
 
             string? name = null;
             PortType? type = null;
+            PortMode? mode = null;
             string? description = null;
             string? defaultValue = null;
-            bool isStatic = false;
-            bool? trigger = null;
             InputRole? role = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
@@ -485,28 +493,15 @@ static class FlowDocumentReader
 
                         break;
 
-                    case "static":
-                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    case "mode":
+                        if (!TryPortMode(property.Value, out PortMode parsedMode))
                         {
-                            errors.Add(scope.Node(label, "输入端口的 Static 键必须是布尔值。"));
+                            errors.Add(scope.Node(label, "输入端口的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
                         }
                         else
                         {
-                            isStatic = property.Value.GetBoolean();
-                        }
-
-                        break;
-
-                    case "trigger":
-                        if (property.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-                        {
-                            errors.Add(scope.Node(label, "输入端口的 Trigger 键必须是布尔值。"));
-                            invalid = true;
-                        }
-                        else
-                        {
-                            trigger = property.Value.GetBoolean();
+                            mode = parsedMode;
                         }
 
                         break;
@@ -526,7 +521,7 @@ static class FlowDocumentReader
 
                     default:
                         errors.Add(scope.Node(label,
-                            $"输入端口不认识键 {property.Name}，条目写 Name、Type、Description、Default、Static、Role 与 Trigger。"));
+                            $"输入端口不认识键 {property.Name}，条目写 Name、Type、Mode、Description、Default 与 Role。"));
                         invalid = true;
                         break;
                 }
@@ -534,7 +529,7 @@ static class FlowDocumentReader
 
             if (!invalid)
             {
-                result.Add(new InputPortDocument(name ?? string.Empty, type, description, defaultValue, isStatic, role, trigger));
+                result.Add(new InputPortDocument(name ?? string.Empty, type, mode, description, defaultValue, role));
             }
         }
 
@@ -547,6 +542,14 @@ static class FlowDocumentReader
 
         return element.ValueKind == JsonValueKind.String
             && PortTypes.TryParse(element.GetString(), out type);
+    }
+
+    private static bool TryPortMode(JsonElement element, out PortMode mode)
+    {
+        mode = default;
+
+        return element.ValueKind == JsonValueKind.String
+            && Enum.TryParse(element.GetString(), ignoreCase: true, out mode);
     }
 
     private static bool TryInputRole(JsonElement element, out InputRole role)
