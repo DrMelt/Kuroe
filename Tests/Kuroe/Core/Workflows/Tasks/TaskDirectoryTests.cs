@@ -96,19 +96,29 @@ public sealed class TaskDirectoryTests : IDisposable
     }
 
     [Fact]
-    public void A_path_over_the_limit_is_rejected()
+    public void A_root_occupied_by_a_file_reports_the_workspace_error()
     {
-        string root = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, new string('长', 175));
-        TaskDirectory directory = TaskDirectory.Create(root).Value;
+        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.GetDirectoryName(root)!);
+        File.WriteAllText(root, "occupied");
 
-        ErrorOr<string> result = directory.Prepare(
-            new TaskId(1),
-            new FlowName(new string('流', 20)),
-            new string('标', 40));
+        try
+        {
+            TaskDirectory directory = TaskDirectory.Create(root).Value;
 
-        Assert.True(result.IsError);
-        Assert.Equal(ErrorCodes.TaskWorkspaceCreate, result.FirstError.Code);
-        Assert.Contains("路径过长", result.FirstError.Description, StringComparison.Ordinal);
+            ErrorOr<string> result = directory.Prepare(
+                new TaskId(1),
+                new FlowName("默认"),
+                "目标");
+
+            Assert.True(result.IsError);
+            Assert.Equal(ErrorType.Failure, result.FirstError.Type);
+            Assert.Equal(ErrorCodes.TaskWorkspaceCreate, result.FirstError.Code);
+        }
+        finally
+        {
+            File.Delete(root);
+        }
     }
 
     public void Dispose()

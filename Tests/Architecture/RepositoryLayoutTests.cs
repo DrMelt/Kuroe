@@ -121,7 +121,10 @@ public sealed class RepositoryLayoutTests
             .Descendants("ProjectReference")
             .Select(element => element.Attribute("Include")?.Value)
             .OfType<string>()
-            .Select(include => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(project)!, include)))];
+            // csproj 中的 ProjectReference 固定用反斜杠
+            .Select(include => Path.GetFullPath(Path.Combine(
+                Path.GetDirectoryName(project)!,
+                include.Replace('\\', Path.DirectorySeparatorChar))))];
 
     private static IEnumerable<string> ProjectFiles(string root) =>
         Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)

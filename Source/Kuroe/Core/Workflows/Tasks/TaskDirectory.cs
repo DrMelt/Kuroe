@@ -15,9 +15,6 @@ public sealed class TaskDirectory
     /// <summary>标题段的字符上限。</summary>
     private const int TitleLimit = 40;
 
-    /// <summary>任务目录完整路径的字符上限。</summary>
-    private const int PathLimit = 240;
-
     /// <summary>文件系统不接受的名字字符。</summary>
     private static readonly char[] InvalidChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
@@ -46,10 +43,6 @@ public sealed class TaskDirectory
     public ErrorOr<string> Prepare(TaskId id, FlowName flow, string title)
     {
         string path = Path.Combine(_root, Compose(id, flow, title));
-        if (path.Length > PathLimit)
-        {
-            return Error.Validation(ErrorCodes.TaskWorkspaceCreate, $"任务目录路径过长：{path}");
-        }
 
         lock (_gate)
         {
