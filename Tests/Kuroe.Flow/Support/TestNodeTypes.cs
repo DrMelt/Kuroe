@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.TestSupport;
 
@@ -15,4 +16,14 @@ public static class TestNodeTypes
 
     /// <summary>测试用的执行节点类型实例，不带静态输入，用于只验证执行与接线规则的节点。</summary>
     public static INodeType PlainExecutable { get; } = new TestExecutableNodeType(withContractInput: false);
+
+    /// <summary>测试用的容器类型：组织子节点，不派发执行。</summary>
+    public static INodeType Container { get; } = new TestNodeType(
+        new NodeKind("Container"),
+        new NodeTypeShape
+        {
+            Organizes = true,
+            InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+            OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
+        });
 }

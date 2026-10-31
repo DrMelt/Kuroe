@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Approval\Core\Kuroe.Node.Approval.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Input\Core\Kuroe.Node.Input.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Dotnet\Core\Kuroe.Tool.Dotnet.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\File\Core\Kuroe.Tool.File.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Git\Core\Kuroe.Tool.Git.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe\Tool\Implementation\Time\Core\Kuroe.Tool.Time.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -22,6 +22,5 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Node.Llm.Tests" />
-        <InternalsVisibleTo Include="Kuroe.Tests" />
     </ItemGroup>
 </Project>
