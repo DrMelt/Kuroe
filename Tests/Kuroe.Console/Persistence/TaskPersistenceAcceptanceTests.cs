@@ -24,7 +24,9 @@ public abstract class TaskPersistenceAcceptanceTests
             await using (ITaskPersistenceSession first = await CreateSessionAsync(root))
             {
                 id = first.Submit("持久化任务");
-                await first.PauseAsync(id);
+                first.WaitForInput(id);
+                ErrorOr<Success> paused = await first.PauseAsync(id);
+                Assert.False(paused.IsError);
                 await first.ShutdownAsync();
             }
 
@@ -39,7 +41,7 @@ public abstract class TaskPersistenceAcceptanceTests
     }
 
     [Fact]
-    public async Task Restart_does_not_auto_resume()
+    public async Task Restart_loads_unfinished_task_paused()
     {
         string root = CreateRoot();
         try
@@ -48,12 +50,13 @@ public abstract class TaskPersistenceAcceptanceTests
             await using (ITaskPersistenceSession first = await CreateSessionAsync(root))
             {
                 id = first.Submit("不自动恢复");
-                await first.PauseAsync(id);
+                first.WaitForInput(id);
+                ErrorOr<Success> paused = await first.PauseAsync(id);
+                Assert.False(paused.IsError);
                 await first.ShutdownAsync();
             }
 
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
-            await Task.Delay(50);
 
             TaskSnapshot loaded = second.Snapshot(id);
             Assert.Equal(TaskState.Paused, loaded.State);
@@ -75,8 +78,9 @@ public abstract class TaskPersistenceAcceptanceTests
             await using (ITaskPersistenceSession first = await CreateSessionAsync(root))
             {
                 id = first.Submit("等待输入");
-                first.Wait(id, snapshot => snapshot.State == TaskState.Running);
-                await first.PauseAsync(id);
+                first.WaitForInput(id);
+                ErrorOr<Success> paused = await first.PauseAsync(id);
+                Assert.False(paused.IsError);
                 await first.ShutdownAsync();
             }
 
@@ -132,9 +136,10 @@ public abstract class TaskPersistenceAcceptanceTests
             await using (ITaskPersistenceSession first = await CreateSessionAsync(root))
             {
                 id = first.Submit("历史任务");
-                TaskSnapshot settled = first.Wait(id, snapshot => snapshot.LiveExecutions == 0);
+                TaskSnapshot settled = first.WaitForInput(id);
                 executions = settled.Executables.Sum(node => node.Executions.Count);
-                await first.PauseAsync(id);
+                ErrorOr<Success> paused = await first.PauseAsync(id);
+                Assert.False(paused.IsError);
                 await first.ShutdownAsync();
             }
 

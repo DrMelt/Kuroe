@@ -200,6 +200,7 @@ public sealed class FlowAdvanceTests
 
         TaskId id = environment.Submit("补齐 README");
         Assert.Equal(TaskState.Done, environment.Settle(id).State);
+        environment.Wait(id, _ => environment.Registry.Find(id).ThrowIfError().Completed);
 
         ErrorOr<Success> paused = environment.Tasks.Pause(id);
         Assert.True(paused.IsError);

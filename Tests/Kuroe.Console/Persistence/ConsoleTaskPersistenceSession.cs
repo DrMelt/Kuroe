@@ -42,6 +42,9 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
 
     public ErrorOr<Success> Rework(TaskId id) => _environment.Tasks.Rework(id);
 
+    public TaskSnapshot WaitForInput(TaskId id) =>
+        _environment.Wait(id, _ => _environment.Awaiting(id));
+
     public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition) =>
         _environment.Wait(id, condition);
 

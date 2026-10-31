@@ -315,7 +315,7 @@ public sealed class WorkTask : INodeTask
             return [TaskErrors.AlreadyPaused(Id)];
         }
 
-        if (Summarize() == TaskState.Done)
+        if (_completed)
         {
             return [TaskErrors.DoneCannotPause(Id)];
         }
@@ -353,7 +353,7 @@ public sealed class WorkTask : INodeTask
             return [TaskErrors.Terminated(Id)];
         }
 
-        if (Summarize() == TaskState.Done)
+        if (_completed)
         {
             return [TaskErrors.DoneCannotTerminate(Id)];
         }

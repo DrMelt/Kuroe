@@ -21,6 +21,8 @@ public interface ITaskPersistenceSession : IAsyncDisposable
 
     ErrorOr<Success> Rework(TaskId id);
 
+    TaskSnapshot WaitForInput(TaskId id);
+
     TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition);
 
     Task<ErrorOr<Success>> ShutdownAsync();
