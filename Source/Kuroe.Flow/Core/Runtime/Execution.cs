@@ -87,11 +87,11 @@ public sealed class Execution : IExecution
 
     internal CancellationToken CancellationToken => _cancellation.Token;
 
-    /// <summary>模型输出的一段文本，按到达顺序给出。</summary>
-    public event Action<string>? TextEmitted
+    /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
+    public event Action<ProcessContent>? ContentEmitted
     {
-        add => _process.Text += value;
-        remove => _process.Text -= value;
+        add => _process.Content += value;
+        remove => _process.Content -= value;
     }
 
     /// <summary>一条需要即时呈现的过程记录。</summary>
@@ -123,13 +123,13 @@ public sealed class Execution : IExecution
             _journal = journal;
         }
 
-        journal.TextAppended += PublishText;
+        journal.ContentAppended += PublishContent;
         journal.EntryAppended += PublishEntry;
         journal.ProgressReported += UpdateProgress;
     }
 
-    /// <summary>转给订阅者一段文本增量。</summary>
-    private void PublishText(string delta)
+    /// <summary>转给订阅者一段流式内容。</summary>
+    private void PublishContent(ProcessContent content)
     {
         lock (_gate)
         {
@@ -139,7 +139,7 @@ public sealed class Execution : IExecution
             }
         }
 
-        _process.PublishText(delta);
+        _process.PublishContent(content);
     }
 
     /// <summary>更新进度。</summary>
@@ -240,7 +240,7 @@ public sealed class Execution : IExecution
 
         if (journal is not null)
         {
-            journal.TextAppended -= PublishText;
+            journal.ContentAppended -= PublishContent;
             journal.EntryAppended -= PublishEntry;
             journal.ProgressReported -= UpdateProgress;
         }
@@ -330,11 +330,11 @@ public sealed class Execution : IExecution
     private sealed class ProcessBroadcast
     {
         private readonly Lock _gate = new();
-        private Action<string>? _text;
+        private Action<ProcessContent>? _content;
         private Action<JournalEntry>? _entry;
         private bool _closed;
 
-        public event Action<string>? Text
+        public event Action<ProcessContent>? Content
         {
             add
             {
@@ -342,7 +342,7 @@ public sealed class Execution : IExecution
                 {
                     if (!_closed)
                     {
-                        _text += value;
+                        _content += value;
                     }
                 }
             }
@@ -350,7 +350,7 @@ public sealed class Execution : IExecution
             {
                 lock (_gate)
                 {
-                    _text -= value;
+                    _content -= value;
                 }
             }
         }
@@ -376,15 +376,15 @@ public sealed class Execution : IExecution
             }
         }
 
-        public void PublishText(string delta)
+        public void PublishContent(ProcessContent content)
         {
-            Action<string>? handler;
+            Action<ProcessContent>? handler;
             lock (_gate)
             {
-                handler = _text;
+                handler = _content;
             }
 
-            handler?.Invoke(delta);
+            handler?.Invoke(content);
         }
 
         public void PublishEntry(JournalEntry entry)
@@ -404,7 +404,7 @@ public sealed class Execution : IExecution
             lock (_gate)
             {
                 _closed = true;
-                _text = null;
+                _content = null;
                 _entry = null;
             }
         }

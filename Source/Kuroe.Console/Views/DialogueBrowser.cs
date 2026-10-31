@@ -83,11 +83,12 @@ internal sealed class DialogueBrowser(
     {
         ErrorOr<Success> outcome = Result.Success;
         string? failure = null;
+        output.Reset();
         using (terminal.OpenFrame(BoxKind.Reply, SourceLabel))
         {
             try
             {
-                outcome = await dialogue.ReplyAsync(input, output.Text, output.Entry);
+                outcome = await dialogue.ReplyAsync(input, output.Content, output.Entry);
             }
             catch (Exception ex)
             {

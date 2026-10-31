@@ -144,7 +144,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
             }
 
             string reply = Reply?.Invoke(started) ?? $"{input.Node}产出";
-            journal.AppendText(reply);
+            journal.AppendContent(ProcessContentKind.Reply, reply);
 
             return Result.Success;
         }

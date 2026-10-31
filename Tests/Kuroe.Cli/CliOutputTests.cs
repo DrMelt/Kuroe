@@ -25,6 +25,20 @@ public sealed class CliOutputTests
     }
 
     [Fact]
+    public void Content_writes_reply_to_stdout_and_drops_reasoning()
+    {
+        StringWriter output = new();
+        StringWriter error = new();
+        CliOutput cli = new(output, error);
+
+        cli.Content(new ProcessContent(ProcessContentKind.Reasoning, "思考"));
+        cli.Content(new ProcessContent(ProcessContentKind.Reply, "回答"));
+
+        Assert.Equal("回答", output.ToString());
+        Assert.Empty(error.ToString());
+    }
+
+    [Fact]
     public void Entry_writes_label_and_text_to_stderr()
     {
         StringWriter output = new();

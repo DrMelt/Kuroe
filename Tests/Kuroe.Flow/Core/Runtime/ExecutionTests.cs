@@ -35,18 +35,19 @@ public sealed class ExecutionTests
     }
 
     [Fact]
-    public void Journal_text_entry_and_progress_reach_subscribers()
+    public void Journal_content_entry_and_progress_reach_subscribers()
     {
         Execution execution = new(new ExecutionId(1), Input());
         TestJournal journal = new([]);
-        List<string> texts = [];
+        List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         execution.AttachJournal(journal);
-        execution.TextEmitted += texts.Add;
+        execution.ContentEmitted += contents.Add;
         execution.EntryEmitted += entries.Add;
         execution.MarkRunning();
 
-        journal.EmitText("增量");
+        journal.EmitContent(ProcessContentKind.Reply, "增量");
+        journal.EmitContent(ProcessContentKind.Reasoning, "思考");
         JournalEntry entry = new(
             DateTimeOffset.UtcNow,
             JournalLevel.Information,
@@ -55,7 +56,12 @@ public sealed class ExecutionTests
         journal.EmitEntry(entry);
         journal.EmitProgress("调用工具 GetLocalTime");
 
-        Assert.Equal(["增量"], texts);
+        Assert.Equal(
+            [
+                new ProcessContent(ProcessContentKind.Reply, "增量"),
+                new ProcessContent(ProcessContentKind.Reasoning, "思考"),
+            ],
+            contents);
         Assert.Equal([entry], entries);
         Assert.Equal("调用工具 GetLocalTime", execution.Snapshot().Progress);
     }
@@ -66,45 +72,46 @@ public sealed class ExecutionTests
         Execution execution = new(new ExecutionId(1), Input());
         TestJournal journal = new([new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "回复", "保留")]);
         execution.AttachJournal(journal);
-        int texts = 0;
+        int contents = 0;
         int entries = 0;
-        execution.TextEmitted += _ => texts++;
+        execution.ContentEmitted += _ => contents++;
         execution.EntryEmitted += _ => entries++;
         execution.MarkRunning();
         execution.MarkSucceeded();
 
-        journal.EmitText("后");
+        journal.EmitContent(ProcessContentKind.Reply, "后");
+        journal.EmitContent(ProcessContentKind.Reasoning, "后想");
         journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
         journal.EmitProgress("调用工具 GetLocalTime");
 
-        Assert.Equal(0, texts);
+        Assert.Equal(0, contents);
         Assert.Equal(0, entries);
         Assert.Equal(string.Empty, execution.Snapshot().Progress);
         Assert.Single(execution.Snapshot().Journal);
     }
 
     [Fact]
-    public void Every_subscriber_receives_text_and_entries()
+    public void Every_subscriber_receives_content_and_entries()
     {
         Execution execution = new(new ExecutionId(1), Input());
         TestJournal journal = new([]);
-        List<string> firstTexts = [];
-        List<string> secondTexts = [];
+        List<ProcessContent> firstContents = [];
+        List<ProcessContent> secondContents = [];
         List<JournalEntry> firstEntries = [];
         List<JournalEntry> secondEntries = [];
         execution.AttachJournal(journal);
-        execution.TextEmitted += firstTexts.Add;
-        execution.TextEmitted += secondTexts.Add;
+        execution.ContentEmitted += firstContents.Add;
+        execution.ContentEmitted += secondContents.Add;
         execution.EntryEmitted += firstEntries.Add;
         execution.EntryEmitted += secondEntries.Add;
         execution.MarkRunning();
 
-        journal.EmitText("增量");
+        journal.EmitContent(ProcessContentKind.Reply, "增量");
         JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}");
         journal.EmitEntry(entry);
 
-        Assert.Equal(["增量"], firstTexts);
-        Assert.Equal(["增量"], secondTexts);
+        Assert.Equal([new ProcessContent(ProcessContentKind.Reply, "增量")], firstContents);
+        Assert.Equal([new ProcessContent(ProcessContentKind.Reply, "增量")], secondContents);
         Assert.Equal([entry], firstEntries);
         Assert.Equal([entry], secondEntries);
     }
@@ -117,15 +124,16 @@ public sealed class ExecutionTests
         execution.AttachJournal(journal);
         execution.MarkRunning();
         execution.MarkSucceeded();
-        List<string> texts = [];
+        List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
-        execution.TextEmitted += texts.Add;
+        execution.ContentEmitted += contents.Add;
         execution.EntryEmitted += entries.Add;
 
-        journal.EmitText("后");
+        journal.EmitContent(ProcessContentKind.Reply, "后");
+        journal.EmitContent(ProcessContentKind.Reasoning, "后想");
         journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
 
-        Assert.Empty(texts);
+        Assert.Empty(contents);
         Assert.Empty(entries);
     }
 
@@ -142,13 +150,14 @@ public sealed class ExecutionTests
 
         public int DroppedEntries { get; } = dropped;
 
-        public event Action<string>? TextAppended;
+        public event Action<ProcessContent>? ContentAppended;
 
         public event Action<JournalEntry>? EntryAppended;
 
         public event Action<string>? ProgressReported;
 
-        public void EmitText(string delta) => TextAppended?.Invoke(delta);
+        public void EmitContent(ProcessContentKind kind, string delta) =>
+            ContentAppended?.Invoke(new ProcessContent(kind, delta));
 
         public void EmitEntry(JournalEntry entry) => EntryAppended?.Invoke(entry);
 

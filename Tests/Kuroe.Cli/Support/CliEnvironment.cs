@@ -73,7 +73,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
         CancellationToken cancellationToken)
     {
         await Task.Delay(5, cancellationToken);
-        journal.AppendText(Text);
+        journal.AppendContent(ProcessContentKind.Reply, Text);
 
         return Result.Success;
     }
@@ -89,7 +89,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
             owner.ExecuteAsync(_journal, cancellationToken);
     }
 
-    /// <summary>测试用的过程记录：保存条目并播发文本。</summary>
+    /// <summary>测试用的过程记录：保存条目并播发内容。</summary>
     private sealed class StubJournal : IProcessJournal
     {
         private readonly Lock _gate = new();
@@ -97,8 +97,8 @@ internal sealed class StubRunner : IExecutionRunnerFactory
         private Action<JournalEntry>? _entryAppended;
         private Action<string>? _progressReported;
 
-        /// <summary>文本追加后给出该增量。</summary>
-        public event Action<string>? TextAppended;
+        /// <summary>流式内容追加后给出该增量与种类。</summary>
+        public event Action<ProcessContent>? ContentAppended;
 
         /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
         public event Action<JournalEntry>? EntryAppended
@@ -123,16 +123,23 @@ internal sealed class StubRunner : IExecutionRunnerFactory
             }
         }
 
-        /// <summary>追加文本增量，随后播发该增量。</summary>
-        public void AppendText(string delta)
+        /// <summary>追加一段流式内容，随后播发该增量。</summary>
+        public void AppendContent(ProcessContentKind kind, string delta)
         {
             if (delta.Length == 0)
             {
                 return;
             }
 
-            Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "回复", delta));
-            TextAppended?.Invoke(delta);
+            string label = kind switch
+            {
+                ProcessContentKind.Reply => "回复",
+                ProcessContentKind.Reasoning => "思考",
+                _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+            };
+
+            Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+            ContentAppended?.Invoke(new ProcessContent(kind, delta));
         }
 
         public IReadOnlyList<JournalEntry> Entries

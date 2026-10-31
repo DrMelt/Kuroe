@@ -5,22 +5,24 @@ using Xunit;
 
 namespace Kuroe.Node.Llm.Tests.Executions;
 
-/// <summary>执行过程记录的具体格式：文本合并、条目上限与过程播发。</summary>
+/// <summary>执行过程记录的具体格式：内容合并、条目上限与过程播发。</summary>
 public sealed class ProcessJournalTests
 {
     [Fact]
-    public void Text_deltas_merge_and_broadcast_each_delta()
+    public void Reply_content_deltas_merge_and_broadcast_each_delta()
     {
-        List<string> texts = [];
+        List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         ProcessJournal journal = new();
-        journal.TextAppended += texts.Add;
+        journal.ContentAppended += contents.Add;
         journal.EntryAppended += entries.Add;
 
-        journal.AppendText("甲");
-        journal.AppendText("乙");
+        journal.AppendContent(ProcessContentKind.Reply, "甲");
+        journal.AppendContent(ProcessContentKind.Reply, "乙");
 
-        Assert.Equal(["甲", "乙"], texts);
+        Assert.Equal(
+            [new ProcessContent(ProcessContentKind.Reply, "甲"), new ProcessContent(ProcessContentKind.Reply, "乙")],
+            contents);
         Assert.Empty(entries);
         JournalEntry entry = Assert.Single(journal.Entries);
         Assert.Equal("回复", entry.Label);
@@ -33,13 +35,38 @@ public sealed class ProcessJournalTests
     {
         ProcessJournal journal = new();
 
-        journal.AppendText(new string('长', 4096));
-        journal.AppendText("尾");
+        journal.AppendContent(ProcessContentKind.Reply, new string('长', 4096));
+        journal.AppendContent(ProcessContentKind.Reply, "尾");
 
         JournalEntry[] entries = [.. journal.Entries];
         Assert.Equal(2, entries.Length);
         Assert.Equal(4096, entries[0].Text.Length);
         Assert.Equal("尾", entries[1].Text);
+    }
+
+    [Fact]
+    public void Reasoning_content_merges_separately_from_reply_content()
+    {
+        List<ProcessContent> contents = [];
+        ProcessJournal journal = new();
+        journal.ContentAppended += contents.Add;
+
+        journal.AppendContent(ProcessContentKind.Reasoning, string.Empty);
+        journal.AppendContent(ProcessContentKind.Reasoning, "想");
+        journal.AppendContent(ProcessContentKind.Reasoning, "下去");
+        journal.AppendContent(ProcessContentKind.Reply, "答复");
+        journal.AppendContent(ProcessContentKind.Reasoning, "再想");
+
+        Assert.Equal(
+            [
+                new ProcessContent(ProcessContentKind.Reasoning, "想"),
+                new ProcessContent(ProcessContentKind.Reasoning, "下去"),
+                new ProcessContent(ProcessContentKind.Reply, "答复"),
+                new ProcessContent(ProcessContentKind.Reasoning, "再想"),
+            ],
+            contents);
+        Assert.Equal(["思考", "回复", "思考"], journal.Entries.Select(entry => entry.Label));
+        Assert.Equal(["想下去", "答复", "再想"], journal.Entries.Select(entry => entry.Text));
     }
 
     [Fact]
@@ -78,11 +105,11 @@ public sealed class ProcessJournalTests
     [Fact]
     public void Prompt_and_discard_entries_are_recorded_only()
     {
-        List<string> texts = [];
+        List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         List<string> progress = [];
         ProcessJournal journal = new();
-        journal.TextAppended += texts.Add;
+        journal.ContentAppended += contents.Add;
         journal.EntryAppended += entries.Add;
         journal.ProgressReported += progress.Add;
 
@@ -97,19 +124,19 @@ public sealed class ProcessJournalTests
         JournalEntry discarded = journal.Entries[1];
         Assert.Equal("丢弃", discarded.Label);
         Assert.Equal(JournalLevel.Warning, discarded.Level);
-        Assert.Empty(texts);
+        Assert.Empty(contents);
         Assert.Empty(entries);
         Assert.Empty(progress);
     }
 
     [Fact]
-    public void Empty_text_delta_is_ignored()
+    public void Empty_content_delta_is_ignored()
     {
         int broadcasts = 0;
         ProcessJournal journal = new();
-        journal.TextAppended += _ => broadcasts++;
+        journal.ContentAppended += _ => broadcasts++;
 
-        journal.AppendText(string.Empty);
+        journal.AppendContent(ProcessContentKind.Reply, string.Empty);
 
         Assert.Empty(journal.Entries);
         Assert.Equal(0, broadcasts);

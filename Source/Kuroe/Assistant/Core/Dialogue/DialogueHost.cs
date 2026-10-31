@@ -25,10 +25,10 @@ public sealed class DialogueHost(
     private TaskId? _dialogue;
     private ModelName? _model;
 
-    /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程增量与过程条目经回调送出。</summary>
+    /// <summary>一轮对话。无模型时返回模型未选择，不触碰任务。过程内容与过程条目经回调送出。</summary>
     public async Task<ErrorOr<Success>> ReplyAsync(
         string input,
-        Action<string>? onText = null,
+        Action<ProcessContent>? onContent = null,
         Action<JournalEntry>? onEntry = null)
     {
         if (models.Current is not { } model)
@@ -38,7 +38,7 @@ public sealed class DialogueHost(
 
         TaskId id = EnsureDialogue(model);
 
-        return await rounds.AskAsync(id, null, input, onText, onEntry);
+        return await rounds.AskAsync(id, null, input, onContent, onEntry);
     }
 
     /// <summary>重置对话：停止并丢弃当前对话任务，下一次输入重建。</summary>

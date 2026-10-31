@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
-/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、语言变化后重置才按新系统指令重建、模型变化后下一轮重建、回复文本经过程播发送给观察者。</summary>
+/// <summary>常驻对话任务的管理层宿主：无模型时报模型未选择、一轮对话落到任务管线、多轮在同一任务上接续、语言变化后重置才按新系统指令重建、模型变化后下一轮重建、回复与思考经过程播发送给观察者。</summary>
 public sealed class DialogueHostTests
 {
     [Fact]
@@ -29,7 +29,7 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = _ => "回复你好";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -42,8 +42,8 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Text, observer.Entry);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Text, observer.Entry);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Content, observer.Entry);
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Content, observer.Entry);
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -176,7 +176,7 @@ public sealed class DialogueHostTests
 
         for (int round = 1; round <= 8; round++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Text, observer.Entry);
+            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Content, observer.Entry);
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -196,7 +196,7 @@ public sealed class DialogueHostTests
             journal.AppendToolCall("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
         JournalEntry entry = Assert.Single(observer.Entries);
@@ -205,18 +205,18 @@ public sealed class DialogueHostTests
     }
 
     [Fact]
-    public async Task A_round_records_node_entries_and_streams_text()
+    public async Task A_round_records_node_entries_and_streams_content()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.Reply = _ => "回复你好";
         environment.Runner.Emits = (_, journal) =>
         {
             journal.AppendPrompt("问题");
-            journal.AppendText("增量");
+            journal.AppendContent(ProcessContentKind.Reply, "增量");
         };
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Text, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
@@ -225,6 +225,22 @@ public sealed class DialogueHostTests
         List<JournalEntry> entries = [.. round.Snapshot().Journal];
         Assert.Contains(entries, entry => entry.Label == "输入" && entry.Text == "问题");
         Assert.Contains(entries, entry => entry.Text.Contains("增量", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_round_hands_reasoning_to_its_observer()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Reply = _ => string.Empty;
+        environment.Runner.Emits = (_, journal) =>
+            journal.AppendContent(ProcessContentKind.Reasoning, "先想");
+        RecordingOutput observer = new();
+
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
+
+        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.Equal(["先想"], observer.Reasonings);
+        Assert.Empty(observer.Texts);
     }
 
     [Fact]
@@ -243,9 +259,20 @@ public sealed class DialogueHostTests
     {
         public List<string> Texts { get; } = [];
 
+        public List<string> Reasonings { get; } = [];
+
         public List<JournalEntry> Entries { get; } = [];
 
-        public void Text(string delta) => Texts.Add(delta);
+        public void Content(ProcessContent content)
+        {
+            if (content.Kind == ProcessContentKind.Reasoning)
+            {
+                Reasonings.Add(content.Delta);
+                return;
+            }
+
+            Texts.Add(content.Delta);
+        }
 
         public void Entry(JournalEntry entry) => Entries.Add(entry);
     }

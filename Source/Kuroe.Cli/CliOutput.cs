@@ -9,6 +9,15 @@ internal sealed class CliOutput(TextWriter output, TextWriter error)
     private readonly Lock _gate = new();
     private bool _lineOpen;
 
+    /// <summary>写出一段流式内容，回复写 stdout，思考不呈现。</summary>
+    public void Content(ProcessContent content)
+    {
+        if (content.Kind == ProcessContentKind.Reply)
+        {
+            Text(content.Delta);
+        }
+    }
+
     /// <summary>写出文本，不补换行，用于流式增量。</summary>
     public void Text(string text)
     {

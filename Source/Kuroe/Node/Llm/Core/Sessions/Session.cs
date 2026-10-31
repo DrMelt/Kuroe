@@ -1,5 +1,6 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 using Microsoft.Agents.AI;
@@ -78,10 +79,7 @@ public sealed class Session
                 cancellationToken))
             {
                 updates.Add(update);
-                if (update.Text is { Length: > 0 } text)
-                {
-                    journal.AppendText(text);
-                }
+                RecordContent(update, journal);
             }
         }
         finally
@@ -90,6 +88,24 @@ public sealed class Session
         }
 
         return Result.Success;
+    }
+
+    /// <summary>把一条流式更新中的思考与回复内容按种类写进过程记录，其余内容由会话历史承载。</summary>
+    internal static void RecordContent(AgentResponseUpdate update, ProcessJournal journal)
+    {
+        foreach (AIContent content in update.Contents)
+        {
+            switch (content)
+            {
+                case TextReasoningContent { Text.Length: > 0 } reasoning:
+                    journal.AppendContent(ProcessContentKind.Reasoning, reasoning.Text);
+                    break;
+
+                case TextContent { Text.Length: > 0 } text:
+                    journal.AppendContent(ProcessContentKind.Reply, text.Text);
+                    break;
+            }
+        }
     }
 
     /// <summary>首次使用时创建框架会话并按来源布局历史。</summary>

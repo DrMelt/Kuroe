@@ -18,7 +18,7 @@ public sealed class WorkTask : INodeTask
 {
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
-    private readonly Action<string>? _onText;
+    private readonly Action<ProcessContent>? _onContent;
     private readonly Action<JournalEntry>? _onEntry;
     private string _title;
     private DateTimeOffset _lastActivityAt;
@@ -33,7 +33,7 @@ public sealed class WorkTask : INodeTask
         FlowDefinition flow,
         INodeGraph graph,
         string title,
-        Action<string>? onText,
+        Action<ProcessContent>? onContent,
         Action<JournalEntry>? onEntry)
     {
         Registry = registry;
@@ -46,7 +46,7 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
-        _onText = onText;
+        _onContent = onContent;
         _onEntry = onEntry;
         _title = title;
     }
@@ -61,7 +61,7 @@ public sealed class WorkTask : INodeTask
         string title,
         DateTimeOffset createdAt,
         DateTimeOffset lastActivityAt,
-        Action<string>? onText,
+        Action<ProcessContent>? onContent,
         Action<JournalEntry>? onEntry)
     {
         Registry = registry;
@@ -74,7 +74,7 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = createdAt;
         _lastActivityAt = lastActivityAt;
-        _onText = onText;
+        _onContent = onContent;
         _onEntry = onEntry;
         _title = title;
     }
@@ -86,7 +86,7 @@ public sealed class WorkTask : INodeTask
         CompiledFlow flow,
         IPortTexts startTexts,
         IReadOnlyList<Execution> executions,
-        Action<string>? onText = null,
+        Action<ProcessContent>? onContent = null,
         Action<JournalEntry>? onEntry = null)
     {
         WorkTask task = new(
@@ -99,7 +99,7 @@ public sealed class WorkTask : INodeTask
             checkpoint.Identity.Title,
             checkpoint.Identity.CreatedAt,
             checkpoint.Identity.LastActivityAt,
-            onText,
+            onContent,
             onEntry);
 
         task.Journal.Restore(checkpoint.Journal.Entries, checkpoint.Journal.DroppedEntries);
@@ -376,9 +376,9 @@ public sealed class WorkTask : INodeTask
         _executions.Add(execution);
         Runtime.Executable(execution.Input.Node).RecordExecution();
         _lastActivityAt = DateTimeOffset.UtcNow;
-        if (_onText is { } onText)
+        if (_onContent is { } onContent)
         {
-            execution.TextEmitted += onText;
+            execution.ContentEmitted += onContent;
         }
 
         if (_onEntry is { } onEntry)

@@ -78,18 +78,21 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     public void Note(string text) => WriteError(text, Styles.Warning);
 
     /// <summary>在当前行追加文本，不排版也不换行，用于提示符与流式增量。</summary>
-    public void Append(string text)
+    public void Append(string text) => Append(text, Style.Plain);
+
+    /// <summary>按指定样式在当前行追加文本，不排版也不换行。</summary>
+    public void Append(string text, Style style)
     {
         lock (_gate)
         {
             if (_frame is { } frame)
             {
-                frame.Append(text, Style.Plain);
+                frame.Append(text, style);
 
                 return;
             }
 
-            outputWriter.Write(text, Style.Plain);
+            outputWriter.Write(text, style);
             if (text.Length > 0)
             {
                 _lineOpen = !text.EndsWith('\n');
@@ -472,5 +475,8 @@ internal static class Styles
 
     /// <summary>用法、指引与次要信息。</summary>
     public static readonly Style Hint = new(Color.Grey);
+
+    /// <summary>模型思考内容。</summary>
+    public static readonly Style Reasoning = new(Color.MediumPurple);
 }
 

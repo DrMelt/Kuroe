@@ -3,8 +3,8 @@ using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm.Executions;
 
-/// <summary>一次执行的过程记录：追加与读取共用一把锁，文本增量与末尾的文本条目合并。
-/// 文本增量与需要即时呈现的条目写入后、进度变化后经事件播发。</summary>
+/// <summary>一次执行的过程记录：追加与读取共用一把锁，同标签的文本增量与末尾同类条目合并。
+/// 流式内容、需要即时呈现的条目与进度变化经事件播发。</summary>
 internal sealed class ProcessJournal : IProcessJournal
 {
     /// <summary>单条文本记录的上限，超出后另起一条，避免逐字增量反复拷贝整段。</summary>
@@ -15,6 +15,7 @@ internal sealed class ProcessJournal : IProcessJournal
 
     private const string PromptLabel = "输入";
     private const string ReplyLabel = "回复";
+    private const string ReasoningLabel = "思考";
     private const string ToolLabel = "工具";
     private const string DiscardedLabel = "丢弃";
     private const string DiscardedText = "本轮未计入上下文。";
@@ -23,8 +24,8 @@ internal sealed class ProcessJournal : IProcessJournal
     private readonly List<JournalEntry> _entries = [];
     private int _dropped;
 
-    /// <summary>文本追加后给出该增量。</summary>
-    public event Action<string>? TextAppended;
+    /// <summary>流式内容追加后给出该增量与种类。</summary>
+    public event Action<ProcessContent>? ContentAppended;
 
     /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
     public event Action<JournalEntry>? EntryAppended;
@@ -36,30 +37,13 @@ internal sealed class ProcessJournal : IProcessJournal
     public void AppendPrompt(string input) =>
         Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, PromptLabel, input));
 
-    /// <summary>追加文本增量，与末尾的回复记录合并，随后播发该增量。</summary>
-    public void AppendText(string delta)
+    /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
+    public void AppendContent(ProcessContentKind kind, string delta)
     {
-        if (delta.Length == 0)
+        if (AppendDelta(LabelOf(kind), delta))
         {
-            return;
+            ContentAppended?.Invoke(new ProcessContent(kind, delta));
         }
-
-        lock (_gate)
-        {
-            if (_entries.Count > 0
-                && _entries[^1].Label == ReplyLabel
-                && _entries[^1].Text.Length + delta.Length <= SegmentLimit)
-            {
-                JournalEntry last = _entries[^1];
-                _entries[^1] = last with { Text = last.Text + delta };
-            }
-            else
-            {
-                AppendCore(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, ReplyLabel, delta));
-            }
-        }
-
-        TextAppended?.Invoke(delta);
     }
 
     /// <summary>追加一次工具调用，随后播发进度与条目。</summary>
@@ -108,6 +92,40 @@ internal sealed class ProcessJournal : IProcessJournal
                 return _dropped;
             }
         }
+    }
+
+    /// <summary>内容种类对应的记录标签。</summary>
+    private static string LabelOf(ProcessContentKind kind) => kind switch
+    {
+        ProcessContentKind.Reply => ReplyLabel,
+        ProcessContentKind.Reasoning => ReasoningLabel,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    /// <summary>追加同标签的文本增量，与末尾同类记录合并；空增量不写。</summary>
+    private bool AppendDelta(string label, string delta)
+    {
+        if (delta.Length == 0)
+        {
+            return false;
+        }
+
+        lock (_gate)
+        {
+            if (_entries.Count > 0
+                && _entries[^1].Label == label
+                && _entries[^1].Text.Length + delta.Length <= SegmentLimit)
+            {
+                JournalEntry last = _entries[^1];
+                _entries[^1] = last with { Text = last.Text + delta };
+            }
+            else
+            {
+                AppendCore(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+            }
+        }
+
+        return true;
     }
 
     /// <summary>追加一条过程记录。</summary>

@@ -9,7 +9,7 @@ internal sealed class RestoredProcessJournal(IReadOnlyList<JournalEntry> entries
 
     public int DroppedEntries { get; } = dropped;
 
-    public event Action<string>? TextAppended
+    public event Action<ProcessContent>? ContentAppended
     {
         add => _ = value;
         remove => _ = value;
