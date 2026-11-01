@@ -74,7 +74,7 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
     {
         try
         {
-            return JsonSerializer.Serialize(ToDto(document), TaskCheckpointJson.Default.TaskCheckpointFileDto);
+            return JsonSerializer.Serialize(ToDto(document), TaskCheckpointJson.WriteOptions.GetTypeInfo(typeof(TaskCheckpointFileDto)));
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {

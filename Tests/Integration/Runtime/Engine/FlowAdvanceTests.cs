@@ -42,6 +42,39 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
+    public void Long_start_input_reaches_execution_untruncated()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        string goal = new('甲', 3000);
+
+        TaskId id = environment.Submit(goal);
+        environment.Settle(id);
+
+        IExecution plan = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "制定计划");
+        InputValue target = plan.Input.Inputs.Single(value => value.Port == new PortName("目标"));
+
+        Assert.Equal(goal, target.Text);
+    }
+
+    [Fact]
+    public void Long_upstream_output_reaches_downstream_untruncated()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        string plan = new('计', 3000);
+        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value == "制定计划"
+            ? $"{{\"计划\":\"{plan}\"}}"
+            : null;
+
+        TaskId id = environment.Submit("补齐 README");
+        environment.Settle(id);
+
+        IExecution implement = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "分配执行");
+        InputValue value = implement.Input.Inputs.Single(input => input.Port == new PortName("计划"));
+
+        Assert.Equal(plan, value.Text);
+    }
+
+    [Fact]
     public void Approval_on_plan_parks_until_approved()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Tests.Runtime.Graph;
 
-/// <summary>执行输入的端口文本与取值来自同一份截断结果，静态端口文本单独保留。</summary>
+/// <summary>执行输入的端口文本与取值来自同一份完整取值，静态端口文本单独保留。</summary>
 public sealed class ExecutionInputBuilderTests
 {
     private static readonly PortName Content = new("正文");
@@ -19,7 +19,7 @@ public sealed class ExecutionInputBuilderTests
     private static readonly PortName Static = TestExecutableNodeType.StaticPort;
 
     [Fact]
-    public void Texts_match_the_truncated_inputs()
+    public void Texts_match_the_full_inputs()
     {
         string longText = new('甲', 2100);
         string longDefault = new('乙', 2100);
@@ -31,13 +31,11 @@ public sealed class ExecutionInputBuilderTests
 
         ExecutionInput input = ExecutionInputBuilder.Build(new TaskId(1), node, inputs, null);
 
-        string expected = new string('甲', 2000) + "…";
-        Assert.Equal(expected, input.Text(Content));
-        Assert.Equal(expected, input.Inputs.Single(value => value.Port == Content).Text);
+        Assert.Equal(longText, input.Text(Content));
+        Assert.Equal(longText, input.Inputs.Single(value => value.Port == Content).Text);
 
-        string expectedDefault = new string('乙', 2000) + "…";
-        Assert.Equal(expectedDefault, input.Text(Fallback));
-        Assert.Equal(expectedDefault, input.Inputs.Single(value => value.Port == Fallback).Text);
+        Assert.Equal(longDefault, input.Text(Fallback));
+        Assert.Equal(longDefault, input.Inputs.Single(value => value.Port == Fallback).Text);
 
         Assert.Equal("静态值", input.Text(Static));
         Assert.DoesNotContain(input.Inputs, value => value.Port == Static);

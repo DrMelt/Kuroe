@@ -118,6 +118,17 @@ public abstract class TaskCheckpointCodecContractTests
         Assert.Equal(codec.Write(document).ThrowIfError(), codec.Write(document).ThrowIfError());
     }
 
+    [Fact]
+    public void Write_keeps_non_ascii_characters()
+    {
+        ITaskCheckpointCodec codec = CreateCodec();
+        TaskCheckpointDocument document = TaskCheckpointFixture.CreateDocument();
+
+        string json = codec.Write(document).ThrowIfError();
+
+        Assert.Contains("计划结果", json);
+    }
+
     private static TaskCheckpointDocument WithAllContextSources(TaskCheckpointDocument document)
     {
         NodePath node = NodePath.Of("整体", "计划");

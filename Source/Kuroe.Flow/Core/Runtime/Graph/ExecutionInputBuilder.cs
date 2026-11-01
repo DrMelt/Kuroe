@@ -8,12 +8,10 @@ namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>为执行节点装配执行输入：按输入端口的执行角色决定内容与配置，动态取值与常量取值使用同一份出处结构。
 /// Content 端口进入内容输入，Configuration 端口只进入文本视图，Control 端口只参与启动。
-/// Context 内容端口置于内容输入最前，其余按组内连接序。</summary>
+/// Context 内容端口置于内容输入最前，其余按组内连接序。
+/// 取值按上游发布原样进入，装配层不改变内容长度。</summary>
 internal static class ExecutionInputBuilder
 {
-    /// <summary>单条取值文本的上限。</summary>
-    private const int TextLimit = 2000;
-
     /// <summary>为执行节点装配这一轮的输入。</summary>
     internal static ExecutionInput Build(
         TaskId id,
@@ -32,7 +30,7 @@ internal static class ExecutionInputBuilder
                 continue;
             }
 
-            InputValue value = new(input.TargetInput, Truncate(input.Value));
+            InputValue value = new(input.TargetInput, input.Value);
             if (declared is not { } role || role.Role == InputRole.Content)
             {
                 List<InputValue> target = input.Type.Semantics == PortSemantics.Context ? contextInput : values;
@@ -51,7 +49,7 @@ internal static class ExecutionInputBuilder
                 {
                     InputValue constantValue = new(
                         port.Name,
-                        Truncate(new ContextValue(new ConstantSource(node.Path, port.Name), constant)));
+                        new ContextValue(new ConstantSource(node.Path, port.Name), constant));
                     List<InputValue> target = port.Type.Semantics == PortSemantics.Context ? contextInput : values;
                     target.Add(constantValue);
                 }
@@ -68,7 +66,7 @@ internal static class ExecutionInputBuilder
 
             InputValue value = new(
                 port.Name,
-                Truncate(new ContextValue(new DefaultSource(node.Path, port.Name), text)));
+                new ContextValue(new DefaultSource(node.Path, port.Name), text));
             if (port.Role == InputRole.Content)
             {
                 values.Add(value);
@@ -80,7 +78,7 @@ internal static class ExecutionInputBuilder
         // 上下文输入端口的内容与系统指令一起构成请求前缀段，置于取值最前
         values.InsertRange(0, contextInput);
 
-        // 端口文本与取值来自同一份截断结果，常量端口优先
+        // 端口文本与取值来自同一份取值，常量端口优先
         Dictionary<PortName, string> texts = new(inputs.StaticTexts.Texts);
         foreach ((PortName port, List<ContextValue> list) in textValues)
         {
@@ -114,10 +112,4 @@ internal static class ExecutionInputBuilder
 
         list.Add(value.Value);
     }
-
-    /// <summary>取值文本过长时截断，出处原样保留。</summary>
-    private static ContextValue Truncate(ContextValue value) =>
-        value.Text.Length <= TextLimit
-            ? value
-            : value with { Text = string.Concat(value.Text.AsSpan(0, TextLimit), "…") };
 }
