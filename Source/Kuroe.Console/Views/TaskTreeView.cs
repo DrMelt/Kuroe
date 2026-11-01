@@ -63,6 +63,17 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             .Add(ViewLabels.Of(state), ViewLabels.StyleOf(state))
             .Add($"成员 {done}/{total} 完成", Styles.Hint);
 
+        if (snapshot is { } current
+            && (current.PublicationCount > 0 || current.MaxExecutions != ExecutableNode.DefaultMaxExecutions))
+        {
+            bool unlimited = current.MaxExecutions == int.MaxValue;
+            bool capped = !unlimited && current.PublicationCount >= current.MaxExecutions;
+            string publishes = unlimited
+                ? $"发布 {current.PublicationCount} 次"
+                : $"发布 {current.PublicationCount}/{current.MaxExecutions} 次";
+            line.Add(capped ? $"{publishes}，已达上限" : publishes, capped ? Styles.Warning : Styles.Hint);
+        }
+
         if (container.Outputs.Count > 0)
         {
             line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
@@ -99,12 +110,14 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         if (executable.Type.Shape.DispatchesExecutions)
         {
-            int count = facts.Executions(executable.Path).Count;
-            bool configured = executable.MaxExecutions != ExecutableNode.DefaultMaxExecutions;
-            bool capped = count >= executable.MaxExecutions;
+            ExecutableSnapshot? snapshot = facts.Executable(executable.Path);
+            int count = snapshot?.ExecutionCount ?? facts.Executions(executable.Path).Count;
+            int limit = snapshot?.MaxExecutions ?? executable.MaxExecutions;
+            bool configured = limit != ExecutableNode.DefaultMaxExecutions;
+            bool capped = count >= limit;
             if (count > 0 || configured)
             {
-                string executions = configured ? $"执行 {count}/{executable.MaxExecutions} 次" : $"执行 {count} 次";
+                string executions = configured ? $"执行 {count}/{limit} 次" : $"执行 {count} 次";
                 line.Add(executions, capped ? Styles.Warning : Styles.Hint);
             }
 
@@ -176,6 +189,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     private sealed class Facts
     {
         private readonly Dictionary<NodePath, NodeState> _states;
+        private readonly Dictionary<NodePath, ExecutableSnapshot> _snapshots;
         private readonly Dictionary<NodePath, IReadOnlyList<ExecutionSnapshot>> _executions;
         private readonly Dictionary<NodePath, ContainerSnapshot> _containers;
         private readonly Dictionary<NodePath, PendingNode> _waiting;
@@ -187,6 +201,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         {
             _task = task;
             _states = task.ExecutableStates.ToDictionary(state => state.Node, state => state.State);
+            _snapshots = task.Executables.ToDictionary(node => node.Executable.Path);
             _executions = task.Executables.ToDictionary(node => node.Executable.Path, node => node.Executions);
             _containers = task.Containers.ToDictionary(container => container.Path);
             _staticTexts = task.Executables.ToDictionary(node => node.Executable.Path, node => node.StaticTexts);
@@ -204,6 +219,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         public IReadOnlyList<ExecutionSnapshot> Executions(NodePath path) =>
             _executions.TryGetValue(path, out IReadOnlyList<ExecutionSnapshot>? executions) ? executions : [];
+
+        public ExecutableSnapshot? Executable(NodePath path) =>
+            _snapshots.GetValueOrDefault(path);
 
         public ContainerSnapshot? Container(NodePath path) =>
             _containers.TryGetValue(path, out ContainerSnapshot? container) ? container : null;

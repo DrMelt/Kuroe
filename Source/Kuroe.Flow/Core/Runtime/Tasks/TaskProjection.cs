@@ -2,6 +2,7 @@ using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -19,7 +20,38 @@ internal sealed class TaskProjection(
     public ExecutableStateSnapshot State(NodePath path) => materializer.Find(path)?.Snapshot()
         ?? new ExecutableStateSnapshot(path, NodeState.Pending);
 
-    /// <summary>各容器在快照里的一刻状态：内容齐备情况与成员活动。</summary>
+    /// <summary>各执行节点在快照里的一刻状态：静态文本、执行与次数上限。</summary>
+    public IReadOnlyList<ExecutableSnapshot> Executables(IReadOnlyList<ExecutionSnapshot> executions)
+    {
+        Dictionary<NodePath, List<ExecutionSnapshot>> byNode = [];
+        foreach (ExecutionSnapshot execution in executions)
+        {
+            if (!byNode.TryGetValue(execution.Input.Node, out List<ExecutionSnapshot>? values))
+            {
+                values = [];
+                byNode[execution.Input.Node] = values;
+            }
+
+            values.Add(execution);
+        }
+
+        return
+        [
+            .. graph.ExecutableNodes.Select(node => new ExecutableSnapshot(
+                node,
+                staticPorts.For(node),
+                staticPorts.ConstantsFor(node),
+                byNode.GetValueOrDefault(node.Path) ?? [],
+                materializer.Find(node.Path)?.Progress.Executions ?? 0,
+                LimitOf(node.Path) ?? node.MaxExecutions)),
+        ];
+    }
+
+    /// <summary>各执行节点在快照里的一刻状态。</summary>
+    public IReadOnlyList<ExecutableStateSnapshot> ExecutableStates() =>
+        [.. graph.ExecutableNodes.Select(node => State(node.Path))];
+
+    /// <summary>各容器在快照里的一刻状态：内容齐备情况、成员活动与发布。</summary>
     public IReadOnlyList<ContainerSnapshot> Containers()
     {
         List<ContainerSnapshot> snapshots = [];
@@ -31,7 +63,9 @@ internal sealed class TaskProjection(
                     container.Path,
                     ActivityState(container),
                     ChildPaths(container),
-                    staticPorts.ConstantsFor(container)));
+                    staticPorts.ConstantsFor(container),
+                    0,
+                    LimitOf(container.Path) ?? container.MaxExecutions));
         }
 
         return snapshots;
@@ -58,8 +92,13 @@ internal sealed class TaskProjection(
             container.Path,
             state,
             ChildPaths(container.Container),
-            staticPorts.ConstantsFor(container.Container));
+            staticPorts.ConstantsFor(container.Container),
+            container.Progress.Executions,
+            LimitOf(container.Path) ?? container.Container.MaxExecutions);
     }
+
+    /// <summary>方案给出的执行或发布次数上限，没有方案时为空。</summary>
+    private int? LimitOf(NodePath path) => graph.PlanOf(path)?.MaxExecutions;
 
     /// <summary>容器的直接子节点路径，先根序。</summary>
     private static IReadOnlyList<NodePath> ChildPaths(ContainerNode container) =>
@@ -72,5 +111,5 @@ internal sealed class TaskProjection(
     /// <summary>成员执行节点是否有在跑的执行或已产出，未实例化的成员没有活动。</summary>
     private bool MemberActive(NodePath executable) =>
         materializer.Find(executable) is RuntimeExecutable node
-            && (node.HasActive || node.PublishedExecution is not null);
+            && (node.HasActive || node.Progress.Published);
 }

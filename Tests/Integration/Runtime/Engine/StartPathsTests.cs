@@ -34,11 +34,11 @@ public sealed class StartPathsTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "读取路径",
                       "Kind": "Llm",
-                      "Static": { "MODEL_NAME": "@MODEL_NAME", "启动": "@启动", "流程": "@流程" },
+                      "Bindings": { "MODEL_NAME": "@MODEL_NAME", "启动": "@启动", "流程": "@流程" },
                       "Inputs": [
                         { "Name": "目标" },
                         { "Name": "启动", "Type": "Text", "Mode": "Constant" },
@@ -118,12 +118,12 @@ public sealed class StartPathsTests
                     { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
                     { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                   ],
-                  "In": { "目标": "Start@目标", "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
+                  "Bindings": { "目标": "Start@目标", "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
                   "Nodes": [
                     {
                       "Name": "实施",
                       "Kind": "Llm",
-                      "Static": { "MODEL_NAME": "@MODEL_NAME" },
+                      "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                       "Outputs": [{ "Name": "正文", "Type": "Text" }],
                       "From": [{ "目标": "@目标" }]
                     },
@@ -133,7 +133,7 @@ public sealed class StartPathsTests
                       "Path": "{root}/out/result.txt",
                       "Variables": { "root": "任务目录" },
                       "Inputs": [{ "Name": "正文" }, { "Name": "任务目录", "Type": "Text", "Mode": "Constant" }],
-                      "Static": { "任务目录": "@任务目录" },
+                      "Bindings": { "任务目录": "@任务目录" },
                       "From": [{ "正文": "实施@正文" }]
                     }
                   ]

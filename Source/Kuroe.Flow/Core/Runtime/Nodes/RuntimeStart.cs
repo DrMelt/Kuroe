@@ -8,27 +8,23 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
-/// <summary>开始节点在任务内的运行时对象：任务启动即已放行，产出是任务启动时确定的开始端口值，
+/// <summary>开始节点在任务内的运行时对象：任务启动即发布一次，产出是任务启动时确定的开始端口值，
 /// 固定值、宿主输入与提交输入共用同一份解析。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
-internal sealed class RuntimeStart(StartNode node, IPortTexts startPorts) : RuntimeNode(node)
+internal sealed class RuntimeStart : RuntimeNode
 {
-    /// <summary>任务启动时确定的开始端口文本，固定值、宿主输入与提交输入按端口给出。</summary>
-    private readonly IPortTexts _startPorts = startPorts;
+    private readonly StartNode _start;
+    private readonly IPortTexts _startPorts;
 
-    public override bool Released => true;
-
-    public override long Revision => 1;
+    public RuntimeStart(StartNode node, IPortTexts startPorts) : base(node)
+    {
+        _start = node;
+        _startPorts = startPorts;
+        Progress.Publish(CreatePublication());
+    }
 
     public override bool Canceled => false;
 
-    /// <summary>按端口取任务启动时确定的文本，未声明端口或既非 Text 也非常量端口时无产出。</summary>
-    public override string? PortText(INodeContext context, PortName port) => Text(port);
-
-    /// <summary>按端口取初始输入消息，出处指向流程起点。</summary>
-    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Text(port) is { Length: > 0 } text
-            ? [new ContextValue(new StartSource(port), text)]
-            : [];
+    protected override bool Consumable => true;
 
     public override void Cancel()
     {
@@ -42,8 +38,23 @@ internal sealed class RuntimeStart(StartNode node, IPortTexts startPorts) : Runt
     {
     }
 
-    private string? Text(PortName port) =>
-        node.FindPort(port) is { } declared && (declared.IsConstant || PortRules.CarriesText(declared.Type))
-            ? _startPorts.Text(port)
-            : null;
+    /// <summary>开始端口的发布内容：承载文本的端口按启动值各给一条产出，出处指向流程起点。</summary>
+    private Publication CreatePublication()
+    {
+        Dictionary<PortName, IReadOnlyList<ContextValue>> content = [];
+        foreach (Port port in _start.Outputs)
+        {
+            if (!port.IsConstant && !PortRules.CarriesText(port.Type))
+            {
+                continue;
+            }
+
+            if (_startPorts.Text(port.Name) is { Length: > 0 } text)
+            {
+                content[port.Name] = [new ContextValue(new StartSource(port.Name), text)];
+            }
+        }
+
+        return new Publication(1, new Dictionary<PortName, bool>(), content);
+    }
 }

@@ -182,6 +182,11 @@ internal sealed class FlowBrowser(
             line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
+        if (container.MaxExecutions != int.MaxValue)
+        {
+            line.Add($"上限 {container.MaxExecutions}", Styles.Hint);
+        }
+
         return line.Build();
     }
 
@@ -236,13 +241,13 @@ internal sealed class FlowBrowser(
         return line.Build();
     }
 
-    /// <summary>入边按启动组展开，组内以顿号连接，组间表示任一齐备。</summary>
-    private static string Upstream(IReadOnlyList<FlowEdge> edges) =>
-        string.Join(" 或 ", edges
-            .GroupBy(edge => edge.Group)
+    /// <summary>上游绑定按启动组展开，组内以顿号连接，组间表示任一齐备。</summary>
+    private static string Upstream(IReadOnlyList<InputBinding> bindings) =>
+        string.Join(" 或 ", bindings
+            .GroupBy(binding => binding.Group)
             .OrderBy(group => group.Key)
-            .Select(group => string.Join('、', group.Select(edge =>
-                $"{edge.TargetInput}←{edge.Source}@{edge.SourcePort}"))));
+            .Select(group => string.Join('、', group.Select(binding =>
+                $"{binding.TargetInput}←{binding.Source}@{binding.SourcePort}"))));
 
     /// <summary>流程里的执行节点与容器数量。</summary>
     private static (int Executables, int Containers) Count(NodeSpec root)

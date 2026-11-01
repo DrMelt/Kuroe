@@ -67,9 +67,9 @@ public sealed class NodeLibraryRuntimeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Label": "定计划", "Use": "准备", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                    { "Label": "交付", "Use": "交付", "In": { "计划": "定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Label": "定计划", "Use": "准备", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                    { "Label": "交付", "Use": "交付", "Bindings": { "计划": "定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
                 }
               ]
@@ -85,7 +85,7 @@ public sealed class NodeLibraryRuntimeTests
             { "Name": "规划", "Kind": "Llm", "Outputs": [{ "Name": "计划", "Type": "Text" }] },
             { "Name": "执行", "Kind": "Llm" },
             { "Name": "交付", "Kind": "Container", "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
-              { "Label": "实施", "Use": "执行", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
+              { "Label": "实施", "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
             ] }
           ],
           "Flows": [
@@ -96,11 +96,11 @@ public sealed class NodeLibraryRuntimeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                { "Label": "制定A", "Use": "规划", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                { "Label": "制定B", "Use": "规划", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                { "Label": "交付A", "Use": "交付", "In": { "计划": "制定A@计划", "MODEL_NAME": "@MODEL_NAME" } },
-                { "Label": "交付B", "Use": "交付", "In": { "计划": "制定B@计划", "MODEL_NAME": "@MODEL_NAME" } }
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                { "Label": "制定A", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                { "Label": "制定B", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                { "Label": "交付A", "Use": "交付", "Bindings": { "计划": "制定A@计划", "MODEL_NAME": "@MODEL_NAME" } },
+                { "Label": "交付B", "Use": "交付", "Bindings": { "计划": "制定B@计划", "MODEL_NAME": "@MODEL_NAME" } }
                   ]
                 }
               ]
@@ -128,9 +128,9 @@ public sealed class NodeLibraryRuntimeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "目标": "@目标" } ] },
-                    { "Label": "审查实例", "Use": "审查", "Static": { "MODEL_NAME": "@MODEL_NAME" },
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                    { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "目标": "@目标" } ] },
+                    { "Label": "审查实例", "Use": "审查", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                       "From": [ { "上下文": "计划@上下文" } ] }
                   ]
                 }

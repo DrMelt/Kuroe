@@ -1,0 +1,73 @@
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
+
+namespace Kuroe.Flow.Compilation.Shared.Validation;
+
+/// <summary>输入绑定规则：绑定目标必须是已声明的输入端口，覆盖要求按节点形态判定。
+/// 参与方式由目标端口的模式决定：Constant 端口取静态值，Trigger 端口参与容器门控，
+/// Plain 端口作为容器入参供成员取用。执行节点只绑定静态输入端口，动态输入一律经 From。</summary>
+public static partial class NodeSpecRules
+{
+    /// <summary>检查绑定目标，逐条经 fail 报出。引用节点在库校验阶段尚未展开，目标由展开后判定。</summary>
+    public static void CheckBindings(this NodeSpec node, Action<string> fail)
+    {
+        if (node.Bindings is not { Count: > 0 } bindings)
+        {
+            return;
+        }
+
+        // 引用节点在库校验阶段尚未展开，目标输入与来源端口由流程展开后判定。
+        if (node.Use is not null && node.Type is null)
+        {
+            return;
+        }
+
+        foreach (PortName name in bindings.Keys)
+        {
+            InputPort? target = node.FindInput(name);
+            if (target is null)
+            {
+                fail($"绑定目标 {name.Value} 不是已声明的输入端口。");
+                continue;
+            }
+
+            if (node.IsContainer)
+            {
+                continue;
+            }
+
+            if (!target.Value.IsStatic)
+            {
+                fail($"执行节点的绑定目标 {name.Value} 不是静态输入端口，动态输入一律经 From 绑定。");
+            }
+        }
+    }
+
+    /// <summary>检查输入端口是否都有值来源。容器的全部声明端口都要绑定，执行节点的静态输入端口要有绑定或默认值。</summary>
+    public static void CheckBindingCoverage(
+        this NodeSpec node,
+        IReadOnlyList<InputPort> inputs,
+        bool container,
+        Action<string> fail)
+    {
+        foreach (InputPort input in inputs)
+        {
+            bool bound = node.Bindings?.ContainsKey(input.Name) == true;
+            if (container)
+            {
+                if (!bound)
+                {
+                    fail($"输入端口 {input.Name.Value} 没有绑定。");
+                }
+
+                continue;
+            }
+
+            if (input.IsStatic && !bound && string.IsNullOrWhiteSpace(input.Default))
+            {
+                fail($"静态输入端口 {input.Name.Value} 没有绑定来源或默认值。");
+            }
+        }
+    }
+}

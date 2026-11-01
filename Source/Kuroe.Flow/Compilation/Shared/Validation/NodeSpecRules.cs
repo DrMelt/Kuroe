@@ -12,10 +12,10 @@ public static partial class NodeSpecRules
         node.CheckIdentity(context, fail);
         node.CheckStructure(node.Type?.Shape, context, fail);
         node.CheckWiring(context, fail);
-        node.CheckStatic(fail);
+        node.CheckBindings(fail);
         if (node.Spec is not null && context != NodeRuleContext.LibraryDefinition)
         {
-            node.CheckStaticCoverage(fail);
+            node.CheckBindingCoverage(node.EffectiveInputs, container: false, fail);
         }
 
         node.CheckInterface(node.Type?.Shape, fail);

@@ -46,8 +46,8 @@ public sealed class ApprovalRuntimeTests
         Assert.Single(channel.Declared).Receive(string.Empty);
 
         Assert.True(runtime.Released);
-        Assert.Equal("内容", runtime.PortText(context, port));
-        Assert.Single(runtime.OutputValues(context, port));
+        Assert.Equal("内容", runtime.PortText(port));
+        Assert.Single(runtime.OutputValues(port));
     }
 
     [Fact]

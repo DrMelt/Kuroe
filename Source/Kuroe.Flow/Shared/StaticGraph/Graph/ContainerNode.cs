@@ -22,8 +22,5 @@ public sealed record ContainerNode : GraphNode
     public override IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出端口到子树内成员端口的映射，编译期解析成成员路径。未声明来源时为空。</summary>
-    public override IReadOnlyDictionary<PortName, NodePort>? OutputBindings { get; init; }
-
-    /// <summary>输入侧方案：一组绑定覆盖全部直接子节点。</summary>
-    public NodeInputPlan Plan => NodeInputPlan.Of(Children);
+    public override IReadOnlyDictionary<PortName, OutputBinding>? OutputBindings { get; init; }
 }

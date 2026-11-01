@@ -301,12 +301,14 @@ internal sealed class TaskDriver(
 
         List<NodePath> notify = [];
         NodeRuntime node;
+        TaskRuntime.ActivationKind activation;
         NodeInputValues? inputs;
         lock (task.Gate)
         {
             node = task.Runtime[name];
             TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
+            activation = result.Activation;
             inputs = result.Inputs;
         }
 
@@ -315,8 +317,8 @@ internal sealed class TaskDriver(
             Enqueue([next]);
         }
 
-        // 只有派发执行的节点会给出启动输入，审批节点与输入节点不派发执行
-        if (node is not RuntimeExecutable executable || inputs is null)
+        // 只有派发执行的节点返回派发激活，审批节点、输入节点与容器直接发布
+        if (node is not RuntimeExecutable executable || activation != TaskRuntime.ActivationKind.Dispatched)
         {
             return;
         }
@@ -327,7 +329,7 @@ internal sealed class TaskDriver(
         }
 
         // 直接调用让装配段同步完成，执行编号与派发顺序保持确定，await 之后才回到线程池
-        _ = DispatchAndSettleAsync(executable, inputs);
+        _ = DispatchAndSettleAsync(executable, inputs ?? NodeInputValues.Empty);
     }
 
     /// <summary>执行装配与启动的包装：收口异常上报为推进异常，不越过调度循环。</summary>

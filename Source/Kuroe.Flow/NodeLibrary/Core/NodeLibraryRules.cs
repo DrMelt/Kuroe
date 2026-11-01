@@ -117,11 +117,11 @@ internal static class NodeLibraryRules
         {
             member.Type?.Validate(member, NodeScope.Library, errors.Add);
             CheckMember(member, byName, errors);
-            member.CheckStatic(message =>
+            member.CheckBindings(message =>
                 errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
             if (member.Spec is not null)
             {
-                member.CheckStaticCoverage(message =>
+                member.CheckBindingCoverage(member.EffectiveInputs, container: false, message =>
                     errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
             }
 
@@ -158,7 +158,7 @@ internal static class NodeLibraryRules
         }
     }
 
-    /// <summary>容器输出端口：有 Ref 时目标必须落在子树内，端口必须存在且常量性与类型一致；固定值输出不需要目标。</summary>
+    /// <summary>容器输出端口：有 Ref 时目标必须是子树内成员输出或容器自身的静态输入，端口必须存在且常量性与类型一致；固定值输出不需要目标。</summary>
     private static void CheckContainerOutputs(
         NodeSpec container,
         HashSet<NodeLabel> subtreeLabels,
@@ -174,8 +174,6 @@ internal static class NodeLibraryRules
 
             if (target.Source is not { } sourceLabel)
             {
-                errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {output.Name.Value} 的 Ref 必须写 成员@端口。"));
                 continue;
             }
 
@@ -194,17 +192,11 @@ internal static class NodeLibraryRules
                 continue;
             }
 
-            if (memberPort.IsConstant != output.IsConstant)
+            foreach (string message in OutputSourceRules.Check(output, memberPort.Type, memberPort.IsConstant, target.Display))
             {
-                errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {output.Name.Value} 的常量性必须与绑定目标 {target.Display} 一致。"));
+                errors.Add(NodeScope.Library.Node(container.Label.Value, message));
             }
 
-            if (memberPort.Type != output.Type)
-            {
-                errors.Add(NodeScope.Library.Node(container.Label.Value,
-                    $"容器输出端口 {output.Name.Value} 的类型必须与绑定目标 {target.Display} 的类型一致。"));
-            }
         }
     }
 
@@ -265,5 +257,4 @@ internal static class NodeLibraryRules
             errors.Add(NodeScope.Library.Node(member.Label.Value, "MaxExecutions 必须是正整数。"));
         }
     }
-
 }

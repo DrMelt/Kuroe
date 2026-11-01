@@ -134,7 +134,7 @@ public sealed class KuroeInfoToolTests
                     {
                       "Name": "实施",
                       "Kind": "Llm",
-                      "Static": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                      "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
                       "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Mode": "Constant" } ],
                       "From": [ { "目标": "Start@目标" } ]
                     }

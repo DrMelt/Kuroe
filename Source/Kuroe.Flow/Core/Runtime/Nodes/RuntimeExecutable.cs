@@ -1,4 +1,3 @@
-using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -15,9 +14,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。
 /// 节点状态只经推进方法改动，读写都要求持有任务 Gate。</summary>
-internal sealed class RuntimeExecutable(
-    ExecutableNode executable,
-    IConsumedRevisionStore? consumed = null) : RuntimeNode(executable), IInputProgress
+internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode(executable)
 {
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
@@ -25,15 +22,10 @@ internal sealed class RuntimeExecutable(
     /// <summary>各次执行交回的内容，发布后只保留已发布那次。</summary>
     private readonly Dictionary<ExecutionId, Submission> _submissions = [];
 
-    /// <summary>输入侧已消费版本，版本驱动的判定按它比较来源版本。</summary>
-    private readonly IConsumedRevisionStore _consumed = consumed ?? new ConsumedRevisionStore();
-
     /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
     private readonly List<NodePath> _reworkTargets = [];
 
     private bool _canceled;
-    private bool _rerunRequested;
-    private long _stamp;
 
     /// <summary>在跑的执行数。推进时经 AddActive 与 ReleaseActive 改动。</summary>
     public int Active { get; private set; }
@@ -41,11 +33,8 @@ internal sealed class RuntimeExecutable(
     /// <summary>是否仍有在跑的执行。</summary>
     public bool HasActive => Active > 0;
 
-    /// <summary>已发布产出的那次执行，未发布时为空。</summary>
-    public Execution? PublishedExecution { get; private set; }
-
     /// <summary>已启动的执行数。</summary>
-    public int Executions { get; private set; }
+    public int Executions => Progress.Executions;
 
     /// <summary>是否停在阻塞等待返工。</summary>
     public bool Blocked { get; private set; }
@@ -53,26 +42,20 @@ internal sealed class RuntimeExecutable(
     /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
     public IReadOnlyList<NodePath> ReworkTargets => _reworkTargets;
 
-    /// <summary>被作废的重跑目标：下一次启动判定越过就绪条件直接重启一次。</summary>
-    public bool RerunRequested => _rerunRequested;
-
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
 
-    /// <summary>产出已放行、可被下游消费：产出已发布且不在阻塞与取消。</summary>
-    public override bool Released => PublishedExecution is not null && !Blocked && !Canceled;
-
-    /// <summary>单调的发布计数，作废归零产出锚但不清计数。下游把它登记为已消费版本，重跑后版本不回退。</summary>
-    public override long Revision => _stamp;
+    /// <summary>产出可消费：不在阻塞与取消。</summary>
+    protected override bool Consumable => !Blocked && !Canceled;
 
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
     /// <summary>记下重跑请求，供返工作废后的重启判定使用。</summary>
-    public void RequestRerun() => _rerunRequested = true;
+    public void RequestRerun() => Progress.RequestRerun();
 
     /// <summary>重跑请求已消耗。</summary>
-    public void ClearRerun() => _rerunRequested = false;
+    public void ClearRerun() => Progress.ClearRerun();
 
     /// <summary>某次执行交回的命名端口值，未交回时为空。</summary>
     public IReadOnlyDictionary<PortName, PortValue>? SubmittedPorts(ExecutionId execution) =>
@@ -124,10 +107,9 @@ internal sealed class RuntimeExecutable(
         }
     }
 
-    /// <summary>产出发布：产出锚指向这次执行，只保留这次执行的交回记录，发布号单调递增，下游据此重新评估。</summary>
+    /// <summary>产出发布：按这次执行的交回记录构造发布，只保留这次执行的交回记录，版本单调递增，下游据此重新评估。</summary>
     public void Publish(Execution execution)
     {
-        PublishedExecution = execution;
         Submission? kept = _submissions.GetValueOrDefault(execution.Id);
         _submissions.Clear();
 
@@ -136,31 +118,27 @@ internal sealed class RuntimeExecutable(
             _submissions[execution.Id] = kept;
         }
 
-        _stamp++;
+        Progress.Publish(CreatePublication(execution, Progress.NextRevision()));
     }
 
     /// <summary>作废已发布产出与交回记录，返工起点用它让下游重新等待。阻塞与返工目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRework"/> 按处理进度解除。</summary>
     public void Invalidate()
     {
-        PublishedExecution = null;
         _submissions.Clear();
+        Progress.Invalidate();
     }
 
     /// <summary>记一轮派发。调用点唯一：WorkTask.Attach。</summary>
-    public void RecordExecution() => Executions++;
+    public void RecordExecution() => Progress.Started();
 
     /// <summary>启动即登记方案内全部取值来源的当前版本，防止同版本重复触发。</summary>
-    public void Consume(NodeInputPlan plan, IReadinessSources sources) => _consumed.Record(plan, sources);
-
-    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
-
-    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
-
-    int IInputProgress.Executions => Executions;
-
-    bool IInputProgress.Published => PublishedExecution is not null;
-
-    bool IInputProgress.ForceRerun => RerunRequested;
+    public void Consume(NodeInputPlan plan, IReadinessSources sources)
+    {
+        foreach (InputGroup group in plan.Groups)
+        {
+            Progress.Consume(group, sources);
+        }
+    }
 
     /// <summary>一个已启动的执行终结，在跑数减一。</summary>
     public void ReleaseActive()
@@ -174,90 +152,51 @@ internal sealed class RuntimeExecutable(
     /// <summary>记下新启动的执行。</summary>
     public void AddActive() => Active++;
 
-    /// <summary>按输出端口取单段文本：常量端口取已发布那次交回的端口值，动态 Context 端口给来源执行输入侧内容的拼合，
-    /// 动态 Text 端口取已发布那次交回的端口值，其余端口不承载内容。</summary>
-    public override string? PortText(INodeContext context, PortName port)
+    /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 Context 端口转发来源输入内容，
+    /// 常量与 Text 端口取交回文本，其余端口不承载内容。</summary>
+    private Publication CreatePublication(Execution execution, long revision)
     {
-        if (Executable.FindPort(port) is not { } declared)
+        Dictionary<PortName, bool> triggers = [];
+        Dictionary<PortName, IReadOnlyList<ContextValue>> content = [];
+        foreach (Port port in Executable.Outputs)
         {
-            return null;
+            PortValue? submitted = SubmittedValue(execution, port.Name);
+            triggers[port.Name] = TriggerRules.Output(port, submitted);
+            if (!port.IsConstant && port.Type.Semantics == PortSemantics.Context)
+            {
+                content[port.Name] = ContextInputs(execution);
+                continue;
+            }
+
+            if (submitted is { Text: { Length: > 0 } text })
+            {
+                content[port.Name] = [new ContextValue(new ExecutionSource(execution.Id, Path, port.Name), text)];
+            }
         }
 
-        return !declared.IsConstant && declared.Type.Semantics == PortSemantics.Context
-            ? ContextValues.Join(ContextInputs())
-            : PublishedValue(port)?.Text;
+        return new Publication(revision, triggers, content);
     }
 
-    /// <summary>按输出端口取产出：常量端口给已发布那次交回的端口值，动态 Context 端口把来源执行输入侧取到的内容按原出处给出，
-    /// 动态 Text 端口给已发布那次交回的端口值，其余端口不承载内容。</summary>
-    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port)
-    {
-        if (Executable.FindPort(port) is not { } declared)
-        {
-            return [];
-        }
+    /// <summary>来源执行输入侧取到的内容，按原出处给出。</summary>
+    private static IReadOnlyList<ContextValue> ContextInputs(Execution execution) =>
+        [.. execution.Input.Inputs.Select(value => value.Value)];
 
-        if (!declared.IsConstant && declared.Type.Semantics == PortSemantics.Context)
-        {
-            return ContextInputs();
-        }
-
-        return PublishedValue(port) is { Text: { Length: > 0 } text } && PublishedExecution is { } execution
-            ? [new ContextValue(new ExecutionSource(execution.Id, Path, port), text)]
-            : [];
-    }
-
-    /// <summary>承载触发的输出端口的最近一次产出是否触发下游，其余端口恒触发。</summary>
-    public override bool Triggers(PortName port)
-    {
-        PortValue? value = PublishedExecution is { } execution
-            && SubmittedPorts(execution.Id) is { } values
-            && values.TryGetValue(port, out PortValue found)
-                ? found
-                : null;
-
-        return TriggerRules.Output(Executable.FindPort(port), value);
-    }
-
-    /// <summary>来源执行输入侧取到的内容，按原出处给出。尚未产出时为空。</summary>
-    private IReadOnlyList<ContextValue> ContextInputs() =>
-        PublishedExecution is { } execution
-            ? [.. execution.Input.Inputs.Select(value => value.Value)]
-            : [];
-
-    /// <summary>按端口取已发布产出的一个返回值：常量端口与 Text 语义端口承载内容，Signal 端口交回端口名但不作产出；未发布或未交回时为空。</summary>
-    private PortValue? PublishedValue(PortName port) =>
-        Executable.FindPort(port) is { } declared
-        && (declared.IsConstant || PortRules.CarriesText(declared.Type))
-        && PublishedExecution is { } execution
-        && SubmittedPorts(execution.Id) is { } values
+    /// <summary>按端口取这次执行交回的值，未交回时为空。</summary>
+    private PortValue? SubmittedValue(Execution execution, PortName port) =>
+        SubmittedPorts(execution.Id) is { } values
         && values.TryGetValue(port, out PortValue value)
             ? value
             : null;
 
-    /// <summary>捕获执行节点的状态、执行计数与已发布产出。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint()
-    {
-        IReadOnlyDictionary<PortName, PortValue> ports =
-            PublishedExecution is { } published
-                ? _submissions.GetValueOrDefault(published.Id)?.Ports ?? new Dictionary<PortName, PortValue>()
-                : new Dictionary<PortName, PortValue>();
-
-        return new ExecutableNodeCheckpoint(
+    /// <summary>捕获执行节点的进展、发布与阻塞状态。</summary>
+    public override NodeCheckpoint? CaptureCheckpoint() =>
+        new ExecutableNodeCheckpoint(
             Path,
-            new NodeCommonCheckpoint(
-                Revision,
-                LastInputGroup,
-                _consumed.CaptureCheckpoint(),
-                [.. _reworkTargets],
-                Blocked,
-                RerunRequested),
-            Executions,
-            PublishedExecution?.Id,
-            ports);
-    }
+            CaptureProgress(),
+            [.. _reworkTargets],
+            Blocked);
 
-    /// <summary>从检查点恢复执行节点状态与已发布产出。</summary>
+    /// <summary>从检查点恢复执行节点的进展、发布与阻塞状态。</summary>
     public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
     {
         if (checkpoint is not ExecutableNodeCheckpoint state)
@@ -265,20 +204,11 @@ internal sealed class RuntimeExecutable(
             throw new ArgumentException($"执行节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
         }
 
-        RestoreLastInputGroup(state.Common.LastInputGroup);
-        _consumed.RestoreCheckpoint(state.Common.Consumed);
-        _stamp = state.Common.Revision;
-        Executions = state.Executions;
+        RestoreProgress(state.Common);
         _reworkTargets.Clear();
-        _reworkTargets.AddRange(state.Common.ReworkTargets);
-        Blocked = state.Common.Blocked;
-        _rerunRequested = state.Common.RerunRequested;
-        PublishedExecution = state.PublishedExecution is { } id ? context.Execution(id) as Execution : null;
+        _reworkTargets.AddRange(state.ReworkTargets);
+        Blocked = state.Blocked;
         _submissions.Clear();
-        if (PublishedExecution is { } published && state.PublishedPorts.Count > 0)
-        {
-            _submissions[published.Id] = new Submission(Ports: state.PublishedPorts);
-        }
     }
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
@@ -299,7 +229,7 @@ internal sealed class RuntimeExecutable(
         }
         else
         {
-            state = PublishedExecution is not null ? NodeState.Done : NodeState.Pending;
+            state = Progress.Published ? NodeState.Done : NodeState.Pending;
         }
 
         return new ExecutableStateSnapshot(Path, state);

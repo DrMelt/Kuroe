@@ -52,9 +52,9 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
     public IReadOnlyList<ContainerNode> Containers => [];
 
-    public IReadOnlyList<FlowEdge> Edges => node.Incoming;
+    public IReadOnlyList<InputBinding> Bindings => node.Incoming;
 
-    public IReadOnlyList<StaticDependency> StaticDependencies => [];
+    public IReadOnlyList<InputBinding> StaticBindings => [];
 
     public int Count => 1;
 
@@ -66,11 +66,12 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
 
     public ContainerNode? ContainerOf(NodePath path) => null;
 
-    public IReadOnlyList<FlowEdge> Incoming(NodePath target) => [.. node.Incoming.Where(edge => edge.Target == target)];
+    public IReadOnlyList<InputBinding> Incoming(NodePath target) =>
+        [.. node.Incoming.Where(binding => binding.Target == target)];
 
-    public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => [];
+    public IReadOnlyList<InputBinding> Outgoing(NodePath source) => [];
 
-    public IReadOnlyList<NodePath> StaticDependents(NodePath source) => [];
+    public IReadOnlyList<NodePath> Dependents(NodePath source) => [];
 
     public StaticResolution? StaticInputResolution(NodePath node, PortName port) => null;
 
@@ -85,24 +86,28 @@ internal sealed class StubGraph(ExecutableNode node) : INodeGraph
     public PortType TypeOf(NodePath node, PortName port) => PortTypes.Text;
 }
 
-/// <summary>测试用的来源运行期对象：按输出端口给出固定文本。</summary>
-internal sealed class SourceRuntime(NodePath path, string content)
-    : RuntimeNode(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
+/// <summary>测试用的来源运行期对象：在结果端口发布固定文本。</summary>
+internal sealed class SourceRuntime : RuntimeNode
 {
-    public override bool Released => true;
-
-    public override long Revision => 1;
+    public SourceRuntime(NodePath path, string content)
+        : base(new StartNode { Path = path, Outputs = [new Port(new PortName("结果"), PortTypes.Text)] })
+    {
+        Progress.Publish(new Publication(
+            1,
+            new Dictionary<PortName, bool>(),
+            new Dictionary<PortName, IReadOnlyList<ContextValue>>
+            {
+                [new PortName("结果")] = [new ContextValue(new StartSource(new PortName("结果")), content)],
+            }));
+    }
 
     public override bool Canceled => false;
+
+    protected override bool Consumable => true;
 
     public override void Cancel()
     {
     }
-
-    public override string? PortText(INodeContext context, PortName port) => content;
-
-    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        [new ContextValue(new StartSource(port), content)];
 
     /// <summary>测试来源没有需要持久化的状态。</summary>
     public override NodeCheckpoint? CaptureCheckpoint() => null;

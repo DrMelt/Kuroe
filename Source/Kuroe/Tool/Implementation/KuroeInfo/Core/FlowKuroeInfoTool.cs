@@ -130,7 +130,7 @@ public sealed class FlowKuroeInfoTool : ITool
             return "未绑定";
         }
 
-        if (node.Static is { } bindings && bindings.TryGetValue(modelPort, out PortRef reference))
+        if (node.Bindings is { } bindings && bindings.TryGetValue(modelPort, out PortRef reference))
         {
             return reference.Display;
         }

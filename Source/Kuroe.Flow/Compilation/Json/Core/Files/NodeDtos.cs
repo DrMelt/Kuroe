@@ -34,17 +34,14 @@ public sealed class NodeDto
     public int? MaxExecutions { get; set; }
 
     /// <summary>输入端口条目：执行节点与容器共用，写 Name 与可选 Type、Mode、Description、Default、Role。
-    /// 容器的传入端口由容器节点的 In 绑定，执行节点的由自身 From 绑定。Mode 为 Constant 时是静态输入。</summary>
+    /// 值由节点自身的 Bindings 绑定提供，或由 From 提供。Mode 为 Constant 时是静态输入。</summary>
     public List<JsonElement>? Inputs { get; set; }
 
     /// <summary>产出模式：Repeated 逐次发布，Once 首次发布后冻结。</summary>
     public string? Emission { get; set; }
 
-    /// <summary>容器节点的传入端口绑定：端口名到当前作用域来源的映射。</summary>
-    public Dictionary<string, string>? In { get; set; }
-
-    /// <summary>静态端口绑定：目标静态输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 From、In 一致。</summary>
-    public Dictionary<string, string>? Static { get; set; }
+    /// <summary>输入端口绑定：目标输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 From 一致。</summary>
+    public Dictionary<string, string>? Bindings { get; set; }
 
     /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
     [JsonExtensionData]

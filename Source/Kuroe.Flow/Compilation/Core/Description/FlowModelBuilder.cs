@@ -122,16 +122,10 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(validation.ErrorsOrEmptyList);
         }
 
-        ErrorOr<Dictionary<PortName, PortRef>?> bindings = ToBindings(document.In);
+        ErrorOr<Dictionary<PortName, PortRef>?> bindings = ToBindings(document.Bindings);
         if (bindings.IsError)
         {
             errors.AddRange(bindings.ErrorsOrEmptyList);
-        }
-
-        ErrorOr<Dictionary<PortName, PortRef>?> staticBindings = ToBindings(document.Static);
-        if (staticBindings.IsError)
-        {
-            errors.AddRange(staticBindings.ErrorsOrEmptyList);
         }
 
         if (errors.Count > 0)
@@ -145,8 +139,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             Validate = validation.Value,
             Emission = document.Emission,
             MaxExecutions = document.MaxExecutions,
-            In = bindings.Value,
-            Static = staticBindings.Value,
+            Bindings = bindings.Value,
         };
     }
 
@@ -211,18 +204,10 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(validation.ErrorsOrEmptyList);
         }
 
-        ErrorOr<Dictionary<PortName, PortRef>?> bindings = shape.Organizes && !scope.IsLibrary
-            ? ToBindings(document.In)
-            : (Dictionary<PortName, PortRef>?)null;
+        ErrorOr<Dictionary<PortName, PortRef>?> bindings = ToBindings(document.Bindings);
         if (bindings.IsError)
         {
             errors.AddRange(bindings.ErrorsOrEmptyList);
-        }
-
-        ErrorOr<Dictionary<PortName, PortRef>?> staticBindings = ToBindings(document.Static);
-        if (staticBindings.IsError)
-        {
-            errors.AddRange(staticBindings.ErrorsOrEmptyList);
         }
 
         INodeType? type = ParameterDocumentReader.Read(description, document.Parameters, scope, new NodeLabel(label), errors.Add);
@@ -254,8 +239,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             Inputs = inputs.Value,
             Outputs = outputs,
             From = from.Value,
-            In = bindings.Value,
-            Static = staticBindings.Value,
+            Bindings = bindings.Value,
             Nodes = children,
             Validate = validation.Value,
             MaxExecutions = shape.Organizes ? document.MaxExecutions : null,
@@ -291,9 +275,9 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 Fail("容器节点不是执行节点，不支持 From。");
             }
 
-            if (document.In is not null && scope.IsLibrary)
+            if (document.Bindings is not null && scope.IsLibrary)
             {
-                Fail("库容器定义不接线，不能声明输入端口绑定。");
+                Fail("库节点定义不接线，不能声明输入绑定。");
             }
 
             if (document.Validate is not null)
@@ -312,11 +296,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         if (document.Nodes is { Count: > 0 })
         {
             Fail($"{document.Kind} 节点不能声明子节点，子节点只属于容器。");
-        }
-
-        if (document.In is not null)
-        {
-            Fail("执行节点不写输入端口绑定，接线一律经 From。");
         }
     }
 

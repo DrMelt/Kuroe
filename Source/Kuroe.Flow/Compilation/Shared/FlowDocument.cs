@@ -18,7 +18,7 @@ public sealed record FlowDocumentFlow(
     NodeDocument? Root);
 
 /// <summary>输出端口条目：所有节点共用。Type 省略时按 Text，Mode 省略时按类型默认模式。Value 是固定值，Ref 是同一节点内部作用域中的来源端口，两者互斥。
-/// Mode 取 Plain、Trigger 或 Constant，支持范围由端口类型注册声明。Constant 端口的值在任务内确定一次，只供 Static 读取，不进入 From；
+/// Mode 取 Plain、Trigger 或 Constant，支持范围由端口类型注册声明。Constant 端口的值在任务内确定一次，只供下游 Bindings 读取，不进入 From；
 /// 没有 Value 与 Ref 时由 Emission 为 Once 的节点执行产出。</summary>
 public sealed record PortDocument(
     string Name,
@@ -28,7 +28,7 @@ public sealed record PortDocument(
     string? Value = null,
     string? Ref = null);
 
-/// <summary>输入端口条目：执行节点与容器共用。Mode 省略时按类型默认模式，Constant 表示静态输入，值由 Static 绑定或默认值提供。
+/// <summary>输入端口条目：执行节点与容器共用。Mode 省略时按类型默认模式，Constant 表示静态输入，值由 Bindings 绑定或默认值提供。
 /// Role 是执行角色。</summary>
 public sealed record InputPortDocument(
     string Name,
@@ -53,8 +53,8 @@ public abstract record NodeDocument
     /// <summary>上游启动组。</summary>
     public IReadOnlyList<FromGroupDocument> From { get; init; } = [];
 
-    /// <summary>静态端口绑定：目标静态输入端口到来源引用文本。来源识别与 From、In 使用同一套作用域规则。</summary>
-    public IReadOnlyDictionary<string, string>? Static { get; init; }
+    /// <summary>输入端口绑定：目标输入端口到来源引用文本。来源识别与 From 使用同一套作用域规则。</summary>
+    public IReadOnlyDictionary<string, string>? Bindings { get; init; }
 
     /// <summary>输出校验覆盖。</summary>
     public ValidationDocument? Validate { get; init; }
@@ -81,9 +81,6 @@ public sealed record NodeDefinitionDocument : NodeDocument
     /// <summary>输出端口声明，容器按 Ref 写成员来源。</summary>
     public IReadOnlyList<PortDocument> Outputs { get; init; } = [];
 
-    /// <summary>定义条目写了输入端口绑定。库定义不接线，内联容器在流程作用域绑定自身声明的传入端口。</summary>
-    public IReadOnlyDictionary<string, string>? In { get; init; }
-
     /// <summary>子节点，非空即容器。</summary>
     public IReadOnlyList<NodeDocument>? Nodes { get; init; }
 
@@ -99,7 +96,4 @@ public sealed record NodeReferenceDocument : NodeDocument
 
     /// <summary>引用的节点库定义名。</summary>
     public required string Use { get; init; }
-
-    /// <summary>容器引用处的输入端口绑定。</summary>
-    public IReadOnlyDictionary<string, string>? In { get; init; }
 }

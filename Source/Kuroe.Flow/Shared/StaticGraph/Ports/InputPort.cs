@@ -3,7 +3,7 @@ namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 
 /// <summary>输入端口声明：名字、类型、模式、说明、默认值、执行角色与驱动配置。类型决定动态来源产出如何进入本节点。
 /// 容器与执行节点共用，容器由引用处绑定，执行节点由自身 From 绑定。
-/// 常量模式是静态输入，由 Static 绑定提供值或使用默认值，不进入 From、版本、就绪与触发。
+/// 常量模式是静态输入，由 Bindings 绑定提供值或使用默认值，不进入 From、版本、就绪与触发。
 /// 角色不随模式改变，执行装配按角色决定内容与配置。模式支持范围由端口类型注册声明。</summary>
 public readonly record struct InputPort
 {
@@ -42,7 +42,7 @@ public readonly record struct InputPort
     /// <summary>执行角色：内容、配置或控制。</summary>
     public InputRole Role { get; init; }
 
-    /// <summary>常量模式的静态输入：值来自 Static 绑定或默认值，不进入 From、版本、就绪与触发。</summary>
+    /// <summary>常量模式的静态输入：值来自 Bindings 绑定或默认值，不进入 From、版本、就绪与触发。</summary>
     public bool IsStatic => Mode == PortMode.Constant;
 
     /// <summary>动态绑定是否使用来源触发值门控启动组。</summary>

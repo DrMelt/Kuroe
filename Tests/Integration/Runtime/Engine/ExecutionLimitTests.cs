@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Runtime.Tasks;
 using Xunit;
 
@@ -54,9 +55,9 @@ public sealed class ExecutionLimitTests
         }
     }
 
-    /// <summary>容器统一上限到点后，组内失败的执行节点停驻且返工不放行。</summary>
+    /// <summary>容器上限是发布次数，不限制成员执行次数。</summary>
     [Fact]
-    public void Container_limit_blocks_failed_member_at_limit()
+    public void Container_limit_does_not_cap_member_retries()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleExecutionContainerFlow);
         environment.Runner.FailsWhen = _ => true;
@@ -67,10 +68,10 @@ public sealed class ExecutionLimitTests
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, Executions(task, "干活"));
-        Assert.True(environment.Tasks.Rework(id).IsError, "达到上限的节点不能再返工");
+        Assert.False(environment.Tasks.Rework(id).IsError);
     }
 
-    /// <summary>引用容器时覆盖库定义统一上限，未覆盖时继承库定义。</summary>
+    /// <summary>引用容器时覆盖库定义上限，未覆盖时继承库定义。上限属于容器自身，不传给成员。</summary>
     [Fact]
     public void Reference_overrides_and_inherits_container_limit()
     {
@@ -79,10 +80,12 @@ public sealed class ExecutionLimitTests
         environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Context.Graph.ExecutableNodes
+        Assert.Equal(5, task.Context.Graph.Containers
+            .Single(node => node.Path.Value == "整体/较重").MaxExecutions);
+        Assert.Equal(3, task.Context.Graph.Containers
+            .Single(node => node.Path.Value == "整体/较轻").MaxExecutions);
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, task.Context.Graph.ExecutableNodes
             .Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
-        Assert.Equal(3, task.Context.Graph.ExecutableNodes
-            .Single(node => node.Path.Value == "整体/较轻/干活").MaxExecutions);
     }
 
     /// <summary>引用库执行定义时覆盖库上限，未覆盖时继承库定义。</summary>
@@ -131,8 +134,8 @@ public sealed class ExecutionLimitTests
     private const string FailingNodeFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]
         }
@@ -142,8 +145,8 @@ public sealed class ExecutionLimitTests
     private const string SingleNodeLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 2, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 2, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]
         }
@@ -153,8 +156,8 @@ public sealed class ExecutionLimitTests
     private const string ValidationFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ],
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ],
                 "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
             ] }
           ] } ]
@@ -165,11 +168,11 @@ public sealed class ExecutionLimitTests
     private const string LoopWithLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "修订", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 1, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
-              { "Name": "审查", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "审查@结论" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 1, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
+              { "Name": "审查", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }
@@ -179,39 +182,39 @@ public sealed class ExecutionLimitTests
     private const string LoopWithoutLimitFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "计划", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "修订", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
-              { "Name": "审查", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "结论": "审查@结论" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+              { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
+              { "Name": "审查", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
+              { "Name": "交付", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }
         """;
 
-    /// <summary>容器统一上限 1 次，组内节点失败后停驻。</summary>
+    /// <summary>容器发布上限 1 次，不限制成员执行次数，成员失败后停驻。</summary>
     private const string SingleExecutionContainerFlow = """
         {
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "MaxExecutions": 1, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "MaxExecutions": 1, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]
         }
         """;
 
-    /// <summary>库容器定义声明统一上限，引用处可覆盖或继承。</summary>
+    /// <summary>库容器定义声明发布次数上限，引用处可覆盖或继承。</summary>
     private const string ReferenceContainerLimitFlow = """
         {
           "Nodes": [
             { "Name": "干活组", "Kind": "Container", "MaxExecutions": 3, "Inputs": [{ "Name": "入口" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "入口": "@入口" } ] }
+              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "入口": "@入口" } ] }
             ] }
           ],
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Label": "较重", "Use": "干活组", "MaxExecutions": 5, "In": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } },
-              { "Label": "较轻", "Use": "干活组", "In": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Label": "较重", "Use": "干活组", "MaxExecutions": 5, "Bindings": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } },
+              { "Label": "较轻", "Use": "干活组", "Bindings": { "入口": "@目标", "MODEL_NAME": "@MODEL_NAME" } }
             ] }
           ] } ]
         }
@@ -224,9 +227,9 @@ public sealed class ExecutionLimitTests
             { "Name": "干活库", "Kind": "Llm", "Tools": [], "MaxExecutions": 3 }
           ],
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Label": "覆盖干活", "Use": "干活库", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "目标": "@目标" } ] },
-              { "Label": "继承干活", "Use": "干活库", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Label": "覆盖干活", "Use": "干活库", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "目标": "@目标" } ] },
+              { "Label": "继承干活", "Use": "干活库", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             ] }
           ] } ]
         }

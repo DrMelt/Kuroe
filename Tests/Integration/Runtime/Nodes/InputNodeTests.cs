@@ -159,8 +159,8 @@ public sealed class InputNodeTests
         ExecutableNode input = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
         ExecutableNode implement = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
 
-        Assert.Null(input.StaticBindings);
-        Assert.NotNull(implement.StaticBindings);
+        Assert.Null(input.InputBindings);
+        Assert.NotNull(implement.InputBindings);
     }
 
     [Fact]
@@ -177,6 +177,9 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Done, done.State);
         ExecutableSnapshot implement = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "实施");
         Assert.Single(implement.Executions);
+        ExecutableSnapshot input = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "用户输入");
+        Assert.Equal(1, input.ExecutionCount);
+        Assert.Equal(int.MaxValue, input.MaxExecutions);
     }
 
     [Fact]
@@ -311,16 +314,16 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "收集",
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                      "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                      "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "@目标" }, "Nodes": [
                         { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                       ]
                     },
-                    { "Name": "实施", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "收集@回答" } ] }
+                    { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "收集@回答" } ] }
                   ]
                 }
               ]
@@ -340,12 +343,12 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "审查容器",
                       "Kind": "Container",
                       "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                      "Inputs": [{ "Name": "目标" }], "In": { "目标": "@目标" }, "Nodes": [
+                      "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "@目标" }, "Nodes": [
                         { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                       ]
                     },
@@ -369,9 +372,9 @@ public sealed class InputNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
-                    { "Name": "回话", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
+                    { "Name": "回话", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
                   ]
                 }
               ]

@@ -1,7 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -29,7 +28,6 @@ public static class TaskCheckpointFixture
 
         FlowName flow = new("默认");
         PortName target = new("目标");
-        PortName result = new("结论");
 
         return new TaskCheckpoint(
             new TaskIdentity(id, "检查点任务", At(3, 4, 5), At(3, 5, 6)),
@@ -87,26 +85,39 @@ public static class TaskCheckpointFixture
             [
                 new ExecutableNodeCheckpoint(
                     plan,
-                    Common(plan, revision: 2, lastInputGroup: 0, blocked: false, rerunRequested: false),
-                    1,
-                    new ExecutionId(taskId * 10 + 1),
-                    new Dictionary<PortName, PortValue> { [result] = new("计划结果") }),
+                    Common(
+                        revision: 2,
+                        lastInputGroup: 0,
+                        rerunRequested: false,
+                        publication: new PublicationCheckpoint(
+                            new Dictionary<PortName, bool> { [new PortName("结论")] = false },
+                            new Dictionary<PortName, IReadOnlyList<PublicationValueCheckpoint>>
+                            {
+                                [new PortName("结论")] =
+                                [
+                                    new PublicationValueCheckpoint(
+                                        new ContextSourceCheckpoint(
+                                            ContextSourceKind.Execution,
+                                            new ExecutionId(taskId * 10 + 1),
+                                            plan,
+                                            new PortName("结论")),
+                                        "计划结果"),
+                                ],
+                            })),
+                    [],
+                    false),
                 new SelfDrivenNodeCheckpoint(
                     read,
-                    Common(read, revision: 0, lastInputGroup: null, blocked: true, rerunRequested: false),
-                    1,
-                    null,
+                    Common(revision: 0, lastInputGroup: null, rerunRequested: false),
                     "读取失败。",
-                    false,
                     false),
                 new InputNodeCheckpoint(
                     answer,
-                    Common(answer, revision: 1, lastInputGroup: null, blocked: false, rerunRequested: false),
-                    "回答内容",
+                    Common(revision: 1, lastInputGroup: null, rerunRequested: false),
                     false),
                 new ApprovalNodeCheckpoint(
                     approve,
-                    Common(approve, revision: 1, lastInputGroup: 0, blocked: false, rerunRequested: false),
+                    Common(revision: 1, lastInputGroup: 0, rerunRequested: false),
                     new NodeInputValuesCheckpoint(
                         [new NodeInputValueCheckpoint(target, "Text", new InputValueCheckpoint(target, new ContextSourceCheckpoint(ContextSourceKind.Start, null, null, target), "目标内容"))],
                         [target],
@@ -115,7 +126,7 @@ public static class TaskCheckpointFixture
                     false),
                 new ContainerNodeCheckpoint(
                     container,
-                    Common(container, revision: 1, lastInputGroup: null, blocked: false, rerunRequested: false)),
+                    Common(revision: 1, lastInputGroup: null, rerunRequested: false)),
             ],
             new SchedulerSeed([plan, read]));
     }
@@ -124,16 +135,15 @@ public static class TaskCheckpointFixture
         new(2026, 1, 2, hour, minute, second, TimeSpan.Zero);
 
     private static NodeCommonCheckpoint Common(
-        NodePath path,
         long revision,
         int? lastInputGroup,
-        bool blocked,
-        bool rerunRequested) =>
+        bool rerunRequested,
+        PublicationCheckpoint? publication = null) =>
         new(
             revision,
+            1,
             lastInputGroup,
             [new ConsumedRevisionCheckpoint(NodePath.Of("Start"), null, 1)],
-            blocked ? [path] : [],
-            blocked,
+            publication,
             rerunRequested);
 }

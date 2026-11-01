@@ -77,9 +77,9 @@ public sealed class TaskActions(
 
         // 不启动执行的节点不需要宿主声明；开始直连的派发节点在静态值全部就绪后再要求声明可解析
         StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, inputs));
-        foreach (FlowEdge edge in graph.Outgoing(graph.Start.Path))
+        foreach (InputBinding binding in graph.Outgoing(graph.Start.Path))
         {
-            if (graph[edge.Target] is not ExecutableNode target
+            if (graph[binding.Target] is not ExecutableNode target
                 || graph.ShapeOf(target.Path) is { DispatchesExecutions: false }
                 || !staticPorts.FullyResolved(target))
             {

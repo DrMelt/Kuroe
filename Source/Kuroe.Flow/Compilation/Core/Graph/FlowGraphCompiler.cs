@@ -8,9 +8,9 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Compilation.Graph;
 
 /// <summary>把流程树编译成执行视图：开始是唯一来源，节点以从根到本节点的路径标识，容器登记直接子节点，
-/// From 启动组编译为带取值域与输入类型的边：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
+/// From 启动组编译为带取值域与输入类型的绑定：输入类型非 Text 的按整份消费，其余按来源与目标模式推导。
 /// 引用按作用域链解析成路径：从引用者所在容器逐层向外，先看该层的直接子节点，再看该层子树，定义内引用因此可以指向子树的成员。
-/// 要求已通过 FlowRules 校验，静态绑定引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
+/// 要求已通过 FlowRules 校验，输入绑定引用与节点标签都可解析。传入的树必须是展开后的节点树。</summary>
 internal sealed class FlowGraphCompiler
 {
     /// <summary>报错作用域，引用解析与结构问题按它给出流程级错误。</summary>
@@ -25,8 +25,8 @@ internal sealed class FlowGraphCompiler
     /// <summary>根级节点，开始不在其中，它由编译直接构造。</summary>
     private readonly List<Pending> _roots = [];
 
-    /// <summary>编译出的边，按登记顺序。</summary>
-    private readonly List<FlowEdge> _edges = [];
+    /// <summary>编译出的驱动绑定，按登记顺序。</summary>
+    private readonly List<InputBinding> _bindings = [];
 
     private FlowGraphCompiler(
         IReadOnlyList<Port> startOutputs,
@@ -58,8 +58,8 @@ internal sealed class FlowGraphCompiler
         public NodePath Path { get; } = path;
         public Pending? Parent { get; } = parent;
         public List<Pending> Children { get; } = [];
-        public Dictionary<PortName, NodePort> Bindings { get; } = [];
-        public Dictionary<PortName, NodePort> StaticBindings { get; } = [];
+        public Dictionary<PortName, OutputBinding> Bindings { get; } = [];
+        public Dictionary<PortName, InputBinding> InputBindings { get; } = [];
 
         /// <summary>编译出的节点记录，子树编译完成后填入。</summary>
         public GraphNode? Node { get; set; }
@@ -79,10 +79,10 @@ internal sealed class FlowGraphCompiler
         return pending;
     }
 
-    /// <summary>解析引用、把边与方案挂到节点上，按先根序给出节点表，构造执行视图。解析失败时只给错误。</summary>
+    /// <summary>解析引用、把绑定与方案挂到节点上，按先根序给出节点表，构造执行视图。解析失败时只给错误。</summary>
     private ErrorOr<NodeGraph> Assemble()
     {
-        LinkEdges();
+        LinkWiring();
 
         List<Pending> order = [.. Flatten(_roots)];
         foreach (Pending pending in Enumerable.Reverse(order))
@@ -94,25 +94,25 @@ internal sealed class FlowGraphCompiler
 
         return _errors.Count > 0
             ? _errors
-            : new NodeGraph([NewStart(), .. order.Select(pending => pending.Node!)], _edges);
+            : new NodeGraph([NewStart(), .. order.Select(pending => pending.Node!)], _bindings);
     }
 
-    /// <summary>把 From 启动组、静态绑定与输出端口来源解析成路径，落定全部边。</summary>
-    private void LinkEdges()
+    /// <summary>把 From 启动组、输入绑定与输出端口来源解析成路径，落定全部接线。</summary>
+    private void LinkWiring()
     {
         foreach (Pending pending in Flatten(_roots))
         {
             if (pending.Entry.Spec is not null)
             {
                 LinkExecutable(pending);
-                LinkStatic(pending);
             }
 
+            LinkBindings(pending);
             LinkOutputs(pending);
         }
     }
 
-    /// <summary>执行节点的 From 启动组编译成边：组序号按组序，来源与端口按作用域解析，输入类型取自目标输入端口声明。</summary>
+    /// <summary>执行节点的 From 启动组编译成绑定：组序号按组序，来源与端口按作用域解析，输入类型取自目标输入端口声明。</summary>
     private void LinkExecutable(Pending pending)
     {
         int groupIndex = 0;
@@ -139,7 +139,7 @@ internal sealed class FlowGraphCompiler
                     continue;
                 }
 
-                AddEdge(from, pending.Path, link.Ref.Port, link.Input, input.Type, groupIndex);
+                AddBinding(from, pending.Path, link.Ref.Port, link.Input, input.Type, input.Trigger, groupIndex);
             }
 
             groupIndex++;
@@ -150,27 +150,51 @@ internal sealed class FlowGraphCompiler
     private NodePath? SourceOf(NodeLabel label, Pending referrer, string field) =>
         label == StartNode.ReservedLabel ? StartPath : Resolve(label, referrer, field)?.Path;
 
-    /// <summary>解析静态绑定的来源路径。@端口 应由展开层解析成具体来源。</summary>
-    private void LinkStatic(Pending pending)
+    /// <summary>解析输入绑定的来源路径。@端口 应由展开层解析成具体来源，容器的绑定来源必须在容器外部。</summary>
+    private void LinkBindings(Pending pending)
     {
-        if (pending.Entry.Static is not { Count: > 0 } bindings)
+        if (pending.Entry.Bindings is not { Count: > 0 } bindings)
         {
             return;
         }
 
+        bool container = pending.Entry.IsContainer;
         foreach ((PortName target, PortRef reference) in bindings)
         {
             if (reference.Source is not { } label)
             {
                 _errors.Add(_scope.Node(pending.Path.Value,
-                    $"静态绑定 {reference.Display} 没有解析到来源节点。"));
+                    $"输入绑定 {reference.Display} 没有解析到来源节点。"));
                 continue;
             }
 
-            if (SourceOf(label, pending, "Static") is { } source)
+            if (SourceOf(label, pending, "Bindings") is not { } source)
             {
-                pending.StaticBindings[target] = new NodePort(source, reference.Port);
+                continue;
             }
+
+            if (container && (source == pending.Path || source.IsUnder(pending.Path)))
+            {
+                _errors.Add(_scope.Node(pending.Path.Value,
+                    $"输入绑定 {reference.Display} 的来源 {source} 必须在容器外部。"));
+                continue;
+            }
+
+            InputPort? input = pending.Entry.EffectiveInputs.Find(target);
+            BindingRole role = input switch
+            {
+                { IsStatic: true } => BindingRole.Static,
+                { Trigger: true } => BindingRole.Gate,
+                _ => BindingRole.Alias,
+            };
+            pending.InputBindings[target] = new InputBinding(
+                pending.Path,
+                source,
+                reference.Port,
+                target,
+                input?.Type,
+                input?.Trigger ?? false,
+                role);
         }
     }
 
@@ -186,7 +210,7 @@ internal sealed class FlowGraphCompiler
 
             if (reference.Source is not { } label)
             {
-                pending.Bindings[output.Name] = new NodePort(pending.Path, reference.Port);
+                pending.Bindings[output.Name] = new OutputBinding(pending.Path, reference.Port);
                 continue;
             }
 
@@ -197,19 +221,20 @@ internal sealed class FlowGraphCompiler
                 continue;
             }
 
-            pending.Bindings[output.Name] = new NodePort(member.Path, reference.Port);
+            pending.Bindings[output.Name] = new OutputBinding(member.Path, reference.Port);
         }
     }
 
-    /// <summary>登记一条边：边表按登记顺序，入出边由执行视图在构造时挂到节点上。</summary>
-    private void AddEdge(
+    /// <summary>登记一条驱动绑定：绑定表按登记顺序，入出绑定由执行视图在构造时挂到节点上。</summary>
+    private void AddBinding(
         NodePath source,
         NodePath target,
         PortName sourcePort,
         PortName targetInput,
         PortType type,
+        bool trigger,
         int group) =>
-        _edges.Add(new FlowEdge(source, target, sourcePort, targetInput, type, group));
+        _bindings.Add(new InputBinding(target, source, sourcePort, targetInput, type, trigger, BindingRole.Dynamic, group));
 
     /// <summary>按标签在作用域子树里解析节点：从引用者所在容器逐层向外，每层先看直接子节点再看子树。找不到时记错误给空。</summary>
     private Pending? Resolve(NodeLabel label, Pending referrer, string field)
@@ -277,7 +302,7 @@ internal sealed class FlowGraphCompiler
             Spec = spec,
             Inputs = entry.EffectiveInputs,
             Outputs = entry.Outputs,
-            StaticBindings = pending.StaticBindings.Count > 0 ? pending.StaticBindings : null,
+            InputBindings = pending.InputBindings.Count > 0 ? pending.InputBindings : null,
             OutputBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
             MaxExecutions = spec.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
         };
@@ -296,6 +321,8 @@ internal sealed class FlowGraphCompiler
             Inputs = pending.Entry.EffectiveInputs,
             Outputs = pending.Entry.Outputs,
             OutputBindings = pending.Bindings.Count > 0 ? pending.Bindings : null,
+            InputBindings = pending.InputBindings.Count > 0 ? pending.InputBindings : null,
+            MaxExecutions = pending.Entry.MaxExecutions ?? int.MaxValue,
         };
     }
 

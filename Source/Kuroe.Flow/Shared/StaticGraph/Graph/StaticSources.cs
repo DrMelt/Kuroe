@@ -1,6 +1,5 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -35,9 +34,9 @@ public static class StaticSources
             return Find(graph, node) switch
             {
                 StartNode start when side == StaticPortSide.Output => ResolveStart(start, port),
-                ContainerNode container when side == StaticPortSide.Output => ResolveOutput(graph, container, port, visiting),
-                ExecutableNode executable when side == StaticPortSide.Output => ResolveOutput(graph, executable, port, visiting),
-                ExecutableNode executable => ResolveInput(graph, executable, port, visiting),
+                GraphNode inputNode when side == StaticPortSide.Input => ResolveInput(graph, inputNode, port, visiting),
+                ContainerNode container => ResolveOutput(graph, container, port, visiting),
+                ExecutableNode executable => ResolveOutput(graph, executable, port, visiting),
                 _ => StaticResolution.Missing(node, port, $"静态来源 {node} 不在流程里。"),
             };
         }
@@ -82,7 +81,7 @@ public static class StaticSources
             return StaticResolution.Literal(node.Path, port, text);
         }
 
-        if (node.OutputBindings?.TryGetValue(port, out NodePort source) != true)
+        if (node.OutputBindings?.TryGetValue(port, out OutputBinding source) != true)
         {
             return node is ExecutableNode { Spec.Emission: NodeEmission.Once }
                 ? StaticResolution.RuntimeConstant(node.Path, port)
@@ -90,15 +89,15 @@ public static class StaticSources
                     $"常量输出端口 {port} 没有来源，只有 Emission 为 Once 的节点可以由执行产出。");
         }
 
-        StaticPortSide side = source.Node == node.Path ? StaticPortSide.Input : StaticPortSide.Output;
+        StaticPortSide side = source.Source == node.Path ? StaticPortSide.Input : StaticPortSide.Output;
 
-        return ResolvePort(graph, source.Node, source.Port, side, visiting);
+        return ResolvePort(graph, source.Source, source.Port, side, visiting);
     }
 
-    /// <summary>执行节点的静态输入：绑定来源优先，其次默认值。</summary>
+    /// <summary>节点的静态输入：绑定来源优先，其次默认值。执行节点与容器共用这一条链。</summary>
     private static StaticResolution ResolveInput(
         INodeGraph graph,
-        ExecutableNode node,
+        GraphNode node,
         PortName port,
         HashSet<StaticPortKey> visiting)
     {
@@ -107,9 +106,10 @@ public static class StaticSources
             return StaticResolution.Missing(node.Path, port, $"静态输入端口 {port} 不是静态输入。");
         }
 
-        if (node.StaticBindings?.TryGetValue(port, out NodePort source) == true)
+        if (node.InputBindings?.TryGetValue(port, out InputBinding? source) == true
+            && source is { SourcePort: { } sourcePort })
         {
-            return ResolvePort(graph, source.Node, source.Port, StaticPortSide.Output, visiting);
+            return ResolvePort(graph, source.Source, sourcePort, StaticPortSide.Output, visiting);
         }
 
         return input.Default is { Length: > 0 } defaultValue

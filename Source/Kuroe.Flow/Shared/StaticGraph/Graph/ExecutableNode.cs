@@ -16,9 +16,6 @@ public sealed record ExecutableNode : GraphNode
     /// <summary>执行配置：输出校验与执行上限，编译期只把执行上限落定为生效值。</summary>
     public required ExecutableSpec Spec { get; init; }
 
-    /// <summary>静态输入端口到来源端口的绑定。来源在运行期沿绑定链解析，编译期只校验与落定绑定。</summary>
-    public IReadOnlyDictionary<PortName, NodePort>? StaticBindings { get; init; }
-
     /// <summary>执行节点的输入端口表：名字、类型、默认值与静态标记，类型决定来源产出如何进入本节点。</summary>
     public override IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
@@ -26,13 +23,13 @@ public sealed record ExecutableNode : GraphNode
     public override IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出端口到内部来源端口的绑定：常量输出来源是本节点的静态输入。未声明来源时为空。</summary>
-    public override IReadOnlyDictionary<PortName, NodePort>? OutputBindings { get; init; }
+    public override IReadOnlyDictionary<PortName, OutputBinding>? OutputBindings { get; init; }
 
-    /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。审批节点不启动执行，不限次数。</summary>
-    public required int MaxExecutions { get; init; }
+    /// <summary>执行次数的生效上限，配置链未声明时由编译落定为默认值。</summary>
+    public override int MaxExecutions { get; init; } = DefaultMaxExecutions;
 
-    /// <summary>汇入本节点的边，编译期落定，按编译顺序。输入侧方案与启动判定按它读数。</summary>
-    public IReadOnlyList<FlowEdge> Incoming { get; init; } = [];
+    /// <summary>汇入本节点的驱动绑定，编译期落定，按编译顺序。输入侧方案与启动判定按它读数。</summary>
+    public IReadOnlyList<InputBinding> Incoming { get; init; } = [];
 
     /// <summary>执行次数上限的默认值，配置链未声明时由编译落定。</summary>
     public const int DefaultMaxExecutions = 100;

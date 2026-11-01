@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.NodeLibrary;
-/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的 In 在所在作用域建立绑定域，成员的 From、In 与 Static 引用都在该绑定域里取 @端口。
+/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的绑定在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
 /// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
 internal static class NodeExpander
 {
@@ -26,7 +26,7 @@ internal static class NodeExpander
     {
         List<Error> errors = [];
         CheckRootBindings(library, root, scope, errors);
-        NodeSpec? expanded = ExpandNode(library, root, null, inInstance: false, currentLimit: null, scope, errors);
+        NodeSpec? expanded = ExpandNode(library, root, null, inInstance: false, scope, errors);
 
         if (errors.Count > 0)
         {
@@ -47,7 +47,7 @@ internal static class NodeExpander
             || (root.Use is { } use
                 && library.TryFind(use, out NodeSpec? definition)
                 && definition.Nodes is { Count: > 0 });
-        if (!container || root.In is not { Count: > 0 } bindings)
+        if (!container || root.Bindings is not { Count: > 0 } bindings)
         {
             return;
         }
@@ -72,7 +72,6 @@ internal static class NodeExpander
         NodeSpec node,
         Env? env,
         bool inInstance,
-        int? currentLimit,
         NodeScope scope,
         List<Error> errors)
     {
@@ -94,18 +93,18 @@ internal static class NodeExpander
                 node.CheckWiring(NodeRuleContext.Reference, message =>
                     errors.Add(scope.Node(node.Label.Value, message)), container: true);
 
-                CheckBindings(node, definition.EffectiveInputs, definition.Label, scope, errors);
-                Env childEnv = BuildContainerEnv(env, node.In);
-                int? memberLimit = node.MaxExecutions ?? definition.MaxExecutions ?? currentLimit;
-                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors, memberLimit);
+                CheckContainerBindings(node, definition.EffectiveInputs, definition.Label, scope, errors);
+                Env childEnv = BuildContainerEnv(env, node.Bindings);
+                List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors);
                 return new NodeSpec
                 {
                     Label = node.Label,
                     Type = definition.Type,
                     Inputs = definition.Inputs,
+                    Bindings = ResolveBindings(node.Bindings, env, scope, errors),
                     Nodes = members,
-                    Outputs = ResolveOutputs(definition.Outputs, childEnv, scope, errors),
-                    MaxExecutions = node.MaxExecutions,
+                    Outputs = definition.Outputs,
+                    MaxExecutions = node.MaxExecutions ?? definition.MaxExecutions,
                 };
             }
 
@@ -123,9 +122,9 @@ internal static class NodeExpander
                 {
                     Emission = node.Emission ?? librarySpec.Emission,
                     Validate = node.Validate ?? librarySpec.Validate,
-                    MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions, currentLimit),
+                    MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions),
                 },
-                Static = ResolveStatic(node.Static, env, scope, errors),
+                Bindings = ResolveBindings(node.Bindings, env, scope, errors),
                 From = ResolveAll(node.From, env, scope, errors),
                 Outputs = definition.Outputs,
             };
@@ -139,18 +138,17 @@ internal static class NodeExpander
                     errors.Add(scope.Node(member.Label.Value, message)));
             }
 
-            CheckBindings(node, node.EffectiveInputs, node.Label, scope, errors);
-            Env childEnv = BuildContainerEnv(env, node.In);
-            List<NodeSpec> expanded = ExpandMembers(library, children, childEnv, inInstance, scope, errors, node.MaxExecutions ?? currentLimit);
+            CheckContainerBindings(node, node.EffectiveInputs, node.Label, scope, errors);
+            Env childEnv = BuildContainerEnv(env, node.Bindings);
+            List<NodeSpec> expanded = ExpandMembers(library, children, childEnv, inInstance, scope, errors);
             return new NodeSpec
             {
                 Name = node.Name,
                 Label = node.Label,
                 Type = node.Type,
                 Inputs = node.Inputs,
-                From = ResolveAll(node.From, env, scope, errors),
-                Static = ResolveStatic(node.Static, env, scope, errors),
-                Outputs = ResolveOutputs(node.Outputs, childEnv, scope, errors),
+                Bindings = ResolveBindings(node.Bindings, env, scope, errors),
+                Outputs = node.Outputs,
                 MaxExecutions = node.MaxExecutions,
                 Nodes = expanded,
             };
@@ -172,17 +170,17 @@ internal static class NodeExpander
             Inputs = node.Inputs,
             Spec = spec with
             {
-                MaxExecutions = ResolveMaxExecutions(spec.MaxExecutions, null, currentLimit),
+                MaxExecutions = ResolveMaxExecutions(spec.MaxExecutions, null),
             },
-            Static = ResolveStatic(node.Static, env, scope, errors),
+            Bindings = ResolveBindings(node.Bindings, env, scope, errors),
             From = ResolveAll(node.From, env, scope, errors),
             Outputs = node.Outputs,
         };
     }
 
-    /// <summary>执行节点的生效执行上限：自身显式、库定义、外层容器统一值依次取先，都没有时落到默认值。</summary>
-    private static int ResolveMaxExecutions(int? own, int? library, int? currentLimit) =>
-        own ?? library ?? currentLimit ?? ExecutableNode.DefaultMaxExecutions;
+    /// <summary>执行节点的生效执行上限：自身显式、库定义依次取先，都没有时落到默认值。</summary>
+    private static int ResolveMaxExecutions(int? own, int? library) =>
+        own ?? library ?? ExecutableNode.DefaultMaxExecutions;
 
     private static List<NodeSpec> ExpandMembers(
         NodeLibrary library,
@@ -190,13 +188,12 @@ internal static class NodeExpander
         Env? env,
         bool inInstance,
         NodeScope scope,
-        List<Error> errors,
-        int? currentLimit)
+        List<Error> errors)
     {
         List<NodeSpec> expanded = [];
         foreach (NodeSpec member in members)
         {
-            NodeSpec? item = ExpandNode(library, member, env, inInstance, currentLimit, scope, errors);
+            NodeSpec? item = ExpandNode(library, member, env, inInstance, scope, errors);
             if (item is not null)
             {
                 expanded.Add(item);
@@ -207,7 +204,7 @@ internal static class NodeExpander
     }
 
     /// <summary>容器的绑定域：端口绑定必须覆盖声明的输入端口且不能指向未声明的端口。</summary>
-    private static void CheckBindings(
+    private static void CheckContainerBindings(
         NodeSpec node,
         IReadOnlyList<InputPort> inputs,
         NodeLabel container,
@@ -215,17 +212,12 @@ internal static class NodeExpander
         List<Error> errors)
     {
         var declaredPorts = new HashSet<PortName>([.. inputs.Select(port => port.Name)]);
-        IReadOnlyDictionary<PortName, PortRef> bound = node.In ?? new Dictionary<PortName, PortRef>();
-        foreach (PortName port in bound.Keys.Where(port => !declaredPorts.Contains(port)))
+        foreach (PortName port in (node.Bindings?.Keys ?? []).Where(port => !declaredPorts.Contains(port)))
         {
             errors.Add(scope.Node(node.Label.Value, $"端口 {port} 不在容器 {container} 上。"));
         }
 
-        foreach (InputPort port in inputs.Where(port => !bound.ContainsKey(port.Name)))
-        {
-            errors.Add(scope.Node(node.Label.Value, $"端口 {port.Name} 没有绑定。"));
-        }
-
+        node.CheckBindingCoverage(inputs, container: true, message => errors.Add(scope.Node(node.Label.Value, message)));
     }
 
     /// <summary>按名字取库定义，未注册时给空。</summary>
@@ -239,14 +231,17 @@ internal static class NodeExpander
         IReadOnlyDictionary<PortName, PortRef>? bindings) =>
         new(parent, bindings ?? new Dictionary<PortName, PortRef>());
 
-    /// <summary>解析静态绑定：@端口 沿容器的端口绑定链展开，写明来源的引用由编译期按作用域解析。</summary>
-    private static Dictionary<PortName, PortRef>? ResolveStatic(
+    /// <summary>解析端口绑定：@端口 沿容器的端口绑定链展开，写明来源的引用由编译期按作用域解析。
+    /// 没有绑定域时保留原文，由根绑定规则给出诊断。</summary>
+    private static Dictionary<PortName, PortRef>? ResolveBindings(
         IReadOnlyDictionary<PortName, PortRef>? bindings,
         Env? env,
         NodeScope scope,
         List<Error> errors) =>
         bindings is { Count: > 0 }
-            ? bindings.ToDictionary(pair => pair.Key, pair => ResolveRef(pair.Value, env, scope, errors))
+            ? bindings.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.Source is null && env is null ? pair.Value : ResolveRef(pair.Value, env, scope, errors))
             : null;
 
     /// <summary>逐个解析上游启动组：来源标签沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
@@ -295,15 +290,4 @@ internal static class NodeExpander
         errors.Add(scope.Node(bound.Port.Value, $"端口 @{bound.Port.Value} 没有绑定来源。"));
         return bound;
     }
-
-    /// <summary>容器输出端口的实例化：引用在本容器的绑定域里解析，固定值与说明原样保留。</summary>
-    private static IReadOnlyList<Port> ResolveOutputs(
-        IReadOnlyList<Port> outputs,
-        Env? env,
-        NodeScope scope,
-        List<Error> errors) =>
-        [.. outputs.Select(output => output.Ref is { } reference
-            ? output with { Ref = ResolveRef(reference, env, scope, errors) }
-            : output)];
-
 }

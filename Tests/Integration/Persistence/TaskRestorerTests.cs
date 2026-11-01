@@ -5,7 +5,6 @@ using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.TestSupport;
@@ -92,23 +91,52 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             [
                 new ExecutableNodeCheckpoint(
                     plan,
-                    Common(plan, published ? 1 : 0, blocked),
-                    1,
-                    published ? execution : null,
-                    published ? new Dictionary<PortName, PortValue> { [result] = new("计划结果") } : []),
-                new ContainerNodeCheckpoint(container, Common(container, published ? 1 : 0, false)),
+                    Common(
+                        published ? 1 : 0,
+                        published ? PublishedCheckpoint(execution, plan, result) : null),
+                    blocked ? [plan] : [],
+                    blocked),
+                new ContainerNodeCheckpoint(container, Common(published ? 1 : 0)),
             ],
             new SchedulerSeed([]));
     }
 
-    private static NodeCommonCheckpoint Common(NodePath path, long revision, bool blocked) =>
+    private static NodeCommonCheckpoint Common(long revision, PublicationCheckpoint? publication = null) =>
         new(
             revision,
+            1,
             null,
             [new ConsumedRevisionCheckpoint(NodePath.Of("整体"), new PortName("目标"), 1)],
-            blocked ? [path] : [],
-            blocked,
+            publication,
             false);
+
+    private static PublicationCheckpoint PublishedCheckpoint(
+        ExecutionId execution,
+        NodePath plan,
+        PortName port) =>
+        new(
+            new Dictionary<PortName, bool>(),
+            new Dictionary<PortName, IReadOnlyList<PublicationValueCheckpoint>>
+            {
+                [port] =
+                [
+                    new PublicationValueCheckpoint(
+                        new ContextSourceCheckpoint(ContextSourceKind.Execution, execution, plan, port),
+                        "计划结果"),
+                ],
+            });
+
+    [Fact]
+    public void Restore_preserves_published_content()
+    {
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(DoneCheckpoint, CompileFixtureFlow());
+        Assert.False(restored.IsError);
+        WorkTask task = restored.Value;
+        NodePath plan = NodePath.Of("整体", "制定计划");
+        PortName port = new("计划");
+
+        Assert.Equal("计划结果", task.Context.Runtime(plan).PortText(port));
+    }
 
     public void Dispose() => _environment.Dispose();
 }

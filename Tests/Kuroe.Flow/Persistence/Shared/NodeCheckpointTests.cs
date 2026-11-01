@@ -17,13 +17,13 @@ public sealed class NodeCheckpointTests
 
         Assert.Equal(2, node.Common.Revision);
         Assert.Equal(0, node.Common.LastInputGroup);
-        Assert.False(node.Common.Blocked);
-        Assert.False(node.Common.RerunRequested);
+        Assert.Equal(1, node.Common.Executions);
+        Assert.False(node.Common.ForceRerun);
         Assert.Single(node.Common.Consumed);
     }
 
     [Fact]
-    public void Executable_checkpoint_carries_published_execution()
+    public void Executable_checkpoint_carries_publication()
     {
         TaskCheckpoint checkpoint = TaskCheckpointFixture.Create();
         NodePath plan = NodePath.Of("整体", "计划");
@@ -31,13 +31,15 @@ public sealed class NodeCheckpointTests
         ExecutableNodeCheckpoint node = Assert.IsType<ExecutableNodeCheckpoint>(
             checkpoint.Nodes.Single(candidate => candidate.Path == plan));
 
-        Assert.Equal(1, node.Executions);
-        Assert.NotNull(node.PublishedExecution);
-        Assert.Equal("计划结果", node.PublishedPorts[new PortName("结论")].Text);
+        Assert.Equal(1, node.Common.Executions);
+        Assert.NotNull(node.Common.Publication);
+        Assert.Equal(
+            "计划结果",
+            Assert.Single(node.Common.Publication.Content[new PortName("结论")]).Text);
     }
 
     [Fact]
-    public void Self_driven_checkpoint_carries_content_and_failure()
+    public void Self_driven_checkpoint_carries_failure()
     {
         TaskCheckpoint checkpoint = TaskCheckpointFixture.Create();
         NodePath read = NodePath.Of("整体", "读取");
@@ -45,16 +47,14 @@ public sealed class NodeCheckpointTests
         SelfDrivenNodeCheckpoint node = Assert.IsType<SelfDrivenNodeCheckpoint>(
             checkpoint.Nodes.Single(candidate => candidate.Path == read));
 
-        Assert.Null(node.Content);
         Assert.Equal("读取失败。", node.Failure);
         Assert.False(node.FailureTaken);
-        Assert.False(node.Retry);
-        Assert.True(node.Common.Blocked);
-        Assert.Equal([read], node.Common.ReworkTargets);
+        Assert.False(node.Common.ForceRerun);
+        Assert.Null(node.Common.Publication);
     }
 
     [Fact]
-    public void Input_checkpoint_carries_answer_and_waiting()
+    public void Input_checkpoint_carries_waiting()
     {
         TaskCheckpoint checkpoint = TaskCheckpointFixture.Create();
         NodePath answer = NodePath.Of("整体", "回答");
@@ -62,7 +62,6 @@ public sealed class NodeCheckpointTests
         InputNodeCheckpoint node = Assert.IsType<InputNodeCheckpoint>(
             checkpoint.Nodes.Single(candidate => candidate.Path == answer));
 
-        Assert.Equal("回答内容", node.Answer);
         Assert.False(node.Waiting);
     }
 
@@ -91,7 +90,8 @@ public sealed class NodeCheckpointTests
             checkpoint.Nodes.Single(candidate => candidate.Path == container));
 
         Assert.Equal(1, node.Common.Revision);
-        Assert.Empty(node.Common.ReworkTargets);
+        Assert.Equal(1, node.Common.Executions);
+        Assert.Null(node.Common.Publication);
     }
 
     [Fact]

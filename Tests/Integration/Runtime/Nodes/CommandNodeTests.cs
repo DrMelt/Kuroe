@@ -45,7 +45,7 @@ public sealed class CommandNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "版本",
                       "Kind": "Command",
@@ -61,7 +61,7 @@ public sealed class CommandNodeTests
                       "Path": "{root}/out/version.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "正文": "版本@输出" }]
                     }
                   ]
@@ -83,7 +83,7 @@ public sealed class CommandNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "缺失",
                       "Kind": "Command",

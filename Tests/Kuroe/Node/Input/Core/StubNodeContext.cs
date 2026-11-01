@@ -15,7 +15,18 @@ internal sealed class StubNodeContext : INodeContext
 
     public NodeInputPlan? Plan(NodePath node) => new()
     {
-        Groups = [new InputGroup([new InputBinding(SourcePath, new PortName("目标"), PortTypes.Text)])],
+        Groups =
+        [
+            new InputGroup(
+            [
+                new InputBinding(
+                    NodePath.Of("整体", "输入"),
+                    SourcePath,
+                    new PortName("目标"),
+                    new PortName("目标"),
+                    PortTypes.Text),
+            ]),
+        ],
     };
 
     public NodeRuntime Runtime(NodePath node) => throw new NotSupportedException();

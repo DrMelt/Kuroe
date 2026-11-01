@@ -80,14 +80,14 @@ public sealed class DialogueTests
             paths.Skip(DialogueFlow.Tools.Count));
     }
 
-    /// <summary>回话节点的工作区静态端口由根容器的 In 从开始端口转接，节点用 Static 绑定取用。</summary>
+    /// <summary>回话节点的工作区静态端口由根容器的绑定从开始端口转接，节点用绑定取用。</summary>
     [Fact]
     public void Dialogue_reply_node_receives_the_workspace_port_from_the_start_node()
     {
         NodeSpec reply = Members(DefaultLanguage)[1];
-        IReadOnlyDictionary<PortName, PortRef> statics = reply.Static ?? new Dictionary<PortName, PortRef>();
+        IReadOnlyDictionary<PortName, PortRef> bindings = reply.Bindings ?? new Dictionary<PortName, PortRef>();
 
-        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), statics.Values);
+        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), bindings.Values);
         Assert.True(reply.FindInput(DialogueFlow.WorkspacePort) is { IsStatic: true });
     }
 

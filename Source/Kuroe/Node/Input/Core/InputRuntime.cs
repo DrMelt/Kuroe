@@ -1,13 +1,10 @@
 using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
@@ -16,38 +13,22 @@ namespace Kuroe.Node.Input;
 /// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
 internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext nodeContext)
-    : RuntimeNode(executable), IInputProgress
+    : RuntimeNode(executable)
 {
-    private readonly ConsumedRevisionStore _consumed = new();
-    private string? _answer;
     private bool _canceled;
     private bool _waiting;
-    private long _revision;
-
-    /// <summary>产出已放行、可被下游消费：已有回答且未被取消。</summary>
-    public override bool Released => !_canceled && _answer is not null;
-
-    /// <summary>放行代数：每次回答递增，是版本驱动的依据。</summary>
-    public override long Revision => _revision;
 
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
+
+    /// <summary>回答产出可消费：未被取消。</summary>
+    protected override bool Consumable => !_canceled;
 
     /// <summary>已声明接收外部输入且尚未交付。</summary>
     public override bool AwaitingInput => _waiting;
 
     /// <summary>输入节点等待外部交付，不依赖来源取值。</summary>
     public override bool NeedsInput => false;
-
-    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
-
-    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
-
-    int IInputProgress.Executions => 0;
-
-    bool IInputProgress.Published => _revision > 0;
-
-    bool IInputProgress.ForceRerun => false;
 
     /// <summary>随任务进入取消态并撤销接收声明。</summary>
     public override void Cancel()
@@ -65,45 +46,27 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
             return;
         }
 
-        _answer = null;
         _waiting = true;
+        Progress.Invalidate();
         channel.Accept(context, Path, Deliver);
     }
 
-    /// <summary>收下一次外部输入：记下回答并推进放行代数，声明由交付方随交付撤销。</summary>
+    /// <summary>收下一次外部输入：按回答发布一次，声明由交付方随交付撤销。</summary>
     private void Deliver(string text)
     {
-        _answer = text;
         _waiting = false;
-        _revision++;
+        Progress.Started();
+        Progress.Publish(CreatePublication(Progress.NextRevision(), text));
     }
 
-    /// <summary>按输出端口取回答文本，端口不是 Text 语义或尚未回答时为空。</summary>
-    public override string? PortText(INodeContext context, PortName port) =>
-        executable.Outputs.Find(port) is { } declared
-        && PortRules.CarriesText(declared.Type)
-        && _answer is { Length: > 0 } answer
-            ? answer
-            : null;
-
-    /// <summary>按输出端口取回答：端口不是 Text 语义或尚未回答时为空。</summary>
-    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released
-        && executable.Outputs.Find(port) is { } declared
-        && PortRules.CarriesText(declared.Type)
-        && _answer is { Length: > 0 } answer
-            ? [new ContextValue(new InputSource(Path, port), answer)]
-            : [];
-
-    /// <summary>捕获回答与等待状态。</summary>
+    /// <summary>捕获等待状态、进展与发布。</summary>
     public override NodeCheckpoint? CaptureCheckpoint() =>
         new InputNodeCheckpoint(
             Path,
-            new NodeCommonCheckpoint(Revision, LastInputGroup, _consumed.CaptureCheckpoint(), [], false, false),
-            _answer,
+            CaptureProgress(),
             _waiting);
 
-    /// <summary>恢复回答与等待状态，等待中的节点重新声明接收外部输入。</summary>
+    /// <summary>恢复等待状态、进展与发布，等待中的节点重新声明接收外部输入。</summary>
     public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
     {
         if (checkpoint is not InputNodeCheckpoint state)
@@ -111,11 +74,9 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
             throw new ArgumentException($"输入节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
         }
 
-        RestoreLastInputGroup(state.Common.LastInputGroup);
-        _consumed.RestoreCheckpoint(state.Common.Consumed);
-        _revision = state.Common.Revision;
-        _answer = state.Answer;
+        RestoreProgress(state.Common);
         _waiting = state.Waiting;
+
         if (_waiting && !_canceled)
         {
             channel.Accept(nodeContext, Path, Deliver);
@@ -130,11 +91,25 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
         {
             state = NodeState.Canceled;
         }
-        else if (Released)
+        else if (Progress.Published)
         {
             state = NodeState.Done;
         }
 
         return new ExecutableStateSnapshot(Path, state);
+    }
+
+    /// <summary>按回答构造一次发布：Text 语义端口给出同一条回答，出处指向本节点。</summary>
+    private Publication CreatePublication(long revision, string answer)
+    {
+        Dictionary<PortName, IReadOnlyList<ContextValue>> content = answer is { Length: > 0 } text
+            ? executable.Outputs
+                .Where(port => PortRules.CarriesText(port.Type))
+                .ToDictionary(
+                    port => port.Name,
+                    port => (IReadOnlyList<ContextValue>)[new ContextValue(new InputSource(Path, port.Name), text)])
+            : [];
+
+        return new Publication(revision, new Dictionary<PortName, bool>(), content);
     }
 }

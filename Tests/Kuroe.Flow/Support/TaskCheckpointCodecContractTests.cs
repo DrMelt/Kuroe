@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -52,7 +53,7 @@ public abstract class TaskCheckpointCodecContractTests
         TaskCheckpoint loaded = codec.Read(codec.Write(document).ThrowIfError()).ThrowIfError().Task;
 
         Assert.Equal(document.Task.Executions[1].StartedAt, loaded.Executions[1].StartedAt);
-        Assert.Null(Assert.IsType<SelfDrivenNodeCheckpoint>(loaded.Nodes[1]).Content);
+        Assert.Null(Assert.IsType<SelfDrivenNodeCheckpoint>(loaded.Nodes[1]).Common.Publication);
         Assert.Null(loaded.Nodes[1].Common.LastInputGroup);
     }
 
@@ -84,6 +85,28 @@ public abstract class TaskCheckpointCodecContractTests
         TaskCheckpointDocument document = TaskCheckpointFixture.CreateDocument() with { Version = 999 };
 
         Assert.True(codec.Read(codec.Write(document).ThrowIfError()).IsError);
+    }
+
+    [Fact]
+    public void Read_rejects_previous_version_before_mapping_fields()
+    {
+        ITaskCheckpointCodec codec = CreateCodec();
+        const string legacy = """{"Version":1,"Task":{"Nodes":[{"Kind":"Executable","PublishedExecution":1}]}}""";
+
+        Assert.Equal(FlowErrorCodes.CheckpointVersion, codec.Read(legacy).FirstError.Code);
+    }
+
+    [Fact]
+    public void Round_trip_preserves_publication_triggers_and_content()
+    {
+        ITaskCheckpointCodec codec = CreateCodec();
+        TaskCheckpointDocument document = TaskCheckpointFixture.CreateDocument();
+
+        TaskCheckpoint loaded = codec.Read(codec.Write(document).ThrowIfError()).ThrowIfError().Task;
+        PublicationCheckpoint publication = Assert.IsType<ExecutableNodeCheckpoint>(loaded.Nodes[0]).Common.Publication!;
+
+        Assert.False(publication.Triggers[new PortName("结论")]);
+        Assert.Equal("计划结果", Assert.Single(publication.Content[new PortName("结论")]).Text);
     }
 
     [Fact]

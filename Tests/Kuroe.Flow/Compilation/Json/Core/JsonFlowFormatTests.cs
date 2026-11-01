@@ -24,7 +24,7 @@ public sealed class JsonFlowFormatTests
         NodeReferenceDocument reference = Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes!));
         Assert.Equal("副本", reference.Label);
         Assert.Equal("计划", reference.Use);
-        Assert.Equal("Start@MODEL_NAME", reference.Static!["MODEL_NAME"]);
+        Assert.Equal("Start@MODEL_NAME", reference.Bindings!["MODEL_NAME"]);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class JsonFlowFormatTests
                       { "Name": "配置", "Type": "Text", "Mode": "Constant", "Role": "Configuration" },
                       { "Name": "信号", "Type": "Signal", "Mode": "Plain" }
                     ],
-                    "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
+                    "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
                     "Outputs": [
                       { "Name": "结论", "Type": "Text", "Mode": "Trigger" },
                       { "Name": "完成", "Type": "Signal" }
@@ -115,7 +115,7 @@ public sealed class JsonFlowFormatTests
                 { "Name": "整体", "Kind": "Container", "Outputs": [
                   { "Name": "配置", "Type": "Text", "Mode": "Constant", "Value": "固定" }
                 ], "Nodes": [
-                  { "Name": "配置节点", "Kind": "Llm", "Static": { "MODEL_NAME": "Start@MODEL_NAME" },
+                  { "Name": "配置节点", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
                     "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] }
                 ] }
               ] } ]
@@ -182,8 +182,8 @@ public sealed class JsonFlowFormatTests
               "Name": "默认",
               "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ] },
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "In": { "目标": "Start@目标" }, "Nodes": [
-                  { "Label": "副本", "Use": "计划", "Static": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
+                  { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
                 ] }
               ]
             }

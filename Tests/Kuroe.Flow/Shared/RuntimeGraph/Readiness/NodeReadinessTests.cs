@@ -99,6 +99,69 @@ public sealed class NodeReadinessTests
         Assert.True(plan.Ready(node, sources));
     }
 
+    /// <summary>只门控的绑定不驱动新版本：门控来源再发布不启动，成员新版本仍启动。</summary>
+    [Fact]
+    public void Gate_binding_does_not_drive_new_versions()
+    {
+        NodeInputPlan plan = GatePlan(PortTypes.Text);
+        FakeSources sources = new();
+        FakeProgress node = new();
+
+        sources.Of("成员").Publish();
+        sources.Of("把关").Publish();
+        Assert.True(plan.Ready(node, sources));
+
+        node.Consume(plan, sources);
+
+        sources.Of("把关").Publish();
+        Assert.False(plan.Ready(node, sources));
+        Assert.Null(plan.DrivenGroup(node, sources));
+
+        sources.Of("成员").Publish();
+        Assert.True(plan.Ready(node, sources));
+        Assert.Equal(0, plan.DrivenGroup(node, sources));
+    }
+
+    /// <summary>Signal 门控只参与抑制，不把驱动收窄为门控来源：成员新版本仍启动。</summary>
+    [Fact]
+    public void Signal_gate_does_not_mask_member_new_versions()
+    {
+        NodeInputPlan plan = GatePlan(PortTypes.Signal);
+        FakeSources sources = new();
+        FakeProgress node = new();
+
+        sources.Of("成员").Publish();
+        sources.Of("把关").Publish();
+        Assert.True(plan.Ready(node, sources));
+
+        node.Consume(plan, sources);
+        sources.Of("成员").Publish();
+
+        Assert.True(plan.Ready(node, sources));
+        Assert.Equal(0, plan.DrivenGroup(node, sources));
+
+        node.Consume(plan, sources);
+        sources.Of("把关").Publish();
+        Assert.False(plan.Ready(node, sources));
+    }
+
+    /// <summary>门控来源触发值为 false 时，成员新版本驱动的组被抑制。</summary>
+    [Fact]
+    public void Gate_with_false_trigger_suppresses_member_drive()
+    {
+        NodeInputPlan plan = GatePlan(PortTypes.Signal);
+        FakeSources sources = new();
+        FakeProgress node = new();
+
+        sources.Of("成员").Publish();
+        sources.Of("把关").Publish();
+        sources.Of("把关").Fires = false;
+
+        Assert.False(plan.Ready(node, sources));
+        Assert.Null(plan.DrivenGroup(node, sources));
+        Assert.NotNull(plan.SuppressedGroup(node, sources));
+    }
+
     /// <summary>达到执行次数上限后不再启动。</summary>
     [Fact]
     public void Execution_limit_stops_further_starts()
@@ -147,16 +210,37 @@ public sealed class NodeReadinessTests
     private static (NodeInputPlan Plan, FakeSources Sources, FakeProgress Node) WithSignal() =>
         Build([Value("节点1", "节点2", PortTypes.Text), Value("节点2", "节点2", PortTypes.Signal, new PortName("信号"))]);
 
-    /// <summary>按边建出方案与判定侧。</summary>
-    private static (NodeInputPlan Plan, FakeSources Sources, FakeProgress Node) Build(IReadOnlyList<FlowEdge> edges) =>
-        (Plan(edges), new FakeSources(), new FakeProgress());
+    /// <summary>容器方案：一个成员驱动与一个只门控的触发输入。</summary>
+    private static NodeInputPlan GatePlan(PortType gateType) => new()
+    {
+        Groups =
+        [
+            new InputGroup(
+            [
+                InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员")),
+                new InputBinding(
+                    NodePath.Of("整体"),
+                    NodePath.Of("把关"),
+                    new PortName("信号"),
+                    new PortName("把关"),
+                    gateType,
+                    Trigger: true,
+                    Role: BindingRole.Gate),
+            ]),
+        ],
+        MaxExecutions = 100,
+    };
+
+    /// <summary>按绑定建出方案与判定侧。</summary>
+    private static (NodeInputPlan Plan, FakeSources Sources, FakeProgress Node) Build(IReadOnlyList<InputBinding> bindings) =>
+        (Plan(bindings), new FakeSources(), new FakeProgress());
 
     /// <summary>按入边建立目标节点的输入侧方案。</summary>
-    private static NodeInputPlan Plan(IReadOnlyList<FlowEdge> incoming, int maxExecutions = 100) =>
+    private static NodeInputPlan Plan(IReadOnlyList<InputBinding> incoming, int maxExecutions = 100) =>
         NodeInputPlan.Of(new ExecutableSpec { MaxExecutions = maxExecutions }, incoming, [], []);
 
-    private static FlowEdge Value(string from, string to, PortType type, PortName? input = null, int group = 0) =>
-        new(NodePath.Of(from), NodePath.Of(to), OutputPort, input ?? OutputPort, type, group);
+    private static InputBinding Value(string from, string to, PortType type, PortName? input = null, int group = 0) =>
+        new(NodePath.Of(to), NodePath.Of(from), OutputPort, input ?? OutputPort, type, Group: group);
 
     /// <summary>判定要读的目标自身状态替身：已消费版本、执行次数、发布与重跑意图。</summary>
     private sealed class FakeProgress : IInputProgress
@@ -221,12 +305,18 @@ public sealed class NodeReadinessTests
 
             public long Revision => _revision;
 
+            /// <summary>端口最近一次产出的触发值，默认触发。</summary>
+            public bool Fires { get; set; } = true;
+
             /// <summary>发布一次新版本。</summary>
             public void Publish()
             {
                 Released = true;
                 _revision++;
             }
+
+            /// <summary>按端口给出触发值，判定测试不区分端口。</summary>
+            public bool Triggers(PortName port) => Fires;
         }
     }
 }

@@ -7,7 +7,7 @@ using Xunit;
 namespace Kuroe.Flow.Shared.Tests.StaticGraph.Ports;
 
 /// <summary>端口表与端口引用：按名查找、展示文本与执行节点的端口判定。</summary>
-public sealed class NodePortTests
+public sealed class PortDeclarationTests
 {
     [Fact]
     public void Port_table_finds_declarations_by_name()

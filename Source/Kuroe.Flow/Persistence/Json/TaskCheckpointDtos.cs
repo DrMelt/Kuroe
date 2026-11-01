@@ -141,21 +141,13 @@ internal sealed class NodeDto
 
     public NodeCommonDto? Common { get; set; }
 
-    public int? Executions { get; set; }
+    public List<NodePathDto>? ReworkTargets { get; set; }
 
-    public int? PublishedExecution { get; set; }
-
-    public Dictionary<string, PortValueDto>? PublishedPorts { get; set; }
-
-    public string? Content { get; set; }
+    public bool? Blocked { get; set; }
 
     public string? Failure { get; set; }
 
     public bool? FailureTaken { get; set; }
-
-    public bool? Retry { get; set; }
-
-    public string? Answer { get; set; }
 
     public bool? Waiting { get; set; }
 
@@ -168,15 +160,29 @@ internal sealed class NodeCommonDto
 {
     public long Revision { get; set; }
 
+    public int Executions { get; set; }
+
     public int? LastInputGroup { get; set; }
 
     public List<ConsumedRevisionDto>? Consumed { get; set; }
 
-    public List<NodePathDto>? ReworkTargets { get; set; }
+    public PublicationDto? Publication { get; set; }
 
-    public bool Blocked { get; set; }
+    public bool ForceRerun { get; set; }
+}
 
-    public bool RerunRequested { get; set; }
+internal sealed class PublicationDto
+{
+    public Dictionary<string, bool>? Triggers { get; set; }
+
+    public Dictionary<string, List<PublicationValueDto>>? Content { get; set; }
+}
+
+internal sealed class PublicationValueDto
+{
+    public ContextSourceDto? Origin { get; set; }
+
+    public string? Text { get; set; }
 }
 
 internal sealed class ConsumedRevisionDto
@@ -191,13 +197,6 @@ internal sealed class ConsumedRevisionDto
 internal sealed class NodePathDto
 {
     public List<string> Levels { get; set; } = [];
-}
-
-internal sealed class PortValueDto
-{
-    public string? Text { get; set; }
-
-    public bool? Trigger { get; set; }
 }
 
 internal sealed class NodeInputValuesDto

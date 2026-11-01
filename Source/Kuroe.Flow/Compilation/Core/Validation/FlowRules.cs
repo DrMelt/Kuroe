@@ -36,7 +36,7 @@ internal static class FlowRules
         return errors.Count > 0 ? errors : compiled.Value;
     }
 
-    /// <summary>流程层规则：开始入口与节点树。引用解析、静态绑定与图规则在具体图上判定。</summary>
+    /// <summary>流程层规则：开始入口与节点树。引用解析、输入绑定与图规则在具体图上判定。</summary>
     internal static void ValidateFlow(FlowDefinition flow, List<Error> errors)
     {
         CheckStart(flow, errors);
@@ -140,7 +140,7 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>递归校验标识、容器形状、静态绑定与统一输出端口。引用解析与图规则在展平后的图上校验。</summary>
+    /// <summary>递归校验标识、容器形状、输入绑定与统一输出端口。引用解析与图规则在展平后的图上校验。</summary>
     private static void CheckTree(
         NodeSpec node,
         NodeScope scope,
@@ -212,7 +212,7 @@ internal static class FlowRules
                 if (node.FindInput(input) is { IsStatic: true })
                 {
                     errors.Add(scope.Node(node.Label.Value,
-                        $"From 不能连接静态输入端口 {input}，静态输入用 Static 绑定。"));
+                        $"From 不能连接静态输入端口 {input}，静态输入用 Bindings 绑定。"));
                 }
                 else if (node.FindInput(input) is null)
                 {
@@ -248,49 +248,90 @@ internal static class FlowRules
                     continue;
                 }
 
-                if (node.OutputBindings?.TryGetValue(output.Name, out NodePort target) != true)
+                if (node.OutputBindings?.TryGetValue(output.Name, out OutputBinding target) != true)
                 {
                     errors.Add(scope.Node(node.Path.Value,
                         $"输出端口 {output.Name.Value} 没有解析到来源。"));
                     continue;
                 }
 
-                if (target.Node == node.Path)
+                if (target.Source == node.Path)
                 {
-                    if (node.FindInput(target.Port) is not { IsStatic: true })
-                    {
-                        errors.Add(scope.Node(node.Path.Value,
-                            $"输出端口 {output.Name.Value} 的来源 {target.Port.Value} 不是本节点的静态输入。"));
-                    }
-
                     continue;
                 }
 
-                if (!target.Node.IsUnder(node.Path))
+                if (!target.Source.IsUnder(node.Path))
                 {
                     errors.Add(scope.Node(node.Path.Value,
-                        $"输出端口 {output.Name.Value} 的来源 {target.Node} 不在节点 {node.Path} 的子树里。"));
+                        $"输出端口 {output.Name.Value} 的来源 {target.Source} 不在节点 {node.Path} 的子树里。"));
                     continue;
                 }
 
-                GraphNode bound = graph[target.Node];
+                GraphNode bound = graph[target.Source];
                 if (bound.FindPort(target.Port) is not { } memberPort)
                 {
                     errors.Add(scope.Node(node.Path.Value,
-                        $"输出端口 {output.Name.Value} 的来源节点 {target.Node} 没有输出端口 {target.Port.Value}。"));
+                        $"输出端口 {output.Name.Value} 的来源节点 {target.Source} 没有输出端口 {target.Port.Value}。"));
                     continue;
                 }
 
-                if (memberPort.IsConstant != output.IsConstant)
+                foreach (string message in OutputSourceRules.Check(
+                    output, memberPort.Type, memberPort.IsConstant, $"{target.Source}@{target.Port}"))
                 {
-                    errors.Add(scope.Node(node.Path.Value,
-                        $"输出端口 {output.Name.Value} 的常量性必须与来源 {target.Node}@{target.Port} 一致。"));
+                    errors.Add(scope.Node(node.Path.Value, message));
                 }
 
-                if (memberPort.Type != output.Type)
+            }
+        }
+    }
+
+    /// <summary>容器传入端口的绑定：来源必须在容器外部，端口存在，类型一致；静态输入沿常量来源解析，动态输入不能绑定常量来源。</summary>
+    private static void CheckContainerInputs(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        foreach (ContainerNode container in graph.Containers)
+        {
+            foreach (InputPort input in container.Inputs)
+            {
+                if (container.InputBindings?.TryGetValue(input.Name, out InputBinding? source) != true
+                    || source is not { SourcePort: { } sourcePort })
                 {
-                    errors.Add(scope.Node(node.Path.Value,
-                        $"输出端口 {output.Name.Value} 的类型必须与来源 {target.Node}@{target.Port} 一致。"));
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输入端口 {input.Name.Value} 没有绑定来源。"));
+                    continue;
+                }
+
+                if (graph.Nodes.FirstOrDefault(node => node.Path == source.Source) is not { } sourceNode)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输入端口 {input.Name.Value} 的来源 {source.Source} 不在流程里。"));
+                    continue;
+                }
+
+                if (sourceNode.FindPort(sourcePort) is not { } sourcePortDeclared)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输入端口 {input.Name.Value} 的来源 {source.Source} 没有输出端口 {sourcePort.Value}。"));
+                    continue;
+                }
+
+                if (sourcePortDeclared.Type != input.Type)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"容器输入端口 {input.Name.Value} 的类型必须与来源 {source.Source}@{sourcePort} 一致。"));
+                }
+
+                if (input.IsStatic)
+                {
+                    StaticResolution resolution = StaticSources.ResolveInput(graph, container.Path, input.Name);
+                    if (resolution.Error is { } error)
+                    {
+                        errors.Add(scope.Node(resolution.Node.Value, error));
+                    }
+                }
+                else if (sourcePortDeclared.IsConstant)
+                {
+                    errors.Add(scope.Node(container.Path.Value,
+                        $"动态容器输入端口 {input.Name.Value} 不能绑定常量来源 {source.Source}@{sourcePort}。"));
                 }
             }
         }
@@ -312,27 +353,32 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>一条边的来源侧校验：来源端口必须声明存在且为动态端口，成员不能被容器外直接引用，来源类型与目标输入一致。</summary>
-    private static void CheckEdgeSource(NodeGraph graph, FlowEdge edge, ExecutableNode target, NodeScope scope, List<Error> errors)
+    /// <summary>一条驱动绑定的来源侧校验：来源端口必须声明存在且为动态端口，成员不能被容器外直接引用，来源类型与目标输入一致。</summary>
+    private static void CheckEdgeSource(NodeGraph graph, InputBinding binding, ExecutableNode target, NodeScope scope, List<Error> errors)
     {
-        GraphNode source = graph[edge.Source];
-        if (source.FindPort(edge.SourcePort) is not { } port)
+        if (binding.SourcePort is not { } sourcePort)
         {
-            errors.Add(scope.Node(target.Path.Value, $"节点 {edge.Source} 没有输出端口 {edge.SourcePort.Value}。"));
+            return;
+        }
+
+        GraphNode source = graph[binding.Source];
+        if (source.FindPort(sourcePort) is not { } port)
+        {
+            errors.Add(scope.Node(target.Path.Value, $"节点 {binding.Source} 没有输出端口 {sourcePort.Value}。"));
             return;
         }
 
         if (port.IsConstant)
         {
             errors.Add(scope.Node(target.Path.Value,
-                $"常量输出端口 {source.Path}@{edge.SourcePort.Value} 不进入 From，使用 Static 绑定。"));
+                $"常量输出端口 {source.Path}@{sourcePort.Value} 不进入 From，使用 Bindings 读取。"));
             return;
         }
 
-        if (edge.Type == PortTypes.Context && !SupportsContext(graph, source, port))
+        if (binding.Type == PortTypes.Context && !SupportsContext(graph, source, port))
         {
             errors.Add(scope.Node(target.Path.Value,
-                $"Context 输入来源 {source.Path} 必须产出 Context 端口，实际来源端口 {edge.SourcePort.Value} 是 {port.Type}。"));
+                $"Context 输入来源 {source.Path} 必须产出 Context 端口，实际来源端口 {sourcePort.Value} 是 {port.Type}。"));
         }
 
         if (source is ExecutableNode executable && !Visible(executable.Path, target.Path))
@@ -373,26 +419,27 @@ internal static class FlowRules
         CheckReachability(graph, scope, errors);
         CheckGroupSources(graph, scope, errors);
         CheckOutputBindings(graph, scope, errors);
+        CheckContainerInputs(graph, scope, errors);
         CheckStaticBindings(graph, scope, errors);
 
-        foreach (FlowEdge edge in graph.Edges)
+        foreach (InputBinding binding in graph.Bindings)
         {
-            if (graph[edge.Target] is not ExecutableNode target)
+            if (graph[binding.Target] is not ExecutableNode target)
             {
                 continue;
             }
 
-            CheckEdgeSource(graph, edge, target, scope, errors);
+            CheckEdgeSource(graph, binding, target, scope, errors);
         }
     }
 
     /// <summary>组间来源端口不重复：同一来源端口作为启动条件只能落在一个组里，跨组出现即多组同时齐备。</summary>
     private static void CheckGroupSources(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        foreach (IGrouping<(NodePath Target, NodePath Source, PortName SourcePort), FlowEdge> group in graph.Edges
-            .GroupBy(edge => (edge.Target, edge.Source, edge.SourcePort)))
+        foreach (IGrouping<(NodePath Target, NodePath Source, PortName? SourcePort), InputBinding> group in graph.Bindings
+            .GroupBy(binding => (binding.Target, binding.Source, binding.SourcePort)))
         {
-            if (group.Select(edge => edge.Group).Distinct().Count() < 2
+            if (group.Select(binding => binding.Group).Distinct().Count() < 2
                 || graph[group.Key.Target] is not ExecutableNode target)
             {
                 continue;
@@ -411,7 +458,7 @@ internal static class FlowRules
         queue.Enqueue(graph.Start.Path);
         foreach (ExecutableNode executable in graph.ExecutableNodes
             .Where(node => graph.PlanOf(node.Path) is { StaticOnly: true })
-            .Where(node => !graph.StaticDependencies.Any(dependency => dependency.Target == node.Path))
+            .Where(node => !graph.StaticBindings.Any(binding => binding.Target == node.Path))
             .Where(node => reached.Add(node.Path)))
         {
             queue.Enqueue(executable.Path);
@@ -422,10 +469,10 @@ internal static class FlowRules
             // reached.Add 兼作去重判定：首次到达的节点才入队
             while (queue.TryDequeue(out NodePath current))
             {
-                foreach (NodePath next in graph.Outgoing(current).Select(edge => edge.Target)
-                    .Concat(graph.StaticDependencies
-                        .Where(dependency => dependency.Source == current)
-                        .Select(dependency => dependency.Target))
+                foreach (NodePath next in graph.Outgoing(current).Select(binding => binding.Target)
+                    .Concat(graph.StaticBindings
+                        .Where(binding => binding.Source == current)
+                        .Select(binding => binding.Target))
                     .Where(reached.Add))
                 {
                     queue.Enqueue(next);
@@ -458,14 +505,14 @@ internal static class FlowRules
     /// <summary>常量依赖环：静态输入沿常量来源逐级等待，形成环时环内节点永远等不到值。</summary>
     private static void CheckStaticCycles(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        Dictionary<NodePath, List<NodePath>> outgoing = graph.StaticDependencies
-            .GroupBy(dependency => dependency.Source)
-            .ToDictionary(group => group.Key, group => group.Select(dependency => dependency.Target).Distinct().ToList());
+        Dictionary<NodePath, List<NodePath>> outgoing = graph.StaticBindings
+            .GroupBy(binding => binding.Source)
+            .ToDictionary(group => group.Key, group => group.Select(binding => binding.Target).Distinct().ToList());
         Dictionary<NodePath, int> incoming = graph.ExecutableNodes.ToDictionary(node => node.Path, _ => 0);
-        foreach (StaticDependency dependency in graph.StaticDependencies
-            .Where(dependency => incoming.ContainsKey(dependency.Target)))
+        foreach (InputBinding binding in graph.StaticBindings
+            .Where(binding => incoming.ContainsKey(binding.Target)))
         {
-            incoming[dependency.Target]++;
+            incoming[binding.Target]++;
         }
 
         Queue<NodePath> ready = new([.. incoming.Where(pair => pair.Value == 0).Select(pair => pair.Key)]);
@@ -510,11 +557,11 @@ internal static class FlowRules
             adjacent.Add([]);
         }
 
-        foreach (FlowEdge edge in graph.Edges)
+        foreach (InputBinding binding in graph.Bindings)
         {
-            foreach (NodePath source in graph.ExecutablesIn(edge.Source))
+            foreach (NodePath source in graph.ExecutablesIn(binding.Source))
             {
-                adjacent[rank[source]].Add(rank[edge.Target]);
+                adjacent[rank[source]].Add(rank[binding.Target]);
             }
         }
 
@@ -587,13 +634,13 @@ internal static class FlowRules
     /// 开始是流程级来源，输入节点每轮从外部接收回答，两者都构成周期性外源。节点依赖构成的迭代环若可启动则合法。</summary>
     private static void CheckLoops(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
-        foreach (FlowEdge edge in graph.Edges)
+        foreach (InputBinding binding in graph.Bindings)
         {
             // 成员从自身所在容器取输入会让容器永远等不到齐备，是启动条件永不满足的环
-            if (graph[edge.Source] is ContainerNode container
-                && graph.ExecutablesIn(container.Path).Contains(edge.Target))
+            if (graph[binding.Source] is ContainerNode container
+                && graph.ExecutablesIn(container.Path).Contains(binding.Target))
             {
-                errors.Add(scope.Node(graph[edge.Target].Path.Value,
+                errors.Add(scope.Node(graph[binding.Target].Path.Value,
                     "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"));
             }
         }
@@ -607,9 +654,9 @@ internal static class FlowRules
             }
 
             bool externalEntry = members.Any(member =>
-                graph.Incoming(member).Any(edge =>
-                    graph[edge.Source] is StartNode
-                    || graph.ExecutablesIn(edge.Source).Any(source => !members.Contains(source))));
+                graph.Incoming(member).Any(binding =>
+                    graph[binding.Source] is StartNode
+                    || graph.ExecutablesIn(binding.Source).Any(source => !members.Contains(source))));
             if (!externalEntry)
             {
                 ExecutableNode representative = (ExecutableNode)graph[members[0]];

@@ -51,7 +51,7 @@ public static partial class NodeSpecRules
         {
             foreach (InputPort port in inputs.Where(port => port.IsStatic && port.Default is not null))
             {
-                fail($"静态输入端口 {port.Name.Value} 在容器上不能声明默认值，值由 In 绑定提供。");
+                fail($"静态输入端口 {port.Name.Value} 在容器上不能声明默认值，值由引用处的绑定提供。");
             }
         }
 
@@ -147,7 +147,8 @@ public static partial class NodeSpecRules
         }
     }
 
-    /// <summary>输出端口来源：常量输出只接受固定值或常量来源，动态输出不接受固定值，转发来源只用于组织子节点的节点。</summary>
+    /// <summary>输出端口来源：常量输出只接受固定值或常量来源，动态输出不接受固定值，转发来源只用于组织子节点的节点。
+    /// 引用本节点静态输入时在此完成存在性、常量性与类型校验。</summary>
     private static void CheckOutputSource(NodeSpec node, Port port, bool organizes, Action<string> fail)
     {
         string name = port.Name.Value;
@@ -181,15 +182,15 @@ public static partial class NodeSpecRules
 
             if (reference.Source is null)
             {
-                if (organizes)
+                if (node.FindInput(reference.Port) is not { IsStatic: true } input)
                 {
-                    fail($"容器常量输出端口 {name} 不能引用自身输入 {reference.Display}，只能引用子树成员的常量输出。");
+                    fail($"常量输出端口 {name} 的来源 {reference.Display} 不是本节点的静态输入。");
                     return;
                 }
 
-                if (node.FindInput(reference.Port) is not { IsStatic: true })
+                foreach (string message in OutputSourceRules.Check(port, input.Type, true, reference.Display))
                 {
-                    fail($"常量输出端口 {name} 的来源 {reference.Display} 不是本节点的静态输入。");
+                    fail(message);
                 }
 
                 return;
@@ -210,9 +211,24 @@ public static partial class NodeSpecRules
 
         if (organizes)
         {
-            if (port.Ref is null)
+            if (port.Ref is not { } reference)
             {
                 fail($"输出端口 {name} 必须写 Value 或 Ref。");
+                return;
+            }
+
+            if (reference.Source is null)
+            {
+                if (node.FindInput(reference.Port) is not { IsStatic: true } input)
+                {
+                    fail($"动态输出端口 {name} 的来源 {reference.Display} 不是本节点的静态输入。");
+                    return;
+                }
+
+                foreach (string message in OutputSourceRules.Check(port, input.Type, true, reference.Display))
+                {
+                    fail(message);
+                }
             }
 
             return;

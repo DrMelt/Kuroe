@@ -33,7 +33,7 @@ public sealed class CommandRuntimeTests
 
         Assert.True(runtime.Released);
         Assert.Equal(1, runtime.Revision);
-        Assert.Equal($"甲{Environment.NewLine}乙", runtime.PortText(context, OutputPort));
+        Assert.Equal($"甲{Environment.NewLine}乙", runtime.PortText(OutputPort));
         Assert.Equal(NodeState.Done, runtime.Snapshot().State);
         Assert.Null(runtime.TakeFailure());
     }
@@ -117,7 +117,7 @@ public sealed class CommandRuntimeTests
         runtime.Activate(context, Inputs(context));
 
         Assert.True(runtime.Released);
-        Assert.Equal("恢复内容", runtime.PortText(context, OutputPort));
+        Assert.Equal("恢复内容", runtime.PortText(OutputPort));
         Assert.Equal(NodeState.Done, runtime.Snapshot().State);
         Assert.Equal(2, process.Calls);
     }
@@ -204,7 +204,7 @@ public sealed class CommandRuntimeTests
 
         runtime.Activate(context, Inputs(context));
 
-        Assert.Equal("abc…输出已截断", runtime.PortText(context, OutputPort));
+        Assert.Equal("abc…输出已截断", runtime.PortText(OutputPort));
     }
 
     private static StubNodeContext Context(ExecutableNode node, string? rootValue = null)
@@ -238,10 +238,16 @@ public sealed class CommandRuntimeTests
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
             Incoming =
             [
-                new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal),
-                new FlowEdge(
-                    VariableSourcePath,
+                new InputBinding(
                     TargetPath,
+                    SourcePath,
+                    new PortName("结果"),
+                    new PortName("触发"),
+                    PortTypes.Signal,
+                    Trigger: true),
+                new InputBinding(
+                    TargetPath,
+                    VariableSourcePath,
                     new PortName("结果"),
                     new PortName("任务路径"),
                     PortTypes.Text),

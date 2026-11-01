@@ -20,10 +20,16 @@ public abstract record GraphNode
     public virtual IReadOnlyList<Port> Outputs { get; init; } = [];
 
     /// <summary>输出端口到内部来源端口的绑定：来源是本节点输入或直接子节点输出。未声明来源时为空。</summary>
-    public virtual IReadOnlyDictionary<PortName, NodePort>? OutputBindings { get; init; }
+    public virtual IReadOnlyDictionary<PortName, OutputBinding>? OutputBindings { get; init; }
 
-    /// <summary>以本节点为来源的边，编译期落定，按编译顺序。</summary>
-    public IReadOnlyList<FlowEdge> Outgoing { get; init; } = [];
+    /// <summary>输入端口到来源的绑定：执行节点是静态输入，容器是传入端口。未声明绑定时为空。</summary>
+    public virtual IReadOnlyDictionary<PortName, InputBinding>? InputBindings { get; init; }
+
+    /// <summary>节点自身的执行或发布次数上限，所有节点共用。容器每发布一次计一次。</summary>
+    public virtual int MaxExecutions { get; init; } = int.MaxValue;
+
+    /// <summary>以本节点为来源的绑定，编译期落定，按编译顺序。</summary>
+    public IReadOnlyList<InputBinding> Outgoing { get; init; } = [];
 
     /// <summary>按名字取输入端口声明，未声明时为空。</summary>
     public InputPort? FindInput(PortName name) => Inputs.Find(name);

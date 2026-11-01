@@ -49,7 +49,13 @@ public sealed class TaskSnapshotTests
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"),
             PortTexts.Empty, Flow, Graph, TaskState.Running, 0,
-            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(executable, PortTexts.Empty, PortTexts.Empty, []))],
+            [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(
+                executable,
+                PortTexts.Empty,
+                PortTexts.Empty,
+                [],
+                0,
+                executable.MaxExecutions))],
             states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
     }
 
@@ -113,9 +119,9 @@ public sealed class TaskSnapshotTests
 
         public IReadOnlyList<ContainerNode> Containers => [];
 
-        public IReadOnlyList<FlowEdge> Edges => [];
+        public IReadOnlyList<InputBinding> Bindings => [];
 
-        public IReadOnlyList<StaticDependency> StaticDependencies => [];
+        public IReadOnlyList<InputBinding> StaticBindings => [];
 
         public int Count => executables.Count;
 
@@ -127,11 +133,11 @@ public sealed class TaskSnapshotTests
 
         public ContainerNode? ContainerOf(NodePath path) => null;
 
-        public IReadOnlyList<FlowEdge> Incoming(NodePath target) => [];
+        public IReadOnlyList<InputBinding> Incoming(NodePath target) => [];
 
-        public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => [];
+        public IReadOnlyList<InputBinding> Outgoing(NodePath source) => [];
 
-        public IReadOnlyList<NodePath> StaticDependents(NodePath source) => [];
+        public IReadOnlyList<NodePath> Dependents(NodePath source) => [];
 
         public StaticResolution? StaticInputResolution(NodePath node, PortName port) => null;
 

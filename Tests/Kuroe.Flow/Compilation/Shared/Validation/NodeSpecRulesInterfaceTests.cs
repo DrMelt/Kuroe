@@ -65,7 +65,42 @@ public sealed class NodeSpecRulesInterfaceTests
         };
 
         Assert.Equal(
-            ["静态输入端口 输入 在容器上不能声明默认值，值由 In 绑定提供。"],
+            ["静态输入端口 输入 在容器上不能声明默认值，值由引用处的绑定提供。"],
+            Errors(node, node.Type?.Shape));
+    }
+
+    [Fact]
+    public void Container_input_can_declare_trigger()
+    {
+        NodeSpec node = NodeSpec.Define(new NodeName("组")) with
+        {
+            Type = new TestNodeType(new NodeKind("Container"), new NodeTypeShape
+            {
+                Organizes = true,
+                InputTypes = [PortTypes.Text],
+            }),
+            Inputs = [new InputPort(Input, PortTypes.Text, mode: PortMode.Trigger)],
+            Nodes = [NodeSpec.Define(new NodeName("成员"))],
+        };
+
+        Assert.Empty(Errors(node, node.Type?.Shape));
+    }
+
+    [Fact]
+    public void Container_constant_output_can_reference_its_static_input()
+    {
+        NodeSpec node = ContainerWithOutput(PortMode.Constant, Input);
+
+        Assert.Empty(Errors(node, node.Type?.Shape));
+    }
+
+    [Fact]
+    public void Container_dynamic_output_cannot_reference_its_static_input()
+    {
+        NodeSpec node = ContainerWithOutput(PortMode.Plain, Input);
+
+        Assert.Equal(
+            ["输出端口 结果 的常量性必须与来源 @输入 一致。"],
             Errors(node, node.Type?.Shape));
     }
 
@@ -81,6 +116,20 @@ public sealed class NodeSpecRulesInterfaceTests
 
         Assert.Equal(["动态输出端口 输出 不能写 Value。"], Errors(node, node.Type?.Shape));
     }
+
+    private static NodeSpec ContainerWithOutput(PortMode outputMode, PortName input) =>
+        NodeSpec.Define(new NodeName("组")) with
+        {
+            Type = new TestNodeType(new NodeKind("Container"), new NodeTypeShape
+            {
+                Organizes = true,
+                InputTypes = [PortTypes.Text],
+                OutputTypes = [PortTypes.Text],
+            }),
+            Inputs = [new InputPort(input, PortTypes.Text, mode: PortMode.Constant)],
+            Outputs = [new Port(new PortName("结果"), PortTypes.Text, reference: PortRef.Bound(input), mode: outputMode)],
+            Nodes = [NodeSpec.Define(new NodeName("成员"))],
+        };
 
     [Fact]
     public void Static_input_accepts_non_text_types()

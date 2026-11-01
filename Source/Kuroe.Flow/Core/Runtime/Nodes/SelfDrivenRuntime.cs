@@ -1,28 +1,21 @@
-using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
-/// <summary>自驱型节点的运行期基类：激活时消费引擎装入的输入并产出一次，成功后推进版本，失败停在阻塞等待返工。
+/// <summary>自驱型节点的运行期基类：激活时消费引擎装入的输入并产出一次，成功后发布，失败停在阻塞等待返工。
 /// 产出是唯一的文本内容，按声明为 Text 的输出端口放出。读写都要求持有任务 Gate。</summary>
-public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode(executable), IInputProgress
+public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode(executable)
 {
-    private readonly ConsumedRevisionStore _consumed = new();
     private string? _content;
     private string? _failure;
     private bool _failureTaken;
-    private bool _retry;
     private bool _canceled;
-    private long _revision;
-    private int _executions;
 
     /// <summary>本次操作的名字，用于失败说明。</summary>
     protected abstract string Action { get; }
@@ -30,24 +23,11 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     /// <summary>本次操作的目标，用于失败说明。</summary>
     protected abstract string Target { get; }
 
-    /// <inheritdoc/>
-    public override bool Released => !_canceled && _revision > 0;
-
-    /// <inheritdoc/>
-    public override long Revision => _revision;
+    /// <summary>产出可消费：未被取消。</summary>
+    protected override bool Consumable => !_canceled;
 
     /// <inheritdoc/>
     public override bool Canceled => _canceled;
-
-    long IInputProgress.ConsumedRevision(ConsumptionKey key) => _consumed.Revision(key);
-
-    void IInputProgress.Consume(InputGroup group, IReadinessSources sources) => _consumed.Record(group, sources);
-
-    int IInputProgress.Executions => _executions;
-
-    bool IInputProgress.Published => _revision > 0;
-
-    bool IInputProgress.ForceRerun => _retry;
 
     /// <summary>随任务进入取消态，之后不再激活。</summary>
     public override void Cancel() => _canceled = true;
@@ -70,10 +50,10 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     {
         _failure = null;
         _failureTaken = false;
-        _retry = true;
+        Progress.RequestRerun();
     }
 
-    /// <summary>消费本次输入并产出一次。成功推进修订号，失败停在阻塞等待返工。</summary>
+    /// <summary>消费本次输入并产出一次。成功发布一次，失败停在阻塞等待返工。</summary>
     public override void Activate(INodeContext context, NodeInputValues inputs)
     {
         if (_canceled || _failure is not null)
@@ -86,8 +66,8 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
             string? failure = Produce(inputs);
             if (failure is null)
             {
-                _revision++;
-                _executions++;
+                Progress.Started();
+                Progress.Publish(CreatePublication(Progress.NextRevision()));
             }
             else
             {
@@ -100,41 +80,19 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
         }
         finally
         {
-            _retry = false;
+            Progress.ClearRerun();
         }
     }
 
-    /// <summary>按输出端口取单段文本：只有 Text 语义端口承载内容，未成功产出时为空。</summary>
-    public override string? PortText(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
-            ? _content
-            : null;
-
-    /// <summary>按输出端口取产出：Text 语义端口给出本次产出的文本，出处指向本节点。</summary>
-    public override IReadOnlyList<ContextValue> OutputValues(INodeContext context, PortName port) =>
-        Released && executable.FindPort(port) is { } declared && PortRules.CarriesText(declared.Type)
-        && _content is { Length: > 0 } content
-            ? [new ContextValue(new NodeSource(Path, port), content)]
-            : [];
-
-    /// <summary>捕获自驱节点的产出、失败与执行计数。</summary>
+    /// <summary>捕获自驱节点的进展、发布与失败。</summary>
     public override NodeCheckpoint? CaptureCheckpoint() =>
         new SelfDrivenNodeCheckpoint(
             Path,
-            new NodeCommonCheckpoint(
-                Revision,
-                LastInputGroup,
-                _consumed.CaptureCheckpoint(),
-                [],
-                _failure is not null,
-                _retry),
-            _executions,
-            _content,
+            CaptureProgress(),
             _failure,
-            _failureTaken,
-            _retry);
+            _failureTaken);
 
-    /// <summary>从检查点恢复自驱节点的产出、失败与执行计数。</summary>
+    /// <summary>从检查点恢复自驱节点的进展、发布与失败。</summary>
     public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
     {
         if (checkpoint is not SelfDrivenNodeCheckpoint selfDriven)
@@ -142,14 +100,9 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
             throw new ArgumentException($"自驱节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
         }
 
-        RestoreLastInputGroup(selfDriven.Common.LastInputGroup);
-        _consumed.RestoreCheckpoint(selfDriven.Common.Consumed);
-        _revision = selfDriven.Common.Revision;
-        _executions = selfDriven.Executions;
-        _content = selfDriven.Content;
+        RestoreProgress(selfDriven.Common);
         _failure = selfDriven.Failure;
         _failureTaken = selfDriven.FailureTaken;
-        _retry = selfDriven.Retry;
     }
 
     /// <summary>节点在快照里的一刻状态：失败为阻塞，成功为完成。</summary>
@@ -164,7 +117,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
         {
             state = NodeState.Blocked;
         }
-        else if (Released)
+        else if (Progress.Published)
         {
             state = NodeState.Done;
         }
@@ -177,6 +130,20 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
 
     /// <summary>记下本次成功产出的内容。</summary>
     protected void SetContent(string content) => _content = content;
+
+    /// <summary>按已产出内容构造一次发布：Text 语义端口给出同一条内容，出处指向本节点。</summary>
+    private Publication CreatePublication(long revision)
+    {
+        Dictionary<PortName, IReadOnlyList<ContextValue>> content = _content is { Length: > 0 } text
+            ? executable.Outputs
+                .Where(port => PortRules.CarriesText(port.Type))
+                .ToDictionary(
+                    port => port.Name,
+                    port => (IReadOnlyList<ContextValue>)[new ContextValue(new NodeSource(Path, port.Name), text)])
+            : [];
+
+        return new Publication(revision, new Dictionary<PortName, bool>(), content);
+    }
 
     private void Fail(string failure)
     {

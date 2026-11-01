@@ -90,14 +90,14 @@ public sealed class FileNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "读入",
                       "Kind": "FileRead",
                       "Path": "{root}/in.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
@@ -107,7 +107,7 @@ public sealed class FileNodeTests
                       "Path": "{root}/out/result.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "正文": "读入@正文" }]
                     }
                   ]
@@ -130,21 +130,21 @@ public sealed class FileNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "In": { "基准": "Start@基准", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     {
                       "Name": "读入",
                       "Kind": "FileRead",
                       "Path": "{root}/in.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
                     {
                       "Name": "实施",
                       "Kind": "Llm",
-                      "Static": { "MODEL_NAME": "@MODEL_NAME" },
+                      "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                       "Inputs": [{ "Name": "正文" }],
                       "From": [{ "正文": "读入@正文" }]
                     }
@@ -168,7 +168,7 @@ public sealed class FileNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "读入",
                       "Kind": "FileRead",
@@ -176,7 +176,7 @@ public sealed class FileNodeTests
                       "Variables": { "root": "基准" },
                       "MaxChars": 2,
                       "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     },
@@ -186,7 +186,7 @@ public sealed class FileNodeTests
                       "Path": "{root}/out/result.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "正文": "读入@正文" }]
                     }
                   ]
@@ -209,14 +209,14 @@ public sealed class FileNodeTests
                 {
                   "Name": "整体",
                   "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "In": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
                     {
                       "Name": "读入",
                       "Kind": "FileRead",
                       "Path": "{root}/../escape.txt",
                       "Variables": { "root": "基准" },
                       "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
-                      "Static": { "基准": "@基准" },
+                      "Bindings": { "基准": "@基准" },
                       "From": [{ "触发": "@目标" }],
                       "Outputs": [{ "Name": "正文", "Type": "Text" }]
                     }

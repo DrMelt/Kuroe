@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>流程编译出的执行视图的只读面：节点以从根到本节点的路径标识，开始是固定来源，
-/// 执行节点与容器在同一棵树上，依赖由 From 边与静态输入的运行期常量依赖共同表达。节点表、树遍历与输入侧方案由实现给出，读取方只依赖这里。</summary>
+/// 执行节点与容器在同一棵树上，依赖由 From 绑定、静态输入的运行期常量依赖与容器触发输入共同表达。节点表、树遍历与输入侧方案由实现给出，读取方只依赖这里。</summary>
 public interface INodeGraph
 {
     /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
@@ -20,11 +20,11 @@ public interface INodeGraph
     /// <summary>容器节点，按先根序。</summary>
     IReadOnlyList<ContainerNode> Containers { get; }
 
-    /// <summary>依赖边。</summary>
-    IReadOnlyList<FlowEdge> Edges { get; }
+    /// <summary>驱动绑定，按编译顺序。</summary>
+    IReadOnlyList<InputBinding> Bindings { get; }
 
-    /// <summary>常量依赖：目标节点的静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
-    IReadOnlyList<StaticDependency> StaticDependencies { get; }
+    /// <summary>静态启动条件：静态输入绑定到运行期常量产出。</summary>
+    IReadOnlyList<InputBinding> StaticBindings { get; }
 
     /// <summary>节点数，执行节点与容器一起算。</summary>
     int Count { get; }
@@ -41,14 +41,14 @@ public interface INodeGraph
     /// <summary>节点直接所属的容器，根级节点为空。</summary>
     ContainerNode? ContainerOf(NodePath path);
 
-    /// <summary>目标的入边，按编译顺序。</summary>
-    IReadOnlyList<FlowEdge> Incoming(NodePath target);
+    /// <summary>目标的驱动绑定，按编译顺序。</summary>
+    IReadOnlyList<InputBinding> Incoming(NodePath target);
 
-    /// <summary>来源的出边，按编译顺序。</summary>
-    IReadOnlyList<FlowEdge> Outgoing(NodePath source);
+    /// <summary>来源的驱动绑定，按编译顺序。</summary>
+    IReadOnlyList<InputBinding> Outgoing(NodePath source);
 
-    /// <summary>依赖某来源节点运行期常量的执行节点路径，按执行节点表顺序。</summary>
-    IReadOnlyList<NodePath> StaticDependents(NodePath source);
+    /// <summary>来源发布后需要重新评估的目标，包含静态依赖节点与使用该来源的容器触发输入。</summary>
+    IReadOnlyList<NodePath> Dependents(NodePath source);
 
     /// <summary>执行节点某静态输入的结构解析结果，未声明或未解析时为空。</summary>
     StaticResolution? StaticInputResolution(NodePath node, PortName port);
@@ -59,7 +59,7 @@ public interface INodeGraph
     /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器给全部成员，执行节点给自身。</summary>
     IReadOnlyList<NodePath> ExecutablesIn(NodePath source);
 
-    /// <summary>节点的输入侧方案，未参与就绪判定的节点为空。</summary>
+    /// <summary>节点的输入侧方案，开始为空。</summary>
     NodeInputPlan? PlanOf(NodePath path);
 
     /// <summary>节点类型的形状，开始为空。</summary>

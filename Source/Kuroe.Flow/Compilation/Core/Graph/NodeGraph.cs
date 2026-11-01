@@ -6,32 +6,32 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Compilation.Graph;
 
 /// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上。
-/// 依赖由 From 边与静态输入指向的运行期常量依赖共同表达，边的角色与取值域固化在边上。执行按“组齐备且有驱动则激活”推进。
-/// 树与边在编译期落定，与节点相关的边在构造时挂到节点上，静态来源与输入侧方案由执行视图在构造期解析。</summary>
+/// 依赖由 From 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达，绑定的角色与取值域固化在绑定上。执行按“组齐备且有驱动则激活”推进。
+/// 树与绑定在编译期落定，与节点相关的绑定在构造时挂到节点上，静态来源与输入侧方案由执行视图在构造期解析。</summary>
 public sealed class NodeGraph : INodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
     private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _staticInputs = [];
     private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _constantOutputs = [];
-    private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _staticDependents = [];
+    private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _dependents = [];
     private readonly Dictionary<NodePath, NodeInputPlan> _plans = [];
 
-    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，边两端必须落在节点表里。
-    /// 与节点相关的边在构造时挂到节点上：出边落在来源，入边落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
-    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<FlowEdge> edges)
+    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，绑定两端必须落在节点表里。
+    /// 与节点相关的绑定在构造时挂到节点上：来源侧落在来源，驱动绑定落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
+    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<InputBinding> bindings)
     {
         Start = nodes[0] as StartNode
             ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
-        Edges = edges;
-        _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, edges))];
+        Bindings = bindings;
+        _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, bindings))];
         Nodes = [.. _roots.SelectMany(Flattened)];
         ExecutableNodes = [.. Nodes.OfType<ExecutableNode>()];
         Containers = [.. Nodes.OfType<ContainerNode>()];
 
         CheckTree(nodes.Count);
-        StaticDependencies = ResolveStaticDependencies();
-        BuildDependents();
+        StaticBindings = ResolveStaticBindings();
         BuildPlans();
+        BuildDependents();
     }
 
     /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
@@ -46,11 +46,11 @@ public sealed class NodeGraph : INodeGraph
     /// <summary>容器节点，按先根序。</summary>
     public IReadOnlyList<ContainerNode> Containers { get; }
 
-    /// <summary>依赖边。</summary>
-    public IReadOnlyList<FlowEdge> Edges { get; }
+    /// <summary>驱动绑定，按编译顺序。</summary>
+    public IReadOnlyList<InputBinding> Bindings { get; }
 
-    /// <summary>常量依赖：目标节点的静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
-    public IReadOnlyList<StaticDependency> StaticDependencies { get; }
+    /// <summary>静态启动条件：静态输入绑定到 Once 来源节点唯一一次执行的产出。</summary>
+    public IReadOnlyList<InputBinding> StaticBindings { get; }
 
     /// <summary>节点数，执行节点与容器一起算。</summary>
     public int Count => Nodes.Count;
@@ -78,16 +78,16 @@ public sealed class NodeGraph : INodeGraph
     public ContainerNode? ContainerOf(NodePath path) =>
         path.Parent is { } parent ? this[parent] as ContainerNode : null;
 
-    /// <summary>目标的入边，按编译顺序。边只汇入执行节点。</summary>
-    public IReadOnlyList<FlowEdge> Incoming(NodePath target) =>
+    /// <summary>目标的驱动绑定，按编译顺序。绑定只汇入执行节点。</summary>
+    public IReadOnlyList<InputBinding> Incoming(NodePath target) =>
         this[target] is ExecutableNode executable ? executable.Incoming : [];
 
-    /// <summary>来源的出边，按编译顺序。</summary>
-    public IReadOnlyList<FlowEdge> Outgoing(NodePath source) => this[source].Outgoing;
+    /// <summary>来源的驱动绑定，按编译顺序。</summary>
+    public IReadOnlyList<InputBinding> Outgoing(NodePath source) => this[source].Outgoing;
 
-    /// <summary>依赖某来源节点运行期常量的执行节点路径，按执行节点表顺序。</summary>
-    public IReadOnlyList<NodePath> StaticDependents(NodePath source) =>
-        _staticDependents.GetValueOrDefault(source) ?? [];
+    /// <summary>来源发布后需要重新评估的目标，包含静态依赖节点与使用该来源的容器触发输入。</summary>
+    public IReadOnlyList<NodePath> Dependents(NodePath source) =>
+        _dependents.GetValueOrDefault(source) ?? [];
 
     /// <summary>执行节点某静态输入的结构解析结果，未声明或未解析时为空。</summary>
     public StaticResolution? StaticInputResolution(NodePath node, PortName port) =>
@@ -103,13 +103,8 @@ public sealed class NodeGraph : INodeGraph
             ? resolution
             : null;
 
-    /// <summary>节点的输入侧方案，开始与不需来源即可挂起的类型为空。</summary>
-    public NodeInputPlan? PlanOf(NodePath path) => this[path] switch
-    {
-        ExecutableNode => _plans.GetValueOrDefault(path),
-        ContainerNode container => container.Plan,
-        _ => null,
-    };
+    /// <summary>节点的输入侧方案，开始为空。</summary>
+    public NodeInputPlan? PlanOf(NodePath path) => _plans.GetValueOrDefault(path);
 
     /// <summary>节点类型的形状，开始为空。</summary>
     public NodeTypeShape? ShapeOf(NodePath path) => this[path] switch
@@ -119,41 +114,50 @@ public sealed class NodeGraph : INodeGraph
         _ => null,
     };
 
-    /// <summary>来源节点某输出端口声明的类型，未声明按 Text。供边规则按类型校验。</summary>
+    /// <summary>来源节点某输出端口声明的类型，未声明按 Text。供绑定规则按类型校验。</summary>
     public PortType TypeOf(NodePath node, PortName port) =>
         this[node].FindPort(port)?.Type ?? PortTypes.Text;
 
-    /// <summary>把与节点相关的边挂到节点上，子节点递归重建，节点记录构造后不再变化。
-    /// 容器与执行节点带上自己的入出边，输入侧方案由执行视图在静态解析后生成。</summary>
-    private static GraphNode Finalize(GraphNode node, IReadOnlyList<FlowEdge> edges) => node switch
+    /// <summary>把与节点相关的绑定挂到节点上，子节点递归重建，节点记录构造后不再变化。
+    /// 容器与执行节点带上自己的出入绑定，输入侧方案由执行视图在静态解析后生成。</summary>
+    private static GraphNode Finalize(GraphNode node, IReadOnlyList<InputBinding> bindings) => node switch
     {
-        StartNode start => start with { Outgoing = [.. edges.Where(edge => edge.Source == start.Path)] },
+        StartNode start => start with
+        {
+            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == start.Path)],
+        },
         ContainerNode container => container with
         {
-            Children = [.. container.Children.Select(child => Finalize(child, edges))],
-            Outgoing = [.. edges.Where(edge => edge.Source == container.Path)],
+            Children = [.. container.Children.Select(child => Finalize(child, bindings))],
+            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == container.Path)],
         },
         ExecutableNode executable => executable with
         {
-            Incoming = [.. edges.Where(edge => edge.Target == executable.Path)],
-            Outgoing = [.. edges.Where(edge => edge.Source == executable.Path)],
+            Incoming = [.. bindings.Where(binding => binding.Drives && binding.Target == executable.Path)],
+            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == executable.Path)],
         },
         _ => node,
     };
 
-    /// <summary>按静态绑定链找出运行期常量依赖，并登记每个静态输入与常量输出的结构解析结果。</summary>
-    private IReadOnlyList<StaticDependency> ResolveStaticDependencies()
+    /// <summary>按静态绑定链找出运行期常量条件，并登记每个静态输入与常量输出的结构解析结果。</summary>
+    private IReadOnlyList<InputBinding> ResolveStaticBindings()
     {
-        List<StaticDependency> dependencies = [];
+        List<InputBinding> staticBindings = [];
         foreach (ExecutableNode executable in ExecutableNodes)
         {
             Dictionary<PortName, StaticResolution> inputs = executable.Inputs
                 .Where(port => port.IsStatic)
                 .Select(input => (input.Name, Resolution: StaticSources.ResolveInput(this, executable.Path, input.Name)))
                 .ToDictionary(entry => entry.Name, entry => entry.Resolution);
-            dependencies.AddRange(inputs.Values
-                .Where(resolution => resolution.Kind == StaticSourceKind.RuntimeConstant)
-                .Select(resolution => new StaticDependency(resolution.Node, resolution.Port, executable.Path)));
+            staticBindings.AddRange(inputs
+                .Where(pair => pair.Value.Kind == StaticSourceKind.RuntimeConstant)
+                .Select(pair => new InputBinding(
+                    executable.Path,
+                    pair.Value.Node,
+                    pair.Value.Port,
+                    pair.Key,
+                    executable.FindInput(pair.Key)?.Type,
+                    Role: BindingRole.Static)));
 
             if (inputs.Count > 0)
             {
@@ -173,32 +177,66 @@ public sealed class NodeGraph : INodeGraph
             }
         }
 
-        return [.. dependencies.Distinct()];
+        return [.. staticBindings.Distinct()];
     }
 
-    /// <summary>按来源建立运行期常量依赖的反查，目标保持执行节点表顺序。</summary>
+    /// <summary>按来源建立重新评估目标的反查：静态启动条件在前，容器门控输入在后。</summary>
     private void BuildDependents()
     {
-        foreach (IGrouping<NodePath, StaticDependency> group in StaticDependencies.GroupBy(dependency => dependency.Source))
+        Dictionary<NodePath, List<NodePath>> dependents = [];
+        foreach (InputBinding binding in StaticBindings)
         {
-            _staticDependents[group.Key] = [.. group.Select(dependency => dependency.Target).Distinct()];
+            Add(binding.Source, binding.Target);
+        }
+
+        foreach (ContainerNode container in Containers)
+        {
+            foreach (InputBinding binding in container.InputBindings?.Values.Where(binding => binding.Role == BindingRole.Gate) ?? [])
+            {
+                Add(binding.Source, container.Path);
+            }
+        }
+
+        foreach ((NodePath source, List<NodePath> targets) in dependents)
+        {
+            _dependents[source] = [.. targets];
+        }
+
+        void Add(NodePath source, NodePath target)
+        {
+            if (!dependents.TryGetValue(source, out List<NodePath>? list))
+            {
+                list = [];
+                dependents[source] = list;
+            }
+
+            if (!list.Contains(target))
+            {
+                list.Add(target);
+            }
         }
     }
 
-    /// <summary>生成执行节点的输入侧方案，静态依赖与产出模式一并落定。</summary>
+    /// <summary>生成执行节点与容器的输入侧方案，静态启动条件与产出模式一并落定。</summary>
     private void BuildPlans()
     {
         foreach (ExecutableNode executable in ExecutableNodes)
         {
             if (executable.Type.Shape.StartsUnaided)
             {
+                _plans[executable.Path] = NodeInputPlan.External();
                 continue;
             }
 
-            IReadOnlyList<StaticDependency> dependencies =
-                [.. StaticDependencies.Where(dependency => dependency.Target == executable.Path)];
+            IReadOnlyList<InputBinding> staticBindings =
+                [.. StaticBindings.Where(binding => binding.Target == executable.Path)];
             _plans[executable.Path] =
-                NodeInputPlan.Of(executable.Spec, executable.Incoming, executable.Inputs, dependencies);
+                NodeInputPlan.Of(executable.Spec, executable.Incoming, executable.Inputs, staticBindings);
+        }
+
+        foreach (ContainerNode container in Containers)
+        {
+            _plans[container.Path] = NodeInputPlan.Of(container);
         }
     }
 
@@ -208,7 +246,7 @@ public sealed class NodeGraph : INodeGraph
             ? [node, .. container.Children.SelectMany(Flattened)]
             : [node];
 
-    /// <summary>树的形状检查：同层节点标签唯一、子节点路径与父一致，且节点表里的节点在树上各出现一次，边两端都能下钻到。</summary>
+    /// <summary>树的形状检查：同层节点标签唯一、子节点路径与父一致，且节点表里的节点在树上各出现一次，绑定两端都能下钻到。</summary>
     private void CheckTree(int supplied)
     {
         CheckLevel(_roots, parent: null);
@@ -222,10 +260,10 @@ public sealed class NodeGraph : INodeGraph
             throw new ArgumentException("节点表里的节点数与流程树上的节点数不一致，同一条路径上可能出现多个节点。");
         }
 
-        foreach (FlowEdge edge in Edges)
+        foreach (InputBinding binding in Bindings)
         {
-            _ = this[edge.Source];
-            _ = this[edge.Target];
+            _ = this[binding.Source];
+            _ = this[binding.Target];
         }
     }
 
@@ -252,7 +290,7 @@ public sealed class NodeGraph : INodeGraph
         }
     }
 
-    /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器出边的激活消息沿成员到目标的路由边投递。</summary>
+    /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器下游的激活消息沿成员到目标的路由投递。</summary>
     public IReadOnlyList<NodePath> ExecutablesIn(NodePath source) => [.. SourcesIn(source).Distinct()];
 
     /// <summary>来源节点展开出的执行节点路径集合：执行节点给自身，容器递归给全部成员，开始没有执行节点。</summary>

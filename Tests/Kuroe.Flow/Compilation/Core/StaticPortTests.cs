@@ -80,14 +80,14 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Named(StartNode.ReservedLabel, Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Named(StartNode.ReservedLabel, Model) },
                         Spec = new ExecutableSpec(),
                         From =
                         [
@@ -123,7 +123,7 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     source,
@@ -131,7 +131,7 @@ public sealed class StaticPortTests
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal)],
-                        Static = new Dictionary<PortName, PortRef>
+                        Bindings = new Dictionary<PortName, PortRef>
                         {
                             [Model] = PortRef.Named(new NodeLabel("来源"), Result),
                         },
@@ -155,14 +155,14 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                         Spec = new ExecutableSpec(),
                         From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
                     },
@@ -196,14 +196,14 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                         Spec = new ExecutableSpec(),
                         From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
                     },
@@ -219,7 +219,9 @@ public sealed class StaticPortTests
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        Assert.Equal(new NodePort(new NodePath([StartNode.ReservedLabel]), Model), check.StaticBindings![Model]);
+        InputBinding binding = check.InputBindings![Model];
+        Assert.Equal(new NodePath([StartNode.ReservedLabel]), binding.Source);
+        Assert.Equal(Model, binding.SourcePort);
         Assert.Equal("fake", StaticText(
             compiled.Value,
             check,
@@ -232,7 +234,7 @@ public sealed class StaticPortTests
             new PortTexts(new Dictionary<PortName, string> { [Model] = "other" })));
     }
 
-    /// <summary>常量开始端口不能进入 From，只能作为 Static 绑定的来源。</summary>
+    /// <summary>常量开始端口不能进入 From，只能作为 Bindings 绑定的来源。</summary>
     [Fact]
     public void Constant_start_port_cannot_feed_from()
     {
@@ -250,7 +252,7 @@ public sealed class StaticPortTests
         Assert.Contains(Errors(flow), error => error.Contains($"常量输出端口 Start@{Model} 不进入 From"));
     }
 
-    /// <summary>开始端口只写 Value 不写 Static 时仍不是静态端口，静态绑定读取时报错。</summary>
+    /// <summary>开始端口只写 Value 不写 Mode 时仍不是静态端口，静态绑定读取时报错。</summary>
     [Fact]
     public void Value_alone_does_not_make_a_static_start_port()
     {
@@ -261,14 +263,14 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                         Spec = new ExecutableSpec(),
                         From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
                     },
@@ -310,7 +312,7 @@ public sealed class StaticPortTests
                                 Type = TestNodeTypes.Executable,
                                 Inputs = [new InputPort(Goal)],
                                 Outputs = [new Port(Model, PortTypes.Text, reference: PortRef.Bound(Model), mode: PortMode.Constant)],
-                                Static = new Dictionary<PortName, PortRef>
+                                Bindings = new Dictionary<PortName, PortRef>
                                 {
                                     [Model] = PortRef.Named(new NodeLabel("交付"), Model),
                                 },
@@ -377,7 +379,7 @@ public sealed class StaticPortTests
             {
                 Type = new StaticContainerType(),
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = new Dictionary<PortName, PortRef>
+                Bindings = new Dictionary<PortName, PortRef>
                 {
                     [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
                 },
@@ -425,7 +427,7 @@ public sealed class StaticPortTests
             string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        Assert.Null(check.StaticBindings);
+        Assert.Null(check.InputBindings);
         Assert.Equal("执行者", StaticText(compiled.Value, check, TestExecutableNodeType.StaticPort));
     }
 
@@ -440,14 +442,14 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                In = RootBindings(),
+                Bindings = RootBindings(),
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                        Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                         Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
                         Spec = new ExecutableSpec { Emission = NodeEmission.Once },
                         From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
@@ -469,7 +471,7 @@ public sealed class StaticPortTests
             Type = TestNodeTypes.Executable,
             Inputs = [new InputPort(source, PortTypes.Text, mode: PortMode.Constant)],
             Outputs = [new Port(Result, PortTypes.Text, mode: PortMode.Constant)],
-            Static = new Dictionary<PortName, PortRef>
+            Bindings = new Dictionary<PortName, PortRef>
             {
                 [source] = PortRef.Named(new NodeLabel(other), Result),
             },
@@ -621,7 +623,7 @@ public sealed class StaticPortTests
         [
             NodeSpec.Reference(new NodeLabel("实施"), new NodeName("执行")) with
             {
-                Static = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
+                Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Bound(Model) },
                 From = [new FromGroup([new FromLink(Plan, PortRef.Bound(Plan))])],
             },
         ],
@@ -636,12 +638,12 @@ public sealed class StaticPortTests
         {
             Type = ContainerNodeTypes.Type,
             Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-            In = RootBindings(),
+            Bindings = RootBindings(),
             Nodes =
             [
                 NodeSpec.Reference(new NodeLabel("交付"), new NodeName("交付")) with
                 {
-                    In = new Dictionary<PortName, PortRef>
+                    Bindings = new Dictionary<PortName, PortRef>
                     {
                         [Plan] = PortRef.Bound(Goal),
                         [Model] = PortRef.Bound(Model),
@@ -651,7 +653,7 @@ public sealed class StaticPortTests
                 {
                     Type = TestNodeTypes.Executable,
                     Inputs = [new InputPort(Goal)],
-                    Static = new Dictionary<PortName, PortRef>
+                    Bindings = new Dictionary<PortName, PortRef>
                     {
                         [Model] = PortRef.Named(new NodeLabel("交付"), Model),
                     },
@@ -660,6 +662,56 @@ public sealed class StaticPortTests
                 },
             ],
         });
+
+    /// <summary>容器绑定的参与方式由目标端口模式推导：常量端口静态、触发端口门控、其余端口只作值通道。</summary>
+    [Fact]
+    public void Container_binding_role_follows_the_target_port_mode()
+    {
+        PortName gate = new("放行");
+        FlowDefinition flow = new(
+            new FlowName("默认"),
+            null,
+            [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("整体")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Inputs =
+                [
+                    new InputPort(Goal),
+                    new InputPort(Model, PortTypes.Text, mode: PortMode.Constant),
+                    new InputPort(gate, mode: PortMode.Trigger),
+                ],
+                Bindings = new Dictionary<PortName, PortRef>
+                {
+                    [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
+                    [Model] = PortRef.Named(StartNode.ReservedLabel, Model),
+                    [gate] = PortRef.Named(StartNode.ReservedLabel, Goal),
+                },
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("检查")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Inputs = [new InputPort(Goal)],
+                        Spec = new ExecutableSpec(),
+                        From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+                    },
+                ],
+            });
+
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        Assert.False(expanded.IsError,
+            string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ContainerNode container = compiled.Value.Containers.Single();
+        Assert.Equal(BindingRole.Static, container.InputBindings![Model].Role);
+        Assert.Equal(BindingRole.Gate, container.InputBindings[gate].Role);
+        Assert.Equal(BindingRole.Alias, container.InputBindings[Goal].Role);
+    }
 
     private static Dictionary<PortName, PortRef> RootBindings() => new()
     {

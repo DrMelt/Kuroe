@@ -4,7 +4,6 @@ using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -16,6 +15,31 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
     /// <inheritdoc/>
     public ErrorOr<TaskCheckpointDocument> Read(string text)
     {
+        int version;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip,
+            });
+            if (ReadVersion(document.RootElement) is not { } declared)
+            {
+                return [Error.Failure(FlowErrorCodes.CheckpointFormat, "检查点缺少版本。")];
+            }
+
+            version = declared;
+        }
+        catch (JsonException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.CheckpointFormat, $"检查点 JSON 不合法：{ex.Message}")];
+        }
+
+        if (version != TaskCheckpointVersion.Current)
+        {
+            return [Error.Failure(FlowErrorCodes.CheckpointVersion, $"不支持的检查点版本 {version}。")];
+        }
+
         TaskCheckpointFileDto? file;
         try
         {
@@ -31,14 +55,9 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
             return [Error.Failure(FlowErrorCodes.CheckpointFormat, "检查点为空。")];
         }
 
-        if (file.Version != TaskCheckpointVersion.Current)
-        {
-            return [Error.Failure(FlowErrorCodes.CheckpointVersion, $"不支持的检查点版本 {file.Version}。")];
-        }
-
         try
         {
-            return new TaskCheckpointDocument(file.Version, ReadTask(file.Task));
+            return new TaskCheckpointDocument(version, ReadTask(file.Task));
         }
         catch (CheckpointFormatException ex)
         {
@@ -61,6 +80,26 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
         {
             return [Error.Failure(FlowErrorCodes.CheckpointWrite, $"写出检查点失败：{ex.Message}")];
         }
+    }
+
+    /// <summary>在严格映射字段之前读取版本，旧版本按版本不符拒绝，不误报为格式损坏。</summary>
+    private static int? ReadVersion(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        foreach (JsonProperty property in root.EnumerateObject())
+        {
+            if (string.Equals(property.Name, nameof(TaskCheckpointFileDto.Version), StringComparison.OrdinalIgnoreCase)
+                && property.Value.TryGetInt32(out int version))
+            {
+                return version;
+            }
+        }
+
+        return null;
     }
 
     private static TaskCheckpointFileDto ToDto(TaskCheckpointDocument document) =>
@@ -161,29 +200,22 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
                 Kind = "Executable",
                 Path = ToDto(executable.Path),
                 Common = ToDto(executable.Common),
-                Executions = executable.Executions,
-                PublishedExecution = executable.PublishedExecution?.Value,
-                PublishedPorts = executable.PublishedPorts.ToDictionary(
-                    pair => pair.Key.Value,
-                    pair => new PortValueDto { Text = pair.Value.Text, Trigger = pair.Value.Trigger }),
+                ReworkTargets = [.. executable.ReworkTargets.Select(ToDto)],
+                Blocked = executable.Blocked,
             },
             SelfDrivenNodeCheckpoint selfDriven => new NodeDto
             {
                 Kind = "SelfDriven",
                 Path = ToDto(selfDriven.Path),
                 Common = ToDto(selfDriven.Common),
-                Executions = selfDriven.Executions,
-                Content = selfDriven.Content,
                 Failure = selfDriven.Failure,
                 FailureTaken = selfDriven.FailureTaken,
-                Retry = selfDriven.Retry,
             },
             InputNodeCheckpoint input => new NodeDto
             {
                 Kind = "Input",
                 Path = ToDto(input.Path),
                 Common = ToDto(input.Common),
-                Answer = input.Answer,
                 Waiting = input.Waiting,
             },
             ApprovalNodeCheckpoint approval => new NodeDto
@@ -207,6 +239,7 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
         new()
         {
             Revision = common.Revision,
+            Executions = common.Executions,
             LastInputGroup = common.LastInputGroup,
             Consumed =
             [
@@ -217,10 +250,26 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
                     Revision = entry.Revision,
                 }),
             ],
-            ReworkTargets = [.. common.ReworkTargets.Select(ToDto)],
-            Blocked = common.Blocked,
-            RerunRequested = common.RerunRequested,
+            Publication = ToDto(common.Publication),
+            ForceRerun = common.ForceRerun,
         };
+
+    private static PublicationDto? ToDto(PublicationCheckpoint? publication) =>
+        publication is null
+            ? null
+            : new PublicationDto
+            {
+                Triggers = publication.Triggers.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
+                Content = publication.Content.ToDictionary(
+                    pair => pair.Key.Value,
+                    pair => pair.Value
+                        .Select(value => new PublicationValueDto
+                        {
+                            Origin = ToDto(value.Origin),
+                            Text = value.Text,
+                        })
+                        .ToList()),
+            };
 
     private static NodeInputValuesDto ToDto(NodeInputValuesCheckpoint inputs) =>
         new()
@@ -334,21 +383,16 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
             "Executable" => new ExecutableNodeCheckpoint(
                 ReadPath(dto.Path, "节点路径"),
                 ReadCommon(dto.Common),
-                dto.Executions ?? 0,
-                dto.PublishedExecution is { } published ? new ExecutionId(published) : null,
-                ReadPortValues(dto.PublishedPorts)),
+                [.. (dto.ReworkTargets ?? []).Select(path => ReadPath(path, "返工目标"))],
+                dto.Blocked ?? false),
             "SelfDriven" => new SelfDrivenNodeCheckpoint(
                 ReadPath(dto.Path, "节点路径"),
                 ReadCommon(dto.Common),
-                dto.Executions ?? 0,
-                dto.Content,
                 dto.Failure,
-                dto.FailureTaken ?? false,
-                dto.Retry ?? false),
+                dto.FailureTaken ?? false),
             "Input" => new InputNodeCheckpoint(
                 ReadPath(dto.Path, "节点路径"),
                 ReadCommon(dto.Common),
-                dto.Answer,
                 dto.Waiting ?? false),
             "Approval" => new ApprovalNodeCheckpoint(
                 ReadPath(dto.Path, "节点路径"),
@@ -370,15 +414,29 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
 
         return new NodeCommonCheckpoint(
             dto.Revision,
+            dto.Executions,
             dto.LastInputGroup,
             [.. (dto.Consumed ?? []).Select(entry => new ConsumedRevisionCheckpoint(
                 ReadPath(entry.Source, "已消费来源"),
                 entry.Port is null ? null : new PortName(entry.Port),
                 entry.Revision))],
-            [.. (dto.ReworkTargets ?? []).Select(path => ReadPath(path, "返工目标"))],
-            dto.Blocked,
-            dto.RerunRequested);
+            ReadPublication(dto.Publication),
+            dto.ForceRerun);
     }
+
+    private static PublicationCheckpoint? ReadPublication(PublicationDto? dto) =>
+        dto is null
+            ? null
+            : new PublicationCheckpoint(
+                (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
+                (dto.Content ?? []).ToDictionary(
+                    pair => new PortName(pair.Key),
+                    pair => (IReadOnlyList<PublicationValueCheckpoint>)
+                    [
+                        .. pair.Value.Select(value => new PublicationValueCheckpoint(
+                            ReadContextSource(value.Origin),
+                            value.Text ?? string.Empty)),
+                    ]));
 
     private static NodeInputValuesCheckpoint ReadNodeInputs(NodeInputValuesDto? dto)
     {
@@ -396,11 +454,6 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
             (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
             ReadTexts(dto.StaticTexts));
     }
-
-    private static Dictionary<PortName, PortValue> ReadPortValues(Dictionary<string, PortValueDto>? values) =>
-        values is null
-            ? []
-            : values.ToDictionary(pair => new PortName(pair.Key), pair => new PortValue(pair.Value.Text, pair.Value.Trigger));
 
     private static Dictionary<PortName, string> ReadTexts(Dictionary<string, string>? values) =>
         values is null

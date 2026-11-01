@@ -35,7 +35,7 @@ internal static class ContainerScope
         }
     }
 
-    /// <summary>成员在所属容器作用域里求值的引用：From 的连接、容器成员的 In 绑定与 Static 绑定。</summary>
+    /// <summary>成员在所属容器作用域里求值的引用：From 的连接与成员对容器传入端口的 Bindings 绑定。</summary>
     private static IEnumerable<(PortRef Reference, string Field)> References(NodeSpec member)
     {
         foreach (FromGroup group in member.From)
@@ -46,14 +46,9 @@ internal static class ContainerScope
             }
         }
 
-        foreach (PortRef reference in member.In?.Values ?? [])
+        foreach (PortRef reference in member.Bindings?.Values ?? [])
         {
-            yield return (reference, "In");
-        }
-
-        foreach (PortRef reference in member.Static?.Values ?? [])
-        {
-            yield return (reference, "Static");
+            yield return (reference, "Bindings");
         }
     }
 

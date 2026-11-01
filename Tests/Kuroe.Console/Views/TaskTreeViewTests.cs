@@ -49,7 +49,7 @@ public sealed class TaskTreeViewTests
         IReadOnlyList<ExecutableSnapshot> executables =
         [
             .. compiled.Graph.ExecutableNodes.Select(node =>
-                new ExecutableSnapshot(node, PortTexts.Empty, PortTexts.Empty, [])),
+                new ExecutableSnapshot(node, PortTexts.Empty, PortTexts.Empty, [], 0, node.MaxExecutions)),
         ];
         IReadOnlyList<ExecutableStateSnapshot> states =
         [
@@ -61,7 +61,9 @@ public sealed class TaskTreeViewTests
                 container.Path,
                 NodeState.Pending,
                 [.. container.Children.Select(child => child.Path)],
-                PortTexts.Empty)),
+                PortTexts.Empty,
+                0,
+                container.MaxExecutions)),
         ];
 
         return new TaskSnapshot(

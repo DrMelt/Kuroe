@@ -50,7 +50,7 @@ internal static class BuiltinNodes
         Spec = new ExecutableSpec(),
     };
 
-    /// <summary>交付容器：接一份计划，由成员按计划实施。模型由静态输入端口提供，引用处的 In 绑定来源。</summary>
+    /// <summary>交付容器：接一份计划，由成员按计划实施。模型由静态输入端口提供，引用处的 Bindings 绑定来源。</summary>
     private static readonly NodeSpec DeliveryContainerDefinition = NodeSpec.Define(new NodeName("交付")) with
     {
         Type = ContainerNodeTypes.Type,
@@ -67,7 +67,7 @@ internal static class BuiltinNodes
         [
             NodeSpec.Reference(new NodeLabel("实施"), new NodeName("执行")) with
             {
-                Static = new Dictionary<PortName, PortRef>
+                Bindings = new Dictionary<PortName, PortRef>
                 {
                     [LlmNodeTypes.ModelPort] = PortRef.Bound(LlmNodeTypes.ModelPort),
                 },

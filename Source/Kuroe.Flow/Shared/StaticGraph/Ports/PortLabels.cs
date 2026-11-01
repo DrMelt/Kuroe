@@ -58,13 +58,13 @@ public static class PortLabels
 
     /// <summary>静态端口绑定来源的展示：成员路径@端口。直接绑定开始端口且该端口有宿主输入名时附上输入名。</summary>
     public static string StaticLabel(
-        this NodePort binding,
+        this OutputBinding binding,
         IReadOnlyDictionary<PortName, string>? hostInputs = null)
     {
-        string text = $"{binding.Node}@{binding.Port.Value}";
+        string text = $"{binding.Source}@{binding.Port.Value}";
         if (hostInputs is not null
-            && binding.Node.Depth == 1
-            && binding.Node.Label == StartNode.ReservedLabel
+            && binding.Source.Depth == 1
+            && binding.Source.Label == StartNode.ReservedLabel
             && hostInputs.TryGetValue(binding.Port, out string? input))
         {
             text = $"{text}←{input}";
@@ -79,9 +79,10 @@ public static class PortLabels
         PortName port,
         IReadOnlyDictionary<PortName, string>? hostInputs = null)
     {
-        if (executable.StaticBindings?.TryGetValue(port, out NodePort binding) == true)
+        if (executable.InputBindings?.TryGetValue(port, out InputBinding? binding) == true
+            && binding is { SourcePort: { } sourcePort })
         {
-            return binding.StaticLabel(hostInputs);
+            return new OutputBinding(binding.Source, sourcePort).StaticLabel(hostInputs);
         }
 
         return executable.FindInput(port) is { IsStatic: true, Default: { Length: > 0 } value } ? value : null;

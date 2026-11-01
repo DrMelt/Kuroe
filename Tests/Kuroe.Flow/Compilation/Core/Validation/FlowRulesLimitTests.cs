@@ -34,32 +34,40 @@ public sealed class FlowRulesLimitTests
     }
 
     [Fact]
-    public void Container_limit_applies_to_unconfigured_members()
+    public void Container_limit_is_kept_on_the_container()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("普通"))));
 
-        Assert.Equal(2, Executable(graph, "普通").MaxExecutions);
+        Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
+        Assert.Equal(2, graph.PlanOf(NodePath.Of("整体"))!.MaxExecutions);
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
     [Fact]
-    public void Explicit_member_limit_overrides_the_container()
+    public void Member_limit_is_independent_of_the_container()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("重点", max: 5), Exec("普通"))));
 
         Assert.Equal(5, Executable(graph, "重点").MaxExecutions);
-        Assert.Equal(2, Executable(graph, "普通").MaxExecutions);
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
     [Fact]
-    public void Nested_container_limit_overrides_the_outer_one()
+    public void Nested_container_limits_are_kept()
     {
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null,
             Exec("外层干活"),
             Container("内部", max: 5, source: PortRef.Bound(StartPort), Exec("内层干活")))));
 
-        Assert.Equal(5, Executable(graph, "内层干活").MaxExecutions);
-        Assert.Equal(2, Executable(graph, "外层干活").MaxExecutions);
+        Assert.Equal(5, ContainerOf(graph, "内部").MaxExecutions);
+        Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
+        Assert.Equal(2, graph.PlanOf(NodePath.Of("整体"))!.MaxExecutions);
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "内层干活").MaxExecutions);
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "外层干活").MaxExecutions);
     }
+
+    private static ContainerNode ContainerOf(NodeGraph graph, string label) =>
+        graph.Containers.Single(node => node.Label.Value == label);
 
     private static ExecutableNode Executable(NodeGraph graph, string label) =>
         graph.ExecutableNodes.Single(node => node.Label.Value == label);
@@ -88,7 +96,7 @@ public sealed class FlowRulesLimitTests
             Type = ContainerNodeTypes.Type,
             MaxExecutions = max,
             Inputs = [new InputPort(StartPort)],
-            In = new Dictionary<PortName, PortRef>
+            Bindings = new Dictionary<PortName, PortRef>
             {
                 [StartPort] = source ?? PortRef.Named(StartNode.ReservedLabel, StartPort),
             },

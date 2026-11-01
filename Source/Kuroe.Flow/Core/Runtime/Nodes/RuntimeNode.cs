@@ -12,4 +12,10 @@ public abstract class RuntimeNode(GraphNode node) : NodeRuntime(node), INodeChec
 
     /// <inheritdoc/>
     public abstract void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context);
+
+    /// <summary>捕获输入侧进展的公共部分。</summary>
+    protected NodeCommonCheckpoint CaptureProgress() => InputProgressCheckpoints.Capture(Progress);
+
+    /// <summary>恢复输入侧进展的公共部分。</summary>
+    protected void RestoreProgress(NodeCommonCheckpoint checkpoint) => InputProgressCheckpoints.Restore(Progress, checkpoint);
 }

@@ -304,6 +304,22 @@ public sealed class FlowRulesTests
                 }))));
 
     [Fact]
+    public void Container_output_trigger_does_not_require_the_member_port_to_trigger() =>
+        Assert.Empty(
+            Errors(Flow(
+                Container("整体",
+                    Text("成员") with { Outputs = [P("结论")] }) with
+                {
+                    Outputs =
+                    [
+                        new Port(PN("结论"), PortTypes.Text, mode: PortMode.Trigger)
+                        {
+                            Ref = PortRef.Named(new NodeLabel("成员"), PN("结论")),
+                        },
+                    ],
+                })));
+
+    [Fact]
     public void Container_out_bound_to_sub_container_without_the_port_is_rejected() =>
         Assert.Equal(
             [NodeError("整体/交付", "输出端口 结果 的来源节点 整体/交付/撰写组 没有输出端口 结论。")],

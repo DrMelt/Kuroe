@@ -137,10 +137,10 @@ static class FlowDocumentReader
             nodeErrors.AddRange(outputs.ErrorsOrEmptyList);
         }
 
-        ErrorOr<Dictionary<string, string>?> staticBindings = ReadStatic(dto.Static, scope, label);
-        if (staticBindings.IsError)
+        ErrorOr<Dictionary<string, string>?> bindings = ReadBindings(dto.Bindings, scope, label);
+        if (bindings.IsError)
         {
-            nodeErrors.AddRange(staticBindings.ErrorsOrEmptyList);
+            nodeErrors.AddRange(bindings.ErrorsOrEmptyList);
         }
 
         ErrorOr<IReadOnlyList<FromGroupDocument>> from = ReadFrom(dto.From, scope, label);
@@ -178,8 +178,7 @@ static class FlowDocumentReader
             Kind = dto.Kind ?? string.Empty,
             Inputs = inputs.Value,
             Outputs = outputs.Value,
-            Static = staticBindings.Value,
-            In = dto.In,
+            Bindings = bindings.Value,
             Nodes = children,
             Parameters = ReadParameters(dto.Parameters),
             From = from.Value,
@@ -234,10 +233,10 @@ static class FlowDocumentReader
             referenceErrors.Add(scope.Node(label, "引用节点不能声明输出端口。"));
         }
 
-        ErrorOr<Dictionary<string, string>?> staticBindings = ReadStatic(dto.Static, scope, label);
-        if (staticBindings.IsError)
+        ErrorOr<Dictionary<string, string>?> bindings = ReadBindings(dto.Bindings, scope, label);
+        if (bindings.IsError)
         {
-            referenceErrors.AddRange(staticBindings.ErrorsOrEmptyList);
+            referenceErrors.AddRange(bindings.ErrorsOrEmptyList);
         }
 
         ErrorOr<IReadOnlyList<FromGroupDocument>> from = ReadFrom(dto.From, scope, label);
@@ -259,8 +258,7 @@ static class FlowDocumentReader
         {
             Label = label,
             Use = dto.Use ?? string.Empty,
-            In = dto.In,
-            Static = staticBindings.Value,
+            Bindings = bindings.Value,
             From = from.Value,
             Validate = ReadValidation(dto.Validate),
             Emission = emission,
@@ -560,7 +558,7 @@ static class FlowDocumentReader
             && Enum.TryParse(element.GetString(), ignoreCase: true, out role);
     }
 
-    private static ErrorOr<Dictionary<string, string>?> ReadStatic(
+    private static ErrorOr<Dictionary<string, string>?> ReadBindings(
         Dictionary<string, string>? entries,
         NodeScope scope,
         string label)
@@ -576,7 +574,7 @@ static class FlowDocumentReader
         {
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(reference))
             {
-                errors.Add(scope.Node(label, "静态端口名与来源引用都不能为空。"));
+                errors.Add(scope.Node(label, "输入端口名与来源引用都不能为空。"));
                 continue;
             }
 

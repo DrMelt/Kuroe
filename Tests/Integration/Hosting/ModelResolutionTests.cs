@@ -100,8 +100,17 @@ public sealed class ModelResolutionTests
             Type = LlmNodeTypes.Create(null),
             Spec = new ExecutableSpec(),
             Inputs = declare ? [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, mode: PortMode.Constant)] : [],
-            StaticBindings = bind
-                ? new Dictionary<PortName, NodePort> { [LlmNodeTypes.ModelPort] = new NodePort(StartPath, LlmNodeTypes.ModelPort) }
+            InputBindings = bind
+                ? new Dictionary<PortName, InputBinding>
+                {
+                    [LlmNodeTypes.ModelPort] = new InputBinding(
+                        NodePath.Of("干活"),
+                        StartPath,
+                        LlmNodeTypes.ModelPort,
+                        LlmNodeTypes.ModelPort,
+                        PortTypes.Text,
+                        Role: BindingRole.Static),
+                }
                 : null,
             Outputs = [],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,

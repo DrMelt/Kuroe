@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Persistence.Shared;
 public static class TaskCheckpointVersion
 {
     /// <summary>当前版本。</summary>
-    public const int Current = 1;
+    public const int Current = 2;
 }
 
 /// <summary>持久化的任务检查点文档：版本与任务状态。</summary>

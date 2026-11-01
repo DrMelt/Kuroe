@@ -32,7 +32,7 @@ public sealed class FileRuntimeTests
 
         Assert.True(runtime.Released);
         Assert.Equal(1, runtime.Revision);
-        Assert.Equal("文件内容", runtime.PortText(context, ContentPort));
+        Assert.Equal("文件内容", runtime.PortText(ContentPort));
         Assert.Equal(NodeState.Done, runtime.Snapshot().State);
         Assert.Null(runtime.TakeFailure());
     }
@@ -49,7 +49,7 @@ public sealed class FileRuntimeTests
 
         runtime.Activate(context, Inputs(context));
 
-        Assert.Equal("基准内容", runtime.PortText(context, ContentPort));
+        Assert.Equal("基准内容", runtime.PortText(ContentPort));
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class FileRuntimeTests
         runtime.Activate(context, Inputs(context));
 
         Assert.True(runtime.Released);
-        Assert.Equal("恢复内容", runtime.PortText(context, ContentPort));
+        Assert.Equal("恢复内容", runtime.PortText(ContentPort));
         Assert.Equal(NodeState.Done, runtime.Snapshot().State);
     }
 
@@ -116,7 +116,7 @@ public sealed class FileRuntimeTests
 
         runtime.Activate(context, Inputs(context));
 
-        Assert.Equal("abc…内容已截断", runtime.PortText(context, ContentPort));
+        Assert.Equal("abc…内容已截断", runtime.PortText(ContentPort));
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public sealed class FileRuntimeTests
 
         runtime.Activate(context, Inputs(context));
 
-        Assert.Equal(content, runtime.PortText(context, ContentPort));
+        Assert.Equal(content, runtime.PortText(ContentPort));
     }
 
     [Fact]
@@ -191,9 +191,9 @@ public sealed class FileRuntimeTests
 
         Assert.True(runtime.Released);
         Assert.Equal("写入内容", System.IO.File.ReadAllText(root.Resolve("out/nested/result.txt")));
-        Assert.Equal("写入内容", runtime.PortText(context, new PortName("回执")));
+        Assert.Equal("写入内容", runtime.PortText(new PortName("回执")));
 
-        ContextValue value = Assert.Single(runtime.OutputValues(context, new PortName("回执")));
+        ContextValue value = Assert.Single(runtime.OutputValues(new PortName("回执")));
         Assert.IsType<NodeSource>(value.Origin);
     }
 
@@ -279,8 +279,14 @@ public sealed class FileRuntimeTests
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
             Incoming =
         [
-            new FlowEdge(SourcePath, TargetPath, new PortName("结果"), new PortName("触发"), PortTypes.Signal),
-            new FlowEdge(VariableSourcePath, TargetPath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
+            new InputBinding(
+                TargetPath,
+                SourcePath,
+                new PortName("结果"),
+                new PortName("触发"),
+                PortTypes.Signal,
+                Trigger: true),
+            new InputBinding(TargetPath, VariableSourcePath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
         ],
         };
 
@@ -302,10 +308,10 @@ public sealed class FileRuntimeTests
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
             Incoming =
             [
-                new FlowEdge(SourcePath, TargetPath, new PortName("结果"), ContentPort, PortTypes.Text),
-                new FlowEdge(
-                    VariableSourcePath,
+                new InputBinding(TargetPath, SourcePath, new PortName("结果"), ContentPort, PortTypes.Text),
+                new InputBinding(
                     TargetPath,
+                    VariableSourcePath,
                     new PortName("结果"),
                     new PortName("任务路径"),
                     PortTypes.Text),

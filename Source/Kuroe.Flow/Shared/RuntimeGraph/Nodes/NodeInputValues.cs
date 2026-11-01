@@ -98,7 +98,7 @@ public sealed class NodeInputValues : IPortTexts
     /// <summary>该输入端口最近一次绑定的触发值，没有触发值的端口为 true。</summary>
     public bool Triggers(PortName input) => _triggers.GetValueOrDefault(input, true);
 
-    /// <summary>按一组绑定读取来源产出：信号不取内容，其余按绑定顺序取值，每个输入端口的触发值取最后一次绑定。</summary>
+    /// <summary>按一组绑定读取来源产出：非驱动绑定不进入输入，信号不取内容，其余按绑定顺序取值，每个输入端口的触发值取最后一次绑定。</summary>
     public static NodeInputValues From(InputGroup group, INodeContext context)
     {
         List<NodeInputValue> ordered = [];
@@ -106,19 +106,19 @@ public sealed class NodeInputValues : IPortTexts
         Dictionary<PortName, bool> triggers = [];
         foreach (InputBinding binding in group.Bindings)
         {
-            if (binding.TargetInput is not { } input)
+            if (!binding.Drives || binding.TargetInput is not { } input)
             {
                 continue;
             }
 
             connected.Add(input);
             triggers[input] = binding.Triggers(context.Source(binding.Source));
-            if (binding.Signal || binding.Port is not { } port)
+            if (binding.Signal || binding.SourcePort is not { } port)
             {
                 continue;
             }
 
-            foreach (ContextValue value in context.Runtime(binding.Source).OutputValues(context, port))
+            foreach (ContextValue value in context.Runtime(binding.Source).OutputValues(port))
             {
                 ordered.Add(new NodeInputValue(input, binding.Type ?? PortTypes.Text, value));
             }

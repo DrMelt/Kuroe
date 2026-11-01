@@ -11,7 +11,7 @@ public interface IInputProgress
     /// <summary>登记一组绑定的当前版本，这一组视为已消费。</summary>
     void Consume(InputGroup group, IReadinessSources sources);
 
-    /// <summary>已启动的执行数。</summary>
+    /// <summary>已启动、已交付或已发布的次数。</summary>
     int Executions { get; }
 
     /// <summary>是否已经发布过产出。</summary>

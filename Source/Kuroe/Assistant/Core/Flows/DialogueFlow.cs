@@ -92,7 +92,7 @@ internal static class DialogueFlow
                         new InputPortDocument(WorkspacePort.Value, PortTypes.Text, Mode: PortMode.Constant),
                         new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, Mode: PortMode.Constant),
                     ],
-                    In = new Dictionary<string, string>
+                    Bindings = new Dictionary<string, string>
                     {
                         [StartPort.Value] = $"{StartNode.ReservedLabel.Value}@{StartPort.Value}",
                         [WorkspacePort.Value] = $"{StartNode.ReservedLabel.Value}@{WorkspacePort.Value}",
@@ -134,7 +134,7 @@ internal static class DialogueFlow
                                 new InputPortDocument(WorkspacePort.Value, PortTypes.Text, Mode: PortMode.Constant),
                                 new InputPortDocument(LlmNodeTypes.ModelPort.Value, PortTypes.Text, Mode: PortMode.Constant),
                             ],
-                            Static = new Dictionary<string, string>
+                            Bindings = new Dictionary<string, string>
                             {
                                 [LlmNodeTypes.ModelPort.Value] = $"@{LlmNodeTypes.ModelPort.Value}",
                                 [WorkspacePort.Value] = $"@{WorkspacePort.Value}",

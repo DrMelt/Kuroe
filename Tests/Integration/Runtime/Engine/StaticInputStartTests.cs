@@ -31,19 +31,19 @@ public sealed class StaticInputStartTests
             "Nodes": [
               { "Name": "外层", "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                "In": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "整体", "Kind": "Container",
                     "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                    "In": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                     "Outputs": [{ "Name": "配置", "Type": "Text", "Mode": "Constant", "Ref": "配置@资料" }],
                     "Nodes": [
-                      { "Name": "配置", "Kind": "Llm", "Static": { "MODEL_NAME": "@MODEL_NAME" },
+                      { "Name": "配置", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                         "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] }
                     ] },
                   { "Name": "使用", "Kind": "Llm",
                     "Inputs": [{ "Name": "目标" }, { "Name": "资料", "Type": "Text", "Mode": "Constant" }],
-                    "Static": { "MODEL_NAME": "@MODEL_NAME", "资料": "整体@配置" },
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME", "资料": "整体@配置" },
                     "From": [ { "目标": "@目标" } ] }
                 ] }
             ] } ]
