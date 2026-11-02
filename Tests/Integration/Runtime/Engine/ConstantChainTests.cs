@@ -98,52 +98,50 @@ public sealed class ConstantChainTests
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [
-                    { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
-                    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
-                  ],
-                  "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
-                  "Nodes": [
-                    {
-                      "Name": "制定大纲",
-                      "Kind": "Llm",
-                      "Emission": "Once",
-                      "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }],
-                      "Outputs": [{ "Name": "大纲", "Type": "Text", "Mode": "Constant" }]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "制定大纲",
+                    "Kind": "Llm",
+                    "Emission": "Once",
+                    "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }],
+                    "Outputs": [{ "Name": "大纲", "Type": "Text", "Mode": "Constant" }]
+                  },
+                  {
+                    "Label": "甲稿",
+                    "Use": "成稿",
+                    "Bindings": { "大纲": "制定大纲@大纲", "MODEL_NAME": "@MODEL_NAME" }
+                  },
+                  {
+                    "Label": "乙稿",
+                    "Use": "成稿",
+                    "Bindings": { "大纲": "制定大纲@大纲", "MODEL_NAME": "@MODEL_NAME" }
+                  },
+                  {
+                    "Name": "比选",
+                    "Kind": "Llm",
+                    "Emission": "Once",
+                    "Bindings": {
+                      "甲稿": "甲稿@全文",
+                      "乙稿": "乙稿@全文",
+                      "MODEL_NAME": "@MODEL_NAME"
                     },
-                    {
-                      "Label": "甲稿",
-                      "Use": "成稿",
-                      "Bindings": { "大纲": "制定大纲@大纲", "MODEL_NAME": "@MODEL_NAME" }
-                    },
-                    {
-                      "Label": "乙稿",
-                      "Use": "成稿",
-                      "Bindings": { "大纲": "制定大纲@大纲", "MODEL_NAME": "@MODEL_NAME" }
-                    },
-                    {
-                      "Name": "比选",
-                      "Kind": "Llm",
-                      "Emission": "Once",
-                      "Bindings": {
-                        "甲稿": "甲稿@全文",
-                        "乙稿": "乙稿@全文",
-                        "MODEL_NAME": "@MODEL_NAME"
-                      },
-                      "Inputs": [
-                        { "Name": "甲稿", "Type": "Text", "Mode": "Constant", "Role": "Content" },
-                        { "Name": "乙稿", "Type": "Text", "Mode": "Constant", "Role": "Content" }
-                      ],
-                      "Outputs": [{ "Name": "定稿", "Type": "Text", "Mode": "Constant" }]
-                    }
-                  ]
-                }
-              ]
+                    "Inputs": [
+                      { "Name": "甲稿", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+                      { "Name": "乙稿", "Type": "Text", "Mode": "Constant", "Role": "Content" }
+                    ],
+                    "Outputs": [{ "Name": "定稿", "Type": "Text", "Mode": "Constant" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -178,40 +176,38 @@ public sealed class ConstantChainTests
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [
-                    { "Name": "触发" },
-                    { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
-                    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
-                  ],
-                  "Bindings": { "触发": "Start@触发", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
-                  "Nodes": [
-                    {
-                      "Name": "第一步",
-                      "Emission": "Once",
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "触发" },
+                  { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "Bindings": { "触发": "Start@触发", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "第一步",
+                    "Emission": "Once",
 
-                      "Kind": "Llm",
-                      "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }],
-                      "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
-                    },
-                    {
-                      "Name": "第二步",
-                      "Kind": "Llm",
-                      "Bindings": { "结果": "第一步@结果", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [
-                        { "Name": "触发", "Type": "Text" },
-                        { "Name": "结果", "Type": "Text", "Mode": "Constant", "Role": "Content" }
-                      ],
-                      "Outputs": [{ "Name": "定稿", "Type": "Text" }],
-                      "From": [{ "触发": "@触发" }]
-                    }
-                  ]
-                }
-              ]
+                    "Kind": "Llm",
+                    "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }],
+                    "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
+                  },
+                  {
+                    "Name": "第二步",
+                    "Kind": "Llm",
+                    "Bindings": { "结果": "第一步@结果", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [
+                      { "Name": "触发", "Type": "Text" },
+                      { "Name": "结果", "Type": "Text", "Mode": "Constant", "Role": "Content" }
+                    ],
+                    "Outputs": [{ "Name": "定稿", "Type": "Text" }],
+                    "From": [{ "触发": "@触发" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -227,41 +223,39 @@ public sealed class ConstantChainTests
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [
-                    { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
-                    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
-                  ],
-                  "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
-                  "Nodes": [
-                    {
-                      "Name": "第一步",
-                      "Emission": "Once",
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "第一步",
+                    "Emission": "Once",
 
-                      "Kind": "Llm",
-                      "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [
-                        { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }
-                      ],
-                      "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
-                    },
-                    {
-                      "Name": "第二步",
-                      "Kind": "Llm",
-                      "Emission": "Once",
+                    "Kind": "Llm",
+                    "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [
+                      { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" }
+                    ],
+                    "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
+                  },
+                  {
+                    "Name": "第二步",
+                    "Kind": "Llm",
+                    "Emission": "Once",
 
-                      "Bindings": { "结果": "第一步@结果", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [
-                        { "Name": "结果", "Type": "Text", "Mode": "Constant", "Role": "Content" }
-                      ],
-                      "Outputs": [{ "Name": "定稿", "Type": "Text", "Mode": "Constant" }]
-                    }
-                  ]
-                }
-              ]
+                    "Bindings": { "结果": "第一步@结果", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [
+                      { "Name": "结果", "Type": "Text", "Mode": "Constant", "Role": "Content" }
+                    ],
+                    "Outputs": [{ "Name": "定稿", "Type": "Text", "Mode": "Constant" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -294,24 +288,22 @@ public sealed class ConstantChainTests
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                  "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
-                  "Nodes": [
-                    {
-                      "Name": "重试",
-                      "Kind": "Llm",
-                      "Emission": "Once",
-                      "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                      "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
+                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "重试",
+                    "Kind": "Llm",
+                    "Emission": "Once",
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
+                    "Outputs": [{ "Name": "结果", "Type": "Text", "Mode": "Constant" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -329,29 +321,27 @@ public sealed class ConstantChainTests
                 { "Name": "上下文", "Type": "Context", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
               ] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [
-                    { "Name": "上下文", "Type": "Context", "Mode": "Constant" },
-                    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
-                  ],
-                  "Bindings": { "上下文": "Start@上下文", "MODEL_NAME": "Start@MODEL_NAME" },
-                  "Nodes": [
-                    {
-                      "Name": "读取",
-                      "Kind": "Llm",
-                      "Bindings": { "上下文": "@上下文", "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [
-                        { "Name": "上下文", "Type": "Context", "Mode": "Constant", "Role": "Content" },
-                        { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
-                      ],
-                      "Outputs": [{ "Name": "结果", "Type": "Text" }]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "上下文", "Type": "Context", "Mode": "Constant" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "Bindings": { "上下文": "Start@上下文", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "读取",
+                    "Kind": "Llm",
+                    "Bindings": { "上下文": "@上下文", "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [
+                      { "Name": "上下文", "Type": "Context", "Mode": "Constant", "Role": "Content" },
+                      { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                    ],
+                    "Outputs": [{ "Name": "结果", "Type": "Text" }]
+                  }
+                ]
+              }
             }
           ]
         }

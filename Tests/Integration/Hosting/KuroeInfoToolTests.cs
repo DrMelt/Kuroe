@@ -163,15 +163,13 @@ public sealed class KuroeInfoToolTests
                     ]
                   },
                   "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
-                  "Nodes": [
-                    {
-                      "Name": "实施",
-                      "Kind": "Llm",
-                      "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
-                      "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Mode": "Constant" } ],
-                      "From": [ { "目标": "Start@目标" } ]
-                    }
-                  ]
+                  "Root": {
+                    "Name": "实施",
+                    "Kind": "Llm",
+                    "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                    "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Mode": "Constant" } ],
+                    "From": [ { "目标": "Start@目标" } ]
+                  }
                 }
               ]
             }
@@ -202,15 +200,13 @@ public sealed class KuroeInfoToolTests
                 {
                   "Name": "默认",
                   "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" } ] },
-                  "Nodes": [
-                    {
-                      "Name": "收话",
-                      "Kind": "Input",
-                      "Question": "请补充背景",
-                      "Outputs": [ { "Name": "回答", "Type": "Text" } ],
-                      "From": [ { "目标": "Start@目标" } ]
-                    }
-                  ]
+                  "Root": {
+                    "Name": "收话",
+                    "Kind": "Input",
+                    "Question": "请补充背景",
+                    "Outputs": [ { "Name": "回答", "Type": "Text" } ],
+                    "From": [ { "目标": "Start@目标" } ]
+                  }
                 }
               ]
             }

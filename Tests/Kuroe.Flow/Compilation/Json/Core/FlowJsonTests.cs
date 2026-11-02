@@ -19,7 +19,7 @@ public sealed class FlowJsonTests
                 {
                   "name": "默认",
                   "start": { "outputs": [{ "name": "目标", "type": "Text" }] },
-                  "nodes": [],
+                  "root": null,
                 },
               ],
             }
@@ -32,7 +32,7 @@ public sealed class FlowJsonTests
         Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Start!.Outputs!).ValueKind);
     }
 
-    /// <summary>缺键的列表属性取声明的空集合，未写的可选标量取 null。</summary>
+    /// <summary>缺键的属性取 null。</summary>
     [Fact]
     public void Missing_keys_fall_back_to_declared_defaults()
     {
@@ -41,7 +41,7 @@ public sealed class FlowJsonTests
         FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
 
         FlowDto flow = Assert.Single(file.Flows);
-        Assert.Empty(flow.Nodes);
+        Assert.Null(flow.Root);
         Assert.Null(flow.Description);
         Assert.Null(flow.Start);
         Assert.Null(flow.HostStartInputs);

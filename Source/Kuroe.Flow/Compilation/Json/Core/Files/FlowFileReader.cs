@@ -80,13 +80,9 @@ static class FlowFileReader
         }
 
         NodeDocument? root = null;
-        if (dto.Nodes.Count > 1)
+        if (dto.Root is { } rootNode)
         {
-            errors.Add(FlowErrors.Body(name, "流程只能有一个根节点。"));
-        }
-        else if (dto.Nodes.Count == 1)
-        {
-            ErrorOr<NodeDocument> parsed = ReadNode(dto.Nodes[0], NodeScope.Flow(name), errors);
+            ErrorOr<NodeDocument> parsed = ReadNode(rootNode, scope, errors);
             if (parsed.IsSuccess)
             {
                 root = parsed.Value;

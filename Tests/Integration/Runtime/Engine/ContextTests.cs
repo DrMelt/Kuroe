@@ -173,20 +173,18 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    {
-                      "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
-                      "From": [ { "任务": "制定计划@计划" } ]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  {
+                    "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
+                    "From": [ { "任务": "制定计划@计划" } ]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -199,20 +197,18 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    {
-                      "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
-                      "From": [ { "任务": "制定计划@计划", "格式": "制定计划@计划" } ]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  {
+                    "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "任务" }, { "Name": "格式", "Default": "固定格式" }],
+                    "From": [ { "任务": "制定计划@计划", "格式": "制定计划@计划" } ]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -225,28 +221,26 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "准备甲", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "准备乙", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    {
-                      "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 1,
-                      "Inputs": [
-                        { "Name": "结论" },
-                        { "Name": "依据", "Default": "默认依据" },
-                        { "Name": "附加", "Default": "默认附加" }
-                      ],
-                      "From": [
-                        { "结论": "准备甲@结论", "附加": "准备甲@结论" },
-                        { "结论": "准备乙@结论" }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  { "Name": "准备甲", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "准备乙", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  {
+                    "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 1,
+                    "Inputs": [
+                      { "Name": "结论" },
+                      { "Name": "依据", "Default": "默认依据" },
+                      { "Name": "附加", "Default": "默认附加" }
+                    ],
+                    "From": [
+                      { "结论": "准备甲@结论", "附加": "准备甲@结论" },
+                      { "结论": "准备乙@结论" }
+                    ]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -259,21 +253,19 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    {
-                      "Name": "干活",
-                      "Kind": "Llm",
-                      "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
-                      "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
-                      "From": [{ "目标": "@目标", "风格": "@风格" }]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  {
+                    "Name": "干活",
+                    "Kind": "Llm",
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [{ "Name": "目标" }, { "Name": "风格" }],
+                    "From": [{ "目标": "@目标", "风格": "@风格" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -286,11 +278,9 @@ public sealed class ContextTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "背景": "Start@背景", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                  { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "背景": "@背景" } ] }
-                ] }
-              ]
+              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "背景": "Start@背景", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "背景": "@背景" } ] }
+              ] }
             }
           ]
         }

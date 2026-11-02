@@ -41,32 +41,30 @@ public sealed class CommandNodeTests
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
               "HostStartInputs": { "基准": "WORKSPACE_PATH" },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
-                    {
-                      "Name": "版本",
-                      "Kind": "Command",
-                      "Program": "dotnet",
-                      "Arguments": ["--version"],
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "@目标" }],
-                      "Outputs": [{ "Name": "输出", "Type": "Text" }]
-                    },
-                    {
-                      "Name": "写出",
-                      "Kind": "FileWrite",
-                      "Path": "{root}/out/version.txt",
-                      "Variables": { "root": "基准" },
-                      "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
-                      "Bindings": { "基准": "@基准" },
-                      "From": [{ "正文": "版本@输出" }]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                  {
+                    "Name": "版本",
+                    "Kind": "Command",
+                    "Program": "dotnet",
+                    "Arguments": ["--version"],
+                    "Inputs": [{ "Name": "触发", "Type": "Signal" }],
+                    "From": [{ "触发": "@目标" }],
+                    "Outputs": [{ "Name": "输出", "Type": "Text" }]
+                  },
+                  {
+                    "Name": "写出",
+                    "Kind": "FileWrite",
+                    "Path": "{root}/out/version.txt",
+                    "Variables": { "root": "基准" },
+                    "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
+                    "Bindings": { "基准": "@基准" },
+                    "From": [{ "正文": "版本@输出" }]
+                  }
+                ]
+              }
             }
           ]
         }
@@ -79,22 +77,20 @@ public sealed class CommandNodeTests
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
-                    {
-                      "Name": "缺失",
-                      "Kind": "Command",
-                      "Program": "kuroe-command-does-not-exist",
-                      "Inputs": [{ "Name": "触发", "Type": "Signal" }],
-                      "From": [{ "触发": "@目标" }],
-                      "Outputs": [{ "Name": "输出", "Type": "Text" }]
-                    }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
+                  {
+                    "Name": "缺失",
+                    "Kind": "Command",
+                    "Program": "kuroe-command-does-not-exist",
+                    "Inputs": [{ "Name": "触发", "Type": "Signal" }],
+                    "From": [{ "触发": "@目标" }],
+                    "Outputs": [{ "Name": "输出", "Type": "Text" }]
+                  }
+                ]
+              }
             }
           ]
         }

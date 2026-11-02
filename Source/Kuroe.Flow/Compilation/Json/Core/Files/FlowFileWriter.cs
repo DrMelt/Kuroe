@@ -26,7 +26,7 @@ static class FlowFileWriter
         HostStartInputs = flow.HostStartInputs.Count > 0
             ? new Dictionary<string, string>(flow.HostStartInputs)
             : null,
-        Nodes = flow.Root is null ? [] : [WriteNode(flow.Root)],
+        Root = flow.Root is null ? null : WriteNode(flow.Root),
     };
 
     private static NodeDto WriteNode(NodeDocument node) => node switch

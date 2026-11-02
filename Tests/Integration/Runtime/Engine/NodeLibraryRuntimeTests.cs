@@ -50,16 +50,14 @@ public sealed class NodeLibraryRuntimeTests
             {
               "Name": "内置引用",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Label": "定计划", "Use": "准备", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                    { "Label": "交付", "Use": "交付", "Bindings": { "计划": "定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                  { "Label": "定计划", "Use": "准备", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                  { "Label": "交付", "Use": "交付", "Bindings": { "计划": "定计划@计划", "MODEL_NAME": "@MODEL_NAME" } }
+                ]
+              }
             }
           ]
         }
@@ -79,18 +77,16 @@ public sealed class NodeLibraryRuntimeTests
             {
               "Name": "双线",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                { "Label": "制定A", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                { "Label": "制定B", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                { "Label": "交付A", "Use": "交付", "Bindings": { "计划": "制定A@计划", "MODEL_NAME": "@MODEL_NAME" } },
-                { "Label": "交付B", "Use": "交付", "Bindings": { "计划": "制定B@计划", "MODEL_NAME": "@MODEL_NAME" } }
-                  ]
-                }
-              ]
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              { "Label": "制定A", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+              { "Label": "制定B", "Use": "规划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+              { "Label": "交付A", "Use": "交付", "Bindings": { "计划": "制定A@计划", "MODEL_NAME": "@MODEL_NAME" } },
+              { "Label": "交付B", "Use": "交付", "Bindings": { "计划": "制定B@计划", "MODEL_NAME": "@MODEL_NAME" } }
+                ]
+              }
             }
           ]
         }

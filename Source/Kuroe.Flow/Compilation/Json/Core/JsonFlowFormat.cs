@@ -20,7 +20,7 @@ public sealed class JsonFlowFormat : IFlowFormatReader, IFlowFormatWriter
         }
         catch (JsonException ex)
         {
-            return Error.Validation(FlowErrorCodes.FlowFormat, $"流程文件不是合法 JSON：{ex.Message}。流程文件只写 Flows，节点库写在 nodes.json。");
+            return Error.Validation(FlowErrorCodes.FlowFormat, $"流程文件不是合法 JSON：{ex.Message}。流程文件只写 Flows，根节点写在 Root，节点库写在 nodes.json。");
         }
 
         if (file is null)

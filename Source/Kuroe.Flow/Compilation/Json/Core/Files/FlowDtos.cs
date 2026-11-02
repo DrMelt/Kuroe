@@ -25,8 +25,8 @@ public sealed class FlowDto
     /// <summary>开始端口到宿主输入名的绑定。</summary>
     public Dictionary<string, string>? HostStartInputs { get; set; }
 
-    /// <summary>装配树的根节点，恰好一个。</summary>
-    public List<NodeDto> Nodes { get; set; } = [];
+    /// <summary>装配树的根节点，唯一。</summary>
+    public NodeDto? Root { get; set; }
 }
 
 /// <summary>文件里一条流程的开始入口：流程的唯一来源，输出端口即提交时给的初始输入。</summary>
