@@ -27,9 +27,6 @@ public sealed class NodeDto
     /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 FlowRules 校验。</summary>
     public List<JsonElement>? From { get; set; }
 
-    /// <summary>输出校验：收口时校验模型产出，不通过则节点阻塞待返工。</summary>
-    public ValidationDto? Validate { get; set; }
-
     /// <summary>同一执行路径的最高执行次数，未写时取默认值。</summary>
     public int? MaxExecutions { get; set; }
 
@@ -77,14 +74,4 @@ public sealed class PortEntryDto
 
     /// <summary>输入端口的执行角色，取值 Content、Configuration 或 Control。</summary>
     public string? Role { get; set; }
-}
-
-/// <summary>输出校验的 JSON 形状：谓词名与参数。</summary>
-public sealed class ValidationDto
-{
-    /// <summary>谓词名，读取时按枚举解析。</summary>
-    public string? Predicate { get; set; }
-
-    /// <summary>谓词参数：指定文本或正则，NonEmpty 不需要。</summary>
-    public string? Argument { get; set; }
 }

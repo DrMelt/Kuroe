@@ -182,7 +182,6 @@ static class FlowDocumentReader
             Nodes = children,
             Parameters = ReadParameters(dto.Parameters),
             From = from.Value,
-            Validate = ReadValidation(dto.Validate),
             Emission = emission,
             MaxExecutions = dto.MaxExecutions,
         };
@@ -260,7 +259,6 @@ static class FlowDocumentReader
             Use = dto.Use ?? string.Empty,
             Bindings = bindings.Value,
             From = from.Value,
-            Validate = ReadValidation(dto.Validate),
             Emission = emission,
             MaxExecutions = dto.MaxExecutions,
         };
@@ -627,9 +625,6 @@ static class FlowDocumentReader
 
         return errors.Count > 0 ? errors : result;
     }
-
-    private static ValidationDocument? ReadValidation(ValidationDto? validation) =>
-        validation is null ? null : new ValidationDocument(validation.Predicate ?? string.Empty, validation.Argument);
 
     private static Dictionary<string, FlowValue> ReadParameters(
         IReadOnlyDictionary<string, JsonElement>? parameters) =>

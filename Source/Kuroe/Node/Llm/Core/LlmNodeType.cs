@@ -46,7 +46,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
         }
     }
 
-    /// <summary>Llm 类型的规则：执行上限与输出校验的组合约束。</summary>
+    /// <summary>Llm 类型的规则：执行上限约束。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
         ExecutableSpec spec = node.Spec!;
@@ -64,12 +64,6 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
         {
             fail(scope.Node(node.Label.Value,
                 $"Llm 节点的模型输入 {LlmNodeTypes.ModelPort.Value} 类型只能是 Text。"));
-        }
-
-        if (spec.Validate is not null
-            && !node.Outputs.Any(port => PortRules.RequiresSubmission(port, spec.Emission)))
-        {
-            fail(scope.Node(node.Label.Value, "声明 Validate 的节点必须声明可交回的产出端口，校验对象是端口产出。"));
         }
 
         ToolPortRules.Validate(Parameters, node, Contracts, scope, fail);

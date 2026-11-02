@@ -38,7 +38,6 @@ static class FlowDocumentWriter
         Inputs = WriteInputs(node.Inputs),
         Outputs = WritePorts(node.Outputs),
         From = WriteFrom(node.From),
-        Validate = WriteValidation(node.Validate),
         MaxExecutions = node.MaxExecutions,
         Bindings = WriteBindings(node.Bindings),
         Emission = node.Emission?.ToString(),
@@ -51,7 +50,6 @@ static class FlowDocumentWriter
         Label = node.Label,
         Use = node.Use,
         From = WriteFrom(node.From),
-        Validate = WriteValidation(node.Validate),
         MaxExecutions = node.MaxExecutions,
         Bindings = WriteBindings(node.Bindings),
         Emission = node.Emission?.ToString(),
@@ -120,9 +118,6 @@ static class FlowDocumentWriter
 
     private static Dictionary<string, string>? WriteBindings(IReadOnlyDictionary<string, string>? bindings) =>
         bindings is { Count: > 0 } ? new Dictionary<string, string>(bindings) : null;
-
-    private static ValidationDto? WriteValidation(ValidationDocument? validation) =>
-        validation is null ? null : new ValidationDto { Predicate = validation.Predicate, Argument = validation.Argument };
 
     private static Dictionary<string, JsonElement>? WriteParameters(IReadOnlyDictionary<string, FlowValue> parameters)
     {

@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation.Shared.Validation;
 
-/// <summary>节点接线规则：From、输入绑定与 Validate 的上下文限制。绑定目标能否承接由 <see cref="CheckBindings"/> 按端口模式判定。</summary>
+/// <summary>节点接线规则：From 与输入绑定的上下文限制。绑定目标能否承接由 <see cref="CheckBindings"/> 按端口模式判定。</summary>
 public static partial class NodeSpecRules
 {
     /// <summary>按作用域检查接线字段。container 为真时按容器判定，引用条目按被引用定义判定。</summary>
@@ -11,17 +11,9 @@ public static partial class NodeSpecRules
         bool isContainer = container ?? node.IsContainer;
         if (context == NodeRuleContext.Reference)
         {
-            if (isContainer)
+            if (isContainer && node.From.Count > 0)
             {
-                if (node.From.Count > 0)
-                {
-                    fail("引用容器不能声明 From，容器自身不接线。");
-                }
-
-                if (node.Validate is not null)
-                {
-                    fail("引用节点组不能声明 Validate，输出校验只属于执行节点。");
-                }
+                fail("引用容器不能声明 From，容器自身不接线。");
             }
 
             return;
@@ -36,11 +28,6 @@ public static partial class NodeSpecRules
                     fail("库容器定义不接线，不能声明 From。");
                 }
 
-                if (node.Validate is not null)
-                {
-                    fail("库容器定义不声明 Validate，输出校验只属于执行节点。");
-                }
-
                 if (node.Bindings is not null)
                 {
                     fail("库容器定义不接线，不能声明输入绑定。");
@@ -52,11 +39,6 @@ public static partial class NodeSpecRules
             if (node.From.Count > 0)
             {
                 fail("容器节点不是执行节点，不支持 From。");
-            }
-
-            if (node.Validate is not null)
-            {
-                fail("容器节点不是执行节点，不支持 Validate。");
             }
 
             return;

@@ -311,21 +311,9 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return Block(node, execution);
         }
 
-        ExecutableNode executable = node.Executable;
         if (node.Shortfall(execution.Id).Count > 0)
         {
             execution.MarkUncollected("输出端口内容未交回，本步未收口。");
-            return Block(node, execution);
-        }
-
-        // 输出校验不通过即不发布，节点停驻等返工
-        IReadOnlyDictionary<PortName, string>? outputs = node.SubmittedPorts(execution.Id)?
-            .ToDictionary(pair => pair.Key, pair => pair.Value.Text ?? string.Empty);
-        if (executable.Spec.Validate is { } validation
-            && !validation.Passes(executable.Outputs, outputs, executable.Spec.Emission))
-        {
-            execution.MarkUncollected("输出校验不通过，本步未收口。");
-
             return Block(node, execution);
         }
 

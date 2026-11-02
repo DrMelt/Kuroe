@@ -66,16 +66,11 @@ public sealed class ApprovalNodeTypeTests
         NodeSpec node = Node([new InputPort(new PortName("计划"), PortTypes.Text)]) with
         {
             MaxExecutions = 3,
-            Spec = new ExecutableSpec
-            {
-                Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
-            },
         };
 
         string[] errors = [.. Failures(node)];
 
-        Assert.Equal(2, errors.Length);
-        Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 Validate。"));
+        Assert.Single(errors);
         Assert.Contains(errors, error => error.EndsWith("审批节点不启动执行，不能声明 MaxExecutions。"));
     }
 

@@ -57,20 +57,6 @@ public sealed class CommandNodeTypeTests
     public void Plain_command_node_passes() => Assert.Empty(Failures(Type, Node()));
 
     [Fact]
-    public void Validate_is_rejected()
-    {
-        NodeSpec node = Node() with
-        {
-            Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
-        };
-
-        string[] errors = [.. Failures(Type, node)];
-
-        Assert.Single(errors);
-        Assert.EndsWith("命令执行节点不启动模型执行，不能声明 Validate。", errors[0]);
-    }
-
-    [Fact]
     public void Trigger_and_output_are_required()
     {
         string[] errors = [.. Failures(Type, Node() with { Inputs = [], Outputs = [] })];

@@ -78,31 +78,31 @@ public sealed class FileNodeTypeTests
     public void Plain_write_node_passes() => Assert.Empty(Failures(WriteType, WriteNode()));
 
     [Fact]
-    public void Read_rejects_execution_config()
+    public void Read_rejects_non_positive_max_executions()
     {
         NodeSpec node = ReadNode() with
         {
-            Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
+            Spec = new ExecutableSpec { MaxExecutions = 0 },
         };
 
         string[] errors = [.. Failures(ReadType, node)];
 
         Assert.Single(errors);
-        Assert.EndsWith("文件读取节点不启动执行，不能声明 Validate。", errors[0]);
+        Assert.EndsWith("MaxExecutions 必须是正整数。", errors[0]);
     }
 
     [Fact]
-    public void Write_rejects_execution_config()
+    public void Write_rejects_non_positive_max_executions()
     {
         NodeSpec node = WriteNode() with
         {
-            Spec = new ExecutableSpec { Validate = new OutputValidation(ValidationPredicate.NonEmpty, null) },
+            Spec = new ExecutableSpec { MaxExecutions = 0 },
         };
 
         string[] errors = [.. Failures(WriteType, node)];
 
         Assert.Single(errors);
-        Assert.EndsWith("文件写入节点不启动执行，不能声明 Validate。", errors[0]);
+        Assert.EndsWith("MaxExecutions 必须是正整数。", errors[0]);
     }
 
     [Fact]

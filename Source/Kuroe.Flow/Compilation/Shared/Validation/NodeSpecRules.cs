@@ -19,6 +19,5 @@ public static partial class NodeSpecRules
         }
 
         node.CheckInterface(node.Type?.Shape, fail);
-        node.Spec?.Validate?.Check(fail);
     }
 }

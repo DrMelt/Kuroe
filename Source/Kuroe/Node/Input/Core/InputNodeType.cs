@@ -26,11 +26,9 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
     /// <summary>输入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => InputNodeTypes.Shape;
 
-    /// <summary>输入节点的类型规则：只以用户输入为产出，不接受执行方式与校验。</summary>
+    /// <summary>输入节点的类型规则：只以用户输入为产出。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
-        ExecutableSpec spec = node.Spec!;
-
         void Reject(bool condition, string message)
         {
             if (condition)
@@ -39,7 +37,6 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
             }
         }
 
-        Reject(spec.Validate is not null, "输入节点不启动执行，不能声明 Validate。");
         Reject(node.Outputs.Count > 1, "输入节点最多声明一个输出端口，回答写入该端口。");
         Reject(node.Outputs.Any(port => port.Trigger), "输入节点不启动执行，输出端口不能使用触发。");
     }

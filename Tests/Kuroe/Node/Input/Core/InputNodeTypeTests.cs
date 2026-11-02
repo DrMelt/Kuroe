@@ -47,20 +47,6 @@ public sealed class InputNodeTypeTests
         Assert.Empty(Failures(Node()));
 
     [Fact]
-    public void Execution_config_is_rejected()
-    {
-        NodeSpec node = Node(new ExecutableSpec
-        {
-            Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
-        });
-
-        string[] errors = [.. Failures(node)];
-
-        Assert.Single(errors);
-        Assert.EndsWith("输入节点不启动执行，不能声明 Validate。", errors[0]);
-    }
-
-    [Fact]
     public void More_than_one_output_port_is_rejected()
     {
         NodeSpec node = Node() with

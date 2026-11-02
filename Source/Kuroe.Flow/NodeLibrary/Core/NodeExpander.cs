@@ -121,7 +121,6 @@ internal static class NodeExpander
                 Spec = librarySpec with
                 {
                     Emission = node.Emission ?? librarySpec.Emission,
-                    Validate = node.Validate ?? librarySpec.Validate,
                     MaxExecutions = ResolveMaxExecutions(node.MaxExecutions, librarySpec.MaxExecutions),
                 },
                 Bindings = ResolveBindings(node.Bindings, env, scope, errors),

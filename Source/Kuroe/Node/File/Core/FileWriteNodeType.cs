@@ -21,7 +21,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
     /// <summary>文件写入节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;
 
-    /// <summary>文件写入节点的类型规则：一个内容 Text 输入加若干路径变量 Text 输入，输出可选，不接受执行方式与校验。</summary>
+    /// <summary>文件写入节点的类型规则：一个内容 Text 输入加若干路径变量 Text 输入，输出可选，不接受执行方式。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
         ExecutableSpec spec = node.Spec!;
@@ -33,8 +33,6 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
                 fail(scope.Node(node.Label.Value, message));
             }
         }
-
-        Reject(spec.Validate is not null, "文件写入节点不启动执行，不能声明 Validate。");
 
         IReadOnlySet<string> variablePorts = FilePathVariables.Validate(node, Parameters, message =>
             fail(scope.Node(node.Label.Value, message)));

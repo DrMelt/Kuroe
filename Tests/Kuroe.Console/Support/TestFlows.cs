@@ -159,7 +159,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>带校验的执行节点产出不含通过，任务停在阻塞，用于返工命令的装配。</summary>
+    /// <summary>执行节点声明输出端口但不交回，任务停在阻塞，用于返工命令的装配。</summary>
     public const string BlockingFlow = """
         {
           "Flows": [
@@ -172,7 +172,7 @@ public static class TestFlows
                   "Kind": "Container",
                   "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                     { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                    { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "Validate": { "Predicate": "TextContains", "Argument": "通过" }, "From": [ { "结论": "计划@结论" } ] }
+                    { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "计划@结论" } ] }
                   ]
                 }
               ]

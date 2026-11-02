@@ -526,6 +526,7 @@ public sealed partial class TaskAndReplTests
     public void Task_rework_resumes_a_blocked_task()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.BlockingFlow);
+        cli.Environment.Runner.SubmitsPorts = false;
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Blocked, cli.Environment.Snapshot(new TaskId(1)).State);

@@ -43,11 +43,10 @@ public sealed class NodeSpecTests
         Assert.Equal(new NodeKind("Executable"), new NodeSpec { Label = new NodeLabel("实施"), Type = Typed("Executable") }.Kind);
 
     [Fact]
-    public void Executable_defaults_without_validation_or_limit()
+    public void Executable_defaults_without_limit()
     {
         ExecutableSpec execution = new();
 
-        Assert.Null(execution.Validate);
         Assert.Null(execution.MaxExecutions);
     }
 

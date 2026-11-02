@@ -18,9 +18,11 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
     public static Task<ITaskPersistenceSession> CreateAsync(string root)
     {
         bool seedCatalog = !File.Exists(Path.Combine(root, ".kuroe", "catalog.json"));
+        TestEnvironment environment = TestEnvironment.CreateAt(root, SessionFlows, seedCatalog);
+        environment.Runner.SubmitsPorts = false;
 
         return Task.FromResult<ITaskPersistenceSession>(
-            new ConsoleTaskPersistenceSession(TestEnvironment.CreateAt(root, SessionFlows, seedCatalog)));
+            new ConsoleTaskPersistenceSession(environment));
     }
 
     public TaskId Submit(string title)

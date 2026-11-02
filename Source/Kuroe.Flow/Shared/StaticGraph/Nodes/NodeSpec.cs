@@ -62,9 +62,6 @@ public sealed record NodeSpec
     /// <summary>产出模式的覆盖声明：引用执行节点时可覆盖库定义的产出模式，展开后并入执行配置。容器不使用。</summary>
     public NodeEmission? Emission { get; init; }
 
-    /// <summary>输出校验的覆盖声明：引用执行节点时可覆盖库定义的校验，展开后并入执行配置。</summary>
-    public OutputValidation? Validate { get; init; }
-
     /// <summary>节点自身的执行或发布次数上限：执行节点为执行次数，容器为发布次数。未写时由展开解析。</summary>
     public int? MaxExecutions { get; init; }
 

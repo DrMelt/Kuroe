@@ -15,6 +15,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     /// <summary>单个执行的人为耗时，用于取消断言。</summary>
     public int DelayMs { get; set; } = 10;
 
+    /// <summary>是否交回声明端口，关闭用于制造未收口阻塞。</summary>
+    public bool SubmitsPorts { get; set; } = true;
+
     /// <summary>按声明的端口生成提交取值：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static Dictionary<string, PortValue> PortValuesFor(IReadOnlyList<Port> ports) =>
         ports.ToDictionary(
@@ -34,7 +37,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         await Task.Delay(DelayMs, cancellationToken);
 
         IReadOnlyList<Port> ports = input.RequiredPorts;
-        if (ports.Count > 0)
+        if (ports.Count > 0 && SubmitsPorts)
         {
             _ = PortSubmitter!.SubmitValues(execution, PortValuesFor(ports));
         }

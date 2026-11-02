@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>节点库引用在运行时展开为独立实例，库定义的输出校验在实例上生效。</summary>
+/// <summary>节点库引用在运行时展开为独立实例。</summary>
 public sealed class NodeLibraryRuntimeTests
 {
     [Fact]
@@ -20,19 +20,6 @@ public sealed class NodeLibraryRuntimeTests
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README", new FlowName("双线")));
 
         Assert.Equal(TaskState.Done, done.State);
-    }
-
-    [Theory]
-    [InlineData("修订产出不达标", TaskState.Blocked)]
-    [InlineData("修订产出已通过", TaskState.Done)]
-    public void Reference_inherits_library_validation(string output, TaskState expected)
-    {
-        using TestEnvironment environment = TestEnvironment.Create(ReferenceInheritFlow);
-        environment.Runner.PortValuesJson = $$"""{ "结论": "{{output}}" }""";
-
-        TaskSnapshot settled = environment.Settle(environment.Submit("补齐 README"));
-
-        Assert.Equal(expected, settled.State);
     }
 
     /// <summary>文件定义自定义节点时，流程仍可引用宿主提供的内置容器；落盘只写文件来源的节点定义。</summary>
@@ -109,34 +96,4 @@ public sealed class NodeLibraryRuntimeTests
         }
         """;
 
-    /// <summary>库执行定义带校验，引用处注入启动组与数据接线。</summary>
-    private const string ReferenceInheritFlow = """
-        {
-          "Nodes": [
-            {
-              "Name": "审查",
-              "Kind": "Llm",
-              "Outputs": [{ "Name": "结论", "Type": "Text" }],
-              "Validate": { "Predicate": "TextContains", "Argument": "通过" }
-            }
-          ],
-          "Flows": [
-            {
-              "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "目标": "@目标" } ] },
-                    { "Label": "审查实例", "Use": "审查", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
-                      "From": [ { "上下文": "计划@上下文" } ] }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """;
 }

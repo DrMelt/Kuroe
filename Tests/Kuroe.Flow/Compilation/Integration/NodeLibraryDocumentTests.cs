@@ -138,12 +138,11 @@ public sealed class NodeLibraryDocumentTests
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Spec = new ExecutableSpec() }],
             }));
 
-    /// <summary>库容器定义的输出必须有来源，且不能声明输出校验。</summary>
+    /// <summary>库容器定义的输出必须有来源。</summary>
     [Fact]
     public void Library_container_with_execution_fields_is_rejected() =>
         Assert.Equal(
             [
-                "节点库定义 干活组：库容器定义不声明 Validate，输出校验只属于执行节点。",
                 "节点库定义 干活组：输出端口 结论 必须写 Value 或 Ref。",
             ],
             LibraryErrors(new NodeSpec
@@ -152,7 +151,6 @@ public sealed class NodeLibraryDocumentTests
                 Label = new NodeLabel("干活组"),
                 Type = ContainerNodeTypes.Type,
                 Outputs = [new Port(new PortName("结论"), PortTypes.Text)],
-                Validate = new OutputValidation(ValidationPredicate.NonEmpty, null),
                 Nodes = [new NodeSpec { Name = new NodeName("干活"), Label = new NodeLabel("干活"), Type = LlmNodeTypes.Create(null), Inputs = [new InputPort(LlmNodeTypes.ModelPort, PortTypes.Text, null, "执行者", mode: PortMode.Constant)], Spec = new ExecutableSpec() }],
             }));
 
@@ -212,20 +210,12 @@ public sealed class NodeLibraryDocumentTests
     }
 
     [Fact]
-    public void Reference_executable_inherits_library_validate_and_injects_from()
+    public void Reference_executable_inherits_library_definition_and_injects_from()
     {
         FlowDefinition flow = Find(ReferenceInheritFlow, new FlowName("默认"));
         NodeSpec reviewed = flow.RootNode.Nodes![1];
-        Assert.Equal(ValidationPredicate.TextContains, reviewed.Spec!.Validate!.Predicate);
+        Assert.NotNull(reviewed.Spec);
         Assert.Equal("计划@上下文", Assert.Single(Assert.Single(reviewed.From).Links).Ref.Display);
-    }
-
-    [Fact]
-    public void Reference_validate_overrides_library_definition()
-    {
-        FlowDefinition flow = Find(ReferenceOverrideValidateFlow, new FlowName("默认"));
-        NodeSpec reviewed = flow.RootNode.Nodes![1];
-        Assert.Equal(ValidationPredicate.NonEmpty, reviewed.Spec!.Validate!.Predicate);
     }
 
     [Theory]
@@ -247,7 +237,6 @@ public sealed class NodeLibraryDocumentTests
     [InlineData(LeafWithInputs, "必须至少给出一组 From")]
 
     [InlineData(GroupReferenceWithFrom, "引用容器不能声明 From")]
-    [InlineData(GroupReferenceWithValidate, "引用节点组不能声明 Validate")]
     [InlineData(MemberFromOutOfScope, "From 引用的节点")]
     [InlineData(MemberUsesStart, "不在容器 交付 的作用域里")]
     [InlineData(MemberGroupOutsideScope, "From 引用的节点")]
@@ -689,15 +678,14 @@ public sealed class NodeLibraryDocumentTests
         }
         """;
 
-    /// <summary>库执行定义带校验，引用处注入启动组与数据接线。</summary>
+    /// <summary>库执行定义，引用处注入启动组与数据接线。</summary>
     private const string ReferenceInheritFlow = """
         {
           "Nodes": [
             {
               "Name": "审查",
               "Kind": "Llm",
-              "Outputs": [{ "Name": "结论", "Type": "Text" }],
-              "Validate": { "Predicate": "TextContains", "Argument": "通过" }
+              "Outputs": [{ "Name": "结论", "Type": "Text" }]
             }
           ],
           "Flows": [
@@ -719,37 +707,6 @@ public sealed class NodeLibraryDocumentTests
           ]
         }
         """;
-
-    /// <summary>引用侧显式声明校验时覆盖库定义。</summary>
-    private const string ReferenceOverrideValidateFlow = """"
-        {
-          "Nodes": [
-            {
-              "Name": "审查",
-              "Kind": "Llm",
-              "Outputs": [{ "Name": "结论", "Type": "Text" }],
-              "Validate": { "Predicate": "TextContains", "Argument": "通过" }
-            }
-          ],
-          "Flows": [
-            {
-              "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-                    { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
-                    { "Label": "审查实例", "Use": "审查", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ],
-                      "Validate": { "Predicate": "NonEmpty" } }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """";
 
     /// <summary>引用节点组不能声明 From，接线只属于执行节点。</summary>
     private const string GroupReferenceWithFrom = """"
@@ -781,37 +738,6 @@ public sealed class NodeLibraryDocumentTests
           ]
         }
         """";
-    /// <summary>引用节点组不能带输出校验，校验只属于执行节点。</summary>
-    private const string GroupReferenceWithValidate = """"
-        {
-          "Nodes": [
-            { "Name": "审查", "Kind": "Llm" },
-            {
-              "Name": "组",
-              "Kind": "Container",
-              "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-              "Nodes": [ { "Label": "甲", "Use": "审查", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } } ]
-            }
-          ],
-          "Flows": [
-            {
-              "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
-              "Nodes": [
-                {
-                  "Name": "整体",
-                  "Kind": "Container",
-                  "Nodes": [
-                    { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } },
-                    { "Label": "引用组", "Use": "组", "Validate": { "Predicate": "NonEmpty" } }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """";
-
     /// <summary>库容器成员执行节点的启动组来源必须落在容器作用域内。</summary>
     private const string MemberGroupOutsideScope = """"
         {

@@ -38,9 +38,6 @@ public sealed record InputPortDocument(
     string? Default = null,
     InputRole? Role = null);
 
-/// <summary>输出校验条目。</summary>
-public sealed record ValidationDocument(string Predicate, string? Argument);
-
 /// <summary>上游连接：目标输入端口与来源端口引用。</summary>
 public sealed record FromLinkDocument(string Input, string Ref);
 
@@ -55,9 +52,6 @@ public abstract record NodeDocument
 
     /// <summary>输入端口绑定：目标输入端口到来源引用文本。来源识别与 From 使用同一套作用域规则。</summary>
     public IReadOnlyDictionary<string, string>? Bindings { get; init; }
-
-    /// <summary>输出校验覆盖。</summary>
-    public ValidationDocument? Validate { get; init; }
 
     /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>
     public NodeEmission? Emission { get; init; }

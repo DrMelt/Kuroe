@@ -21,7 +21,7 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, IN
     /// <summary>文件读取节点类型的静态形状。</summary>
     public NodeTypeShape Shape => FileReadNodeTypes.Shape;
 
-    /// <summary>文件读取节点的类型规则：Path 的变量映射给出路径，其余输入只作触发，输出只承载读取内容，不接受执行方式与校验。</summary>
+    /// <summary>文件读取节点的类型规则：Path 的变量映射给出路径，其余输入只作触发，输出只承载读取内容，不接受执行方式。</summary>
     public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
     {
         ExecutableSpec spec = node.Spec!;
@@ -34,7 +34,6 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, IN
             }
         }
 
-        Reject(spec.Validate is not null, "文件读取节点不启动执行，不能声明 Validate。");
         Reject(!node.Inputs.Any(port => port.Type.Semantics == PortSemantics.Signal),
             "文件读取节点必须声明至少一个 Signal 输入端口作为触发。");
 

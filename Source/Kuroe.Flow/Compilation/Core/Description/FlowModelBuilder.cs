@@ -116,12 +116,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(from.ErrorsOrEmptyList);
         }
 
-        ErrorOr<OutputValidation?> validation = ToValidation(document.Validate);
-        if (validation.IsError)
-        {
-            errors.AddRange(validation.ErrorsOrEmptyList);
-        }
-
         ErrorOr<Dictionary<PortName, PortRef>?> bindings = ToBindings(document.Bindings);
         if (bindings.IsError)
         {
@@ -136,7 +130,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return NodeSpec.Reference(new NodeLabel(label), new NodeName(document.Use)) with
         {
             From = from.Value,
-            Validate = validation.Value,
             Emission = document.Emission,
             MaxExecutions = document.MaxExecutions,
             Bindings = bindings.Value,
@@ -198,12 +191,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             errors.AddRange(from.ErrorsOrEmptyList);
         }
 
-        ErrorOr<OutputValidation?> validation = ToValidation(document.Validate);
-        if (validation.IsError)
-        {
-            errors.AddRange(validation.ErrorsOrEmptyList);
-        }
-
         ErrorOr<Dictionary<PortName, PortRef>?> bindings = ToBindings(document.Bindings);
         if (bindings.IsError)
         {
@@ -241,14 +228,12 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             From = from.Value,
             Bindings = bindings.Value,
             Nodes = children,
-            Validate = validation.Value,
             MaxExecutions = shape.Organizes ? document.MaxExecutions : null,
             Spec = shape.Organizes
                 ? null
                 : new ExecutableSpec
                 {
                     Emission = document.Emission ?? NodeEmission.Repeated,
-                    Validate = validation.Value,
                     MaxExecutions = document.MaxExecutions,
                 },
         };
@@ -278,11 +263,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             if (document.Bindings is not null && scope.IsLibrary)
             {
                 Fail("库节点定义不接线，不能声明输入绑定。");
-            }
-
-            if (document.Validate is not null)
-            {
-                Fail("容器节点不是执行节点，不支持 Validate。");
             }
 
             if (document.Emission is not null)
@@ -505,27 +485,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         }
 
         return errors.Count > 0 ? errors : result;
-    }
-
-    private static ErrorOr<OutputValidation?> ToValidation(ValidationDocument? validation)
-    {
-        if (validation is null)
-        {
-            return (OutputValidation?)null;
-        }
-
-        if (string.IsNullOrWhiteSpace(validation.Predicate))
-        {
-            return Error.Validation(FlowErrorCodes.FlowNode, "Validate.Predicate 不能为空。");
-        }
-
-        string? matched = Enum.GetNames<ValidationPredicate>()
-            .FirstOrDefault(name => string.Equals(name, validation.Predicate, StringComparison.OrdinalIgnoreCase));
-
-        return matched is not null
-            ? new OutputValidation(Enum.Parse<ValidationPredicate>(matched), validation.Argument)
-            : Error.Validation(FlowErrorCodes.FlowNode,
-                $"Validate.Predicate 应为 NonEmpty、TextContains、TextNot、TextEquals 或 Pattern，收到 {validation.Predicate}。");
     }
 
     private static string? ToDescription(string? description) =>

@@ -1,4 +1,3 @@
-using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -14,15 +13,9 @@ public sealed class ExecutionLimitTests
     [Theory]
     [InlineData("failed")]
     [InlineData("uncollected")]
-    [InlineData("validation")]
     public void Exhausted_limit_blocks_and_rejects_rework(string reason)
     {
-        string flow = reason switch
-        {
-            "uncollected" => SingleNodeLimitFlow,
-            "validation" => ValidationFlow,
-            _ => FailingNodeFlow,
-        };
+        string flow = reason == "uncollected" ? SingleNodeLimitFlow : FailingNodeFlow;
 
         using TestEnvironment environment = TestEnvironment.Create(flow);
         switch (reason)
@@ -32,9 +25,6 @@ public sealed class ExecutionLimitTests
                 break;
             case "uncollected":
                 environment.Runner.SubmitsPorts = false;
-                break;
-            default:
-                environment.Runner.Reply = _ => "产出不达标";
                 break;
         }
 
@@ -103,33 +93,6 @@ public sealed class ExecutionLimitTests
             .Single(node => node.Label.Value == "继承干活").MaxExecutions);
     }
 
-    /// <summary>环迭代受上限约束：有环外终止时停在新版本之前，无终止时全部节点迭代到上限。</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Loop_iteration_stops_at_the_limit(bool terminates)
-    {
-        using TestEnvironment environment = TestEnvironment.Create(terminates ? LoopWithLimitFlow : LoopWithoutLimitFlow);
-        environment.Runner.Reply = execution => execution.Input.Node.Label.Value == "审查" ? "审查通过" : "产出";
-        environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value switch
-        {
-            "审查" => """{"结论": "审查通过"}""",
-            _ => null,
-        };
-
-        TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot done = environment.Settle(id);
-
-        Assert.Equal(TaskState.Done, done.State);
-        int expected = terminates ? 1 : 5;
-        Assert.Equal(expected, done.Executables.Single(node => node.Executable.Label == new NodeLabel("修订")).Executions.Count);
-        Assert.Equal(expected, done.Executables.Single(node => node.Executable.Label == new NodeLabel("交付")).Executions.Count);
-        if (!terminates)
-        {
-            Assert.Equal(5, done.Executables.Single(node => node.Executable.Label == new NodeLabel("审查")).Executions.Count);
-        }
-    }
-
     /// <summary>恒失败的单个节点，满 2 次后停在阻塞。</summary>
     private const string FailingNodeFlow = """
         {
@@ -147,46 +110,6 @@ public sealed class ExecutionLimitTests
           "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
             { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
               { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 2, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
-            ] }
-          ] } ]
-        }
-        """;
-
-    /// <summary>校验永远不通过的节点，重复到上限后停在阻塞。</summary>
-    private const string ValidationFlow = """
-        {
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ],
-                "Validate": { "Predicate": "TextContains", "Argument": "通过" } }
-            ] }
-          ] } ]
-        }
-        """;
-
-    /// <summary>修订被计划与审查交替驱动，执行满 1 次即达上限，不再被审查新版本重启。</summary>
-    private const string LoopWithLimitFlow = """
-        {
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 1, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
-              { "Name": "审查", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "审查@结论" } ] }
-            ] }
-          ] } ]
-        }
-        """;
-
-    /// <summary>无环外终止的互驱动环：修订被计划与审查交替驱动，全部节点迭代到显式上限后任务收敛为完成。</summary>
-    private const string LoopWithoutLimitFlow = """
-        {
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
-            { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-              { "Name": "计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-              { "Name": "修订", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "计划@结论" }, { "结论": "审查@结论" } ] },
-              { "Name": "审查", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "MaxExecutions": 5, "From": [ { "结论": "修订@结论" } ], "Validate": { "Predicate": "TextContains", "Argument": "通过" } },
-              { "Name": "交付", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "结论": "审查@结论" } ] }
             ] }
           ] } ]
         }
