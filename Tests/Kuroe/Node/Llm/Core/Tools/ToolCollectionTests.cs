@@ -110,6 +110,21 @@ public sealed class ToolCollectionTests
         Assert.Empty(built);
     }
 
+    [Fact]
+    public async Task Tool_invocation_reports_progress_only_while_running()
+    {
+        ProcessJournal journal = new();
+        List<string> progress = [];
+        journal.ProgressReported += progress.Add;
+        ToolCollection tools = new([new FakeTool("GetLocalTime")], new ToolJson());
+        AIFunction function = Assert.IsType<AIFunction>(
+            tools.Build(journal, [new ToolPath("GetLocalTime")]).Single(), exactMatch: false);
+
+        await function.InvokeAsync([]);
+
+        Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
+    }
+
     private static ProcessJournal Journal() => new();
 
     private sealed class FakeTool(params string[] paths) : ITool

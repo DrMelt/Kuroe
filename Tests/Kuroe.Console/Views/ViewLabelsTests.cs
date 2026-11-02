@@ -57,6 +57,7 @@ public sealed class ViewLabelsTests
     {
         Assert.Equal("执行中", ViewLabels.State(Execution("")));
         Assert.Equal("执行中（调用工具 GetTime）", ViewLabels.State(Execution("调用工具 GetTime")));
+        Assert.Equal("执行中（输出）", ViewLabels.State(Execution("输出")));
         Assert.Equal("已完成", ViewLabels.State(Execution("调用工具 GetTime") with { State = ExecutionState.Succeeded }));
     }
 

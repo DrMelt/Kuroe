@@ -23,6 +23,7 @@ internal sealed class ProcessJournal : IProcessJournal
     private readonly Lock _gate = new();
     private readonly List<JournalEntry> _entries = [];
     private int _dropped;
+    private string _progress = string.Empty;
 
     /// <summary>流式内容追加后给出该增量与种类。</summary>
     public event Action<ProcessContent>? ContentAppended;
@@ -33,20 +34,24 @@ internal sealed class ProcessJournal : IProcessJournal
     /// <summary>执行进度变化后给出进度文本。</summary>
     public event Action<string>? ProgressReported;
 
-    /// <summary>追加一条发给模型的输入。</summary>
-    public void AppendPrompt(string input) =>
+    /// <summary>追加一条发给模型的输入，随后清空当前活动。</summary>
+    public void AppendPrompt(string input)
+    {
         Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, PromptLabel, input));
+        ReportProgress(string.Empty);
+    }
 
     /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
     public void AppendContent(ProcessContentKind kind, string delta)
     {
         if (AppendDelta(LabelOf(kind), delta))
         {
+            ReportProgress(ProgressOf(kind));
             ContentAppended?.Invoke(new ProcessContent(kind, delta));
         }
     }
 
-    /// <summary>追加一次工具调用，随后播发进度与条目。</summary>
+    /// <summary>追加一次工具调用，随后播发条目。</summary>
     public void AppendToolCall(ToolCallRecord call)
     {
         string invocation = call.Arguments.Length == 0
@@ -62,8 +67,23 @@ internal sealed class ProcessJournal : IProcessJournal
             $"{invocation}\n{outcome}");
 
         Append(entry);
-        ProgressReported?.Invoke($"调用工具 {call.Name}");
         EntryAppended?.Invoke(entry);
+    }
+
+    /// <summary>报告当前活动，文本未变化时不播发。</summary>
+    public void ReportProgress(string text)
+    {
+        lock (_gate)
+        {
+            if (_progress == text)
+            {
+                return;
+            }
+
+            _progress = text;
+        }
+
+        ProgressReported?.Invoke(text);
     }
 
     /// <summary>追加一条本轮未计入上下文的说明。</summary>
@@ -99,6 +119,14 @@ internal sealed class ProcessJournal : IProcessJournal
     {
         ProcessContentKind.Reply => ReplyLabel,
         ProcessContentKind.Reasoning => ReasoningLabel,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    /// <summary>内容种类对应的当前活动文本。</summary>
+    private static string ProgressOf(ProcessContentKind kind) => kind switch
+    {
+        ProcessContentKind.Reply => "输出",
+        ProcessContentKind.Reasoning => "思考",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

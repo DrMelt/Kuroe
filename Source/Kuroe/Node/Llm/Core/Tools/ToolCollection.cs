@@ -71,22 +71,29 @@ public sealed class ToolCollection
         protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
         {
             string parameters = json.Describe(arguments);
-
-            ErrorOr<string> outcome;
+            journal.ReportProgress($"调用工具 {declaration.Definition.Path.Value}");
             try
             {
-                outcome = declaration.Invoke(new ToolArguments(arguments));
+                ErrorOr<string> outcome;
+                try
+                {
+                    outcome = declaration.Invoke(new ToolArguments(arguments));
+                }
+                catch (Exception ex)
+                {
+                    Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
+                    throw;
+                }
+
+                string result = ToolResult.Render(outcome);
+                Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, result, outcome.IsError));
+
+                return new ValueTask<object?>(result);
             }
-            catch (Exception ex)
+            finally
             {
-                Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, $"{ex.GetType().Name}: {ex.Message}", true));
-                throw;
+                journal.ReportProgress(string.Empty);
             }
-
-            string result = ToolResult.Render(outcome);
-            Record(new ToolCallRecord(declaration.Definition.Path.Value, parameters, result, outcome.IsError));
-
-            return new ValueTask<object?>(result);
         }
 
         /// <summary>一次调用落进过程记录，过程条目由执行器播发。</summary>

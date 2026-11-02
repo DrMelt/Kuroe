@@ -70,7 +70,10 @@ public sealed class KuroeInfoToolTests
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.DelayMs = 60_000;
         environment.Runner.Emits = (_, journal) =>
+        {
+            journal.ReportProgress("调用工具 file/ReadFile");
             journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
+        };
 
         TaskId id = environment.Submit("做一个测试任务");
         TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables
@@ -89,6 +92,36 @@ public sealed class KuroeInfoToolTests
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
         Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetTask", ("taskId", id.Value.ToString())));
+    }
+
+    [Fact]
+    public void Execution_state_replaces_tool_progress_with_output()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.DelayMs = 60_000;
+        environment.Runner.Emits = (_, journal) =>
+        {
+            journal.ReportProgress("调用工具 file/ReadFile");
+            journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
+            journal.AppendContent(ProcessContentKind.Reply, "答复");
+        };
+
+        TaskId id = environment.Submit("做一个测试任务");
+        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables
+            .SelectMany(node => node.Executions)
+            .Any(execution => execution.State == ExecutionState.Running
+                && execution.Progress == "输出"));
+
+        ExecutionId executionId = running.Executables
+            .SelectMany(node => node.Executions)
+            .First(execution => execution.State == ExecutionState.Running)
+            .Id;
+
+        TaskKuroeInfoTool tool = new(environment.TaskReader);
+        string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));
+
+        Assert.Contains("执行中（输出）", output);
+        Assert.DoesNotContain("执行中（调用工具", output);
     }
 
     [Fact]

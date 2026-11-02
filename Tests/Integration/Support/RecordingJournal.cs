@@ -12,6 +12,7 @@ internal sealed class RecordingJournal : IProcessJournal
 
     private readonly Lock _gate = new();
     private readonly List<JournalEntry> _entries = [];
+    private string _progress = string.Empty;
 
     /// <summary>流式内容追加后给出该增量与种类。</summary>
     public event Action<ProcessContent>? ContentAppended;
@@ -31,11 +32,14 @@ internal sealed class RecordingJournal : IProcessJournal
         }
     }
 
-    /// <summary>追加一条发给模型的输入。</summary>
-    public void AppendPrompt(string input) =>
+    /// <summary>追加一条发给模型的输入，随后清空当前活动。</summary>
+    public void AppendPrompt(string input)
+    {
         Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "输入", input));
+        ReportProgress(string.Empty);
+    }
 
-    /// <summary>追加一次工具调用，随后播发进度与条目。</summary>
+    /// <summary>追加一次工具调用，随后播发条目。</summary>
     public void AppendToolCall(string name, string arguments, string outcome, bool failed)
     {
         string invocation = arguments.Length == 0 ? name : $"{name} {arguments}";
@@ -47,8 +51,23 @@ internal sealed class RecordingJournal : IProcessJournal
             $"{invocation}\n{result}");
 
         Append(entry);
-        ProgressReported?.Invoke($"调用工具 {name}");
         EntryAppended?.Invoke(entry);
+    }
+
+    /// <summary>报告当前活动，文本未变化时不播发。</summary>
+    public void ReportProgress(string text)
+    {
+        lock (_gate)
+        {
+            if (_progress == text)
+            {
+                return;
+            }
+
+            _progress = text;
+        }
+
+        ProgressReported?.Invoke(text);
     }
 
     /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
@@ -59,10 +78,10 @@ internal sealed class RecordingJournal : IProcessJournal
             return;
         }
 
-        string label = kind switch
+        (string label, string progress) = kind switch
         {
-            ProcessContentKind.Reply => ReplyLabel,
-            ProcessContentKind.Reasoning => ReasoningLabel,
+            ProcessContentKind.Reply => (ReplyLabel, "输出"),
+            ProcessContentKind.Reasoning => (ReasoningLabel, "思考"),
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
 
@@ -79,6 +98,7 @@ internal sealed class RecordingJournal : IProcessJournal
             }
         }
 
+        ReportProgress(progress);
         ContentAppended?.Invoke(new ProcessContent(kind, delta));
     }
 

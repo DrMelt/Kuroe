@@ -67,6 +67,20 @@ public sealed class ExecutionTests
     }
 
     [Fact]
+    public void Progress_clearing_reaches_snapshot()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        TestJournal journal = new([]);
+        execution.AttachJournal(journal);
+        execution.MarkRunning();
+
+        journal.EmitProgress("调用工具 GetLocalTime");
+        journal.EmitProgress(string.Empty);
+
+        Assert.Equal(string.Empty, execution.Snapshot().Progress);
+    }
+
+    [Fact]
     public void Settled_execution_stops_events_and_keeps_journal()
     {
         Execution execution = new(new ExecutionId(1), Input());

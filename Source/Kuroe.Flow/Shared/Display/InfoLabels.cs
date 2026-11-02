@@ -21,7 +21,7 @@ public static class InfoLabels
         _ => state.ToString(),
     };
 
-    /// <summary>执行状态的展示名，未收口时附上过程摘要。</summary>
+    /// <summary>执行状态的展示名，未收口时附当前活动。</summary>
     public static string State(ExecutionSnapshot execution) =>
         execution.State.IsSettled() || execution.Progress.Length == 0
             ? execution.State.Label()

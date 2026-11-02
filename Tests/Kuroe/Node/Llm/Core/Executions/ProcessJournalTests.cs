@@ -70,7 +70,7 @@ public sealed class ProcessJournalTests
     }
 
     [Fact]
-    public void Tool_call_is_recorded_and_broadcast()
+    public void Tool_call_is_recorded_and_broadcast_without_progress()
     {
         List<JournalEntry> entries = [];
         List<string> progress = [];
@@ -86,7 +86,37 @@ public sealed class ProcessJournalTests
         Assert.Equal(JournalLevel.Information, entry.Level);
         Assert.Equal("GetLocalTime {}\n结果 2026-10-18 19:10:48", entry.Text);
         Assert.Equal([entry], entries);
-        Assert.Equal(["调用工具 GetLocalTime"], progress);
+        Assert.Empty(progress);
+    }
+
+    [Fact]
+    public void Progress_is_broadcast_only_when_it_changes()
+    {
+        List<string> progress = [];
+        ProcessJournal journal = new();
+        journal.ProgressReported += progress.Add;
+
+        journal.ReportProgress("调用工具 GetLocalTime");
+        journal.ReportProgress("调用工具 GetLocalTime");
+        journal.ReportProgress(string.Empty);
+        journal.ReportProgress(string.Empty);
+
+        Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
+    }
+
+    [Fact]
+    public void Reply_and_reasoning_content_report_progress()
+    {
+        List<string> progress = [];
+        ProcessJournal journal = new();
+        journal.ProgressReported += progress.Add;
+
+        journal.AppendContent(ProcessContentKind.Reply, "甲");
+        journal.AppendContent(ProcessContentKind.Reply, "乙");
+        journal.AppendContent(ProcessContentKind.Reasoning, "想");
+        journal.AppendContent(ProcessContentKind.Reply, "丙");
+
+        Assert.Equal(["输出", "思考", "输出"], progress);
     }
 
     [Fact]
@@ -127,6 +157,19 @@ public sealed class ProcessJournalTests
         Assert.Empty(contents);
         Assert.Empty(entries);
         Assert.Empty(progress);
+    }
+
+    [Fact]
+    public void Prompt_clears_progress()
+    {
+        List<string> progress = [];
+        ProcessJournal journal = new();
+        journal.ProgressReported += progress.Add;
+
+        journal.AppendContent(ProcessContentKind.Reply, "答复");
+        journal.AppendPrompt("问题");
+
+        Assert.Equal(["输出", string.Empty], progress);
     }
 
     [Fact]
