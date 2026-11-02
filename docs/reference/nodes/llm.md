@@ -1,0 +1,56 @@
+# Llm
+
+`Kind: Llm` 是唯一调用模型的节点类型，派发执行并按端口交回产出。
+
+## 端口
+
+- 必须声明静态输入端口 `MODEL_NAME`，类型 `Text`，模式 `Constant`，角色 `Configuration`。标准写法是从开始端口绑定宿主输入 `MODEL`，见[模型接入](../../usage/模型接入.md)。
+- 输入与输出端口取 `Text`、`Context` 与 `Signal`。`Signal` 未写 `Mode` 时默认 `Trigger`，其他类型默认 `Plain`。
+- `Context` 输入置于目标输入最前。`Context` 输出由来源透传，不需要交回。
+- `Llm` 接受 `From` 引入的未声明 `Text` 输入。
+
+## 类型参数
+
+| 参数           | 类型     | 含义                                                                    |
+| -------------- | -------- | ----------------------------------------------------------------------- |
+| `Prompt`       | string   | 本次执行的要求，与轮次一起构成本轮指令                                  |
+| `Tools`        | string[] | 工具白名单，按工具路径前缀匹配，见[工具配置](../工具配置.md#工具白名单) |
+| `SystemPrompt` | string[] | 恒定系统指令块，按序拼接置于请求最前                                    |
+| `ToolPorts`    | object   | 工具路径变量到输入端口的映射，见[工具变量](../流程定义.md#工具变量)     |
+
+`SystemPrompt` 的内容必须恒定，才能命中服务商前缀缓存。空白块在导入时报错。
+
+## 执行
+
+节点在静态输入就绪或有 `From` 新产出时启动。`Prompt` 写在指令最前，第 2 轮起追加轮次说明。`Emission: Once` 的节点首次成功发布后冻结，`Repeated` 节点逐次发布；`MaxExecutions` 未写时为 100。
+
+节点结束时经契约工具 `SubmitPortValues` 交回动态端口与由执行产出的常量端口。未交回时同一执行内追问最多两次，仍缺则停在阻塞待返工。`GetStatus` 与 `ReportCannotComplete` 始终可用，见[契约工具](../tools/contract.md)。
+
+## 工具
+
+`Tools` 只放行写出的路径子树，未写时不给出白名单内的工具，契约工具仍会附上。被放行且带路径变量的工具必须用 `ToolPorts` 完整映射，否则导入报错。工具分组与函数见[内置工具](../tools/index.md)。
+
+```json
+"Inputs": [{ "Name": "任务路径", "Type": "Text", "Mode": "Constant" }],
+"Bindings": { "任务路径": "Start@TASK_WORK_PATH" },
+"Tools": ["file/read", "GetLocalTime"],
+"ToolPorts": { "file/read": { "root": "任务路径" } }
+```
+
+## 示例
+
+```json
+{
+  "Name": "撰写",
+  "Kind": "Llm",
+  "Emission": "Once",
+  "Prompt": "按目标撰写正文。",
+  "SystemPrompt": ["回答使用简体中文。"],
+  "Inputs": [
+    { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+    { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+  ],
+  "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+  "Outputs": [{ "Name": "正文", "Type": "Text", "Mode": "Constant" }]
+}
+```

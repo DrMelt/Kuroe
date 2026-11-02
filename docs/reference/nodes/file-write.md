@@ -1,0 +1,42 @@
+# 文件写入
+
+`Kind: FileWrite` 不启动执行。把唯一未被映射的内容 `Text` 输入覆盖写入按路径变量解析的 `Path`。
+
+## 类型参数
+
+| 参数        | 类型   | 含义                                                           |
+| ----------- | ------ | -------------------------------------------------------------- |
+| `Path`      | string | 文件路径，必填，可含 `{变量}` 占位符                           |
+| `Variables` | object | 路径变量名到 `Text` 输入端口的映射，与 `Path` 的占位符一一对应 |
+| `MaxChars`  | int    | 单次写入的字符上限，未写时不限制，0 不限制，负数在导入时报错   |
+
+## 端口
+
+- `Inputs` 恰好声明一个未被映射的内容 `Text` 端口，写入内容取自它。
+- 路径变量端口可以多个，`Signal` 触发端口可以多个。
+- `Outputs` 可省略，或声明一个端口：`Text` 给出写入内容，`Signal` 只表示写入完成。
+
+## 写入
+
+路径变量由静态输入或上游取值给出，解析结果必须落在工作区根内。路径越界、目标是目录、内容超过 `MaxChars` 或写入失败时停在阻塞。
+
+写入覆盖整个文件，父目录缺失时自动创建。文件按 UTF-8 写入，不带 BOM。
+
+## 示例
+
+```json
+{
+  "Name": "保存定稿",
+  "Kind": "FileWrite",
+  "Path": "{root}/定稿.md",
+  "Variables": { "root": "TASK_WORK_PATH" },
+  "Inputs": [
+    { "Name": "正文", "Type": "Text", "Mode": "Constant", "Role": "Content" },
+    { "Name": "TASK_WORK_PATH", "Type": "Text", "Mode": "Constant" }
+  ],
+  "Bindings": { "正文": "校对@定稿", "TASK_WORK_PATH": "Start@TASK_WORK_PATH" },
+  "Outputs": [{ "Name": "完成", "Type": "Signal" }]
+}
+```
+
+路径变量与工具变量的完整规则见[工具变量](../流程定义.md#工具变量)，任务目录见[安装与运行](../../usage/安装与运行.md#任务目录)。
