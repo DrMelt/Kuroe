@@ -4,13 +4,18 @@ using Kuroe.Flow.Compilation.Shared;
 namespace Kuroe.Flow.Json.Files;
 
 /// <summary>描述文档到文件形状的写出：只映射字段，不依赖模型与类型目录。</summary>
-static class FlowDocumentWriter
+static class FlowFileWriter
 {
-    /// <summary>把描述文档写成文件形状。</summary>
-    public static FlowFileDto Write(FlowDocument document) => new()
+    /// <summary>把节点定义写成节点库文件形状。</summary>
+    public static NodeFileDto WriteNodes(IReadOnlyList<NodeDefinitionDocument> nodes) => new()
     {
-        Nodes = [.. document.Nodes.Select(WriteDefinition)],
-        Flows = [.. document.Flows.Select(WriteFlow)],
+        Nodes = [.. nodes.Select(WriteDefinition)],
+    };
+
+    /// <summary>把流程描述写成流程文件形状。</summary>
+    public static FlowFileDto WriteFlows(IReadOnlyList<FlowDocumentFlow> flows) => new()
+    {
+        Flows = [.. flows.Select(WriteFlow)],
     };
 
     private static FlowDto WriteFlow(FlowDocumentFlow flow) => new()

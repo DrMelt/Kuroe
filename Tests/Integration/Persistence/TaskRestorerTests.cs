@@ -65,7 +65,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 
         return new TaskCheckpoint(
             new TaskIdentity(id, "恢复任务", at, at),
-            new FlowSnapshot(new FlowName("默认"), """{"Flows":[]}"""),
+            new FlowSnapshot(new FlowName("默认"), """{"Nodes":[]}""", """{"Flows":[]}"""),
             new TaskStartSnapshot(
                 StartInputs.Single(target, "目标内容"),
                 new Dictionary<PortName, string> { [target] = "目标内容" }),

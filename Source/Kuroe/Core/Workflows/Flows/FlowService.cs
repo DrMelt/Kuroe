@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -130,23 +131,37 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 return [FlowErrors.FlowNotFound(name.Value)];
             }
 
-            ErrorOr<string> text = _store.Render(new FlowDocument(_document.Nodes, [flow]));
+            ErrorOr<string> nodes = _store.RenderNodes(_document.Nodes);
+            if (nodes.IsError)
+            {
+                return nodes.ErrorsOrEmptyList;
+            }
 
-            return text.IsError ? text.ErrorsOrEmptyList : new FlowSnapshot(name, text.Value);
+            ErrorOr<string> text = _store.RenderFlows([flow]);
+
+            return text.IsError ? text.ErrorsOrEmptyList : new FlowSnapshot(name, nodes.Value, text.Value);
         }
     }
 
     ErrorOr<CompiledFlow> IFlowSnapshotCompiler.Compile(FlowSnapshot snapshot)
     {
-        ErrorOr<FlowDocument> document = _store.ReadText(snapshot.Document);
-        if (document.IsError)
+        ErrorOr<IReadOnlyList<NodeDefinitionDocument>> nodes = _store.ReadNodesText(snapshot.Nodes);
+        if (nodes.IsError)
         {
             return [Error.Failure(
                 FlowErrorCodes.CheckpointFlowSnapshot,
-                $"流程快照不合法：{document.FirstError.Description}")];
+                $"流程快照的节点库不合法：{nodes.FirstError.Description}")];
         }
 
-        ErrorOr<CompileResult> compiled = Compile(document.Value, _builtins, _compiler);
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> flows = _store.ReadFlowsText(snapshot.Flow);
+        if (flows.IsError)
+        {
+            return [Error.Failure(
+                FlowErrorCodes.CheckpointFlowSnapshot,
+                $"流程快照的流程不合法：{flows.FirstError.Description}")];
+        }
+
+        ErrorOr<CompileResult> compiled = Compile(new FlowDocument(nodes.Value, flows.Value), _builtins, _compiler);
         if (compiled.IsError)
         {
             return compiled.ErrorsOrEmptyList;
@@ -159,7 +174,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             : flow;
     }
 
-    /// <summary>从文件导入流程：严格模式任一流程不合法即整体不生效；宽容模式只保存可编译流程，丢弃不可编译流程并逐条说明。</summary>
+    /// <summary>从文件导入：按顶层字段判定导入节点库还是流程。严格模式任一流程不合法即整体不生效；宽容模式只保存可编译流程。</summary>
     public ErrorOr<FlowImport> Import(string source)
     {
         ErrorOr<string> resolved = _store.Resolve(source);
@@ -168,33 +183,104 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             return resolved.ErrorsOrEmptyList;
         }
 
-        ErrorOr<FlowDocument> incoming = _store.Read(resolved.Value);
+        ErrorOr<FlowImportFile> incoming = _store.ReadFile(resolved.Value);
         if (incoming.IsError)
         {
             return incoming.ErrorsOrEmptyList;
         }
 
-        return _tolerateFailures
-            ? ImportTolerantly(resolved.Value, incoming.Value)
-            : ImportStrictly(resolved.Value, incoming.Value);
+        return incoming.Value switch
+        {
+            NodeLibraryImportFile file => ImportNodes(file),
+            FlowDefinitionsImportFile file => _tolerateFailures
+                ? ImportFlowsTolerantly(file)
+                : ImportFlowsStrictly(file),
+            _ => throw new InvalidOperationException($"不认识的导入文件 {incoming.Value.GetType().Name}。"),
+        };
     }
 
-    /// <summary>严格导入：导入文件与合并结果都必须整体编译通过。</summary>
-    private ErrorOr<FlowImport> ImportStrictly(string source, FlowDocument incoming)
+    /// <summary>导入节点库：节点库本身必须合法，且合并后不能破坏当前可用的流程。</summary>
+    private ErrorOr<FlowImport> ImportNodes(NodeLibraryImportFile file)
     {
-        ErrorOr<CompiledDocument> checkedStandalone = _compiler.Compile(incoming, _builtins);
-        if (checkedStandalone.IsError)
+        lock (_gate)
         {
-            return [.. checkedStandalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
+            List<Error> duplicates =
+            [
+                .. file.Nodes
+                    .GroupBy(node => node.Name)
+                    .Where(group => group.Count() > 1)
+                    .SelectMany(group => group.Skip(1).Select(node =>
+                        Error.Validation(FlowErrorCodes.FlowNode, $"节点库定义 {node.Name}：节点名重复。"))),
+            ];
+            if (duplicates.Count > 0)
+            {
+                return duplicates;
+            }
+
+            List<NodeDefinitionDocument> nodes = MergeByName(_document.Nodes, file.Nodes, node => node.Name);
+            ErrorOr<CompiledDocument> library = _compiler.Compile(new FlowDocument(nodes, []), _builtins);
+            if (library.IsError)
+            {
+                return library.ErrorsOrEmptyList;
+            }
+
+            ErrorOr<CompileResult> compiled = Compile(new FlowDocument(nodes, _document.Flows), _builtins, _compiler);
+            if (compiled.IsError)
+            {
+                return compiled.ErrorsOrEmptyList;
+            }
+
+            if (compiled.Value.Failures.Count > 0)
+            {
+                if (!_tolerateFailures)
+                {
+                    return [.. compiled.Value.Failures.SelectMany(failure => failure.Errors)];
+                }
+
+                HashSet<FlowName> available = [.. _compiled.Select(flow => flow.Model.Name)];
+                List<FlowFailure> broken =
+                    [.. compiled.Value.Failures.Where(failure => available.Contains(failure.Name))];
+                if (broken.Count > 0)
+                {
+                    return [.. broken.SelectMany(failure => failure.Errors)];
+                }
+            }
+
+            List<string> notes =
+            [
+                .. file.Nodes.Select(node => _document.Nodes.Any(existing => existing.Name == node.Name)
+                    ? $"覆盖节点 {node.Name}"
+                    : $"新增节点 {node.Name}"),
+            ];
+
+            ErrorOr<Success> saved = _store.SaveNodes(nodes);
+            if (saved.IsError)
+            {
+                return saved.ErrorsOrEmptyList;
+            }
+
+            _document = new FlowDocument(nodes, _document.Flows);
+            _compiled = compiled.Value.Flows;
+            _failures = compiled.Value.Failures;
+
+            return new FlowImport(file.Source, [], [.. file.Nodes.Select(node => new NodeName(node.Name))], notes);
+        }
+    }
+
+    /// <summary>严格导入流程：合并节点库后的全部流程必须整体编译通过。</summary>
+    private ErrorOr<FlowImport> ImportFlowsStrictly(FlowDefinitionsImportFile file)
+    {
+        List<Error> duplicates = [.. Duplicated(file.Flows)];
+        if (duplicates.Count > 0)
+        {
+            return duplicates;
         }
 
         lock (_gate)
         {
-            List<NodeDefinitionDocument> nodes = MergeByName(_document.Nodes, incoming.Nodes, node => node.Name);
-            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, incoming.Flows, flow => flow.Name);
-            FlowDocument merged = new(nodes, flows);
-
-            ErrorOr<CompiledDocument> compiled = _compiler.Compile(merged, _builtins);
+            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, file.Flows, flow => flow.Name);
+            ErrorOr<CompiledDocument> compiled =
+                _compiler.Compile(new FlowDocument(_document.Nodes, flows), _builtins);
             if (compiled.IsError)
             {
                 return compiled.ErrorsOrEmptyList;
@@ -202,52 +288,48 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
             List<string> notes =
             [
-                .. incoming.Flows.Select(flow => _document.Flows.Any(existing => existing.Name == flow.Name)
+                .. file.Flows.Select(flow => _document.Flows.Any(existing => existing.Name == flow.Name)
                     ? $"覆盖流程 {flow.Name}"
                     : $"新增流程 {flow.Name}"),
-                .. incoming.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
             ];
 
-            ErrorOr<Success> saved = _store.Save(merged);
+            ErrorOr<Success> saved = _store.SaveFlows(flows);
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;
             }
 
-            _document = merged;
+            _document = new FlowDocument(_document.Nodes, flows);
             _compiled = compiled.Value.Flows;
             _failures = [];
 
-            return new FlowImport(source, [.. incoming.Flows.Select(flow => new FlowName(flow.Name))], notes);
+            return new FlowImport(
+                file.Source,
+                [.. file.Flows.Select(flow => new FlowName(flow.Name))],
+                [],
+                notes);
         }
     }
 
-    /// <summary>宽容导入：节点库必须整体合法；只合并可编译流程，不可编译流程丢弃并给出原因。</summary>
-    private ErrorOr<FlowImport> ImportTolerantly(string source, FlowDocument incoming)
+    /// <summary>宽容导入流程：按当前节点库只合并可编译流程，不可编译流程丢弃并给出原因。</summary>
+    private ErrorOr<FlowImport> ImportFlowsTolerantly(FlowDefinitionsImportFile file)
     {
-        ErrorOr<CompiledDocument> library = _compiler.Compile(new FlowDocument(incoming.Nodes, []), _builtins);
-        if (library.IsError)
-        {
-            return library.ErrorsOrEmptyList;
-        }
-
-        ErrorOr<CompileResult> checkedStandalone = Compile(incoming, _builtins, _compiler);
-        if (checkedStandalone.IsError)
-        {
-            return [.. checkedStandalone.ErrorsOrEmptyList, FlowErrors.ImportStandalone()];
-        }
-
-        HashSet<FlowName> accepted = [.. checkedStandalone.Value.Flows.Select(flow => flow.Model.Name)];
-        List<FlowDocumentFlow> acceptedFlows =
-            [.. incoming.Flows.Where(flow => accepted.Contains(new FlowName(flow.Name.Trim())))];
-
         lock (_gate)
         {
-            List<NodeDefinitionDocument> nodes = MergeByName(_document.Nodes, incoming.Nodes, node => node.Name);
-            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, acceptedFlows, flow => flow.Name);
-            FlowDocument merged = new(nodes, flows);
+            ErrorOr<CompileResult> checkedIncoming =
+                Compile(new FlowDocument(_document.Nodes, file.Flows), _builtins, _compiler);
+            if (checkedIncoming.IsError)
+            {
+                return checkedIncoming.ErrorsOrEmptyList;
+            }
 
-            ErrorOr<CompileResult> compiled = Compile(merged, _builtins, _compiler);
+            HashSet<FlowName> accepted = [.. checkedIncoming.Value.Flows.Select(flow => flow.Model.Name)];
+            List<FlowDocumentFlow> acceptedFlows =
+                [.. file.Flows.Where(flow => accepted.Contains(new FlowName(flow.Name.Trim())))];
+
+            List<FlowDocumentFlow> flows = MergeByName(_document.Flows, acceptedFlows, flow => flow.Name);
+            ErrorOr<CompileResult> compiled =
+                Compile(new FlowDocument(_document.Nodes, flows), _builtins, _compiler);
             if (compiled.IsError)
             {
                 return compiled.ErrorsOrEmptyList;
@@ -269,31 +351,26 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                 .. acceptedFlows.Select(flow => _document.Flows.Any(existing => existing.Name.Trim() == flow.Name.Trim())
                     ? $"覆盖流程 {flow.Name.Trim()}"
                     : $"新增流程 {flow.Name.Trim()}"),
-                .. incoming.Nodes.Select(node => $"节点库 {node.Name} 已并入。"),
-                .. checkedStandalone.Value.Failures.Select(failure =>
+                .. checkedIncoming.Value.Failures.Select(failure =>
                     _document.Flows.Any(existing => existing.Name.Trim() == failure.Name.Value)
                         ? $"流程 {failure.Name.Value} 未导入：{Reason(failure)}；保留原流程。"
                         : $"流程 {failure.Name.Value} 未导入：{Reason(failure)}"),
             ];
 
-            ErrorOr<Success> saved = Result.Success;
-            if (acceptedFlows.Count > 0 || incoming.Nodes.Count > 0)
-            {
-                saved = _store.Save(merged);
-            }
-
+            ErrorOr<Success> saved = acceptedFlows.Count > 0 ? _store.SaveFlows(flows) : Result.Success;
             if (saved.IsError)
             {
                 return saved.ErrorsOrEmptyList;
             }
 
-            _document = merged;
+            _document = new FlowDocument(_document.Nodes, flows);
             _compiled = compiled.Value.Flows;
             _failures = compiled.Value.Failures;
 
             return new FlowImport(
-                source,
+                file.Source,
                 [.. acceptedFlows.Select(flow => new FlowName(flow.Name.Trim()))],
+                [],
                 notes);
         }
     }
@@ -309,7 +386,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         IReadOnlyList<NodeSpec> builtins,
         IFlowDescriptionCompiler compiler)
     {
-        List<Error> duplicates = [.. Duplicated(document)];
+        List<Error> duplicates = [.. Duplicated(document.Flows)];
         if (duplicates.Count > 0)
         {
             return duplicates;
@@ -350,8 +427,8 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
     }
 
     /// <summary>流程名重复：同一文档内名字是流程的唯一标识。</summary>
-    private static IEnumerable<Error> Duplicated(FlowDocument document) =>
-        document.Flows
+    private static IEnumerable<Error> Duplicated(IReadOnlyList<FlowDocumentFlow> flows) =>
+        flows
             .Select(flow => (Flow: flow, Name: FlowName.Create(flow.Name)))
             .Where(entry => !entry.Name.IsError)
             .GroupBy(entry => entry.Name.Value)

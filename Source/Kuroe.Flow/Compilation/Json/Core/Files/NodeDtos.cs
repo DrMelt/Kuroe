@@ -3,6 +3,14 @@ using System.Text.Json.Serialization;
 
 namespace Kuroe.Flow.Json.Files;
 
+/// <summary>节点库文件的形状：文件里的字段名与类型在此固定，读入后装配成节点定义。
+/// 属性必须可写，否则缺键的项拿不到声明的默认值。</summary>
+public sealed class NodeFileDto
+{
+    /// <summary>节点库定义，按声明序。</summary>
+    public List<NodeDto> Nodes { get; set; } = [];
+}
+
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
 /// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，结构字段在此固定，类型专属字段落在参数段。</summary>
 public sealed class NodeDto

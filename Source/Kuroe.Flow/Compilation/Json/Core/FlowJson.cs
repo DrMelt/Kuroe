@@ -5,7 +5,7 @@ using Kuroe.Flow.Json.Files;
 
 namespace Kuroe.Flow.Json;
 
-/// <summary>流程文件的 JSON 绑定。字段形状与 null 省略由源生成选项声明，写侧选项是独立实例，在同口径下只改缩进与转义。
+/// <summary>流程与节点库文件的 JSON 绑定。字段形状与 null 省略由源生成选项声明，写侧选项是独立实例，在同口径下只改缩进与转义。
 /// 节点之外的未定义字段被拒绝，节点对象里类型不承认的字段由文件层按类型的字段表报出。</summary>
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
@@ -15,6 +15,7 @@ namespace Kuroe.Flow.Json;
     UseStringEnumConverter = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(FlowFileDto))]
+[JsonSerializable(typeof(NodeFileDto))]
 [JsonSerializable(typeof(PortEntryDto))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

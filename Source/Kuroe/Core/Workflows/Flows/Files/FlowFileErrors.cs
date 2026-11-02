@@ -3,7 +3,7 @@ using Kuroe.Flow.Shared;
 
 namespace Kuroe.Workflows.Flows.Files;
 
-/// <summary>流程文件存取域的错误构造。</summary>
+/// <summary>节点库与流程文件存取域的错误构造。</summary>
 static class FlowFileErrors
 {
     public static Error Read(string path, string message) =>

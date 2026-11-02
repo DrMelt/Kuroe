@@ -5,23 +5,19 @@ using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;
 
-/// <summary>流程文件的 JSON 格式：文本到描述文档的映射与写回保真。</summary>
+/// <summary>流程文件的 JSON 格式：文本到流程描述的映射与写回保真。</summary>
 public sealed class JsonFlowFormatTests
 {
     private static readonly JsonFlowFormat Format = new();
 
     [Fact]
-    public void Read_maps_definitions_and_references_to_the_document()
+    public void Read_maps_flow_root_and_reference()
     {
-        FlowDocument document = Ok(Format.Read(Flow));
-        NodeDefinitionDocument definition = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Nodes));
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(Flow));
 
-        Assert.Equal("计划", definition.Name);
-        Assert.Equal("Llm", definition.Kind);
-        Assert.Equal("写出计划", Assert.IsType<FlowValue.Text>(definition.Parameters["Prompt"]).Value);
-
-        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
-        NodeReferenceDocument reference = Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes!));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
+        NodeReferenceDocument reference =
+            Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes!, node => node is NodeReferenceDocument));
         Assert.Equal("副本", reference.Label);
         Assert.Equal("计划", reference.Use);
         Assert.Equal("Start@MODEL_NAME", reference.Bindings!["MODEL_NAME"]);
@@ -30,8 +26,8 @@ public sealed class JsonFlowFormatTests
     [Fact]
     public void Write_keeps_parameters_and_static_model()
     {
-        FlowDocument document = Ok(Format.Read(Flow));
-        string text = Ok(Format.Write(document));
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(Flow));
+        string text = Ok(Format.Write(flows));
 
         Assert.Contains("\"Prompt\": \"写出计划\"", text);
         Assert.Contains("\"Mode\": \"Constant\"", text);
@@ -56,8 +52,8 @@ public sealed class JsonFlowFormatTests
             }
             """;
 
-        FlowDocument document = Ok(Format.Read(flow));
-        string text = Ok(Format.Write(document));
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
+        string text = Ok(Format.Write(flows));
 
         Assert.Contains("\"Mode\": \"Trigger\"", text);
         Assert.Contains("\"Type\": \"Text\"", text);
@@ -87,8 +83,8 @@ public sealed class JsonFlowFormatTests
             }
             """;
 
-        FlowDocument document = Ok(Format.Read(flow));
-        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
         NodeDefinitionDocument source = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes!));
         InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
         InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
@@ -98,7 +94,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal(PortMode.Trigger, source.Outputs[0].Mode);
         Assert.Null(source.Outputs[1].Mode);
 
-        string text = Ok(Format.Write(document));
+        string text = Ok(Format.Write(flows));
         Assert.Contains("\"Role\": \"Configuration\"", text);
         Assert.Contains("\"Mode\": \"Constant\"", text);
         Assert.Contains("\"Mode\": \"Plain\"", text);
@@ -122,23 +118,34 @@ public sealed class JsonFlowFormatTests
             }
             """;
 
-        FlowDocument document = Ok(Format.Read(flow));
-        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(document.Flows).Root);
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
         PortDocument output = Assert.Single(root.Outputs);
         Assert.Equal("固定", output.Value);
         Assert.Equal(PortTypes.Text, output.Type);
         Assert.Equal(PortMode.Constant, output.Mode);
 
-        string text = Ok(Format.Write(document));
+        string text = Ok(Format.Write(flows));
         Assert.Contains("\"Value\": \"固定\"", text);
         Assert.Contains("\"Ref\": \"@MODEL_NAME\"", text);
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
     [Fact]
+    public void Read_rejects_the_nodes_field()
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document =
+            Format.Read("""{ "Nodes": [ { "Name": "计划", "Kind": "Llm" } ] }""");
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("节点库写在 nodes.json", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Read_rejects_the_old_constant_field()
     {
-        ErrorOr<FlowDocument> document = Format.Read("""
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
               "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "配置", "Type": "Text", "Constant": true }] }
@@ -154,7 +161,7 @@ public sealed class JsonFlowFormatTests
     [Fact]
     public void Read_rejects_a_reference_with_name_and_without_label()
     {
-        ErrorOr<FlowDocument> document = Format.Read("""
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Nodes": [
               { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "副本", "Use": "计划" } ] }
             ] } ] }
@@ -174,15 +181,13 @@ public sealed class JsonFlowFormatTests
 
     private const string Flow = """
         {
-          "Nodes": [
-            { "Name": "计划", "Kind": "Llm", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }] }
-          ],
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ] },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
+                  { "Name": "配置", "Kind": "Llm", "Prompt": "写出计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" } },
                   { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
                 ] }
               ]

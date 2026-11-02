@@ -49,7 +49,9 @@ internal sealed class FlowSnapshotDto
 {
     public string? Name { get; set; }
 
-    public string? Document { get; set; }
+    public string? Nodes { get; set; }
+
+    public string? Flow { get; set; }
 }
 
 internal sealed class TaskStartDto

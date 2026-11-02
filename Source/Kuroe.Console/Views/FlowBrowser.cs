@@ -93,7 +93,7 @@ internal sealed class FlowBrowser(
             node => Line(node, compiled.Model.HostStartInputs)));
     }
 
-    /// <summary>从文件导入流程与节点库，同名覆盖。</summary>
+    /// <summary>从文件导入节点库或流程，同名覆盖。</summary>
     public void Import(string file)
     {
         ErrorOr<FlowImport> imported = flows.Import(file);
@@ -103,11 +103,24 @@ internal sealed class FlowBrowser(
             return;
         }
 
-        terminal.Ok($"已从 {imported.Value.Source} 导入 {imported.Value.Names.Count} 条流程。");
+        terminal.Ok($"已从 {imported.Value.Source} 导入 {Summary(imported.Value)}。");
         foreach (string note in imported.Value.Notes)
         {
             terminal.Hint($"  {note}");
         }
+    }
+
+    /// <summary>导入结果的条数说明，节点库与流程分开计数。</summary>
+    private static string Summary(FlowImport imported)
+    {
+        if (imported.Nodes.Count == 0)
+        {
+            return $"{imported.Flows.Count} 条流程";
+        }
+
+        return imported.Flows.Count == 0
+            ? $"{imported.Nodes.Count} 个节点定义"
+            : $"{imported.Flows.Count} 条流程、{imported.Nodes.Count} 个节点定义";
     }
 
     private void Show(IReadOnlyList<FlowDefinition> all)

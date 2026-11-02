@@ -118,7 +118,8 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
                 Flow = new FlowSnapshotDto
                 {
                     Name = document.Task.Flow.Name.Value,
-                    Document = document.Task.Flow.Document,
+                    Nodes = document.Task.Flow.Nodes,
+                    Flow = document.Task.Flow.Flow,
                 },
                 Start = new TaskStartDto
                 {
@@ -315,7 +316,10 @@ public sealed class TaskCheckpointCodec : ITaskCheckpointCodec
                 RequiredText(identity.Title, "任务标题"),
                 identity.CreatedAt,
                 identity.LastActivityAt),
-            new FlowSnapshot(new FlowName(RequiredText(flow.Name, "流程名")), RequiredText(flow.Document, "流程文档")),
+            new FlowSnapshot(
+                new FlowName(RequiredText(flow.Name, "流程名")),
+                RequiredText(flow.Nodes, "节点库文档"),
+                RequiredText(flow.Flow, "流程文档")),
             new TaskStartSnapshot(
                 new StartInputs(
                 [

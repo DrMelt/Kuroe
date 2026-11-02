@@ -9,10 +9,10 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Json.Files;
 
 /// <summary>文件形状到描述文档的绑定：只判断格式与字段归属，不构造模型。</summary>
-static class FlowDocumentReader
+static class FlowFileReader
 {
-    /// <summary>把文件形状转成描述文档，错误逐条收集。</summary>
-    public static ErrorOr<FlowDocument> Read(FlowFileDto file)
+    /// <summary>把节点库文件形状转成节点定义，错误逐条收集。</summary>
+    public static ErrorOr<IReadOnlyList<NodeDefinitionDocument>> ReadNodes(NodeFileDto file)
     {
         List<Error> errors = [];
         List<NodeDefinitionDocument> nodes = [];
@@ -30,6 +30,13 @@ static class FlowDocumentReader
             }
         }
 
+        return errors.Count > 0 ? errors : nodes;
+    }
+
+    /// <summary>把流程文件形状转成流程描述，错误逐条收集。</summary>
+    public static ErrorOr<IReadOnlyList<FlowDocumentFlow>> ReadFlows(FlowFileDto file)
+    {
+        List<Error> errors = [];
         List<FlowDocumentFlow> flows = [];
         foreach (FlowDto dto in file.Flows)
         {
@@ -45,7 +52,7 @@ static class FlowDocumentReader
             }
         }
 
-        return errors.Count > 0 ? errors : new FlowDocument(nodes, flows);
+        return errors.Count > 0 ? errors : flows;
     }
 
     private static ErrorOr<FlowDocumentFlow> ReadFlow(FlowDto dto, List<Error> errors)

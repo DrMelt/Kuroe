@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.InputChannel;
-using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.Model;
@@ -19,13 +18,12 @@ namespace Kuroe.Flow.Compilation.Integration.Tests;
 /// <summary>节点库的展开、引用绑定与装载校验：直接编译文档，不经宿主装配。</summary>
 public sealed class NodeLibraryDocumentTests
 {
-    private static readonly JsonFlowFormat Format = new();
     private static readonly InputRegistry Inputs = new();
 
     /// <summary>编译一份流程文档，任一条失败时返回全部错误。</summary>
     private static ErrorOr<CompiledDocument> Compile(string json)
     {
-        ErrorOr<FlowDocument> document = Format.Read(json);
+        ErrorOr<FlowDocument> document = FlowDocumentSource.Read(json);
         if (document.IsError)
         {
             return document.ErrorsOrEmptyList;

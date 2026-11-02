@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
@@ -110,8 +111,7 @@ public sealed class TestEnvironment : IDisposable
         string? flowsText = flowsJson ?? TestFlowFile;
         if (flowsText is not null)
         {
-            System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
-            File.WriteAllText(paths.FlowsFile, flowsText);
+            WriteFlowFiles(paths, flowsText);
         }
 
         var services = new ServiceCollection();
@@ -153,6 +153,48 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>在指定工作目录装配，用于跨会话重载检查点。</summary>
     public static TestEnvironment CreateAt(string root, string? flowsJson = null, bool seedCatalog = true) =>
         TryCreateAt(root, flowsJson, seedCatalog, deleteOnDispose: false).ThrowIfError();
+
+    /// <summary>把测试夹具按顶层字段写成节点库与流程两个文件，空对象不写文件。</summary>
+    private static void WriteFlowFiles(KuroePaths paths, string text)
+    {
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            });
+            JsonElement root = document.RootElement;
+            bool written = false;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in root.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, "Nodes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(paths.NodesFile, $"{{\"Nodes\":{property.Value.GetRawText()}}}");
+                        written = true;
+                    }
+                    else if (string.Equals(property.Name, "Flows", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(paths.FlowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
+                        written = true;
+                    }
+                }
+            }
+
+            if (!written && text.Trim() is not "{}")
+            {
+                File.WriteAllText(paths.FlowsFile, text);
+            }
+        }
+        catch (JsonException)
+        {
+            File.WriteAllText(paths.FlowsFile, text);
+        }
+    }
 
     /// <summary>按 目标 端口提交任务，未点名时用测试默认写入的那条流程。</summary>
     public TaskId Submit(string goal, FlowName? flow = null) =>

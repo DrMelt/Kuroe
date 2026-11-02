@@ -5,8 +5,9 @@ namespace Kuroe.Flow.Persistence.Shared;
 
 /// <summary>任务提交时锁定的流程快照。</summary>
 /// <param name="Name">流程名。</param>
-/// <param name="Document">流程文档文本。</param>
-public sealed record FlowSnapshot(FlowName Name, string Document);
+/// <param name="Nodes">节点库文件文本。</param>
+/// <param name="Flow">流程文件文本。</param>
+public sealed record FlowSnapshot(FlowName Name, string Nodes, string Flow);
 
 /// <summary>按流程名捕获当前流程文档快照。由宿主实现。</summary>
 public interface IFlowSnapshotSource

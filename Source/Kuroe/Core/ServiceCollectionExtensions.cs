@@ -117,7 +117,9 @@ public static class ServiceCollectionExtensions
 
         NodeTypeDescriptionRegistry typeFiles = new();
         InputRegistry inputs = new();
-        JsonFlowFormat format = new();
+        JsonNodeFormat nodeFormat = new();
+        JsonFlowFormat flowFormat = new();
+        JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
         IFlowExpander expander = new NodeLibraryExpander();
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
@@ -127,7 +129,15 @@ public static class ServiceCollectionExtensions
         coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(
-            new FlowStore(paths.FlowsFile, paths.WorkingDirectory, format, format),
+            new FlowStore(
+                paths.NodesFile,
+                paths.FlowsFile,
+                paths.WorkingDirectory,
+                nodeFormat,
+                nodeFormat,
+                flowFormat,
+                flowFormat,
+                importFormat),
             BuiltinNodes.Nodes,
             descriptionCompiler,
             coreOptions.AllowFlowFailures);

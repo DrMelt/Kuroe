@@ -48,12 +48,25 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        output.Line($"已从 {imported.Value.Source} 导入 {imported.Value.Names.Count} 条流程。");
+        output.Line($"已从 {imported.Value.Source} 导入 {Summary(imported.Value)}。");
         foreach (string note in imported.Value.Notes)
         {
             output.Hint(note);
         }
 
         return ExitCodes.Success;
+    }
+
+    /// <summary>导入结果的条数说明，节点库与流程分开计数。</summary>
+    private static string Summary(FlowImport imported)
+    {
+        if (imported.Nodes.Count == 0)
+        {
+            return $"{imported.Flows.Count} 条流程";
+        }
+
+        return imported.Flows.Count == 0
+            ? $"{imported.Nodes.Count} 个节点定义"
+            : $"{imported.Flows.Count} 条流程、{imported.Nodes.Count} 个节点定义";
     }
 }

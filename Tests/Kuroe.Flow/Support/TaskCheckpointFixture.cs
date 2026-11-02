@@ -31,7 +31,7 @@ public static class TaskCheckpointFixture
 
         return new TaskCheckpoint(
             new TaskIdentity(id, "检查点任务", At(3, 4, 5), At(3, 5, 6)),
-            new FlowSnapshot(flow, """{"Flows":[]}"""),
+            new FlowSnapshot(flow, """{"Nodes":[]}""", """{"Flows":[]}"""),
             new TaskStartSnapshot(
                 StartInputs.Single(target, "目标内容"),
                 new Dictionary<PortName, string> { [target] = "目标内容" }),

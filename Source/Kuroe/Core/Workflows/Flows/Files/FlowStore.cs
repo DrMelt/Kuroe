@@ -5,10 +5,19 @@ using Kuroe.Flow.Persistence.FileSystem;
 
 namespace Kuroe.Workflows.Flows.Files;
 
-/// <summary>flows.json 的文件存取：路径解析、读取与原子写入。文本与描述文档的转换由格式实现承担。</summary>
-sealed class FlowStore(string file, string baseDirectory, IFlowFormatReader reader, IFlowFormatWriter writer)
+/// <summary>nodes.json 与 flows.json 的文件存取：路径解析、读取与原子写入。文本与描述文档的转换由格式实现承担。</summary>
+sealed class FlowStore(
+    string nodesFile,
+    string flowsFile,
+    string baseDirectory,
+    INodeFormatReader nodeReader,
+    INodeFormatWriter nodeWriter,
+    IFlowFormatReader flowReader,
+    IFlowFormatWriter flowWriter,
+    IFlowImportReader importReader)
 {
-    private readonly string _file = Path.GetFullPath(file);
+    private readonly string _nodesFile = Path.GetFullPath(nodesFile);
+    private readonly string _flowsFile = Path.GetFullPath(flowsFile);
     private readonly string _baseDirectory = Path.GetFullPath(baseDirectory);
 
     /// <summary>工作目录根，用户给出的文件参数以此为基准。</summary>
@@ -27,69 +36,126 @@ sealed class FlowStore(string file, string baseDirectory, IFlowFormatReader read
         }
     }
 
-    /// <summary>读取流程文件为描述文档，文件不存在时为空。</summary>
+    /// <summary>读取节点库与流程文件，两个文件都不存在时为空。</summary>
     public ErrorOr<FlowDocument?> Load()
     {
-        if (!File.Exists(_file))
+        bool hasNodes = File.Exists(_nodesFile);
+        bool hasFlows = File.Exists(_flowsFile);
+        if (!hasNodes && !hasFlows)
         {
             return (FlowDocument?)null;
         }
 
-        ErrorOr<FlowDocument> read = Read(_file);
-        if (read.IsError)
+        List<NodeDefinitionDocument> nodes = [];
+        if (hasNodes)
         {
-            return read.ErrorsOrEmptyList;
+            ErrorOr<string> text = ReadText(_nodesFile);
+            if (text.IsError)
+            {
+                return text.ErrorsOrEmptyList;
+            }
+
+            ErrorOr<IReadOnlyList<NodeDefinitionDocument>> read = ReadNodesText(text.Value);
+            if (read.IsError)
+            {
+                return InFile(_nodesFile, read.ErrorsOrEmptyList);
+            }
+
+            nodes.AddRange(read.Value);
         }
 
-        return read.Value;
+        List<FlowDocumentFlow> flows = [];
+        if (hasFlows)
+        {
+            ErrorOr<string> text = ReadText(_flowsFile);
+            if (text.IsError)
+            {
+                return text.ErrorsOrEmptyList;
+            }
+
+            ErrorOr<IReadOnlyList<FlowDocumentFlow>> read = ReadFlowsText(text.Value);
+            if (read.IsError)
+            {
+                return InFile(_flowsFile, read.ErrorsOrEmptyList);
+            }
+
+            flows.AddRange(read.Value);
+        }
+
+        return new FlowDocument(nodes, flows);
     }
 
-    /// <summary>把描述文档写回流程文件。</summary>
-    public ErrorOr<Success> Save(FlowDocument document)
+    /// <summary>把节点库写回 nodes.json。</summary>
+    public ErrorOr<Success> SaveNodes(IReadOnlyList<NodeDefinitionDocument> nodes) =>
+        Save(_nodesFile, nodeWriter.Write(nodes));
+
+    /// <summary>把流程写回 flows.json。</summary>
+    public ErrorOr<Success> SaveFlows(IReadOnlyList<FlowDocumentFlow> flows) =>
+        Save(_flowsFile, flowWriter.Write(flows));
+
+    /// <summary>把节点库写成文本，不落盘。检查点快照使用。</summary>
+    public ErrorOr<string> RenderNodes(IReadOnlyList<NodeDefinitionDocument> nodes) => nodeWriter.Write(nodes);
+
+    /// <summary>把流程写成文本，不落盘。检查点快照使用。</summary>
+    public ErrorOr<string> RenderFlows(IReadOnlyList<FlowDocumentFlow> flows) => flowWriter.Write(flows);
+
+    /// <summary>从文本读出节点库，不落盘。检查点编译使用。</summary>
+    public ErrorOr<IReadOnlyList<NodeDefinitionDocument>> ReadNodesText(string text) => nodeReader.Read(text);
+
+    /// <summary>从文本读出流程，不落盘。检查点编译使用。</summary>
+    public ErrorOr<IReadOnlyList<FlowDocumentFlow>> ReadFlowsText(string text) => flowReader.Read(text);
+
+    /// <summary>读取导入文件，按顶层字段判定节点库文件或流程文件。</summary>
+    public ErrorOr<FlowImportFile> ReadFile(string path)
     {
-        ErrorOr<string> text = writer.Write(document);
+        ErrorOr<string> text = ReadText(path);
         if (text.IsError)
         {
             return text.ErrorsOrEmptyList;
         }
 
+        ErrorOr<FlowImportContent> content = importReader.Read(text.Value);
+        if (content.IsError)
+        {
+            return InFile(path, content.ErrorsOrEmptyList);
+        }
+
+        return content.Value.Kind == FlowImportKind.Nodes
+            ? new NodeLibraryImportFile(path, content.Value.Nodes)
+            : new FlowDefinitionsImportFile(path, content.Value.Flows);
+    }
+
+    private static ErrorOr<Success> Save(string file, ErrorOr<string> rendered)
+    {
+        if (rendered.IsError)
+        {
+            return rendered.ErrorsOrEmptyList;
+        }
+
         try
         {
-            AtomicFile.WriteText(_file, text.Value);
+            AtomicFile.WriteText(file, rendered.Value);
 
             return Result.Success;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [FlowFileErrors.Write(_file, ex.Message)];
+            return [FlowFileErrors.Write(file, ex.Message)];
         }
     }
 
-    /// <summary>把描述文档写成文本，不落盘。检查点快照使用。</summary>
-    public ErrorOr<string> Render(FlowDocument document) => writer.Write(document);
-
-    /// <summary>从文本读出描述文档，不落盘。检查点编译使用。</summary>
-    public ErrorOr<FlowDocument> ReadText(string text) => reader.Read(text);
-
-    /// <summary>从指定文件读取描述文档，供导入使用。</summary>
-    public ErrorOr<FlowDocument> Read(string path)
+    private static ErrorOr<string> ReadText(string path)
     {
-        string text;
         try
         {
-            text = File.ReadAllText(path);
+            return File.ReadAllText(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return [FlowFileErrors.Read(path, ex.Message)];
         }
-
-        ErrorOr<FlowDocument> document = reader.Read(text);
-        if (document.IsError)
-        {
-            return [.. document.ErrorsOrEmptyList.Select(error => FlowFileErrors.Format($"{path}：{error.Description}"))];
-        }
-
-        return document.Value;
     }
+
+    private static List<Error> InFile(string path, IReadOnlyList<Error> errors) =>
+        [.. errors.Select(error => FlowFileErrors.Format($"{path}：{error.Description}"))];
 }

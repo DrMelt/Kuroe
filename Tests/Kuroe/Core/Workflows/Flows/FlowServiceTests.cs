@@ -48,16 +48,27 @@ public sealed class FlowServiceTests
     {
         string root = Path.Combine(Path.GetTempPath(), $"kuroe-isolation-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
-        string file = Path.Combine(root, "flows.json");
-        File.WriteAllText(file, Mixed);
+        string nodesFile = Path.Combine(root, "nodes.json");
+        string flowsFile = Path.Combine(root, "flows.json");
+        File.WriteAllText(flowsFile, Mixed);
         try
         {
             NodeTypeDescriptionRegistry types = new();
             ContainerNodeTypeDescriptions.RegisterInto(types);
             LlmNodeTypeDescriptions.RegisterInto(types);
             FlowDescriptionCompiler compiler = new(types, new NodeLibraryExpander());
-            JsonFlowFormat format = new();
-            FlowStore store = new(file, root, format, format);
+            JsonNodeFormat nodeFormat = new();
+            JsonFlowFormat flowFormat = new();
+            JsonFlowImportReader importFormat = new(nodeFormat, flowFormat);
+            FlowStore store = new(
+                nodesFile,
+                flowsFile,
+                root,
+                nodeFormat,
+                nodeFormat,
+                flowFormat,
+                flowFormat,
+                importFormat);
 
             check(store, compiler);
         }

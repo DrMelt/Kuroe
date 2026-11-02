@@ -15,7 +15,7 @@ public static class FlowErrorCodes
     /// <summary>流程名不存在。</summary>
     public const string FlowNotFound = "Flow.NotFound";
 
-    /// <summary>流程文件不是合法 JSON 或结构不符。</summary>
+    /// <summary>节点库或流程文件不是合法 JSON 或结构不符。</summary>
     public const string FlowFormat = "Flow.Format";
 
     /// <summary>流程名为空或重复。</summary>
@@ -29,9 +29,6 @@ public static class FlowErrorCodes
 
     /// <summary>命令里的文件参数无法解析为路径。</summary>
     public const string FlowInvalidPath = "Flow.InvalidPath";
-
-    /// <summary>导入的文件按自身装配失败。</summary>
-    public const string FlowImport = "Flow.Import";
 
     /// <summary>任务已暂停，不能交付外部输入或发起推进动作。</summary>
     public const string TaskPaused = "Task.Paused";

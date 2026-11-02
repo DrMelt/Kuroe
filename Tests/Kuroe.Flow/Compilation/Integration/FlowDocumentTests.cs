@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.InputChannel;
 using Kuroe.TestSupport;
@@ -13,9 +12,6 @@ public sealed class FlowDocumentTests
 {
     /// <summary>解析与读写往返用的外部输入协议实例，这些用例不驱动节点执行。</summary>
     private static readonly InputRegistry Inputs = new();
-
-    /// <summary>描述格式与编译管线，错误用例共用一个实现。</summary>
-    private static readonly JsonFlowFormat Format = new();
 
     private static IFlowDescriptionCompiler Compiler =>
         new FlowDescriptionCompiler(TestTypeFiles.Registry(Inputs), new NodeLibraryExpander());
@@ -142,16 +138,16 @@ public sealed class FlowDocumentTests
         File.WriteAllText(file, StructuralFlow);
         try
         {
-            FlowDocument document = Format.Read(File.ReadAllText(file)).ThrowIfError();
+            FlowDocument document = FlowDocumentSource.Read(File.ReadAllText(file)).ThrowIfError();
             Compiler.Compile(document, []).ThrowIfError();
-            File.WriteAllText(file, Format.Write(document).ThrowIfError());
+            File.WriteAllText(file, FlowDocumentSource.WriteFlows(document).ThrowIfError());
             string once = File.ReadAllText(file);
 
             Assert.Contains("\"Prompt\": \"写出计划\"", once);
             Assert.Contains("\"SystemPrompt\": [", once);
             Assert.DoesNotContain("\": null", once);
 
-            string again = Format.Write(Format.Read(once).ThrowIfError()).ThrowIfError();
+            string again = FlowDocumentSource.WriteFlows(FlowDocumentSource.Read(once).ThrowIfError()).ThrowIfError();
 
             Assert.Equal(once, again);
         }
@@ -171,9 +167,9 @@ public sealed class FlowDocumentTests
         File.WriteAllText(file, FlowSamples.ReviewFlow);
         try
         {
-            FlowDocument document = Format.Read(File.ReadAllText(file)).ThrowIfError();
+            FlowDocument document = FlowDocumentSource.Read(File.ReadAllText(file)).ThrowIfError();
             Compiler.Compile(document, []).ThrowIfError();
-            File.WriteAllText(file, Format.Write(document).ThrowIfError());
+            File.WriteAllText(file, FlowDocumentSource.WriteFlows(document).ThrowIfError());
             string text = File.ReadAllText(file);
 
             Assert.Contains("\"Tools\": [", text);
@@ -843,7 +839,7 @@ public sealed class FlowDocumentTests
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json)
     {
-        ErrorOr<FlowDocument> content = Format.Read(json);
+        ErrorOr<FlowDocument> content = FlowDocumentSource.Read(json);
         if (content.IsError)
         {
             return [.. content.ErrorsOrEmptyList.Select(error => error.Description)];

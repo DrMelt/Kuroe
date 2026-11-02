@@ -25,7 +25,7 @@ public sealed class FlowImportTests
         {
             FlowImport imported = environment.Flows.Import(source).ThrowIfError();
 
-            Assert.Single(imported.Names);
+            Assert.Single(imported.Flows);
             Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("两级"));
             Assert.Equal(2, environment.Flows.Find(new FlowName("两级")).ThrowIfError().RootNode.Nodes!.Count);
         }
@@ -72,7 +72,7 @@ public sealed class FlowImportTests
 
         FlowImport imported = environment.Flows.Import("extra.json").ThrowIfError();
 
-        Assert.Single(imported.Names);
+        Assert.Single(imported.Flows);
         Assert.True(Path.IsPathRooted(imported.Source), $"导入来源应是绝对路径，收到 {imported.Source}。");
     }
 
@@ -99,6 +99,19 @@ public sealed class FlowImportTests
     }
 
     [Fact]
+    public void Import_rejects_a_file_with_both_sections()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        File.WriteAllText(Path.Combine(environment.Root, "both.json"), """{ "Nodes": [], "Flows": [] }""");
+
+        ErrorOr<FlowImport> imported = environment.Flows.Import("both.json");
+
+        Assert.True(imported.IsError);
+        Assert.Contains(imported.ErrorsOrEmptyList,
+            error => error.Description.Contains("只能包含 Nodes 或 Flows 之一", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Import_rejects_duplicated_flow_names()
     {
         using TestEnvironment environment = TestEnvironment.Create();
@@ -114,21 +127,31 @@ public sealed class FlowImportTests
     public void Import_keeps_library_and_reference_shape_on_save()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        File.WriteAllText(Path.Combine(environment.Root, "library.json"), LibraryFlow);
+        File.WriteAllText(Path.Combine(environment.Root, "nodes.json"), LibraryNodes);
+        File.WriteAllText(Path.Combine(environment.Root, "library.json"), LibraryFlows);
 
-        FlowImport imported = environment.Flows.Import("library.json").ThrowIfError();
-        Assert.Contains(imported.Notes, note => note.Contains("节点库"));
+        FlowImport nodeImport = environment.Flows.Import("nodes.json").ThrowIfError();
+        Assert.Equal([new NodeName("执行"), new NodeName("交付")], nodeImport.Nodes);
+        Assert.Contains(nodeImport.Notes, note => note.Contains("新增节点"));
 
-        string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
-        Assert.Contains("\"Nodes\"", text);
-        Assert.Contains("\"Use\"", text);
-        Assert.Contains("\"Bindings\"", text);
-        Assert.Contains("\"Inputs\"", text);
-        Assert.DoesNotContain("\"Models\"", text);
-        Assert.DoesNotContain("\"ModelSlots\"", text);
+        FlowImport flowImport = environment.Flows.Import("library.json").ThrowIfError();
+        Assert.Single(flowImport.Flows);
 
-        using JsonDocument saved = JsonDocument.Parse(text);
-        JsonElement libraryContainer = saved.RootElement.GetProperty("Nodes")
+        KuroePaths paths = KuroePaths.At(environment.Root);
+        string nodesText = File.ReadAllText(paths.NodesFile);
+        Assert.Contains("\"Nodes\"", nodesText);
+
+        string flowsText = File.ReadAllText(paths.FlowsFile);
+        Assert.Contains("\"Flows\"", flowsText);
+        Assert.Contains("\"Use\"", flowsText);
+        Assert.Contains("\"Bindings\"", flowsText);
+        Assert.Contains("\"Inputs\"", flowsText);
+        Assert.DoesNotContain("\"Models\"", flowsText);
+        Assert.DoesNotContain("\"ModelSlots\"", flowsText);
+
+        using JsonDocument savedNodes = JsonDocument.Parse(nodesText);
+        Assert.False(savedNodes.RootElement.TryGetProperty("Flows", out _));
+        JsonElement libraryContainer = savedNodes.RootElement.GetProperty("Nodes")
             .EnumerateArray()
             .Single(node => node.GetProperty("Name").GetString() == "交付");
         JsonElement modelInput = libraryContainer.GetProperty("Inputs")
@@ -136,7 +159,9 @@ public sealed class FlowImportTests
             .Single(input => input.GetProperty("Name").GetString() == "MODEL_NAME");
         Assert.Equal("Constant", modelInput.GetProperty("Mode").GetString());
 
-        JsonElement reference = saved.RootElement.GetProperty("Flows")[0].GetProperty("Nodes")[0]
+        using JsonDocument savedFlows = JsonDocument.Parse(flowsText);
+        Assert.False(savedFlows.RootElement.TryGetProperty("Nodes", out _));
+        JsonElement reference = savedFlows.RootElement.GetProperty("Flows")[0].GetProperty("Nodes")[0]
             .GetProperty("Nodes")[1];
         Assert.Equal("@MODEL_NAME", reference.GetProperty("Bindings").GetProperty("MODEL_NAME").GetString());
     }
@@ -144,16 +169,13 @@ public sealed class FlowImportTests
     [Fact]
     public void Import_rejects_flow_referencing_library_node_outside_the_file()
     {
-        using TestEnvironment environment = TestEnvironment.Create(LibraryFlow);
+        using TestEnvironment environment = TestEnvironment.Create(LibraryNodes);
         File.WriteAllText(Path.Combine(environment.Root, "reuse.json"), LibraryReferenceOnlyFlow);
 
         ErrorOr<FlowImport> imported = environment.Flows.Import("reuse.json");
 
         Assert.Equal(
-            [
-                "流程 复用 的节点 干活：引用的节点 外部库 不在节点库。",
-                "导入的文件必须能独立装配：流程引用的节点要用内置节点或写在同一文件里。",
-            ],
+            ["流程 复用 的节点 干活：引用的节点 外部库 不在节点库。"],
             imported.ErrorsOrEmptyList.Select(error => error.Description));
     }
 
@@ -244,7 +266,7 @@ public sealed class FlowImportTests
         ] }
         """;
 
-    /// <summary>只写流程，引用的节点库定义不在文件里，按文件自身装配会报缺定义。</summary>
+    /// <summary>只写流程，引用的节点库定义不在当前节点库，导入报缺定义。</summary>
     private const string LibraryReferenceOnlyFlow = """
         { "Flows": [
           { "Name": "复用", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Nodes": [
@@ -255,7 +277,7 @@ public sealed class FlowImportTests
         ] }
         """;
 
-    private const string LibraryFlow = """
+    private const string LibraryNodes = """
         {
           "Nodes": [
             { "Name": "执行", "Kind": "Llm" },
@@ -267,7 +289,12 @@ public sealed class FlowImportTests
                 { "Label": "实施", "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "@计划" } ] }
               ]
             }
-          ],
+          ]
+        }
+        """;
+
+    private const string LibraryFlows = """
+        {
           "Flows": [
             {
               "Name": "默认",

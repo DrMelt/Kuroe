@@ -34,9 +34,9 @@ public sealed class NodeLibraryRuntimeTests
         Assert.NotNull(container.Nodes);
         Assert.Single(container.Nodes, node => node.Label == new NodeLabel("实施"));
 
-        FlowDocument document = new JsonFlowFormat()
-            .Read(File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile)).ThrowIfError();
-        IReadOnlyList<NodeLabel> savedNodes = [.. document.Nodes.Select(node => new NodeLabel(node.Name))];
+        IReadOnlyList<NodeDefinitionDocument> nodes = new JsonNodeFormat()
+            .Read(File.ReadAllText(KuroePaths.At(environment.Root).NodesFile)).ThrowIfError();
+        IReadOnlyList<NodeLabel> savedNodes = [.. nodes.Select(node => new NodeLabel(node.Name))];
         Assert.Equal([new NodeLabel("准备")], savedNodes);
     }
 

@@ -27,7 +27,6 @@ public sealed class FlowJsonTests
 
         FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
 
-        Assert.Empty(file.Nodes);
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Equal("默认", flow.Name);
         Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Start!.Outputs!).ValueKind);
@@ -42,7 +41,6 @@ public sealed class FlowJsonTests
         FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
 
         FlowDto flow = Assert.Single(file.Flows);
-        Assert.Empty(file.Nodes);
         Assert.Empty(flow.Nodes);
         Assert.Null(flow.Description);
         Assert.Null(flow.Start);
@@ -81,7 +79,7 @@ public sealed class FlowJsonTests
     {
         const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container" } ] }""";
 
-        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        NodeFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto)!;
 
         NodeDto node = Assert.Single(file.Nodes);
         Assert.Equal("container", node.Kind);
@@ -101,7 +99,7 @@ public sealed class FlowJsonTests
             }
             """;
 
-        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        NodeFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto)!;
 
         Assert.Equal("Start@MODEL_NAME", file.Nodes[0].Bindings!["MODEL_NAME"]);
         Assert.Equal("@MODEL_NAME", file.Nodes[1].Bindings!["MODEL_NAME"]);
@@ -140,14 +138,13 @@ public sealed class FlowJsonTests
     {
         FlowFileDto file = new()
         {
-            Nodes = [new NodeDto { Label = "制定计划", Kind = "Llm" }],
             Flows = [new FlowDto { Name = "默认" }],
         };
 
         string text = JsonSerializer.Serialize(file, FlowJson.WriteOptions.GetTypeInfo(typeof(FlowFileDto)));
 
-        Assert.Contains("\"Kind\": \"Llm\"", text);
-        Assert.Contains("制定计划", text);
+        Assert.Contains("\"Flows\"", text);
+        Assert.Contains("默认", text);
         Assert.Contains("\n", text);
         Assert.Contains("  ", text);
     }

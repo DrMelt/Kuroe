@@ -15,6 +15,7 @@ public sealed class KuroePaths
         CheckpointsDirectory = Path.Combine(TasksDirectory, ".checkpoints");
         UserSettingsFile = Path.Combine(ConfigDirectory, "settings.json");
         CatalogFile = Path.Combine(ConfigDirectory, "catalog.json");
+        NodesFile = Path.Combine(ConfigDirectory, "nodes.json");
         FlowsFile = Path.Combine(ConfigDirectory, "flows.json");
     }
 
@@ -35,6 +36,9 @@ public sealed class KuroePaths
 
     /// <summary>目录文件，提供商、模型及其凭据都在其中。</summary>
     public string CatalogFile { get; }
+
+    /// <summary>节点库文件。</summary>
+    public string NodesFile { get; }
 
     /// <summary>任务流程模板文件。</summary>
     public string FlowsFile { get; }

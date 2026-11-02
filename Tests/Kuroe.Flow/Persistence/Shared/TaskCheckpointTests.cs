@@ -26,7 +26,8 @@ public sealed class TaskCheckpointTests
 
         Assert.Equal("检查点任务", checkpoint.Identity.Title);
         Assert.Equal(new FlowName("默认"), checkpoint.Flow.Name);
-        Assert.Equal("""{"Flows":[]}""", checkpoint.Flow.Document);
+        Assert.Equal("""{"Nodes":[]}""", checkpoint.Flow.Nodes);
+        Assert.Equal("""{"Flows":[]}""", checkpoint.Flow.Flow);
         Assert.Equal(TaskLifecycle.Paused, checkpoint.Lifecycle);
         Assert.False(checkpoint.Completed);
     }
@@ -58,7 +59,7 @@ public sealed class TaskCheckpointTests
     {
         TaskCheckpoint checkpoint = new(
             new TaskIdentity(new TaskId(1), "空任务", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch),
-            new FlowSnapshot(new FlowName("空"), "{}"),
+            new FlowSnapshot(new FlowName("空"), "{}", "{}"),
             new TaskStartSnapshot(new StartInputs([]), new Dictionary<PortName, string>()),
             TaskLifecycle.Active,
             Completed: false,
