@@ -1,5 +1,6 @@
-using Kuroe.Flow.Shared.NodeTypes;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Node.Approval;
+using Kuroe.Node.Input;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Console.Views;
@@ -11,5 +12,10 @@ internal static class NodeParameterView
     public static LlmParameters? Llm(INodeType? type) => (type as LlmNodeType)?.Parameters;
 
     /// <summary>等待型节点的提问文本，未声明或类型不符时为空。</summary>
-    public static string? Question(INodeType? type) => type is IQuestionNodeType node ? node.Question : null;
+    public static string? Question(INodeType? type) => type switch
+    {
+        InputNodeType input => input.Parameters?.Question,
+        ApprovalNodeType approval => approval.Parameters?.Question,
+        _ => null,
+    };
 }

@@ -191,34 +191,6 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("没有名为 missing 的流程", Call(tool, "GetFlow", ("flowName", "missing")));
     }
 
-    [Fact]
-    public void GetFlow_reports_waiting_node_question()
-    {
-        using TestEnvironment environment = TestEnvironment.Create("""
-            {
-              "Flows": [
-                {
-                  "Name": "默认",
-                  "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" } ] },
-                  "Root": {
-                    "Name": "收话",
-                    "Kind": "Input",
-                    "Question": "请补充背景",
-                    "Outputs": [ { "Name": "回答", "Type": "Text" } ],
-                    "From": [ { "目标": "Start@目标" } ]
-                  }
-                }
-              ]
-            }
-            """);
-
-        FlowKuroeInfoTool tool = new(environment.Flows);
-        string output = Call(tool, "GetFlow", ("flowName", "默认"));
-
-        Assert.Contains("提问 请补充背景", output);
-    }
-
-
     private static string Call(ITool tool, string name, params (string Key, object? Value)[] args) =>
         ToolResult.Render(tool.Functions.Single(function => function.Definition.Path.Name.Value == name)
             .Invoke(new ToolArguments(args.ToDictionary(pair => pair.Key, pair => pair.Value))));

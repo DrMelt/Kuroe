@@ -1,7 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -43,8 +42,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
         Table table = Blocks.Table(("节点", false), ("等待", false), ("提问", true));
         foreach (PendingNode node in found.Value)
         {
-            ExecutableNode? executable = task.Graph[node.Node] as ExecutableNode;
-            string question = NodeParameterView.Question(executable?.Type) is { Length: > 0 } text
+            string question = node.Question is { Length: > 0 } text
                 ? ViewLabels.OneLine(text, ViewLabels.QuestionLimit)
                 : "—";
             table.AddRow(

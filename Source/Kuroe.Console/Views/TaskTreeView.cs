@@ -91,7 +91,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         if (facts.Waiting(executable.Path) is { } waiting)
         {
-            line.Add(ViewLabels.WaitingLabel(waiting, executable.Type), Styles.Warning);
+            line.Add(ViewLabels.WaitingLabel(waiting), Styles.Warning);
         }
         else
         {

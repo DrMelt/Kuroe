@@ -25,6 +25,20 @@ public sealed class InputRuntimeTests
     }
 
     [Fact]
+    public void Activation_declares_the_configured_question()
+    {
+        StubInputChannel channel = new();
+        StubNodeContext context = new();
+        InputRuntime runtime = Assert.IsType<InputRuntime>(
+            new InputNodeType(new InputParameters { Question = "要做什么" }, channel)
+                .Create(Node(channel), context));
+
+        runtime.Activate(context, NodeInputValues.Empty);
+
+        Assert.Equal("要做什么", Assert.Single(channel.Declared).Question);
+    }
+
+    [Fact]
     public void Delivery_records_the_answer_without_declining()
     {
         StubInputChannel channel = new();

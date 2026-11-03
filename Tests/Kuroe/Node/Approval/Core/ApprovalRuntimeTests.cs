@@ -16,6 +16,20 @@ public sealed class ApprovalRuntimeTests
     private static readonly PortName Port = new("正文");
 
     [Fact]
+    public void Activation_declares_the_configured_question()
+    {
+        StubInputChannel channel = new();
+        StubNodeContext context = new();
+        ApprovalRuntime runtime = Assert.IsType<ApprovalRuntime>(
+            new ApprovalNodeType(new ApprovalParameters { Question = "确认计划" }, channel)
+                .Create(Node(channel), context));
+
+        runtime.Activate(context, NodeInputValues.Empty);
+
+        Assert.Equal("确认计划", Assert.Single(channel.Declared).Question);
+    }
+
+    [Fact]
     public void Canceled_node_never_declares_again()
     {
         StubInputChannel channel = new();

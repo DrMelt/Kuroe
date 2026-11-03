@@ -10,9 +10,9 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Input;
 
-/// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入，交付即产出，取消后不再接收。
+/// <summary>输入节点在任务内的运行期对象：不启动执行，在自己的执行里声明接收外部输入并给出提问，交付即产出，取消后不再接收。
 /// 读写都要求持有任务 Gate。</summary>
-internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, INodeContext nodeContext)
+internal sealed class InputRuntime(ExecutableNode executable, IInputChannel channel, string? question, INodeContext nodeContext)
     : RuntimeNode(executable)
 {
     private bool _canceled;
@@ -48,7 +48,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
 
         _waiting = true;
         Progress.Invalidate();
-        channel.Accept(context, Path, Deliver);
+        channel.Accept(context, Path, question, Deliver);
     }
 
     /// <summary>收下一次外部输入：按回答发布一次，声明由交付方随交付撤销。</summary>
@@ -79,7 +79,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
 
         if (_waiting && !_canceled)
         {
-            channel.Accept(nodeContext, Path, Deliver);
+            channel.Accept(nodeContext, Path, question, Deliver);
         }
     }
 

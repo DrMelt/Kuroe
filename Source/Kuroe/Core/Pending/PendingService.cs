@@ -8,14 +8,14 @@ using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Pending;
 
-/// <summary>一个待处理节点：节点路径与等待种类。</summary>
-public readonly record struct PendingNode(NodePath Node, PendingKind Kind);
+/// <summary>一个待处理节点：节点路径、等待种类与等待时的提问。</summary>
+public readonly record struct PendingNode(NodePath Node, PendingKind Kind, string? Question);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进下游。
 /// 外部输入经协议交到节点上，登记即代表收下。</summary>
 public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, IInputDelivery inputs)
 {
-    /// <summary>任务里此刻待处理的节点，按图先根序。</summary>
+    /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
@@ -115,17 +115,21 @@ public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, II
         }
     }
 
-    /// <summary>任务里此刻待处理的节点，按图先根序。要求持有 Gate。</summary>
+    /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。要求持有 Gate。</summary>
     private List<PendingNode> Pending(WorkTask task)
     {
         INodeTask access = task;
-        HashSet<NodePath> accepting = [.. inputs.Accepting(task.Context)];
+        Dictionary<NodePath, string?> accepting = inputs.Accepting(task.Context)
+            .ToDictionary(request => request.Node, request => request.Question);
 
         return
         [
             .. access.Graph.ExecutableNodes
-                .Where(node => accepting.Contains(node.Path))
-                .Select(node => new PendingNode(node.Path, node.Type.Shape.AwaitsApproval ? PendingKind.Approve : PendingKind.Answer)),
+                .Where(node => accepting.ContainsKey(node.Path))
+                .Select(node => new PendingNode(
+                    node.Path,
+                    node.Type.Shape.AwaitsApproval ? PendingKind.Approve : PendingKind.Answer,
+                    accepting[node.Path])),
         ];
     }
 }

@@ -2,7 +2,6 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.NodeTypes;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -138,7 +137,7 @@ public sealed class FlowKuroeInfoTool : ITool
         return node.FindInput(modelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
     }
 
-    /// <summary>节点要求：类型属性、输入端口、上游启动组、提问与输出端口。</summary>
+    /// <summary>节点要求：类型属性、输入端口、上游启动组与输出端口。</summary>
     private static string Requirement(NodeSpec node)
     {
         List<string> parts = [];
@@ -156,11 +155,6 @@ public sealed class FlowKuroeInfoTool : ITool
         if (node.From.Count > 0)
         {
             parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
-        }
-
-        if (node.Type is IQuestionNodeType { Question: { Length: > 0 } question })
-        {
-            parts.Add($"提问 {question}");
         }
 
         if (node.Outputs.Count > 0)

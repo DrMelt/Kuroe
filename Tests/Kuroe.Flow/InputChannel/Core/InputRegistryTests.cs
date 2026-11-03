@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Flow.InputChannel.Tests;
 
-/// <summary>外部输入协议的默认承载：按任务分组记下接收外部输入的节点，交付时按节点路径调节点给的入口。</summary>
+/// <summary>外部输入协议的默认承载：按任务分组记下接收外部输入的节点与提问，交付时按节点路径调节点给的入口。</summary>
 public sealed class InputRegistryTests
 {
     private static readonly NodePath Input = NodePath.Of("整体", "收话");
@@ -19,11 +19,26 @@ public sealed class InputRegistryTests
         StubContext first = new();
         StubContext second = new();
 
-        channel.Accept(first, Input, _ => { });
-        channel.Accept(second, Review, _ => { });
+        channel.Accept(first, Input, "补充背景", _ => { });
+        channel.Accept(second, Review, "确认计划", _ => { });
 
         Assert.Equal(["整体/收话"], Accepting(channel, first));
         Assert.Equal(["整体/审阅"], Accepting(channel, second));
+    }
+
+    [Fact]
+    public void Accepting_reports_the_question()
+    {
+        InputRegistry channel = new();
+        StubContext task = new();
+        channel.Accept(task, Input, "补充背景", _ => { });
+        channel.Accept(task, Review, null, _ => { });
+
+        Dictionary<string, string?> questions = channel.Accepting(task)
+            .ToDictionary(request => request.Node.Value, request => request.Question);
+
+        Assert.Equal("补充背景", questions["整体/收话"]);
+        Assert.Null(questions["整体/审阅"]);
     }
 
     [Fact]
@@ -31,8 +46,8 @@ public sealed class InputRegistryTests
     {
         InputRegistry channel = new();
         StubContext task = new();
-        channel.Accept(task, Input, _ => { });
-        channel.Accept(task, Review, _ => { });
+        channel.Accept(task, Input, null, _ => { });
+        channel.Accept(task, Review, null, _ => { });
 
         channel.Decline(task, Input);
         Assert.Equal(["整体/审阅"], Accepting(channel, task));
@@ -47,7 +62,7 @@ public sealed class InputRegistryTests
         InputRegistry channel = new();
         StubContext task = new();
         List<string> received = [];
-        channel.Accept(task, Input, received.Add);
+        channel.Accept(task, Input, "补充背景", received.Add);
 
         channel.Deliver(task, Input, "补齐 README");
 
@@ -59,7 +74,7 @@ public sealed class InputRegistryTests
     {
         InputRegistry channel = new();
         StubContext task = new();
-        channel.Accept(task, Input, _ => { });
+        channel.Accept(task, Input, null, _ => { });
 
         channel.Deliver(task, Input, "补齐 README");
 
@@ -72,7 +87,7 @@ public sealed class InputRegistryTests
     {
         InputRegistry channel = new();
         StubContext task = new();
-        channel.Accept(task, Input, _ => { });
+        channel.Accept(task, Input, null, _ => { });
         channel.Deliver(task, Input, "补齐 README");
 
         channel.Decline(task, Input);
@@ -101,8 +116,8 @@ public sealed class InputRegistryTests
         {
             for (int round = 0; round < 200; round++)
             {
-                channel.Accept(task, Input, _ => Interlocked.Increment(ref delivered));
-                channel.Accept(task, Review, _ => { });
+                channel.Accept(task, Input, null, _ => Interlocked.Increment(ref delivered));
+                channel.Accept(task, Review, null, _ => { });
                 channel.Decline(task, Review);
                 channel.Deliver(task, Input, string.Empty);
 
@@ -115,7 +130,7 @@ public sealed class InputRegistryTests
 
     /// <summary>按路径文本排序的接收节点，通道给出的是无序集合。</summary>
     private static string[] Accepting(InputRegistry channel, StubContext task) =>
-        [.. channel.Accepting(task).Select(node => node.Value).OrderBy(value => value, StringComparer.Ordinal)];
+        [.. channel.Accepting(task).Select(request => request.Node.Value).OrderBy(value => value, StringComparer.Ordinal)];
 
     /// <summary>测试用的任务上下文：通道只按它分组，其余成员不参与。</summary>
     private sealed class StubContext : INodeContext

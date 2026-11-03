@@ -2,7 +2,6 @@ using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Pending;
 using Spectre.Console;
 
@@ -22,8 +21,8 @@ internal static class ViewLabels
     public const int QuestionLimit = 40;
 
     /// <summary>等待节点的提示：种类与提问，供节点行与选择项共用。</summary>
-    public static string WaitingLabel(PendingNode waiting, INodeType? type) =>
-        NodeParameterView.Question(type) is { Length: > 0 } question
+    public static string WaitingLabel(PendingNode waiting) =>
+        waiting.Question is { Length: > 0 } question
             ? $"{Of(waiting.Kind)}：{OneLine(question, QuestionLimit)}"
             : Of(waiting.Kind);
 

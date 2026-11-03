@@ -11,11 +11,12 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Approval;
 
-/// <summary>审批节点在任务内的运行期对象：输入齐备即停在待批准，在自己的执行里声明接收外部输入，交付即批准并按输入端口放出停驻时的取值。
+/// <summary>审批节点在任务内的运行期对象：输入齐备即停在待批准，在自己的执行里声明接收外部输入并给出提问，交付即批准并按输入端口放出停驻时的取值。
 /// 不启动执行、不承载自身内容，取消后不再接收。读写都要求持有任务 Gate。</summary>
 internal sealed class ApprovalRuntime(
     ExecutableNode executable,
     IInputChannel channel,
+    string? question,
     INodeContext nodeContext)
     : RuntimeNode(executable)
 {
@@ -52,7 +53,7 @@ internal sealed class ApprovalRuntime(
 
         _inputs = inputs;
         _awaiting = true;
-        channel.Accept(context, Path, _ => Approve());
+        channel.Accept(context, Path, question, _ => Approve());
     }
 
     /// <summary>收下一次外部输入即批准：撤停驻并发布一次，下游据此按新版本重新评估。批准不带内容，声明由交付方随交付撤销。</summary>
@@ -116,7 +117,7 @@ internal sealed class ApprovalRuntime(
 
         if (_awaiting && !_canceled)
         {
-            channel.Accept(nodeContext, Path, _ => Approve());
+            channel.Accept(nodeContext, Path, question, _ => Approve());
         }
     }
 

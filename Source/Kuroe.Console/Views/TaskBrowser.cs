@@ -5,7 +5,6 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
@@ -321,24 +320,17 @@ internal sealed class TaskBrowser(
             return;
         }
 
-        if (registry.Find(id) is not { IsError: false } found)
-        {
-            return;
-        }
-
-        TaskSnapshot task = found.Value.Snapshot();
         List<Item> items = [.. waiting.Select(node => new Item(
-            AnswerItemLabel(task, node), "answer", Node: node.Node))];
+            AnswerItemLabel(node), "answer", Node: node.Node))];
 
         if (Choose("选择要回答的节点", items).Node is not { } nodePath)
         {
             return;
         }
 
-        ExecutableNode? executable = task.Graph[nodePath] as ExecutableNode;
-        string? question = NodeParameterView.Question(executable?.Type);
+        PendingNode selected = waiting.First(node => node.Node.Value == nodePath.Value);
         List<FormInfo> info = [new("节点", nodePath.Value)];
-        if (question is { Length: > 0 })
+        if (selected.Question is { Length: > 0 } question)
         {
             info.Add(new("提问", question));
         }
@@ -350,12 +342,8 @@ internal sealed class TaskBrowser(
         }
     }
 
-    private static string AnswerItemLabel(TaskSnapshot task, PendingNode node)
-    {
-        ExecutableNode? executable = task.Graph[node.Node] as ExecutableNode;
-
-        return $"{node.Node.Value} · {ViewLabels.WaitingLabel(node, executable?.Type)}";
-    }
+    private static string AnswerItemLabel(PendingNode node) =>
+        $"{node.Node.Value} · {ViewLabels.WaitingLabel(node)}";
 
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(ExecutionId executionId)
