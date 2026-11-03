@@ -7,7 +7,7 @@ namespace Kuroe.Tool.File.Tests;
 
 using File = System.IO.File;
 
-/// <summary>工作目录文件访问工具：读写文本文件与列出目录条目，路径限制在工作目录内。</summary>
+/// <summary>工作目录文件访问工具：读写文本文件、列出目录条目与删除路径，路径限制在工作目录内。</summary>
 public sealed class FileToolsTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
@@ -704,13 +704,144 @@ public sealed class FileToolsTests : IDisposable
     }
 
     [Fact]
+    public void DeleteFile_deletes_file()
+    {
+        Directory.CreateDirectory(_root);
+        string target = Path.Combine(_root, "notes.txt");
+        File.WriteAllText(target, "内容");
+
+        string output = Call("DeleteFile", ("path", "notes.txt"));
+
+        Assert.Equal("已删除文件 notes.txt。", output);
+        Assert.False(File.Exists(target));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_missing_path_argument()
+    {
+        Directory.CreateDirectory(_root);
+
+        Assert.Contains("缺少参数 path", Call("DeleteFile"));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_missing_path()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call("DeleteFile", ("path", "nope.txt"));
+
+        Assert.Contains("不存在", output);
+    }
+
+    [Fact]
+    public void DeleteFile_deletes_empty_directory()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "empty"));
+
+        string output = Call("DeleteFile", ("path", "empty"));
+
+        Assert.Equal("已删除目录 empty。", output);
+        Assert.False(Directory.Exists(Path.Combine(_root, "empty")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_non_empty_directory_without_recursive()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "dir"));
+        File.WriteAllText(Path.Combine(_root, "dir", "a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", "dir"));
+
+        Assert.Contains("不为空", output);
+        Assert.True(File.Exists(Path.Combine(_root, "dir", "a.txt")));
+    }
+
+    [Fact]
+    public void DeleteFile_deletes_directory_with_contents_when_recursive()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "dir", "nested"));
+        File.WriteAllText(Path.Combine(_root, "dir", "a.txt"), "x");
+        File.WriteAllText(Path.Combine(_root, "dir", "nested", "b.txt"), "y");
+
+        string output = Call("DeleteFile", ("path", "dir"), ("recursive", true));
+
+        Assert.Equal("已删除目录 dir。", output);
+        Assert.False(Directory.Exists(Path.Combine(_root, "dir")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_path_escaping_working_directory()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", ".."));
+
+        Assert.Contains("不在工作区内", output);
+        Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_the_path_base_itself()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", "."), ("recursive", true));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_the_path_base_with_a_trailing_separator()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
+
+        string output = Call("DeleteFile", ("path", $".{Path.DirectorySeparatorChar}"), ("recursive", true));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_the_path_base_when_the_root_binding_has_a_trailing_separator()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "x");
+
+        DeleteFileTool tool = new(_root + Path.DirectorySeparatorChar);
+        string output = ToolResult.Render(tool.Functions.Single().Invoke(
+            new ToolArguments(new Dictionary<string, object?> { ["path"] = ".", ["recursive"] = true })));
+
+        Assert.Contains("路径基准目录本身", output);
+        Assert.True(File.Exists(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void DeleteFile_rejects_the_denied_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        Directory.CreateDirectory(Path.Combine(_root, ".git"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "密钥");
+        File.WriteAllText(Path.Combine(_root, ".git", "config"), "仓库配置");
+
+        Assert.Contains("黑名单", Call("DeleteFile", ("path", ".kuroe/catalog.json")));
+        Assert.Contains("黑名单", Call("DeleteFile", ("path", ".git"), ("recursive", true)));
+        Assert.True(File.Exists(Path.Combine(_root, ".kuroe", "catalog.json")));
+        Assert.True(File.Exists(Path.Combine(_root, ".git", "config")));
+    }
+
+    [Fact]
     public void Face_functions_split_into_read_and_write_groups()
     {
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
         string[] readFunctions = ["ReadFile", "ListDirectory", "GetFileInfo"];
-        string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile"];
+        string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile", "DeleteFile"];
         foreach (string name in readFunctions)
         {
             Assert.Equal($"file/read/{name}", paths[name]);
@@ -737,11 +868,24 @@ public sealed class FileToolsTests : IDisposable
                 ("PatchFile", "path"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
+                ("DeleteFile", "path"),
             ],
             entry => Assert.True(Parameter(definitions, entry.Item1, entry.Item2).Path));
 
         Assert.False(Parameter(definitions, "WriteFile", "content").Path);
         Assert.False(Parameter(definitions, "ReadFile", "from").Path);
+    }
+
+    [Fact]
+    public void DeleteFile_declares_recursive_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter recursive = Parameter(definitions, "DeleteFile", "recursive");
+
+        Assert.True(recursive.Flag);
+        Assert.False(recursive.Required);
     }
 
     [Fact]
@@ -795,6 +939,7 @@ public sealed class FileToolsTests : IDisposable
                 ("PatchFile", "path"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
+                ("DeleteFile", "path"),
             ],
             entry =>
             {
@@ -869,6 +1014,7 @@ public sealed class FileToolsTests : IDisposable
         new WriteFileTool(_root),
         new PatchFileTool(_root),
         new MoveFileTool(_root),
+        new DeleteFileTool(_root),
         new GetFileInfoTool(_root),
     ];
 

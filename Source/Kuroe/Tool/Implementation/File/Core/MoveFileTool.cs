@@ -65,7 +65,7 @@ public sealed class MoveFileTool : ITool
             return ToolErrors.Path($"{target} 已存在，不能覆盖。");
         }
 
-        if (isDirectory && IsWithin(resolvedTarget.Value, resolvedSource.Value))
+        if (isDirectory && WorkspacePath.IsWithin(resolvedSource.Value, resolvedTarget.Value))
         {
             return ToolErrors.Path($"{target} 在 {source} 之内，不能移动到自身子目录。");
         }
@@ -94,11 +94,4 @@ public sealed class MoveFileTool : ITool
 
         return $"已把 {source} 移动到 {target}。";
     }
-
-    /// <summary>目标路径是否落在源目录之内，按平台的文件系统大小写规则比较。</summary>
-    private static bool IsWithin(string path, string directory) =>
-        path.Length > directory.Length
-        && path.StartsWith(
-            string.Concat(directory, Path.DirectorySeparatorChar),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }

@@ -12,8 +12,9 @@
 | `file/write/WriteFile`    | `path`、`content` 必填，`encoding` 可选                               | 覆盖写入文本，文件不存在时创建，父目录缺失时自动创建               |
 | `file/write/PatchFile`    | `path`、`from`、`to`、`original`、`replacement` 必填，`encoding` 可选 | 按行号范围替换内容，原文必须与 `original` 逐行一致                 |
 | `file/write/MoveFile`     | `source`、`target` 必填                                               | 移动文件或目录，同目录改名为重命名，目标已存在时拒绝               |
+| `file/write/DeleteFile`   | `path` 必填，`recursive` 开关                                         | 删除文件或目录，目录缺省只删除空目录，路径基准目录本身拒绝删除     |
 
-目标落在源目录之内时拒绝，目标父目录缺失时自动创建。
+`MoveFile` 的目标落在源目录之内时拒绝，目标父目录缺失时自动创建。`DeleteFile` 的 `recursive` 开关为真时连同目录内容一起删除。
 
 ## 路径
 

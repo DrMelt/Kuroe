@@ -38,4 +38,12 @@ public static class WorkspacePath
             && relative != ".."
             && !relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
     }
+
+    /// <summary>两个路径是否指向同一位置：忽略目录的尾分隔符，按平台的文件系统大小写规则比较。两个参数都是绝对路径。</summary>
+    public static bool IsSame(string left, string right) =>
+        IsUnder(left, right) && IsUnder(right, left);
+
+    /// <summary>目标路径是否严格位于目录之内：不含目录本身，忽略目录的尾分隔符。两个参数都是绝对路径。</summary>
+    public static bool IsWithin(string directory, string path) =>
+        IsUnder(directory, path) && !IsSame(directory, path);
 }
