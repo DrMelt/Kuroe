@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ErrorOr;
 
@@ -69,8 +70,8 @@ public sealed class FileScope(string root, string boundary, string rootName, str
         }
     }
 
-    /// <summary>读取根目录内文件指定行号范围的内容，按行截取并按字符上限截断。
-    /// 行号从 1 起，结束行超出文件长度时读到文件尾并附实际行数。listFunction 是提示里指出的列目录函数名。</summary>
+    /// <summary>读取根目录内文件指定行号范围的内容，每行带行号并按字符上限截断。
+    /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。listFunction 是提示里指出的列目录函数名。</summary>
     public ErrorOr<string> ReadRange(string path, int from, int to, string listFunction)
     {
         ErrorOr<string> file = ExistingFile(path, listFunction);
@@ -125,8 +126,8 @@ public sealed class FileScope(string root, string boundary, string rootName, str
         return resolved.Value;
     }
 
-    /// <summary>读取文件指定行号范围的内容，按行截取并按字符上限截断。
-    /// 行号从 1 起，结束行超出文件长度时读到文件尾并附实际行数。</summary>
+    /// <summary>读取文件指定行号范围的内容，每行带行号并按字符上限截断。
+    /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。</summary>
     private static ErrorOr<string> ReadLines(string fullPath, string path, int from, int to)
     {
         try
@@ -142,42 +143,77 @@ public sealed class FileScope(string root, string boundary, string rootName, str
             }
 
             int maxLines = to - from + 1;
-            var text = new StringBuilder();
-            int readLines = 0;
-            bool limited = false;
-            while (readLines < maxLines && !limited)
+            List<string> lines = [];
+            bool reachedEnd = false;
+            int rawLength = 0;
+            while (lines.Count < maxLines)
             {
                 string? line = reader.ReadLine();
                 if (line is null)
                 {
+                    reachedEnd = true;
                     break;
                 }
 
-                readLines++;
-                if (text.Length > 0)
+                lines.Add(line);
+                rawLength += line.Length + 1;
+                if (rawLength > OutputLimit)
                 {
-                    text.Append('\n');
-                }
-
-                text.Append(line);
-                if (text.Length > OutputLimit)
-                {
-                    limited = true;
+                    break;
                 }
             }
 
-            string content = Truncate(text.ToString());
-            if (!limited && readLines < maxLines)
+            if (lines.Count == 0)
             {
-                content += $"（已到文件结尾，实际返回 {readLines} 行）";
+                return "（已到文件结尾，文件没有内容）";
             }
 
-            return content;
+            string content = Numbered(lines, from, out bool limited);
+            if (limited)
+            {
+                return $"（内容超过 {OutputLimit} 字符，已截断）\n{content}";
+            }
+
+            if (!reachedEnd)
+            {
+                return content;
+            }
+
+            int last = from + lines.Count - 1;
+            string range = from == last ? $"第 {from} 行" : $"第 {from} 到 {last} 行";
+            return $"（已到文件结尾，实际返回{range}）\n{content}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return ToolErrors.ReadFailed($"读取 {path} 失败：{ex.Message}");
         }
+    }
+
+    /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并标记。</summary>
+    private static string Numbered(List<string> lines, int from, out bool limited)
+    {
+        int width = (from + lines.Count - 1).ToString(CultureInfo.InvariantCulture).Length;
+        var text = new StringBuilder();
+        limited = false;
+        for (int index = 0; index < lines.Count; index++)
+        {
+            if (text.Length > 0)
+            {
+                text.Append('\n');
+            }
+
+            text.Append((from + index).ToString(CultureInfo.InvariantCulture).PadLeft(width));
+            text.Append(" | ");
+            text.Append(lines[index]);
+            if (text.Length > OutputLimit)
+            {
+                limited = true;
+                break;
+            }
+        }
+
+        string content = text.ToString();
+        return content.Length <= OutputLimit ? content : content[..OutputLimit];
     }
 
     /// <summary>按字符上限截断文本，超长保留前限并在末尾加截断标记。</summary>

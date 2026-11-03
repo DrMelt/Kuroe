@@ -23,7 +23,7 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
-        "读取导出目录内源码或文档指定行号范围的内容。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾。",
+        "读取导出目录内源码或文档指定行号范围的内容，每行带行号。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾并在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
@@ -71,7 +71,7 @@ public sealed class SourceTool(string sourceDirectory) : ITool
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>读取导出目录内文件指定行号范围的内容，按行截取并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
+    /// <summary>读取导出目录内文件指定行号范围的内容，每行带行号并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
     private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
         string path = arguments.Text(new ToolName("path"))!;

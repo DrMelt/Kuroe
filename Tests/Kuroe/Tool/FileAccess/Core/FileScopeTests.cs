@@ -70,7 +70,63 @@ public sealed class FileScopeTests : IDisposable
         ErrorOr<string> text = scope.ReadRange("a.txt", 2, 3, "ListDirectory");
 
         Assert.False(text.IsError);
-        Assert.Equal("二\n三", text.Value);
+        Assert.Equal("2 | 二\n3 | 三", text.Value);
+    }
+
+    [Fact]
+    public void Read_range_numbers_lines_and_marks_the_file_end()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "一\n二\n三\n四\n");
+        FileScope scope = new(_root, "工作目录");
+
+        ErrorOr<string> text = scope.ReadRange("a.txt", 2, 10, "ListDirectory");
+
+        Assert.False(text.IsError);
+        Assert.Equal("（已到文件结尾，实际返回第 2 到 4 行）\n2 | 二\n3 | 三\n4 | 四", text.Value);
+    }
+
+    [Fact]
+    public void Read_range_aligns_line_numbers_to_the_last_line()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), string.Concat(Enumerable.Range(1, 12).Select(line => $"L{line}\n")));
+        FileScope scope = new(_root, "工作目录");
+
+        ErrorOr<string> text = scope.ReadRange("a.txt", 8, 12, "ListDirectory");
+
+        Assert.False(text.IsError);
+        Assert.Equal(" 8 | L8\n 9 | L9\n10 | L10\n11 | L11\n12 | L12", text.Value);
+    }
+
+    [Fact]
+    public void Read_range_marks_truncation_before_the_content()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), new string('a', 9000));
+        FileScope scope = new(_root, "工作目录");
+
+        ErrorOr<string> text = scope.ReadRange("a.txt", 1, 1, "ListDirectory");
+
+        Assert.False(text.IsError);
+        const string Notice = "（内容超过 8000 字符，已截断）\n";
+        Assert.StartsWith(Notice, text.Value, StringComparison.Ordinal);
+        string content = text.Value[Notice.Length..];
+        Assert.Equal(8000, content.Length);
+        Assert.StartsWith("1 | ", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Read_range_reports_an_empty_file()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), string.Empty);
+        FileScope scope = new(_root, "工作目录");
+
+        ErrorOr<string> text = scope.ReadRange("a.txt", 1, 50, "ListDirectory");
+
+        Assert.False(text.IsError);
+        Assert.Equal("（已到文件结尾，文件没有内容）", text.Value);
     }
 
     [Fact]
