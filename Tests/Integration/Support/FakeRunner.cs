@@ -91,7 +91,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         RecordingJournal journal,
         CancellationToken cancellationToken)
     {
-        IExecution started = Executions!.Find(execution).ThrowIfError();
+        ExecutionIndex executions = Executions
+            ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
+        IExecution started = executions.Find(execution).ThrowIfError();
 
         lock (_gate)
         {

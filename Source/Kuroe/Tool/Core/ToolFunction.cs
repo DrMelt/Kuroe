@@ -33,9 +33,14 @@ public sealed class ToolFunction
         return _invoke(arguments);
     }
 
-    /// <summary>校验全部路径参数，返回第一条拒绝错误。</summary>
+    /// <summary>校验全部路径参数，返回第一条拒绝错误。没有路径范围时没有路径参数可校验。</summary>
     private Error? Check(ToolArguments arguments)
     {
+        if (_paths is not { } paths)
+        {
+            return null;
+        }
+
         foreach (ToolParameter parameter in Definition.Parameters)
         {
             if (!parameter.Path)
@@ -58,7 +63,7 @@ public sealed class ToolFunction
 
                 foreach (string pathValue in values)
                 {
-                    if (CheckValue(parameter, pathValue) is { } rejectedValue)
+                    if (CheckValue(paths, parameter, pathValue) is { } rejectedValue)
                     {
                         return rejectedValue;
                     }
@@ -78,7 +83,7 @@ public sealed class ToolFunction
                 continue;
             }
 
-            if (CheckValue(parameter, text) is { } rejectedText)
+            if (CheckValue(paths, parameter, text) is { } rejectedText)
             {
                 return rejectedText;
             }
@@ -88,14 +93,14 @@ public sealed class ToolFunction
     }
 
     /// <summary>校验一个路径值：空值拒绝，其余按工具声明的路径范围解析。</summary>
-    private Error? CheckValue(ToolParameter parameter, string value)
+    private static Error? CheckValue(ToolPathScope paths, ToolParameter parameter, string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return ToolErrors.Argument($"路径参数 {parameter.Name.Value} 不能为空。");
         }
 
-        ErrorOr<string> resolved = _paths!.Resolve(value, parameter.PathAccess);
+        ErrorOr<string> resolved = paths.Resolve(value, parameter.PathAccess);
 
         return resolved.IsError ? resolved.FirstError : null;
     }

@@ -36,9 +36,9 @@ public sealed class Session
     /// <summary>丢弃当前上下文，回到该历史来源的起点。</summary>
     public void Reset()
     {
-        if (_session is not null)
+        if (_session is { } session)
         {
-            Relayout();
+            Relayout(session);
         }
     }
 
@@ -62,19 +62,19 @@ public sealed class Session
         }
 
         ChatClientAgent agent = _clients.GetAgent(model, resolved.Value);
-        await EnsureSessionAsync(agent, cancellationToken);
+        ChatClientAgentSession session = await EnsureSessionAsync(agent, cancellationToken);
         if (_history.Stale)
         {
-            Relayout();
+            Relayout(session);
         }
 
-        int historyStart = HistoryCount;
+        int historyStart = HistoryCount(session);
         var updates = new List<AgentResponseUpdate>();
         try
         {
             await foreach (var update in agent.RunStreamingAsync(
                 [new ChatMessage(ChatRole.User, input)],
-                _session,
+                session,
                 Options(journal),
                 cancellationToken))
             {
@@ -84,7 +84,7 @@ public sealed class Session
         }
         finally
         {
-            CompleteReply(updates, journal, historyStart);
+            CompleteReply(updates, journal, session, historyStart);
         }
 
         return Result.Success;
@@ -109,49 +109,58 @@ public sealed class Session
     }
 
     /// <summary>首次使用时创建框架会话并按来源布局历史。</summary>
-    private async Task EnsureSessionAsync(ChatClientAgent agent, CancellationToken cancellationToken)
+    private async Task<ChatClientAgentSession> EnsureSessionAsync(
+        ChatClientAgent agent,
+        CancellationToken cancellationToken)
     {
-        if (_session is not null)
+        if (_session is { } existing)
         {
-            return;
+            return existing;
         }
 
-        _session = (ChatClientAgentSession)await agent.CreateSessionAsync(cancellationToken);
-        Relayout();
+        ChatClientAgentSession created = (ChatClientAgentSession)await agent.CreateSessionAsync(cancellationToken);
+        _session = created;
+        Relayout(created);
+
+        return created;
     }
 
     /// <summary>按历史来源重铺会话历史。</summary>
-    private void Relayout()
+    private void Relayout(ChatClientAgentSession session)
     {
         List<ChatMessage> layout = [];
         _history.LayOut(layout);
-        _session!.SetInMemoryChatHistory(layout);
+        session.SetInMemoryChatHistory(layout);
     }
 
     /// <summary>会话历史当前的条数，收口回退的本轮增量以此为界。</summary>
-    private int HistoryCount =>
-        _session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) ? history.Count : 0;
+    private static int HistoryCount(ChatClientAgentSession session) =>
+        session.TryGetInMemoryChatHistory(out List<ChatMessage>? history) ? history.Count : 0;
 
     /// <summary>本轮回复的消息由框架写回历史。工具调用缺少结果或没有任何产出时整轮退回，本轮新增全部撤销。</summary>
-    private void CompleteReply(List<AgentResponseUpdate> updates, ProcessJournal journal, int historyStart)
+    private static void CompleteReply(
+        List<AgentResponseUpdate> updates,
+        ProcessJournal journal,
+        ChatClientAgentSession session,
+        int historyStart)
     {
         if (updates.Count == 0)
         {
-            DiscardReply(journal, historyStart);
+            DiscardReply(journal, session, historyStart);
             return;
         }
 
         IList<ChatMessage> produced = updates.ToAgentResponse().Messages;
         if (HasPendingFunctionCall(produced))
         {
-            DiscardReply(journal, historyStart);
+            DiscardReply(journal, session, historyStart);
         }
     }
 
     /// <summary>撤掉本轮期间写入历史的消息，该轮输出保留在记录里。</summary>
-    private void DiscardReply(ProcessJournal journal, int historyStart)
+    private static void DiscardReply(ProcessJournal journal, ChatClientAgentSession session, int historyStart)
     {
-        if (_session!.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
+        if (session.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
         {
             history.RemoveRange(historyStart, history.Count - historyStart);
         }

@@ -67,11 +67,15 @@ public sealed class SettingsTests : IDisposable
         entries.Single(entry => entry.Name == name).Value;
 
     /// <summary>库内类型与文件形状都是 internal，测试按名字取。</summary>
-    private static IEnumerable<string> Properties(Assembly library, string name) => library
-        .GetType(name, throwOnError: true)!
-        .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-        .Select(property => property.Name)
-        .Order();
+    private static IEnumerable<string> Properties(Assembly library, string name)
+    {
+        Type? type = library.GetType(name, throwOnError: true);
+        Assert.NotNull(type);
+
+        return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => property.Name)
+            .Order();
+    }
 
     /// <summary>路径解析只认已定义的设置项，大小写不敏感。</summary>
     [Fact]

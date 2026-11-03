@@ -9,7 +9,8 @@ public static class AtomicFile
     public static void WriteText(string path, string text)
     {
         string target = Path.GetFullPath(path);
-        string directory = Path.GetDirectoryName(target)!;
+        string directory = Path.GetDirectoryName(target)
+            ?? throw new IOException($"目标路径 {target} 没有所在目录。");
         Directory.CreateDirectory(directory);
 
         string temporary = Path.Combine(directory, $"{Path.GetFileName(target)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp");

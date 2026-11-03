@@ -23,8 +23,6 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
     /// <summary>文件写入节点的类型规则：一个内容 Text 输入加若干路径变量 Text 输入，输出可选，不接受执行方式。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
-        ExecutableSpec spec = node.Spec!;
-
         void Reject(bool condition, string message)
         {
             if (condition)
@@ -39,7 +37,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
             "文件写入节点必须声明一个 Text 输入端口，写入内容取自它。");
 
         Reject(node.Outputs.Count > 1, "文件写入节点最多声明一个输出端口。");
-        Reject(spec.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
+        Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
     /// <summary>文件写入节点的运行期对象。</summary>

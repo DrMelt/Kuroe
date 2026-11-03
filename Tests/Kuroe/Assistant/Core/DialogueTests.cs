@@ -127,7 +127,7 @@ public sealed class DialogueTests
 
         Assert.True(flow.HostStartInputs.TryGetValue(model, out string? input));
         Assert.Equal("MODEL", input);
-        Assert.Null(flow.StartOutputs.Find(model)!.Value.Value);
+        Assert.Null(Assert.NotNull(flow.StartOutputs.Find(model)).Value);
     }
 
     private static FlowDefinition Build(string language)

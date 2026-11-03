@@ -74,7 +74,7 @@ public sealed class SourceTool(string sourceDirectory) : ITool
     /// <summary>读取导出目录内文件指定行号范围的内容，每行带行号并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
     private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
-        string path = arguments.Text(new ToolName("path"))!;
+        string path = arguments.RequiredText(new ToolName("path"));
 
         ErrorOr<LineRange> range = LineRange.Parse(arguments, 1, DefaultLines);
         if (range.IsError)

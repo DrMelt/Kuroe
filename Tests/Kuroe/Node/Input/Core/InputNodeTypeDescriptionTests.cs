@@ -38,7 +38,8 @@ public sealed class InputNodeTypeDescriptionTests
         Assert.Null(parameters.Question);
     }
 
-    private static InputParameters Declared(INodeType type) => Assert.IsType<InputNodeType>(type).Parameters!;
+    private static InputParameters Declared(INodeType type) =>
+        Assert.IsType<InputParameters>(Assert.IsType<InputNodeType>(type).Parameters);
 
     /// <summary>测试用的参数段取值：按字段名给出本轮内容，未给的字段取安全默认。</summary>
     private sealed class Reader(string? question = null) : IParameterReader

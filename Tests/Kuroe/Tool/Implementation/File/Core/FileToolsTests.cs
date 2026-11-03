@@ -943,7 +943,8 @@ public sealed class FileToolsTests : IDisposable
             ],
             entry =>
             {
-                ToolPathAccess access = Parameter(definitions, entry.Item1, entry.Item2).PathAccess!;
+                ToolPathAccess access =
+                    Assert.IsType<ToolPathAccess>(Parameter(definitions, entry.Item1, entry.Item2).PathAccess);
                 Assert.Equal([".kuroe", ".git"], access.Deny);
             });
     }

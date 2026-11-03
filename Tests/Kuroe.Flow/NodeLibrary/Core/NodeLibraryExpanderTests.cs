@@ -25,9 +25,11 @@ public sealed class NodeLibraryExpanderTests
         Assert.False(expanded.IsError,
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
         NodeSpec root = Assert.Single(expanded.Value).RootNode;
-        NodeSpec container = Assert.Single(root.Nodes!);
+        Assert.NotNull(root.Nodes);
+        NodeSpec container = Assert.Single(root.Nodes);
         Assert.Equal(Instance, container.Label);
-        Assert.Equal(TestNodeTypes.ExecutableKind, Assert.Single(container.Nodes!).Kind);
+        Assert.NotNull(container.Nodes);
+        Assert.Equal(TestNodeTypes.ExecutableKind, Assert.Single(container.Nodes).Kind);
     }
 
     [Fact]

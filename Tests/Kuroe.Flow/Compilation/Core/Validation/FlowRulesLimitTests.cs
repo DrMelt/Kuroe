@@ -38,7 +38,7 @@ public sealed class FlowRulesLimitTests
         NodeGraph graph = Compile(Flow(Container("整体", max: 2, source: null, Exec("普通"))));
 
         Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
-        Assert.Equal(2, graph.PlanOf(NodePath.Of("整体"))!.MaxExecutions);
+        Assert.Equal(2, Assert.IsType<NodeInputPlan>(graph.PlanOf(NodePath.Of("整体"))).MaxExecutions);
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "普通").MaxExecutions);
     }
 
@@ -60,7 +60,7 @@ public sealed class FlowRulesLimitTests
 
         Assert.Equal(5, ContainerOf(graph, "内部").MaxExecutions);
         Assert.Equal(2, ContainerOf(graph, "整体").MaxExecutions);
-        Assert.Equal(2, graph.PlanOf(NodePath.Of("整体"))!.MaxExecutions);
+        Assert.Equal(2, Assert.IsType<NodeInputPlan>(graph.PlanOf(NodePath.Of("整体"))).MaxExecutions);
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "内层干活").MaxExecutions);
         Assert.Equal(ExecutableNode.DefaultMaxExecutions, Executable(graph, "外层干活").MaxExecutions);
     }

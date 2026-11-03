@@ -60,7 +60,7 @@ public sealed class FileRuntimeTests
         ExecutableNode node = ReadNode(root, "in.txt");
         StubNodeContext context = Context(node, root);
         FileReadRuntime runtime = ReadRuntime(node, context);
-        NodeInputPlan plan = context.Plan(TargetPath)!;
+        NodeInputPlan plan = Assert.IsType<NodeInputPlan>(context.Plan(TargetPath));
 
         Assert.True(plan.Ready(runtime, context));
         ((IInputProgress)runtime).Consume(plan.Groups[0], context);
@@ -254,7 +254,7 @@ public sealed class FileRuntimeTests
     }
 
     private static NodeInputValues Inputs(StubNodeContext context) =>
-        NodeInputValues.From(context.Plan(TargetPath)!.Groups[0], context);
+        NodeInputValues.From(Assert.IsType<NodeInputPlan>(context.Plan(TargetPath)).Groups[0], context);
 
     private static FileReadRuntime ReadRuntime(ExecutableNode node, StubNodeContext context) =>
         Assert.IsType<FileReadRuntime>(((INodeRuntimeFactory)node.Type).Create(node, context));

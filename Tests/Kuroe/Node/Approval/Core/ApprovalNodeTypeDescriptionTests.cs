@@ -38,7 +38,8 @@ public sealed class ApprovalNodeTypeDescriptionTests
         Assert.Null(parameters.Question);
     }
 
-    private static ApprovalParameters Declared(INodeType type) => Assert.IsType<ApprovalNodeType>(type).Parameters!;
+    private static ApprovalParameters Declared(INodeType type) =>
+        Assert.IsType<ApprovalParameters>(Assert.IsType<ApprovalNodeType>(type).Parameters);
 
     /// <summary>测试用的参数段取值：按字段名给出本轮内容，未给的字段取安全默认。</summary>
     private sealed class Reader(string? question = null) : IParameterReader

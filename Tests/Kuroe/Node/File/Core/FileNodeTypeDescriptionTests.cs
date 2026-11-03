@@ -48,7 +48,7 @@ public sealed class FileNodeTypeDescriptionTests
         List<string> failures = [];
         INodeType type = new FileReadNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
 
-        FileParameters parameters = Assert.IsType<FileReadNodeType>(type).Parameters!;
+        FileParameters parameters = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
@@ -62,7 +62,7 @@ public sealed class FileNodeTypeDescriptionTests
         List<string> failures = [];
         INodeType type = new FileWriteNodeTypeDescription(Root).Read(new Reader("a/b.txt"), failures.Add);
 
-        FileParameters parameters = Assert.IsType<FileWriteNodeType>(type).Parameters!;
+        FileParameters parameters = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("a/b.txt", parameters.Path);
@@ -84,10 +84,10 @@ public sealed class FileNodeTypeDescriptionTests
     {
         List<string> failures = [];
 
-        FileParameters read = Assert.IsType<FileReadNodeType>(
-            new FileReadNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters!;
-        FileParameters write = Assert.IsType<FileWriteNodeType>(
-            new FileWriteNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters!;
+        FileParameters read = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(
+            new FileReadNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
+        FileParameters write = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(
+            new FileWriteNodeTypeDescription(Root).Read(new Reader("a.txt", 1200), failures.Add)).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal(1200, read.MaxChars);
@@ -100,10 +100,10 @@ public sealed class FileNodeTypeDescriptionTests
         Dictionary<string, string> variables = new() { ["root"] = "任务路径" };
         List<string> failures = [];
 
-        FileParameters read = Assert.IsType<FileReadNodeType>(
-            new FileReadNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters!;
-        FileParameters write = Assert.IsType<FileWriteNodeType>(
-            new FileWriteNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters!;
+        FileParameters read = Assert.IsType<FileParameters>(Assert.IsType<FileReadNodeType>(
+            new FileReadNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters);
+        FileParameters write = Assert.IsType<FileParameters>(Assert.IsType<FileWriteNodeType>(
+            new FileWriteNodeTypeDescription(Root).Read(new Reader("{root}/a.txt", variables: variables), failures.Add)).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal(variables, read.Variables);

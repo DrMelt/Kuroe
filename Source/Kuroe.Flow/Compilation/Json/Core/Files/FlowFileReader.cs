@@ -637,7 +637,7 @@ static class FlowFileReader
 
     private static FlowValue ToFlowValue(JsonElement element) => element.ValueKind switch
     {
-        JsonValueKind.String => new FlowValue.Text(element.GetString()!),
+        JsonValueKind.String => new FlowValue.Text(element.ToString()),
         JsonValueKind.Number => new FlowValue.Number(element.GetRawText()),
         JsonValueKind.True => new FlowValue.Boolean(true),
         JsonValueKind.False => new FlowValue.Boolean(false),

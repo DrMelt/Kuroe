@@ -23,7 +23,8 @@ internal sealed class NodeMaterializer(
     internal IEnumerable<NodeRuntime> Materialized => _roots.SelectMany(Subtree);
 
     /// <summary>按路径取节点，未实例化时建出缺失的段。要求持有任务 Gate。</summary>
-    internal NodeRuntime Get(NodePath path) => Walk(path, materialize: true)!;
+    internal NodeRuntime Get(NodePath path) => Walk(path, materialize: true)
+        ?? throw new InvalidOperationException($"路径 {path} 为空，无法建立运行期节点。");
 
     /// <summary>已实例化的节点，未实例化时为空。不创建节点。</summary>
     internal NodeRuntime? Find(NodePath path) => Walk(path, materialize: false);

@@ -113,13 +113,15 @@ public sealed class CommandToolFile : IToolFile
     private static ErrorOr<CommandToolDefinition> ToDefinition(CommandToolDto dto, string workDirectory)
     {
         List<Error> errors = [];
+        string? toolName = string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name;
+        string name = toolName ?? "(未命名)";
 
-        if (string.IsNullOrWhiteSpace(dto.Name))
+        if (toolName is null)
         {
-            errors.Add(CommandToolErrors.Invalid("(未命名)", "工具名不能为空。"));
+            errors.Add(CommandToolErrors.Invalid(name, "工具名不能为空。"));
         }
 
-        ErrorOr<IReadOnlyList<CommandToolTemplateItem>> template = ToTemplateItems(dto.Name ?? "(未命名)", dto.Template);
+        ErrorOr<IReadOnlyList<CommandToolTemplateItem>> template = ToTemplateItems(name, dto.Template);
         if (template.IsError)
         {
             errors.AddRange(template.ErrorsOrEmptyList);
@@ -128,24 +130,24 @@ public sealed class CommandToolFile : IToolFile
         string? path = PathOf(dto);
         if (path is { } value && ToolPath.InvalidReason(value) is { } reason)
         {
-            errors.Add(CommandToolErrors.Invalid(dto.Name!, reason));
+            errors.Add(CommandToolErrors.Invalid(name, reason));
         }
 
         if (dto.OutputLimit is { } outputLimit && outputLimit < 1)
         {
-            errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", "OutputLimit 必须是正整数。"));
+            errors.Add(CommandToolErrors.Invalid(name, "OutputLimit 必须是正整数。"));
         }
 
         if (dto.TimeoutSeconds is { } timeout && timeout < 1)
         {
-            errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", "TimeoutSeconds 必须是正整数。"));
+            errors.Add(CommandToolErrors.Invalid(name, "TimeoutSeconds 必须是正整数。"));
         }
         else if (dto.TimeoutSeconds > CommandToolTemplate.MaxTimeoutSeconds)
         {
-            errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"TimeoutSeconds 不能超过 {CommandToolTemplate.MaxTimeoutSeconds} 秒。"));
+            errors.Add(CommandToolErrors.Invalid(name, $"TimeoutSeconds 不能超过 {CommandToolTemplate.MaxTimeoutSeconds} 秒。"));
         }
 
-        ErrorOr<IReadOnlyList<string>> variables = ToVariables(dto.Name ?? "(未命名)", dto.Variables, dto.Directory);
+        ErrorOr<IReadOnlyList<string>> variables = ToVariables(name, dto.Variables, dto.Directory);
         if (variables.IsError)
         {
             errors.AddRange(variables.ErrorsOrEmptyList);
@@ -159,17 +161,17 @@ public sealed class CommandToolFile : IToolFile
                 if (!ToolPathAccess.IsUnder(workDirectory, executionDirectory))
                 {
                     errors.Add(CommandToolErrors.Invalid(
-                        dto.Name ?? "(未命名)",
+                        name,
                         $"执行目录 {dto.Directory} 必须在工作目录内。"));
                 }
             }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
             {
-                errors.Add(CommandToolErrors.Invalid(dto.Name ?? "(未命名)", $"Directory {directory} 无法解析为路径。"));
+                errors.Add(CommandToolErrors.Invalid(name, $"Directory {directory} 无法解析为路径。"));
             }
         }
 
-        ErrorOr<IReadOnlyList<ToolParameter>> parameters = ToParameters(dto.Name ?? "(未命名)", dto.Parameters, workDirectory);
+        ErrorOr<IReadOnlyList<ToolParameter>> parameters = ToParameters(name, dto.Parameters, workDirectory);
         if (parameters.IsError)
         {
             errors.AddRange(parameters.ErrorsOrEmptyList);
@@ -180,9 +182,11 @@ public sealed class CommandToolFile : IToolFile
             return errors;
         }
 
+        string toolPath = path ?? throw new InvalidOperationException($"工具 {name} 没有路径。");
+
         return new CommandToolDefinition(
-            new ToolPath(path!),
-            dto.Description ?? $"执行命令 {dto.Name}",
+            new ToolPath(toolPath),
+            dto.Description ?? $"执行命令 {name}",
             parameters.Value,
             template.Value,
             dto.Directory,
@@ -243,7 +247,7 @@ public sealed class CommandToolFile : IToolFile
     /// <summary>名字与可选分组拼出的工具路径，名字未给时为空。</summary>
     private static string? PathOf(CommandToolDto dto)
     {
-        if (dto.Name is not { Length: > 0 } name)
+        if (dto.Name is not { } name || string.IsNullOrWhiteSpace(name))
         {
             return null;
         }

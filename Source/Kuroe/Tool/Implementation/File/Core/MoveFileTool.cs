@@ -39,8 +39,8 @@ public sealed class MoveFileTool : ITool
     /// <summary>把文件或目录移动到工作目录内的另一个路径，目标已存在时拒绝，父目录缺失时自动创建；错误与拒绝以 ErrorOr 表达。</summary>
     private ErrorOr<string> Move(ToolArguments arguments)
     {
-        string source = arguments.Text(new ToolName("source"))!;
-        string target = arguments.Text(new ToolName("target"))!;
+        string source = arguments.RequiredText(new ToolName("source"));
+        string target = arguments.RequiredText(new ToolName("target"));
 
         ErrorOr<string> resolvedSource = _scope.Resolve(source);
         if (resolvedSource.IsError)

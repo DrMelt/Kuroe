@@ -48,8 +48,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     /// <summary>Llm 类型的规则：执行上限约束。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
-        ExecutableSpec spec = node.Spec!;
-        if (spec.MaxExecutions is { } limit && limit < 1)
+        if (node.Spec?.MaxExecutions is { } limit && limit < 1)
         {
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }

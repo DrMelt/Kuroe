@@ -16,11 +16,13 @@ public sealed class JsonFlowFormatTests
         IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(Flow));
 
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
+        Assert.NotNull(root.Nodes);
         NodeReferenceDocument reference =
-            Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes!, node => node is NodeReferenceDocument));
+            Assert.IsType<NodeReferenceDocument>(Assert.Single(root.Nodes, node => node is NodeReferenceDocument));
         Assert.Equal("副本", reference.Label);
         Assert.Equal("计划", reference.Use);
-        Assert.Equal("Start@MODEL_NAME", reference.Bindings!["MODEL_NAME"]);
+        Assert.NotNull(reference.Bindings);
+        Assert.Equal("Start@MODEL_NAME", reference.Bindings["MODEL_NAME"]);
     }
 
     [Fact]
@@ -81,7 +83,8 @@ public sealed class JsonFlowFormatTests
 
         IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
-        NodeDefinitionDocument source = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes!));
+        Assert.NotNull(root.Nodes);
+        NodeDefinitionDocument source = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes));
         InputPortDocument configured = Assert.Single(source.Inputs, port => port.Name == "配置");
         InputPortDocument signal = Assert.Single(source.Inputs, port => port.Name == "信号");
         Assert.Equal(InputRole.Configuration, configured.Role);

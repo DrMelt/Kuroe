@@ -45,7 +45,7 @@ public sealed class CommandRuntimeTests
         ExecutableNode node = Node(process);
         StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
-        NodeInputPlan plan = context.Plan(TargetPath)!;
+        NodeInputPlan plan = Assert.IsType<NodeInputPlan>(context.Plan(TargetPath));
 
         Assert.True(plan.Ready(runtime, context));
         ((IInputProgress)runtime).Consume(plan.Groups[0], context);
@@ -216,7 +216,7 @@ public sealed class CommandRuntimeTests
     }
 
     private static NodeInputValues Inputs(StubNodeContext context) =>
-        NodeInputValues.From(context.Plan(TargetPath)!.Groups[0], context);
+        NodeInputValues.From(Assert.IsType<NodeInputPlan>(context.Plan(TargetPath)).Groups[0], context);
 
     private static CommandRuntime Runtime(ExecutableNode node, StubNodeContext context) =>
         Assert.IsType<CommandRuntime>(((INodeRuntimeFactory)node.Type).Create(node, context));

@@ -39,7 +39,7 @@ public sealed class DeleteFileTool : ITool
     /// <summary>删除工作目录内的文件或目录；错误与拒绝以 ErrorOr 表达。</summary>
     private ErrorOr<string> Delete(ToolArguments arguments)
     {
-        string path = arguments.Text(new ToolName("path"))!;
+        string path = arguments.RequiredText(new ToolName("path"));
         bool recursive = arguments.Flag(new ToolName("recursive")) == true;
 
         ErrorOr<string> resolved = _scope.Resolve(path);

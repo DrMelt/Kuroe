@@ -38,7 +38,8 @@ public sealed class CommandNodeTypeDescriptionTests
             .Read(new Reader("dotnet", ["build", "--no-restore"], "{root}/src", 30, 1200,
                 new Dictionary<string, string> { ["root"] = "任务路径" }), failures.Add);
 
-        CommandParameters parameters = Assert.IsType<CommandNodeType>(type).Parameters!;
+        CommandParameters parameters =
+            Assert.IsType<CommandParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Equal("dotnet", parameters.Program);
@@ -86,7 +87,8 @@ public sealed class CommandNodeTypeDescriptionTests
         INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
             .Read(new Reader("dotnet"), failures.Add);
 
-        CommandParameters parameters = Assert.IsType<CommandNodeType>(type).Parameters!;
+        CommandParameters parameters =
+            Assert.IsType<CommandParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
 
         Assert.Empty(failures);
         Assert.Null(parameters.Directory);

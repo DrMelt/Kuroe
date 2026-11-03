@@ -157,8 +157,8 @@ internal sealed class TaskBrowser(
         [
             new("流程", flow.Name.Value),
             .. flow.StartOutputs
-                .Where(port => port.Value is not null)
-                .Select(port => new FormInfo(port.Name.Value, port.Value!)),
+                .Select(port => port.Value is { } value ? new FormInfo(port.Name.Value, value) : null)
+                .OfType<FormInfo>(),
             .. flow.StartOutputs
                 .Where(port => flow.HostStartInputs.ContainsKey(port.Name))
                 .Select(port => new FormInfo(port.Name.Value, $"宿主 {flow.HostStartInputs[port.Name]}")),

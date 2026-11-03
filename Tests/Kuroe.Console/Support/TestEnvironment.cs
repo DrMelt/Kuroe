@@ -155,7 +155,8 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>把测试夹具按顶层字段写成节点库与流程两个文件，空对象不写文件。</summary>
     private static void WriteFlowFiles(KuroePaths paths, string text)
     {
-        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)!);
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)
+            ?? throw new InvalidOperationException($"流程文件 {paths.FlowsFile} 没有所在目录。"));
 
         try
         {

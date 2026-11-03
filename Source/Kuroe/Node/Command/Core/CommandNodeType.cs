@@ -27,8 +27,6 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
     /// <summary>命令节点的类型规则：Directory 的变量映射给出执行目录，其余输入只作触发，输出只承载命令输出。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
-        ExecutableSpec spec = node.Spec!;
-
         void Reject(bool condition, string message)
         {
             if (condition)
@@ -46,7 +44,7 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
             "命令执行节点的 Text 输入必须是路径变量端口。");
 
         Reject(node.Outputs.Count != 1, "命令执行节点必须声明一个输出端口，命令输出写入该端口。");
-        Reject(spec.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
+        Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
     /// <summary>命令节点的运行期对象。</summary>

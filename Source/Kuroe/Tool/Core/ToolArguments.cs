@@ -20,6 +20,10 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         object other => other.ToString(),
     };
 
+    /// <summary>按参数名取必填文本。必填路径参数在调用前已由 <see cref="ToolFunction"/> 校验，取不到说明声明与调用体不一致。</summary>
+    public string RequiredText(ToolName name) =>
+        Text(name) ?? throw new InvalidOperationException($"必填参数 {name.Value} 缺失。");
+
     /// <summary>按参数名取真假值。文本形式只认 true 与 false，取不到时为空。</summary>
     public bool? Flag(ToolName name) => Value(name) switch
     {

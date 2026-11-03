@@ -44,7 +44,7 @@ public sealed class PatchFileTool : ITool
     /// <summary>按行号范围替换文件内容，替换区间的原文须与 original 逐行一致；错误与拒绝以 ErrorOr 表达。行号从 1 起，replacement 行数可增减，为空时删除该范围，写回统一换行符并按 encoding 参数编码。</summary>
     private ErrorOr<string> Patch(ToolArguments arguments)
     {
-        string path = arguments.Text(new ToolName("path"))!;
+        string path = arguments.RequiredText(new ToolName("path"));
 
         ErrorOr<LineRange> range = LineRange.Parse(arguments, 0, 0);
         if (range.IsError)

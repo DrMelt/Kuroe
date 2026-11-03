@@ -67,8 +67,9 @@ public sealed class TaskRecordSerializationMapperTests
     public void From_document_rejects_unknown_node_kind()
     {
         TaskRecordDocument document = Document();
-        TaskRecordData task = document.Task!;
-        NodeData unknown = task.Nodes![0] with { Kind = "Unknown" };
+        TaskRecordData task = Assert.IsType<TaskRecordData>(document.Task);
+        Assert.NotNull(task.Nodes);
+        NodeData unknown = task.Nodes[0] with { Kind = "Unknown" };
         TaskRecordDocument changed = document with
         {
             Task = task with { Nodes = [unknown, .. task.Nodes.Skip(1)] },

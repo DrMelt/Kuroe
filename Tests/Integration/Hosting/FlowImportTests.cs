@@ -27,7 +27,10 @@ public sealed class FlowImportTests
 
             Assert.Single(imported.Flows);
             Assert.Contains(environment.Flows.All(), flow => flow.Name == new FlowName("两级"));
-            Assert.Equal(2, environment.Flows.Find(new FlowName("两级")).ThrowIfError().RootNode.Nodes!.Count);
+            IReadOnlyList<NodeSpec>? nodes = environment.Flows.Find(new FlowName("两级"))
+                .ThrowIfError().RootNode.Nodes;
+            Assert.NotNull(nodes);
+            Assert.Equal(2, nodes.Count);
         }
         finally
         {
@@ -44,10 +47,12 @@ public sealed class FlowImportTests
 
         environment.Flows.Import("loop.json").ThrowIfError();
 
-        IReadOnlyList<NodeSpec> members = environment.Flows.Find(new FlowName("默认")).ThrowIfError().RootNode.Nodes!;
+        IReadOnlyList<NodeSpec>? rootNodes = environment.Flows.Find(new FlowName("默认"))
+            .ThrowIfError().RootNode.Nodes;
+        Assert.NotNull(rootNodes);
 
-        Assert.Equal(PortTypes.Signal, members[0].Inputs.Find(new PortName("回复"))?.Type);
-        Assert.Equal(PortTypes.Signal, members[1].Outputs.Find(new PortName("回复"))?.Type);
+        Assert.Equal(PortTypes.Signal, rootNodes[0].Inputs.Find(new PortName("回复"))?.Type);
+        Assert.Equal(PortTypes.Signal, rootNodes[1].Outputs.Find(new PortName("回复"))?.Type);
 
         string text = File.ReadAllText(KuroePaths.At(environment.Root).FlowsFile);
         Assert.Contains("\"Type\": \"Signal\"", text);

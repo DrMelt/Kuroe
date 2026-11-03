@@ -39,7 +39,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         IReadOnlyList<Port> ports = input.RequiredPorts;
         if (ports.Count > 0 && SubmitsPorts)
         {
-            _ = PortSubmitter!.SubmitValues(execution, PortValuesFor(ports));
+            PortSubmitter submitter = PortSubmitter
+                ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
+            _ = submitter.SubmitValues(execution, PortValuesFor(ports));
         }
 
         journal.AppendContent(ProcessContentKind.Reply, $"{input.Node}产出");

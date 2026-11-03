@@ -15,8 +15,8 @@ public sealed class PortDeclarationTests
         IReadOnlyList<Port> outputs = [new Port(new PortName("结论"), PortTypes.Text), new Port(new PortName("上下文"), PortTypes.Context)];
         IReadOnlyList<InputPort> inputs = [new InputPort(new PortName("目标")), new InputPort(new PortName("催办"), PortTypes.Signal)];
 
-        Assert.Equal(PortTypes.Context, outputs.Find(new PortName("上下文"))!.Value.Type);
-        Assert.Equal(PortTypes.Signal, inputs.Find(new PortName("催办"))!.Value.Type);
+        Assert.Equal(PortTypes.Context, Assert.NotNull(outputs.Find(new PortName("上下文"))).Type);
+        Assert.Equal(PortTypes.Signal, Assert.NotNull(inputs.Find(new PortName("催办"))).Type);
         Assert.Null(outputs.Find(new PortName("检查")));
         Assert.Null(inputs.Find(new PortName("检查")));
     }
@@ -46,7 +46,7 @@ public sealed class PortDeclarationTests
         ExecutableNode executable = Executable([new Port(new PortName("结论"), PortTypes.Text)]);
 
         Assert.Equal([new PortName("结论")], executable.RequiredPorts.Select(port => port.Name));
-        Assert.Equal(PortTypes.Text, executable.FindPort(new PortName("结论"))!.Value.Type);
+        Assert.Equal(PortTypes.Text, Assert.NotNull(executable.FindPort(new PortName("结论"))).Type);
         Assert.Null(executable.FindPort(new PortName("任务")));
         Assert.Equal(100, ExecutableNode.DefaultMaxExecutions);
     }
@@ -86,7 +86,7 @@ public sealed class PortDeclarationTests
         };
 
         Assert.Equal("Start", StartNode.ReservedLabel.Value);
-        Assert.Equal(PortTypes.Text, start.FindPort(new PortName("目标"))!.Value.Type);
+        Assert.Equal(PortTypes.Text, Assert.NotNull(start.FindPort(new PortName("目标"))).Type);
         Assert.Null(start.FindPort(new PortName("任务")));
     }
 

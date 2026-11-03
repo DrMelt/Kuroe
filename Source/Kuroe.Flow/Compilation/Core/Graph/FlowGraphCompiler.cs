@@ -51,7 +51,7 @@ internal sealed class FlowGraphCompiler
         return compiler.Assemble();
     }
 
-    /// <summary>编译期的节点：定义、路径、父与直接子节点，以及本轮编译落定的端口绑定与编译出的节点记录。</summary>
+    /// <summary>编译期的节点：定义、路径、父与直接子节点，以及本轮编译落定的端口绑定。</summary>
     private sealed class Pending(NodeSpec entry, NodePath path, Pending? parent)
     {
         public NodeSpec Entry { get; } = entry;
@@ -60,9 +60,6 @@ internal sealed class FlowGraphCompiler
         public List<Pending> Children { get; } = [];
         public Dictionary<PortName, OutputBinding> Bindings { get; } = [];
         public Dictionary<PortName, InputBinding> InputBindings { get; } = [];
-
-        /// <summary>编译出的节点记录，子树编译完成后填入。</summary>
-        public GraphNode? Node { get; set; }
     }
 
     /// <summary>按先根序建出编译期的节点树：路径是父路径加本节点标签，层级由树给出，不靠标签前缀。</summary>
@@ -84,18 +81,29 @@ internal sealed class FlowGraphCompiler
     {
         LinkWiring();
 
-        List<Pending> order = [.. Flatten(_roots)];
-        foreach (Pending pending in Enumerable.Reverse(order))
+        if (_errors.Count > 0)
         {
-            pending.Node = pending.Entry.Nodes is { Count: > 0 }
-                ? NewContainer(pending)
-                : NewExecutable(pending);
+            return _errors;
         }
 
-        return _errors.Count > 0
-            ? _errors
-            : new NodeGraph([NewStart(), .. order.Select(pending => pending.Node!)], _bindings);
+        List<GraphNode> nodes = [NewStart(), .. _roots.Select(NewNode).SelectMany(Flattened)];
+
+        return new NodeGraph(nodes, _bindings);
     }
+
+    /// <summary>节点与它的后代，按先根序。</summary>
+    private static IEnumerable<GraphNode> Flattened(GraphNode node) =>
+        node is ContainerNode container
+            ? [node, .. container.Children.SelectMany(Flattened)]
+            : [node];
+
+    /// <summary>按条目构造节点：有子节点的是容器，有执行配置的是执行节点，两者都缺时是展开后不应出现的结构。</summary>
+    private static GraphNode NewNode(Pending pending) => pending.Entry switch
+    {
+        { Nodes.Count: > 0 } => NewContainer(pending),
+        { Spec: { } spec } => NewExecutable(pending, spec),
+        _ => throw new InvalidOperationException($"节点 {pending.Path} 既没有子节点也没有执行配置。"),
+    };
 
     /// <summary>把 From 启动组、输入绑定与输出端口来源解析成路径，落定全部接线。</summary>
     private void LinkWiring()
@@ -290,10 +298,9 @@ internal sealed class FlowGraphCompiler
     };
 
     /// <summary>执行节点：类型与执行配置落定。</summary>
-    private static ExecutableNode NewExecutable(Pending pending)
+    private static ExecutableNode NewExecutable(Pending pending, ExecutableSpec spec)
     {
         NodeSpec entry = pending.Entry;
-        ExecutableSpec spec = entry.Spec!;
 
         return new ExecutableNode
         {
@@ -311,7 +318,7 @@ internal sealed class FlowGraphCompiler
     /// <summary>容器节点：类型、端口与直接子节点落定，输出端口绑定一并挂上。</summary>
     private static ContainerNode NewContainer(Pending pending)
     {
-        List<GraphNode> children = [.. pending.Children.Select(child => child.Node!)];
+        List<GraphNode> children = [.. pending.Children.Select(NewNode)];
 
         return new ContainerNode
         {

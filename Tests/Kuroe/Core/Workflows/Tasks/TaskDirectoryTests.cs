@@ -99,7 +99,9 @@ public sealed class TaskDirectoryTests : IDisposable
     public void A_root_occupied_by_a_file_reports_the_workspace_error()
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.GetDirectoryName(root)!);
+        string? parent = Path.GetDirectoryName(root);
+        Assert.NotNull(parent);
+        Directory.CreateDirectory(parent);
         File.WriteAllText(root, "occupied");
 
         try

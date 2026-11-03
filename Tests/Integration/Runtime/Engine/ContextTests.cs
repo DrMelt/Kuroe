@@ -22,7 +22,7 @@ public sealed class ContextTests
         InputValue goal = Assert.Single(plan.Input.Inputs);
         Assert.Equal("补齐 README", goal.Value.Text);
         Assert.IsType<StartSource>(goal.Value.Origin);
-        Assert.Equal(ModelName.Create("fake").Value, (plan.Input.Declaration as KuroeNodeDeclaration)!.Model);
+        Assert.Equal(ModelName.Create("fake").Value, Assert.IsType<KuroeNodeDeclaration>(plan.Input.Declaration).Model);
     }
 
     [Fact]

@@ -62,8 +62,8 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
     /// <summary>合并输入与阻塞流程，分别命名为「输入」与「阻塞」。</summary>
     private static string MergeFlows()
     {
-        JsonObject document = new() { ["Flows"] = new JsonArray() };
-        JsonArray flows = document["Flows"]!.AsArray();
+        JsonArray flows = [];
+        JsonObject document = new() { ["Flows"] = flows };
         Add(flows, TestFlows.InputFlow, "输入");
         Add(flows, TestFlows.BlockingFlow, "阻塞");
 
@@ -72,7 +72,12 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
 
     private static void Add(JsonArray flows, string json, string name)
     {
-        JsonObject flow = JsonNode.Parse(json)!["Flows"]![0]!.DeepClone().AsObject();
+        JsonObject file = JsonNode.Parse(json) as JsonObject
+            ?? throw new InvalidOperationException($"流程文件不是对象：{json}");
+        JsonArray array = file["Flows"] as JsonArray
+            ?? throw new InvalidOperationException($"流程文件没有 Flows 数组：{json}");
+        JsonObject flow = array[0]?.DeepClone().AsObject()
+            ?? throw new InvalidOperationException($"流程文件没有第一个流程：{json}");
         flow["Name"] = name;
         flows.Add(flow);
     }

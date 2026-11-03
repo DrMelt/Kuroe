@@ -35,7 +35,7 @@ public sealed class GetFileInfoTool : ITool
     /// <summary>取一个文件的文件系统事实并渲染成文本，错误与拒绝以 ErrorOr 表达。目录不受理，提示改用 ListDirectory。</summary>
     private ErrorOr<string> Info(ToolArguments arguments)
     {
-        string path = arguments.Text(new ToolName("path"))!;
+        string path = arguments.RequiredText(new ToolName("path"));
 
         ErrorOr<FileDetails> details = _scope.Inspect(path, "ListDirectory");
         if (details.IsError)

@@ -167,18 +167,15 @@ internal static class FlowRules
         }
         else if (node.Spec is not null)
         {
-            INodeType? definition = node.Type;
-            NodeTypeShape? shape = definition?.Shape;
-
             CheckFromGroups(node, scope, errors);
 
-            if (shape is null)
+            if (node.Type is not { } definition)
             {
                 errors.Add(scope.Node(node.Label.Value, "执行节点必须写类型。"));
             }
-            else if (shape is { Organizes: false })
+            else if (definition.Shape is { Organizes: false })
             {
-                definition!.Validate(node, scope, errors.Add);
+                definition.Validate(node, scope, errors.Add);
             }
         }
         else if (node.Use is null)

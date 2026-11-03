@@ -23,8 +23,6 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, IN
     /// <summary>文件读取节点的类型规则：Path 的变量映射给出路径，其余输入只作触发，输出只承载读取内容，不接受执行方式。</summary>
     public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
-        ExecutableSpec spec = node.Spec!;
-
         void Reject(bool condition, string message)
         {
             if (condition)
@@ -42,7 +40,7 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, IN
             "文件读取节点的 Text 输入必须是路径变量端口。");
 
         Reject(node.Outputs.Count != 1, "文件读取节点必须声明一个输出端口，读取内容写入该端口。");
-        Reject(spec.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
+        Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
     /// <summary>文件读取节点的运行期对象。</summary>

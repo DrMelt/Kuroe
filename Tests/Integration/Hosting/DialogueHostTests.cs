@@ -57,7 +57,9 @@ public sealed class DialogueHostTests
         List<string> prompts = [];
         environment.Runner.Reply = execution =>
         {
-            prompts.Add(Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt()!);
+            string? prompt = Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt();
+            Assert.NotNull(prompt);
+            prompts.Add(prompt);
             return $"回复{execution.Input.ExecutionCount}";
         };
 

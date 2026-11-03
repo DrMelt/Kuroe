@@ -33,7 +33,7 @@ internal static class NodeExpander
             return errors;
         }
 
-        return expanded!;
+        return expanded ?? throw new InvalidOperationException($"流程根节点 {root.Label} 展开失败。");
     }
 
     /// <summary>根容器的绑定来源：流程作用域里只有开始节点，根容器的传入端口只能绑定开始端口。</summary>
@@ -111,7 +111,11 @@ internal static class NodeExpander
             node.CheckWiring(NodeRuleContext.Reference, message =>
                 errors.Add(scope.Node(node.Label.Value, message)), container: false);
 
-            ExecutableSpec librarySpec = definition.Spec!;
+            if (definition.Spec is not { } librarySpec)
+            {
+                errors.Add(scope.Node(node.Label.Value, $"引用的节点 {use} 没有执行配置。"));
+                return null;
+            }
 
             return new NodeSpec
             {

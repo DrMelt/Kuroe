@@ -61,20 +61,15 @@ public sealed class KuroeTaskStart(
         Dictionary<PortName, string> values = [];
         foreach ((PortName port, string input) in bindings)
         {
-            switch (input)
+            values[port] = input switch
             {
-                case StartSources.Workspace:
-                    values[port] = workspaceDirectory;
-                    break;
-
-                case StartSources.Task:
-                    values[port] = taskPath!;
-                    break;
-
-                case StartSources.Model:
-                    values[port] = model!.Value;
-                    break;
-            }
+                StartSources.Workspace => workspaceDirectory,
+                StartSources.Task => taskPath
+                    ?? throw new InvalidOperationException("任务开始输入缺少 TASK_WORK_PATH 的值。"),
+                StartSources.Model => model?.Value
+                    ?? throw new InvalidOperationException("模型开始输入缺少当前模型选择。"),
+                _ => throw new InvalidOperationException($"未知的宿主开始输入 {input}。"),
+            };
         }
 
         return new PortTexts(values);

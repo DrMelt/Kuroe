@@ -25,9 +25,10 @@ public sealed class ParameterDocumentReaderTests
             errors));
 
         Assert.Empty(errors);
-        Assert.Equal("展开", type.Parameters!.Text);
-        Assert.Equal(["甲", "乙"], type.Parameters.Texts);
-        Assert.Equal(5, type.Parameters.Number);
+        TestParameters parameters = Assert.IsType<TestParameters>(type.Parameters);
+        Assert.Equal("展开", parameters.Text);
+        Assert.Equal(["甲", "乙"], parameters.Texts);
+        Assert.Equal(5, parameters.Number);
     }
 
     [Fact]
@@ -38,9 +39,10 @@ public sealed class ParameterDocumentReaderTests
         ParameterNodeType type = Assert.IsType<ParameterNodeType>(ReadParameters([], errors));
 
         Assert.Empty(errors);
-        Assert.Null(type.Parameters!.Text);
-        Assert.Empty(type.Parameters.Texts);
-        Assert.Null(type.Parameters.Number);
+        TestParameters parameters = Assert.IsType<TestParameters>(type.Parameters);
+        Assert.Null(parameters.Text);
+        Assert.Empty(parameters.Texts);
+        Assert.Null(parameters.Number);
     }
 
     [Fact]

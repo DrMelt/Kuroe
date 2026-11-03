@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 
 /// <summary>端口类型注册表：登记类型、语义与允许模式，模式不再生成类型名后缀。
@@ -75,11 +77,11 @@ public static class PortTypes
     }
 
     /// <summary>取类型的注册项，未注册时返回 false。</summary>
-    public static bool TryGetDefinition(PortType type, out PortTypeDefinition definition)
+    public static bool TryGetDefinition(PortType type, [NotNullWhen(true)] out PortTypeDefinition? definition)
     {
         if (type.Name is null)
         {
-            definition = default!;
+            definition = null;
 
             return false;
         }
@@ -91,16 +93,16 @@ public static class PortTypes
             return true;
         }
 
-        definition = default!;
+        definition = null;
 
         return false;
     }
 
     /// <summary>类型是否允许该模式，未注册时返回 false。</summary>
     public static bool Supports(PortType type, PortMode mode) =>
-        TryGetDefinition(type, out PortTypeDefinition definition) && definition.Modes.Contains(mode);
+        TryGetDefinition(type, out PortTypeDefinition? definition) && definition.Modes.Contains(mode);
 
     /// <summary>类型未写模式时的默认模式，未注册时按普通模式。</summary>
     public static PortMode DefaultMode(PortType type) =>
-        TryGetDefinition(type, out PortTypeDefinition definition) ? definition.DefaultMode : PortMode.Plain;
+        TryGetDefinition(type, out PortTypeDefinition? definition) ? definition.DefaultMode : PortMode.Plain;
 }

@@ -41,7 +41,7 @@ public sealed class WriteFileTool : ITool
     /// <summary>把文本覆盖写入工作目录内的文件，父目录缺失时自动创建，已有文件直接覆盖；错误与拒绝以 ErrorOr 表达。编码按 encoding 参数，缺省 UTF-8 无 BOM。</summary>
     private ErrorOr<string> Write(ToolArguments arguments)
     {
-        string path = arguments.Text(new ToolName("path"))!;
+        string path = arguments.RequiredText(new ToolName("path"));
 
         string? content = arguments.Text(new ToolName("content"));
         if (content is null)

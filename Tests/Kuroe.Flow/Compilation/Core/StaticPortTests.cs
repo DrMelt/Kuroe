@@ -35,7 +35,8 @@ public sealed class StaticPortTests
             string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
         FlowDefinition tree = Assert.Single(expanded.Value);
 
-        NodeSpec delivery = tree.RootNode.Nodes!.Single(node => node.Label.Value == "交付");
+        Assert.NotNull(tree.RootNode.Nodes);
+        NodeSpec delivery = tree.RootNode.Nodes.Single(node => node.Label.Value == "交付");
         Assert.True(delivery.Outputs.Single(port => port.Name == Model).IsConstant);
 
         ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(tree);
@@ -218,7 +219,8 @@ public sealed class StaticPortTests
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
-        InputBinding binding = check.InputBindings![Model];
+        Assert.NotNull(check.InputBindings);
+        InputBinding binding = check.InputBindings[Model];
         Assert.Equal(new NodePath([StartNode.ReservedLabel]), binding.Source);
         Assert.Equal(Model, binding.SourcePort);
         Assert.Equal("fake", StaticText(
@@ -707,7 +709,8 @@ public sealed class StaticPortTests
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
         ContainerNode container = compiled.Value.Containers.Single();
-        Assert.Equal(BindingRole.Static, container.InputBindings![Model].Role);
+        Assert.NotNull(container.InputBindings);
+        Assert.Equal(BindingRole.Static, container.InputBindings[Model].Role);
         Assert.Equal(BindingRole.Gate, container.InputBindings[gate].Role);
         Assert.Equal(BindingRole.Alias, container.InputBindings[Goal].Role);
     }

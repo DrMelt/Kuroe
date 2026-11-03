@@ -72,7 +72,8 @@ public sealed class LlmNodeTypeDescriptionTests
         Assert.Equal(["系统指令块不能为空。"], errors);
     }
 
-    private static LlmParameters Declared(INodeType type) => Assert.IsType<LlmNodeType>(type).Parameters!;
+    private static LlmParameters Declared(INodeType type) =>
+        Assert.IsType<LlmParameters>(Assert.IsType<LlmNodeType>(type).Parameters);
 
     /// <summary>测试用的参数段取值：按字段名给出本轮内容，未给的字段取安全默认。</summary>
     private sealed class Reader(

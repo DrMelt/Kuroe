@@ -76,7 +76,8 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
-        PublicationRecord publication = Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Common.Publication!;
+        PublicationRecord publication =
+            Assert.IsType<PublicationRecord>(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Common.Publication);
 
         Assert.False(publication.Triggers[new PortName("结论")]);
         Assert.Equal("计划结果", Assert.Single(publication.Content[new PortName("结论")]).Text);

@@ -25,11 +25,13 @@ public sealed class FlowJsonTests
             }
             """;
 
-        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        FlowFileDto file = Assert.IsType<FlowFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
 
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Equal("默认", flow.Name);
-        Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Start!.Outputs!).ValueKind);
+        StartDto start = Assert.IsType<StartDto>(flow.Start);
+        Assert.NotNull(start.Outputs);
+        Assert.Equal(JsonValueKind.Object, Assert.Single(start.Outputs).ValueKind);
     }
 
     /// <summary>缺键的属性取 null。</summary>
@@ -38,7 +40,7 @@ public sealed class FlowJsonTests
     {
         const string json = """{ "Flows": [ { "Name": "默认" } ] }""";
 
-        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        FlowFileDto file = Assert.IsType<FlowFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
 
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Null(flow.Root);
@@ -62,10 +64,11 @@ public sealed class FlowJsonTests
             }
             """;
 
-        FlowFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto)!;
+        FlowFileDto file = Assert.IsType<FlowFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.FlowFileDto));
         FlowDto flow = Assert.Single(file.Flows);
 
-        Assert.Equal("WORKSPACE_PATH", Assert.Single(flow.HostStartInputs!).Value);
+        Assert.NotNull(flow.HostStartInputs);
+        Assert.Equal("WORKSPACE_PATH", Assert.Single(flow.HostStartInputs).Value);
 
         string written = FlowFileJson.Serialize(file);
 
@@ -79,7 +82,7 @@ public sealed class FlowJsonTests
     {
         const string json = """{ "Nodes": [ { "Name": "整体", "Kind": "container" } ] }""";
 
-        NodeFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto)!;
+        NodeFileDto file = Assert.IsType<NodeFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto));
 
         NodeDto node = Assert.Single(file.Nodes);
         Assert.Equal("container", node.Kind);
@@ -99,11 +102,17 @@ public sealed class FlowJsonTests
             }
             """;
 
-        NodeFileDto file = JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto)!;
+        NodeFileDto file = Assert.IsType<NodeFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto));
 
-        Assert.Equal("Start@MODEL_NAME", file.Nodes[0].Bindings!["MODEL_NAME"]);
-        Assert.Equal("@MODEL_NAME", file.Nodes[1].Bindings!["MODEL_NAME"]);
-        Assert.Equal(JsonValueKind.Object, Assert.Single(file.Nodes[0].Outputs!).ValueKind);
+        Dictionary<string, string>? startBindings = file.Nodes[0].Bindings;
+        Assert.NotNull(startBindings);
+        Assert.Equal("Start@MODEL_NAME", startBindings["MODEL_NAME"]);
+        Dictionary<string, string>? groupBindings = file.Nodes[1].Bindings;
+        Assert.NotNull(groupBindings);
+        Assert.Equal("@MODEL_NAME", groupBindings["MODEL_NAME"]);
+        List<JsonElement>? outputs = file.Nodes[0].Outputs;
+        Assert.NotNull(outputs);
+        Assert.Equal(JsonValueKind.Object, Assert.Single(outputs).ValueKind);
     }
 
     /// <summary>端口条目的端口类型写成枚举名字。</summary>

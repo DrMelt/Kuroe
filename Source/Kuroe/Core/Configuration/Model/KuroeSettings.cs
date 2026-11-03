@@ -150,5 +150,5 @@ internal sealed record KuroeSettings
 
     /// <summary>生效值的呈现文本，未设置时用 <see cref="NotSetText"/>。</summary>
     private static string Text(object? value) =>
-        value is null ? NotSetText : Convert.ToString(value, CultureInfo.InvariantCulture)!;
+        value is null ? NotSetText : Convert.ToString(value, CultureInfo.InvariantCulture) ?? NotSetText;
 }

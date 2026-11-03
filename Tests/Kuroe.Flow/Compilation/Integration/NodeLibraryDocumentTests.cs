@@ -168,7 +168,8 @@ public sealed class NodeLibraryDocumentTests
     public void File_node_overrides_builtin_definition()
     {
         FlowDefinition flow = Find(OverridingBuiltinFlow, new FlowName("默认"));
-        NodeSpec implement = flow.RootNode.Nodes![0];
+        Assert.NotNull(flow.RootNode.Nodes);
+        NodeSpec implement = flow.RootNode.Nodes[0];
 
         Assert.Equal("文件覆写的指令", Assert.IsType<LlmNodeType>(implement.Type).Parameters?.Prompt);
     }
@@ -178,8 +179,12 @@ public sealed class NodeLibraryDocumentTests
     {
         FlowDefinition flow = Find(MemberNameBindingFlow, new FlowName("默认"));
 
-        NodeSpec deliver = flow.RootNode.Nodes![1];
-        NodeSpec implement = deliver.Nodes![1].Nodes![0];
+        Assert.NotNull(flow.RootNode.Nodes);
+        NodeSpec deliver = flow.RootNode.Nodes[1];
+        Assert.NotNull(deliver.Nodes);
+        NodeSpec group = deliver.Nodes[1];
+        Assert.NotNull(group.Nodes);
+        NodeSpec implement = group.Nodes[0];
         Assert.Equal(new NodeLabel("实施"), implement.Label);
         Assert.Equal("目标条目@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
@@ -189,8 +194,12 @@ public sealed class NodeLibraryDocumentTests
     {
         FlowDefinition flow = Find(OuterPortBindingFlow, new FlowName("透传"));
 
-        NodeSpec deliver = flow.RootNode.Nodes![1];
-        NodeSpec implement = deliver.Nodes![0].Nodes![0];
+        Assert.NotNull(flow.RootNode.Nodes);
+        NodeSpec deliver = flow.RootNode.Nodes[1];
+        Assert.NotNull(deliver.Nodes);
+        NodeSpec outer = deliver.Nodes[0];
+        Assert.NotNull(outer.Nodes);
+        NodeSpec implement = outer.Nodes[0];
         Assert.Equal("制定计划@计划", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
     }
 
@@ -200,8 +209,10 @@ public sealed class NodeLibraryDocumentTests
     {
         FlowDefinition flow = Find(PortSelectionBindingFlow, new FlowName("默认"));
 
-        NodeSpec deliver = flow.RootNode.Nodes![1];
-        NodeSpec implement = deliver.Nodes![0];
+        Assert.NotNull(flow.RootNode.Nodes);
+        NodeSpec deliver = flow.RootNode.Nodes[1];
+        Assert.NotNull(deliver.Nodes);
+        NodeSpec implement = deliver.Nodes[0];
         Assert.Equal(new PortName("结论"), Assert.Single(Assert.Single(implement.From).Links).Ref.Port);
         Assert.Equal(new NodeLabel("来源"), Assert.Single(Assert.Single(implement.From).Links).Ref.Source);
         Assert.Equal("来源@结论", Assert.Single(Assert.Single(implement.From).Links).Ref.Display);
@@ -211,7 +222,8 @@ public sealed class NodeLibraryDocumentTests
     public void Reference_executable_inherits_library_definition_and_injects_from()
     {
         FlowDefinition flow = Find(ReferenceInheritFlow, new FlowName("默认"));
-        NodeSpec reviewed = flow.RootNode.Nodes![1];
+        Assert.NotNull(flow.RootNode.Nodes);
+        NodeSpec reviewed = flow.RootNode.Nodes[1];
         Assert.NotNull(reviewed.Spec);
         Assert.Equal("计划@上下文", Assert.Single(Assert.Single(reviewed.From).Links).Ref.Display);
     }

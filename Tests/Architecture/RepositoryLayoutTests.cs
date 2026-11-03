@@ -66,7 +66,7 @@ public sealed class RepositoryLayoutTests
 
     private static bool IsPersistenceBoundary(string project, string persistence)
     {
-        string directory = Path.GetDirectoryName(project)!;
+        string directory = DirectoryOf(project);
 
         return IsUnder(directory, persistence)
             && string.Equals(Path.GetFileName(directory), "Shared", StringComparison.Ordinal);
@@ -92,7 +92,7 @@ public sealed class RepositoryLayoutTests
 
     private static bool IsSharedTestProject(string project)
     {
-        string[] segments = Path.GetRelativePath(TestsRoot, Path.GetDirectoryName(project)!)
+        string[] segments = Path.GetRelativePath(TestsRoot, DirectoryOf(project))
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         bool flowShared = segments.Length >= 2
             && segments[0] == "Kuroe.Flow"
@@ -106,7 +106,7 @@ public sealed class RepositoryLayoutTests
 
     private static List<string> SharedDirectories(string project)
     {
-        string[] segments = Path.GetRelativePath(TestsRoot, Path.GetDirectoryName(project)!)
+        string[] segments = Path.GetRelativePath(TestsRoot, DirectoryOf(project))
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         List<string> directories = [];
         string component = Path.Combine(SourceRoot, segments[0]);
@@ -153,8 +153,12 @@ public sealed class RepositoryLayoutTests
             .OfType<string>()
             // csproj 中的 ProjectReference 固定用反斜杠
             .Select(include => Path.GetFullPath(Path.Combine(
-                Path.GetDirectoryName(project)!,
+                DirectoryOf(project),
                 include.Replace('\\', Path.DirectorySeparatorChar))))];
+
+    /// <summary>项目文件的所在目录，项目路径总是带目录。</summary>
+    private static string DirectoryOf(string project) =>
+        Path.GetDirectoryName(project) ?? throw new InvalidOperationException($"{project} 没有所在目录。");
 
     private static IEnumerable<string> ProjectFiles(string root) =>
         Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
