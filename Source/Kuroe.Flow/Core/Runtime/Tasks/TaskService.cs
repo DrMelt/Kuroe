@@ -47,7 +47,7 @@ public sealed class TaskService(
     /// <summary>取消一个执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id) => _actions.StopExecution(id);
 
-    /// <summary>丢掉已完成或已终止的任务，同时删除它们的检查点。</summary>
+    /// <summary>丢掉已完成或已终止的任务，同时删除它们的存档。</summary>
     public IReadOnlyList<TaskId> ClearSettled() => _actions.ClearSettled();
 
     /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进。</summary>

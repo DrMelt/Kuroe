@@ -1,0 +1,395 @@
+using ErrorOr;
+using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
+
+namespace Kuroe.Flow.Persistence.Serialization.Shared;
+
+/// <summary>任务存档与通用存档文档之间的映射与校验。</summary>
+public static class TaskRecordSerializationMapper
+{
+    /// <summary>把任务存档写成通用文档，写入当前版本。</summary>
+    public static ErrorOr<TaskRecordDocument> ToDocument(TaskRecord record)
+    {
+        try
+        {
+            return MapDocument(record);
+        }
+        catch (NotSupportedException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordWrite, $"写出存档失败：{ex.Message}")];
+        }
+    }
+
+    /// <summary>把通用文档还原为任务存档，版本不符或字段不合法时返回错误。</summary>
+    public static ErrorOr<TaskRecord> FromDocument(TaskRecordDocument? document)
+    {
+        if (document is null)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, "存档为空。")];
+        }
+
+        if (document.Version != TaskRecordSerializationVersion.Current)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordVersion, $"不支持的存档版本 {document.Version}。")];
+        }
+
+        try
+        {
+            return ReadTask(document.Task);
+        }
+        catch (FormatException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
+        catch (ArgumentException ex)
+        {
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
+        }
+    }
+
+    private static TaskRecordDocument MapDocument(TaskRecord record) =>
+        new(
+            TaskRecordSerializationVersion.Current,
+            new TaskRecordData(
+                new TaskIdentityData(
+                    record.Identity.Id.Value,
+                    record.Identity.Title,
+                    record.Identity.CreatedAt,
+                    record.Identity.LastActivityAt),
+                new FlowSnapshotData(
+                    record.Flow.Name.Value,
+                    record.Flow.Nodes,
+                    record.Flow.Flow),
+                new TaskStartData(
+                    [.. record.Start.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
+                    ToData(record.Start.StartTexts)),
+                record.Lifecycle,
+                record.Completed,
+                new TaskJournalData([.. record.Journal.Entries.Select(ToData)], record.Journal.DroppedEntries),
+                [.. record.Executions.Select(ToData)],
+                [.. record.Nodes.Select(ToData)],
+                new SchedulerSeedData([.. record.Pending.Targets.Select(ToData)])));
+
+    private static JournalEntryData ToData(JournalEntry entry) =>
+        new(entry.At, entry.Level, entry.Label, entry.Text);
+
+    private static ExecutionData ToData(ExecutionRecord execution) =>
+        new(
+            execution.Id.Value,
+            ToData(execution.Node),
+            execution.ExecutionCount,
+            execution.State,
+            execution.Progress,
+            execution.CreatedAt,
+            execution.StartedAt,
+            execution.FinishedAt,
+            [.. execution.Failures],
+            [.. execution.Journal.Select(ToData)],
+            execution.DroppedEntries,
+            [.. execution.Inputs.Select(ToData)],
+            ToData(execution.Texts));
+
+    private static InputValueData ToData(InputValueRecord value) =>
+        new(value.Port.Value, ToData(value.Origin), value.Text);
+
+    private static ContextSourceData ToData(ContextSourceRecord source) =>
+        new(
+            source.Kind,
+            source.Execution?.Value,
+            source.Node is { } node ? ToData(node) : null,
+            source.Port?.Value);
+
+    private static NodeData ToData(NodeRecord node) =>
+        node switch
+        {
+            ExecutableNodeRecord executable => new NodeData(
+                Kind: "Executable",
+                Path: ToData(executable.Path),
+                Common: ToData(executable.Common),
+                ReworkTargets: [.. executable.ReworkTargets.Select(ToData)],
+                Blocked: executable.Blocked,
+                Failure: null,
+                FailureTaken: null,
+                Waiting: null,
+                Inputs: null,
+                Awaiting: null),
+            SelfDrivenNodeRecord selfDriven => new NodeData(
+                Kind: "SelfDriven",
+                Path: ToData(selfDriven.Path),
+                Common: ToData(selfDriven.Common),
+                ReworkTargets: null,
+                Blocked: null,
+                Failure: selfDriven.Failure,
+                FailureTaken: selfDriven.FailureTaken,
+                Waiting: null,
+                Inputs: null,
+                Awaiting: null),
+            InputNodeRecord input => new NodeData(
+                Kind: "Input",
+                Path: ToData(input.Path),
+                Common: ToData(input.Common),
+                ReworkTargets: null,
+                Blocked: null,
+                Failure: null,
+                FailureTaken: null,
+                Waiting: input.Waiting,
+                Inputs: null,
+                Awaiting: null),
+            ApprovalNodeRecord approval => new NodeData(
+                Kind: "Approval",
+                Path: ToData(approval.Path),
+                Common: ToData(approval.Common),
+                ReworkTargets: null,
+                Blocked: null,
+                Failure: null,
+                FailureTaken: null,
+                Waiting: null,
+                Inputs: ToData(approval.Inputs),
+                Awaiting: approval.Awaiting),
+            ContainerNodeRecord container => new NodeData(
+                Kind: "Container",
+                Path: ToData(container.Path),
+                Common: ToData(container.Common),
+                ReworkTargets: null,
+                Blocked: null,
+                Failure: null,
+                FailureTaken: null,
+                Waiting: null,
+                Inputs: null,
+                Awaiting: null),
+            _ => throw new NotSupportedException($"不认识的节点记录 {node.GetType().Name}。"),
+        };
+
+    private static NodeCommonData ToData(NodeCommonRecord common) =>
+        new(
+            common.Revision,
+            common.Executions,
+            common.LastInputGroup,
+            [.. common.Consumed.Select(entry => new ConsumedRevisionData(
+                ToData(entry.Source),
+                entry.Port?.Value,
+                entry.Revision))],
+            ToData(common.Publication),
+            common.ForceRerun);
+
+    private static PublicationData? ToData(PublicationRecord? publication) =>
+        publication is null
+            ? null
+            : new PublicationData(
+                publication.Triggers.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
+                publication.Content.ToDictionary(
+                    pair => pair.Key.Value,
+                    pair => pair.Value
+                        .Select(value => new PublicationValueData(ToData(value.Origin), value.Text))
+                        .ToList()));
+
+    private static NodeInputValuesData ToData(NodeInputValuesRecord inputs) =>
+        new(
+            [.. inputs.Ordered.Select(item => new NodeInputValueData(
+                item.Target.Value,
+                item.Type,
+                ToData(item.Value)))],
+            [.. inputs.Connected.Select(port => port.Value)],
+            inputs.Triggers.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
+            ToData(inputs.StaticTexts));
+
+    private static NodePathData ToData(NodePath path) =>
+        new([.. path.Levels.Select(level => level.Value)]);
+
+    private static Dictionary<string, string> ToData(IReadOnlyDictionary<PortName, string> values) =>
+        values.ToDictionary(pair => pair.Key.Value, pair => pair.Value);
+
+    private static TaskRecord ReadTask(TaskRecordData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("存档缺少任务。");
+        }
+
+        TaskIdentityData identity = dto.Identity ?? throw new FormatException("存档缺少任务身份。");
+        FlowSnapshotData flow = dto.Flow ?? throw new FormatException("存档缺少流程快照。");
+        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+        TaskJournalData journal = dto.Journal ?? throw new FormatException("存档缺少任务过程记录。");
+        SchedulerSeedData pending = dto.Pending ?? throw new FormatException("存档缺少调度种子。");
+
+        return new TaskRecord(
+            new TaskIdentity(
+                ReadId(identity.Id),
+                RequiredText(identity.Title, "任务标题"),
+                identity.CreatedAt,
+                identity.LastActivityAt),
+            new FlowSnapshot(
+                new FlowName(RequiredText(flow.Name, "流程名")),
+                RequiredText(flow.Nodes, "节点库文档"),
+                RequiredText(flow.Flow, "流程文档")),
+            new TaskStartSnapshot(
+                new StartInputs(
+                [
+                    .. (start.Inputs ?? []).Select(input => new StartInput(
+                        ReadPort(input.Port, "开始输入端口"),
+                        RequiredText(input.Text, "开始输入文本"))),
+                ]),
+                ReadTexts(start.StartTexts)),
+            dto.Lifecycle,
+            dto.Completed,
+            new TaskJournalSnapshot(ReadJournal(journal.Entries), journal.DroppedEntries),
+            [.. (dto.Executions ?? []).Select(ReadExecution)],
+            [.. (dto.Nodes ?? []).Select(ReadNode)],
+            new SchedulerSeed([.. (pending.Targets ?? []).Select(path => ReadPath(path, "调度目标"))]));
+    }
+
+    private static ExecutionRecord ReadExecution(ExecutionData dto) =>
+        new(
+            new ExecutionId(dto.Id),
+            ReadPath(dto.Node, "执行节点"),
+            dto.ExecutionCount,
+            dto.State,
+            dto.Progress ?? string.Empty,
+            dto.CreatedAt,
+            dto.StartedAt,
+            dto.FinishedAt,
+            dto.Failures ?? [],
+            ReadJournal(dto.Journal),
+            dto.DroppedEntries,
+            [.. (dto.Inputs ?? []).Select(ReadInputValue)],
+            ReadTexts(dto.Texts));
+
+    private static InputValueRecord ReadInputValue(InputValueData dto) =>
+        new(
+            ReadPort(dto.Port, "输入端口"),
+            ReadContextSource(dto.Origin),
+            dto.Text ?? string.Empty);
+
+    private static ContextSourceRecord ReadContextSource(ContextSourceData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("输入取值缺少出处。");
+        }
+
+        return new ContextSourceRecord(
+            dto.Kind,
+            dto.Execution is { } execution ? new ExecutionId(execution) : null,
+            dto.Node is null ? null : ReadPath(dto.Node, "出处节点"),
+            dto.Port is null ? null : new PortName(dto.Port));
+    }
+
+    private static IReadOnlyList<JournalEntry> ReadJournal(List<JournalEntryData>? entries) =>
+        entries is null
+            ? []
+            : [.. entries.Select(entry => new JournalEntry(
+                entry.At,
+                entry.Level,
+                RequiredText(entry.Label, "过程记录标签"),
+                RequiredText(entry.Text, "过程记录文本")))];
+
+    private static NodeRecord ReadNode(NodeData dto) =>
+        dto.Kind switch
+        {
+            "Executable" => new ExecutableNodeRecord(
+                ReadPath(dto.Path, "节点路径"),
+                ReadCommon(dto.Common),
+                [.. (dto.ReworkTargets ?? []).Select(path => ReadPath(path, "返工目标"))],
+                dto.Blocked ?? false),
+            "SelfDriven" => new SelfDrivenNodeRecord(
+                ReadPath(dto.Path, "节点路径"),
+                ReadCommon(dto.Common),
+                dto.Failure,
+                dto.FailureTaken ?? false),
+            "Input" => new InputNodeRecord(
+                ReadPath(dto.Path, "节点路径"),
+                ReadCommon(dto.Common),
+                dto.Waiting ?? false),
+            "Approval" => new ApprovalNodeRecord(
+                ReadPath(dto.Path, "节点路径"),
+                ReadCommon(dto.Common),
+                ReadNodeInputs(dto.Inputs),
+                dto.Awaiting ?? false),
+            "Container" => new ContainerNodeRecord(
+                ReadPath(dto.Path, "节点路径"),
+                ReadCommon(dto.Common)),
+            _ => throw new FormatException($"未知的节点记录种类 {dto.Kind}。"),
+        };
+
+    private static NodeCommonRecord ReadCommon(NodeCommonData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("节点记录缺少公共状态。");
+        }
+
+        return new NodeCommonRecord(
+            dto.Revision,
+            dto.Executions,
+            dto.LastInputGroup,
+            [.. (dto.Consumed ?? []).Select(entry => new ConsumedRevisionRecord(
+                ReadPath(entry.Source, "已消费来源"),
+                entry.Port is null ? null : new PortName(entry.Port),
+                entry.Revision))],
+            ReadPublication(dto.Publication),
+            dto.ForceRerun);
+    }
+
+    private static PublicationRecord? ReadPublication(PublicationData? dto) =>
+        dto is null
+            ? null
+            : new PublicationRecord(
+                (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
+                (dto.Content ?? []).ToDictionary(
+                    pair => new PortName(pair.Key),
+                    pair => (IReadOnlyList<PublicationValueRecord>)
+                    [
+                        .. pair.Value.Select(value => new PublicationValueRecord(
+                            ReadContextSource(value.Origin),
+                            value.Text ?? string.Empty)),
+                    ]));
+
+    private static NodeInputValuesRecord ReadNodeInputs(NodeInputValuesData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("审批节点记录缺少输入取值。");
+        }
+
+        return new NodeInputValuesRecord(
+            [.. (dto.Ordered ?? []).Select(item => new NodeInputValueRecord(
+                ReadPort(item.Target, "审批输入端口"),
+                RequiredText(item.Type, "审批输入类型"),
+                ReadInputValue(item.Value ?? throw new FormatException("审批输入缺少取值。"))))],
+            [.. (dto.Connected ?? []).Select(port => new PortName(port))],
+            (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
+            ReadTexts(dto.StaticTexts));
+    }
+
+    private static Dictionary<PortName, string> ReadTexts(Dictionary<string, string>? values) =>
+        values is null
+            ? []
+            : values.ToDictionary(pair => new PortName(pair.Key), pair => pair.Value);
+
+    private static TaskId ReadId(string? text) =>
+        TaskId.TryParse(text, out TaskId id)
+            ? id
+            : throw new FormatException($"任务键不合法：{text ?? "空"}。");
+
+    private static PortName ReadPort(string? text, string field) =>
+        new(RequiredText(text, field));
+
+    private static NodePath ReadPath(NodePathData? dto, string field)
+    {
+        if (dto?.Levels is null || dto.Levels.Count == 0)
+        {
+            throw new FormatException($"存档缺少{field}。");
+        }
+
+        return new NodePath([.. dto.Levels.Select(level => new NodeLabel(level))]);
+    }
+
+    private static string RequiredText(string? text, string field) =>
+        string.IsNullOrWhiteSpace(text)
+            ? throw new FormatException($"存档缺少{field}。")
+            : text;
+}

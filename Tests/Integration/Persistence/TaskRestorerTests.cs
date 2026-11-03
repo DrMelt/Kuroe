@@ -3,7 +3,7 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Persistence;
 
-/// <summary>任务恢复契约的实现：用默认测试流程验证完成、未完成与中断三种检查点。</summary>
+/// <summary>任务恢复契约的实现：用默认测试流程验证完成、未完成与中断三种存档。</summary>
 public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 {
     private readonly TestEnvironment _environment = TestEnvironment.Create();
@@ -32,24 +32,24 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             : flow.Value;
     }
 
-    protected override TaskCheckpoint DoneCheckpoint => Create(TaskLifecycle.Active, ExecutionState.Succeeded, published: true, blocked: false) with { Completed = true };
+    protected override TaskRecord DoneRecord => Create(TaskLifecycle.Active, ExecutionState.Succeeded, published: true, blocked: false) with { Completed = true };
 
-    protected override TaskCheckpoint UnfinishedCheckpoint => Create(TaskLifecycle.Paused, ExecutionState.Succeeded, published: false, blocked: false);
+    protected override TaskRecord UnfinishedRecord => Create(TaskLifecycle.Paused, ExecutionState.Succeeded, published: false, blocked: false);
 
-    protected override TaskCheckpoint InterruptedCheckpoint => Create(TaskLifecycle.Paused, ExecutionState.Interrupted, published: false, blocked: true);
+    protected override TaskRecord InterruptedRecord => Create(TaskLifecycle.Paused, ExecutionState.Interrupted, published: false, blocked: true);
 
     [Fact]
     public void Restore_registers_executions_in_shared_index()
     {
-        TaskCheckpoint checkpoint = UnfinishedCheckpoint;
+        TaskRecord record = UnfinishedRecord;
 
-        ErrorOr<WorkTask> restored = CreateRestorer().Restore(checkpoint, CompileFixtureFlow());
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
         Assert.False(restored.IsError);
-        Assert.False(_registry.FindExecution(checkpoint.Executions[0].Id).IsError);
+        Assert.False(_registry.FindExecution(record.Executions[0].Id).IsError);
     }
 
-    private static TaskCheckpoint Create(
+    private static TaskRecord Create(
         TaskLifecycle lifecycle,
         ExecutionState state,
         bool published,
@@ -63,7 +63,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         PortName target = new("目标");
         PortName result = new("计划");
 
-        return new TaskCheckpoint(
+        return new TaskRecord(
             new TaskIdentity(id, "恢复任务", at, at),
             new FlowSnapshot(new FlowName("默认"), """{"Nodes":[]}""", """{"Flows":[]}"""),
             new TaskStartSnapshot(
@@ -73,7 +73,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             Completed: false,
             new TaskJournalSnapshot([], 0),
             [
-                new ExecutionCheckpoint(
+                new ExecutionRecord(
                     execution,
                     plan,
                     1,
@@ -85,43 +85,43 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
                     state == ExecutionState.Interrupted ? ["任务已暂停。"] : [],
                     [],
                     0,
-                    [new InputValueCheckpoint(target, new ContextSourceCheckpoint(ContextSourceKind.Start, null, null, target), "目标内容")],
+                    [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
                     new Dictionary<PortName, string> { [target] = "目标内容" }),
             ],
             [
-                new ExecutableNodeCheckpoint(
+                new ExecutableNodeRecord(
                     plan,
                     Common(
                         published ? 1 : 0,
-                        published ? PublishedCheckpoint(execution, plan, result) : null),
+                        published ? PublishedRecord(execution, plan, result) : null),
                     blocked ? [plan] : [],
                     blocked),
-                new ContainerNodeCheckpoint(container, Common(published ? 1 : 0)),
+                new ContainerNodeRecord(container, Common(published ? 1 : 0)),
             ],
             new SchedulerSeed([]));
     }
 
-    private static NodeCommonCheckpoint Common(long revision, PublicationCheckpoint? publication = null) =>
+    private static NodeCommonRecord Common(long revision, PublicationRecord? publication = null) =>
         new(
             revision,
             1,
             null,
-            [new ConsumedRevisionCheckpoint(NodePath.Of("整体"), new PortName("目标"), 1)],
+            [new ConsumedRevisionRecord(NodePath.Of("整体"), new PortName("目标"), 1)],
             publication,
             false);
 
-    private static PublicationCheckpoint PublishedCheckpoint(
+    private static PublicationRecord PublishedRecord(
         ExecutionId execution,
         NodePath plan,
         PortName port) =>
         new(
             new Dictionary<PortName, bool>(),
-            new Dictionary<PortName, IReadOnlyList<PublicationValueCheckpoint>>
+            new Dictionary<PortName, IReadOnlyList<PublicationValueRecord>>
             {
                 [port] =
                 [
-                    new PublicationValueCheckpoint(
-                        new ContextSourceCheckpoint(ContextSourceKind.Execution, execution, plan, port),
+                    new PublicationValueRecord(
+                        new ContextSourceRecord(ContextSourceKind.Execution, execution, plan, port),
                         "计划结果"),
                 ],
             });
@@ -129,7 +129,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_preserves_published_content()
     {
-        ErrorOr<WorkTask> restored = CreateRestorer().Restore(DoneCheckpoint, CompileFixtureFlow());
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(DoneRecord, CompileFixtureFlow());
         Assert.False(restored.IsError);
         WorkTask task = restored.Value;
         NodePath plan = NodePath.Of("整体", "制定计划");

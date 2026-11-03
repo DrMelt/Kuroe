@@ -5,7 +5,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -96,7 +96,7 @@ public sealed class TestEnvironment : IDisposable
             flowsJson,
             seedCatalog);
 
-    /// <summary>在指定工作目录装配，用于跨会话重载检查点。</summary>
+    /// <summary>在指定工作目录装配，用于跨会话重载存档。</summary>
     public static ErrorOr<TestEnvironment> TryCreateAt(
         string root,
         string? flowsJson = null,
@@ -148,7 +148,7 @@ public sealed class TestEnvironment : IDisposable
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
         TryCreate(flowsJson, seedCatalog).ThrowIfError();
 
-    /// <summary>在指定工作目录装配，用于跨会话重载检查点。</summary>
+    /// <summary>在指定工作目录装配，用于跨会话重载存档。</summary>
     public static TestEnvironment CreateAt(string root, string? flowsJson = null, bool seedCatalog = true) =>
         TryCreateAt(root, flowsJson, seedCatalog, deleteOnDispose: false).ThrowIfError();
 

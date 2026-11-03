@@ -51,27 +51,27 @@ public static class FlowErrorCodes
     /// <summary>任务不可恢复。</summary>
     public const string TaskNotResumable = "Task.NotResumable";
 
-    /// <summary>检查点版本不受支持。</summary>
-    public const string CheckpointVersion = "Checkpoint.Version";
+    /// <summary>存档版本不受支持。</summary>
+    public const string RecordVersion = "Record.Version";
 
-    /// <summary>检查点格式不合法。</summary>
-    public const string CheckpointFormat = "Checkpoint.Format";
+    /// <summary>存档格式不合法。</summary>
+    public const string RecordFormat = "Record.Format";
 
     /// <summary>流程快照无法编译。</summary>
-    public const string CheckpointFlowSnapshot = "Checkpoint.FlowSnapshot";
+    public const string RecordFlowSnapshot = "Record.FlowSnapshot";
 
-    /// <summary>检查点与流程图的节点集合不一致。</summary>
-    public const string CheckpointGraphMismatch = "Checkpoint.GraphMismatch";
+    /// <summary>存档与流程图的节点集合不一致。</summary>
+    public const string RecordGraphMismatch = "Record.GraphMismatch";
 
-    /// <summary>检查点节点状态与图节点类型不一致。</summary>
-    public const string CheckpointNodeMismatch = "Checkpoint.NodeMismatch";
+    /// <summary>存档节点状态与图节点类型不一致。</summary>
+    public const string RecordNodeMismatch = "Record.NodeMismatch";
 
-    /// <summary>检查点读取失败。</summary>
-    public const string CheckpointRead = "Checkpoint.Read";
+    /// <summary>存档读取失败。</summary>
+    public const string RecordRead = "Record.Read";
 
     /// <summary>任务租约被其他进程持有。</summary>
     public const string TaskLease = "Task.Lease";
 
-    /// <summary>检查点写入失败。</summary>
-    public const string CheckpointWrite = "Checkpoint.Write";
+    /// <summary>存档写入失败。</summary>
+    public const string RecordWrite = "Record.Write";
 }

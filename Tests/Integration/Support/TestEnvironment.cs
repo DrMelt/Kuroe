@@ -5,7 +5,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -140,7 +140,7 @@ public sealed class TestEnvironment : IDisposable
         }
         """;
 
-    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。默认不写检查点，持久化用例显式打开。</summary>
+    /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。默认不写存档，持久化用例显式打开。</summary>
     internal static KuroeCoreOptions Options => new() { RegisterNodeTypes = TestTypeFiles.RegisterAll, PersistTasks = false };
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>

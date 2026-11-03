@@ -3,7 +3,7 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Workflows.Flows.Files;
@@ -149,7 +149,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         if (nodes.IsError)
         {
             return [Error.Failure(
-                FlowErrorCodes.CheckpointFlowSnapshot,
+                FlowErrorCodes.RecordFlowSnapshot,
                 $"流程快照的节点库不合法：{nodes.FirstError.Description}")];
         }
 
@@ -157,7 +157,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         if (flows.IsError)
         {
             return [Error.Failure(
-                FlowErrorCodes.CheckpointFlowSnapshot,
+                FlowErrorCodes.RecordFlowSnapshot,
                 $"流程快照的流程不合法：{flows.FirstError.Description}")];
         }
 
@@ -170,7 +170,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         CompiledFlow? flow = compiled.Value.Flows.FirstOrDefault(candidate => candidate.Model.Name == snapshot.Name);
 
         return flow is null
-            ? [Error.Failure(FlowErrorCodes.CheckpointFlowSnapshot, $"流程快照中没有流程 {snapshot.Name}。")]
+            ? [Error.Failure(FlowErrorCodes.RecordFlowSnapshot, $"流程快照中没有流程 {snapshot.Name}。")]
             : flow;
     }
 

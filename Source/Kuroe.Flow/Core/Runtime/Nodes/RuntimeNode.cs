@@ -1,21 +1,21 @@
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Nodes;
 
-/// <summary>带检查点的运行时节点基类。检查点状态由节点实现捕获与恢复。</summary>
-public abstract class RuntimeNode(GraphNode node) : NodeRuntime(node), INodeCheckpointSource
+/// <summary>带持久记录的运行时节点基类。节点状态由节点实现捕获与恢复。</summary>
+public abstract class RuntimeNode(GraphNode node) : NodeRuntime(node), INodeRecordSource
 {
     /// <inheritdoc/>
-    public abstract NodeCheckpoint? CaptureCheckpoint();
+    public abstract NodeRecord? CaptureRecord();
 
     /// <inheritdoc/>
-    public abstract void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context);
+    public abstract void RestoreRecord(NodeRecord record, INodeRestoreContext context);
 
     /// <summary>捕获输入侧进展的公共部分。</summary>
-    protected NodeCommonCheckpoint CaptureProgress() => InputProgressCheckpoints.Capture(Progress);
+    protected NodeCommonRecord CaptureProgress() => InputProgressRecords.Capture(Progress);
 
     /// <summary>恢复输入侧进展的公共部分。</summary>
-    protected void RestoreProgress(NodeCommonCheckpoint checkpoint) => InputProgressCheckpoints.Restore(Progress, checkpoint);
+    protected void RestoreProgress(NodeCommonRecord record) => InputProgressRecords.Restore(Progress, record);
 }

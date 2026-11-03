@@ -32,7 +32,7 @@ public sealed class FlowEngine(
         Launch(task, driver);
     }
 
-    /// <summary>登记推进循环与任务域，把待处理目标接到任务上供检查点捕获，循环结束后把驱动移出索引。</summary>
+    /// <summary>登记推进循环与任务域，把待处理目标接到任务上供存档捕获，循环结束后把驱动移出索引。</summary>
     private void Launch(WorkTask task, TaskDriver driver)
     {
         task.SeedSource = driver.CaptureSeed;

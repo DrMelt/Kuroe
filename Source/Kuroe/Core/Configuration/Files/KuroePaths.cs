@@ -12,7 +12,7 @@ public sealed class KuroePaths
         WorkingDirectory = root;
         ConfigDirectory = Path.Combine(root, ".kuroe");
         TasksDirectory = Path.Combine(root, ".kuroe_tasks");
-        CheckpointsDirectory = Path.Combine(TasksDirectory, ".checkpoints");
+        RecordsDirectory = Path.Combine(TasksDirectory, ".records");
         UserSettingsFile = Path.Combine(ConfigDirectory, "settings.json");
         CatalogFile = Path.Combine(ConfigDirectory, "catalog.json");
         NodesFile = Path.Combine(ConfigDirectory, "nodes.json");
@@ -28,8 +28,8 @@ public sealed class KuroePaths
     /// <summary>任务目录的根，各任务的工作目录在其下按名字建立。</summary>
     public string TasksDirectory { get; }
 
-    /// <summary>任务检查点与租约的目录。</summary>
-    public string CheckpointsDirectory { get; }
+    /// <summary>任务存档与租约的目录。</summary>
+    public string RecordsDirectory { get; }
 
     /// <summary>用户层偏好文件。</summary>
     public string UserSettingsFile { get; }

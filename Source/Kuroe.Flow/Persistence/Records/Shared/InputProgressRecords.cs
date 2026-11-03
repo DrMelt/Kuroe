@@ -1,0 +1,30 @@
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
+
+namespace Kuroe.Flow.Persistence.Records.Shared;
+
+/// <summary>输入侧进展的持久形态转换：版本、执行次数、上次启动组、已消费版本、重跑意图与发布一次往返。</summary>
+public static class InputProgressRecords
+{
+    /// <summary>把输入侧进展写成公共持久记录。</summary>
+    public static NodeCommonRecord Capture(InputProgress progress) =>
+        new(
+            progress.Revision,
+            progress.Executions,
+            progress.LastInputGroup,
+            [.. progress.Consumed.Select(pair => new ConsumedRevisionRecord(pair.Key.Source, pair.Key.Port, pair.Value))],
+            PublicationRecords.Capture(progress.Publication),
+            progress.ForceRerun);
+
+    /// <summary>按公共持久记录还原输入侧进展。</summary>
+    public static void Restore(InputProgress progress, NodeCommonRecord record) =>
+        progress.Restore(
+            record.Revision,
+            record.Executions,
+            record.LastInputGroup,
+            record.ForceRerun,
+            record.Consumed.Select(entry => new KeyValuePair<ConsumptionKey, long>(
+                new ConsumptionKey(entry.Source, entry.Port),
+                entry.Revision)),
+            PublicationRecords.Restore(record.Publication, record.Revision));
+}

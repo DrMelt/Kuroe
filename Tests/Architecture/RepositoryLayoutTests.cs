@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>仓库结构的约束：IVT 只指向对应测试程序集，Shared 测试只引用同层源码。</summary>
+/// <summary>仓库结构的约束：IVT 只指向对应测试程序集，Shared 测试只引用共享源码。</summary>
 public sealed class RepositoryLayoutTests
 {
     private static readonly string Root = FindRoot();
@@ -27,7 +27,7 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Shared_test_projects_reference_only_their_layer()
+    public void Shared_test_projects_reference_only_shared_source()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(TestsRoot).Where(IsSharedTestProject)];
 
@@ -42,8 +42,34 @@ public sealed class RepositoryLayoutTests
             Assert.All(references, reference =>
                 Assert.True(
                     allowed.Any(directory => IsUnder(reference, directory)),
-                    $"{Path.GetFileName(project)} 引用了同层之外的 {reference}。"));
+                    $"{Path.GetFileName(project)} 引用了共享源码之外的 {reference}。"));
         }
+    }
+
+    [Fact]
+    public void Persistence_projects_reference_only_shared_boundaries()
+    {
+        string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
+        string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+
+        foreach (string project in ProjectFiles(persistence))
+        {
+            IReadOnlyList<string> references = [.. ProjectReferences(project)
+                .Where(reference => IsUnder(reference, SourceRoot))];
+
+            Assert.All(references, reference =>
+                Assert.True(
+                    IsPersistenceBoundary(reference, persistence) || IsUnder(reference, flowContracts),
+                    $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
+        }
+    }
+
+    private static bool IsPersistenceBoundary(string project, string persistence)
+    {
+        string directory = Path.GetDirectoryName(project)!;
+
+        return IsUnder(directory, persistence)
+            && string.Equals(Path.GetFileName(directory), "Shared", StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,12 +109,12 @@ public sealed class RepositoryLayoutTests
         string[] segments = Path.GetRelativePath(TestsRoot, Path.GetDirectoryName(project)!)
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         List<string> directories = [];
-        for (int length = 1; length <= segments.Length; length++)
+        string component = Path.Combine(SourceRoot, segments[0]);
+        foreach (string directory in Directory.EnumerateDirectories(component, "Shared", SearchOption.AllDirectories))
         {
-            string candidate = Path.Combine([SourceRoot, .. segments[..length], "Shared"]);
-            if (Directory.Exists(candidate))
+            if (!IsBuildOutput(directory))
             {
-                directories.Add(candidate);
+                directories.Add(directory);
             }
         }
 
@@ -100,6 +126,10 @@ public sealed class RepositoryLayoutTests
 
         return directories;
     }
+
+    private static bool IsBuildOutput(string path) =>
+        path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+        || path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
 
     private static bool IsCompilationIntegrationTestProject(string project)
     {

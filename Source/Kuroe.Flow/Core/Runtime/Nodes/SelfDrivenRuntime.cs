@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -85,19 +85,19 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>捕获自驱节点的进展、发布与失败。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() =>
-        new SelfDrivenNodeCheckpoint(
+    public override NodeRecord? CaptureRecord() =>
+        new SelfDrivenNodeRecord(
             Path,
             CaptureProgress(),
             _failure,
             _failureTaken);
 
-    /// <summary>从检查点恢复自驱节点的进展、发布与失败。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    /// <summary>从存档恢复自驱节点的进展、发布与失败。</summary>
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
-        if (checkpoint is not SelfDrivenNodeCheckpoint selfDriven)
+        if (record is not SelfDrivenNodeRecord selfDriven)
         {
-            throw new ArgumentException($"自驱节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+            throw new ArgumentException($"自驱节点 {Path} 收到 {record.GetType().Name} 记录。", nameof(record));
         }
 
         RestoreProgress(selfDriven.Common);

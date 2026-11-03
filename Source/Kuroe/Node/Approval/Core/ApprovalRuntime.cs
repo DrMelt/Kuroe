@@ -1,6 +1,6 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -83,18 +83,18 @@ internal sealed class ApprovalRuntime(
     }
 
     /// <summary>捕获停驻输入、待批准状态、进展与发布。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() =>
-        new ApprovalNodeCheckpoint(
+    public override NodeRecord? CaptureRecord() =>
+        new ApprovalNodeRecord(
             Path,
             CaptureProgress(),
-            new NodeInputValuesCheckpoint(
+            new NodeInputValuesRecord(
                 [
-                    .. _inputs.Ordered.Select(item => new NodeInputValueCheckpoint(
+                    .. _inputs.Ordered.Select(item => new NodeInputValueRecord(
                         item.TargetInput,
                         item.Type.Name,
-                        new InputValueCheckpoint(
+                        new InputValueRecord(
                             item.TargetInput,
-                            CheckpointSources.Write(item.Value.Origin),
+                            RecordSources.Write(item.Value.Origin),
                             item.Value.Text))),
                 ],
                 [.. _inputs.Texts.Keys],
@@ -103,11 +103,11 @@ internal sealed class ApprovalRuntime(
             _awaiting);
 
     /// <summary>恢复停驻输入与待批准状态，待批准节点重新声明接收外部输入。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
-        if (checkpoint is not ApprovalNodeCheckpoint state)
+        if (record is not ApprovalNodeRecord state)
         {
-            throw new ArgumentException($"审批节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+            throw new ArgumentException($"审批节点 {Path} 收到 {record.GetType().Name} 记录。", nameof(record));
         }
 
         RestoreProgress(state.Common);
@@ -120,17 +120,17 @@ internal sealed class ApprovalRuntime(
         }
     }
 
-    /// <summary>从检查点重建停驻输入。</summary>
-    private NodeInputValues ReadInputs(NodeInputValuesCheckpoint state)
+    /// <summary>从存档重建停驻输入。</summary>
+    private NodeInputValues ReadInputs(NodeInputValuesRecord state)
     {
         List<NodeInputValue> ordered = [];
-        foreach (NodeInputValueCheckpoint item in state.Ordered)
+        foreach (NodeInputValueRecord item in state.Ordered)
         {
             PortType type = executable.FindInput(item.Target)?.Type ?? PortTypes.Text;
             ordered.Add(new NodeInputValue(
                 item.Target,
                 type,
-                new ContextValue(CheckpointSources.Read(item.Value.Origin), item.Value.Text)));
+                new ContextValue(RecordSources.Read(item.Value.Origin), item.Value.Text)));
         }
 
         return new NodeInputValues(

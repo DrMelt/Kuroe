@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -62,12 +62,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>某节点的输入侧方案，开始为空。</summary>
     public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);
 
-    /// <summary>按检查点恢复节点状态。容器先于成员恢复，路径深度升序。</summary>
-    internal void Restore(IReadOnlyList<NodeCheckpoint> nodes)
+    /// <summary>按存档恢复节点状态。容器先于成员恢复，路径深度升序。</summary>
+    internal void Restore(IReadOnlyList<NodeRecord> nodes)
     {
-        foreach (NodeCheckpoint checkpoint in nodes.OrderBy(node => node.Path.Depth))
+        foreach (NodeRecord record in nodes.OrderBy(node => node.Path.Depth))
         {
-            ((INodeCheckpointSource)this[checkpoint.Path]).RestoreCheckpoint(checkpoint, this);
+            ((INodeRecordSource)this[record.Path]).RestoreRecord(record, this);
         }
     }
 

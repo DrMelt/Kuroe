@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime.Process;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime;
@@ -34,30 +34,30 @@ public sealed class Execution : IExecution
         CreatedAt = createdAt;
     }
 
-    /// <summary>从检查点恢复一次已收口的执行。未收口的执行记为已中断。</summary>
-    internal static Execution Restore(ExecutionCheckpoint checkpoint, ExecutionInput input)
+    /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
+    internal static Execution Restore(ExecutionRecord record, ExecutionInput input)
     {
-        Execution execution = new(checkpoint.Id, input, checkpoint.CreatedAt);
-        execution.RestoreState(checkpoint);
+        Execution execution = new(record.Id, input, record.CreatedAt);
+        execution.RestoreState(record);
 
         return execution;
     }
 
     /// <summary>恢复状态与历史，未收口的执行记为已中断。</summary>
-    private void RestoreState(ExecutionCheckpoint checkpoint)
+    private void RestoreState(ExecutionRecord record)
     {
-        bool live = checkpoint.State.IsLive();
-        _state = live ? ExecutionState.Interrupted : checkpoint.State;
-        _progress = checkpoint.Progress;
-        _startedAt = checkpoint.StartedAt;
-        _finishedAt = live ? DateTimeOffset.UtcNow : checkpoint.FinishedAt;
-        _failures.AddRange(checkpoint.Failures);
+        bool live = record.State.IsLive();
+        _state = live ? ExecutionState.Interrupted : record.State;
+        _progress = record.Progress;
+        _startedAt = record.StartedAt;
+        _finishedAt = live ? DateTimeOffset.UtcNow : record.FinishedAt;
+        _failures.AddRange(record.Failures);
         if (live)
         {
             _failures.Add("进程退出前未收口。");
         }
 
-        _journal = new RestoredProcessJournal(checkpoint.Journal, checkpoint.DroppedEntries);
+        _journal = new RestoredProcessJournal(record.Journal, record.DroppedEntries);
         _cancellation.Dispose();
     }
 
@@ -301,11 +301,11 @@ public sealed class Execution : IExecution
     }
 
     /// <summary>捕获本次执行的状态与历史。</summary>
-    internal ExecutionCheckpoint CaptureCheckpoint()
+    internal ExecutionRecord CaptureRecord()
     {
         ExecutionSnapshot snapshot = Snapshot();
 
-        return new ExecutionCheckpoint(
+        return new ExecutionRecord(
             snapshot.Id,
             snapshot.Input.Node,
             snapshot.Input.ExecutionCount,
@@ -318,9 +318,9 @@ public sealed class Execution : IExecution
             snapshot.Journal,
             snapshot.DroppedEntries,
             [
-                .. snapshot.Input.Inputs.Select(value => new InputValueCheckpoint(
+                .. snapshot.Input.Inputs.Select(value => new InputValueRecord(
                     value.Port,
-                    CheckpointSources.Write(value.Origin),
+                    RecordSources.Write(value.Origin),
                     value.Text)),
             ],
             snapshot.Input.Texts);

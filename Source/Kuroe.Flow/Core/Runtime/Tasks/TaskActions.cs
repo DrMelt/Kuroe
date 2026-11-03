@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Saving.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -21,7 +22,7 @@ public sealed class TaskActions(
     IHostTaskStart host,
     ITaskIdSource ids,
     IFlowSnapshotSource? snapshots = null,
-    ITaskCheckpointCoordinator? checkpoints = null)
+    ITaskRecordCoordinator? records = null)
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
@@ -29,7 +30,7 @@ public sealed class TaskActions(
     private readonly IHostTaskStart _host = host;
     private readonly ITaskIdSource _ids = ids;
     private readonly IFlowSnapshotSource? _snapshots = snapshots;
-    private readonly ITaskCheckpointCoordinator? _checkpoints = checkpoints;
+    private readonly ITaskRecordCoordinator? _records = records;
 
     /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取注入的开始端口值，再建任务并启动推进。
     /// 任务号被宿主资源占用时换下一个任务号重来。onContent 与 onEntry 收到该任务全部执行的过程事件。</summary>
@@ -175,7 +176,7 @@ public sealed class TaskActions(
     /// <summary>标记任务状态已变并同步写盘，关键状态变化立即落盘。</summary>
     private void Persist(TaskId id)
     {
-        if (_checkpoints is not { } coordinator)
+        if (_records is not { } coordinator)
         {
             return;
         }
@@ -324,11 +325,11 @@ public sealed class TaskActions(
         return stopped;
     }
 
-    /// <summary>丢掉已完成或已终止的任务，同时删除它们的检查点。</summary>
+    /// <summary>丢掉已完成或已终止的任务，同时删除它们的存档。</summary>
     public IReadOnlyList<TaskId> ClearSettled()
     {
         IReadOnlyList<TaskId> cleared = _registry.ClearSettled();
-        if (_checkpoints is { } coordinator)
+        if (_records is { } coordinator)
         {
             foreach (TaskId id in cleared)
             {
@@ -339,10 +340,10 @@ public sealed class TaskActions(
         return cleared;
     }
 
-    /// <summary>退出时先写全部任务检查点，再中断任务与执行并等待收口。</summary>
+    /// <summary>退出时先写全部任务存档，再中断任务与执行并等待收口。</summary>
     public async Task ShutdownAsync()
     {
-        if (_checkpoints is { } coordinator)
+        if (_records is { } coordinator)
         {
             foreach (TaskId id in _registry.Ids())
             {

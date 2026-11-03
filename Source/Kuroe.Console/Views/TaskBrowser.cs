@@ -63,7 +63,7 @@ internal sealed class TaskBrowser(
         list.Print([task]);
     }
 
-    /// <summary>丢掉已完成或已终止的内存任务，同时删除检查点。</summary>
+    /// <summary>丢掉已完成或已终止的内存任务，同时删除存档。</summary>
     public void Clear()
     {
         int count = tasks.ClearSettled().Count;

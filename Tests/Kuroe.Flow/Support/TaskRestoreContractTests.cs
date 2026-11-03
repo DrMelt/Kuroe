@@ -1,6 +1,6 @@
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -16,24 +16,24 @@ public abstract class TaskRestoreContractTests
 
     protected abstract CompiledFlow CompileFixtureFlow();
 
-    protected abstract TaskCheckpoint DoneCheckpoint { get; }
+    protected abstract TaskRecord DoneRecord { get; }
 
-    protected abstract TaskCheckpoint UnfinishedCheckpoint { get; }
+    protected abstract TaskRecord UnfinishedRecord { get; }
 
-    protected abstract TaskCheckpoint InterruptedCheckpoint { get; }
+    protected abstract TaskRecord InterruptedRecord { get; }
 
     [Fact]
-    public void Restore_done_checkpoint_keeps_done_state()
+    public void Restore_done_record_keeps_done_state()
     {
-        WorkTask task = Restore(DoneCheckpoint);
+        WorkTask task = Restore(DoneRecord);
 
         Assert.Equal(TaskState.Done, task.State);
     }
 
     [Fact]
-    public void Restore_unfinished_checkpoint_enters_paused()
+    public void Restore_unfinished_record_enters_paused()
     {
-        WorkTask task = Restore(UnfinishedCheckpoint);
+        WorkTask task = Restore(UnfinishedRecord);
 
         Assert.Equal(TaskState.Paused, task.State);
     }
@@ -41,15 +41,15 @@ public abstract class TaskRestoreContractTests
     [Fact]
     public void Restore_preserves_execution_history()
     {
-        WorkTask task = Restore(UnfinishedCheckpoint);
+        WorkTask task = Restore(UnfinishedRecord);
 
-        Assert.Equal(UnfinishedCheckpoint.Executions.Count, task.Executions.Count);
+        Assert.Equal(UnfinishedRecord.Executions.Count, task.Executions.Count);
     }
 
     [Fact]
     public void Restore_interrupted_execution_blocks_node()
     {
-        WorkTask task = Restore(InterruptedCheckpoint);
+        WorkTask task = Restore(InterruptedRecord);
 
         TaskSnapshot snapshot = task.Snapshot();
         Assert.Contains(
@@ -58,6 +58,6 @@ public abstract class TaskRestoreContractTests
         Assert.Contains(snapshot.ExecutableStates, state => state.State == NodeState.Blocked);
     }
 
-    private WorkTask Restore(TaskCheckpoint checkpoint) =>
-        CreateRestorer().Restore(checkpoint, CompileFixtureFlow()).ThrowIfError();
+    private WorkTask Restore(TaskRecord record) =>
+        CreateRestorer().Restore(record, CompileFixtureFlow()).ThrowIfError();
 }

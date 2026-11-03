@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -55,17 +55,17 @@ internal sealed class RuntimeContainer(
     public override void Cancel() => _canceled = true;
 
     /// <summary>捕获容器的进展与发布。内容是否齐备由方案中的内容来源推导。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() =>
-        new ContainerNodeCheckpoint(
+    public override NodeRecord? CaptureRecord() =>
+        new ContainerNodeRecord(
             Path,
             CaptureProgress());
 
-    /// <summary>从检查点恢复容器的进展与发布。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    /// <summary>从存档恢复容器的进展与发布。</summary>
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
-        if (checkpoint is not ContainerNodeCheckpoint state)
+        if (record is not ContainerNodeRecord state)
         {
-            throw new ArgumentException($"容器 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+            throw new ArgumentException($"容器 {Path} 收到 {record.GetType().Name} 记录。", nameof(record));
         }
 
         RestoreProgress(state.Common);

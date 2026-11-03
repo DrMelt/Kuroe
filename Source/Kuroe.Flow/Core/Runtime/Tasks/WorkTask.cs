@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime.Process;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -79,10 +79,10 @@ public sealed class WorkTask : INodeTask
         _title = title;
     }
 
-    /// <summary>从检查点恢复任务。未完成任务恢复为暂停，完成的任务保持完成，终止的任务保持终止。</summary>
+    /// <summary>从存档恢复任务。未完成任务恢复为暂停，完成的任务保持完成，终止的任务保持终止。</summary>
     internal static WorkTask Restore(
         TaskRegistry registry,
-        TaskCheckpoint checkpoint,
+        TaskRecord record,
         CompiledFlow flow,
         IPortTexts startTexts,
         IReadOnlyList<Execution> executions,
@@ -91,21 +91,21 @@ public sealed class WorkTask : INodeTask
     {
         WorkTask task = new(
             registry,
-            checkpoint.Identity.Id,
-            checkpoint.Start.Inputs,
+            record.Identity.Id,
+            record.Start.Inputs,
             startTexts,
             flow.Model,
             flow.Graph,
-            checkpoint.Identity.Title,
-            checkpoint.Identity.CreatedAt,
-            checkpoint.Identity.LastActivityAt,
+            record.Identity.Title,
+            record.Identity.CreatedAt,
+            record.Identity.LastActivityAt,
             onContent,
             onEntry);
 
-        task.Journal.Restore(checkpoint.Journal.Entries, checkpoint.Journal.DroppedEntries);
-        task.FlowSnapshot = checkpoint.Flow;
+        task.Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
+        task.FlowSnapshot = record.Flow;
         task._executions.AddRange(executions);
-        task.Runtime.Restore(checkpoint.Nodes);
+        task.Runtime.Restore(record.Nodes);
         foreach (NodePath node in executions
             .Where(execution => execution.State == ExecutionState.Interrupted)
             .Select(execution => execution.Input.Node))
@@ -113,20 +113,20 @@ public sealed class WorkTask : INodeTask
             task.Runtime.Executable(node).EnterBlocked([node]);
         }
 
-        task._lifecycle = task.DetermineRestoredLifecycle(checkpoint);
+        task._lifecycle = task.DetermineRestoredLifecycle(record);
 
         return task;
     }
 
     /// <summary>终止保持终止，已完成保持完成，其余未完成任务恢复为暂停。</summary>
-    private TaskLifecycle DetermineRestoredLifecycle(TaskCheckpoint checkpoint)
+    private TaskLifecycle DetermineRestoredLifecycle(TaskRecord record)
     {
-        if (checkpoint.Lifecycle == TaskLifecycle.Terminated)
+        if (record.Lifecycle == TaskLifecycle.Terminated)
         {
             return TaskLifecycle.Terminated;
         }
 
-        _completed = checkpoint.Completed;
+        _completed = record.Completed;
 
         return _completed ? TaskLifecycle.Active : TaskLifecycle.Paused;
     }
@@ -140,10 +140,10 @@ public sealed class WorkTask : INodeTask
     /// <summary>最近活动时刻。</summary>
     internal DateTimeOffset LastActivityAt => _lastActivityAt;
 
-    /// <summary>提交时锁定的流程快照，写检查点时使用。</summary>
+    /// <summary>提交时锁定的流程快照，写存档时使用。</summary>
     internal FlowSnapshot? FlowSnapshot { get; set; }
 
-    /// <summary>推进循环给出的待处理目标，写检查点时使用。</summary>
+    /// <summary>推进循环给出的待处理目标，写存档时使用。</summary>
     internal Func<SchedulerSeed>? SeedSource { get; set; }
 
     /// <summary>捕获待处理目标，没有推进循环时为空。</summary>
@@ -164,7 +164,7 @@ public sealed class WorkTask : INodeTask
     /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
     internal void MarkCompleted() => _completed = true;
 
-    /// <summary>通知任务已走完，写检查点由任务域决定。</summary>
+    /// <summary>通知任务已走完，写存档由任务域决定。</summary>
     internal void NotifyCompleted() => Registry.ReportCompleted(this);
 
     /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>

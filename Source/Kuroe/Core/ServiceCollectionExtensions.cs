@@ -10,12 +10,16 @@ using Kuroe.Node.Llm.Tools;
 using Kuroe.Node.Command;
 using Kuroe.Node.File;
 using Kuroe.Flow.Compilation.Description;
+using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Json;
+using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
 using Kuroe.Flow.Shared.Flow;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Tool;
@@ -28,11 +32,12 @@ using Kuroe.Tool.Json;
 using Kuroe.Tool.Time;
 using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Tasks;
-using Kuroe.Flow.Persistence.FileSystem;
+using Kuroe.Flow.Persistence.Files;
 using Kuroe.Tools;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Persistence;
+using Kuroe.Flow.Persistence.Restoring;
+using Kuroe.Flow.Persistence.Saving;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.Compilation;
@@ -189,16 +194,16 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
-        services.AddSingleton<ITaskCheckpointCodec>(new TaskCheckpointCodec());
-        services.AddSingleton<ITaskCheckpointStore>(sp => new FileTaskCheckpointStore(
-            paths.CheckpointsDirectory,
-            sp.GetRequiredService<ITaskCheckpointCodec>()));
-        services.AddSingleton<ITaskLeaseStore>(new FileTaskLeaseStore(paths.CheckpointsDirectory));
+        services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
+        services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
+            paths.RecordsDirectory,
+            sp.GetRequiredService<ITaskRecordCodec>()));
+        services.AddSingleton<ITaskLeaseStore>(new FileTaskLeaseStore(paths.RecordsDirectory));
         services.AddSingleton<ITaskRestorer>(new TaskRestorer(taskRegistry));
-        services.AddSingleton<ITaskCheckpointSource>(new TaskCheckpointSource(taskRegistry));
-        services.AddSingleton<ITaskCheckpointCoordinator>(sp => new TaskCheckpointCoordinator(
-            sp.GetRequiredService<ITaskCheckpointSource>(),
-            sp.GetRequiredService<ITaskCheckpointStore>()));
+        services.AddSingleton<ITaskRecordSource>(new TaskRecordSource(taskRegistry));
+        services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
+            sp.GetRequiredService<ITaskRecordSource>(),
+            sp.GetRequiredService<ITaskRecordStore>()));
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
@@ -212,7 +217,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ITaskRestorer>(),
             sp.GetRequiredService<IFlowRunner>()));
         services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
-            sp.GetRequiredService<ITaskCheckpointStore>(),
+            sp.GetRequiredService<ITaskRecordStore>(),
             sp.GetRequiredService<IFlowSnapshotCompiler>(),
             sp.GetRequiredService<ITaskLeaseStore>(),
             sp.GetRequiredService<ITaskRestoreRuntime>()));
@@ -224,7 +229,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<ITaskIdSource>(),
                 coreOptions.PersistTasks ? flows.Value : null,
-                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskCheckpointCoordinator>() : null),
+                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(
             taskRegistry,

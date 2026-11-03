@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json.Shared;
-using Kuroe.Flow.Persistence.FileSystem;
+using Kuroe.Flow.Persistence.Files;
 
 namespace Kuroe.Workflows.Flows.Files;
 
@@ -93,16 +93,16 @@ sealed class FlowStore(
     public ErrorOr<Success> SaveFlows(IReadOnlyList<FlowDocumentFlow> flows) =>
         Save(_flowsFile, flowWriter.Write(flows));
 
-    /// <summary>把节点库写成文本，不落盘。检查点快照使用。</summary>
+    /// <summary>把节点库写成文本，不落盘。存档快照使用。</summary>
     public ErrorOr<string> RenderNodes(IReadOnlyList<NodeDefinitionDocument> nodes) => nodeWriter.Write(nodes);
 
-    /// <summary>把流程写成文本，不落盘。检查点快照使用。</summary>
+    /// <summary>把流程写成文本，不落盘。存档快照使用。</summary>
     public ErrorOr<string> RenderFlows(IReadOnlyList<FlowDocumentFlow> flows) => flowWriter.Write(flows);
 
-    /// <summary>从文本读出节点库，不落盘。检查点编译使用。</summary>
+    /// <summary>从文本读出节点库，不落盘。存档编译使用。</summary>
     public ErrorOr<IReadOnlyList<NodeDefinitionDocument>> ReadNodesText(string text) => nodeReader.Read(text);
 
-    /// <summary>从文本读出流程，不落盘。检查点编译使用。</summary>
+    /// <summary>从文本读出流程，不落盘。存档编译使用。</summary>
     public ErrorOr<IReadOnlyList<FlowDocumentFlow>> ReadFlowsText(string text) => flowReader.Read(text);
 
     /// <summary>读取导入文件，按顶层字段判定节点库文件或流程文件。</summary>

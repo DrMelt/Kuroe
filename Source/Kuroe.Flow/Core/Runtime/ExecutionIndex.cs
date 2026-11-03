@@ -23,7 +23,7 @@ public sealed class ExecutionIndex
         }
     }
 
-    /// <summary>登记一个从检查点恢复的执行，推进下一次执行号。</summary>
+    /// <summary>登记一个从存档恢复的执行，推进下一次执行号。</summary>
     internal void Restore(WorkTask owner, Execution execution)
     {
         lock (_gate)

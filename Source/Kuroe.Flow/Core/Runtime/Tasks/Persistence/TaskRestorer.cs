@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -8,31 +8,31 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
-/// <summary>从检查点恢复任务对象：重建执行历史与节点状态，不启动推进循环。</summary>
+/// <summary>从存档恢复任务对象：重建执行历史与节点状态，不启动推进循环。</summary>
 public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
 {
     private readonly TaskRegistry _registry = registry;
 
     /// <inheritdoc/>
-    public ErrorOr<WorkTask> Restore(TaskCheckpoint checkpoint, CompiledFlow flow)
+    public ErrorOr<WorkTask> Restore(TaskRecord record, CompiledFlow flow)
     {
         try
         {
-            PortTexts startTexts = new(checkpoint.Start.StartTexts);
+            PortTexts startTexts = new(record.Start.StartTexts);
             List<Execution> restored = [];
-            foreach (ExecutionCheckpoint saved in checkpoint.Executions)
+            foreach (ExecutionRecord saved in record.Executions)
             {
                 if (flow.Graph[saved.Node] is not ExecutableNode node)
                 {
                     return [Error.Failure(
-                        FlowErrorCodes.CheckpointGraphMismatch,
-                        $"检查点执行节点 {saved.Node} 不在流程图中。")];
+                        FlowErrorCodes.RecordGraphMismatch,
+                        $"存档执行节点 {saved.Node} 不在流程图中。")];
                 }
 
-                restored.Add(Execution.Restore(saved, BuildInput(checkpoint.Identity.Id, node, saved)));
+                restored.Add(Execution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
             }
 
-            WorkTask task = WorkTask.Restore(_registry, checkpoint, flow, startTexts, restored);
+            WorkTask task = WorkTask.Restore(_registry, record, flow, startTexts, restored);
             foreach (Execution execution in task.Executions)
             {
                 _registry.RestoreExecution(task, execution);
@@ -42,11 +42,11 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
         }
         catch (ArgumentException ex)
         {
-            return [Error.Failure(FlowErrorCodes.CheckpointNodeMismatch, ex.Message)];
+            return [Error.Failure(FlowErrorCodes.RecordNodeMismatch, ex.Message)];
         }
     }
 
-    private static ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionCheckpoint saved)
+    private static ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
     {
         return new ExecutionInput
         {
@@ -58,7 +58,7 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
             [
                 .. saved.Inputs.Select(value => new InputValue(
                     value.Port,
-                    new ContextValue(CheckpointSources.Read(value.Origin), value.Text))),
+                    new ContextValue(RecordSources.Read(value.Origin), value.Text))),
             ],
             Texts = saved.Texts,
             OutputPorts = node.SubmittablePorts,

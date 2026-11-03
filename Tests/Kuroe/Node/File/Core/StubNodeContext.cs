@@ -1,6 +1,6 @@
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
@@ -110,10 +110,10 @@ internal sealed class SourceRuntime : RuntimeNode
     }
 
     /// <summary>测试来源没有需要持久化的状态。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() => null;
+    public override NodeRecord? CaptureRecord() => null;
 
     /// <summary>测试来源没有需要恢复的状态。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
     }
 }

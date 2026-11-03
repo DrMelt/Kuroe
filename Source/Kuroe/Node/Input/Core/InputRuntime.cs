@@ -1,6 +1,6 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Runtime.Nodes;
@@ -60,18 +60,18 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     }
 
     /// <summary>捕获等待状态、进展与发布。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() =>
-        new InputNodeCheckpoint(
+    public override NodeRecord? CaptureRecord() =>
+        new InputNodeRecord(
             Path,
             CaptureProgress(),
             _waiting);
 
     /// <summary>恢复等待状态、进展与发布，等待中的节点重新声明接收外部输入。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
-        if (checkpoint is not InputNodeCheckpoint state)
+        if (record is not InputNodeRecord state)
         {
-            throw new ArgumentException($"输入节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+            throw new ArgumentException($"输入节点 {Path} 收到 {record.GetType().Name} 记录。", nameof(record));
         }
 
         RestoreProgress(state.Common);

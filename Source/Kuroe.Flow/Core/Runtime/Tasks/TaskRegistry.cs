@@ -16,7 +16,7 @@ public sealed class TaskRegistry(ExecutionIndex executions)
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    /// <summary>一个任务走完的通知，检查点协调据此写终态。</summary>
+    /// <summary>一个任务走完的通知，存档协调据此写终态。</summary>
     internal event Action<WorkTask>? Completed;
 
     /// <summary>把已定键、已备好开始端口文本的任务加入本域。</summary>
@@ -38,7 +38,7 @@ public sealed class TaskRegistry(ExecutionIndex executions)
         }
     }
 
-    /// <summary>把已恢复的任务加入本域。任务键已由检查点给出。</summary>
+    /// <summary>把已恢复的任务加入本域。任务键已由存档给出。</summary>
     internal void Adopt(WorkTask task)
     {
         lock (_gate)
@@ -186,7 +186,7 @@ public sealed class TaskRegistry(ExecutionIndex executions)
         }
     }
 
-    /// <summary>本域全部任务键，退出写检查点时使用。</summary>
+    /// <summary>本域全部任务键，退出写存档时使用。</summary>
     internal IReadOnlyList<TaskId> Ids()
     {
         lock (_gate)

@@ -24,10 +24,15 @@
     <Project Path="Source/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.csproj" />
-    <Project Path="Source/Kuroe.Flow/Persistence/Shared/Kuroe.Flow.Persistence.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Persistence/Core/Kuroe.Flow.Persistence.csproj" />
-    <Project Path="Source/Kuroe.Flow/Persistence/FileSystem/Kuroe.Flow.Persistence.FileSystem.csproj" />
-    <Project Path="Source/Kuroe.Flow/Persistence/Json/Kuroe.Flow.Persistence.Json.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Records/Shared/Kuroe.Flow.Persistence.Records.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Saving/Shared/Kuroe.Flow.Persistence.Saving.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Saving/Core/Kuroe.Flow.Persistence.Saving.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Restoring/Shared/Kuroe.Flow.Persistence.Restoring.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Restoring/Core/Kuroe.Flow.Persistence.Restoring.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Files/Shared/Kuroe.Flow.Persistence.Files.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Files/Core/Kuroe.Flow.Persistence.Files.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Serialization/Shared/Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Persistence/Serialization/Json/Core/Kuroe.Flow.Persistence.Json.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeType/Container/Core/Kuroe.Flow.NodeType.Container.csproj" />
     <Project Path="Source/Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Shared/Kuroe.Flow.InputChannel.Shared.csproj" />
@@ -72,10 +77,11 @@
     <Project Path="Tests/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/NodeType/Container/Core/Kuroe.Flow.NodeType.Container.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/InputChannel/Core/Kuroe.Flow.InputChannel.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Persistence/Shared/Kuroe.Flow.Persistence.Shared.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Persistence/Core/Kuroe.Flow.Persistence.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Persistence/Json/Kuroe.Flow.Persistence.Json.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Persistence/FileSystem/Kuroe.Flow.Persistence.FileSystem.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Records/Shared/Kuroe.Flow.Persistence.Records.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Restoring/Kuroe.Flow.Persistence.Restoring.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Serialization/Json/Kuroe.Flow.Persistence.Json.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Serialization/Shared/Kuroe.Flow.Persistence.Serialization.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Flow/Persistence/Files/Kuroe.Flow.Persistence.Files.Tests.csproj" />
     <Project Path="Tests/Kuroe.Console/Kuroe.Console.Tests.csproj" />
     <Project Path="Tests/Kuroe.Cli/Kuroe.Cli.Tests.csproj" />
 </Solution>

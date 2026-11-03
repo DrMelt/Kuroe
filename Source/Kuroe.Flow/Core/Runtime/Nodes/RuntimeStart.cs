@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -31,10 +31,10 @@ internal sealed class RuntimeStart : RuntimeNode
     }
 
     /// <summary>开始节点的产出由任务开始输入重建，不单独持久化。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() => null;
+    public override NodeRecord? CaptureRecord() => null;
 
-    /// <summary>开始节点没有需要从检查点恢复的状态。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    /// <summary>开始节点没有需要从存档恢复的状态。</summary>
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
     }
 

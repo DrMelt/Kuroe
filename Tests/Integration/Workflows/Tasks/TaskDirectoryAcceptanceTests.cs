@@ -15,7 +15,7 @@ public sealed class TaskDirectoryAcceptanceTests
         TaskId id = environment.Submit("修复登录超时");
 
         string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
-        string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".checkpoints");
+        string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".records");
         Assert.Equal($"{id.Value}-默认-修复登录超时", Path.GetFileName(created));
         Assert.Equal(new TaskId(1), id);
     }
@@ -29,7 +29,7 @@ public sealed class TaskDirectoryAcceptanceTests
 
         TaskId id = environment.Submit("修复登录超时");
 
-        Assert.Equal(2, Directory.GetDirectories(tasks).Count(path => Path.GetFileName(path) != ".checkpoints"));
+        Assert.Equal(2, Directory.GetDirectories(tasks).Count(path => Path.GetFileName(path) != ".records"));
         Assert.NotNull(Directory.GetDirectories(tasks, $"{id.Value}-*").FirstOrDefault());
     }
 

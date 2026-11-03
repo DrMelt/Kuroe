@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Shared;
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -189,19 +189,19 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             : null;
 
     /// <summary>捕获执行节点的进展、发布与阻塞状态。</summary>
-    public override NodeCheckpoint? CaptureCheckpoint() =>
-        new ExecutableNodeCheckpoint(
+    public override NodeRecord? CaptureRecord() =>
+        new ExecutableNodeRecord(
             Path,
             CaptureProgress(),
             [.. _reworkTargets],
             Blocked);
 
-    /// <summary>从检查点恢复执行节点的进展、发布与阻塞状态。</summary>
-    public override void RestoreCheckpoint(NodeCheckpoint checkpoint, INodeRestoreContext context)
+    /// <summary>从存档恢复执行节点的进展、发布与阻塞状态。</summary>
+    public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
-        if (checkpoint is not ExecutableNodeCheckpoint state)
+        if (record is not ExecutableNodeRecord state)
         {
-            throw new ArgumentException($"执行节点 {Path} 收到 {checkpoint.GetType().Name} 检查点。", nameof(checkpoint));
+            throw new ArgumentException($"执行节点 {Path} 收到 {record.GetType().Name} 记录。", nameof(record));
         }
 
         RestoreProgress(state.Common);

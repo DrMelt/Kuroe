@@ -2,7 +2,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime.Process;
 
-/// <summary>从检查点恢复的只读过程记录，不产生新的过程事件。</summary>
+/// <summary>从存档恢复的只读过程记录，不产生新的过程事件。</summary>
 internal sealed class RestoredProcessJournal(IReadOnlyList<JournalEntry> entries, int dropped) : IProcessJournal
 {
     public IReadOnlyList<JournalEntry> Entries { get; } = entries;

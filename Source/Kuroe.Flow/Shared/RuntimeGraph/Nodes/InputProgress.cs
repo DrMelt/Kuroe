@@ -67,7 +67,7 @@ public sealed class InputProgress : IInputProgress
         }
     }
 
-    /// <summary>按检查点回填版本、次数、上次启动组、重跑意图、已消费版本与发布。</summary>
+    /// <summary>按存档回填版本、次数、上次启动组、重跑意图、已消费版本与发布。</summary>
     public void Restore(
         long revision,
         int executions,
