@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -22,7 +21,7 @@ public sealed class FileReadNodeType(FileParameters? parameters) : INodeType, IN
     public NodeTypeShape Shape => FileReadNodeTypes.Shape;
 
     /// <summary>文件读取节点的类型规则：Path 的变量映射给出路径，其余输入只作触发，输出只承载读取内容，不接受执行方式。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         ExecutableSpec spec = node.Spec!;
 

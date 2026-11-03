@@ -14,7 +14,7 @@ public sealed class InputRegistry : IInputChannel, IInputDelivery
     private readonly ConditionalWeakTable<INodeContext, Dictionary<NodePath, Acceptance>> _nodes = [];
 
     /// <summary>声明本节点此刻接收外部输入。</summary>
-    public void Accept(INodeContext task, NodePath node, string? question, Action<string> receive) =>
+    public void Accept(INodeContext task, NodePath node, string? question, InputReceiver receive) =>
         Nodes(task)[node] = new Acceptance(question, receive);
 
     /// <summary>声明本节点不再接收外部输入。</summary>
@@ -49,5 +49,5 @@ public sealed class InputRegistry : IInputChannel, IInputDelivery
         _nodes.GetValue(task, _ => []);
 
     /// <summary>一条接收声明：等待时的提问与交付入口。</summary>
-    private readonly record struct Acceptance(string? Question, Action<string> Receive);
+    private readonly record struct Acceptance(string? Question, InputReceiver Receive);
 }

@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
@@ -17,5 +18,5 @@ internal sealed class ContainerNodeTypeDescription : INodeTypeDescription
     public IReadOnlyList<ParameterField> Fields { get; } = [];
 
     /// <summary>容器的类型实例，参数段没有内容。</summary>
-    public INodeType Read(IParameterReader values, Action<string> fail) => ContainerNodeTypes.Type;
+    public INodeType Read(IParameterReader values, ValidationMessageHandler fail) => ContainerNodeTypes.Type;
 }

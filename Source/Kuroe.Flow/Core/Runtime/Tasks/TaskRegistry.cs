@@ -26,12 +26,11 @@ public sealed class TaskRegistry(ExecutionIndex executions)
         IPortTexts startTexts,
         CompiledFlow flow,
         string title,
-        Action<ProcessContent>? onContent,
-        Action<JournalEntry>? onEntry)
+        ProcessObserver? observer)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, startTexts, flow.Model, flow.Graph, title, onContent, onEntry);
+            WorkTask task = new(this, id, inputs, startTexts, flow.Model, flow.Graph, title, observer);
             _tasks[task.Id.Value] = task;
 
             return task;

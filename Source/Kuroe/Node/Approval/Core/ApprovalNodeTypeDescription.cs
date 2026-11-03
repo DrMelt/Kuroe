@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -20,6 +21,6 @@ internal sealed class ApprovalNodeTypeDescription(IInputChannel channel) : INode
     public IReadOnlyList<ParameterField> Fields { get; } = [new(QuestionName, ParameterValueKind.Text)];
 
     /// <summary>读出参数段并建出类型实例。</summary>
-    public INodeType Read(IParameterReader values, Action<string> fail) =>
+    public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
         ApprovalNodeTypes.Create(new ApprovalParameters { Question = values.Text(QuestionName) }, channel);
 }

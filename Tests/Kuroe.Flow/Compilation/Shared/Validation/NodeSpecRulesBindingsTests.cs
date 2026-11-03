@@ -70,7 +70,7 @@ public sealed class NodeSpecRulesBindingsTests
             Errors(fail => node.CheckBindingCoverage(node.EffectiveInputs, container: true, fail)));
     }
 
-    private static List<string> Errors(Action<Action<string>> check)
+    private static List<string> Errors(Action<ValidationMessageHandler> check)
     {
         List<string> errors = [];
         check(errors.Add);

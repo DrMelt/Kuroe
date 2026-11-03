@@ -8,13 +8,13 @@ namespace Kuroe.Node.Approval.Tests;
 internal sealed class StubInputChannel : IInputChannel
 {
     /// <summary>收到的声明，按声明顺序。</summary>
-    public List<(NodePath Node, string? Question, Action<string> Receive)> Declared { get; } = [];
+    public List<(NodePath Node, string? Question, InputReceiver Receive)> Declared { get; } = [];
 
     /// <summary>收到的撤销，按撤销顺序。</summary>
     public List<NodePath> Declined { get; } = [];
 
     /// <summary>声明本节点此刻接收外部输入。</summary>
-    public void Accept(INodeContext task, NodePath node, string? question, Action<string> receive) =>
+    public void Accept(INodeContext task, NodePath node, string? question, InputReceiver receive) =>
         Declared.Add((node, question, receive));
 
     /// <summary>声明本节点不再接收外部输入。</summary>

@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -26,7 +25,7 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
     public NodeTypeShape Shape => CommandNodeTypes.Shape;
 
     /// <summary>命令节点的类型规则：Directory 的变量映射给出执行目录，其余输入只作触发，输出只承载命令输出。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         ExecutableSpec spec = node.Spec!;
 

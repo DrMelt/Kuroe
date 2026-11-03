@@ -1,5 +1,6 @@
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Xunit;
@@ -44,6 +45,6 @@ public sealed class NodeTypeDescriptionRegistryTests
 
         public IReadOnlyList<ParameterField> Fields => [];
 
-        public INodeType Read(IParameterReader values, Action<string> fail) => throw new NotSupportedException();
+        public INodeType Read(IParameterReader values, ValidationMessageHandler fail) => throw new NotSupportedException();
     }
 }

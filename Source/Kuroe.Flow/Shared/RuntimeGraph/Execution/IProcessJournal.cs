@@ -11,11 +11,11 @@ public interface IProcessJournal
     int DroppedEntries { get; }
 
     /// <summary>流式内容追加后给出该增量与种类。</summary>
-    event Action<ProcessContent>? ContentAppended;
+    event ProcessContentHandler? ContentAppended;
 
     /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
-    event Action<JournalEntry>? EntryAppended;
+    event JournalEntryHandler? EntryAppended;
 
     /// <summary>执行进度变化后给出进度文本。</summary>
-    event Action<string>? ProgressReported;
+    event ProgressTextHandler? ProgressReported;
 }

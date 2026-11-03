@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Console.Views;
 
@@ -88,7 +89,7 @@ internal sealed class DialogueBrowser(
         {
             try
             {
-                outcome = await dialogue.ReplyAsync(input, output.Content, output.Entry);
+                outcome = await dialogue.ReplyAsync(input, new ProcessObserver(output.Content, output.Entry));
             }
             catch (Exception ex)
             {

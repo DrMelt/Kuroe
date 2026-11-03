@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -23,7 +22,7 @@ public sealed class InputNodeType(InputParameters? parameters, IInputChannel cha
     public NodeTypeShape Shape => InputNodeTypes.Shape;
 
     /// <summary>输入节点的类型规则：只以用户输入为产出。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         void Reject(bool condition, string message)
         {

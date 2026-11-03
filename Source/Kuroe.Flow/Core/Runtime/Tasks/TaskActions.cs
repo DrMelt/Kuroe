@@ -33,13 +33,12 @@ public sealed class TaskActions(
     private readonly ITaskRecordCoordinator? _records = records;
 
     /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取注入的开始端口值，再建任务并启动推进。
-    /// 任务号被宿主资源占用时换下一个任务号重来。onContent 与 onEntry 收到该任务全部执行的过程事件。</summary>
+    /// 任务号被宿主资源占用时换下一个任务号重来。observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
         CompiledFlow flow,
         string? title,
-        Action<ProcessContent>? onContent = null,
-        Action<JournalEntry>? onEntry = null)
+        ProcessObserver? observer = null)
     {
         INodeGraph graph = flow.Graph;
         IReadOnlyDictionary<PortName, string> hostInputs = flow.Model.HostStartInputs;
@@ -100,8 +99,7 @@ public sealed class TaskActions(
             startTexts.Value,
             flow,
             taskTitle,
-            onContent,
-            onEntry);
+            observer);
         task.FlowSnapshot = flowSnapshot;
 
         lock (task.Gate)

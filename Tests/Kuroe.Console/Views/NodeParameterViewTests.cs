@@ -28,7 +28,7 @@ public sealed class NodeParameterViewTests
 
     private sealed class StubInputChannel : IInputChannel
     {
-        public void Accept(INodeContext task, NodePath node, string? question, Action<string> receive)
+        public void Accept(INodeContext task, NodePath node, string? question, InputReceiver receive)
         {
         }
 

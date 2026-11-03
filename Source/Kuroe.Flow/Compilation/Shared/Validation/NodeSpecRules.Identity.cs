@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 public static partial class NodeSpecRules
 {
     /// <summary>按作用域检查节点标识：定义条目按节点名，引用条目按标签。</summary>
-    public static void CheckIdentity(this NodeSpec node, NodeRuleContext context, Action<string> fail)
+    public static void CheckIdentity(this NodeSpec node, NodeRuleContext context, ValidationMessageHandler fail)
     {
         if (context == NodeRuleContext.Reference || node.Use is not null || node.Name is null)
         {
@@ -19,7 +19,7 @@ public static partial class NodeSpecRules
     }
 
     /// <summary>检查定义条目的节点名，标签必须取节点名文本。</summary>
-    private static void CheckDefinition(NodeSpec node, Action<string> fail)
+    private static void CheckDefinition(NodeSpec node, ValidationMessageHandler fail)
     {
         if (node.Name is not { } name)
         {
@@ -37,10 +37,10 @@ public static partial class NodeSpecRules
     }
 
     /// <summary>检查引用条目的标签。</summary>
-    private static void CheckReference(NodeSpec node, Action<string> fail) =>
+    private static void CheckReference(NodeSpec node, ValidationMessageHandler fail) =>
         Check(node.Label.Value, "节点标签", NodeLabel.ReservedStart.Value, "标签", fail);
 
-    private static void Check(string value, string kind, string reserved, string reservedKind, Action<string> fail)
+    private static void Check(string value, string kind, string reserved, string reservedKind, ValidationMessageHandler fail)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

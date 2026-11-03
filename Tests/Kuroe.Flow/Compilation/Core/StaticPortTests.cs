@@ -594,7 +594,7 @@ public sealed class StaticPortTests
             InputTypes = [PortTypes.Text],
         };
 
-        public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+        public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
         {
         }
     }

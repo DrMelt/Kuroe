@@ -10,7 +10,7 @@ namespace Kuroe.Flow.InputChannel.Shared;
 public interface IInputChannel
 {
     /// <summary>声明本节点此刻接收外部输入，交付经 receive 收下。question 是等待时给外部的提问，没有时为空。节点在自己的执行中调用，取消态下不调用。</summary>
-    void Accept(INodeContext task, NodePath node, string? question, Action<string> receive);
+    void Accept(INodeContext task, NodePath node, string? question, InputReceiver receive);
 
     /// <summary>声明本节点不再接收外部输入。节点随任务取消时调用，已交付的声明无需再撤销。</summary>
     void Decline(INodeContext task, NodePath node);

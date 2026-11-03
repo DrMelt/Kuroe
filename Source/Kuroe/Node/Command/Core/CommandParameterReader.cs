@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 
 namespace Kuroe.Node.Command;
 
@@ -8,7 +9,7 @@ internal static class CommandParameterReader
     /// <summary>读出程序、参数、执行目录、路径变量、超时与输出上限，缺失或非法时经 fail 报出。</summary>
     internal static CommandParameters Read(
         IParameterReader values,
-        Action<string> fail,
+        ValidationMessageHandler fail,
         string rootDirectory)
     {
         IReadOnlyDictionary<string, string> variables = values.Mappings(CommandParameterNames.Variables);

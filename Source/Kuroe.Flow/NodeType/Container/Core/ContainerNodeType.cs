@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -16,7 +15,7 @@ internal sealed class ContainerNodeType : INodeType, INodeTypeValidation
     public NodeTypeShape Shape => ContainerNodeTypes.Shape;
 
     /// <summary>容器的类型规则：发布次数上限、输入端口默认值与输出端口绑定。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         if (node.MaxExecutions is { } limit && limit < 1)
         {

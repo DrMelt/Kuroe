@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -47,7 +46,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     }
 
     /// <summary>Llm 类型的规则：执行上限约束。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         ExecutableSpec spec = node.Spec!;
         if (spec.MaxExecutions is { } limit && limit < 1)

@@ -9,19 +9,19 @@ internal sealed class RestoredProcessJournal(IReadOnlyList<JournalEntry> entries
 
     public int DroppedEntries { get; } = dropped;
 
-    public event Action<ProcessContent>? ContentAppended
+    public event ProcessContentHandler? ContentAppended
     {
         add => _ = value;
         remove => _ = value;
     }
 
-    public event Action<JournalEntry>? EntryAppended
+    public event JournalEntryHandler? EntryAppended
     {
         add => _ = value;
         remove => _ = value;
     }
 
-    public event Action<string>? ProgressReported
+    public event ProgressTextHandler? ProgressReported
     {
         add => _ = value;
         remove => _ = value;

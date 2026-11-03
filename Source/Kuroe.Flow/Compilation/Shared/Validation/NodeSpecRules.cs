@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 public static partial class NodeSpecRules
 {
     /// <summary>按作用域检查一个节点的全部不变量，每条错误经 fail 报出。</summary>
-    public static void Check(this NodeSpec node, NodeRuleContext context, Action<string> fail)
+    public static void Check(this NodeSpec node, NodeRuleContext context, ValidationMessageHandler fail)
     {
         node.CheckIdentity(context, fail);
         node.CheckStructure(node.Type?.Shape, context, fail);

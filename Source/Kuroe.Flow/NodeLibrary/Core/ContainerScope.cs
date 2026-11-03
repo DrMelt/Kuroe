@@ -1,3 +1,4 @@
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -12,7 +13,7 @@ internal static class ContainerScope
         NodeSpec container,
         IReadOnlyList<NodeSpec> members,
         Func<NodeName, NodeSpec?> find,
-        Action<NodeSpec, string> fail)
+        NodeViolationHandler fail)
     {
         HashSet<NodeLabel> labels = SubtreeLabels(members, find);
         HashSet<PortName> ports = [.. container.EffectiveInputs.Select(port => port.Name)];

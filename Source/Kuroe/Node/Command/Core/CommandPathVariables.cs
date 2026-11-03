@@ -1,3 +1,4 @@
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -12,7 +13,7 @@ internal static class CommandPathVariables
     internal static IReadOnlySet<string> Validate(
         NodeSpec node,
         CommandParameters? parameters,
-        Action<string> report)
+        ValidationMessageHandler fail)
     {
         IReadOnlyDictionary<string, string> variables =
             parameters?.Variables ?? new Dictionary<string, string>();
@@ -27,7 +28,7 @@ internal static class CommandPathVariables
             return port is null ? null : PortRules.CarriesText(port.Value.Type);
         }))
         {
-            report(error);
+            fail(error);
         }
 
         return new HashSet<string>(variables.Values, StringComparer.Ordinal);

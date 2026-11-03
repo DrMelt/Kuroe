@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 public static partial class NodeSpecRules
 {
     /// <summary>按作用域检查接线字段。container 为真时按容器判定，引用条目按被引用定义判定。</summary>
-    public static void CheckWiring(this NodeSpec node, NodeRuleContext context, Action<string> fail, bool? container = null)
+    public static void CheckWiring(this NodeSpec node, NodeRuleContext context, ValidationMessageHandler fail, bool? container = null)
     {
         bool isContainer = container ?? node.IsContainer;
         if (context == NodeRuleContext.Reference)

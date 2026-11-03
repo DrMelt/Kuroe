@@ -94,21 +94,21 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     {
         private readonly Lock _gate = new();
         private readonly List<JournalEntry> _entries = [];
-        private Action<JournalEntry>? _entryAppended;
-        private Action<string>? _progressReported;
+        private JournalEntryHandler? _entryAppended;
+        private ProgressTextHandler? _progressReported;
 
         /// <summary>流式内容追加后给出该增量与种类。</summary>
-        public event Action<ProcessContent>? ContentAppended;
+        public event ProcessContentHandler? ContentAppended;
 
         /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
-        public event Action<JournalEntry>? EntryAppended
+        public event JournalEntryHandler? EntryAppended
         {
             add => _entryAppended += value;
             remove => _entryAppended -= value;
         }
 
         /// <summary>执行进度变化后给出进度文本。</summary>
-        public event Action<string>? ProgressReported
+        public event ProgressTextHandler? ProgressReported
         {
             add => _progressReported += value;
             remove => _progressReported -= value;

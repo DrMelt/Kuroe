@@ -13,7 +13,7 @@ public static partial class NodeSpecRules
     public static void CheckInterface(
         this NodeSpec node,
         NodeTypeShape? shape,
-        Action<string> fail)
+        ValidationMessageHandler fail)
     {
         bool container = shape?.Organizes ?? node.IsContainer;
         bool organizes = node.IsContainer;
@@ -149,7 +149,7 @@ public static partial class NodeSpecRules
 
     /// <summary>输出端口来源：常量输出只接受固定值或常量来源，动态输出不接受固定值，转发来源只用于组织子节点的节点。
     /// 引用本节点静态输入时在此完成存在性、常量性与类型校验。</summary>
-    private static void CheckOutputSource(NodeSpec node, Port port, bool organizes, Action<string> fail)
+    private static void CheckOutputSource(NodeSpec node, Port port, bool organizes, ValidationMessageHandler fail)
     {
         string name = port.Name.Value;
         if (port.Value is not null && port.Ref is not null)

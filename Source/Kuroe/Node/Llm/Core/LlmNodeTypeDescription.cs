@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Tool;
@@ -32,7 +33,7 @@ internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = n
     ];
 
     /// <summary>读出参数段并建出类型实例。</summary>
-    public INodeType Read(IParameterReader values, Action<string> fail)
+    public INodeType Read(IParameterReader values, ValidationMessageHandler fail)
     {
         IReadOnlyList<string> tools = values.Texts(ToolsName);
         foreach (string tool in tools)

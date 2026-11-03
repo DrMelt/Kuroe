@@ -15,13 +15,13 @@ internal sealed class RecordingJournal : IProcessJournal
     private string _progress = string.Empty;
 
     /// <summary>流式内容追加后给出该增量与种类。</summary>
-    public event Action<ProcessContent>? ContentAppended;
+    public event ProcessContentHandler? ContentAppended;
 
     /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
-    public event Action<JournalEntry>? EntryAppended;
+    public event JournalEntryHandler? EntryAppended;
 
     /// <summary>执行进度变化后给出进度文本。</summary>
-    public event Action<string>? ProgressReported;
+    public event ProgressTextHandler? ProgressReported;
 
     /// <summary>追加一条过程记录。</summary>
     public void Append(JournalEntry entry)

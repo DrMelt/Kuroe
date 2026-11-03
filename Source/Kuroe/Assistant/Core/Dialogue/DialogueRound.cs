@@ -12,13 +12,12 @@ namespace Kuroe.Assistant.Dialogue;
 /// 回答的交付由等待型节点的宿主功能承担，这里只管一轮的挂载、观察与收口。</summary>
 public sealed class DialogueRound(TaskRegistry registry, PendingService pendings)
 {
-    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程内容与过程条目经回调送出。</summary>
+    /// <summary>回答待输入的节点并等本轮产出执行收口，只报成败。过程事件经 observer 送出。</summary>
     public async Task<ErrorOr<Success>> AskAsync(
         TaskId id,
         string? nodePath,
         string input,
-        Action<ProcessContent>? onContent = null,
-        Action<JournalEntry>? onEntry = null)
+        ProcessObserver? observer = null)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
@@ -84,12 +83,12 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
                     return;
                 }
 
-                if (onContent is { } contentObserver)
+                if (observer?.Content is { } contentObserver)
                 {
                     execution.ContentEmitted += contentObserver;
                 }
 
-                if (onEntry is { } entryObserver)
+                if (observer?.Entry is { } entryObserver)
                 {
                     execution.EntryEmitted += entryObserver;
                 }

@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -13,7 +12,7 @@ public sealed class TestNodeType(NodeKind kind, NodeTypeShape shape) : INodeType
 
     public NodeTypeShape Shape { get; } = shape;
 
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
     }
 }

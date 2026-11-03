@@ -1,3 +1,4 @@
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
@@ -17,7 +18,7 @@ public interface INodeTypeDescription
     IReadOnlyList<ParameterField> Fields { get; }
 
     /// <summary>由本轮取值建出类型实例，声明内容不合法经 fail 报出。</summary>
-    INodeType Read(IParameterReader values, Action<string> fail);
+    INodeType Read(IParameterReader values, ValidationMessageHandler fail);
 }
 
 /// <summary>节点类型描述的注册表：类型名到描述的唯一入口。</summary>

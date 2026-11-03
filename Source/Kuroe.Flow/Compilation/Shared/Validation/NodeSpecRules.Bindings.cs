@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 public static partial class NodeSpecRules
 {
     /// <summary>检查绑定目标，逐条经 fail 报出。引用节点在库校验阶段尚未展开，目标由展开后判定。</summary>
-    public static void CheckBindings(this NodeSpec node, Action<string> fail)
+    public static void CheckBindings(this NodeSpec node, ValidationMessageHandler fail)
     {
         if (node.Bindings is not { Count: > 0 } bindings)
         {
@@ -49,7 +49,7 @@ public static partial class NodeSpecRules
         this NodeSpec node,
         IReadOnlyList<InputPort> inputs,
         bool container,
-        Action<string> fail)
+        ValidationMessageHandler fail)
     {
         foreach (InputPort input in inputs)
         {

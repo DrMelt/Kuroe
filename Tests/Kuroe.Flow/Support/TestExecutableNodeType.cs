@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -28,7 +27,7 @@ public sealed class TestExecutableNodeType(bool withContractInput = true) : INod
     };
 
     /// <summary>替身的类型规则：执行上限必须是正整数，覆盖类型规则经节点作用域报出的路径。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         if (node.Spec?.MaxExecutions is { } limit && limit < 1)
         {

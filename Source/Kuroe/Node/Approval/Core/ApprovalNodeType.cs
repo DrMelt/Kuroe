@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -24,7 +23,7 @@ public sealed class ApprovalNodeType(ApprovalParameters? parameters, IInputChann
     public NodeTypeShape Shape => ApprovalNodeTypes.Shape;
 
     /// <summary>审批节点的类型规则：对外端口取自身输入端口，不接受执行上限。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         void Reject(bool condition, string message)
         {

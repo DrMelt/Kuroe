@@ -97,8 +97,7 @@ public sealed class WorkTaskTests
             flow,
             graph,
             "测试任务",
-            onContent: null,
-            onEntry: null);
+            observer: null);
     }
 
     private static void MarkCompleted(WorkTask task) =>

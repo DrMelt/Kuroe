@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -22,7 +21,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
     public NodeTypeShape Shape => FileWriteNodeTypes.Shape;
 
     /// <summary>文件写入节点的类型规则：一个内容 Text 输入加若干路径变量 Text 输入，输出可选，不接受执行方式。</summary>
-    public void Validate(NodeSpec node, NodeScope scope, Action<Error> fail)
+    public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
     {
         ExecutableSpec spec = node.Spec!;
 

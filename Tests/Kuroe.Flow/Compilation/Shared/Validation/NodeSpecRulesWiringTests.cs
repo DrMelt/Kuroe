@@ -110,7 +110,7 @@ public sealed class NodeSpecRulesWiringTests
     private static Dictionary<PortName, PortRef> Bindings() =>
         new() { [Input] = PortRef.Named(new NodeLabel("来源"), Output) };
 
-    private static List<string> Errors(Action<Action<string>> check)
+    private static List<string> Errors(Action<ValidationMessageHandler> check)
     {
         List<string> errors = [];
         check(errors.Add);

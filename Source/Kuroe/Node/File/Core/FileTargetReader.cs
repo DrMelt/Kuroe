@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 
 namespace Kuroe.Node.File;
 
@@ -8,7 +9,7 @@ internal static class FileTargetReader
     /// <summary>读出文件路径、路径变量与字符上限，路径缺失或上限为负数时经 fail 报出。</summary>
     internal static FileParameters Read(
         IParameterReader values,
-        Action<string> fail,
+        ValidationMessageHandler fail,
         string nodeName,
         string rootDirectory,
         int defaultMaxChars)

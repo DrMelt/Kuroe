@@ -18,8 +18,7 @@ public sealed class WorkTask : INodeTask
 {
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
-    private readonly Action<ProcessContent>? _onContent;
-    private readonly Action<JournalEntry>? _onEntry;
+    private readonly ProcessObserver? _observer;
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private TaskLifecycle _lifecycle = TaskLifecycle.Active;
@@ -33,8 +32,7 @@ public sealed class WorkTask : INodeTask
         FlowDefinition flow,
         INodeGraph graph,
         string title,
-        Action<ProcessContent>? onContent,
-        Action<JournalEntry>? onEntry)
+        ProcessObserver? observer)
     {
         Registry = registry;
         Id = id;
@@ -46,8 +44,7 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
-        _onContent = onContent;
-        _onEntry = onEntry;
+        _observer = observer;
         _title = title;
     }
 
@@ -61,8 +58,7 @@ public sealed class WorkTask : INodeTask
         string title,
         DateTimeOffset createdAt,
         DateTimeOffset lastActivityAt,
-        Action<ProcessContent>? onContent,
-        Action<JournalEntry>? onEntry)
+        ProcessObserver? observer)
     {
         Registry = registry;
         Id = id;
@@ -74,8 +70,7 @@ public sealed class WorkTask : INodeTask
         Runtime = new TaskRuntime(this);
         _createdAt = createdAt;
         _lastActivityAt = lastActivityAt;
-        _onContent = onContent;
-        _onEntry = onEntry;
+        _observer = observer;
         _title = title;
     }
 
@@ -86,8 +81,7 @@ public sealed class WorkTask : INodeTask
         CompiledFlow flow,
         IPortTexts startTexts,
         IReadOnlyList<Execution> executions,
-        Action<ProcessContent>? onContent = null,
-        Action<JournalEntry>? onEntry = null)
+        ProcessObserver? observer = null)
     {
         WorkTask task = new(
             registry,
@@ -99,8 +93,7 @@ public sealed class WorkTask : INodeTask
             record.Identity.Title,
             record.Identity.CreatedAt,
             record.Identity.LastActivityAt,
-            onContent,
-            onEntry);
+            observer);
 
         task.Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
         task.FlowSnapshot = record.Flow;
@@ -376,12 +369,12 @@ public sealed class WorkTask : INodeTask
         _executions.Add(execution);
         Runtime.Executable(execution.Input.Node).RecordExecution();
         _lastActivityAt = DateTimeOffset.UtcNow;
-        if (_onContent is { } onContent)
+        if (_observer?.Content is { } onContent)
         {
             execution.ContentEmitted += onContent;
         }
 
-        if (_onEntry is { } onEntry)
+        if (_observer?.Entry is { } onEntry)
         {
             execution.EntryEmitted += onEntry;
         }

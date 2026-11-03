@@ -88,14 +88,14 @@ public sealed class Execution : IExecution
     internal CancellationToken CancellationToken => _cancellation.Token;
 
     /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
-    public event Action<ProcessContent>? ContentEmitted
+    public event ProcessContentHandler? ContentEmitted
     {
         add => _process.Content += value;
         remove => _process.Content -= value;
     }
 
     /// <summary>一条需要即时呈现的过程记录。</summary>
-    public event Action<JournalEntry>? EntryEmitted
+    public event JournalEntryHandler? EntryEmitted
     {
         add => _process.Entry += value;
         remove => _process.Entry -= value;
@@ -330,11 +330,11 @@ public sealed class Execution : IExecution
     private sealed class ProcessBroadcast
     {
         private readonly Lock _gate = new();
-        private Action<ProcessContent>? _content;
-        private Action<JournalEntry>? _entry;
+        private ProcessContentHandler? _content;
+        private JournalEntryHandler? _entry;
         private bool _closed;
 
-        public event Action<ProcessContent>? Content
+        public event ProcessContentHandler? Content
         {
             add
             {
@@ -355,7 +355,7 @@ public sealed class Execution : IExecution
             }
         }
 
-        public event Action<JournalEntry>? Entry
+        public event JournalEntryHandler? Entry
         {
             add
             {
@@ -378,7 +378,7 @@ public sealed class Execution : IExecution
 
         public void PublishContent(ProcessContent content)
         {
-            Action<ProcessContent>? handler;
+            ProcessContentHandler? handler;
             lock (_gate)
             {
                 handler = _content;
@@ -389,7 +389,7 @@ public sealed class Execution : IExecution
 
         public void PublishEntry(JournalEntry entry)
         {
-            Action<JournalEntry>? handler;
+            JournalEntryHandler? handler;
             lock (_gate)
             {
                 handler = _entry;

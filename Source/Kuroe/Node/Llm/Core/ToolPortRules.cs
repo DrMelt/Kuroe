@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -17,7 +16,7 @@ internal static class ToolPortRules
         NodeSpec node,
         IToolContractCatalog? contracts,
         NodeScope scope,
-        Action<Error> fail)
+        ValidationErrorHandler fail)
     {
         if (parameters is null)
         {

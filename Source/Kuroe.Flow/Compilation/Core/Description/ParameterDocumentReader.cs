@@ -17,7 +17,7 @@ static class ParameterDocumentReader
         IReadOnlyDictionary<string, FlowValue> values,
         NodeScope scope,
         NodeLabel node,
-        Action<Error> fail)
+        ValidationErrorHandler fail)
     {
         List<Error> errors = [];
         void Report(string message) => errors.Add(scope.Node(node.Value, message));
@@ -44,7 +44,7 @@ static class ParameterDocumentReader
     }
 
     /// <summary>一轮取值的读侧：按字段名取，形状不符经 fail 报出，缺失取安全默认。</summary>
-    private sealed class Reader(IReadOnlyDictionary<string, FlowValue> values, Action<string> fail) : IParameterReader
+    private sealed class Reader(IReadOnlyDictionary<string, FlowValue> values, ValidationMessageHandler fail) : IParameterReader
     {
         public string? Text(string name)
         {

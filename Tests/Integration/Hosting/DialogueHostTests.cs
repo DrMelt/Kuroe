@@ -29,7 +29,7 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = _ => "回复你好";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["回复你好"], observer.Texts);
@@ -42,8 +42,8 @@ public sealed class DialogueHostTests
         environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
         RecordingOutput observer = new();
 
-        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", observer.Content, observer.Entry);
-        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", observer.Content, observer.Entry);
+        ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", new ProcessObserver(observer.Content, observer.Entry));
+        ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(first.IsError, ErrorText(first));
         Assert.False(second.IsError, ErrorText(second));
@@ -176,7 +176,7 @@ public sealed class DialogueHostTests
 
         for (int round = 1; round <= 8; round++)
         {
-            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", observer.Content, observer.Entry);
+            ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync($"第{round}问", new ProcessObserver(observer.Content, observer.Entry));
 
             Assert.False(reply.IsError, ErrorText(reply));
         }
@@ -196,7 +196,7 @@ public sealed class DialogueHostTests
             journal.AppendToolCall("GetLocalTime", "{}", "2026-10-18 19:10:48", false);
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         JournalEntry entry = Assert.Single(observer.Entries);
@@ -216,7 +216,7 @@ public sealed class DialogueHostTests
         };
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
@@ -236,7 +236,7 @@ public sealed class DialogueHostTests
             journal.AppendContent(ProcessContentKind.Reasoning, "先想");
         RecordingOutput observer = new();
 
-        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", observer.Content, observer.Entry);
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", new ProcessObserver(observer.Content, observer.Entry));
 
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["先想"], observer.Reasonings);

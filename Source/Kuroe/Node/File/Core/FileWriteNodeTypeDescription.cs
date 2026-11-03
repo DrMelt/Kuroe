@@ -1,4 +1,5 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
@@ -22,7 +23,7 @@ internal sealed class FileWriteNodeTypeDescription(string rootDirectory) : INode
     ];
 
     /// <summary>读出参数段并建出类型实例。</summary>
-    public INodeType Read(IParameterReader values, Action<string> fail) =>
+    public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
         FileWriteNodeTypes.Create(FileTargetReader.Read(
             values, fail, "文件写入节点", rootDirectory, FileWriteNodeTypes.DefaultMaxChars));
 }

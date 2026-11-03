@@ -1,4 +1,3 @@
-using ErrorOr;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation.Shared.Validation;
@@ -7,5 +6,5 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 public interface INodeTypeValidation
 {
     /// <summary>校验一个节点，scope 给出流程或节点库的作用域。</summary>
-    void Validate(NodeSpec node, NodeScope scope, Action<Error> fail);
+    void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail);
 }

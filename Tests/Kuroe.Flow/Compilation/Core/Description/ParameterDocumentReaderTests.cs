@@ -107,7 +107,7 @@ public sealed class ParameterDocumentReaderTests
             new("Number", ParameterValueKind.Integer),
         ];
 
-        public INodeType Read(IParameterReader values, Action<string> fail) =>
+        public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
             TestNodeTypeFactory.Create(new TestParameters(values.Text("Text"), values.Texts("Texts"), values.Integer("Number")));
     }
 

@@ -20,8 +20,8 @@ public interface IExecution
     void Cancel();
 
     /// <summary>执行输出的一段流式内容，按到达顺序给出。收口后不再触发。</summary>
-    event Action<ProcessContent>? ContentEmitted;
+    event ProcessContentHandler? ContentEmitted;
 
     /// <summary>一条需要即时呈现的过程记录。收口后不再触发。</summary>
-    event Action<JournalEntry>? EntryEmitted;
+    event JournalEntryHandler? EntryEmitted;
 }

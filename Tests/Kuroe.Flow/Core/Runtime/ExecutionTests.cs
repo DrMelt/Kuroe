@@ -164,11 +164,11 @@ public sealed class ExecutionTests
 
         public int DroppedEntries { get; } = dropped;
 
-        public event Action<ProcessContent>? ContentAppended;
+        public event ProcessContentHandler? ContentAppended;
 
-        public event Action<JournalEntry>? EntryAppended;
+        public event JournalEntryHandler? EntryAppended;
 
-        public event Action<string>? ProgressReported;
+        public event ProgressTextHandler? ProgressReported;
 
         public void EmitContent(ProcessContentKind kind, string delta) =>
             ContentAppended?.Invoke(new ProcessContent(kind, delta));

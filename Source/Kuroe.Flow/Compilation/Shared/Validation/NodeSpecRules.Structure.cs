@@ -10,7 +10,7 @@ public static partial class NodeSpecRules
         this NodeSpec node,
         NodeTypeShape? shape,
         NodeRuleContext context,
-        Action<string> fail)
+        ValidationMessageHandler fail)
     {
         if (node.Use is not null || shape is null)
         {
