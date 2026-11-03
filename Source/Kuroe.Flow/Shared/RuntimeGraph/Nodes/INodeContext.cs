@@ -4,12 +4,9 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
-/// <summary>引擎给节点实现的机制入口：读图与来源、取输入侧方案、登记已消费版本、通知下游。读写要求持有任务 Gate。</summary>
+/// <summary>引擎给节点实现的机制入口：来源状态、输入侧方案与运行期对象。读写要求持有任务 Gate。</summary>
 public interface INodeContext : IReadinessSources
 {
-    /// <summary>任务的流程编译视图。</summary>
-    INodeGraph Graph { get; }
-
     /// <summary>某节点的输入侧方案，开始为空。</summary>
     NodeInputPlan? Plan(NodePath node);
 

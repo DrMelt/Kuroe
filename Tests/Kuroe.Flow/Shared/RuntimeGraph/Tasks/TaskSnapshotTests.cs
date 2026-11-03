@@ -80,75 +80,38 @@ public sealed class TaskSnapshotTests
             ],
         });
 
-    private static readonly FakeNodeGraph Graph = new([
-        new ExecutableNode
-        {
-            Path = NodePath.Of("制定计划"),
-            Type = ExecutableType,
-            Spec = new ExecutableSpec(),
-            Inputs = [],
-            Outputs = [],
-            MaxExecutions = 100,
-        },
-        new ExecutableNode
-        {
-            Path = NodePath.Of("实施"),
-            Type = ExecutableType,
-            Spec = new ExecutableSpec(),
-            Inputs = [],
-            Outputs = [],
-            MaxExecutions = 100,
-        },
-    ]);
+    private static readonly NodeGraph Graph = new(
+        [
+            new StartNode
+            {
+                Path = new NodePath([StartNode.ReservedLabel]),
+                Outputs = [],
+            },
+            new ExecutableNode
+            {
+                Path = NodePath.Of("制定计划"),
+                Type = ExecutableType,
+                Spec = new ExecutableSpec(),
+                Inputs = [],
+                Outputs = [],
+                MaxExecutions = 100,
+            },
+            new ExecutableNode
+            {
+                Path = NodePath.Of("实施"),
+                Type = ExecutableType,
+                Spec = new ExecutableSpec(),
+                Inputs = [],
+                Outputs = [],
+                MaxExecutions = 100,
+            },
+        ],
+        []);
 
     private sealed class TestNodeType(NodeKind kind, NodeTypeShape shape) : INodeType
     {
         public NodeKind Kind { get; } = kind;
 
         public NodeTypeShape Shape { get; } = shape;
-    }
-
-    /// <summary>只提供执行节点表与总数的测试图，其余图查询不参与快照派生。</summary>
-    private sealed class FakeNodeGraph(IReadOnlyList<ExecutableNode> executables) : INodeGraph
-    {
-        public IReadOnlyList<GraphNode> Nodes => executables;
-
-        public StartNode Start => throw new NotSupportedException();
-
-        public IReadOnlyList<ExecutableNode> ExecutableNodes => executables;
-
-        public IReadOnlyList<ContainerNode> Containers => [];
-
-        public IReadOnlyList<InputBinding> Bindings => [];
-
-        public IReadOnlyList<InputBinding> StaticBindings => [];
-
-        public int Count => executables.Count;
-
-        public int TotalExecutables => executables.Count;
-
-        public GraphNode this[NodePath path] => executables.Single(node => node.Path == path);
-
-        public IReadOnlyList<GraphNode> ChildrenOf(NodePath? container) => container is null ? executables : [];
-
-        public ContainerNode? ContainerOf(NodePath path) => null;
-
-        public IReadOnlyList<InputBinding> Incoming(NodePath target) => [];
-
-        public IReadOnlyList<InputBinding> Outgoing(NodePath source) => [];
-
-        public IReadOnlyList<NodePath> Dependents(NodePath source) => [];
-
-        public StaticResolution? StaticInputResolution(NodePath node, PortName port) => null;
-
-        public StaticResolution? ConstantResolution(NodePath node, PortName port) => null;
-
-        public IReadOnlyList<NodePath> ExecutablesIn(NodePath source) => [source];
-
-        public NodeInputPlan? PlanOf(NodePath path) => null;
-
-        public NodeTypeShape? ShapeOf(NodePath path) => null;
-
-        public PortType TypeOf(NodePath node, PortName port) => PortTypes.Text;
     }
 }

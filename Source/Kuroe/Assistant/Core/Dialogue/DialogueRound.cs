@@ -27,13 +27,10 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
 
         WorkTask task = found.Value;
         NodePath? output = task.UnderLock(() =>
-        {
-            INodeTask access = task;
-            return access.Graph.ExecutableNodes
-                .Where(node => access.Graph.ShapeOf(node.Path) is { DispatchesExecutions: true })
+            task.Graph.ExecutableNodes
+                .Where(node => task.Graph.ShapeOf(node.Path) is { DispatchesExecutions: true })
                 .Select(node => node.Path)
-                .FirstOrDefault();
-        });
+                .FirstOrDefault());
 
         if (output is not { } target)
         {

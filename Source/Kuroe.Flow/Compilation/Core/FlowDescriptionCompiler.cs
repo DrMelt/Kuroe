@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Compilation.Graph;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
@@ -7,6 +6,7 @@ using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Validation;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation;

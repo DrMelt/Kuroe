@@ -7,7 +7,7 @@ namespace Kuroe.Console.Tests.Support;
 internal static class NodePaths
 {
     /// <summary>按节点标签取节点路径。</summary>
-    public static NodePath PathOf(this INodeGraph graph, string label) =>
+    public static NodePath PathOf(this NodeGraph graph, string label) =>
         graph.Nodes.FirstOrDefault(node => node.Label.Value == label)?.Path
         ?? throw new InvalidOperationException($"流程里没有标签为 {label} 的节点。");
 }

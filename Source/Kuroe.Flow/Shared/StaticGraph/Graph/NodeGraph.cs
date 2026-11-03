@@ -1,14 +1,13 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Compilation.Graph;
+namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上。
 /// 依赖由 From 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达，绑定的角色与取值域固化在绑定上。执行按“组齐备且有驱动则激活”推进。
 /// 树与绑定在编译期落定，与节点相关的绑定在构造时挂到节点上，静态来源与输入侧方案由执行视图在构造期解析。</summary>
-public sealed class NodeGraph : INodeGraph
+public sealed class NodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
     private readonly Dictionary<NodePath, IReadOnlyDictionary<PortName, StaticResolution>> _staticInputs = [];
@@ -16,14 +15,19 @@ public sealed class NodeGraph : INodeGraph
     private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _dependents = [];
     private readonly Dictionary<NodePath, NodeInputPlan> _plans = [];
 
-    /// <summary>构造执行视图：首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，绑定两端必须落在节点表里。
+    /// <summary>构造执行视图：节点表非空且首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，绑定两端必须落在节点表里。
     /// 与节点相关的绑定在构造时挂到节点上：来源侧落在来源，驱动绑定落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
     public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<InputBinding> bindings)
     {
+        if (nodes.Count == 0)
+        {
+            throw new ArgumentException("节点表不能为空，至少要有开始节点。");
+        }
+
         Start = nodes[0] as StartNode
             ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
-        Bindings = bindings;
-        _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, bindings))];
+        Bindings = [.. bindings];
+        _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, Bindings))];
         Nodes = [.. _roots.SelectMany(Flattened)];
         ExecutableNodes = [.. Nodes.OfType<ExecutableNode>()];
         Containers = [.. Nodes.OfType<ContainerNode>()];

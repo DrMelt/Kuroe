@@ -9,15 +9,15 @@ namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 public static class StaticSources
 {
     /// <summary>解析一个静态输入端口的来源终点，无法解析时给出错误说明。</summary>
-    public static StaticResolution ResolveInput(INodeGraph graph, NodePath node, PortName port) =>
+    public static StaticResolution ResolveInput(NodeGraph graph, NodePath node, PortName port) =>
         ResolvePort(graph, node, port, StaticPortSide.Input, []);
 
     /// <summary>解析一个常量输出端口的来源终点，无法解析时给出错误说明。</summary>
-    public static StaticResolution ResolveOutput(INodeGraph graph, NodePath node, PortName port) =>
+    public static StaticResolution ResolveOutput(NodeGraph graph, NodePath node, PortName port) =>
         ResolvePort(graph, node, port, StaticPortSide.Output, []);
 
     private static StaticResolution ResolvePort(
-        INodeGraph graph,
+        NodeGraph graph,
         NodePath node,
         PortName port,
         StaticPortSide side,
@@ -66,7 +66,7 @@ public static class StaticSources
 
     /// <summary>节点的常量输出：固定值、内部来源端口或 Once 节点唯一一次执行的产出。</summary>
     private static StaticResolution ResolveOutput(
-        INodeGraph graph,
+        NodeGraph graph,
         GraphNode node,
         PortName port,
         HashSet<StaticPortKey> visiting)
@@ -96,7 +96,7 @@ public static class StaticSources
 
     /// <summary>节点的静态输入：绑定来源优先，其次默认值。执行节点与容器共用这一条链。</summary>
     private static StaticResolution ResolveInput(
-        INodeGraph graph,
+        NodeGraph graph,
         GraphNode node,
         PortName port,
         HashSet<StaticPortKey> visiting)
@@ -118,7 +118,7 @@ public static class StaticSources
     }
 
     /// <summary>按路径取节点，未收录时为空。</summary>
-    private static GraphNode? Find(INodeGraph graph, NodePath path) =>
+    private static GraphNode? Find(NodeGraph graph, NodePath path) =>
         graph.Nodes.FirstOrDefault(node => node.Path == path);
 
     private enum StaticPortSide

@@ -9,9 +9,9 @@ namespace Kuroe.Flow.Shared.RuntimeGraph.Ports;
 /// <param name="graph">流程编译视图。</param>
 /// <param name="startTexts">任务启动时确定的开始端口文本。</param>
 /// <param name="runtime">运行期常量来源，未接任务运行状态时为空。</param>
-public sealed class StaticPortValues(INodeGraph graph, IPortTexts startTexts, IRuntimeConstantSource? runtime = null)
+public sealed class StaticPortValues(NodeGraph graph, IPortTexts startTexts, IRuntimeConstantSource? runtime = null)
 {
-    private readonly INodeGraph _graph = graph;
+    private readonly NodeGraph _graph = graph;
     private readonly IPortTexts _startTexts = startTexts;
     private readonly IRuntimeConstantSource? _runtime = runtime;
 

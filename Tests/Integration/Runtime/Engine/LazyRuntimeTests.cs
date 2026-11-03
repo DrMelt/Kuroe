@@ -33,7 +33,7 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
-        Assert.Null(task.Context.Materialized(task.Context.Graph.PathOf("收尾")));
+        Assert.Null(task.Context.Materialized(task.Graph.PathOf("收尾")));
         Assert.Equal(4, snapshot.ExecutableStates.Count);
     }
 
@@ -84,7 +84,7 @@ public sealed class LazyRuntimeTests
         environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        NodeRuntime late = task.Context.Runtime(task.Context.Graph.PathOf("实施"));
+        NodeRuntime late = task.Context.Runtime(task.Graph.PathOf("实施"));
         Assert.True(late.Canceled);
         Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[1].State);
         Assert.Empty(environment.Pendings.Pending(id).ThrowIfError());
@@ -92,5 +92,5 @@ public sealed class LazyRuntimeTests
 
     /// <summary>已实例化的运行时节点数，未触达的节点不计。</summary>
     private static int MaterializedCount(WorkTask task) =>
-        task.Context.Graph.Nodes.Count(node => task.Context.Materialized(node.Path) is not null);
+        task.Graph.Nodes.Count(node => task.Context.Materialized(node.Path) is not null);
 }

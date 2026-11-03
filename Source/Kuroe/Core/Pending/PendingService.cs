@@ -118,13 +118,12 @@ public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, II
     /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。要求持有 Gate。</summary>
     private List<PendingNode> Pending(WorkTask task)
     {
-        INodeTask access = task;
         Dictionary<NodePath, string?> accepting = inputs.Accepting(task.Context)
             .ToDictionary(request => request.Node, request => request.Question);
 
         return
         [
-            .. access.Graph.ExecutableNodes
+            .. task.Graph.ExecutableNodes
                 .Where(node => accepting.ContainsKey(node.Path))
                 .Select(node => new PendingNode(
                     node.Path,

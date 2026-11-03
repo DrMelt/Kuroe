@@ -9,7 +9,7 @@ internal static class NodeTree
 {
     /// <summary>建树。根节点之外的分支来自图，容器子节点先加子行再加成员。</summary>
     public static Tree Build(
-        INodeGraph graph,
+        NodeGraph graph,
         IRenderable root,
         Func<GraphNode, IRenderable> line,
         Func<GraphNode, IEnumerable<IRenderable>>? details = null)

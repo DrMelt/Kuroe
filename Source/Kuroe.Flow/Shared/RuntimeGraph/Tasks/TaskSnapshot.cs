@@ -14,7 +14,7 @@ public sealed record TaskSnapshot(
     StartInputs Inputs,
     IPortTexts StartTexts,
     FlowDefinition Flow,
-    INodeGraph Graph,
+    NodeGraph Graph,
     TaskState State,
     int LiveExecutions,
     IReadOnlyList<ExecutableSnapshot> Executables,

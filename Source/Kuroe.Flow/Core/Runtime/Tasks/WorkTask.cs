@@ -14,7 +14,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>任务 = 一条长期执行线程：按流程推进的执行节点状态与启动的全部执行。
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
-public sealed class WorkTask : INodeTask
+public sealed class WorkTask
 {
     private readonly List<Execution> _executions = [];
     private readonly DateTimeOffset _createdAt;
@@ -30,7 +30,7 @@ public sealed class WorkTask : INodeTask
         StartInputs inputs,
         IPortTexts startTexts,
         FlowDefinition flow,
-        INodeGraph graph,
+        NodeGraph graph,
         string title,
         ProcessObserver? observer)
     {
@@ -54,7 +54,7 @@ public sealed class WorkTask : INodeTask
         StartInputs inputs,
         IPortTexts startTexts,
         FlowDefinition flow,
-        INodeGraph graph,
+        NodeGraph graph,
         string title,
         DateTimeOffset createdAt,
         DateTimeOffset lastActivityAt,
@@ -176,10 +176,7 @@ public sealed class WorkTask : INodeTask
     public FlowDefinition Flow { get; }
 
     /// <summary>提交时锁定的流程执行视图。</summary>
-    internal INodeGraph Graph { get; }
-
-    /// <summary>任务的流程编译视图，节点实现经它定位成员与读端口类型。</summary>
-    INodeGraph INodeTask.Graph => Graph;
+    public NodeGraph Graph { get; }
 
     /// <summary>任务的节点上下文，宿主扩展按节点路径取节点运行期对象时使用。</summary>
     public INodeContext Context => Runtime;

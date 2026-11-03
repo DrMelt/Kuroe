@@ -11,8 +11,6 @@ internal sealed class StubNodeContext : INodeContext
 {
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
 
-    public INodeGraph Graph => throw new NotSupportedException();
-
     public NodeInputPlan? Plan(NodePath node) => new()
     {
         Groups =

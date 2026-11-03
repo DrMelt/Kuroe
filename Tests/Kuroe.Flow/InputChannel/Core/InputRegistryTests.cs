@@ -135,8 +135,6 @@ public sealed class InputRegistryTests
     /// <summary>测试用的任务上下文：通道只按它分组，其余成员不参与。</summary>
     private sealed class StubContext : INodeContext
     {
-        public INodeGraph Graph => throw new NotSupportedException();
-
         public NodeInputPlan? Plan(NodePath node) => throw new NotSupportedException();
 
         public NodeRuntime Runtime(NodePath node) => throw new NotSupportedException();

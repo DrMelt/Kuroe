@@ -36,7 +36,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     }
 
     /// <summary>任务锁定的流程执行视图。</summary>
-    public INodeGraph Graph => _task.Graph;
+    public NodeGraph Graph => _task.Graph;
 
     /// <summary>运行期节点物化器，快照投影按它读已实例化节点。</summary>
     internal NodeMaterializer Materializer => _materializer;
@@ -55,9 +55,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
     public NodeRuntime? Materialized(NodePath node) => _materializer.Find(node);
-
-    /// <summary>任务的流程编译视图，节点实现经它定位成员。</summary>
-    INodeGraph INodeContext.Graph => Graph;
 
     /// <summary>某节点的输入侧方案，开始为空。</summary>
     public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);

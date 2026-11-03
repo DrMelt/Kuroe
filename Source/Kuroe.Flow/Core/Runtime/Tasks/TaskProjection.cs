@@ -12,7 +12,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// <summary>任务快照的只读投影：按已实例化节点读出执行节点与容器的一刻状态。
 /// 投影不实例化节点，未实例化的节点按默认待办报告。</summary>
 internal sealed class TaskProjection(
-    INodeGraph graph,
+    NodeGraph graph,
     NodeMaterializer materializer,
     StaticPortValues staticPorts)
 {

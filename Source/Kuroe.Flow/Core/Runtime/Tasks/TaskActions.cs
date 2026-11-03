@@ -40,7 +40,7 @@ public sealed class TaskActions(
         string? title,
         ProcessObserver? observer = null)
     {
-        INodeGraph graph = flow.Graph;
+        NodeGraph graph = flow.Graph;
         IReadOnlyDictionary<PortName, string> hostInputs = flow.Model.HostStartInputs;
 
         if (CheckInputs(graph.Start, hostInputs, inputs) is { Count: > 0 } inputErrors)

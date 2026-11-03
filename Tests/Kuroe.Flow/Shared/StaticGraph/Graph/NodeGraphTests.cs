@@ -2,11 +2,10 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Compilation.Graph;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
-namespace Kuroe.Flow.Compilation.Tests.Graph;
+namespace Kuroe.Flow.Shared.Tests.StaticGraph.Graph;
 
 /// <summary>编译后的执行视图：节点统一编号，执行节点按名可定位。</summary>
 public sealed class NodeGraphTests
@@ -24,7 +23,7 @@ public sealed class NodeGraphTests
             new ExecutableNode
             {
                 Path = NodePath.Of("规划"),
-                Type = TestNodeTypes.Executable,
+                Type = new StubNodeType(new NodeKind("Executable")),
                 Spec = new ExecutableSpec(),
                 Inputs = [],
                 Outputs = [],
@@ -33,7 +32,7 @@ public sealed class NodeGraphTests
             new ExecutableNode
             {
                 Path = NodePath.Of("实施"),
-                Type = TestNodeTypes.Executable,
+                Type = new StubNodeType(new NodeKind("Executable")),
                 Spec = new ExecutableSpec(),
                 Inputs = [],
                 Outputs = [],

@@ -56,8 +56,6 @@ public sealed class RuntimeContainerTests
     {
         public bool GateReleased { get; set; }
 
-        public INodeGraph Graph => throw new NotSupportedException();
-
         public NodeInputPlan? Plan(NodePath node) => node == container ? plan : null;
 
         public NodeRuntime Runtime(NodePath node) => throw new NotSupportedException();
