@@ -3,3 +3,6 @@ obj/
 packages/
 
 .vscode/
+
+.kuroe/
+.kuroe_tasks/
