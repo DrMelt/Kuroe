@@ -1,7 +1,5 @@
 bin/
 obj/
-.docs/
 packages/
-.clinerules/
+
 .vscode/
-.kuroe/
