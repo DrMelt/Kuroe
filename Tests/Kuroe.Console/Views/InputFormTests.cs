@@ -63,7 +63,7 @@ public sealed class InputFormTests
         output.Input.PushTextWithEnter("token");
         output.Input.PushKey(ConsoleKey.Enter);
 
-        new InputForm(terminal, "凭据", [new FormField("凭据", Secret: true)]).Run();
+        new InputForm(terminal, "凭据", [new FormField("凭据", Kind: FieldKind.Secret)]).Run();
 
         string text = output.Output;
         Assert.DoesNotContain("token", text);
@@ -169,6 +169,49 @@ public sealed class InputFormTests
         Assert.True(submit >= 0, text);
         Assert.Contains("alpha", text[submit..]);
         Assert.DoesNotContain("甲 · 未填写", text[submit..]);
+    }
+
+    [Fact]
+    public void Form_reads_a_multiline_field_until_the_terminator_line()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushText("first");
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushText("second");
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushTextWithEnter(MultilinePrompt.Terminator);
+        output.Input.PushKey(ConsoleKey.Enter);
+
+        IReadOnlyList<string>? values = new InputForm(
+            terminal,
+            "填写",
+            [new FormField("回答", Kind: FieldKind.Multiline)]).Run();
+
+        Assert.NotNull(values);
+        Assert.Equal("first\n\nsecond", values[0]);
+        Assert.DoesNotContain(MultilinePrompt.Terminator, values[0]);
+        Assert.Contains("多行输入", output.Output);
+        Assert.Contains("单独一行 ;; 提交", output.Output);
+
+        string table = output.Output[output.Output.LastIndexOf("填写", StringComparison.Ordinal)..];
+        Assert.Contains("first", table);
+        Assert.Contains("second", table);
+    }
+
+    [Fact]
+    public void Form_returns_null_when_a_multiline_field_is_cancelled()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushText("draft");
+        output.Input.PushKey(ConsoleKey.Escape);
+
+        Assert.Null(new InputForm(
+            terminal,
+            "填写",
+            [new FormField("回答", Kind: FieldKind.Multiline)]).Run());
     }
 
     [Fact]

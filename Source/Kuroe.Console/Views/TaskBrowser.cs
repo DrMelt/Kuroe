@@ -166,7 +166,7 @@ internal sealed class TaskBrowser(
         InputForm form = new(
             terminal,
             "开始输入",
-            [.. ports.Select(port => new FormField(port.Name.Value, port.Description))],
+            [.. ports.Select(port => new FormField(port.Name.Value, port.Description, FieldKind.Multiline))],
             info);
 
         if (form.Run() is not { } values)
@@ -335,7 +335,7 @@ internal sealed class TaskBrowser(
             info.Add(new("提问", question));
         }
 
-        InputForm form = new(terminal, "回答等待输入", [new FormField("回答")], info);
+        InputForm form = new(terminal, "回答等待输入", [new FormField("回答", Kind: FieldKind.Multiline)], info);
         if (form.Run() is { } values)
         {
             Answer(id, nodePath.Value, values[0]);

@@ -225,7 +225,7 @@ internal sealed class CatalogBrowser(
             [
                 new FormField("提供商名称"),
                 new FormField("端点"),
-                new FormField("凭据", Secret: true),
+                new FormField("凭据", Kind: FieldKind.Secret),
             ]);
         if (form.Run() is { } values)
         {
@@ -243,7 +243,7 @@ internal sealed class CatalogBrowser(
         InputForm form = new(
             terminal,
             "更换提供商凭据",
-            [new FormField("新凭据", Secret: true)],
+            [new FormField("新凭据", Kind: FieldKind.Secret)],
             [new FormInfo("提供商", provider.ProviderName.Value)]);
         if (form.Run() is { } values)
         {

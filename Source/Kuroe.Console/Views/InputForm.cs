@@ -3,8 +3,21 @@ using Spectre.Console.Rendering;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>输入表的一项：标签、说明与是否凭据。</summary>
-internal sealed record FormField(string Label, string? Description = null, bool Secret = false);
+/// <summary>字段的输入形态。</summary>
+internal enum FieldKind
+{
+    /// <summary>单行文本。</summary>
+    Line,
+
+    /// <summary>可含换行的文本，单独一行 ;; 提交。</summary>
+    Multiline,
+
+    /// <summary>凭据，单行掩码回显。</summary>
+    Secret,
+}
+
+/// <summary>输入表的一项：标签、说明与输入形态。</summary>
+internal sealed record FormField(string Label, string? Description = null, FieldKind Kind = FieldKind.Line);
 
 /// <summary>输入表的只读上下文行，不参与输入。</summary>
 internal sealed record FormInfo(string Label, string Value);
@@ -100,9 +113,7 @@ internal sealed class InputForm(
             terminal.Hint($"{field.Label}：{description}");
         }
 
-        string? text = field.Secret
-            ? terminal.AskSecret($"{field.Label}：")
-            : terminal.Ask($"{field.Label}：");
+        string? text = Ask(field);
         if (text is null)
         {
             return false;
@@ -111,6 +122,23 @@ internal sealed class InputForm(
         _values[index] = text;
 
         return true;
+    }
+
+    /// <summary>按字段形态读取一项输入。</summary>
+    private string? Ask(FormField field) => field.Kind switch
+    {
+        FieldKind.Secret => terminal.AskSecret($"{field.Label}："),
+        FieldKind.Multiline => AskMultiline(field.Label),
+        FieldKind.Line => terminal.Ask($"{field.Label}："),
+        _ => throw new ArgumentOutOfRangeException(nameof(field)),
+    };
+
+    /// <summary>读取一项多行文本，读取前说明提交方式。</summary>
+    private string? AskMultiline(string label)
+    {
+        terminal.Hint($"多行输入：回车换行，单独一行 {MultilinePrompt.Terminator} 提交，Esc 或空内容取消。");
+
+        return terminal.AskMultiline($"{label}：");
     }
 
     /// <summary>重印整表与已填内容。</summary>
@@ -134,7 +162,7 @@ internal sealed class InputForm(
     private static (string Label, IRenderable Value) Row(FormField field, string text)
     {
         IRenderable value;
-        if (field.Secret && text.Length > 0)
+        if (field.Kind == FieldKind.Secret && text.Length > 0)
         {
             value = new Text("已填写", Styles.Success);
         }

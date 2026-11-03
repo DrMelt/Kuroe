@@ -183,6 +183,9 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     /// <summary>读一行凭据，输入以掩码显示，Esc 或空输入返回 null。调用方须持有独占呈现。</summary>
     public string? AskSecret(string label) => Prompt(new LinePrompt(label, secret: true));
 
+    /// <summary>读多行文本，回车换行，单独一行 ;; 提交，Esc 或空输入返回 null。调用方须持有独占呈现。</summary>
+    public string? AskMultiline(string label) => Prompt(new MultilinePrompt(label));
+
     /// <summary>开一个文本框。回合结束后释放，底边由释放收尾。</summary>
     public Frame OpenFrame(BoxKind kind, string title)
     {
