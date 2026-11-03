@@ -255,11 +255,6 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 Fail("容器节点必须声明子节点。");
             }
 
-            if (document.From.Count > 0)
-            {
-                Fail("容器节点不是执行节点，不支持 From。");
-            }
-
             if (document.Bindings is not null && scope.IsLibrary)
             {
                 Fail("库节点定义不接线，不能声明输入绑定。");
@@ -336,9 +331,14 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return parsed.Value;
     }
 
+    /// <summary>派生对外端口：取自身非静态输入端口，只转发内容。批准事件不放行输入的触发值，输出不声明触发模式。</summary>
     private static IReadOnlyList<Port> ForwardedPorts(IReadOnlyList<InputPort> inputs) =>
         [.. inputs.Where(input => !input.IsStatic)
-            .Select(input => new Port(input.Name, input.Type, input.Description, mode: input.Mode))];
+            .Select(input => new Port(
+                input.Name,
+                input.Type,
+                input.Description,
+                mode: PortMode.Plain))];
 
     private static ErrorOr<IReadOnlyList<Port>> ToPorts(
         IReadOnlyList<PortDocument> entries,
@@ -418,7 +418,10 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                     continue;
                 }
 
-                links.Add(new FromLink(input.Value, reference.Value));
+                links.Add(new FromLink(
+                    input.Value,
+                    reference.Value,
+                    link.Condition ?? TriggerCondition.Positive));
             }
 
             if (links.Count == 0)
@@ -456,7 +459,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         return Error.Validation(FlowErrorCodes.FlowNode, $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
     }
 
-    private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(IReadOnlyDictionary<string, string>? bindings)
+    private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(
+        IReadOnlyDictionary<string, string>? bindings)
     {
         if (bindings is not { Count: > 0 })
         {

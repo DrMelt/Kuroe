@@ -104,12 +104,12 @@ public sealed class FlowJsonTests
 
         NodeFileDto file = Assert.IsType<NodeFileDto>(JsonSerializer.Deserialize(json, FlowJson.Default.NodeFileDto));
 
-        Dictionary<string, string>? startBindings = file.Nodes[0].Bindings;
+        Dictionary<string, JsonElement>? startBindings = file.Nodes[0].Bindings;
         Assert.NotNull(startBindings);
-        Assert.Equal("Start@MODEL_NAME", startBindings["MODEL_NAME"]);
-        Dictionary<string, string>? groupBindings = file.Nodes[1].Bindings;
+        Assert.Equal("Start@MODEL_NAME", startBindings["MODEL_NAME"].GetString());
+        Dictionary<string, JsonElement>? groupBindings = file.Nodes[1].Bindings;
         Assert.NotNull(groupBindings);
-        Assert.Equal("@MODEL_NAME", groupBindings["MODEL_NAME"]);
+        Assert.Equal("@MODEL_NAME", groupBindings["MODEL_NAME"].GetString());
         List<JsonElement>? outputs = file.Nodes[0].Outputs;
         Assert.NotNull(outputs);
         Assert.Equal(JsonValueKind.Object, Assert.Single(outputs).ValueKind);

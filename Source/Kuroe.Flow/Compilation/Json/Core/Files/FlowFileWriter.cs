@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Json.Files;
 
@@ -116,13 +117,27 @@ static class FlowFileWriter
         return
         [
             .. groups.Select(group => JsonSerializer.SerializeToElement(
-                group.Links.ToDictionary(link => link.Input, link => link.Ref),
-                FlowJson.Default.DictionaryStringString)),
+                group.Links.ToDictionary(link => link.Input, WriteFromSource),
+                FlowJson.Default.DictionaryStringJsonElement)),
         ];
     }
 
-    private static Dictionary<string, string>? WriteBindings(IReadOnlyDictionary<string, string>? bindings) =>
-        bindings is { Count: > 0 } ? new Dictionary<string, string>(bindings) : null;
+    /// <summary>写一条 From 来源：正向条件写引用文本，翻转条件写带 Ref 与 Condition 的对象。</summary>
+    private static JsonElement WriteFromSource(FromLinkDocument link) =>
+        link.Condition switch
+        {
+            null or TriggerCondition.Positive => JsonSerializer.SerializeToElement(link.Ref, FlowJson.Default.String),
+            { } condition => JsonSerializer.SerializeToElement(
+                new BindingEntryDto { Ref = link.Ref, Condition = condition.ToString() },
+                FlowJson.Default.BindingEntryDto),
+        };
+
+    private static Dictionary<string, JsonElement>? WriteBindings(IReadOnlyDictionary<string, string>? bindings) =>
+        bindings is { Count: > 0 }
+            ? bindings.ToDictionary(
+                entry => entry.Key,
+                entry => JsonSerializer.SerializeToElement(entry.Value, FlowJson.Default.String))
+            : null;
 
     private static Dictionary<string, JsonElement>? WriteParameters(IReadOnlyDictionary<string, FlowValue> parameters)
     {

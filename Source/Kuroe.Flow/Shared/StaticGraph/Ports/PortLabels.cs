@@ -35,12 +35,16 @@ public static class PortLabels
         return text;
     }
 
-    /// <summary>一条上游连接的展示：输入名与来源端口。</summary>
-    public static string Label(this FromLink link) => $"{link.Input} ← {link.Ref.Display}";
+    /// <summary>一条上游连接的展示：输入名与来源，翻转条件标出。</summary>
+    public static string Label(this FromLink link) => $"{link.Input} ← {link.SourceLabel()}";
 
-    /// <summary>一组启动条件的展示：组内连接按序排列。</summary>
+    /// <summary>一组 From 连接的展示：组内连接按序排列。</summary>
     public static string Label(this FromGroup group) =>
         string.Join("、", group.Links.Select(link => link.Label()));
+
+    /// <summary>连接来源的展示：翻转条件附后。</summary>
+    public static string SourceLabel(this FromLink link) =>
+        link.Condition == TriggerCondition.Negative ? $"{link.Ref.Display}·翻转" : link.Ref.Display;
 
     /// <summary>开始端口的展示：带固定值时写出端口与值，绑定宿主输入时附宿主输入名，常量端口标出常量。</summary>
     public static string StartLabel(

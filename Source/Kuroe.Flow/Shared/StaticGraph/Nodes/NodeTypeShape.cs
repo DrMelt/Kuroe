@@ -15,7 +15,7 @@ public sealed record NodeTypeShape
     /// <summary>等待的输入是否为批准。等待型节点里 Input 为回答，Approval 为批准。</summary>
     public bool AwaitsApproval { get; init; }
 
-    /// <summary>对外端口不在文件里声明，由输入端口原样派生。只有不派发执行的类型成立。</summary>
+    /// <summary>对外端口不在文件里声明，由输入端口派生内容，端口模式为 Plain。只有不派发执行的类型成立。</summary>
     public bool DerivesOutputsFromInputs { get; init; }
 
     /// <summary>不需环外来源即可在环内启动，作周期外源。</summary>

@@ -22,7 +22,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
     protected override string Target => Parameters.Program;
 
     /// <inheritdoc/>
-    protected override string? Produce(NodeInputValues inputs)
+    protected override string? Produce(INodeInputs inputs)
     {
         string? failure = ResolveDirectory(inputs, out string workingDirectory);
         if (failure is not null)
@@ -61,7 +61,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
     }
 
     /// <summary>按路径变量解析执行目录，未声明 Directory 时执行目录即路径基准。</summary>
-    private string? ResolveDirectory(NodeInputValues inputs, out string workingDirectory)
+    private string? ResolveDirectory(INodeInputs inputs, out string workingDirectory)
     {
         workingDirectory = string.Empty;
 
@@ -98,7 +98,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
     }
 
     /// <summary>按输入端口取文本：静态端口给静态值，动态端口给输入值。</summary>
-    private static string? PortText(NodeInputValues inputs, PortName port) => inputs.Text(port);
+    private static string? PortText(INodeInputs inputs, PortName port) => inputs.Text(port);
 
     /// <summary>输出按声明上限截断，0 表示不限制。</summary>
     private string Limit(string text) =>

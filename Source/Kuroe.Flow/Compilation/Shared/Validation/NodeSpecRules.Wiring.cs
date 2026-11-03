@@ -11,11 +11,6 @@ public static partial class NodeSpecRules
         bool isContainer = container ?? node.IsContainer;
         if (context == NodeRuleContext.Reference)
         {
-            if (isContainer && node.From.Count > 0)
-            {
-                fail("引用容器不能声明 From，容器自身不接线。");
-            }
-
             return;
         }
 
@@ -34,11 +29,6 @@ public static partial class NodeSpecRules
                 }
 
                 return;
-            }
-
-            if (node.From.Count > 0)
-            {
-                fail("容器节点不是执行节点，不支持 From。");
             }
 
             return;

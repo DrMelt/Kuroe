@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Nodes;
 
-/// <summary>一次激活的输入：按输入端口给出取值、连接与触发值。</summary>
+/// <summary>一次激活的输入：按输入端口给出取值与文本。</summary>
 public sealed class NodeInputValuesTests
 {
     private static readonly PortName Content = new("正文");
@@ -47,18 +47,6 @@ public sealed class NodeInputValuesTests
     }
 
     [Fact]
-    public void Triggers_defaults_to_true_and_keeps_the_recorded_value()
-    {
-        NodeInputValues values = new(
-            [],
-            new HashSet<PortName> { Content, Approval },
-            new Dictionary<PortName, bool> { [Approval] = false });
-
-        Assert.True(values.Triggers(Content));
-        Assert.False(values.Triggers(Approval));
-    }
-
-    [Fact]
     public void Static_texts_are_read_through_text_and_stay_out_of_dynamic_values()
     {
         PortName staticPort = new("静态");
@@ -70,7 +58,6 @@ public sealed class NodeInputValuesTests
         Assert.Equal("静态值", withStatic.Text(staticPort));
         Assert.Null(withStatic.Text(new PortName("动态")));
         Assert.Empty(withStatic.Values(staticPort));
-        Assert.Equal("静态值", withStatic.StaticTexts.Text(staticPort));
     }
 
     [Fact]

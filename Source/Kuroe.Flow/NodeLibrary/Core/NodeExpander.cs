@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.NodeLibrary;
-/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的绑定在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
+/// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 From 在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。
 /// 节点按作者写下的原文保留，定义条目沿用节点名，引用条目用标签，层级由树给出；引用由编译期按作用域链解析。</summary>
 internal static class NodeExpander
 {
@@ -36,7 +36,7 @@ internal static class NodeExpander
         return expanded ?? throw new InvalidOperationException($"流程根节点 {root.Label} 展开失败。");
     }
 
-    /// <summary>根容器的绑定来源：流程作用域里只有开始节点，根容器的传入端口只能绑定开始端口。</summary>
+    /// <summary>根容器的传入来源：流程作用域里只有开始节点，根容器的静态绑定与动态 From 只能引用开始端口。</summary>
     private static void CheckRootBindings(
         NodeLibrary library,
         NodeSpec root,
@@ -47,22 +47,41 @@ internal static class NodeExpander
             || (root.Use is { } use
                 && library.TryFind(use, out NodeSpec? definition)
                 && definition.Nodes is { Count: > 0 });
-        if (!container || root.Bindings is not { Count: > 0 } bindings)
+        if (!container)
         {
             return;
         }
 
-        foreach ((PortName port, PortRef reference) in bindings)
+        if (root.Bindings is { } bindings)
         {
-            if (reference.Source is null)
+            foreach ((PortName port, PortRef reference) in bindings)
             {
-                errors.Add(scope.Node(root.Label.Value, $"根容器的端口 {port} 不能引用更外层端口。"));
+                CheckRootReference(root, port, reference, scope, errors);
             }
-            else if (reference.Source != StartNode.ReservedLabel)
-            {
-                errors.Add(scope.Node(root.Label.Value,
-                    $"根容器的端口 {port} 引用的节点 {reference.Source.Value} 不在流程作用域里。"));
-            }
+        }
+
+        foreach (FromLink link in root.From.SelectMany(group => group.Links))
+        {
+            CheckRootReference(root, link.Input, link.Ref, scope, errors);
+        }
+    }
+
+    /// <summary>根容器的一条传入引用：来源为空或不是开始都记错误。</summary>
+    private static void CheckRootReference(
+        NodeSpec root,
+        PortName port,
+        PortRef reference,
+        NodeScope scope,
+        List<Error> errors)
+    {
+        if (reference.Source is null)
+        {
+            errors.Add(scope.Node(root.Label.Value, $"根容器的端口 {port} 不能引用更外层端口。"));
+        }
+        else if (reference.Source != StartNode.ReservedLabel)
+        {
+            errors.Add(scope.Node(root.Label.Value,
+                $"根容器的端口 {port} 引用的节点 {reference.Source.Value} 不在流程作用域里。"));
         }
     }
 
@@ -93,15 +112,17 @@ internal static class NodeExpander
                 node.CheckWiring(NodeRuleContext.Reference, message =>
                     errors.Add(scope.Node(node.Label.Value, message)), container: true);
 
-                CheckContainerBindings(node, definition.EffectiveInputs, definition.Label, scope, errors);
-                Env childEnv = BuildContainerEnv(env, node.Bindings);
+                Env childEnv = BuildContainerEnv(env, node);
                 List<NodeSpec> members = ExpandMembers(library, definition.Nodes, childEnv, inInstance: true, scope, errors);
+                IReadOnlyList<FromGroup> from = ResolveAll(node.From, env, scope, errors);
+                Dictionary<PortName, PortRef>? bindings = ResolveBindings(node.Bindings, env, scope, errors);
                 return new NodeSpec
                 {
                     Label = node.Label,
                     Type = definition.Type,
                     Inputs = definition.Inputs,
-                    Bindings = ResolveBindings(node.Bindings, env, scope, errors),
+                    Bindings = bindings,
+                    From = from,
                     Nodes = members,
                     Outputs = definition.Outputs,
                     MaxExecutions = node.MaxExecutions ?? definition.MaxExecutions,
@@ -141,16 +162,18 @@ internal static class NodeExpander
                     errors.Add(scope.Node(member.Label.Value, message)));
             }
 
-            CheckContainerBindings(node, node.EffectiveInputs, node.Label, scope, errors);
-            Env childEnv = BuildContainerEnv(env, node.Bindings);
+            Env childEnv = BuildContainerEnv(env, node);
             List<NodeSpec> expanded = ExpandMembers(library, children, childEnv, inInstance, scope, errors);
+            IReadOnlyList<FromGroup> from = ResolveAll(node.From, env, scope, errors);
+            Dictionary<PortName, PortRef>? bindings = ResolveBindings(node.Bindings, env, scope, errors);
             return new NodeSpec
             {
                 Name = node.Name,
                 Label = node.Label,
                 Type = node.Type,
                 Inputs = node.Inputs,
-                Bindings = ResolveBindings(node.Bindings, env, scope, errors),
+                Bindings = bindings,
+                From = from,
                 Outputs = node.Outputs,
                 MaxExecutions = node.MaxExecutions,
                 Nodes = expanded,
@@ -206,35 +229,32 @@ internal static class NodeExpander
         return expanded;
     }
 
-    /// <summary>容器的绑定域：端口绑定必须覆盖声明的输入端口且不能指向未声明的端口。</summary>
-    private static void CheckContainerBindings(
-        NodeSpec node,
-        IReadOnlyList<InputPort> inputs,
-        NodeLabel container,
-        NodeScope scope,
-        List<Error> errors)
-    {
-        var declaredPorts = new HashSet<PortName>([.. inputs.Select(port => port.Name)]);
-        foreach (PortName port in (node.Bindings?.Keys ?? []).Where(port => !declaredPorts.Contains(port)))
-        {
-            errors.Add(scope.Node(node.Label.Value, $"端口 {port} 不在容器 {container} 上。"));
-        }
-
-        node.CheckBindingCoverage(inputs, container: true, message => errors.Add(scope.Node(node.Label.Value, message)));
-    }
-
     /// <summary>按名字取库定义，未注册时给空。</summary>
     private static NodeSpec? Find(NodeLibrary library, NodeName name) =>
         library.TryFind(name, out NodeSpec? definition) ? definition : null;
 
-    /// <summary>构造容器实例的子作用域：端口绑定进作用域。
+    /// <summary>构造容器实例的子作用域：静态绑定与 From 连接都进入绑定域。
     /// parent 沿当前环境链挂上，便于 @更外层端口 逐层透传。</summary>
-    private static Env BuildContainerEnv(
-        Env? parent,
-        IReadOnlyDictionary<PortName, PortRef>? bindings) =>
-        new(parent, bindings ?? new Dictionary<PortName, PortRef>());
+    private static Env BuildContainerEnv(Env? parent, NodeSpec node)
+    {
+        Dictionary<PortName, PortRef> bindings = [];
+        if (node.Bindings is { } declared)
+        {
+            foreach ((PortName port, PortRef reference) in declared)
+            {
+                bindings[port] = reference;
+            }
+        }
 
-    /// <summary>解析端口绑定：@端口 沿容器的端口绑定链展开，写明来源的引用由编译期按作用域解析。
+        foreach (FromLink link in node.From.SelectMany(group => group.Links))
+        {
+            bindings[link.Input] = link.Ref;
+        }
+
+        return new Env(parent, bindings);
+    }
+
+    /// <summary>解析静态输入绑定：@端口 沿容器的端口绑定链展开，写明来源的引用由编译期按作用域解析。
     /// 没有绑定域时保留原文，由根绑定规则给出诊断。</summary>
     private static Dictionary<PortName, PortRef>? ResolveBindings(
         IReadOnlyDictionary<PortName, PortRef>? bindings,
@@ -244,10 +264,12 @@ internal static class NodeExpander
         bindings is { Count: > 0 }
             ? bindings.ToDictionary(
                 pair => pair.Key,
-                pair => pair.Value.Source is null && env is null ? pair.Value : ResolveRef(pair.Value, env, scope, errors))
+                pair => pair.Value.Source is null && env is null
+                    ? pair.Value
+                    : ResolveRef(pair.Value, env, scope, errors))
             : null;
 
-    /// <summary>逐个解析上游启动组：来源标签沿实例映射链与端口绑定链解析，输入名与类型保留。</summary>
+    /// <summary>逐个解析上游 From 组：来源标签沿实例映射链与端口绑定链解析，输入名、触发条件与类型保留。</summary>
     private static IReadOnlyList<FromGroup> ResolveAll(
         IReadOnlyList<FromGroup> from,
         Env? env,
@@ -256,7 +278,15 @@ internal static class NodeExpander
         [
             .. from.Select(group => group with
             {
-                Links = [.. group.Links.Select(link => link with { Ref = ResolveRef(link.Ref, env, scope, errors) })],
+                Links =
+                [
+                    .. group.Links.Select(link => link with
+                    {
+                        Ref = link.Ref.Source is null && env is null
+                            ? link.Ref
+                            : ResolveRef(link.Ref, env, scope, errors),
+                    }),
+                ],
             }),
         ];
 

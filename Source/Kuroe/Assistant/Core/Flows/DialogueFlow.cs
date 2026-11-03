@@ -94,10 +94,18 @@ internal static class DialogueFlow
                     ],
                     Bindings = new Dictionary<string, string>
                     {
-                        [StartPort.Value] = $"{StartNode.ReservedLabel.Value}@{StartPort.Value}",
                         [WorkspacePort.Value] = $"{StartNode.ReservedLabel.Value}@{WorkspacePort.Value}",
                         [LlmNodeTypes.ModelPort.Value] = $"{StartNode.ReservedLabel.Value}@{LlmNodeTypes.ModelPort.Value}",
                     },
+                    From =
+                    [
+                        new FromGroupDocument(
+                        [
+                            new FromLinkDocument(
+                                StartPort.Value,
+                                $"{StartNode.ReservedLabel.Value}@{StartPort.Value}"),
+                        ]),
+                    ],
                     Nodes =
                     [
                         new NodeDefinitionDocument
@@ -120,7 +128,9 @@ internal static class DialogueFlow
                                 new FromGroupDocument(
                                 [
                                     new FromLinkDocument(StartPort.Value, $"@{StartPort.Value}"),
-                                    new FromLinkDocument(ReplyPort.Value, $"{ReplyNodeLabel.Value}@{ReplyPort.Value}"),
+                                    new FromLinkDocument(
+                                        ReplyPort.Value,
+                                        $"{ReplyNodeLabel.Value}@{ReplyPort.Value}"),
                                 ]),
                             ],
                         },
@@ -151,7 +161,9 @@ internal static class DialogueFlow
                             [
                                 new FromGroupDocument(
                                 [
-                                    new FromLinkDocument(InputPort.Value, $"{InputNodeLabel.Value}@{InputPort.Value}"),
+                                    new FromLinkDocument(
+                                        InputPort.Value,
+                                        $"{InputNodeLabel.Value}@{InputPort.Value}"),
                                 ]),
                             ],
                         },

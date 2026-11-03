@@ -165,6 +165,105 @@ public sealed class JsonFlowFormatTests
             error => error.Description.Contains("被使用的节点写 Label 区分，不写 Name。"));
     }
 
+    [Fact]
+    public void From_condition_round_trips()
+    {
+        const string flow = """
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": "Negative" } } ], "Nodes": [
+                { "Name": "实施", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": { "Ref": "Start@目标", "Condition": "Negative" } } ] }
+              ] } } ]
+            }
+            """;
+
+        IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
+        NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
+        FromLinkDocument rootLink = Assert.Single(Assert.Single(root.From).Links);
+        Assert.Equal("Start@目标", rootLink.Ref);
+        Assert.Equal(TriggerCondition.Negative, rootLink.Condition);
+        NodeDefinitionDocument implement = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes ?? []));
+        FromLinkDocument link = Assert.Single(Assert.Single(implement.From).Links);
+        Assert.Equal("Start@目标", link.Ref);
+        Assert.Equal(TriggerCondition.Negative, link.Condition);
+
+        string text = Ok(Format.Write(flows));
+        Assert.Contains("\"Condition\": \"Negative\"", text);
+        Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
+    }
+
+    [Theory]
+    [InlineData("Sometimes")]
+    [InlineData("1")]
+    [InlineData("2")]
+    public void Read_rejects_an_unknown_from_condition(string condition)
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read($$"""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": "{{condition}}" } } ] } } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("Condition 应为 Positive 或 Negative", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Read_rejects_a_bindings_condition_object()
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": { "Ref": "Start@目标", "Condition": "Negative" } } } } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("输入绑定的值只写引用文本", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Read_rejects_a_from_source_without_ref()
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Condition": "Negative" } } ] } } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("来源对象必须写 Ref 键", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Read_rejects_an_unknown_from_source_key()
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Other": "值" } } ] } } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("不认识键 Other", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Read_rejects_a_non_text_from_condition()
+    {
+        ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
+            {
+              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": true } } ] } } ]
+            }
+            """);
+
+        Assert.True(document.IsError);
+        Assert.Contains(document.ErrorsOrEmptyList,
+            error => error.Description.Contains("Condition 应为 Positive 或 Negative", StringComparison.Ordinal));
+    }
+
     private static T Ok<T>(ErrorOr<T> result)
     {
         Assert.False(result.IsError, string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -178,7 +277,7 @@ public sealed class JsonFlowFormatTests
             {
               "Name": "默认",
               "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ] },
-              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
+              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Nodes": [
                 { "Name": "配置", "Kind": "Llm", "Prompt": "写出计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" } },
                 { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
               ] }

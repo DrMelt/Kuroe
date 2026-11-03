@@ -13,14 +13,14 @@ public sealed class NodeModelResolver(IModelAccess access) : IExecutionTargetRes
     /// <summary>解析执行节点使用的模型值。</summary>
     public ErrorOr<INodeDeclaration> For(
         ExecutableNode executable,
-        IPortTexts staticTexts)
+        IPortTexts portTexts)
     {
         if (executable.FindInput(LlmNodeTypes.ModelPort) is not { IsStatic: true })
         {
             return [ModelErrors.ModelMissing(executable.Label.Value)];
         }
 
-        if (staticTexts.Text(LlmNodeTypes.ModelPort) is not { Length: > 0 } value)
+        if (portTexts.Text(LlmNodeTypes.ModelPort) is not { Length: > 0 } value)
         {
             return [ModelErrors.ModelNotProvided(executable.Label.Value)];
         }

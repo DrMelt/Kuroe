@@ -67,12 +67,9 @@ public sealed record ContainerNodeRecord(
     NodeCommonRecord Common)
     : NodeRecord(Path, Common);
 
-/// <summary>审批节点停驻时保存的输入取值。</summary>
+/// <summary>审批节点停驻时保存的输入内容。</summary>
 public sealed record NodeInputValuesRecord(
-    IReadOnlyList<NodeInputValueRecord> Ordered,
-    IReadOnlyList<PortName> Connected,
-    IReadOnlyDictionary<PortName, bool> Triggers,
-    IReadOnlyDictionary<PortName, string> StaticTexts);
+    IReadOnlyList<NodeInputValueRecord> Ordered);
 
 /// <summary>审批节点的一条输入取值。</summary>
 public sealed record NodeInputValueRecord(

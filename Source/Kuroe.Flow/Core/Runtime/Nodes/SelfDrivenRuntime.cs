@@ -54,7 +54,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>消费本次输入并产出一次。成功发布一次，失败停在阻塞等待返工。</summary>
-    public override void Activate(INodeContext context, NodeInputValues inputs)
+    public override void Activate(INodeContext context, INodeInputs inputs)
     {
         if (_canceled || _failure is not null)
         {
@@ -126,7 +126,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>执行本次产出，成功时写入内容并返回空，失败时返回原因。</summary>
-    protected abstract string? Produce(NodeInputValues inputs);
+    protected abstract string? Produce(INodeInputs inputs);
 
     /// <summary>记下本次成功产出的内容。</summary>
     protected void SetContent(string content) => _content = content;

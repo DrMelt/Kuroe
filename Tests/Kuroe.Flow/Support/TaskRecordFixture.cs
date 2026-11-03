@@ -115,10 +115,7 @@ public static class TaskRecordFixture
                     approve,
                     Common(revision: 1, lastInputGroup: 0, rerunRequested: false),
                     new NodeInputValuesRecord(
-                        [new NodeInputValueRecord(target, "Text", new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容"))],
-                        [target],
-                        new Dictionary<PortName, bool> { [target] = true },
-                        new Dictionary<PortName, string>()),
+                        [new NodeInputValueRecord(target, "Text", new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容"))]),
                     false),
                 new ContainerNodeRecord(
                     container,

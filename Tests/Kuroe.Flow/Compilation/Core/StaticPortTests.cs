@@ -81,6 +81,7 @@ public sealed class StaticPortTests
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 Bindings = RootBindings(),
+                From = [RootFrom()],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -124,6 +125,7 @@ public sealed class StaticPortTests
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 Bindings = RootBindings(),
+                From = [RootFrom()],
                 Nodes =
                 [
                     source,
@@ -156,6 +158,7 @@ public sealed class StaticPortTests
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 Bindings = RootBindings(),
+                From = [RootFrom()],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -197,6 +200,7 @@ public sealed class StaticPortTests
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 Bindings = RootBindings(),
+                From = [RootFrom()],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -264,7 +268,13 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model)],
-                Bindings = RootBindings(),
+                From =
+                [
+                    new FromGroup([
+                        new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal)),
+                        new FromLink(Model, PortRef.Named(StartNode.ReservedLabel, Model)),
+                    ]),
+                ],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -344,6 +354,7 @@ public sealed class StaticPortTests
             {
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal)],
+                From = [RootFrom()],
                 Outputs =
                 [
                     new Port(Model, PortTypes.Text, reference: PortRef.Named(new NodeLabel("目标"), Result), mode: PortMode.Constant),
@@ -380,10 +391,7 @@ public sealed class StaticPortTests
             {
                 Type = new StaticContainerType(),
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                Bindings = new Dictionary<PortName, PortRef>
-                {
-                    [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
-                },
+                From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -398,9 +406,13 @@ public sealed class StaticPortTests
 
         ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander()
             .Expand([flow], [], []);
-        Assert.True(expanded.IsError);
-        Assert.Contains(expanded.ErrorsOrEmptyList,
-            error => error.Description.Contains($"端口 {Model} 没有绑定"));
+        Assert.False(expanded.IsError,
+            string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
+        Assert.True(compiled.IsError);
+        Assert.Contains(compiled.ErrorsOrEmptyList,
+            error => error.Description.Contains($"静态输入端口 {Model} 没有绑定来源"));
     }
 
     /// <summary>执行节点静态输入的默认值在读取端口时解析。</summary>
@@ -444,6 +456,7 @@ public sealed class StaticPortTests
                 Type = ContainerNodeTypes.Type,
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
                 Bindings = RootBindings(),
+                From = [RootFrom()],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -640,15 +653,16 @@ public sealed class StaticPortTests
             Type = ContainerNodeTypes.Type,
             Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
             Bindings = RootBindings(),
+            From = [RootFrom()],
             Nodes =
             [
                 NodeSpec.Reference(new NodeLabel("交付"), new NodeName("交付")) with
                 {
                     Bindings = new Dictionary<PortName, PortRef>
                     {
-                        [Plan] = PortRef.Bound(Goal),
                         [Model] = PortRef.Bound(Model),
                     },
+                    From = [new FromGroup([new FromLink(Plan, PortRef.Bound(Goal))])],
                 },
                 NodeSpec.Define(new NodeName("检查")) with
                 {
@@ -669,34 +683,61 @@ public sealed class StaticPortTests
     public void Container_binding_role_follows_the_target_port_mode()
     {
         PortName gate = new("放行");
+        PortName signal = new("信号");
         FlowDefinition flow = new(
             new FlowName("默认"),
             null,
             [new Port(Goal, PortTypes.Text), new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant)],
             new Dictionary<PortName, string>(),
-            NodeSpec.Define(new NodeName("整体")) with
+            NodeSpec.Define(new NodeName("外层")) with
             {
                 Type = ContainerNodeTypes.Type,
-                Inputs =
-                [
-                    new InputPort(Goal),
-                    new InputPort(Model, PortTypes.Text, mode: PortMode.Constant),
-                    new InputPort(gate, mode: PortMode.Trigger),
-                ],
-                Bindings = new Dictionary<PortName, PortRef>
-                {
-                    [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
-                    [Model] = PortRef.Named(StartNode.ReservedLabel, Model),
-                    [gate] = PortRef.Named(StartNode.ReservedLabel, Goal),
-                },
                 Nodes =
                 [
-                    NodeSpec.Define(new NodeName("检查")) with
+                    NodeSpec.Define(new NodeName("来源")) with
                     {
                         Type = TestNodeTypes.Executable,
-                        Inputs = [new InputPort(Goal)],
+                        Outputs =
+                        [
+                            new Port(Goal, PortTypes.Text),
+                            new Port(Model, PortTypes.Text, value: "fake", mode: PortMode.Constant),
+                            new Port(signal, PortTypes.Text, mode: PortMode.Trigger),
+                        ],
                         Spec = new ExecutableSpec(),
-                        From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+                    },
+                    NodeSpec.Define(new NodeName("整体")) with
+                    {
+                        Type = ContainerNodeTypes.Type,
+                        Inputs =
+                        [
+                            new InputPort(Goal),
+                            new InputPort(Model, PortTypes.Text, mode: PortMode.Constant),
+                            new InputPort(gate, mode: PortMode.Trigger),
+                        ],
+                        Bindings = new Dictionary<PortName, PortRef>
+                        {
+                            [Model] = PortRef.Named(new NodeLabel("来源"), Model),
+                        },
+                        From =
+                        [
+                            new FromGroup([
+                                new FromLink(Goal, PortRef.Named(new NodeLabel("来源"), Goal)),
+                                new FromLink(
+                                    gate,
+                                    PortRef.Named(new NodeLabel("来源"), signal),
+                                    TriggerCondition.Negative),
+                            ]),
+                        ],
+                        Nodes =
+                        [
+                            NodeSpec.Define(new NodeName("检查")) with
+                            {
+                                Type = TestNodeTypes.Executable,
+                                Inputs = [new InputPort(Goal)],
+                                Spec = new ExecutableSpec(),
+                                From = [new FromGroup([new FromLink(Goal, PortRef.Bound(Goal))])],
+                            },
+                        ],
                     },
                 ],
             });
@@ -708,18 +749,76 @@ public sealed class StaticPortTests
         ErrorOr<NodeGraph> compiled = FlowRules.ValidateAndCompile(Assert.Single(expanded.Value));
         Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
 
-        ContainerNode container = compiled.Value.Containers.Single();
+        ContainerNode container = compiled.Value.Containers.Single(node => node.InputBindings?.ContainsKey(gate) == true);
         Assert.NotNull(container.InputBindings);
         Assert.Equal(BindingRole.Static, container.InputBindings[Model].Role);
         Assert.Equal(BindingRole.Gate, container.InputBindings[gate].Role);
+        Assert.Equal(TriggerCondition.Negative, container.InputBindings[gate].Condition);
         Assert.Equal(BindingRole.Alias, container.InputBindings[Goal].Role);
+    }
+
+    /// <summary>容器触发绑定的来源端口必须是触发端口。</summary>
+    [Fact]
+    public void Container_binding_condition_requires_a_trigger_source()
+    {
+        PortName gate = new("放行");
+        FlowDefinition flow = new(
+            new FlowName("默认"),
+            null,
+            [new Port(Goal, PortTypes.Text)],
+            new Dictionary<PortName, string>(),
+            NodeSpec.Define(new NodeName("外层")) with
+            {
+                Type = ContainerNodeTypes.Type,
+                Nodes =
+                [
+                    NodeSpec.Define(new NodeName("来源")) with
+                    {
+                        Type = TestNodeTypes.Executable,
+                        Outputs = [new Port(Goal, PortTypes.Text)],
+                        Spec = new ExecutableSpec(),
+                    },
+                    NodeSpec.Define(new NodeName("整体")) with
+                    {
+                        Type = ContainerNodeTypes.Type,
+                        Inputs = [new InputPort(gate, mode: PortMode.Trigger)],
+                        From =
+                        [
+                            new FromGroup([
+                                new FromLink(
+                                    gate,
+                                    PortRef.Named(new NodeLabel("来源"), Goal),
+                                    TriggerCondition.Negative),
+                            ]),
+                        ],
+                        Nodes =
+                        [
+                            NodeSpec.Define(new NodeName("检查")) with
+                            {
+                                Type = TestNodeTypes.Executable,
+                                Spec = new ExecutableSpec(),
+                            },
+                        ],
+                    },
+                ],
+            });
+
+        ErrorOr<IReadOnlyList<FlowDefinition>> expanded = new NodeLibraryExpander().Expand([flow], [], []);
+        Assert.False(expanded.IsError,
+            string.Join("；", expanded.ErrorsOrEmptyList.Select(error => error.Description)));
+
+        Assert.Contains(
+            Errors(Assert.Single(expanded.Value)),
+            error => error.Contains("触发条件要求来源 外层/来源@目标 是触发端口。"));
     }
 
     private static Dictionary<PortName, PortRef> RootBindings() => new()
     {
-        [Goal] = PortRef.Named(StartNode.ReservedLabel, Goal),
         [Model] = PortRef.Named(StartNode.ReservedLabel, Model),
     };
+
+    private static FromGroup RootFrom() =>
+        new([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))]);
 
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
         [.. FlowRules.ValidateAndCompile(flow).ErrorsOrEmptyList.Select(error => error.Description)];

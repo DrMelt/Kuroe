@@ -162,6 +162,28 @@ public sealed class NodeReadinessTests
         Assert.NotNull(plan.SuppressedGroup(node, sources));
     }
 
+    /// <summary>翻转门控：来源触发值为 false 时放行，true 时抑制。</summary>
+    [Fact]
+    public void Flipped_gate_admits_a_false_trigger()
+    {
+        NodeInputPlan plan = GatePlan(PortTypes.Signal, TriggerCondition.Negative);
+        FakeSources sources = new();
+        FakeProgress node = new();
+
+        sources.Of("成员").Publish();
+        sources.Of("把关").Publish();
+        sources.Of("把关").Fires = false;
+
+        Assert.True(plan.Ready(node, sources));
+        Assert.Equal(0, plan.DrivenGroup(node, sources));
+        Assert.Null(plan.SuppressedGroup(node, sources));
+
+        sources.Of("把关").Fires = true;
+
+        Assert.False(plan.Ready(node, sources));
+        Assert.NotNull(plan.SuppressedGroup(node, sources));
+    }
+
     /// <summary>达到执行次数上限后不再启动。</summary>
     [Fact]
     public void Execution_limit_stops_further_starts()
@@ -211,7 +233,7 @@ public sealed class NodeReadinessTests
         Build([Value("节点1", "节点2", PortTypes.Text), Value("节点2", "节点2", PortTypes.Signal, new PortName("信号"))]);
 
     /// <summary>容器方案：一个成员驱动与一个只门控的触发输入。</summary>
-    private static NodeInputPlan GatePlan(PortType gateType) => new()
+    private static NodeInputPlan GatePlan(PortType gateType, TriggerCondition condition = TriggerCondition.Positive) => new()
     {
         Groups =
         [
@@ -225,7 +247,8 @@ public sealed class NodeReadinessTests
                     new PortName("把关"),
                     gateType,
                     Trigger: true,
-                    Role: BindingRole.Gate),
+                    Role: BindingRole.Gate,
+                    Condition: condition),
             ]),
         ],
         MaxExecutions = 100,

@@ -4,7 +4,8 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>一条端口绑定：从来源节点的端口取值，进入目标节点的输入端口。来源端口为空表示按节点整体取值，容器成员通过它按发布版本推进。
-/// 角色决定参与方式：动态绑定进入启动组并驱动新版本，门控绑定只参与齐备与抑制，静态绑定只作为启动条件，别名只表达容器传入端口。</summary>
+/// 角色决定参与方式：动态绑定进入启动组并驱动新版本，门控绑定只参与齐备与抑制，静态绑定只作为启动条件，别名只表达容器传入端口。
+/// 触发门控条件决定来源触发值如何放行本绑定，普通端口恒放行。</summary>
 public sealed record InputBinding(
     NodePath Target,
     NodePath Source,
@@ -13,7 +14,8 @@ public sealed record InputBinding(
     PortType? Type = null,
     bool Trigger = false,
     BindingRole Role = BindingRole.Dynamic,
-    int Group = 0)
+    int Group = 0,
+    TriggerCondition Condition = TriggerCondition.Positive)
 {
     /// <summary>容器成员绑定：按成员整体推进容器发布。</summary>
     public static InputBinding Member(NodePath target, NodePath member) =>

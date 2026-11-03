@@ -31,7 +31,7 @@ public sealed class NodeDto
     /// 容器按 Ref 写 成员@端口，执行节点按 Ref 写自身静态输入，常量输出可写 Value。</summary>
     public List<JsonElement>? Outputs { get; set; }
 
-    /// <summary>上游启动组：数组元素是一个组，组内是输入端口名到来源端口引用的映射，值写 @端口 或 来源@端口。
+    /// <summary>上游 From 组：数组元素是一个组，组内是输入端口名到来源的映射，值写引用文本或带 Ref 与 Condition 的对象。
     /// 组是一套完整的输入绑定方案，组间任一齐备即启动。引用规则由 FlowRules 校验。</summary>
     public List<JsonElement>? From { get; set; }
 
@@ -45,8 +45,9 @@ public sealed class NodeDto
     /// <summary>产出模式：Repeated 逐次发布，Once 首次发布后冻结。</summary>
     public string? Emission { get; set; }
 
-    /// <summary>输入端口绑定：目标输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 From 一致。</summary>
-    public Dictionary<string, string>? Bindings { get; set; }
+    /// <summary>静态输入绑定：目标输入端口到来源引用文本。来源写 @端口 或 来源@端口，识别规则与 From 一致。
+    /// 动态输入写在 From，输入绑定的值不能写对象与 Condition。</summary>
+    public Dictionary<string, JsonElement>? Bindings { get; set; }
 
     /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
     [JsonExtensionData]
@@ -82,4 +83,14 @@ public sealed class PortEntryDto
 
     /// <summary>输入端口的执行角色，取值 Content、Configuration 或 Control。</summary>
     public string? Role { get; set; }
+}
+
+/// <summary>带触发条件的 From 连接形状：Ref 写引用，Condition 写 Positive 或 Negative。写出时未写条件或条件为 Positive 仍写成引用文本。</summary>
+public sealed class BindingEntryDto
+{
+    /// <summary>来源引用，写 @端口 或 来源@端口。</summary>
+    public string? Ref { get; set; }
+
+    /// <summary>触发门控条件，取值 Positive 或 Negative。</summary>
+    public string? Condition { get; set; }
 }

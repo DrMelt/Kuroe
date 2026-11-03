@@ -21,7 +21,7 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
     protected override string Target => Parameters.Path;
 
     /// <summary>按路径变量解析文件路径，成功时给出工作区内的绝对路径。</summary>
-    protected string? ResolveTarget(NodeInputValues inputs, out string fullPath)
+    protected string? ResolveTarget(INodeInputs inputs, out string fullPath)
     {
         fullPath = string.Empty;
 
@@ -51,5 +51,5 @@ internal abstract class FileRuntime(ExecutableNode executable, FileParameters pa
     }
 
     /// <summary>按输入端口取文本：静态端口给静态值，动态端口给输入值。</summary>
-    private static string? PortText(NodeInputValues inputs, PortName port) => inputs.Text(port);
+    private static string? PortText(INodeInputs inputs, PortName port) => inputs.Text(port);
 }

@@ -30,7 +30,8 @@ public sealed class StaticInputStartTests
             ] },
             "Root": { "Name": "外层", "Kind": "Container",
               "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-              "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+              "From": [ { "目标": "Start@目标" } ],
+              "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
               "Nodes": [
                 { "Name": "整体", "Kind": "Container",
                   "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],

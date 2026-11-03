@@ -12,7 +12,7 @@ internal sealed class FileReadRuntime(ExecutableNode executable, FileParameters 
     protected override string Action => "读取";
 
     /// <inheritdoc/>
-    protected override string? Produce(NodeInputValues inputs)
+    protected override string? Produce(INodeInputs inputs)
     {
         string? failure = ResolveTarget(inputs, out string fullPath);
         if (failure is not null)

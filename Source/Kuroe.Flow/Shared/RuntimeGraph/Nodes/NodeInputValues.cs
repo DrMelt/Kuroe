@@ -1,14 +1,14 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
-/// <summary>一次激活的输入：按输入端口给出本次取到的来源产出，保留绑定顺序与端口类型。输入端口文本统一经 <see cref="Text"/> 读取。</summary>
-public sealed class NodeInputValues : IPortTexts
+/// <summary>一次激活的输入：按输入端口给出本次取到的来源产出，保留绑定顺序与端口类型。输入端口文本统一经 <see cref="Text"/> 读取。
+/// 节点按 <see cref="INodeInputs"/> 读取内容，连接状态只供执行装配使用。</summary>
+public sealed class NodeInputValues : INodeInputs
 {
     /// <summary>没有输入的激活使用的空值。</summary>
     public static NodeInputValues Empty { get; } = new([], new HashSet<PortName>());
@@ -16,22 +16,18 @@ public sealed class NodeInputValues : IPortTexts
     private readonly IReadOnlyList<NodeInputValue> _ordered;
     private readonly Dictionary<PortName, IReadOnlyList<ContextValue>> _values;
     private readonly IReadOnlySet<PortName> _connected;
-    private readonly IReadOnlyDictionary<PortName, bool> _triggers;
-    private readonly IPortTexts _staticTexts;
     private readonly IReadOnlyDictionary<PortName, string> _texts;
 
-    /// <summary>按绑定顺序给出取值，已连接端口用于区分未连接的默认值，触发值按输入端口给出，
-    /// 静态端口文本单独存放，不并入动态取值。</summary>
+    /// <summary>按绑定顺序给出取值，已连接端口用于区分未连接的默认值，
+    /// 静态端口文本并入端口文本表，不进入动态取值。</summary>
     public NodeInputValues(
         IReadOnlyList<NodeInputValue> ordered,
         IReadOnlySet<PortName> connected,
-        IReadOnlyDictionary<PortName, bool>? triggers = null,
         IPortTexts? staticTexts = null)
     {
         _ordered = ordered;
         _connected = connected;
-        _triggers = triggers ?? new Dictionary<PortName, bool>();
-        _staticTexts = staticTexts ?? PortTexts.Empty;
+        IPortTexts staticTable = staticTexts ?? PortTexts.Empty;
 
         Dictionary<PortName, List<ContextValue>> values = [];
         foreach (NodeInputValue value in ordered)
@@ -46,13 +42,13 @@ public sealed class NodeInputValues : IPortTexts
         }
 
         _values = values.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<ContextValue>)pair.Value);
-        _texts = BuildTexts(_values, _staticTexts);
+        _texts = BuildTexts(_values, staticTable);
     }
 
     /// <summary>按绑定顺序排列的取值，每条给出目标端口、端口类型与取值。</summary>
     public IReadOnlyList<NodeInputValue> Ordered => _ordered;
 
-    /// <summary>该输入端口是否接了来源。信号输入也计入连接，但不取内容。</summary>
+    /// <summary>该输入端口是否接了来源。信号输入也计入连接，但不取内容。执行装配按它区分未连接端口与空产出。</summary>
     public bool Connected(PortName input) => _connected.Contains(input);
 
     /// <summary>该输入端口的全部取值，端口没有来源时为空。</summary>
@@ -65,12 +61,9 @@ public sealed class NodeInputValues : IPortTexts
     /// <summary>该输入端口的文本，未装配时为空。</summary>
     public string? Text(PortName port) => Texts.GetValueOrDefault(port);
 
-    /// <summary>本次激活的静态端口文本视图，装配执行输入时透传，没有静态值时为空视图。输入读取统一经 <see cref="IPortTexts.Text"/>。</summary>
-    public IPortTexts StaticTexts => _staticTexts;
-
-    /// <summary>附加本次激活的静态端口文本视图，没有静态值时保持原实例。</summary>
+    /// <summary>附加本次激活的静态端口文本，没有静态值时保持原实例。</summary>
     public NodeInputValues WithStatic(IPortTexts staticTexts) =>
-        staticTexts.Texts.Count == 0 ? this : new(_ordered, _connected, _triggers, staticTexts);
+        staticTexts.Texts.Count == 0 ? this : new(_ordered, _connected, staticTexts);
 
     /// <summary>按动态取值与静态值合成端口文本表，静态值优先。</summary>
     private static Dictionary<PortName, string> BuildTexts(
@@ -95,15 +88,11 @@ public sealed class NodeInputValues : IPortTexts
         return texts;
     }
 
-    /// <summary>该输入端口最近一次绑定的触发值，没有触发值的端口为 true。</summary>
-    public bool Triggers(PortName input) => _triggers.GetValueOrDefault(input, true);
-
-    /// <summary>按一组绑定读取来源产出：非驱动绑定不进入输入，信号不取内容，其余按绑定顺序取值，每个输入端口的触发值取最后一次绑定。</summary>
+    /// <summary>按一组绑定读取来源产出：非驱动绑定不进入输入，信号不取内容，其余按绑定顺序取值。</summary>
     public static NodeInputValues From(InputGroup group, INodeContext context)
     {
         List<NodeInputValue> ordered = [];
         HashSet<PortName> connected = [];
-        Dictionary<PortName, bool> triggers = [];
         foreach (InputBinding binding in group.Bindings)
         {
             if (!binding.Drives || binding.TargetInput is not { } input)
@@ -112,7 +101,6 @@ public sealed class NodeInputValues : IPortTexts
             }
 
             connected.Add(input);
-            triggers[input] = binding.Triggers(context.Source(binding.Source));
             if (binding.Signal || binding.SourcePort is not { } port)
             {
                 continue;
@@ -124,7 +112,7 @@ public sealed class NodeInputValues : IPortTexts
             }
         }
 
-        return new NodeInputValues(ordered, connected, triggers);
+        return new NodeInputValues(ordered, connected);
     }
 }
 

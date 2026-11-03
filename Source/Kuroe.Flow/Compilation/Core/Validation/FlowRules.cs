@@ -167,8 +167,6 @@ internal static class FlowRules
         }
         else if (node.Spec is not null)
         {
-            CheckFromGroups(node, scope, errors);
-
             if (node.Type is not { } definition)
             {
                 errors.Add(scope.Node(node.Label.Value, "执行节点必须写类型。"));
@@ -181,55 +179,6 @@ internal static class FlowRules
         else if (node.Use is null)
         {
             errors.Add(scope.Node(node.Label.Value, "节点必须声明执行配置或子节点。"));
-        }
-    }
-
-    /// <summary>校验上游启动组：组覆盖不带默认值的输入端口、来源节点存在、端口存在、容器封装不泄漏。</summary>
-    private static void CheckFromGroups(NodeSpec node, NodeScope scope, List<Error> errors)
-    {
-        if (node.Nodes is { Count: > 0 })
-        {
-            return;
-        }
-
-        IReadOnlyList<InputPort> inputs = node.DeclaredInputs;
-        var required = new HashSet<PortName>([.. inputs
-            .Where(port => !port.IsStatic && port.Default is null)
-            .Select(port => port.Name)]);
-        if (required.Count > 0 && node.From.Count == 0)
-        {
-            errors.Add(scope.Node(node.Label.Value, "声明动态输入端口的节点必须至少给出一组 From 启动条件。"));
-        }
-
-        foreach (FromGroup group in node.From)
-        {
-            var covered = new HashSet<PortName>();
-            foreach (PortName input in group.Links.Select(link => link.Input))
-            {
-                if (node.FindInput(input) is { IsStatic: true })
-                {
-                    errors.Add(scope.Node(node.Label.Value,
-                        $"From 不能连接静态输入端口 {input}，静态输入用 Bindings 绑定。"));
-                }
-                else if (node.FindInput(input) is null)
-                {
-                    errors.Add(scope.Node(node.Label.Value,
-                        $"From 连接的目标输入端口 {input} 没有在节点上声明。"));
-                }
-
-                if (!covered.Add(input))
-                {
-                    errors.Add(scope.Node(node.Label.Value, $"From 组内的目标输入端口 {input} 出现多次。"));
-                }
-            }
-
-            if (required.Count > 0)
-            {
-                foreach (PortName missing in required.Where(port => !covered.Contains(port)))
-                {
-                    errors.Add(scope.Node(node.Label.Value, $"From 组没有覆盖输入端口 {missing.Value}。"));
-                }
-            }
         }
     }
 
@@ -282,7 +231,8 @@ internal static class FlowRules
         }
     }
 
-    /// <summary>容器传入端口的绑定：来源必须在容器外部，端口存在，类型一致；静态输入沿常量来源解析，动态输入不能绑定常量来源。</summary>
+    /// <summary>容器传入端口的绑定：静态输入来自 Bindings，动态输入来自 From；来源必须在容器外部，端口存在，类型一致。
+    /// 静态输入沿常量来源解析，动态输入不能绑定常量来源。</summary>
     private static void CheckContainerInputs(NodeGraph graph, NodeScope scope, List<Error> errors)
     {
         foreach (ContainerNode container in graph.Containers)
@@ -290,10 +240,12 @@ internal static class FlowRules
             foreach (InputPort input in container.Inputs)
             {
                 if (container.InputBindings?.TryGetValue(input.Name, out InputBinding? source) != true
-                    || source is not { SourcePort: { } sourcePort })
+                    || source is not { SourcePort: { } sourcePort }
+                    || !AllowedRole(input.IsStatic, source.Role))
                 {
-                    errors.Add(scope.Node(container.Path.Value,
-                        $"容器输入端口 {input.Name.Value} 没有绑定来源。"));
+                    errors.Add(scope.Node(container.Path.Value, input.IsStatic
+                        ? $"容器静态输入端口 {input.Name.Value} 必须由 Bindings 绑定。"
+                        : $"容器动态输入端口 {input.Name.Value} 必须由 From 连接。"));
                     continue;
                 }
 
@@ -328,11 +280,15 @@ internal static class FlowRules
                 else if (sourcePortDeclared.IsConstant)
                 {
                     errors.Add(scope.Node(container.Path.Value,
-                        $"动态容器输入端口 {input.Name.Value} 不能绑定常量来源 {source.Source}@{sourcePort}。"));
+                        $"动态容器输入端口 {input.Name.Value} 不能连接常量来源 {source.Source}@{sourcePort}。"));
                 }
             }
         }
     }
+
+    /// <summary>容器输入绑定的角色：静态输入只接受 Bindings 产生的绑定，动态输入只接受 From 产生的门控或别名绑定。</summary>
+    private static bool AllowedRole(bool isStatic, BindingRole role) =>
+        isStatic ? role == BindingRole.Static : role is BindingRole.Gate or BindingRole.Alias;
 
     /// <summary>静态输入的来源链：链必须到达开始端口、常量输出、字面量或默认值。</summary>
     private static void CheckStaticBindings(NodeGraph graph, NodeScope scope, List<Error> errors)
@@ -418,6 +374,7 @@ internal static class FlowRules
         CheckOutputBindings(graph, scope, errors);
         CheckContainerInputs(graph, scope, errors);
         CheckStaticBindings(graph, scope, errors);
+        CheckTriggerConditions(graph, scope, errors);
 
         foreach (InputBinding binding in graph.Bindings)
         {
@@ -427,6 +384,45 @@ internal static class FlowRules
             }
 
             CheckEdgeSource(graph, binding, target, scope, errors);
+        }
+    }
+
+    /// <summary>触发条件的来源侧校验：绑定写有非正向条件时，来源端口必须声明触发模式。
+    /// 来源节点或端口缺失由来源侧规则报出，这里不重复。</summary>
+    private static void CheckTriggerConditions(NodeGraph graph, NodeScope scope, List<Error> errors)
+    {
+        foreach (InputBinding binding in graph.Bindings)
+        {
+            CheckTriggerSource(graph, binding, scope, errors);
+        }
+
+        foreach (GraphNode node in graph.Nodes)
+        {
+            foreach (InputBinding binding in node.InputBindings?.Values ?? [])
+            {
+                CheckTriggerSource(graph, binding, scope, errors);
+            }
+        }
+    }
+
+    /// <summary>一条绑定的来源端口是否承载触发值，绑定目标按自身节点作用域报错。</summary>
+    private static void CheckTriggerSource(
+        NodeGraph graph,
+        InputBinding binding,
+        NodeScope scope,
+        List<Error> errors)
+    {
+        if (binding.Condition == TriggerCondition.Positive
+            || binding.SourcePort is not { } sourcePort
+            || graph.Nodes.FirstOrDefault(node => node.Path == binding.Source) is not { } source)
+        {
+            return;
+        }
+
+        if (source.FindPort(sourcePort) is { Trigger: false })
+        {
+            errors.Add(scope.Node(binding.Target.Value,
+                $"触发条件要求来源 {source.Path}@{sourcePort.Value} 是触发端口。"));
         }
     }
 

@@ -12,7 +12,7 @@ internal sealed class FileWriteRuntime(ExecutableNode executable, FileParameters
     protected override string Action => "写入";
 
     /// <inheritdoc/>
-    protected override string? Produce(NodeInputValues inputs)
+    protected override string? Produce(INodeInputs inputs)
     {
         string? failure = ResolveTarget(inputs, out string fullPath);
         if (failure is not null)
@@ -36,7 +36,7 @@ internal sealed class FileWriteRuntime(ExecutableNode executable, FileParameters
     }
 
     /// <summary>取写入内容端口的内容，路径变量端口不算内容端口。</summary>
-    private string Content(NodeInputValues inputs)
+    private string Content(INodeInputs inputs)
     {
         HashSet<string> variablePorts = [.. Parameters.Variables.Values];
         InputPort? port = Executable.Inputs.FirstOrDefault(candidate =>

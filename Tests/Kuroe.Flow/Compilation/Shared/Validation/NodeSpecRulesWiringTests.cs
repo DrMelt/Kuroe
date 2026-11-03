@@ -13,16 +13,14 @@ public sealed class NodeSpecRulesWiringTests
     private static readonly PortName Output = new("输出");
 
     [Fact]
-    public void Reference_container_cannot_declare_from()
+    public void Reference_container_keeps_from_for_input_wiring()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("组"), new NodeName("库组")) with
         {
             From = [Group()],
         };
 
-        Assert.Equal(
-            ["引用容器不能声明 From，容器自身不接线。"],
-            Errors(fail => node.CheckWiring(NodeRuleContext.Reference, fail, container: true)));
+        Assert.Empty(Errors(fail => node.CheckWiring(NodeRuleContext.Reference, fail, container: true)));
     }
 
     [Fact]
@@ -63,12 +61,12 @@ public sealed class NodeSpecRulesWiringTests
     }
 
     [Fact]
-    public void Container_bindings_are_declared_as_input_bindings()
+    public void Container_bindings_are_declared_as_static_input_bindings()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
         {
             Nodes = [NodeSpec.Define(new NodeName("成员"))],
-            Inputs = [new InputPort(Input)],
+            Inputs = [new InputPort(Input, mode: PortMode.Constant)],
             Bindings = Bindings(),
         };
 

@@ -559,8 +559,22 @@ static class FlowFileReader
             && Enum.TryParse(element.GetString(), ignoreCase: true, out role);
     }
 
+    private static bool TryTriggerCondition(JsonElement element, out TriggerCondition condition)
+    {
+        condition = default;
+
+        if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } text)
+        {
+            return false;
+        }
+
+        return Enum.TryParse(text, ignoreCase: true, out condition)
+            && Enum.IsDefined(condition)
+            && text.Equals(condition.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static ErrorOr<Dictionary<string, string>?> ReadBindings(
-        Dictionary<string, string>? entries,
+        Dictionary<string, JsonElement>? entries,
         NodeScope scope,
         string label)
     {
@@ -571,11 +585,24 @@ static class FlowFileReader
 
         Dictionary<string, string> bindings = [];
         List<Error> errors = [];
-        foreach ((string name, string reference) in entries)
+        foreach ((string name, JsonElement entry) in entries)
         {
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(reference))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                errors.Add(scope.Node(label, "输入端口名与来源引用都不能为空。"));
+                errors.Add(scope.Node(label, "输入端口名不能为空。"));
+                continue;
+            }
+
+            if (entry.ValueKind != JsonValueKind.String)
+            {
+                errors.Add(scope.Node(label, "输入绑定的值只写引用文本，Condition 只写在 From。"));
+                continue;
+            }
+
+            string reference = entry.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(reference))
+            {
+                errors.Add(scope.Node(label, "输入绑定的来源引用不能为空。"));
                 continue;
             }
 
@@ -583,6 +610,59 @@ static class FlowFileReader
         }
 
         return errors.Count > 0 ? errors : bindings;
+    }
+
+    /// <summary>读一条 From 来源：字符串即引用文本，对象写 Ref 与可选 Condition。</summary>
+    private static ErrorOr<(string Ref, TriggerCondition? Condition)> ReadFromSource(
+        JsonElement entry,
+        NodeScope scope,
+        string label)
+    {
+        if (entry.ValueKind == JsonValueKind.String)
+        {
+            return (entry.GetString() ?? string.Empty, null);
+        }
+
+        if (entry.ValueKind != JsonValueKind.Object)
+        {
+            return scope.Node(label, "From 连接的来源必须是引用文本，或带 Ref 与可选 Condition 的对象。");
+        }
+
+        string? reference = null;
+        TriggerCondition? condition = null;
+        foreach (JsonProperty property in entry.EnumerateObject())
+        {
+            switch (property.Name.ToLowerInvariant())
+            {
+                case "ref" when property.Value.ValueKind == JsonValueKind.String:
+                    reference = property.Value.GetString();
+                    break;
+
+                case "ref":
+                    return scope.Node(label, "From 连接的 Ref 键必须是 来源@端口 或 @端口 引用。");
+
+                case "condition":
+                    {
+                        if (!TryTriggerCondition(property.Value, out TriggerCondition parsed))
+                        {
+                            return scope.Node(label, "From 连接的 Condition 应为 Positive 或 Negative。");
+                        }
+
+                        condition = parsed;
+                        break;
+                    }
+
+                default:
+                    return scope.Node(label, $"From 连接的来源对象不认识键 {property.Name}，只写 Ref 与 Condition。");
+            }
+        }
+
+        if (reference is null)
+        {
+            return scope.Node(label, "From 连接的来源对象必须写 Ref 键。");
+        }
+
+        return (reference, condition);
     }
 
     private static ErrorOr<IReadOnlyList<FromGroupDocument>> ReadFrom(
@@ -601,20 +681,22 @@ static class FlowFileReader
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(label, "From 的每个组必须是对象，键写输入端口名，值写来源端口引用。"));
+                errors.Add(scope.Node(label, "From 的每个组必须是对象，键写输入端口名，值写来源。"));
                 continue;
             }
 
             List<FromLinkDocument> links = [];
             foreach (JsonProperty property in entry.EnumerateObject())
             {
-                if (property.Value.ValueKind != JsonValueKind.String)
+                ErrorOr<(string Ref, TriggerCondition? Condition)> source =
+                    ReadFromSource(property.Value, scope, label);
+                if (source.IsError)
                 {
-                    errors.Add(scope.Node(label, $"From 连接 {property.Name} 的来源必须是引用文本，写 @端口 或 来源@端口。"));
+                    errors.AddRange(source.ErrorsOrEmptyList);
                     continue;
                 }
 
-                links.Add(new FromLinkDocument(property.Name, property.Value.GetString() ?? string.Empty));
+                links.Add(new FromLinkDocument(property.Name, source.Value.Ref, source.Value.Condition));
             }
 
             if (links.Count == 0)

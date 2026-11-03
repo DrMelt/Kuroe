@@ -38,19 +38,23 @@ public sealed record InputPortDocument(
     string? Default = null,
     InputRole? Role = null);
 
-/// <summary>上游连接：目标输入端口与来源端口引用。</summary>
-public sealed record FromLinkDocument(string Input, string Ref);
+/// <summary>上游连接：目标输入端口、来源引用与触发门控条件。条件未写时按正向。</summary>
+public sealed record FromLinkDocument(
+    string Input,
+    string Ref,
+    TriggerCondition? Condition = null);
 
-/// <summary>一组启动条件。</summary>
+/// <summary>一组 From 连接。</summary>
 public sealed record FromGroupDocument(IReadOnlyList<FromLinkDocument> Links);
 
 /// <summary>节点描述：定义与引用共享的公共字段。</summary>
 public abstract record NodeDocument
 {
-    /// <summary>上游启动组。</summary>
+    /// <summary>上游 From 组：执行节点按组启动，容器只有一组作为传入端口接线。</summary>
     public IReadOnlyList<FromGroupDocument> From { get; init; } = [];
 
-    /// <summary>输入端口绑定：目标输入端口到来源引用文本。来源识别与 From 使用同一套作用域规则。</summary>
+    /// <summary>静态输入绑定：输入端口到来源引用文本，来源识别与 From 使用同一套作用域规则。
+    /// 动态输入一律写在 From，容器只有一组 From。</summary>
     public IReadOnlyDictionary<string, string>? Bindings { get; init; }
 
     /// <summary>产出模式：逐次发布或首次发布后冻结。</summary>

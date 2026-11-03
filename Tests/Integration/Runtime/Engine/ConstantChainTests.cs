@@ -184,7 +184,8 @@ public sealed class ConstantChainTests
                   { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "Bindings": { "触发": "Start@触发", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "From": [ { "触发": "Start@触发" } ],
+                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "第一步",

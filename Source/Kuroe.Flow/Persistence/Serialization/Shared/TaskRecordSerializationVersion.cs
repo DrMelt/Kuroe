@@ -4,5 +4,5 @@ namespace Kuroe.Flow.Persistence.Serialization.Shared;
 public static class TaskRecordSerializationVersion
 {
     /// <summary>当前版本。</summary>
-    public const int Current = 4;
+    public const int Current = 5;
 }

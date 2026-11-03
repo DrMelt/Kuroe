@@ -65,7 +65,7 @@ public sealed class ApprovalRuntimeTests
     }
 
     [Fact]
-    public void Approval_releases_the_trigger_saved_at_pause()
+    public void Approval_outputs_always_trigger()
     {
         StubInputChannel channel = new();
         StubNodeContext context = new();
@@ -73,14 +73,13 @@ public sealed class ApprovalRuntimeTests
             new ApprovalNodeType(null, channel).Create(Node(channel), context));
         NodeInputValues inputs = new(
             [new NodeInputValue(Port, PortTypes.Text, new ContextValue(new StartSource(Port), "内容"))],
-            new HashSet<PortName> { Port },
-            new Dictionary<PortName, bool> { [Port] = false });
+            new HashSet<PortName> { Port });
 
         runtime.Activate(context, inputs);
         Assert.True(runtime.Triggers(Port));
         Assert.Single(channel.Declared).Receive(string.Empty);
 
-        Assert.False(runtime.Triggers(Port));
+        Assert.True(runtime.Triggers(Port));
     }
 
     private static ExecutableNode Node(IInputChannel channel) => new()

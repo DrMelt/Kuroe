@@ -10,7 +10,7 @@ public static class ContainerNodeTypes
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
     public static NodeKind Name { get; } = new("Container");
 
-    /// <summary>容器类型的静态形状：组织子节点，不派发执行，输入端口声明由引用处绑定，输出端口由子树成员提供。</summary>
+    /// <summary>容器类型的静态形状：组织子节点，不派发执行，输入端口由引用处的 From 与 Bindings 绑定，输出端口由子树成员提供。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         Organizes = true,

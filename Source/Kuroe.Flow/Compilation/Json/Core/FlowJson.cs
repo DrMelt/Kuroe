@@ -17,8 +17,10 @@ namespace Kuroe.Flow.Json;
 [JsonSerializable(typeof(FlowFileDto))]
 [JsonSerializable(typeof(NodeFileDto))]
 [JsonSerializable(typeof(PortEntryDto))]
+[JsonSerializable(typeof(BindingEntryDto))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(Dictionary<string, JsonElement>))]
 internal sealed partial class FlowJson : JsonSerializerContext
 {
     private static readonly Lazy<JsonSerializerOptions> LazyWrite = new(static () => new JsonSerializerOptions

@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.TestSupport;
 using Xunit;
 
@@ -23,6 +24,32 @@ public sealed class FlowDocumentTests
     [Fact]
     public void Approval_node_with_invalid_input_port_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 审阅：端口名不能为空或含 @。"], Errors(ApprovalInputPortWithoutName));
+
+    /// <summary>审批节点派生的输出端口只转发内容，不声明触发模式。</summary>
+    [Fact]
+    public void Approval_output_port_is_plain()
+    {
+        ErrorOr<CompiledDocument> compiled = Compiler.Compile(FlowDocumentSource.Read("""
+            { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }] }, "Root": { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "Start@目标" } ] } } ] }
+            """).Value, []);
+
+        Assert.False(compiled.IsError, string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+        Assert.Equal(
+            PortMode.Plain,
+            compiled.Value.Flows.Single().Graph.ExecutableNodes.Single().Outputs.Single().Mode);
+    }
+
+    /// <summary>审批输出不携带触发值，翻转条件绑定审批输出在编译期被拒绝。</summary>
+    [Fact]
+    public void Negative_condition_on_approval_output_is_rejected() =>
+        Assert.Equal(
+            ["流程 默认 的节点 整体/接收：触发条件要求来源 整体/审阅@结论 是触发端口。"],
+            Errors("""
+                { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标", "Type": "Signal" }], "From": [ { "目标": "Start@目标" } ], "Nodes": [
+                  { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": "@目标" } ] },
+                  { "Name": "接收", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal", "Mode": "Trigger" }], "From": [ { "结论": { "Ref": "审阅@结论", "Condition": "Negative" } } ] }
+                ] } } ] }
+                """));
 
     [Fact]
     public void Container_with_invalid_max_executions_is_rejected() =>
@@ -87,13 +114,13 @@ public sealed class FlowDocumentTests
     [Fact]
     public void Execution_dynamic_binding_is_rejected() =>
         Assert.Equal(
-            ["流程 默认 的节点 实施：执行节点的绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
+            ["流程 默认 的节点 实施：绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
             Errors(ExecutionWithDynamicBinding));
 
     [Fact]
     public void Input_dynamic_binding_is_rejected() =>
         Assert.Equal(
-            ["流程 默认 的节点 收集：执行节点的绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
+            ["流程 默认 的节点 收集：绑定目标 计划 不是静态输入端口，动态输入一律经 From 绑定。"],
             Errors(InputWithDynamicBinding));
 
     [Fact]
@@ -122,8 +149,8 @@ public sealed class FlowDocumentTests
             Errors(ContainerOutCrossContainer));
 
     [Fact]
-    public void Referenced_container_with_from_is_rejected() =>
-        Assert.Equal(["流程 默认 的节点 组实例：引用容器不能声明 From，容器自身不接线。"], Errors(ReferenceContainerFrom));
+    public void Reference_container_from_must_target_an_input() =>
+        Assert.Equal(["流程 默认 的节点 组实例：From 连接的目标输入端口 做 没有在节点上声明。"], Errors(ReferenceContainerFrom));
 
     [Fact]
     public void Structural_fields_survive_a_write_read_round_trip()
@@ -227,7 +254,7 @@ public sealed class FlowDocumentTests
 
     private const string SameLabelTwice = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
             { "Label": "副本", "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
             { "Label": "副本", "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
           ] } } ] }
@@ -235,21 +262,21 @@ public sealed class FlowDocumentTests
 
     private const string LabelLessReferenceFlow = """
         { "Nodes": [ { "Name": "执行", "Kind": "Llm" } ],
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
             { "Use": "执行", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
           ] } } ] }
         """;
 
     /// <summary>输入端口写了 Value，默认值只认 Default。</summary>
     private const string NodeInputWithValue = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
           { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Inputs": [{ "Name": "目标", "Value": "固定" }], "From": [ { "目标": "@目标" } ] }
         ] } } ] }
         """;
 
     /// <summary>执行节点的输出端口写了 Value，只属于开始端口。</summary>
     private const string NodeOutputWithValue = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
           { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text", "Value": "固定" }], "From": [ { "目标": "@目标" } ] }
         ] } } ] }
         """;
@@ -263,7 +290,7 @@ public sealed class FlowDocumentTests
         """;
 
     private const string ContainerWithZeroMaxExecutions = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "MaxExecutions": 0, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "MaxExecutions": 0, "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
           { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "目标": "@目标" } ] }
         ] } } ] }
         """;
@@ -344,14 +371,14 @@ public sealed class FlowDocumentTests
         """;
 
     private const string ExecutionWithDynamicBinding = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
           { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
           { "Name": "实施", "Kind": "Llm", "Inputs": [{ "Name": "计划" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME", "计划": "准备@结论" }, "From": [ { "计划": "准备@结论" } ] }
         ] } } ] }
         """;
 
     private const string InputWithDynamicBinding = """
-        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
           { "Name": "收集", "Kind": "Input", "Inputs": [{ "Name": "计划" }], "Bindings": { "计划": "准备@结论" }, "From": [ { "计划": "准备@结论" } ] },
           { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
         ] } } ] }
@@ -389,8 +416,8 @@ public sealed class FlowDocumentTests
               "Nodes": [ { "Label": "实施", "Use": "允许工具", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] } ]
             }
           ],
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
-            { "Label": "交付", "Use": "交付", "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" } },
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
+            { "Label": "交付", "Use": "交付", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
             { "Name": "复盘", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "不存在": "交付@不存在" } ] }
           ] } } ]
         }
@@ -407,7 +434,7 @@ public sealed class FlowDocumentTests
               "Nodes": [ { "Label": "实施", "Use": "允许工具", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } } ]
             }
           ],
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "结论" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "结论": "交付.实施@结论", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "结论" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "结论": "交付.实施@结论" } ], "Nodes": [
             { "Label": "交付", "Use": "交付", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } },
             { "Name": "复盘", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "@结论" } ] }
           ] } } ]
@@ -428,7 +455,7 @@ public sealed class FlowDocumentTests
         {
           "Flows": [
             { "Name": "默认", "Description": "结构覆盖", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Root": { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              "Root": { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "结论", "Ref": "准备@结论" }], "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
               { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "SystemPrompt": ["背景"], "MaxExecutions": 2, "From": [ { "目标": "@目标" } ] },
               { "Name": "规划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
               { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "计划": "规划@计划" } ] },
@@ -506,7 +533,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "目标": "Start@目标" } ],
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [{ "目标": "Start@目标" }] }
                         ]
@@ -531,7 +559,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "目标": "Start@目标" } ],
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
                         "Nodes": [
                           { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [{ "目标": "@目标" }] },
                           {
@@ -554,7 +583,7 @@ public sealed class FlowDocumentTests
     [Fact]
     public void Container_member_in_cannot_reference_start_directly() =>
         Assert.Equal(
-            ["流程 默认 的节点 内层：Bindings 引用的节点 Start 不在容器 整体 的作用域里。"],
+            ["流程 默认 的节点 内层：From 引用的节点 Start 不在容器 整体 的作用域里。"],
             Errors("""
                 {
                   "Flows": [
@@ -565,13 +594,15 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "目标": "Start@目标" } ],
                         "Nodes": [
                           {
                             "Name": "内层",
                             "Kind": "Container",
                             "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                            "Bindings": { "计划": "Start@目标", "MODEL_NAME": "@MODEL_NAME" },
+                            "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                            "From": [ { "计划": "Start@目标" } ],
                             "Nodes": [
                               { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [{ "计划": "@计划" }] }
                             ]
@@ -596,14 +627,16 @@ public sealed class FlowDocumentTests
                     "Name": "整体",
                     "Kind": "Container",
                     "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                    "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                    "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                    "From": [ { "目标": "Start@目标" } ],
                     "Nodes": [
                       { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [{ "目标": "@目标" }] },
                       {
                         "Name": "内层",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "计划": "准备@结论", "MODEL_NAME": "@MODEL_NAME" },
+                        "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                        "From": [ { "计划": "准备@结论" } ],
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [{ "计划": "@计划" }] }
                         ]
@@ -619,7 +652,7 @@ public sealed class FlowDocumentTests
     [Fact]
     public void Container_in_with_an_undeclared_port_is_rejected() =>
         Assert.Equal(
-            ["流程 默认 的节点 整体：端口 风格 不在容器 整体 上。"],
+            ["流程 默认 的节点 整体：绑定目标 风格 不是已声明的输入端口。"],
             Errors("""
                 {
                   "Flows": [
@@ -630,7 +663,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "目标": "Start@目标", "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "Bindings": { "风格": "Start@风格", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "目标": "Start@目标" } ],
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [{ "目标": "@目标" }] }
                         ]
@@ -655,7 +689,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "目标" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "目标": "Start@目标" } ],
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [{ "目标": "@目标" }] }
                         ]
@@ -670,7 +705,6 @@ public sealed class FlowDocumentTests
     public void Container_input_without_binding_is_rejected() =>
         Assert.Equal(
             [
-                "流程 默认 的节点 整体：输入端口 目标 没有绑定。",
                 "流程 默认 的节点 目标：端口 @目标 没有绑定来源。",
             ],
             Errors("""
@@ -708,7 +742,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "计划": "自造@计划", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "计划": "自造@计划" } ],
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } }
                         ]
@@ -733,7 +768,8 @@ public sealed class FlowDocumentTests
                         "Name": "整体",
                         "Kind": "Container",
                         "Inputs": [{ "Name": "计划" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                        "Bindings": { "计划": "@计划", "MODEL_NAME": "Start@MODEL_NAME" },
+                        "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                        "From": [ { "计划": "@计划" } ],
                         "Nodes": [
                           { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } }
                         ]

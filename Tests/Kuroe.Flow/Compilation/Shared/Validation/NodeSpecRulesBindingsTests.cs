@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
 
-/// <summary>节点输入绑定规则：绑定目标是已声明的输入端口，静态输入有绑定或默认值，容器的声明端口全部要绑定。</summary>
+/// <summary>节点输入绑定规则：绑定目标是已声明的静态输入端口，静态输入有绑定或默认值。</summary>
 public sealed class NodeSpecRulesBindingsTests
 {
     private static readonly PortName Input = new("输入");
@@ -26,7 +26,7 @@ public sealed class NodeSpecRulesBindingsTests
         };
 
         Assert.Equal(
-            ["执行节点的绑定目标 输入 不是静态输入端口，动态输入一律经 From 绑定。"],
+            ["绑定目标 输入 不是静态输入端口，动态输入一律经 From 绑定。"],
             Errors(fail => node.CheckBindings(fail)));
     }
 
@@ -57,16 +57,16 @@ public sealed class NodeSpecRulesBindingsTests
     }
 
     [Fact]
-    public void Container_requires_binding_for_every_declared_input()
+    public void Container_static_input_requires_binding()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("组")) with
         {
-            Nodes = [],
-            Inputs = [new InputPort(Input)],
+            Nodes = [NodeSpec.Define(new NodeName("成员"))],
+            Inputs = [new InputPort(Input, mode: PortMode.Constant)],
         };
 
         Assert.Equal(
-            ["输入端口 输入 没有绑定。"],
+            ["静态输入端口 输入 没有绑定来源。"],
             Errors(fail => node.CheckBindingCoverage(node.EffectiveInputs, container: true, fail)));
     }
 

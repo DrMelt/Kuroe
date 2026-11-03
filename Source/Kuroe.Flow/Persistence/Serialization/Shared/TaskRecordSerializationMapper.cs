@@ -192,10 +192,7 @@ public static class TaskRecordSerializationMapper
             [.. inputs.Ordered.Select(item => new NodeInputValueData(
                 item.Target.Value,
                 item.Type,
-                ToData(item.Value)))],
-            [.. inputs.Connected.Select(port => port.Value)],
-            inputs.Triggers.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
-            ToData(inputs.StaticTexts));
+                ToData(item.Value)))]);
 
     private static NodePathData ToData(NodePath path) =>
         new([.. path.Levels.Select(level => level.Value)]);
@@ -359,10 +356,7 @@ public static class TaskRecordSerializationMapper
             [.. (dto.Ordered ?? []).Select(item => new NodeInputValueRecord(
                 ReadPort(item.Target, "审批输入端口"),
                 RequiredText(item.Type, "审批输入类型"),
-                ReadInputValue(item.Value ?? throw new FormatException("审批输入缺少取值。"))))],
-            [.. (dto.Connected ?? []).Select(port => new PortName(port))],
-            (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
-            ReadTexts(dto.StaticTexts));
+                ReadInputValue(item.Value ?? throw new FormatException("审批输入缺少取值。"))))]);
     }
 
     private static Dictionary<PortName, string> ReadTexts(Dictionary<string, string>? values) =>

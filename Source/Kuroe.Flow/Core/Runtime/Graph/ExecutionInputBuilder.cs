@@ -22,6 +22,7 @@ internal static class ExecutionInputBuilder
         List<InputValue> contextInput = [];
         List<InputValue> values = [];
         Dictionary<PortName, List<ContextValue>> textValues = [];
+        Dictionary<PortName, string> texts = [];
         foreach (NodeInputValue input in inputs.Ordered)
         {
             InputPort? declared = node.Executable.FindInput(input.TargetInput);
@@ -44,8 +45,14 @@ internal static class ExecutionInputBuilder
         {
             if (port.IsStatic)
             {
-                if (port.Role == InputRole.Content
-                    && inputs.StaticTexts.Text(port.Name) is { } constant)
+                string? constant = inputs.Text(port.Name);
+                if (constant is null)
+                {
+                    continue;
+                }
+
+                texts[port.Name] = constant;
+                if (port.Role == InputRole.Content)
                 {
                     InputValue constantValue = new(
                         port.Name,
@@ -79,7 +86,6 @@ internal static class ExecutionInputBuilder
         values.InsertRange(0, contextInput);
 
         // 端口文本与取值来自同一份取值，常量端口优先
-        Dictionary<PortName, string> texts = new(inputs.StaticTexts.Texts);
         foreach ((PortName port, List<ContextValue> list) in textValues)
         {
             if (!texts.ContainsKey(port) && ContextValues.Join(list) is { } text)

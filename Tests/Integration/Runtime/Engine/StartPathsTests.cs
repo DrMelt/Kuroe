@@ -33,7 +33,7 @@ public sealed class StartPathsTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "启动": "Start@启动", "流程": "Start@流程", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "启动": "Start@启动", "流程": "Start@流程", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "读取路径",
                     "Kind": "Llm",
@@ -115,7 +115,8 @@ public sealed class StartPathsTests
                   { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "Bindings": { "目标": "Start@目标", "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
+                "From": [ { "目标": "Start@目标" } ],
+                "Bindings": { "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "实施",

@@ -103,12 +103,8 @@ public sealed record ConsumedRevisionData(NodePathData? Source, string? Port, lo
 /// <summary>节点路径的形状。</summary>
 public sealed record NodePathData(List<string>? Levels);
 
-/// <summary>审批节点输入取值的形状。</summary>
-public sealed record NodeInputValuesData(
-    List<NodeInputValueData>? Ordered,
-    List<string>? Connected,
-    Dictionary<string, bool>? Triggers,
-    Dictionary<string, string>? StaticTexts);
+/// <summary>审批节点输入内容的形状。</summary>
+public sealed record NodeInputValuesData(List<NodeInputValueData>? Ordered);
 
 /// <summary>审批节点一条输入取值的形状。</summary>
 public sealed record NodeInputValueData(string? Target, string? Type, InputValueData? Value);

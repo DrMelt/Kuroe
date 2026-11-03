@@ -313,12 +313,12 @@ public sealed class InputNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "收集",
                     "Kind": "Container",
                     "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                    "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "@目标" }, "Nodes": [
+                    "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
                       { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                     ]
                   },
@@ -340,12 +340,12 @@ public sealed class InputNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "Start@目标" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Nodes": [
                   {
                     "Name": "审查容器",
                     "Kind": "Container",
                     "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
-                    "Inputs": [{ "Name": "目标" }], "Bindings": { "目标": "@目标" }, "Nodes": [
+                    "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
                       { "Name": "用户输入", "Kind": "Input", "Question": "请补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                     ]
                   },
@@ -367,7 +367,7 @@ public sealed class InputNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                   { "Name": "收话", "Kind": "Input", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
                   { "Name": "回话", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
                 ]

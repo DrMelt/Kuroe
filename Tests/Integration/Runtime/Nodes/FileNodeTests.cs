@@ -89,7 +89,7 @@ public sealed class FileNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -127,7 +127,7 @@ public sealed class FileNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -163,7 +163,7 @@ public sealed class FileNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -202,7 +202,7 @@ public sealed class FileNodeTests
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "Bindings": { "基准": "Start@基准", "目标": "Start@目标" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",

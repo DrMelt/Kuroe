@@ -40,7 +40,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState, IInputProgress
     public abstract void Cancel();
 
     /// <summary>节点被激活：派发型节点由引擎按就绪条件启动执行，其余类型消费引擎装入的输入。</summary>
-    public virtual void Activate(INodeContext context, NodeInputValues inputs)
+    public virtual void Activate(INodeContext context, INodeInputs inputs)
     {
     }
 

@@ -39,7 +39,7 @@ internal sealed class InputRuntime(ExecutableNode executable, IInputChannel chan
     }
 
     /// <summary>被激活时清掉上一轮回答并声明接收外部输入，取消后不再声明。输入节点不消费来源取值。</summary>
-    public override void Activate(INodeContext context, NodeInputValues inputs)
+    public override void Activate(INodeContext context, INodeInputs inputs)
     {
         if (_canceled)
         {

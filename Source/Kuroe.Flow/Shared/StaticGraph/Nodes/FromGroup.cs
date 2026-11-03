@@ -3,10 +3,12 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
 
-/// <summary>一条上游连接：目标输入端口与来源端口引用。取用方式由目标输入端口的声明决定，
-/// 来源写 来源@端口 指向来源节点的输出端口，库容器成员可写 @端口 引用传入端口。</summary>
-public sealed record FromLink(PortName Input, PortRef Ref);
+/// <summary>一条上游连接：目标输入端口、来源引用与触发门控条件。取用方式由目标输入端口的声明决定。</summary>
+public sealed record FromLink(
+    PortName Input,
+    PortRef Ref,
+    TriggerCondition Condition = TriggerCondition.Positive);
 
-/// <summary>一组启动条件：组内输入全部齐备该组才成立，组间任一组成立即满足启动依赖。
-/// 组是一套完整的输入绑定方案，覆盖目标声明的全部不带默认值的输入端口。</summary>
+/// <summary>一组 From 连接：执行节点的组内输入全部齐备该组才成立，组间任一组成即可启动；
+/// 容器只有一组，作为成员的传入端口接线。执行节点的组覆盖不带默认值的动态输入，容器的一组覆盖全部动态输入。</summary>
 public sealed record FromGroup(IReadOnlyList<FromLink> Links);

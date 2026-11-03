@@ -62,18 +62,21 @@ public sealed class FlowRulesTests
             Errors(Flow(Container("整体", Text("干活")) with { MaxExecutions = -2 })));
 
     [Fact]
-    public void Container_from_is_rejected() =>
-        Assert.Equal(
-            [NodeError("容器", "容器节点不是执行节点，不支持 From。")],
+    public void Container_from_wires_dynamic_inputs() =>
+        Assert.Empty(
             Errors(Flow(
-                Container("容器", Plan("规划")) with { From = [Ref("规划", "结论")] })));
+                Container("容器", Plan("规划")) with
+                {
+                    Inputs = [In("目标")],
+                    From = [StartRef()],
+                })));
 
     [Fact]
-    public void Container_from_with_signal_input_is_rejected() =>
+    public void Container_from_target_must_be_declared() =>
         Assert.Equal(
-            [NodeError("容器", "容器节点不是执行节点，不支持 From。")],
+            [NodeError("容器", "From 连接的目标输入端口 结论 没有在节点上声明。")],
             Errors(Flow(
-                Container("容器", Plan("规划")) with { From = [Signal("规划", "结论")] })));
+                Container("容器", Plan("规划")) with { From = [Ref("规划", "结论")] })));
 
     [Fact]
     public void Start_without_output_port_is_rejected() =>
@@ -303,6 +306,71 @@ public sealed class FlowRulesTests
                 }))));
 
     [Fact]
+    public void From_condition_on_a_non_trigger_target_is_rejected() =>
+        Assert.Equal(
+            [NodeError("接收", "From 连接的目标输入端口 结论 的触发条件只用于触发端口。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("来源") with { Outputs = [P("结论")] },
+                    Text("接收") with
+                    {
+                        Inputs = [In("结论")],
+                        From =
+                        [
+                            new([
+                                new FromLink(
+                                    new PortName("结论"),
+                                    PortRef.Named(new NodeLabel("来源"), new PortName("结论")),
+                                    TriggerCondition.Negative),
+                            ]),
+                        ],
+                    }))));
+
+    [Fact]
+    public void From_condition_on_a_non_trigger_source_is_rejected() =>
+        Assert.Equal(
+            [MemberError("接收", "触发条件要求来源 整体/来源@结论 是触发端口。")],
+            Errors(Flow(
+                Container("整体",
+                    Text("来源") with { Outputs = [P("结论")] },
+                    Text("接收") with
+                    {
+                        Inputs = [new InputPort(PN("结论"), PortTypes.Text, mode: PortMode.Trigger)],
+                        From =
+                        [
+                            new([
+                                new FromLink(
+                                    PN("结论"),
+                                    PortRef.Named(new NodeLabel("来源"), PN("结论")),
+                                    TriggerCondition.Negative),
+                            ]),
+                        ],
+                    }))));
+
+    [Fact]
+    public void From_condition_on_a_trigger_source_is_accepted() =>
+        Assert.Empty(
+            Errors(Flow(
+                Container("整体",
+                    Text("来源") with
+                    {
+                        Outputs = [new Port(PN("结论"), PortTypes.Text, mode: PortMode.Trigger)],
+                    },
+                    Text("接收") with
+                    {
+                        Inputs = [new InputPort(PN("结论"), PortTypes.Text, mode: PortMode.Trigger)],
+                        From =
+                        [
+                            new([
+                                new FromLink(
+                                    PN("结论"),
+                                    PortRef.Named(new NodeLabel("来源"), PN("结论")),
+                                    TriggerCondition.Negative),
+                            ]),
+                        ],
+                    }))));
+
+    [Fact]
     public void Container_output_trigger_does_not_require_the_member_port_to_trigger() =>
         Assert.Empty(
             Errors(Flow(
@@ -493,6 +561,7 @@ public sealed class FlowRulesTests
                 Container("整体", Text("干活")) with
                 {
                     Inputs = [new InputPort(PN("计划"), PortTypes.Text, null, "固定计划")],
+                    From = [new FromGroup([new FromLink(PN("计划"), PortRef.Named(StartNode.ReservedLabel, StartPort))])],
                 })));
 
     /// <summary>输入端口名在同一节点内唯一，与输出端口同一份规则。</summary>

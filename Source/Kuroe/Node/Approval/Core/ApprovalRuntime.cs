@@ -2,7 +2,6 @@ using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -20,8 +19,8 @@ internal sealed class ApprovalRuntime(
     INodeContext nodeContext)
     : RuntimeNode(executable)
 {
-    /// <summary>停驻时装入的输入，放行后按同名输出端口放出。</summary>
-    private NodeInputValues _inputs = NodeInputValues.Empty;
+    /// <summary>停驻时装入的输入内容，放行后按同名输出端口放出。</summary>
+    private INodeInputs _inputs = NodeInputValues.Empty;
 
     private bool _awaiting;
     private bool _canceled;
@@ -44,7 +43,7 @@ internal sealed class ApprovalRuntime(
     }
 
     /// <summary>装入本次输入并声明接收外部输入：停驻时保存输入端口取值，批准后按同名输出端口放出。已停驻或已取消时不再停驻。</summary>
-    public override void Activate(INodeContext context, NodeInputValues inputs)
+    public override void Activate(INodeContext context, INodeInputs inputs)
     {
         if (_canceled || _awaiting)
         {
@@ -64,11 +63,10 @@ internal sealed class ApprovalRuntime(
         Progress.Publish(CreatePublication(Progress.NextRevision()));
     }
 
-    /// <summary>按停驻输入构造一次发布：输出端口取自身声明与已连接输入端口，内容取该端口的停驻取值，
-    /// 触发位取停驻时记录的触发值。</summary>
+    /// <summary>按停驻输入构造一次发布：输出端口取自身声明与已连接输入端口，内容取该端口的停驻取值。
+    /// 批准事件本身放行，发布不携带输入的触发位。</summary>
     private Publication CreatePublication(long revision)
     {
-        Dictionary<PortName, bool> triggers = [];
         Dictionary<PortName, IReadOnlyList<ContextValue>> content = [];
         IEnumerable<PortName> ports = executable.Outputs
             .Select(port => port.Name)
@@ -76,14 +74,13 @@ internal sealed class ApprovalRuntime(
             .Distinct();
         foreach (PortName port in ports)
         {
-            triggers[port] = _inputs.Triggers(port);
             content[port] = _inputs.Values(port);
         }
 
-        return new Publication(revision, triggers, content);
+        return new Publication(revision, new Dictionary<PortName, bool>(), content);
     }
 
-    /// <summary>捕获停驻输入、待批准状态、进展与发布。</summary>
+    /// <summary>捕获停驻输入内容、待批准状态、进展与发布。</summary>
     public override NodeRecord? CaptureRecord() =>
         new ApprovalNodeRecord(
             Path,
@@ -97,10 +94,7 @@ internal sealed class ApprovalRuntime(
                             item.TargetInput,
                             RecordSources.Write(item.Value.Origin),
                             item.Value.Text))),
-                ],
-                [.. _inputs.Texts.Keys],
-                _inputs.Texts.Keys.ToDictionary(port => port, port => _inputs.Triggers(port)),
-                new Dictionary<PortName, string>(_inputs.StaticTexts.Texts)),
+                ]),
             _awaiting);
 
     /// <summary>恢复停驻输入与待批准状态，待批准节点重新声明接收外部输入。</summary>
@@ -121,7 +115,7 @@ internal sealed class ApprovalRuntime(
         }
     }
 
-    /// <summary>从存档重建停驻输入。</summary>
+    /// <summary>从存档重建停驻输入内容。</summary>
     private NodeInputValues ReadInputs(NodeInputValuesRecord state)
     {
         List<NodeInputValue> ordered = [];
@@ -134,11 +128,7 @@ internal sealed class ApprovalRuntime(
                 new ContextValue(RecordSources.Read(item.Value.Origin), item.Value.Text)));
         }
 
-        return new NodeInputValues(
-            ordered,
-            state.Connected.ToHashSet(),
-            state.Triggers,
-            new PortTexts(state.StaticTexts));
+        return new NodeInputValues(ordered, new HashSet<PortName>());
     }
 
     /// <summary>审批节点在快照里的一刻状态。</summary>

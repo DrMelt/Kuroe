@@ -40,7 +40,7 @@ internal sealed class RuntimeContainer(
     public override bool Canceled => _canceled;
 
     /// <summary>容器的一次执行：发布当前成员内容并捕获触发位。就绪与启动组消费由统一节点评估完成。</summary>
-    public override void Activate(INodeContext context, NodeInputValues inputs)
+    public override void Activate(INodeContext context, INodeInputs inputs)
     {
         if (!ContentReady)
         {

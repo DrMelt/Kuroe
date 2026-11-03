@@ -114,6 +114,10 @@ internal sealed class FlowGraphCompiler
             {
                 LinkExecutable(pending);
             }
+            else if (pending.Entry.IsContainer)
+            {
+                LinkContainerFrom(pending);
+            }
 
             LinkBindings(pending);
             LinkOutputs(pending);
@@ -128,37 +132,108 @@ internal sealed class FlowGraphCompiler
         {
             foreach (FromLink link in group.Links)
             {
-                if (link.Ref.Source is not { } label)
-                {
-                    _errors.Add(_scope.Node(pending.Path.Value,
-                        $"From 连接 {link.Ref.Display} 是对绑定端口的引用，请写明来源节点。"));
-                    continue;
-                }
-
-                if (SourceOf(label, pending, "From") is not { } from)
+                if (!TryResolveFrom(pending, link, container: false, out NodePath source, out InputPort input))
                 {
                     continue;
                 }
 
-                if (PortRules.Find(pending.Entry.EffectiveInputs, link.Input) is not { } input)
-                {
-                    _errors.Add(_scope.Node(pending.Path.Value,
-                        $"From 连接的目标输入端口 {link.Input} 没有在节点上声明。"));
-                    continue;
-                }
-
-                AddBinding(from, pending.Path, link.Ref.Port, link.Input, input.Type, input.Trigger, groupIndex);
+                AddBinding(
+                    source,
+                    pending.Path,
+                    link.Ref.Port,
+                    link.Input,
+                    input.Type,
+                    input.Trigger,
+                    link.Condition,
+                    groupIndex);
             }
 
             groupIndex++;
         }
     }
 
+    /// <summary>容器的 From 组编译成传入端口绑定：组内目标必须是动态输入，触发端口只门控发布，其余端口作为成员取值来源。
+    /// 绑定挂在容器自身，不进入驱动绑定表，来源版本不直接驱动发布。</summary>
+    private void LinkContainerFrom(Pending pending)
+    {
+        foreach (FromLink link in pending.Entry.From.SelectMany(group => group.Links))
+        {
+            if (!TryResolveFrom(pending, link, container: true, out NodePath source, out InputPort input))
+            {
+                continue;
+            }
+
+            pending.InputBindings[link.Input] = new InputBinding(
+                pending.Path,
+                source,
+                link.Ref.Port,
+                link.Input,
+                input.Type,
+                input.Trigger,
+                input.Trigger ? BindingRole.Gate : BindingRole.Alias,
+                Condition: link.Condition);
+        }
+    }
+
+    /// <summary>解析一条 From 连接：来源按作用域链解析，目标输入取自生效输入且必须是动态输入。
+    /// 容器的连接还要求来源在容器外部。</summary>
+    private bool TryResolveFrom(
+        Pending pending,
+        FromLink link,
+        bool container,
+        out NodePath source,
+        out InputPort input)
+    {
+        source = default;
+        input = default;
+
+        if (link.Ref.Source is not { } label)
+        {
+            _errors.Add(_scope.Node(pending.Path.Value,
+                $"From 连接 {link.Ref.Display} 是对绑定端口的引用，请写明来源节点。"));
+            return false;
+        }
+
+        if (SourceOf(label, pending, "From") is not { } resolved)
+        {
+            return false;
+        }
+
+        if (container && IsInside(pending, resolved))
+        {
+            _errors.Add(_scope.Node(pending.Path.Value,
+                $"From 连接 {link.Ref.Display} 的来源 {resolved} 必须在容器外部。"));
+            return false;
+        }
+
+        if (PortRules.Find(pending.Entry.EffectiveInputs, link.Input) is not { } declared)
+        {
+            _errors.Add(_scope.Node(pending.Path.Value,
+                $"From 连接的目标输入端口 {link.Input} 没有在节点上声明。"));
+            return false;
+        }
+
+        if (declared.IsStatic)
+        {
+            _errors.Add(_scope.Node(pending.Path.Value,
+                $"From 不能连接静态输入端口 {link.Input}，静态输入用 Bindings 绑定。"));
+            return false;
+        }
+
+        source = resolved;
+        input = declared;
+        return true;
+    }
+
+    /// <summary>来源是否落在节点自身或它的子树里。容器接线与容器静态绑定都要求来源在外部。</summary>
+    private static bool IsInside(Pending pending, NodePath source) =>
+        source == pending.Path || source.IsUnder(pending.Path);
+
     /// <summary>解析一条 From 连接的来源：开始是流程级来源，其余按作用域链解析。解析失败时给空来源。</summary>
     private NodePath? SourceOf(NodeLabel label, Pending referrer, string field) =>
         label == StartNode.ReservedLabel ? StartPath : Resolve(label, referrer, field)?.Path;
 
-    /// <summary>解析输入绑定的来源路径。@端口 应由展开层解析成具体来源，容器的绑定来源必须在容器外部。</summary>
+    /// <summary>解析静态输入绑定的来源路径。@端口 应由展开层解析成具体来源，容器的绑定来源必须在容器外部。</summary>
     private void LinkBindings(Pending pending)
     {
         if (pending.Entry.Bindings is not { Count: > 0 } bindings)
@@ -181,7 +256,7 @@ internal sealed class FlowGraphCompiler
                 continue;
             }
 
-            if (container && (source == pending.Path || source.IsUnder(pending.Path)))
+            if (container && IsInside(pending, source))
             {
                 _errors.Add(_scope.Node(pending.Path.Value,
                     $"输入绑定 {reference.Display} 的来源 {source} 必须在容器外部。"));
@@ -189,12 +264,6 @@ internal sealed class FlowGraphCompiler
             }
 
             InputPort? input = pending.Entry.EffectiveInputs.Find(target);
-            BindingRole role = input switch
-            {
-                { IsStatic: true } => BindingRole.Static,
-                { Trigger: true } => BindingRole.Gate,
-                _ => BindingRole.Alias,
-            };
             pending.InputBindings[target] = new InputBinding(
                 pending.Path,
                 source,
@@ -202,7 +271,7 @@ internal sealed class FlowGraphCompiler
                 target,
                 input?.Type,
                 input?.Trigger ?? false,
-                role);
+                BindingRole.Static);
         }
     }
 
@@ -241,8 +310,10 @@ internal sealed class FlowGraphCompiler
         PortName targetInput,
         PortType type,
         bool trigger,
+        TriggerCondition condition,
         int group) =>
-        _bindings.Add(new InputBinding(target, source, sourcePort, targetInput, type, trigger, BindingRole.Dynamic, group));
+        _bindings.Add(new InputBinding(
+            target, source, sourcePort, targetInput, type, trigger, BindingRole.Dynamic, group, condition));
 
     /// <summary>按标签在作用域子树里解析节点：从引用者所在容器逐层向外，每层先看直接子节点再看子树。找不到时记错误给空。</summary>
     private Pending? Resolve(NodeLabel label, Pending referrer, string field)

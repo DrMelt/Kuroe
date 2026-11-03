@@ -41,18 +41,18 @@ public sealed record NodeSpec
     /// <summary>引用的节点库定义名，非空即引用形态。</summary>
     public NodeName? Use { get; init; }
 
-    /// <summary>输入端口声明：执行节点与容器共用，值由 <see cref="Bindings"/> 或 <see cref="From"/> 提供；
+    /// <summary>输入端口声明：执行节点与容器共用，动态输入由 <see cref="From"/> 连接，静态输入由 <see cref="Bindings"/> 绑定；
     /// 成员用 @端口 引用容器传入端口。派发执行节点的 Text 输入端口可声明默认值，
     /// 默认值在 From 组没有连接该端口时提供内容。</summary>
     public IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
-    /// <summary>输入端口绑定：输入端口到来源端口引用，来源识别与 From 使用同一套作用域规则。
-    /// 参与方式由目标端口的模式决定：Constant 端口在运行期沿绑定链取值，不进入版本；Trigger 端口只门控容器发布；
-    /// Plain 端口作为容器入参，成员用 @端口 取用。容器绑定的来源必须在容器外部；执行节点只绑定静态输入端口，动态输入一律经 <see cref="From"/>。</summary>
+    /// <summary>静态输入绑定：输入端口到来源端口引用，来源识别与 From 使用同一套作用域规则。
+    /// Constant 端口在运行期沿绑定链取值，不进入版本。容器绑定的来源必须在容器外部；动态输入一律经 <see cref="From"/>。</summary>
     public IReadOnlyDictionary<PortName, PortRef>? Bindings { get; init; }
 
-    /// <summary>上游启动组：组是一套完整的输入绑定方案，组内是输入端口到来源端口的连接，组间任一齐备即启动。
-    /// 取用方式由输入端口的声明决定。库执行定义不写接线，由引用处注入；库容器成员与装配层节点自身声明。</summary>
+    /// <summary>上游 From 组：执行节点的组内输入全部齐备该组才成立，组间任一组成即可启动。
+    /// 容器只有一组，作为成员的传入端口接线。触发门控条件随连接给出。库执行定义不写接线，由引用处注入；
+    /// 库容器成员与装配层节点自身声明。</summary>
     public IReadOnlyList<FromGroup> From { get; init; } = [];
 
     /// <summary>输出端口表：所有节点共用。类型在编译期落定产出形态与消费方式，引用处按名字消费。

@@ -7,6 +7,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
@@ -389,7 +390,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 }
                 else
                 {
-                    // Trigger 为 false 的组先消耗；消耗后没有其他可驱动组时不再激活节点
+                    // 不满足触发条件的组先消耗；消耗后没有其他可驱动组时不再激活节点
                     if (ConsumeSuppressed(node, progress, plan) && plan.DrivenGroup(progress, this) is null)
                     {
                         return new EvaluateResult([]);
@@ -471,7 +472,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
     }
 
-    /// <summary>消耗所有由新版本驱动但存在 Trigger 为 false 的启动组，每组写一条信息记录。节点在跑、阻塞、取消、强制重跑或达到执行上限时不消耗。</summary>
+    /// <summary>消耗所有由新版本驱动但存在不满足触发条件绑定的启动组，每组写一条信息记录。节点在跑、阻塞、取消、强制重跑或达到执行上限时不消耗。</summary>
     private bool ConsumeSuppressed(NodeRuntime node, IInputProgress progress, NodeInputPlan plan)
     {
         if (!AcceptsConsumption(node, progress, plan))
@@ -506,17 +507,27 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         return node is not RuntimeExecutable executable || !executable.HasActive;
     }
 
-    /// <summary>记录一次抑制组消耗：给出节点、未触发的来源与端口。</summary>
+    /// <summary>记录一次抑制组消耗：给出节点、未满足触发条件的来源与端口。</summary>
     private void NoteSuppressed(NodeRuntime node, InputGroup group)
     {
         string ports = string.Join('、', group.Bindings
-            .Where(binding => !binding.Triggers(State(binding.Source)))
-            .Select(binding => $"{binding.Source}@{binding.SourcePort}"));
-        string message = $"{_task.Id} 的节点 {node.Path.Label} 有启动组未触发：{ports} 的产出为 false，本组已消耗，不再等待。";
+            .Where(binding => !binding.Admits(State(binding.Source)))
+            .Select(SuppressedBinding));
+        string message = $"{_task.Id} 的节点 {node.Path.Label} 有启动组未满足触发条件：{ports}，本组已消耗，不再等待。";
 
         _task.Journal.AppendInfo(message);
         _task.Registry.Report(new ExecutionNotice(NoticeLevel.Information, message));
         _task.Touch();
+    }
+
+    /// <summary>被抑制的绑定：来源端口、实际触发值与翻转条件。</summary>
+    private string SuppressedBinding(InputBinding binding)
+    {
+        ISourceState source = State(binding.Source);
+        bool fires = binding.SourcePort is { } port && source.Triggers(port);
+        string condition = binding.Condition == TriggerCondition.Negative ? "，翻转条件要求 false" : string.Empty;
+
+        return $"{binding.Source}@{binding.SourcePort} 的产出为 {(fires ? "true" : "false")}{condition}";
     }
 
     /// <summary>一次评估的结果：要通知的下游执行节点路径、激活方式，以及派发执行要用的输入。</summary>

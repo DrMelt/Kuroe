@@ -137,7 +137,7 @@ public sealed class FlowKuroeInfoTool : ITool
         return node.FindInput(modelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
     }
 
-    /// <summary>节点要求：类型属性、输入端口、上游启动组与输出端口。</summary>
+    /// <summary>节点要求：类型属性、输入端口、From 连接与输出端口。</summary>
     private static string Requirement(NodeSpec node)
     {
         List<string> parts = [];

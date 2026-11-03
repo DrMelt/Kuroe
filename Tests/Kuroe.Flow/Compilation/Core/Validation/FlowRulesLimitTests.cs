@@ -95,10 +95,13 @@ public sealed class FlowRulesLimitTests
             Type = ContainerNodeTypes.Type,
             MaxExecutions = max,
             Inputs = [new InputPort(StartPort)],
-            Bindings = new Dictionary<PortName, PortRef>
-            {
-                [StartPort] = source ?? PortRef.Named(StartNode.ReservedLabel, StartPort),
-            },
+            From =
+            [
+                new FromGroup(
+                [
+                    new FromLink(StartPort, source ?? PortRef.Named(StartNode.ReservedLabel, StartPort)),
+                ]),
+            ],
             Nodes = [.. members],
         };
 
