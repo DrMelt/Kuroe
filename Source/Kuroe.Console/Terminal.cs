@@ -15,6 +15,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     private readonly AnsiWriter errorWriter = new(error.Profile.Out.Writer, error.Profile.Capabilities);
     private bool _exclusive;
     private Frame? _frame;
+    private bool _pageShown;
 
     /// <summary>当前终端宽度。窗口尺寸变化后重新读取。</summary>
     private int Width => output.Profile.Width;
@@ -36,11 +37,7 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
     {
         lock (_gate)
         {
-            if (_frame is not null)
-            {
-                throw new InvalidOperationException("框内只能写出文本行。");
-            }
-
+            EnsureOutsideFrame();
             CloseLine();
             output.Write(renderable);
         }
@@ -54,13 +51,44 @@ internal sealed class Terminal(IAnsiConsole output, IAnsiConsole error)
 
     public void Hint(string text) => Write(text, Styles.Hint);
 
-    /// <summary>页面层级标题：路径段按 › 连接，标题按纯文本处理并加粗，横线与标题用强调色，横线占满终端宽度。层级之间由它划分，页内内容由框承载。</summary>
-    public void Page(params string[] path) =>
-        Write(new Rule($"[bold]{Markup.Escape(string.Join(" › ", path))}[/]")
+    /// <summary>页面层级标题：路径段按 › 连接，标题按纯文本处理并加粗，横线与标题用强调色，横线占满终端宽度。层级之间由它划分，页内内容由框承载。
+    /// 写页面标题即重绘页面：首个页面保留已有输出，其后先清理屏幕再写标题，标题从首行开始。</summary>
+    public void Page(params string[] path)
+    {
+        lock (_gate)
         {
-            Justification = Justify.Left,
-            Style = Styles.Page,
-        });
+            EnsureOutsideFrame();
+            CloseLine();
+            if (_pageShown)
+            {
+                ClearScreen();
+            }
+
+            _pageShown = true;
+            output.Write(new Rule($"[bold]{Markup.Escape(string.Join(" › ", path))}[/]")
+            {
+                Justification = Justify.Left,
+                Style = Styles.Page,
+            });
+        }
+    }
+
+    /// <summary>框内只能写文本行。</summary>
+    private void EnsureOutsideFrame()
+    {
+        if (_frame is not null)
+        {
+            throw new InvalidOperationException("框内只能写出文本行。");
+        }
+    }
+
+    /// <summary>清理可见屏幕与滚动区历史，光标回到左上角。写入器按输出能力决定是否写控制序列，不支持时页面按追加方式呈现。</summary>
+    private void ClearScreen()
+    {
+        outputWriter.EraseInDisplay(2);
+        outputWriter.ClearScrollback();
+        outputWriter.CursorPosition(1, 1);
+    }
 
     /// <summary>工具调用行。</summary>
     public void ToolCall(string text) => Write(text, Styles.Key);

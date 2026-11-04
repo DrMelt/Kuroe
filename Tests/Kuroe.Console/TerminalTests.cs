@@ -85,14 +85,71 @@ public sealed class TerminalTests
     [Fact]
     public void Page_uses_the_accent_color_and_bolds_the_title()
     {
-        using TestConsole output = new();
-        output.EmitAnsiSequences();
+        Terminal terminal = NewAnsiTerminal(out TestConsole output, out TestConsole error);
         output.Profile.Width = 40;
-        Terminal terminal = new(output, output);
 
         terminal.Page("主菜单", "任务");
 
         Assert.Contains("\u001b[1;38;5;14m", output.Output);
+        Assert.Empty(error.Output);
+    }
+
+    [Fact]
+    public void Page_keeps_the_banner_and_the_first_screen()
+    {
+        Terminal terminal = NewAnsiTerminal(out TestConsole output, out TestConsole error);
+        terminal.Line("Kuroe 已启动。");
+
+        terminal.Page("主菜单");
+
+        Assert.DoesNotContain("\u001b[2J", output.Output);
+        Assert.DoesNotContain("\u001b[1;1H", output.Output);
+        int banner = output.Output.IndexOf("Kuroe 已启动。", StringComparison.Ordinal);
+        int title = output.Output.IndexOf("主菜单", StringComparison.Ordinal);
+        Assert.True(banner >= 0, output.Output);
+        Assert.True(title > banner, output.Output);
+        Assert.DoesNotContain("\u001b[2J", error.Output);
+    }
+
+    [Fact]
+    public void Page_clears_the_display_and_the_scrollback_before_every_title_after_the_first()
+    {
+        Terminal terminal = NewAnsiTerminal(out TestConsole output, out TestConsole error);
+        terminal.Page("主菜单");
+
+        terminal.Page("主菜单");
+
+        int clear = output.Output.IndexOf("\u001b[2J\u001b[3J\u001b[1;1H", StringComparison.Ordinal);
+        int title = output.Output.LastIndexOf("主菜单", StringComparison.Ordinal);
+        Assert.True(clear >= 0, output.Output);
+        Assert.True(title > clear, output.Output);
+        Assert.DoesNotContain("\u001b[2J", error.Output);
+    }
+
+    [Fact]
+    public void Page_clears_on_every_redraw()
+    {
+        Terminal terminal = NewAnsiTerminal(out TestConsole output, out TestConsole error);
+
+        terminal.Page("主菜单");
+        terminal.Page("主菜单");
+        terminal.Page("主菜单");
+
+        Assert.Equal(2, output.Output.Split("\u001b[2J", StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("\u001b[2J", error.Output);
+    }
+
+    [Fact]
+    public void Page_writes_no_clear_sequence_without_ansi_support()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out TestConsole error);
+        terminal.Page("主菜单");
+
+        terminal.Page("主菜单");
+
+        Assert.DoesNotContain('\u001b', output.Output);
+        Assert.DoesNotContain('\u001b', error.Output);
+        Assert.Equal(2, output.Output.Split("主菜单").Length - 1);
     }
 
     [Fact]
@@ -226,6 +283,33 @@ public sealed class TerminalTests
         using Terminal.Frame frame = terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手");
 
         Assert.Throws<InvalidOperationException>(() => terminal.Write(new Text("内容")));
+    }
+
+    [Fact]
+    public void Page_rejects_a_page_inside_a_frame()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out _, out _);
+
+        using Terminal.Frame frame = terminal.OpenFrame(BoxKind.Reply, "Kuroe 助手");
+
+        Assert.Throws<InvalidOperationException>(() => terminal.Page("主菜单"));
+    }
+
+    /// <summary>建一套控制序列原样写出的终端，两个方向各自捕获。</summary>
+    private static Terminal NewAnsiTerminal(out TestConsole output, out TestConsole error)
+    {
+        output = NewAnsiConsole();
+        error = NewAnsiConsole();
+
+        return new Terminal(output, error);
+    }
+
+    private static TestConsole NewAnsiConsole()
+    {
+        TestConsole console = new();
+        console.EmitAnsiSequences();
+
+        return console;
     }
 
     private static string[] Rows(string output) =>

@@ -28,9 +28,10 @@ internal sealed class DialogueBrowser(
     {
         using (terminal.Exclusive())
         {
+            terminal.Page("主菜单", "Kuroe 助手");
+
             while (true)
             {
-                terminal.Page("主菜单", "Kuroe 助手");
                 terminal.Line($"当前模型 {models.Current?.Value ?? "未选择"} · 回复语言 {settings.AssistantLanguage}");
                 terminal.NewLine();
 

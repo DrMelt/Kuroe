@@ -662,7 +662,7 @@ public sealed partial class TaskAndReplTests
         await cli.Assistant.BrowseAsync();
 
         Assert.Contains("Kuroe >", cli.Output.Output);
-        Assert.Equal(2, cli.Output.Output.Split("── 主菜单 › Kuroe 助手").Length - 1);
+        Assert.Equal(1, cli.Output.Output.Split("── 主菜单 › Kuroe 助手").Length - 1);
     }
 
     [Fact]
