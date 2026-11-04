@@ -381,7 +381,8 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
                 ToDescription(entry.Description),
                 entry.Value,
                 reference,
-                entry.Mode));
+                entry.Mode,
+                entry.Default));
         }
 
         return errors.Count > 0 ? errors : result;

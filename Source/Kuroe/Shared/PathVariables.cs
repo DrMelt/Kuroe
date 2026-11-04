@@ -2,7 +2,7 @@ using ErrorOr;
 
 namespace Kuroe.Shared;
 
-/// <summary>路径变量映射的装载期规则与运行期解析：变量名合法，端口已声明且承载文本，变量集合与占位符一一对应。</summary>
+/// <summary>路径变量的规则入口与运行期解析：装载期校验变量与占位符，运行期把变量解析为工作区内的路径。</summary>
 public static class PathVariables
 {
     /// <summary>作为相对路径基准的保留变量名。</summary>
@@ -15,40 +15,8 @@ public static class PathVariables
     public static IReadOnlyList<string> Validate(
         IReadOnlyDictionary<string, string> variables,
         IReadOnlyList<string> placeholders,
-        Func<string, bool?> portIsText)
-    {
-        List<string> errors = [];
-        foreach ((string variable, string port) in variables)
-        {
-            if (PathTemplate.InvalidNameReason(variable) is { } reason)
-            {
-                errors.Add(reason);
-                continue;
-            }
-
-            bool? isText = portIsText(port);
-            if (isText is null)
-            {
-                errors.Add($"路径变量 {variable} 映射到未声明的输入端口 {port}。");
-            }
-            else if (isText == false)
-            {
-                errors.Add($"路径变量 {variable} 映射到的输入端口 {port} 必须是 Text。");
-            }
-        }
-
-        foreach (string placeholder in placeholders.Except(variables.Keys))
-        {
-            errors.Add($"路径占位符 {{{placeholder}}} 没有对应的路径变量映射。");
-        }
-
-        foreach (string variable in variables.Keys.Except(placeholders))
-        {
-            errors.Add($"路径变量 {variable} 没有被 Path 或 Directory 引用。");
-        }
-
-        return errors;
-    }
+        Func<string, bool?> portIsText) =>
+        VariableMappings.Validate(variables, placeholders, portIsText, "路径", "Path");
 
     /// <summary>从映射端口读出变量值并解析为工作区内的绝对路径，root 变量给出相对路径基准。
     /// 端口未连接、取值为空或越出工作区时给出错误。</summary>

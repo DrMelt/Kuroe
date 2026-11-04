@@ -42,7 +42,7 @@ internal static class ToolPortRules
 
             foreach ((string variable, string portName) in ports)
             {
-                if (PathTemplate.InvalidNameReason(variable) is { } invalid)
+                if (PathTemplate.InvalidNameReason(variable, "路径") is { } invalid)
                 {
                     Report($"工具 {key} 的路径变量名不合法：{invalid}");
                     continue;

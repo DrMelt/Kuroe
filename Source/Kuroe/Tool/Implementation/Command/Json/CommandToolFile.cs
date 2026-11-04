@@ -207,7 +207,7 @@ public sealed class CommandToolFile : IToolFile
 
         void Add(string name)
         {
-            if (PathTemplate.InvalidNameReason(name) is { } reason)
+            if (PathTemplate.InvalidNameReason(name, "路径") is { } reason)
             {
                 errors.Add(CommandToolErrors.Invalid(tool, reason));
                 return;

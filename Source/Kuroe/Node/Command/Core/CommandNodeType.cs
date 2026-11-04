@@ -9,7 +9,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点类型：不派发模型执行，激活时按路径变量解析执行目录并执行一次命令，把合并输出写入唯一的输出端口。</summary>
+/// <summary>命令节点类型：不派发模型执行，激活时按命令变量展开执行目录与参数并执行一次命令，把合并输出写入唯一的输出端口。</summary>
 public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process) : INodeType, INodeTypeValidation, INodeRuntimeFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
@@ -38,10 +38,10 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
         Reject(!node.Inputs.Any(port => port.Type.Semantics == PortSemantics.Signal),
             "命令执行节点必须声明至少一个 Signal 输入端口作为触发。");
 
-        IReadOnlySet<string> variablePorts = CommandPathVariables.Validate(node, Parameters, message =>
+        IReadOnlySet<string> variablePorts = CommandVariables.Validate(node, Parameters, message =>
             fail(scope.Node(node.Label.Value, message)));
         Reject(node.Inputs.Any(port => PortRules.CarriesText(port.Type) && !variablePorts.Contains(port.Name.Value)),
-            "命令执行节点的 Text 输入必须是路径变量端口。");
+            "命令执行节点的 Text 输入必须是命令变量端口。");
 
         Reject(node.Outputs.Count != 1, "命令执行节点必须声明一个输出端口，命令输出写入该端口。");
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");

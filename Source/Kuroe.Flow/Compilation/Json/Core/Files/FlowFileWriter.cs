@@ -79,6 +79,7 @@ static class FlowFileWriter
                     Description = port.Description,
                     Value = port.Value,
                     Ref = port.Ref,
+                    Default = port.Default,
                 },
                 FlowJson.Default.PortEntryDto)),
         ];

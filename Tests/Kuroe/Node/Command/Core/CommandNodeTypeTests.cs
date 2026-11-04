@@ -75,7 +75,7 @@ public sealed class CommandNodeTypeTests
         ];
 
         Assert.Contains(Failures(Type, Node(inputs)),
-            error => error.EndsWith("命令执行节点的 Text 输入必须是路径变量端口。"));
+            error => error.EndsWith("命令执行节点的 Text 输入必须是命令变量端口。"));
     }
 
     [Fact]
@@ -94,7 +94,76 @@ public sealed class CommandNodeTypeTests
         ];
 
         Assert.Contains(Failures(type, Node(inputs, type: type)),
-            error => error.EndsWith("路径变量 root 映射到的输入端口 任务路径 必须是 Text。"));
+            error => error.EndsWith("命令变量 root 映射到的输入端口 任务路径 必须是 Text。"));
+    }
+
+    [Fact]
+    public void Argument_placeholders_require_variable_mapping()
+    {
+        CommandParameters parameters = Parameters with
+        {
+            Arguments = ["clone", "--branch", "{branch}"],
+        };
+        CommandNodeType type = new(parameters, Process);
+
+        Assert.Contains(Failures(type, Node(type: type)),
+            error => error.EndsWith("命令占位符 {branch} 没有对应的命令变量映射。"));
+    }
+
+    [Fact]
+    public void Argument_placeholders_accept_mapped_text_inputs()
+    {
+        CommandParameters parameters = Parameters with
+        {
+            Arguments = ["clone", "{url}"],
+            Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
+        };
+        CommandNodeType type = new(parameters, Process);
+        InputPort[] inputs =
+        [
+            new(new PortName("仓库地址"), PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+
+        Assert.Empty(Failures(type, Node(inputs, type: type)));
+    }
+
+    [Fact]
+    public void A_variable_not_used_by_arguments_is_rejected()
+    {
+        CommandParameters parameters = Parameters with
+        {
+            Arguments = ["clone"],
+            Variables = new Dictionary<string, string> { ["url"] = "仓库地址" },
+        };
+        CommandNodeType type = new(parameters, Process);
+        InputPort[] inputs =
+        [
+            new(new PortName("仓库地址"), PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+
+        Assert.Contains(Failures(type, Node(inputs, type: type)),
+            error => error.EndsWith("命令变量 url 没有被 Directory 或 Arguments 引用。"));
+    }
+
+    [Fact]
+    public void Variable_names_must_not_contain_blanks()
+    {
+        CommandParameters parameters = Parameters with
+        {
+            Arguments = ["build", "{bad name}"],
+            Variables = new Dictionary<string, string> { ["bad name"] = "任务路径" },
+        };
+        CommandNodeType type = new(parameters, Process);
+        InputPort[] inputs =
+        [
+            new(new PortName("任务路径"), PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+
+        Assert.Contains(Failures(type, Node(inputs, type: type)),
+            error => error.EndsWith("命令变量名 bad name 不能含空白与花括号。"));
     }
 
     [Fact]

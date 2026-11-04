@@ -28,4 +28,16 @@ public sealed class PortLabelsTests
 
         Assert.Equal("来源@结论", link.SourceLabel());
     }
+
+    [Fact]
+    public void Start_label_shows_the_default_value()
+    {
+        Port port = new(
+            new PortName("分支"),
+            PortTypes.Text,
+            mode: PortMode.Constant,
+            defaultValue: "main");
+
+        Assert.Equal("分支，默认 main·常量", port.StartLabel());
+    }
 }

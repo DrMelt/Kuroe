@@ -3,12 +3,11 @@ using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Process;
-using Kuroe.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点的运行期对象：消费引擎装入的输入，按路径变量解析执行目录并执行一次命令，成功时按唯一输出端口放出合并输出，失败停在阻塞。</summary>
+/// <summary>命令节点的运行期对象：消费引擎装入的输入，按命令变量展开执行目录与参数并执行一次命令，成功时按唯一输出端口放出合并输出，失败停在阻塞。</summary>
 internal sealed class CommandRuntime(ExecutableNode executable, CommandParameters parameters, IProcessRunner process)
     : SelfDrivenRuntime(executable)
 {
@@ -24,10 +23,36 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
     /// <inheritdoc/>
     protected override string? Produce(INodeInputs inputs)
     {
-        string? failure = ResolveDirectory(inputs, out string workingDirectory);
-        if (failure is not null)
+        ErrorOr<CommandVariableValues> variables = CommandVariables.Resolve(
+            Parameters.Variables,
+            port => inputs.Text(new PortName(port)),
+            Parameters.RootDirectory);
+        if (variables.IsError)
         {
-            return failure;
+            return variables.FirstError.Description;
+        }
+
+        string workingDirectory = variables.Value.BaseDirectory;
+        if (Parameters.Directory is { Length: > 0 } directory)
+        {
+            ErrorOr<string> expanded = CommandVariables.ExpandDirectory(
+                directory,
+                variables.Value,
+                Parameters.RootDirectory);
+            if (expanded.IsError)
+            {
+                return expanded.FirstError.Description;
+            }
+
+            workingDirectory = expanded.Value;
+        }
+
+        ErrorOr<IReadOnlyList<string>> arguments = CommandVariables.ExpandArguments(
+            Parameters.Arguments,
+            variables.Value.Variables);
+        if (arguments.IsError)
+        {
+            return arguments.FirstError.Description;
         }
 
         ProcessResult result;
@@ -35,7 +60,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
         {
             result = process.Run(
                 Parameters.Program,
-                Parameters.Arguments,
+                arguments.Value,
                 workingDirectory,
                 TimeSpan.FromSeconds(Parameters.TimeoutSeconds));
         }
@@ -59,46 +84,6 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
 
         return null;
     }
-
-    /// <summary>按路径变量解析执行目录，未声明 Directory 时执行目录即路径基准。</summary>
-    private string? ResolveDirectory(INodeInputs inputs, out string workingDirectory)
-    {
-        workingDirectory = string.Empty;
-
-        ErrorOr<PathResolution> resolved = PathVariables.Resolve(
-            Parameters.Variables,
-            port => PortText(inputs, new PortName(port)),
-            Parameters.RootDirectory);
-        if (resolved.IsError)
-        {
-            return resolved.FirstError.Description;
-        }
-
-        if (Parameters.Directory is not { Length: > 0 } directory)
-        {
-            workingDirectory = resolved.Value.BaseDirectory;
-
-            return null;
-        }
-
-        ErrorOr<string> expanded = PathVariables.Expand(
-            directory,
-            resolved.Value.Variables,
-            resolved.Value.BaseDirectory,
-            Parameters.RootDirectory,
-            "Directory");
-        if (expanded.IsError)
-        {
-            return expanded.FirstError.Description;
-        }
-
-        workingDirectory = expanded.Value;
-
-        return null;
-    }
-
-    /// <summary>按输入端口取文本：静态端口给静态值，动态端口给输入值。</summary>
-    private static string? PortText(INodeInputs inputs, PortName port) => inputs.Text(port);
 
     /// <summary>输出按声明上限截断，0 表示不限制。</summary>
     private string Limit(string text) =>

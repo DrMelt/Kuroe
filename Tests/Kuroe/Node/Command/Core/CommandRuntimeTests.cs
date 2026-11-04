@@ -17,6 +17,9 @@ public sealed class CommandRuntimeTests
     private static readonly NodePath TargetPath = NodePath.Of("整体", "节点");
     private static readonly NodePath SourcePath = NodePath.Of("整体", "来源");
     private static readonly NodePath VariableSourcePath = NodePath.Of("整体", "基准");
+    private static readonly NodePath RepositorySourcePath = NodePath.Of("整体", "仓库");
+    private static readonly NodePath BranchSourcePath = NodePath.Of("整体", "分支");
+    private static readonly NodePath SubdirectorySourcePath = NodePath.Of("整体", "子目录");
     private static readonly PortName OutputPort = new("输出");
     private static readonly string Root = Path.GetTempPath();
 
@@ -171,6 +174,63 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
+    public void Arguments_expand_variables_without_path_validation()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        InputPort[] inputs =
+        [
+            new(new PortName("任务路径"), PortTypes.Text),
+            new(new PortName("仓库地址"), PortTypes.Text),
+            new(new PortName("分支名"), PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+        InputBinding[] incoming =
+        [
+            new(TargetPath, SourcePath, new PortName("结果"), new PortName("触发"), PortTypes.Signal, Trigger: true),
+            new(TargetPath, VariableSourcePath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
+            new(TargetPath, RepositorySourcePath, new PortName("结果"), new PortName("仓库地址"), PortTypes.Text),
+            new(TargetPath, BranchSourcePath, new PortName("结果"), new PortName("分支名"), PortTypes.Text),
+        ];
+        ExecutableNode node = Node(
+            process,
+            arguments: ["clone", "--branch", "{分支名}", "{仓库地址}", "."],
+            variables: new Dictionary<string, string>
+            {
+                ["root"] = "任务路径",
+                ["仓库地址"] = "仓库地址",
+                ["分支名"] = "分支名",
+            },
+            inputs: inputs,
+            incoming: incoming);
+        StubNodeContext context = Sources(
+            node,
+            (VariableSourcePath, Root),
+            (RepositorySourcePath, @"D:\outside\repo.git"),
+            (BranchSourcePath, "feature/x"));
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(["clone", "--branch", "feature/x", @"D:\outside\repo.git", "."], process.Arguments);
+        Assert.Equal(Root, process.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Unmapped_argument_placeholder_blocks_the_node()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process, arguments: ["clone", "{missing}"]);
+        StubNodeContext context = Context(node);
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(NodeState.Blocked, runtime.Snapshot().State);
+        Assert.Contains("含未映射的变量 missing", runtime.TakeFailure());
+        Assert.Equal(0, process.Calls);
+    }
+
+    [Fact]
     public void Execute_uses_the_root_variable_as_the_default_directory()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -212,6 +272,66 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
+    public void Relative_root_is_resolved_before_expanding_the_directory()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process, directoryTemplate: "{root}");
+        StubNodeContext context = Context(node, "sub");
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Relative_root_is_the_base_of_the_directory_template()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        ExecutableNode node = Node(process, directoryTemplate: "{root}/src");
+        StubNodeContext context = Context(node, "sub");
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(Path.Combine(Root, "sub", "src"), process.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Directory_variables_are_relative_to_the_root()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
+        InputPort[] inputs =
+        [
+            new(new PortName("任务路径"), PortTypes.Text),
+            new(new PortName("子目录"), PortTypes.Text),
+            new(new PortName("触发"), PortTypes.Signal),
+        ];
+        InputBinding[] incoming =
+        [
+            new(TargetPath, SourcePath, new PortName("结果"), new PortName("触发"), PortTypes.Signal, Trigger: true),
+            new(TargetPath, VariableSourcePath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
+            new(TargetPath, SubdirectorySourcePath, new PortName("结果"), new PortName("子目录"), PortTypes.Text),
+        ];
+        ExecutableNode node = Node(
+            process,
+            directoryTemplate: "{root}/{sub}",
+            variables: new Dictionary<string, string>
+            {
+                ["root"] = "任务路径",
+                ["sub"] = "子目录",
+            },
+            inputs: inputs,
+            incoming: incoming);
+        StubNodeContext context = Sources(node, (VariableSourcePath, "task"), (SubdirectorySourcePath, "src"));
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.Equal(Path.Combine(Root, "task", "src"), process.WorkingDirectory);
+    }
+
+    [Fact]
     public void Variable_root_outside_the_workspace_blocks_the_node()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("ok");
@@ -247,6 +367,17 @@ public sealed class CommandRuntimeTests
         return context;
     }
 
+    private static StubNodeContext Sources(ExecutableNode node, params (NodePath Path, string Value)[] sources)
+    {
+        StubNodeContext context = new(node);
+        foreach ((NodePath path, string value) in sources)
+        {
+            context.AddSource(new SourceRuntime(path, value));
+        }
+
+        return context;
+    }
+
     private static NodeInputValues Inputs(StubNodeContext context) =>
         NodeInputValues.From(Assert.IsType<NodeInputPlan>(context.Plan(TargetPath)).Groups[0], context);
 
@@ -257,19 +388,26 @@ public sealed class CommandRuntimeTests
         FakeProcessRunner process,
         int maxChars = CommandNodeTypes.DefaultMaxChars,
         string? directory = null,
-        bool failOnNonZeroExitCode = false) => new()
+        bool failOnNonZeroExitCode = false,
+        IReadOnlyList<string>? arguments = null,
+        IReadOnlyDictionary<string, string>? variables = null,
+        InputPort[]? inputs = null,
+        InputBinding[]? incoming = null,
+        string? directoryTemplate = null) => new()
         {
             Path = TargetPath,
-            Type = CommandNodeTypes.Create(Parameters(maxChars, directory, failOnNonZeroExitCode), process),
+            Type = CommandNodeTypes.Create(
+                Parameters(maxChars, directory, failOnNonZeroExitCode, arguments, variables, directoryTemplate),
+                process),
             Spec = new ExecutableSpec(),
-            Inputs =
+            Inputs = inputs ??
             [
                 new InputPort(new PortName("任务路径"), PortTypes.Text),
                 new InputPort(new PortName("触发"), PortTypes.Signal),
             ],
             Outputs = [new Port(OutputPort, PortTypes.Text)],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
-            Incoming =
+            Incoming = incoming ??
             [
                 new InputBinding(
                     TargetPath,
@@ -290,12 +428,15 @@ public sealed class CommandRuntimeTests
     private static CommandParameters Parameters(
         int maxChars,
         string? directory,
-        bool failOnNonZeroExitCode) => new()
+        bool failOnNonZeroExitCode,
+        IReadOnlyList<string>? arguments = null,
+        IReadOnlyDictionary<string, string>? variables = null,
+        string? directoryTemplate = null) => new()
         {
             Program = "dotnet",
-            Arguments = ["--version"],
-            Directory = directory is null ? null : $"{{root}}/{directory}",
-            Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
+            Arguments = arguments ?? ["--version"],
+            Directory = directoryTemplate ?? (directory is null ? null : $"{{root}}/{directory}"),
+            Variables = variables ?? new Dictionary<string, string> { ["root"] = "任务路径" },
             RootDirectory = Root,
             TimeoutSeconds = 5,
             MaxChars = maxChars,

@@ -104,6 +104,53 @@ public sealed class ContextTests
             error => error.Description.Contains(expected));
     }
 
+    /// <summary>省略带默认值的开始端口时，任务输入与执行输入使用默认值。</summary>
+    [Fact]
+    public void Omitted_start_port_falls_back_to_default()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
+
+        TaskSnapshot done = environment.Settle(environment.Submit(
+            StartInputs.Single(new PortName("目标"), "补齐 README")));
+        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+
+        Assert.Equal("main", done.Inputs.Text(new PortName("分支")));
+        Assert.Equal(["补齐 README", "main"], execution.Input.Inputs.Select(value => value.Text));
+    }
+
+    /// <summary>提交值优先于开始端口默认值。</summary>
+    [Fact]
+    public void Submitted_start_port_wins_over_default()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
+
+        TaskSnapshot done = environment.Settle(environment.Submit(new StartInputs(
+        [
+            new StartInput(new PortName("目标"), "补齐 README"),
+            new StartInput(new PortName("分支"), "feature/x"),
+        ])));
+        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+
+        Assert.Equal("feature/x", done.Inputs.Text(new PortName("分支")));
+        Assert.Equal(["补齐 README", "feature/x"], execution.Input.Inputs.Select(value => value.Text));
+    }
+
+    /// <summary>带默认值的端口提交空白值仍被拒绝。</summary>
+    [Fact]
+    public void Blank_submitted_default_port_is_rejected()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(StartDefaultFlow);
+
+        var submitted = environment.Tasks.Submit(new StartInputs(
+        [
+            new StartInput(new PortName("目标"), "补齐 README"),
+            new StartInput(new PortName("分支"), " "),
+        ]), new FlowName("默认"), null);
+
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("开始端口 分支 的输入不能为空。"));
+    }
+
     /// <summary>组内省略带默认值的输入端口时，执行输入追加声明值。</summary>
     [Fact]
     public void Omitted_input_port_falls_back_to_declared_default()
@@ -239,6 +286,38 @@ public sealed class ContextTests
                       { "结论": "准备乙@结论" }
                     ]
                   }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    /// <summary>开始声明一个带默认值的提交端口，下游读取默认值。</summary>
+    private const string StartDefaultFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "分支", "Type": "Text", "Default": "main" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ]
+              },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "目标" },
+                  { "Name": "分支" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "From": [ { "目标": "Start@目标", "分支": "Start@分支" } ],
+                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标", "分支": "@分支" } ] }
                 ]
               }
             }

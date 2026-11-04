@@ -215,6 +215,38 @@ public sealed class InputFormTests
     }
 
     [Fact]
+    public void Form_starts_with_initial_values_and_submits_them()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushKey(ConsoleKey.Enter);
+
+        IReadOnlyList<string>? values = new InputForm(
+            terminal,
+            "填写",
+            [new FormField("分支", Initial: "main")]).Run();
+
+        Assert.Equal(["main"], values);
+        Assert.Contains("main", output.Output);
+    }
+
+    [Fact]
+    public void Form_allows_rewriting_an_initial_value()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushKey(ConsoleKey.DownArrow);
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushTextWithEnter("dev");
+        output.Input.PushKey(ConsoleKey.Enter);
+
+        IReadOnlyList<string>? values = new InputForm(
+            terminal,
+            "填写",
+            [new FormField("分支", Initial: "main")]).Run();
+
+        Assert.Equal(["dev"], values);
+    }
+
+    [Fact]
     public void Form_without_fields_returns_an_empty_result_without_a_menu()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

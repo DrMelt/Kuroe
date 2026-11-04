@@ -38,7 +38,7 @@ internal static class CliCommandLine
         Option<string?> title = new("--title", "-t") { Description = "任务标题，未指定时取第一个开始输入的首行" };
         Option<string[]> input = new("--input", "-i")
         {
-            Description = "开始端口输入，写作 端口=值，每个不带固定值的开始端口各给一项",
+            Description = "开始端口输入，写作 端口=值，不带固定值与默认值的开始端口各给一项",
             Arity = ArgumentArity.OneOrMore,
         };
         const string unsupported = "run 不接受 --answer 或 --approve，流程不能包含等待外部输入的节点。";

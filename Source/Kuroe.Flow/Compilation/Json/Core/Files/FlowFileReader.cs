@@ -60,7 +60,7 @@ static class FlowFileReader
         string name = dto.Name?.Trim() ?? string.Empty;
         NodeScope scope = NodeScope.Flow(name);
 
-        ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name);
+        ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name, allowDefault: true);
         if (startOutputs.IsError)
         {
             errors.AddRange(startOutputs.ErrorsOrEmptyList);
@@ -286,7 +286,8 @@ static class FlowFileReader
     private static ErrorOr<IReadOnlyList<PortDocument>> ReadPorts(
         List<JsonElement>? entries,
         NodeScope scope,
-        string label)
+        string label,
+        bool allowDefault = false)
     {
         if (entries is not { Count: > 0 })
         {
@@ -295,11 +296,12 @@ static class FlowFileReader
 
         List<PortDocument> result = [];
         List<Error> errors = [];
+        string kind = allowDefault ? "开始端口" : "输出端口";
         foreach (JsonElement entry in entries)
         {
             if (entry.ValueKind != JsonValueKind.Object)
             {
-                errors.Add(scope.Node(label, "输出端口条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
+                errors.Add(scope.Node(label, $"{kind}条目必须是带 Name 的对象，类型写 Type，说明写 Description。"));
                 continue;
             }
 
@@ -309,6 +311,7 @@ static class FlowFileReader
             string? description = null;
             string? value = null;
             string? reference = null;
+            string? defaultValue = null;
             bool invalid = false;
             foreach (JsonProperty property in entry.EnumerateObject())
             {
@@ -317,7 +320,7 @@ static class FlowFileReader
                     case "name":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Name 键必须是端口名。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Name 键必须是端口名。"));
                             invalid = true;
                         }
                         else
@@ -330,7 +333,7 @@ static class FlowFileReader
                     case "type":
                         if (!TryPortType(property.Value, out PortType parsedType))
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Type 应为已注册的端口类型名。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Type 应为已注册的端口类型名。"));
                             invalid = true;
                         }
                         else
@@ -343,7 +346,7 @@ static class FlowFileReader
                     case "description":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Description 键必须是说明文本。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Description 键必须是说明文本。"));
                             invalid = true;
                         }
                         else
@@ -356,7 +359,7 @@ static class FlowFileReader
                     case "ref":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Ref 键必须是 来源@端口 或 @端口 引用。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Ref 键必须是 来源@端口 或 @端口 引用。"));
                             invalid = true;
                         }
                         else
@@ -369,7 +372,7 @@ static class FlowFileReader
                     case "value":
                         if (property.Value.ValueKind != JsonValueKind.String)
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Value 键必须是文本。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Value 键必须是文本。"));
                             invalid = true;
                         }
                         else
@@ -382,7 +385,7 @@ static class FlowFileReader
                     case "mode":
                         if (!TryPortMode(property.Value, out PortMode parsedMode))
                         {
-                            errors.Add(scope.Node(label, "输出端口的 Mode 应为 Plain、Trigger 或 Constant。"));
+                            errors.Add(scope.Node(label, $"{kind}的 Mode 应为 Plain、Trigger 或 Constant。"));
                             invalid = true;
                         }
                         else
@@ -392,9 +395,24 @@ static class FlowFileReader
 
                         break;
 
+                    case "default" when allowDefault:
+                        if (property.Value.ValueKind != JsonValueKind.String)
+                        {
+                            errors.Add(scope.Node(label, $"{kind}的 Default 键必须是文本。"));
+                            invalid = true;
+                        }
+                        else
+                        {
+                            defaultValue = property.Value.GetString();
+                        }
+
+                        break;
+
                     default:
-                        errors.Add(scope.Node(label,
-                            $"输出端口不认识键 {property.Name}，条目写 Name、Type、Mode、Description、Value 与 Ref。"));
+                        string keys = allowDefault
+                            ? "Name、Type、Mode、Description、Value、Ref 与 Default"
+                            : "Name、Type、Mode、Description、Value 与 Ref";
+                        errors.Add(scope.Node(label, $"{kind}不认识键 {property.Name}，条目写 {keys}。"));
                         invalid = true;
                         break;
                 }
@@ -402,7 +420,7 @@ static class FlowFileReader
 
             if (!invalid)
             {
-                result.Add(new PortDocument(name ?? string.Empty, type, mode, description, value, reference));
+                result.Add(new PortDocument(name ?? string.Empty, type, mode, description, value, reference, defaultValue));
             }
         }
 

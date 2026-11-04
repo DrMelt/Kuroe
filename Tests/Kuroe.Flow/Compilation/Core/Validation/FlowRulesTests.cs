@@ -204,6 +204,16 @@ public sealed class FlowRulesTests
             Errors(Flow(Container("整体", Text("分析") with { Outputs = [P("结论"), P("结论")] }))));
 
     [Fact]
+    public void Node_output_default_is_rejected() =>
+        Assert.Equal(
+            [NodeError("干活", "输出端口 结论 不能写 Default，Default 只用于开始端口。")],
+            Errors(Flow(
+                Container("整体", Exec("干活", new ExecutableSpec()) with
+                {
+                    Outputs = [P("结论") with { Default = "x" }],
+                }))));
+
+    [Fact]
     public void Reference_to_missing_node_is_rejected() =>
         Assert.Equal(
             [MemberError("容器/内部", "From 引用的节点 不存在 不在流程里。")],

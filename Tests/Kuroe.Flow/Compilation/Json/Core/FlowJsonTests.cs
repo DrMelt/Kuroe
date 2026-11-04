@@ -141,6 +141,17 @@ public sealed class FlowJsonTests
         Assert.DoesNotContain("\"Default\"", text);
     }
 
+    /// <summary>端口条目写了 Default 时按原样写出。</summary>
+    [Fact]
+    public void Port_entry_writes_default_when_set()
+    {
+        PortEntryDto entry = new() { Name = "分支", Default = "main" };
+
+        string text = JsonSerializer.Serialize(entry, FlowJson.WriteOptions.GetTypeInfo(typeof(PortEntryDto)));
+
+        Assert.Contains("\"Default\": \"main\"", text);
+    }
+
     /// <summary>写侧缩进输出，非 ASCII 字符不转义，节点类型写成枚举名字。</summary>
     [Fact]
     public void Write_keeps_indentation_and_readable_text()

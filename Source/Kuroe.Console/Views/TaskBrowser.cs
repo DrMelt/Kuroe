@@ -148,7 +148,8 @@ internal sealed class TaskBrowser(
         }
     }
 
-    /// <summary>按开始端口询问不带固定值且未绑定宿主输入的项目，每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
+    /// <summary>按开始端口询问不带固定值且未绑定宿主输入的项目，默认值作为初始内容预填。
+    /// 每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
     private StartInputs? AskInputs(FlowDefinition flow)
     {
         List<Port> ports = [.. flow.StartOutputs.Where(port =>
@@ -166,7 +167,7 @@ internal sealed class TaskBrowser(
         InputForm form = new(
             terminal,
             "开始输入",
-            [.. ports.Select(port => new FormField(port.Name.Value, port.Description, FieldKind.Multiline))],
+            [.. ports.Select(port => new FormField(port.Name.Value, port.Description, FieldKind.Multiline, port.Default))],
             info);
 
         if (form.Run() is not { } values)

@@ -6,13 +6,13 @@ public sealed record CommandParameters
     /// <summary>要执行的程序，程序名或路径。</summary>
     public required string Program { get; init; }
 
-    /// <summary>传给程序的参数，逐项传入，不经 shell 解释。</summary>
+    /// <summary>传给程序的参数，逐项传入，不经 shell 解释，可含 `{变量}` 占位符。</summary>
     public required IReadOnlyList<string> Arguments { get; init; }
 
     /// <summary>执行目录原文，可含路径变量；为空时执行目录即变量基准。</summary>
     public required string? Directory { get; init; }
 
-    /// <summary>路径变量名到输入端口名的映射。</summary>
+    /// <summary>命令变量名到输入端口名的映射，变量用于 Directory 与 Arguments 的占位符。</summary>
     public IReadOnlyDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
 
     /// <summary>工作区根目录，解析后的路径必须落在它之内。</summary>

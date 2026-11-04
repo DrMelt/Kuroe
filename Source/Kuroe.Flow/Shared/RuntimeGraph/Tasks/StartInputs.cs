@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 public readonly record struct StartInput(PortName Port, string Text);
 
 /// <summary>任务的开始输入表：按开始端口给出的文本，只覆盖不带固定值的开始端口。
-/// 提交校验保证端口已声明、不重复且文本非空。</summary>
+/// 提交校验保证端口已声明、不重复且文本非空；带默认值的端口省略时由提交层补齐。</summary>
 public sealed class StartInputs
 {
     private readonly List<StartInput> _values;

@@ -25,10 +25,10 @@ public sealed class PathTemplateTests
     [Fact]
     public void Invalid_name_reason_rejects_blank_and_braces()
     {
-        Assert.NotNull(PathTemplate.InvalidNameReason(" "));
-        Assert.NotNull(PathTemplate.InvalidNameReason("a b"));
-        Assert.NotNull(PathTemplate.InvalidNameReason("a{b}"));
-        Assert.Null(PathTemplate.InvalidNameReason("root"));
+        Assert.Equal("路径变量名不能为空。", PathTemplate.InvalidNameReason(" ", "路径"));
+        Assert.Equal("命令变量名 a b 不能含空白与花括号。", PathTemplate.InvalidNameReason("a b", "命令"));
+        Assert.NotNull(PathTemplate.InvalidNameReason("a{b}", "路径"));
+        Assert.Null(PathTemplate.InvalidNameReason("root", "路径"));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class PathTemplateTests
 
         Assert.Contains(errors, error => error.Contains("项目路径 必须是 Text", StringComparison.Ordinal));
         Assert.Contains(errors, error => error.Contains("路径占位符 {project} 没有对应的路径变量映射", StringComparison.Ordinal));
-        Assert.Contains(errors, error => error.Contains("路径变量 extra 没有被 Path 或 Directory 引用", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("路径变量 extra 没有被 Path 引用", StringComparison.Ordinal));
     }
 
     [Fact]

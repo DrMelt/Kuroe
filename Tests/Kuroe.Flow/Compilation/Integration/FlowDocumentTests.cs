@@ -25,6 +25,34 @@ public sealed class FlowDocumentTests
     public void Approval_node_with_invalid_input_port_is_rejected() =>
         Assert.Equal(["流程 默认 的节点 审阅：端口名不能为空或含 @。"], Errors(ApprovalInputPortWithoutName));
 
+    [Fact]
+    public void Start_default_is_accepted() => Assert.Empty(Errors(StartDefaultFlow));
+
+    [Fact]
+    public void Start_value_and_default_are_mutually_exclusive() =>
+        Assert.Contains(Errors(StartValueAndDefaultFlow),
+            error => error.Contains("开始端口 分支 不能同时写 Value 与 Default。"));
+
+    [Fact]
+    public void Start_default_cannot_bind_a_host_input() =>
+        Assert.Contains(Errors(StartDefaultWithHostInputFlow),
+            error => error.Contains("开始端口 分支 带默认值，不能绑定宿主输入。"));
+
+    [Fact]
+    public void Node_output_default_is_rejected() =>
+        Assert.Contains(Errors(NodeOutputDefaultFlow),
+            error => error.Contains("输出端口不认识键 Default"));
+
+    [Fact]
+    public void Start_default_survives_a_write_read_round_trip()
+    {
+        string written = FlowDocumentSource.WriteFlows(
+            FlowDocumentSource.Read(StartDefaultFlow).ThrowIfError()).ThrowIfError();
+
+        Assert.Contains("\"Default\": \"main\"", written);
+        Assert.Empty(Compiler.Compile(FlowDocumentSource.Read(written).ThrowIfError(), []).ErrorsOrEmptyList);
+    }
+
     /// <summary>审批节点派生的输出端口只转发内容，不声明触发模式。</summary>
     [Fact]
     public void Approval_output_port_is_plain()
@@ -778,6 +806,95 @@ public sealed class FlowDocumentTests
                   ]
                 }
                 """));
+
+    private const string StartDefaultFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "分支", "Type": "Text", "Default": "main" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ]
+              },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "目标" },
+                  { "Name": "分支" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "From": [ { "目标": "Start@目标", "分支": "Start@分支" } ],
+                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Nodes": [
+                  { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标", "分支": "@分支" } ] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    private const string StartValueAndDefaultFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "分支", "Type": "Text", "Mode": "Constant", "Value": "main", "Default": "fallback" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ]
+              },
+              "Root": { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" } }
+            }
+          ]
+        }
+        """;
+
+    private const string StartDefaultWithHostInputFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": {
+                "Outputs": [
+                  { "Name": "分支", "Type": "Text", "Default": "main" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ]
+              },
+              "HostStartInputs": { "分支": "WORKSPACE_PATH" },
+              "Root": { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" } }
+            }
+          ]
+        }
+        """;
+
+    private const string NodeOutputDefaultFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": {
+                "Outputs": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ]
+              },
+              "Root": {
+                "Name": "干活",
+                "Kind": "Llm",
+                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Outputs": [{ "Name": "结论", "Type": "Text", "Default": "x" }]
+              }
+            }
+          ]
+        }
+        """;
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json)

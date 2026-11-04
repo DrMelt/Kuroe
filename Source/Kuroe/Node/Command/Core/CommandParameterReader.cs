@@ -3,10 +3,10 @@ using Kuroe.Flow.Compilation.Shared.Validation;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，路径变量与解析边界由运行期使用。</summary>
+/// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，命令变量与解析边界由运行期使用。</summary>
 internal static class CommandParameterReader
 {
-    /// <summary>读出程序、参数、执行目录、路径变量、超时、输出上限与退出码策略，缺失或非法时经 fail 报出。</summary>
+    /// <summary>读出程序、参数、执行目录、命令变量、超时、输出上限与退出码策略，缺失或非法时经 fail 报出。</summary>
     internal static CommandParameters Read(
         IParameterReader values,
         ValidationMessageHandler fail,
@@ -69,7 +69,7 @@ internal static class CommandParameterNames
     /// <summary>执行目录字段。</summary>
     internal const string Directory = "Directory";
 
-    /// <summary>路径变量映射字段。</summary>
+    /// <summary>命令变量映射字段。</summary>
     internal const string Variables = "Variables";
 
     /// <summary>等待上限秒数字段。</summary>

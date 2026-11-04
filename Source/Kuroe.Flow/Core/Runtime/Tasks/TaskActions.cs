@@ -8,6 +8,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
@@ -48,7 +49,8 @@ public sealed class TaskActions(
             return inputErrors;
         }
 
-        string taskTitle = TaskTitle.Compose(inputs, flow.Model.Name, title);
+        StartInputs effectiveInputs = FillDefaults(inputs, graph.Start, hostInputs);
+        string taskTitle = TaskTitle.Compose(effectiveInputs, flow.Model.Name, title);
 
         TaskId id = _ids.Next();
 
@@ -76,7 +78,7 @@ public sealed class TaskActions(
         }
 
         // 不启动执行的节点不需要宿主声明；开始直连的派发节点在静态值全部就绪后再要求声明可解析
-        StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, inputs));
+        StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, effectiveInputs));
         foreach (InputBinding binding in graph.Outgoing(graph.Start.Path))
         {
             if (graph[binding.Target] is not ExecutableNode target
@@ -95,7 +97,7 @@ public sealed class TaskActions(
 
         WorkTask task = _registry.Add(
             id,
-            inputs,
+            effectiveInputs,
             startTexts.Value,
             flow,
             taskTitle,
@@ -112,27 +114,31 @@ public sealed class TaskActions(
         return task.Snapshot();
     }
 
-    /// <summary>开始输入必须逐个覆盖不带固定值且未绑定宿主输入的开始端口，且只落在用户端口上。</summary>
+    /// <summary>开始输入必须覆盖不带固定值、不带默认值且未绑定宿主输入的开始端口，且只落在用户端口上。
+    /// 带默认值的端口可以省略，提交了空白值仍报错。</summary>
     private static List<Error> CheckInputs(
         StartNode start,
         IReadOnlyDictionary<PortName, string> hostInputs,
         StartInputs inputs)
     {
-        List<(PortName Name, string? Text)> required =
+        List<PortName> required =
         [
             .. start.Outputs
-                .Where(port => port.Value is null && !hostInputs.ContainsKey(port.Name))
-                .Select(port => (port.Name, Text: inputs.Text(port.Name))),
+                .Where(port => port.Value is null && port.Default is null && !hostInputs.ContainsKey(port.Name))
+                .Select(port => port.Name),
         ];
 
         List<StartInput> supplied = [.. inputs.Values.DistinctBy(input => input.Port)];
 
         return
         [
-            .. required.Where(entry => entry.Text is null).Select(entry => TaskErrors.MissingInput(entry.Name)),
-            .. required
-                .Where(entry => entry.Text is { } text && string.IsNullOrWhiteSpace(text))
-                .Select(entry => TaskErrors.BlankInput(entry.Name)),
+            .. required.Where(port => inputs.Text(port) is null).Select(TaskErrors.MissingInput),
+            .. start.Outputs
+                .Where(port => port.Value is null
+                    && !hostInputs.ContainsKey(port.Name)
+                    && inputs.Text(port.Name) is { } text
+                    && string.IsNullOrWhiteSpace(text))
+                .Select(port => TaskErrors.BlankInput(port.Name)),
             .. inputs.Values
                 .GroupBy(input => input.Port)
                 .Where(group => group.Count() > 1)
@@ -147,6 +153,27 @@ public sealed class TaskActions(
                 .Where(input => start.FindPort(input.Port) is { Value: not null })
                 .Select(input => TaskErrors.ConstantInput(input.Port)),
         ];
+    }
+
+    /// <summary>把省略的默认值端口补进开始输入，已提交的值保持不变。</summary>
+    private static StartInputs FillDefaults(
+        StartInputs inputs,
+        StartNode start,
+        IReadOnlyDictionary<PortName, string> hostInputs)
+    {
+        List<StartInput> values = [.. inputs.Values];
+        foreach (Port port in start.Outputs)
+        {
+            if (port.Value is null
+                && port.Default is { Length: > 0 } defaultValue
+                && !hostInputs.ContainsKey(port.Name)
+                && inputs.Text(port.Name) is null)
+            {
+                values.Add(new StartInput(port.Name, defaultValue));
+            }
+        }
+
+        return values.Count == inputs.Values.Count ? inputs : new StartInputs(values);
     }
 
     /// <summary>宿主必须为每个绑定端口给出非空值。</summary>

@@ -48,7 +48,8 @@ internal static class FlowRules
         CheckShape(graph, scope, errors);
 
     /// <summary>开始入口的规则：至少一个 Text 端口，至少一个不带 Value 的端口承接开始输入。动态端口只能是 Text 或 Signal，常量端口可以使用任意类型。
-    /// 宿主输入只能绑定已声明且不带 Value 的端口；常量端口没有 Value 与宿主绑定时由提交输入给值。</summary>
+    /// Default 是提交输入的预填值与省略时的回退值，不能与 Value 或宿主输入同时使用。
+    /// 宿主输入只能绑定已声明且不带 Value 与 Default 的端口；常量端口没有 Value 与宿主绑定时由提交输入给值。</summary>
     private static void CheckStart(FlowDefinition flow, List<Error> errors)
     {
         if (flow.StartOutputs.Count == 0)
@@ -95,6 +96,16 @@ internal static class FlowRules
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Value 不能为空。"));
             }
+
+            if (port.Value is not null && port.Default is not null)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 不能同时写 Value 与 Default。"));
+            }
+
+            if (port.Default is { } defaultValue && string.IsNullOrWhiteSpace(defaultValue))
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port.Name} 的 Default 不能为空。"));
+            }
         }
 
         foreach ((PortName port, string input) in flow.HostStartInputs)
@@ -120,6 +131,11 @@ internal static class FlowRules
             if (startPort.Value is not null)
             {
                 errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port} 带固定值，不能绑定宿主输入。"));
+            }
+
+            if (startPort.Default is not null)
+            {
+                errors.Add(FlowErrors.Body(flow.Name.Value, $"开始端口 {port} 带默认值，不能绑定宿主输入。"));
             }
         }
 
@@ -150,6 +166,11 @@ internal static class FlowRules
         string label = string.IsNullOrWhiteSpace(node.Label.Value) ? "(未命名)" : node.Label.Value;
         node.Check(NodeRuleContext.FlowDefinition, message =>
             errors.Add(scope.Node(label, message)));
+
+        foreach (Port output in node.Outputs.Where(output => output.Default is not null))
+        {
+            errors.Add(scope.Node(label, $"输出端口 {output.Name} 不能写 Default，Default 只用于开始端口。"));
+        }
 
         if (node.Nodes is { Count: > 0 } children)
         {

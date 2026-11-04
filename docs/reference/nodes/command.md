@@ -7,9 +7,9 @@
 | 参数                    | 类型     | 含义                                                                |
 | ----------------------- | -------- | ------------------------------------------------------------------- |
 | `Program`               | string   | 程序名或路径，必填                                                  |
-| `Arguments`             | string[] | 传给程序的参数，逐项传入，不经 shell 解释                           |
+| `Arguments`             | string[] | 传给程序的参数，逐项传入，不经 shell 解释，可含 `{变量}`            |
 | `Directory`             | string   | 执行目录，可含 `{变量}`，未写时在工作区根执行                       |
-| `Variables`             | object   | 路径变量名到 `Text` 输入端口的映射，与 `Directory` 的占位符一一对应 |
+| `Variables`             | object   | 命令变量名到 `Text` 输入端口的映射，与 `Directory` 和 `Arguments` 的占位符一一对应 |
 | `TimeoutSeconds`        | int      | 等待秒数，未写时 120，必须是正整数                                  |
 | `MaxChars`              | int      | 输出字符上限，未写时 8000，0 不限制，负数在导入时报错               |
 | `FailOnNonZeroExitCode` | bool     | 退出码非零时是否停在阻塞，未写时不阻塞                              |
@@ -17,12 +17,12 @@
 ## 端口
 
 - `Inputs` 至少声明一个 `Signal` 端口作为触发。
-- `Text` 输入全部是路径变量端口，不能声明承载内容的其他 `Text` 输入。
+- `Text` 输入全部是命令变量端口，不能声明承载内容的其他 `Text` 输入。
 - `Outputs` 必须恰好声明一个 `Text` 端口，命令输出写入该端口。
 
 ## 执行
 
-执行目录由路径变量解析，未写 `Directory` 时在工作区根执行，解析结果必须落在工作区根内。程序在解析后的目录启动，参数逐项传入，不经 shell 解释。命令不在交互模式下运行。
+执行目录与参数由命令变量展开。`root` 是相对路径的基准，`Directory` 中的 `root` 取工作区内的绝对路径，其他变量按原文替换后相对基准解析，展开结果必须落在工作区根内；未写 `Directory` 时在工作区根执行。`Arguments` 的变量按原文替换，不做路径校验，变量值可以是仓库地址、分支名等非路径文本。`Arguments` 中的花括号按占位符处理，字面花括号需要写成变量值。程序在解析后的目录启动，参数逐项传入，不经 shell 解释。命令不在交互模式下运行。
 
 成功时交回合并输出，去掉末尾换行，超过 `MaxChars` 时截断并附截断标记。退出码非零默认不影响产出，退出码本身不进入输出端口。声明 `FailOnNonZeroExitCode` 后，非零退出码停在阻塞，原因含退出码与输出。超时、路径越界或无法启动时停在阻塞，原因写入阻塞状态。超时后连同进程树终止。
 
@@ -43,6 +43,36 @@
   ],
   "Bindings": { "工作路径": "Start@WORKSPACE_PATH" },
   "From": [{ "触发": "计划@结论" }],
+  "Outputs": [{ "Name": "输出", "Type": "Text" }]
+}
+```
+
+`Arguments` 从任务输入取仓库地址与分支名：
+
+```json
+{
+  "Name": "克隆",
+  "Kind": "Command",
+  "Program": "git",
+  "Arguments": ["clone", "--branch", "{branch}", "{repository}", "."],
+  "Directory": "{root}",
+  "Variables": {
+    "root": "任务路径",
+    "branch": "分支名",
+    "repository": "仓库地址"
+  },
+  "Inputs": [
+    { "Name": "任务路径", "Type": "Text", "Mode": "Constant" },
+    { "Name": "分支名", "Type": "Text", "Mode": "Constant" },
+    { "Name": "仓库地址", "Type": "Text", "Mode": "Constant" },
+    { "Name": "触发", "Type": "Signal" }
+  ],
+  "Bindings": {
+    "任务路径": "Start@TASK_WORK_PATH",
+    "分支名": "Start@分支名",
+    "仓库地址": "Start@仓库地址"
+  },
+  "From": [{ "触发": "Start@要求" }],
   "Outputs": [{ "Name": "输出", "Type": "Text" }]
 }
 ```

@@ -16,8 +16,12 @@ internal enum FieldKind
     Secret,
 }
 
-/// <summary>输入表的一项：标签、说明与输入形态。</summary>
-internal sealed record FormField(string Label, string? Description = null, FieldKind Kind = FieldKind.Line);
+/// <summary>输入表的一项：标签、说明、输入形态与初始值。</summary>
+internal sealed record FormField(
+    string Label,
+    string? Description = null,
+    FieldKind Kind = FieldKind.Line,
+    string? Initial = null);
 
 /// <summary>输入表的只读上下文行，不参与输入。</summary>
 internal sealed record FormInfo(string Label, string Value);
@@ -35,7 +39,7 @@ internal sealed class InputForm(
     private static readonly Item Submit = new("√ 提交", SubmitIndex);
     private static readonly Item Cancel = new("← 取消", CancelIndex);
 
-    private readonly string[] _values = [.. fields.Select(_ => string.Empty)];
+    private readonly string[] _values = [.. fields.Select(field => field.Initial ?? string.Empty)];
 
     /// <summary>逐项选择填写或改写，选择提交时返回全部输入，取消时返回 null。</summary>
     public IReadOnlyList<string>? Run()

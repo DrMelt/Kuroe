@@ -1,9 +1,10 @@
 using Kuroe.Flow.Shared.Model;
 namespace Kuroe.Flow.Shared.StaticGraph.Ports;
 
-/// <summary>输出端口声明：名字、类型、模式、说明、来源与触发配置。所有节点的输出都使用这一形状。
+/// <summary>输出端口声明：名字、类型、模式、说明、来源、默认值与触发配置。所有节点的输出都使用这一形状。
 /// 类型在编译期落定产出形态与消费方式，引用只写名字；说明写端口承载什么内容、怎么交回，未写时为空。
 /// <see cref="Value"/> 是固定值，<see cref="Ref"/> 是同一节点内部作用域中的来源端口，两者互斥。
+/// <see cref="Default"/> 只用于开始端口，是提交输入的预填值与省略时的回退值，不改变端口的提交属性。
 /// 常量模式是单值端口，值在任务内确定一次，只供下游 Bindings 读取；没有固定值与来源引用时由 Once 节点唯一一次执行产出。
 /// 动态端口由执行逐次产出或转发动态来源。模式支持范围由端口类型注册声明。</summary>
 public readonly record struct Port
@@ -15,7 +16,8 @@ public readonly record struct Port
         string? description = null,
         string? value = null,
         PortRef? reference = null,
-        PortMode? mode = null)
+        PortMode? mode = null,
+        string? defaultValue = null)
     {
         Name = name;
         Type = type;
@@ -23,6 +25,7 @@ public readonly record struct Port
         Value = value;
         Ref = reference;
         Mode = mode ?? PortTypes.DefaultMode(type);
+        Default = defaultValue;
     }
 
     /// <summary>端口名。</summary>
@@ -39,6 +42,9 @@ public readonly record struct Port
 
     /// <summary>固定值，常量端口使用。</summary>
     public string? Value { get; init; }
+
+    /// <summary>开始端口的提交默认值，未提交时回退到它。</summary>
+    public string? Default { get; init; }
 
     /// <summary>同一节点内部作用域中的来源端口。</summary>
     public PortRef? Ref { get; init; }
