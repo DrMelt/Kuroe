@@ -198,7 +198,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
             paths.RecordsDirectory,
             sp.GetRequiredService<ITaskRecordCodec>()));
-        services.AddSingleton<ITaskLeaseStore>(new FileTaskLeaseStore(paths.RecordsDirectory));
+        services.AddSingleton<ITaskLeaseStore>(sp => new FileTaskLeaseStore(paths.RecordsDirectory));
         services.AddSingleton<ITaskRestorer>(new TaskRestorer(taskRegistry));
         services.AddSingleton<ITaskRecordSource>(new TaskRecordSource(taskRegistry));
         services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
@@ -216,11 +216,14 @@ public static class ServiceCollectionExtensions
             taskRegistry,
             sp.GetRequiredService<ITaskRestorer>(),
             sp.GetRequiredService<IFlowRunner>()));
-        services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
-            sp.GetRequiredService<ITaskRecordStore>(),
-            sp.GetRequiredService<IFlowSnapshotCompiler>(),
-            sp.GetRequiredService<ITaskLeaseStore>(),
-            sp.GetRequiredService<ITaskRestoreRuntime>()));
+        if (coreOptions.PersistTasks)
+        {
+            services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
+                sp.GetRequiredService<ITaskRecordStore>(),
+                sp.GetRequiredService<IFlowSnapshotCompiler>(),
+                sp.GetRequiredService<ITaskLeaseStore>(),
+                sp.GetRequiredService<ITaskRestoreRuntime>()));
+        }
         services.AddSingleton(sp => new TaskService(
             new TaskActions(
                 taskRegistry,
@@ -229,7 +232,8 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<ITaskIdSource>(),
                 coreOptions.PersistTasks ? flows.Value : null,
-                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null),
+                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
+                coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
         services.AddSingleton(sp => new PendingService(
             taskRegistry,

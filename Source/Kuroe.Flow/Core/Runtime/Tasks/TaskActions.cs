@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Runtime.Engine;
@@ -23,7 +24,8 @@ public sealed class TaskActions(
     IHostTaskStart host,
     ITaskIdSource ids,
     IFlowSnapshotSource? snapshots = null,
-    ITaskRecordCoordinator? records = null)
+    ITaskRecordCoordinator? records = null,
+    ITaskLeaseStore? leases = null)
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
@@ -32,8 +34,9 @@ public sealed class TaskActions(
     private readonly ITaskIdSource _ids = ids;
     private readonly IFlowSnapshotSource? _snapshots = snapshots;
     private readonly ITaskRecordCoordinator? _records = records;
+    private readonly ITaskLeaseStore? _leases = leases;
 
-    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、取注入的开始端口值，再建任务并启动推进。
+    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、占用任务键、取注入的开始端口值，再建任务并启动推进。
     /// 任务号被宿主资源占用时换下一个任务号重来。observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
@@ -92,6 +95,15 @@ public sealed class TaskActions(
             if (declaration.IsError)
             {
                 return declaration.ErrorsOrEmptyList;
+            }
+        }
+
+        if (_leases is { } leaseStore)
+        {
+            ErrorOr<Success> lease = leaseStore.TryAcquire(id);
+            if (lease.IsError)
+            {
+                return lease.ErrorsOrEmptyList;
             }
         }
 
@@ -345,12 +357,13 @@ public sealed class TaskActions(
         if (!stopped.IsError)
         {
             Persist(found.Value.Id);
+            _leases?.Release(found.Value.Id);
         }
 
         return stopped;
     }
 
-    /// <summary>丢掉已完成或已终止的任务，同时删除它们的存档。</summary>
+    /// <summary>丢掉已完成或已终止的任务，删除它们的存档并放开占用。</summary>
     public IReadOnlyList<TaskId> ClearSettled()
     {
         IReadOnlyList<TaskId> cleared = _registry.ClearSettled();
@@ -362,10 +375,18 @@ public sealed class TaskActions(
             }
         }
 
+        if (_leases is { } leaseStore)
+        {
+            foreach (TaskId id in cleared)
+            {
+                leaseStore.Release(id);
+            }
+        }
+
         return cleared;
     }
 
-    /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，最后丢弃任务域。</summary>
+    /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，放开占用，最后丢弃任务域。</summary>
     public async Task ShutdownAsync()
     {
         await _driver.ShutdownAsync().ConfigureAwait(false);
@@ -380,6 +401,7 @@ public sealed class TaskActions(
             await coordinator.FlushAsync().ConfigureAwait(false);
         }
 
+        _leases?.ReleaseAll();
         _registry.Forget();
     }
 }

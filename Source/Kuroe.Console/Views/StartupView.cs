@@ -1,6 +1,7 @@
 using ApiHub.Shared.Models;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Catalogs;
+using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -15,7 +16,7 @@ internal sealed class StartupView(
     FlowService flows,
     Terminal terminal)
 {
-    public void Print()
+    public void Print(TaskLoadReport? report = null)
     {
         CatalogContents contents = catalog.Snapshot();
         string model = models.Current?.Value ?? "未选择";
@@ -26,6 +27,11 @@ internal sealed class StartupView(
             new Text($"目录中有 {contents.Providers.Length} 个提供商、{contents.Models.Length} 个模型，"
                 + $"流程模板 {flows.All().Count} 条。", Styles.Hint),
         ];
+
+        if (report is { } load && load.Busy.Count > 0)
+        {
+            lines.Add(new Text($"{load.Busy.Count} 个任务由其他进程持有，本实例未加载。", Styles.Hint));
+        }
 
         if (contents.Providers.Length == 0)
         {

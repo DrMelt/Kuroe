@@ -98,7 +98,7 @@ static async Task<int> RunAsync(string? workDirectory)
         errors.Report(failure.Errors);
     }
 
-    await provider.GetRequiredService<Repl>().RunAsync();
+    await provider.GetRequiredService<Repl>().RunAsync(loaded);
 
     return 0;
 }

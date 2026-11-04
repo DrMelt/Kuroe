@@ -129,6 +129,27 @@ public abstract class TaskPersistenceAcceptanceTests
     }
 
     [Fact]
+    public async Task Concurrent_sessions_report_the_task_held_by_the_other()
+    {
+        string root = CreateRoot();
+        try
+        {
+            await using ITaskPersistenceSession first = await CreateSessionAsync(root);
+            TaskId held = first.Submit("占用任务");
+            first.WaitForInput(held);
+
+            await using ITaskPersistenceSession second = await CreateSessionAsync(root);
+
+            Assert.Contains(held, second.Loaded.Busy);
+            Assert.DoesNotContain(second.Tasks(), task => task.Id == held);
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
     public async Task Loaded_task_preserves_execution_history()
     {
         string root = CreateRoot();

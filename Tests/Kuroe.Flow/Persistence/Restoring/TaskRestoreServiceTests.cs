@@ -48,10 +48,11 @@ public sealed class TaskRestoreServiceTests
         InMemoryTaskRecordStore store = new();
         TaskRecord record = TaskRecordFixture.Create();
         store.Write(record).ThrowIfError();
+        SingleLeaseStore leases = new();
         TaskRestoreService service = new(
             store,
             new FailingCompiler(),
-            new SingleLeaseStore(),
+            leases,
             new UnusedRuntime());
 
         TaskLoadReport report = service.Restore();
@@ -59,6 +60,47 @@ public sealed class TaskRestoreServiceTests
         TaskLoadFailure failure = Assert.Single(report.Failures);
         Assert.Equal(record.Identity.Id, failure.Task);
         Assert.Equal(record.Identity.Id.Value, failure.Source);
+        Assert.Contains(record.Identity.Id, leases.Released);
+    }
+
+    [Fact]
+    public void Restore_reports_busy_when_the_lease_is_held()
+    {
+        InMemoryTaskRecordStore store = new();
+        TaskRecord record = TaskRecordFixture.Create();
+        store.Write(record).ThrowIfError();
+        TaskRestoreService service = new(
+            store,
+            new UnusedCompiler(),
+            new BusyLeaseStore(),
+            new UnusedRuntime());
+
+        TaskLoadReport report = service.Restore();
+
+        Assert.Empty(report.Loaded);
+        Assert.Contains(record.Identity.Id, report.Busy);
+        Assert.Empty(report.Failures);
+    }
+
+    [Fact]
+    public void Restore_reports_lease_failure_as_task_failure()
+    {
+        InMemoryTaskRecordStore store = new();
+        TaskRecord record = TaskRecordFixture.Create();
+        store.Write(record).ThrowIfError();
+        TaskRestoreService service = new(
+            store,
+            new UnusedCompiler(),
+            new BrokenLeaseStore(),
+            new UnusedRuntime());
+
+        TaskLoadReport report = service.Restore();
+
+        Assert.Empty(report.Loaded);
+        Assert.Empty(report.Busy);
+        TaskLoadFailure failure = Assert.Single(report.Failures);
+        Assert.Equal(record.Identity.Id, failure.Task);
+        Assert.Contains(failure.Errors, error => error.Code == FlowErrorCodes.TaskLease);
     }
 
     private static TaskRestoreService CreateService(ITaskRecordStore store) =>
@@ -78,8 +120,14 @@ public sealed class TaskRestoreServiceTests
     /// <summary>这些场景不获取租约。</summary>
     private sealed class UnusedLeaseStore : ITaskLeaseStore
     {
-        public ErrorOr<ITaskLease> TryAcquire(TaskId id) =>
+        public ErrorOr<Success> TryAcquire(TaskId id) =>
             throw new InvalidOperationException("这些场景不应获取租约。");
+
+        public void Release(TaskId id) =>
+            throw new InvalidOperationException("这些场景不应释放租约。");
+
+        public void ReleaseAll() =>
+            throw new InvalidOperationException("这些场景不应释放租约。");
     }
 
     /// <summary>编译一定失败，用于验证失败来源。</summary>
@@ -89,18 +137,45 @@ public sealed class TaskRestoreServiceTests
             [Error.Failure("Test.Compile", "编译失败。")];
     }
 
-    /// <summary>发放一个不占用外部资源的租约。</summary>
+    /// <summary>发放租约并记录注销，用于验证恢复失败后的清理。</summary>
     private sealed class SingleLeaseStore : ITaskLeaseStore
     {
-        public ErrorOr<ITaskLease> TryAcquire(TaskId id) => new StubLease(id);
+        public List<TaskId> Released { get; } = [];
 
-        private sealed class StubLease(TaskId id) : ITaskLease
+        public ErrorOr<Success> TryAcquire(TaskId id) => Result.Success;
+
+        public void Release(TaskId id) => Released.Add(id);
+
+        public void ReleaseAll() => Released.Clear();
+    }
+
+    /// <summary>租约由其他进程持有。</summary>
+    private sealed class BusyLeaseStore : ITaskLeaseStore
+    {
+        public ErrorOr<Success> TryAcquire(TaskId id) =>
+            [Error.Conflict(FlowErrorCodes.TaskLease, "占用。")];
+
+        public void Release(TaskId id)
         {
-            public TaskId Id => id;
+        }
 
-            public void Dispose()
-            {
-            }
+        public void ReleaseAll()
+        {
+        }
+    }
+
+    /// <summary>租约建立失败，不是占用。</summary>
+    private sealed class BrokenLeaseStore : ITaskLeaseStore
+    {
+        public ErrorOr<Success> TryAcquire(TaskId id) =>
+            [Error.Failure(FlowErrorCodes.TaskLease, "目录不可写。")];
+
+        public void Release(TaskId id)
+        {
+        }
+
+        public void ReleaseAll()
+        {
         }
     }
 

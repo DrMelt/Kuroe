@@ -1,4 +1,5 @@
 using Kuroe.Console.Views;
+using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Console;
@@ -31,10 +32,10 @@ internal sealed class Repl(
         Exit,
     ];
 
-    public async Task RunAsync()
+    public async Task RunAsync(TaskLoadReport? report = null)
     {
         notifier.Attach();
-        startup.Print();
+        startup.Print(report);
 
         while (true)
         {

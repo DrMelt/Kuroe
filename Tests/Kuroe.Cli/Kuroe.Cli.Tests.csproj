@@ -22,6 +22,11 @@
         <ProjectReference Include="..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Files\Core\Kuroe.Flow.Persistence.Files.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Records\Shared\Kuroe.Flow.Persistence.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Flow\Persistence\Serialization\Shared\Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
     </ItemGroup>
 
 </Project>

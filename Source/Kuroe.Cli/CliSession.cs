@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Console;
 
 namespace Kuroe.Cli;
 
-/// <summary>一次 CLI 调用的服务装配与释放。装配核心服务，日志全部导向 stderr。</summary>
+/// <summary>一次 CLI 调用的服务装配与释放。装配核心服务，任务写存档并占用租约，不加载存档，日志全部导向 stderr。</summary>
 internal sealed class CliSession : IAsyncDisposable
 {
     private readonly ServiceProvider _provider;
@@ -58,7 +58,7 @@ internal sealed class CliSession : IAsyncDisposable
         var services = new ServiceCollection();
         ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
             paths.Value,
-            new KuroeCoreOptions { AllowFlowFailures = true, PersistTasks = false });
+            new KuroeCoreOptions { AllowFlowFailures = true, PersistTasks = true });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;

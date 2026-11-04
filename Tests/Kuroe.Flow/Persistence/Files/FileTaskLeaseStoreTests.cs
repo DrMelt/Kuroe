@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
@@ -15,59 +14,111 @@ public sealed class FileTaskLeaseStoreTests : IDisposable
     [Fact]
     public void Acquire_then_release_keeps_the_lock_file()
     {
-        FileTaskLeaseStore store = new(_root);
+        using FileTaskLeaseStore store = new(_root);
         TaskId id = new(7);
 
-        using (store.TryAcquire(id).ThrowIfError())
-        {
-            Assert.True(File.Exists(LockFile(id)));
-        }
+        store.TryAcquire(id).ThrowIfError();
+        Assert.True(File.Exists(LockFile(id)));
+
+        store.Release(id);
+        Assert.True(File.Exists(LockFile(id)));
+        store.TryAcquire(id).ThrowIfError();
+    }
+
+    [Fact]
+    public void Leftover_lock_file_does_not_block_acquisition()
+    {
+        using FileTaskLeaseStore store = new(_root);
+        TaskId id = new(12);
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(LockFile(id), string.Empty);
+
+        store.TryAcquire(id).ThrowIfError();
 
         Assert.True(File.Exists(LockFile(id)));
-        using ITaskLease again = store.TryAcquire(id).ThrowIfError();
-        Assert.Equal(id, again.Id);
     }
 
     [Fact]
     public void Another_store_cannot_acquire_a_held_lease()
     {
-        FileTaskLeaseStore first = new(_root);
-        FileTaskLeaseStore second = new(_root);
+        using FileTaskLeaseStore first = new(_root);
+        using FileTaskLeaseStore second = new(_root);
         TaskId id = new(8);
 
-        using ITaskLease held = first.TryAcquire(id).ThrowIfError();
-        ErrorOr<ITaskLease> busy = second.TryAcquire(id);
+        first.TryAcquire(id).ThrowIfError();
+        ErrorOr<Success> busy = second.TryAcquire(id);
 
         Assert.True(busy.IsError);
         Assert.Equal(FlowErrorCodes.TaskLease, busy.FirstError.Code);
+        Assert.Equal(ErrorType.Conflict, busy.FirstError.Type);
 
-        held.Dispose();
-        using ITaskLease taken = second.TryAcquire(id).ThrowIfError();
+        first.Release(id);
+        second.TryAcquire(id).ThrowIfError();
     }
 
     [Fact]
     public void Same_store_rejects_a_second_lease()
     {
-        FileTaskLeaseStore store = new(_root);
+        using FileTaskLeaseStore store = new(_root);
         TaskId id = new(9);
 
-        using ITaskLease first = store.TryAcquire(id).ThrowIfError();
-        ErrorOr<ITaskLease> second = store.TryAcquire(id);
+        store.TryAcquire(id).ThrowIfError();
+        ErrorOr<Success> second = store.TryAcquire(id);
 
         Assert.True(second.IsError);
         Assert.Equal(FlowErrorCodes.TaskLease, second.FirstError.Code);
+        Assert.Equal(ErrorType.Conflict, second.FirstError.Type);
     }
 
     [Fact]
     public void Different_tasks_do_not_block_each_other()
     {
-        FileTaskLeaseStore store = new(_root);
+        using FileTaskLeaseStore store = new(_root);
 
-        using ITaskLease first = store.TryAcquire(new TaskId(10)).ThrowIfError();
-        using ITaskLease second = store.TryAcquire(new TaskId(11)).ThrowIfError();
+        Assert.False(store.TryAcquire(new TaskId(10)).IsError);
+        Assert.False(store.TryAcquire(new TaskId(11)).IsError);
+    }
 
-        Assert.Equal(new TaskId(10), first.Id);
-        Assert.Equal(new TaskId(11), second.Id);
+    [Fact]
+    public void ReleaseAll_frees_every_task()
+    {
+        using FileTaskLeaseStore first = new(_root);
+        using FileTaskLeaseStore second = new(_root);
+        TaskId one = new(14);
+        TaskId two = new(15);
+
+        first.TryAcquire(one).ThrowIfError();
+        first.TryAcquire(two).ThrowIfError();
+        first.ReleaseAll();
+
+        Assert.False(second.TryAcquire(one).IsError);
+        Assert.False(second.TryAcquire(two).IsError);
+    }
+
+    [Fact]
+    public void Release_of_an_unheld_task_is_ignored()
+    {
+        using FileTaskLeaseStore store = new(_root);
+        TaskId id = new(16);
+
+        store.Release(id);
+
+        Assert.False(store.TryAcquire(id).IsError);
+    }
+
+    [Fact]
+    public void Unusable_directory_reports_failure()
+    {
+        Directory.CreateDirectory(_root);
+        string path = Path.Combine(_root, "file");
+        File.WriteAllText(path, string.Empty);
+        using FileTaskLeaseStore store = new(path);
+
+        ErrorOr<Success> acquired = store.TryAcquire(new TaskId(13));
+
+        Assert.True(acquired.IsError);
+        Assert.Equal(FlowErrorCodes.TaskLease, acquired.FirstError.Code);
+        Assert.Equal(ErrorType.Failure, acquired.FirstError.Type);
     }
 
     private string LockFile(TaskId id) => Path.Combine(_root, $"{id.Value}.lock");

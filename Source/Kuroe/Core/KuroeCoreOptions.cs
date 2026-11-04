@@ -12,6 +12,6 @@ public sealed record KuroeCoreOptions
     /// <summary>流程库个别流程编译失败时是否继续装配。为 false 时按启动错误返回。</summary>
     public bool AllowFlowFailures { get; init; }
 
-    /// <summary>任务是否写存档并由宿主加载。只跑一次、不恢复任务的宿主可关闭。</summary>
+    /// <summary>任务是否写存档并占用租约。开启后宿主可调用恢复服务加载存档。</summary>
     public bool PersistTasks { get; init; } = true;
 }

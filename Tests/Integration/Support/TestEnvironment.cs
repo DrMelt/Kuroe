@@ -177,7 +177,11 @@ public sealed class TestEnvironment : IDisposable
         services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<ITaskRestoreService>().Restore();
+        // 不写存档的装配不注册恢复服务
+        if (persistTasks)
+        {
+            provider.GetRequiredService<ITaskRestoreService>().Restore();
+        }
 
         if (seedCatalog)
         {

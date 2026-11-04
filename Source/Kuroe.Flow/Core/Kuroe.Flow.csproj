@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\Persistence\Records\Shared\Kuroe.Flow.Persistence.Records.Shared.csproj" />
+        <ProjectReference Include="..\Persistence\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
         <ProjectReference Include="..\Persistence\Restoring\Shared\Kuroe.Flow.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Persistence\Saving\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />
     </ItemGroup>

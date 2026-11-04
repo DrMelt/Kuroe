@@ -1,4 +1,6 @@
 using Kuroe.Console.Views;
+using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
 
 namespace Kuroe.Console.Tests.Views;
@@ -32,5 +34,17 @@ public sealed class StartupViewTests
 
         Assert.Contains("当前模型 未选择", cli.Output.Output);
         Assert.Contains("先在「模型与提供商」菜单添加提供商", cli.Output.Output);
+    }
+
+    [Fact]
+    public void Startup_banner_reports_tasks_held_by_other_processes()
+    {
+        using ConsoleSession cli = new();
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Flows, cli.Terminal);
+        TaskLoadReport report = new([], [new TaskId(1), new TaskId(2)], []);
+
+        startup.Print(report);
+
+        Assert.Contains("2 个任务由其他进程持有，本实例未加载。", cli.Output.Output);
     }
 }

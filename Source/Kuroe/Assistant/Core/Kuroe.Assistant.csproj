@@ -19,6 +19,7 @@
         <ProjectReference Include="..\..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Persistence\Records\Shared\Kuroe.Flow.Persistence.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Flow\Persistence\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Persistence\Saving\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />

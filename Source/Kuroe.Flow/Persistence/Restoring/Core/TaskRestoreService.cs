@@ -13,9 +13,8 @@ public sealed class TaskRestoreService(
     ITaskRecordStore store,
     IFlowSnapshotCompiler compiler,
     ITaskLeaseStore leases,
-    ITaskRestoreRuntime runtime) : ITaskRestoreService, IDisposable
+    ITaskRestoreRuntime runtime) : ITaskRestoreService
 {
-    private readonly List<ITaskLease> _held = [];
     private bool _restored;
 
     /// <inheritdoc/>
@@ -50,10 +49,18 @@ public sealed class TaskRestoreService(
         List<TaskLoadFailure> failures)
     {
         string source = record.Identity.Id.Value;
-        ErrorOr<ITaskLease> lease = leases.TryAcquire(record.Identity.Id);
+        ErrorOr<Success> lease = leases.TryAcquire(record.Identity.Id);
         if (lease.IsError)
         {
-            busy.Add(record.Identity.Id);
+            if (lease.FirstError.Type == ErrorType.Conflict)
+            {
+                busy.Add(record.Identity.Id);
+            }
+            else
+            {
+                failures.Add(new TaskLoadFailure(record.Identity.Id, source, lease.ErrorsOrEmptyList));
+            }
+
             return;
         }
 
@@ -61,7 +68,7 @@ public sealed class TaskRestoreService(
         if (flow.IsError)
         {
             failures.Add(new TaskLoadFailure(record.Identity.Id, source, flow.ErrorsOrEmptyList));
-            lease.Value.Dispose();
+            leases.Release(record.Identity.Id);
             return;
         }
 
@@ -69,22 +76,10 @@ public sealed class TaskRestoreService(
         if (task.IsError)
         {
             failures.Add(new TaskLoadFailure(record.Identity.Id, source, task.ErrorsOrEmptyList));
-            lease.Value.Dispose();
+            leases.Release(record.Identity.Id);
             return;
         }
 
-        _held.Add(lease.Value);
         loaded.Add(task.Value);
-    }
-
-    /// <summary>释放加载期间持有的任务租约。</summary>
-    public void Dispose()
-    {
-        foreach (ITaskLease lease in _held)
-        {
-            lease.Dispose();
-        }
-
-        _held.Clear();
     }
 }

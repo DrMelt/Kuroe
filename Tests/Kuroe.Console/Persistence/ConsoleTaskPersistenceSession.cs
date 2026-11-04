@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using ErrorOr;
+using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -24,6 +25,8 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
         return Task.FromResult<ITaskPersistenceSession>(
             new ConsoleTaskPersistenceSession(environment));
     }
+
+    public TaskLoadReport Loaded => _environment.Loaded;
 
     public TaskId Submit(string title)
     {

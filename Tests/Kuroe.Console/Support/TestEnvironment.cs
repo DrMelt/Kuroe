@@ -26,11 +26,17 @@ public sealed class TestEnvironment : IDisposable
     private readonly ServiceProvider _provider;
     private readonly bool _deleteOnDispose;
 
-    private TestEnvironment(string root, ServiceProvider provider, FakeRunner runner, bool deleteOnDispose)
+    private TestEnvironment(
+        string root,
+        ServiceProvider provider,
+        FakeRunner runner,
+        bool deleteOnDispose,
+        TaskLoadReport loaded)
     {
         Root = root;
         _provider = provider;
         _deleteOnDispose = deleteOnDispose;
+        Loaded = loaded;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
         Tasks = provider.GetRequiredService<TaskService>();
@@ -40,6 +46,9 @@ public sealed class TestEnvironment : IDisposable
 
     /// <summary>临时工作目录。</summary>
     public string Root { get; }
+
+    /// <summary>启动加载的报告，被其他实例占用的任务在这里列出。</summary>
+    public TaskLoadReport Loaded { get; }
 
     public FakeRunner Runner { get; }
 
@@ -132,7 +141,7 @@ public sealed class TestEnvironment : IDisposable
         services.AddSingleton<IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<ITaskRestoreService>().Restore();
+        TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();
 
         if (seedCatalog)
         {
@@ -142,7 +151,7 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 
-        return new TestEnvironment(root, provider, runner, deleteOnDispose);
+        return new TestEnvironment(root, provider, runner, deleteOnDispose, loaded);
     }
 
     public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true) =>
