@@ -24,6 +24,7 @@ internal sealed class CommandNodeTypeDescription(string rootDirectory, IProcessR
         new(CommandParameterNames.Variables, ParameterValueKind.Map),
         new(CommandParameterNames.TimeoutSeconds, ParameterValueKind.Integer),
         new(CommandParameterNames.MaxChars, ParameterValueKind.Integer),
+        new(CommandParameterNames.FailOnNonZeroExitCode, ParameterValueKind.Boolean),
     ];
 
     /// <summary>读出参数段并建出类型实例。</summary>

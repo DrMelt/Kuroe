@@ -21,6 +21,7 @@ public sealed class ParameterDocumentReaderTests
                 ("Text", new FlowValue.Text("展开")),
                 ("Texts", new FlowValue.Array([new FlowValue.Text("甲"), new FlowValue.Text("乙")])),
                 ("Number", new FlowValue.Number("5")),
+                ("Flag", new FlowValue.Boolean(true)),
             ],
             errors));
 
@@ -29,6 +30,7 @@ public sealed class ParameterDocumentReaderTests
         Assert.Equal("展开", parameters.Text);
         Assert.Equal(["甲", "乙"], parameters.Texts);
         Assert.Equal(5, parameters.Number);
+        Assert.True(parameters.Flag);
     }
 
     [Fact]
@@ -43,6 +45,7 @@ public sealed class ParameterDocumentReaderTests
         Assert.Null(parameters.Text);
         Assert.Empty(parameters.Texts);
         Assert.Null(parameters.Number);
+        Assert.Null(parameters.Flag);
     }
 
     [Fact]
@@ -58,12 +61,14 @@ public sealed class ParameterDocumentReaderTests
                 "流程 测试 的节点 干活：字段 Text 必须是文本。",
                 "流程 测试 的节点 干活：字段 Texts 必须是文本数组。",
                 "流程 测试 的节点 干活：字段 Number 必须是整数。",
+                "流程 测试 的节点 干活：字段 Flag 必须是布尔值。",
             ],
             Errors(
                 [
                     ("Text", new FlowValue.Number("5")),
                     ("Texts", new FlowValue.Text("甲")),
                     ("Number", new FlowValue.Text("五")),
+                    ("Flag", new FlowValue.Text("真")),
                 ]));
 
     [Fact]
@@ -107,10 +112,15 @@ public sealed class ParameterDocumentReaderTests
             new("Text", ParameterValueKind.Text),
             new("Texts", ParameterValueKind.Texts),
             new("Number", ParameterValueKind.Integer),
+            new("Flag", ParameterValueKind.Boolean),
         ];
 
         public INodeType Read(IParameterReader values, ValidationMessageHandler fail) =>
-            TestNodeTypeFactory.Create(new TestParameters(values.Text("Text"), values.Texts("Texts"), values.Integer("Number")));
+            TestNodeTypeFactory.Create(new TestParameters(
+                values.Text("Text"),
+                values.Texts("Texts"),
+                values.Integer("Number"),
+                values.Boolean("Flag")));
     }
 
     private sealed class ParameterNodeType(TestParameters? parameters) : INodeType
@@ -129,5 +139,5 @@ public sealed class ParameterDocumentReaderTests
         public static ParameterNodeType Create(TestParameters parameters) => new(parameters);
     }
 
-    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts, int? Number);
+    private sealed record TestParameters(string? Text, IReadOnlyList<string> Texts, int? Number, bool? Flag);
 }

@@ -50,6 +50,8 @@ public sealed class InputNodeTypeDescriptionTests
 
         public int? Integer(string name) => null;
 
+        public bool? Boolean(string name) => null;
+
         public IReadOnlyDictionary<string, string> Mappings(string name) => new Dictionary<string, string>();
 
         public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MappingMaps(string name) =>

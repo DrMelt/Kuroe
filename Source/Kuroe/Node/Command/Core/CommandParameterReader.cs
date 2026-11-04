@@ -6,7 +6,7 @@ namespace Kuroe.Node.Command;
 /// <summary>命令节点参数段的读取：Program 必填，执行目录保留原文，路径变量与解析边界由运行期使用。</summary>
 internal static class CommandParameterReader
 {
-    /// <summary>读出程序、参数、执行目录、路径变量、超时与输出上限，缺失或非法时经 fail 报出。</summary>
+    /// <summary>读出程序、参数、执行目录、路径变量、超时、输出上限与退出码策略，缺失或非法时经 fail 报出。</summary>
     internal static CommandParameters Read(
         IParameterReader values,
         ValidationMessageHandler fail,
@@ -41,6 +41,8 @@ internal static class CommandParameterReader
             maxChars = null;
         }
 
+        bool? failOnNonZeroExitCode = values.Boolean(CommandParameterNames.FailOnNonZeroExitCode);
+
         return new CommandParameters
         {
             Program = program,
@@ -50,6 +52,7 @@ internal static class CommandParameterReader
             RootDirectory = rootDirectory,
             TimeoutSeconds = timeout ?? CommandNodeTypes.DefaultTimeoutSeconds,
             MaxChars = maxChars ?? CommandNodeTypes.DefaultMaxChars,
+            FailOnNonZeroExitCode = failOnNonZeroExitCode ?? false,
         };
     }
 }
@@ -74,4 +77,7 @@ internal static class CommandParameterNames
 
     /// <summary>输出字符上限字段。</summary>
     internal const string MaxChars = "MaxChars";
+
+    /// <summary>退出码非零是否阻塞的字段。</summary>
+    internal const string FailOnNonZeroExitCode = "FailOnNonZeroExitCode";
 }

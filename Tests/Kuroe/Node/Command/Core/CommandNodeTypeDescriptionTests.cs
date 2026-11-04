@@ -26,6 +26,7 @@ public sealed class CommandNodeTypeDescriptionTests
                 new ParameterField("Variables", ParameterValueKind.Map),
                 new ParameterField("TimeoutSeconds", ParameterValueKind.Integer),
                 new ParameterField("MaxChars", ParameterValueKind.Integer),
+                new ParameterField("FailOnNonZeroExitCode", ParameterValueKind.Boolean),
             ],
             description.Fields);
     }
@@ -36,7 +37,7 @@ public sealed class CommandNodeTypeDescriptionTests
         List<string> failures = [];
         INodeType type = new CommandNodeTypeDescription(Root, new FakeProcessRunner())
             .Read(new Reader("dotnet", ["build", "--no-restore"], "{root}/src", 30, 1200,
-                new Dictionary<string, string> { ["root"] = "任务路径" }), failures.Add);
+                new Dictionary<string, string> { ["root"] = "任务路径" }, failOnNonZeroExitCode: true), failures.Add);
 
         CommandParameters parameters =
             Assert.IsType<CommandParameters>(Assert.IsType<CommandNodeType>(type).Parameters);
@@ -49,6 +50,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(30, parameters.TimeoutSeconds);
         Assert.Equal(1200, parameters.MaxChars);
+        Assert.True(parameters.FailOnNonZeroExitCode);
     }
 
     [Fact]
@@ -95,6 +97,7 @@ public sealed class CommandNodeTypeDescriptionTests
         Assert.Equal(Root, parameters.RootDirectory);
         Assert.Equal(CommandNodeTypes.DefaultTimeoutSeconds, parameters.TimeoutSeconds);
         Assert.Equal(CommandNodeTypes.DefaultMaxChars, parameters.MaxChars);
+        Assert.False(parameters.FailOnNonZeroExitCode);
     }
 
     [Fact]
@@ -114,7 +117,8 @@ public sealed class CommandNodeTypeDescriptionTests
         string? directory = null,
         int? timeoutSeconds = null,
         int? maxChars = null,
-        IReadOnlyDictionary<string, string>? variables = null) : IParameterReader
+        IReadOnlyDictionary<string, string>? variables = null,
+        bool? failOnNonZeroExitCode = null) : IParameterReader
     {
         public string? Text(string name) => name switch
         {
@@ -131,6 +135,9 @@ public sealed class CommandNodeTypeDescriptionTests
             "MaxChars" => maxChars,
             _ => null,
         };
+
+        public bool? Boolean(string name) =>
+            name == "FailOnNonZeroExitCode" ? failOnNonZeroExitCode : null;
 
         public IReadOnlyDictionary<string, string> Mappings(string name) =>
             name == "Variables" ? variables ?? new Dictionary<string, string>() : new Dictionary<string, string>();

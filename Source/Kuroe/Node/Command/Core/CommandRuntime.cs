@@ -50,7 +50,7 @@ internal sealed class CommandRuntime(ExecutableNode executable, CommandParameter
             return $"命令在 {Parameters.TimeoutSeconds} 秒内未结束，已终止。";
         }
 
-        if (result.ExitCode != 0)
+        if (result.ExitCode != 0 && Parameters.FailOnNonZeroExitCode)
         {
             return $"命令退出码 {result.ExitCode}：{Detail(output)}";
         }

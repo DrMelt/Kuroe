@@ -1,6 +1,6 @@
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点的类型专属声明：程序、参数、执行目录原文、路径变量映射、边界根、超时与输出上限。</summary>
+/// <summary>命令节点的类型专属声明：程序、参数、执行目录原文、路径变量映射、边界根、超时、输出上限与退出码策略。</summary>
 public sealed record CommandParameters
 {
     /// <summary>要执行的程序，程序名或路径。</summary>
@@ -23,4 +23,7 @@ public sealed record CommandParameters
 
     /// <summary>输出字符上限，0 表示不限制。</summary>
     public required int MaxChars { get; init; }
+
+    /// <summary>退出码非零时是否停在阻塞，未声明时不阻塞。</summary>
+    public bool FailOnNonZeroExitCode { get; init; }
 }

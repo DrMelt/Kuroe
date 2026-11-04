@@ -50,6 +50,22 @@ public sealed class JsonNodeFormatTests
         Assert.Equal(text, Ok(Format.Write(Ok(Format.Read(text)))));
     }
 
+    [Fact]
+    public void Read_and_write_keep_boolean_parameters()
+    {
+        IReadOnlyList<NodeDefinitionDocument> nodes = Ok(Format.Read("""
+            {
+              "Nodes": [
+                { "Name": "构建", "Kind": "Command", "Program": "dotnet", "FailOnNonZeroExitCode": true }
+              ]
+            }
+            """));
+
+        NodeDefinitionDocument definition = Assert.Single(nodes);
+        Assert.True(Assert.IsType<FlowValue.Boolean>(definition.Parameters["FailOnNonZeroExitCode"]).Value);
+        Assert.Contains("\"FailOnNonZeroExitCode\": true", Ok(Format.Write(nodes)));
+    }
+
     private static T Ok<T>(ErrorOr<T> result)
     {
         Assert.False(result.IsError, string.Join("；", result.ErrorsOrEmptyList.Select(error => error.Description)));

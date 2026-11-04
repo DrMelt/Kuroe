@@ -141,6 +141,8 @@ public sealed class FileNodeTypeDescriptionTests
 
         public int? Integer(string name) => name == "MaxChars" ? maxChars : null;
 
+        public bool? Boolean(string name) => null;
+
         public IReadOnlyDictionary<string, string> Mappings(string name) =>
             name == "Variables" ? variables ?? new Dictionary<string, string>() : new Dictionary<string, string>();
 

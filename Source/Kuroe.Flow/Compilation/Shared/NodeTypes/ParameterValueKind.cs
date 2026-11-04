@@ -12,6 +12,9 @@ public enum ParameterValueKind
     /// <summary>整数值。</summary>
     Integer,
 
+    /// <summary>布尔值。</summary>
+    Boolean,
+
     /// <summary>文本到文本的映射对象。</summary>
     Map,
 

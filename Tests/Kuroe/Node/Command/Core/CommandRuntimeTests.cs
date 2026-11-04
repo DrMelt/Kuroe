@@ -54,10 +54,26 @@ public sealed class CommandRuntimeTests
     }
 
     [Fact]
-    public void Non_zero_exit_code_blocks_the_node_with_the_output()
+    public void Non_zero_exit_code_publishes_the_output_by_default()
     {
         FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
         ExecutableNode node = Node(process);
+        StubNodeContext context = Context(node);
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.True(runtime.Released);
+        Assert.Equal("错误", runtime.PortText(OutputPort));
+        Assert.Equal(NodeState.Done, runtime.Snapshot().State);
+        Assert.Null(runtime.TakeFailure());
+    }
+
+    [Fact]
+    public void Non_zero_exit_code_blocks_when_declared()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns("错误", exitCode: 2);
+        ExecutableNode node = Node(process, failOnNonZeroExitCode: true);
         StubNodeContext context = Context(node);
         CommandRuntime runtime = Runtime(node, context);
 
@@ -70,6 +86,22 @@ public sealed class CommandRuntimeTests
         Assert.NotNull(failure);
         Assert.Contains("退出码 2", failure);
         Assert.Contains("错误", failure);
+    }
+
+    [Fact]
+    public void Non_zero_exit_code_without_output_publishes_empty_content()
+    {
+        FakeProcessRunner process = new FakeProcessRunner().Returns(string.Empty, exitCode: 1);
+        ExecutableNode node = Node(process);
+        StubNodeContext context = Context(node);
+        CommandRuntime runtime = Runtime(node, context);
+
+        runtime.Activate(context, Inputs(context));
+
+        Assert.True(runtime.Released);
+        Assert.Null(runtime.PortText(OutputPort));
+        Assert.Equal(NodeState.Done, runtime.Snapshot().State);
+        Assert.Null(runtime.TakeFailure());
     }
 
     [Fact]
@@ -224,10 +256,11 @@ public sealed class CommandRuntimeTests
     private static ExecutableNode Node(
         FakeProcessRunner process,
         int maxChars = CommandNodeTypes.DefaultMaxChars,
-        string? directory = null) => new()
+        string? directory = null,
+        bool failOnNonZeroExitCode = false) => new()
         {
             Path = TargetPath,
-            Type = CommandNodeTypes.Create(Parameters(maxChars, directory), process),
+            Type = CommandNodeTypes.Create(Parameters(maxChars, directory, failOnNonZeroExitCode), process),
             Spec = new ExecutableSpec(),
             Inputs =
             [
@@ -254,16 +287,20 @@ public sealed class CommandRuntimeTests
             ],
         };
 
-    private static CommandParameters Parameters(int maxChars, string? directory) => new()
-    {
-        Program = "dotnet",
-        Arguments = ["--version"],
-        Directory = directory is null ? null : $"{{root}}/{directory}",
-        Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
-        RootDirectory = Root,
-        TimeoutSeconds = 5,
-        MaxChars = maxChars,
-    };
+    private static CommandParameters Parameters(
+        int maxChars,
+        string? directory,
+        bool failOnNonZeroExitCode) => new()
+        {
+            Program = "dotnet",
+            Arguments = ["--version"],
+            Directory = directory is null ? null : $"{{root}}/{directory}",
+            Variables = new Dictionary<string, string> { ["root"] = "任务路径" },
+            RootDirectory = Root,
+            TimeoutSeconds = 5,
+            MaxChars = maxChars,
+            FailOnNonZeroExitCode = failOnNonZeroExitCode,
+        };
 
     /// <summary>按入队顺序给出进程结果的替身。</summary>
     private sealed class FakeProcessRunner : IProcessRunner

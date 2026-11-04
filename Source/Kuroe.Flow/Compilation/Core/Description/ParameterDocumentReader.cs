@@ -111,6 +111,23 @@ static class ParameterDocumentReader
             return null;
         }
 
+        public bool? Boolean(string name)
+        {
+            if (!values.TryGetValue(name, out FlowValue? value) || value is FlowValue.Null)
+            {
+                return null;
+            }
+
+            if (value is FlowValue.Boolean boolean)
+            {
+                return boolean.Value;
+            }
+
+            fail($"字段 {name} 必须是布尔值。");
+
+            return null;
+        }
+
         public IReadOnlyDictionary<string, string> Mappings(string name)
         {
             if (!values.TryGetValue(name, out FlowValue? value) || value is FlowValue.Null)
