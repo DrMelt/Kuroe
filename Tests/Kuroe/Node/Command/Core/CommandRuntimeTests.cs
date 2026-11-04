@@ -20,7 +20,7 @@ public sealed class CommandRuntimeTests
     private static readonly NodePath RepositorySourcePath = NodePath.Of("整体", "仓库");
     private static readonly NodePath BranchSourcePath = NodePath.Of("整体", "分支");
     private static readonly NodePath SubdirectorySourcePath = NodePath.Of("整体", "子目录");
-    private static readonly PortName OutputPort = new("输出");
+    private static readonly PortName OutputPort = new("Output");
     private static readonly string Root = Path.GetTempPath();
 
     [Fact]
@@ -405,7 +405,7 @@ public sealed class CommandRuntimeTests
                 new InputPort(new PortName("任务路径"), PortTypes.Text),
                 new InputPort(new PortName("触发"), PortTypes.Signal),
             ],
-            Outputs = [new Port(OutputPort, PortTypes.Text)],
+            Outputs = [.. Assert.IsType<OutputDeclaration.Given>(CommandNodeTypes.Shape.Outputs).Ports],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
             Incoming = incoming ??
             [

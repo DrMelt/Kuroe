@@ -21,16 +21,9 @@ internal static class NodeLibraryRules
         {
             node.Type?.Validate(node, NodeScope.Library, errors.Add);
 
-            if (ShapeOf(node) is { Organizes: true })
+            if (ShapeOf(node) is { Organizes: true } && node.Nodes is { Count: > 0 } members)
             {
-                if (node.Nodes is { Count: > 0 } members)
-                {
-                    CheckContainer(node, members, byName, errors);
-                }
-            }
-            else
-            {
-                CheckLeaf(node, errors);
+                CheckContainer(node, members, byName, errors);
             }
         }
 
@@ -77,18 +70,6 @@ internal static class NodeLibraryRules
         return byName;
     }
 
-    /// <summary>执行节点库叶子的库层限制：端口与类型规则由 NodeSpec 承担，这里只拒绝非执行节点声明多个输出端口。</summary>
-    private static void CheckLeaf(NodeSpec node, List<Error> errors) => ValidateInterface(node, errors);
-
-    /// <summary>非执行节点的输出端口上限，属于库层对接口的额外限制。</summary>
-    private static void ValidateInterface(NodeSpec node, List<Error> errors)
-    {
-        if ((node.Spec is null || ShapeOf(node) is { DispatchesExecutions: false }) && node.Outputs.Count > 1)
-        {
-            errors.Add(NodeScope.Library.Node(node.Label.Value, "非执行节点最多一个输出端口。"));
-        }
-    }
-
     /// <summary>校验容器子树：整棵子树标签扁平唯一，成员引用存在且结构合法，From 全部落在子树或声明端口内。</summary>
     private static void CheckContainer(
         NodeSpec container,
@@ -127,7 +108,6 @@ internal static class NodeLibraryRules
 
             member.CheckInterface(ShapeOf(member), message =>
                 errors.Add(NodeScope.Library.Node(member.Label.Value, message)));
-            ValidateInterface(member, errors);
             if (member.Nodes is { Count: > 0 })
             {
                 CheckContainer(member, member.Nodes, byName, errors);

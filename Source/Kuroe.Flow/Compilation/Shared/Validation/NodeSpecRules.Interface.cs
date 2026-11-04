@@ -60,6 +60,16 @@ public static partial class NodeSpecRules
             fail($"输出端口 {port.Value} 重复。");
         }
 
+        foreach (string name in node.Outputs
+            .Select(port => port.Name)
+            .Where(IsInvalidPortName)
+            .Select(name => name.Value))
+        {
+            fail(string.IsNullOrWhiteSpace(name)
+                ? "输出端口名不能为空。"
+                : $"输出端口名 {name} 不能含 @。");
+        }
+
         foreach (Port port in node.Outputs.Where(port => !PortTypes.Supports(port.Type, port.Mode)))
         {
             fail($"输出端口 {port.Name.Value} 的类型 {port.Type} 不支持模式 {port.Mode}。");
@@ -67,11 +77,17 @@ public static partial class NodeSpecRules
 
         if (shape is { } declaredOutput)
         {
+            if (declaredOutput.Outputs is OutputDeclaration.Given given && !node.Outputs.SequenceEqual(given.Ports))
+            {
+                fail("输出端口必须与类型给出的端口一致。");
+            }
+
+            IReadOnlyList<PortType> allowed = declaredOutput.AllowedOutputTypes;
             foreach (string port in node.Outputs
-                .Where(port => !declaredOutput.OutputTypes.Contains(port.Type))
+                .Where(port => !allowed.Contains(port.Type))
                 .Select(port => port.Name.Value))
             {
-                fail($"输出端口 {port} 的类型只能是 {Types(declaredOutput.OutputTypes)}。");
+                fail($"输出端口 {port} 的类型只能是 {Types(allowed)}。");
             }
         }
 
@@ -248,6 +264,11 @@ public static partial class NodeSpecRules
         _ => $"{string.Join("、", types.Take(types.Count - 1).Select(type => type.ToString()))} 或 {types[^1]}",
     };
 
+    /// <summary>端口名不能为空或含 @。</summary>
+    private static bool IsInvalidPortName(PortName name) =>
+        string.IsNullOrWhiteSpace(name.Value) || name.Value.Contains('@');
+
+    /// <summary>重复出现的端口名。</summary>
     private static IEnumerable<PortName> Duplicates(IReadOnlyList<PortName> names) =>
         names.GroupBy(name => name).Where(group => group.Count() > 1).Select(group => group.Key);
 }

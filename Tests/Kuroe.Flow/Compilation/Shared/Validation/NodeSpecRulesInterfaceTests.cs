@@ -170,6 +170,60 @@ public sealed class NodeSpecRulesInterfaceTests
             Errors(node, node.Type?.Shape));
     }
 
+    [Fact]
+    public void Given_output_types_do_not_need_a_declared_type_range()
+    {
+        NodeTypeShape shape = new()
+        {
+            DispatchesExecutions = true,
+            InputTypes = [PortTypes.Text],
+            Outputs = new OutputDeclaration.Given([new Port(new PortName("输出"), PortTypes.Signal)]),
+        };
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Spec = new ExecutableSpec(),
+            Outputs = [new Port(new PortName("输出"), PortTypes.Signal)],
+        };
+
+        Assert.Empty(Errors(node, shape));
+    }
+
+    [Fact]
+    public void Given_output_ports_must_match_the_type_ports()
+    {
+        NodeTypeShape shape = new()
+        {
+            DispatchesExecutions = true,
+            InputTypes = [PortTypes.Text],
+            Outputs = new OutputDeclaration.Given([new Port(new PortName("输出"), PortTypes.Text)]),
+        };
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Spec = new ExecutableSpec(),
+            Outputs = [new Port(new PortName("其他"), PortTypes.Text)],
+        };
+
+        Assert.Equal(["输出端口必须与类型给出的端口一致。"], Errors(node, shape));
+    }
+
+    [Fact]
+    public void Given_output_port_name_with_at_is_rejected()
+    {
+        NodeTypeShape shape = new()
+        {
+            DispatchesExecutions = true,
+            InputTypes = [PortTypes.Text],
+            Outputs = new OutputDeclaration.Given([new Port(new PortName("甲@乙"), PortTypes.Text)]),
+        };
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Spec = new ExecutableSpec(),
+            Outputs = [new Port(new PortName("甲@乙"), PortTypes.Text)],
+        };
+
+        Assert.Equal(["输出端口名 甲@乙 不能含 @。"], Errors(node, shape));
+    }
+
     private static NodeTypeShape Shape(IReadOnlyList<PortType>? input = null) => new()
     {
         DispatchesExecutions = true,

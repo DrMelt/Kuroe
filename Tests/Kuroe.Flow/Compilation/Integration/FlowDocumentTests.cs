@@ -1,7 +1,12 @@
 using ErrorOr;
+using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Compilation.Shared.NodeTypes;
+using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.InputChannel;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.TestSupport;
 using Xunit;
@@ -78,6 +83,38 @@ public sealed class FlowDocumentTests
                   { "Name": "接收", "Kind": "Approval", "Inputs": [{ "Name": "结论", "Type": "Signal", "Mode": "Trigger" }], "From": [ { "结论": { "Ref": "审阅@结论", "Condition": "Negative" } } ] }
                 ] } } ] }
                 """));
+
+    /// <summary>类型给出的输出端口由节点类型提供，流程不声明。</summary>
+    [Fact]
+    public void Given_output_ports_come_from_the_node_type()
+    {
+        ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputFlow);
+
+        Assert.False(compiled.IsError,
+            string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+        IReadOnlyList<Port> outputs = compiled.Value.Flows.Single().Graph.ExecutableNodes.Single().Outputs;
+        Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Select(port => port.Name));
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], outputs.Select(port => port.Type));
+    }
+
+    /// <summary>类型给出的输出端口不允许流程重新声明。</summary>
+    [Fact]
+    public void Given_output_ports_cannot_be_declared_in_the_document() =>
+        Assert.Contains(CompileWith(new GivenOutputDescription(), GivenOutputWithDeclaredPortsFlow).ErrorsOrEmptyList,
+            error => error.Description.EndsWith("Given节点不声明输出端口，对外端口由类型给出。"));
+
+    /// <summary>节点库定义的输出端口由类型给出，引用处继承这些端口。</summary>
+    [Fact]
+    public void Given_output_ports_reach_a_library_reference()
+    {
+        ErrorOr<CompiledDocument> compiled = CompileWith(new GivenOutputDescription(), GivenOutputLibraryFlow);
+
+        Assert.False(compiled.IsError,
+            string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
+        IReadOnlyList<Port> outputs = compiled.Value.Flows.Single().Graph.ExecutableNodes
+            .Single(node => node.Label.Value == "执行").Outputs;
+        Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Select(port => port.Name));
+    }
 
     [Fact]
     public void Container_with_invalid_max_executions_is_rejected() =>
@@ -895,6 +932,88 @@ public sealed class FlowDocumentTests
           ]
         }
         """;
+
+    /// <summary>类型给出输出端口的节点不写 Outputs。</summary>
+    private const string GivenOutputFlow = """
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "执行", "Kind": "Given" } } ] }
+        """;
+
+    /// <summary>类型给出输出端口的节点写了 Outputs。</summary>
+    private const string GivenOutputWithDeclaredPortsFlow = """
+        { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "执行", "Kind": "Given", "Outputs": [{ "Name": "Output", "Type": "Text" }] } } ] }
+        """;
+
+    /// <summary>节点库定义不写 Outputs，端口由类型给出。</summary>
+    private const string GivenOutputLibraryFlow = """
+        {
+          "Nodes": [
+            { "Name": "库执行", "Kind": "Given", "Inputs": [{ "Name": "触发", "Type": "Signal" }] }
+          ],
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Signal", "Mode": "Plain" }] },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标", "Type": "Signal" }],
+                "From": [{ "目标": "Start@目标" }],
+                "Nodes": [
+                  { "Label": "执行", "Use": "库执行", "From": [{ "触发": "@目标" }] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    /// <summary>按给定类型描述编译一份文档，读取失败时给读取错误。</summary>
+    private static ErrorOr<CompiledDocument> CompileWith(INodeTypeDescription description, string json)
+    {
+        NodeTypeDescriptionRegistry files = TestTypeFiles.Registry(Inputs);
+        files.Register(description);
+        IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
+        ErrorOr<FlowDocument> document = FlowDocumentSource.Read(json);
+        if (document.IsError)
+        {
+            return document.ErrorsOrEmptyList;
+        }
+
+        return compiler.Compile(document.Value, []);
+    }
+
+    /// <summary>类型给出输出端口的测试类型：Output 承载文本，Completed 表示完成。</summary>
+    private sealed class GivenOutputDescription : INodeTypeDescription
+    {
+        private static readonly NodeTypeShape DeclaredShape = new()
+        {
+            InputTypes = [PortTypes.Text, PortTypes.Signal],
+            Outputs = new OutputDeclaration.Given(
+            [
+                new Port(new PortName("Output"), PortTypes.Text),
+                new Port(new PortName("Completed"), PortTypes.Signal),
+            ]),
+        };
+
+        public NodeKind Kind { get; } = new("Given");
+
+        public NodeTypeShape Shape => DeclaredShape;
+
+        public IReadOnlyList<ParameterField> Fields => [];
+
+        public INodeType Read(IParameterReader values, ValidationMessageHandler fail) => new GivenOutputType();
+
+        private sealed class GivenOutputType : INodeType, INodeTypeValidation
+        {
+            public NodeKind Kind { get; } = new("Given");
+
+            public NodeTypeShape Shape => DeclaredShape;
+
+            public void Validate(NodeSpec node, NodeScope scope, ValidationErrorHandler fail)
+            {
+            }
+        }
+    }
 
     /// <summary>把文件形状的 JSON 装配成流程，取错误说明。</summary>
     private static IReadOnlyList<string> Errors(string json)

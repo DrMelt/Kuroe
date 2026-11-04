@@ -16,7 +16,7 @@ public static class ApprovalNodeTypes
     {
         AwaitsApproval = true,
         AcceptsInferredInputs = true,
-        DerivesOutputsFromInputs = true,
+        Outputs = OutputDeclaration.DerivedFromInputs.Instance,
         InputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
         OutputTypes = [PortTypes.Text, PortTypes.Context, PortTypes.Signal],
     };

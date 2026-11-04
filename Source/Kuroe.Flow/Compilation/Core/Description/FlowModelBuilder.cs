@@ -310,14 +310,29 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
         string nodeLabel,
         List<Error> errors)
     {
-        if (shape.DerivesOutputsFromInputs)
+        switch (shape.Outputs)
         {
-            if (document.Outputs.Count > 0)
-            {
-                errors.Add(scope.Node(nodeLabel, $"{document.Kind}节点不声明输出端口，对外端口取自身输入端口。"));
-            }
+            case OutputDeclaration.Given given:
+                if (document.Outputs.Count > 0)
+                {
+                    errors.Add(scope.Node(nodeLabel, $"{document.Kind}节点不声明输出端口，对外端口由类型给出。"));
+                }
 
-            return ForwardedPorts(inputs);
+                return given.Ports;
+
+            case OutputDeclaration.DerivedFromInputs:
+                if (document.Outputs.Count > 0)
+                {
+                    errors.Add(scope.Node(nodeLabel, $"{document.Kind}节点不声明输出端口，对外端口取自身输入端口。"));
+                }
+
+                return ForwardedPorts(inputs);
+
+            case OutputDeclaration.Declared:
+                break;
+
+            default:
+                throw new InvalidOperationException($"不认识的输出声明 {shape.Outputs.GetType().Name}。");
         }
 
         ErrorOr<IReadOnlyList<Port>> parsed = ToPorts(document.Outputs, scope, nodeLabel);

@@ -36,7 +36,7 @@ public sealed class InputNodeTypeTests
 
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
-        Assert.False(shape.DerivesOutputsFromInputs);
+        Assert.IsType<OutputDeclaration.Declared>(shape.Outputs);
         Assert.True(shape.StartsUnaided);
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
         Assert.Equal([PortTypes.Text], shape.OutputTypes);

@@ -17,11 +17,15 @@ public static class CommandNodeTypes
     /// <summary>未声明 MaxChars 时的输出上限。</summary>
     public const int DefaultMaxChars = 8000;
 
-    /// <summary>命令节点的静态形状：路径变量给出执行目录，Signal 输入触发，输出承载命令输出。</summary>
+    /// <summary>命令节点的静态形状：路径变量给出执行目录，Signal 输入触发，输出端口由类型给出为命令输出与完成信号。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
         InputTypes = [PortTypes.Text, PortTypes.Signal],
-        OutputTypes = [PortTypes.Text],
+        Outputs = new OutputDeclaration.Given(
+        [
+            new Port(new PortName("Output"), PortTypes.Text, "命令的合并输出。"),
+            new Port(new PortName("Completed"), PortTypes.Signal, "本次命令执行完成。"),
+        ]),
     };
 
     /// <summary>按类型专属声明与进程执行边界建出类型实例。</summary>

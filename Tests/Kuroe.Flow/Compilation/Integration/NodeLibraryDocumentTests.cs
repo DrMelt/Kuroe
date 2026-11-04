@@ -252,7 +252,7 @@ public sealed class NodeLibraryDocumentTests
     [InlineData(MemberGroupOutsideScope, "From 引用的节点")]
     [InlineData(MemberGroupUndeclaredPort, "没有在容器")]
 
-    [InlineData(LibraryPortOnInput, "最多一个输出端口")]
+    [InlineData(LibraryPortOnInput, "最多声明一个输出端口")]
     [InlineData(LibraryQuestionOnText, "字段 Question 不属于 Llm 节点")]
     [InlineData(LibraryContainerWithOutputs, "输出端口 结论 必须写 Value 或 Ref")]
     [InlineData(MemberReferenceWithOutputs, "引用节点不能声明输出端口")]
@@ -788,7 +788,7 @@ public sealed class NodeLibraryDocumentTests
         }
         """";
 
-    /// <summary>输入成员在节点库声明输出端口，装配校验拒绝。</summary>
+    /// <summary>输入成员在节点库声明多个输出端口，类型规则拒绝。</summary>
     private const string LibraryPortOnInput = """
         {
           "Nodes": [

@@ -367,7 +367,7 @@ internal static class FlowRules
     {
         StartNode => true,
         ExecutableNode executable => graph.ShapeOf(executable.Path) is { Organizes: false } shape
-            && shape.OutputTypes.Any(type => type.Semantics == PortSemantics.Context),
+            && shape.AllowedOutputTypes.Any(type => type.Semantics == PortSemantics.Context),
         ContainerNode => port.Type.Semantics == PortSemantics.Context,
         _ => false,
     };

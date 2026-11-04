@@ -15,8 +15,8 @@ public sealed record NodeTypeShape
     /// <summary>等待的输入是否为批准。等待型节点里 Input 为回答，Approval 为批准。</summary>
     public bool AwaitsApproval { get; init; }
 
-    /// <summary>对外端口不在文件里声明，由输入端口派生内容，端口模式为 Plain。只有不派发执行的类型成立。</summary>
-    public bool DerivesOutputsFromInputs { get; init; }
+    /// <summary>输出端口声明方式。未写时由流程或节点库声明。</summary>
+    public OutputDeclaration Outputs { get; init; } = OutputDeclaration.Declared.Instance;
 
     /// <summary>不需环外来源即可在环内启动，作周期外源。</summary>
     public bool StartsUnaided { get; init; }
@@ -31,6 +31,12 @@ public sealed record NodeTypeShape
     /// <summary>允许的输入端口类型。</summary>
     public IReadOnlyList<PortType> InputTypes { get; init; } = [];
 
-    /// <summary>允许的输出端口类型。空表示该类型不声明输出端口。</summary>
+    /// <summary>声明的输出端口类型值域。空表示该类型不声明输出端口。类型给出端口时由端口类型决定。</summary>
     public IReadOnlyList<PortType> OutputTypes { get; init; } = [];
+
+    /// <summary>允许的输出端口类型：类型给出端口时取端口类型，其余取 OutputTypes。</summary>
+    public IReadOnlyList<PortType> AllowedOutputTypes =>
+        Outputs is OutputDeclaration.Given given
+            ? [.. given.Ports.Select(port => port.Type).Distinct()]
+            : OutputTypes;
 }

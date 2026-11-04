@@ -32,7 +32,7 @@ public sealed class CommandNodeTypeTests
     }
 
     [Fact]
-    public void Shape_takes_text_and_signal_inputs_and_produces_text()
+    public void Shape_takes_text_and_signal_inputs_and_gives_output_ports()
     {
         NodeTypeShape shape = Type.Shape;
 
@@ -40,7 +40,11 @@ public sealed class CommandNodeTypeTests
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
-        Assert.Equal([PortTypes.Text], shape.OutputTypes);
+        OutputDeclaration.Given outputs = Assert.IsType<OutputDeclaration.Given>(shape.Outputs);
+        Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Ports.Select(port => port.Name));
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], outputs.Ports.Select(port => port.Type));
+        Assert.Equal([PortMode.Plain, PortMode.Trigger], outputs.Ports.Select(port => port.Mode));
+        Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.AllowedOutputTypes);
     }
 
     [Fact]
@@ -57,12 +61,11 @@ public sealed class CommandNodeTypeTests
     public void Plain_command_node_passes() => Assert.Empty(Failures(Type, Node()));
 
     [Fact]
-    public void Trigger_and_output_are_required()
+    public void Trigger_is_required()
     {
-        string[] errors = [.. Failures(Type, Node() with { Inputs = [], Outputs = [] })];
+        string[] errors = [.. Failures(Type, Node() with { Inputs = [] })];
 
-        Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明至少一个 Signal 输入端口作为触发。"));
-        Assert.Contains(errors, error => error.EndsWith("命令执行节点必须声明一个输出端口，命令输出写入该端口。"));
+        Assert.EndsWith("命令执行节点必须声明至少一个 Signal 输入端口作为触发。", Assert.Single(errors));
     }
 
     [Fact]
@@ -167,19 +170,6 @@ public sealed class CommandNodeTypeTests
     }
 
     [Fact]
-    public void More_than_one_output_is_rejected()
-    {
-        Port[] outputs =
-        [
-            new(new PortName("甲"), PortTypes.Text),
-            new(new PortName("乙"), PortTypes.Text),
-        ];
-
-        Assert.Contains(Failures(Type, Node(outputs: outputs)),
-            error => error.EndsWith("命令执行节点必须声明一个输出端口，命令输出写入该端口。"));
-    }
-
-    [Fact]
     public void MaxExecutions_must_be_positive()
     {
         NodeSpec node = Node() with { Spec = new ExecutableSpec { MaxExecutions = 0 } };
@@ -197,14 +187,13 @@ public sealed class CommandNodeTypeTests
 
     private static NodeSpec Node(
         InputPort[]? inputs = null,
-        Port[]? outputs = null,
         CommandNodeType? type = null) => new()
         {
             Label = new NodeLabel("执行"),
             Type = type ?? Type,
             Spec = new ExecutableSpec(),
             Inputs = inputs ?? [new InputPort(new PortName("触发"), PortTypes.Signal)],
-            Outputs = outputs ?? [new Port(new PortName("输出"), PortTypes.Text)],
+            Outputs = [.. Assert.IsType<OutputDeclaration.Given>(CommandNodeTypes.Shape.Outputs).Ports],
         };
 
     /// <summary>测试用的进程执行替身，类型规则阶段不会调用。</summary>

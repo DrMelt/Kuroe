@@ -37,7 +37,7 @@ public sealed class ApprovalNodeTypeTests
         Assert.False(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
-        Assert.True(shape.DerivesOutputsFromInputs);
+        Assert.IsType<OutputDeclaration.DerivedFromInputs>(shape.Outputs);
         Assert.Equal([PortTypes.Text, PortTypes.Context, PortTypes.Signal], shape.InputTypes);
         Assert.Equal([PortTypes.Text, PortTypes.Context, PortTypes.Signal], shape.OutputTypes);
     }

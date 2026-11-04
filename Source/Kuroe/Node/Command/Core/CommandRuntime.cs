@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点的运行期对象：消费引擎装入的输入，按命令变量展开执行目录与参数并执行一次命令，成功时按唯一输出端口放出合并输出，失败停在阻塞。</summary>
+/// <summary>命令节点的运行期对象：消费引擎装入的输入，按命令变量展开执行目录与参数并执行一次命令，产出时把合并输出写入类型给出的 Output 端口，Completed 端口随同一次发布触发下游，失败停在阻塞。</summary>
 internal sealed class CommandRuntime(ExecutableNode executable, CommandParameters parameters, IProcessRunner process)
     : SelfDrivenRuntime(executable)
 {
