@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -27,6 +28,7 @@ public static class TaskRecordFixture
 
         return new TaskRecord(
             new TaskIdentity(id, "存档任务", At(3, 4, 5), At(3, 5, 6)),
+            At(3, 5, 7),
             new FlowSnapshot(flow, """{"Nodes":[]}""", """{"Flows":[]}"""),
             new TaskStartSnapshot(
                 StartInputs.Single(target, "目标内容"),
@@ -101,11 +103,11 @@ public static class TaskRecordFixture
                                 ],
                             })),
                     [],
-                    false),
+                    null),
                 new SelfDrivenNodeRecord(
                     read,
                     Common(revision: 0, lastInputGroup: null, rerunRequested: false),
-                    "读取失败。",
+                    new NodeBlock("读取失败。", new ExecutionId(taskId * 10 + 2), At(3, 4, 22)),
                     false),
                 new InputNodeRecord(
                     answer,

@@ -101,7 +101,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>派发执行的节点还有没有待启动的执行：按输入侧方案判定静态依赖、齐备与驱动。</summary>
     public bool CanStart(RuntimeExecutable node)
     {
-        if (node.HasActive || node.Canceled || node.Blocked)
+        if (node.HasActive || node.Canceled || node.Block is not null)
         {
             return false;
         }
@@ -325,7 +325,15 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private SettlePlan Block(RuntimeExecutable node, Execution execution)
     {
         _task.NotifyExecutionSettled(execution);
-        node.EnterBlocked([node.Path]);
+        ExecutionSnapshot snapshot = execution.Snapshot();
+        string summary = snapshot.Failures.FirstOrDefault(failure => !string.IsNullOrWhiteSpace(failure))
+            ?? snapshot.State switch
+            {
+                ExecutionState.Canceled => "执行已取消。",
+                ExecutionState.Interrupted => "执行已中断。",
+                _ => "执行未成功收口。",
+            };
+        node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, DateTimeOffset.UtcNow));
         NoteLimitReached(node);
 
         return new SettlePlan([]);

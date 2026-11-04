@@ -35,7 +35,7 @@ public sealed class TaskRecordCodec : ITaskRecordCodec
             return [Error.Failure(FlowErrorCodes.RecordFormat, $"存档 JSON 不合法：{ex.Message}")];
         }
 
-        if (version != TaskRecordSerializationVersion.Current)
+        if (!TaskRecordSerializationVersion.IsReadable(version))
         {
             return [Error.Failure(FlowErrorCodes.RecordVersion, $"不支持的存档版本 {version}。")];
         }
@@ -74,7 +74,7 @@ public sealed class TaskRecordCodec : ITaskRecordCodec
         }
     }
 
-    /// <summary>在严格映射字段之前读取版本，旧版本按版本不符拒绝，不误报为格式损坏。</summary>
+    /// <summary>在严格映射字段之前读取版本，不可读的版本按版本不符拒绝，不误报为格式损坏。</summary>
     private static int? ReadVersion(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object)

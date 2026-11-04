@@ -19,6 +19,7 @@ public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture
 
             return new TaskRecord(
                 new TaskIdentity(task.Id, task.Title, task.CreatedAt, task.LastActivityAt),
+                DateTimeOffset.UtcNow,
                 flow,
                 new TaskStartSnapshot(task.Inputs, task.StartTexts.Texts),
                 task.Lifecycle,

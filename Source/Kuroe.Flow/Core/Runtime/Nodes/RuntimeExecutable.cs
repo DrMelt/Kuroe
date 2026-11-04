@@ -36,8 +36,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>已启动的执行数。</summary>
     public int Executions => Progress.Executions;
 
-    /// <summary>是否停在阻塞等待返工。</summary>
-    public bool Blocked { get; private set; }
+    /// <summary>停在阻塞时的原因，未阻塞时为空。</summary>
+    public NodeBlock? Block { get; private set; }
 
     /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
     public IReadOnlyList<NodePath> ReworkTargets => _reworkTargets;
@@ -46,7 +46,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     public override bool Canceled => _canceled;
 
     /// <summary>产出可消费：不在阻塞与取消。</summary>
-    protected override bool Consumable => !Blocked && !Canceled;
+    protected override bool Consumable => Block is null && !Canceled;
 
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
@@ -84,9 +84,9 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { CannotCompleteReason = reason };
 
     /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
-    public void EnterBlocked(IReadOnlyList<NodePath> targets)
+    public void EnterBlocked(IReadOnlyList<NodePath> targets, NodeBlock block)
     {
-        Blocked = true;
+        Block = block;
         foreach (NodePath target in targets.Where(target => !_reworkTargets.Contains(target)))
         {
             _reworkTargets.Add(target);
@@ -103,7 +103,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
         if (_reworkTargets.Count == 0)
         {
-            Blocked = false;
+            Block = null;
         }
     }
 
@@ -194,7 +194,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             Path,
             CaptureProgress(),
             [.. _reworkTargets],
-            Blocked);
+            Block);
 
     /// <summary>从存档恢复执行节点的进展、发布与阻塞状态。</summary>
     public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
@@ -207,7 +207,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         RestoreProgress(state.Common);
         _reworkTargets.Clear();
         _reworkTargets.AddRange(state.ReworkTargets);
-        Blocked = state.Blocked;
+        Block = state.Block;
         _submissions.Clear();
     }
 
@@ -219,7 +219,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         {
             state = NodeState.Canceled;
         }
-        else if (Blocked)
+        else if (Block is not null)
         {
             state = NodeState.Blocked;
         }
@@ -232,7 +232,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             state = Progress.Published ? NodeState.Done : NodeState.Pending;
         }
 
-        return new ExecutableStateSnapshot(Path, state);
+        return new ExecutableStateSnapshot(Path, state, Block);
     }
 
     /// <summary>一次执行交回的内容。</summary>

@@ -3,6 +3,7 @@ using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Xunit;
@@ -55,7 +56,11 @@ public abstract class TaskRestoreContractTests
         Assert.Contains(
             task.Executions,
             execution => execution.State == ExecutionState.Interrupted);
-        Assert.Contains(snapshot.ExecutableStates, state => state.State == NodeState.Blocked);
+        ExecutableStateSnapshot blocked = Assert.Single(
+            snapshot.ExecutableStates,
+            state => state.State == NodeState.Blocked);
+        NodeBlock block = Assert.IsType<NodeBlock>(blocked.Block);
+        Assert.False(string.IsNullOrWhiteSpace(block.Summary));
     }
 
     private WorkTask Restore(TaskRecord record) =>

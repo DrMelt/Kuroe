@@ -25,6 +25,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
             .ThrowIfError();
 
         Assert.Equal(id, record.Identity.Id);
+        Assert.NotEqual(default, record.SavedAt);
         Assert.Equal([target], record.Pending.Targets);
         Assert.False(record.Completed);
         Assert.NotEmpty(record.Nodes);

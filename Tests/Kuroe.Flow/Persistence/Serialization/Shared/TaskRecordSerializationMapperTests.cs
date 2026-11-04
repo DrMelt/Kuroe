@@ -1,6 +1,7 @@
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
@@ -17,6 +18,7 @@ public sealed class TaskRecordSerializationMapperTests
         TaskRecord loaded = RoundTrip(record);
 
         Assert.Equal(record.Identity, loaded.Identity);
+        Assert.Equal(record.SavedAt, loaded.SavedAt);
         Assert.Equal(record.Flow, loaded.Flow);
         Assert.Equal(record.Lifecycle, loaded.Lifecycle);
         Assert.Equal(record.Completed, loaded.Completed);
@@ -53,6 +55,60 @@ public sealed class TaskRecordSerializationMapperTests
         TaskRecordDocument document = new(999, null);
 
         Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordSerializationMapper.FromDocument(document).FirstError.Code);
+    }
+
+    [Fact]
+    public void From_document_reads_version_five_block_fields()
+    {
+        TaskRecordDocument current = Document();
+        TaskRecordData task = Assert.IsType<TaskRecordData>(current.Task);
+        List<NodeData> source = task.Nodes ?? [];
+        List<NodeData> nodes =
+        [
+            source[0] with { Block = null, Blocked = true },
+            source[1] with { Block = null, Failure = "读取失败。" },
+            .. source.Skip(2),
+        ];
+        TaskRecordDocument legacy = current with
+        {
+            Version = 5,
+            Task = task with { SavedAt = null, Nodes = nodes },
+        };
+
+        TaskRecord loaded = TaskRecordSerializationMapper.FromDocument(legacy).ThrowIfError();
+        TaskIdentityData identity = Assert.IsType<TaskIdentityData>(task.Identity);
+        Assert.Equal(identity.LastActivityAt, loaded.SavedAt);
+
+        NodeBlock executable = Assert.IsType<NodeBlock>(
+            Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Block);
+        Assert.Equal("存档未记录阻塞原因。", executable.Summary);
+
+        NodeBlock selfDriven = Assert.IsType<NodeBlock>(
+            Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Block);
+        Assert.Equal("读取失败。", selfDriven.Summary);
+    }
+
+    [Fact]
+    public void From_document_ignores_legacy_block_fields_at_current_version()
+    {
+        TaskRecordDocument document = Document();
+        TaskRecordData task = Assert.IsType<TaskRecordData>(document.Task);
+        List<NodeData> source = task.Nodes ?? [];
+        List<NodeData> nodes =
+        [
+            source[0] with { Block = null, Blocked = true },
+            source[1] with { Block = null, Failure = "读取失败。" },
+            .. source.Skip(2),
+        ];
+        TaskRecordDocument changed = document with
+        {
+            Task = task with { Nodes = nodes },
+        };
+
+        TaskRecord loaded = TaskRecordSerializationMapper.FromDocument(changed).ThrowIfError();
+
+        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Block);
+        Assert.Null(Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Block);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ namespace Kuroe.Flow.Runtime.Nodes;
 public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode(executable)
 {
     private string? _content;
-    private string? _failure;
+    private NodeBlock? _block;
     private bool _failureTaken;
     private bool _canceled;
 
@@ -35,20 +35,20 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     /// <summary>取走本次激活产生的失败原因，同一原因只取一次。</summary>
     public override string? TakeFailure()
     {
-        if (_failure is null || _failureTaken)
+        if (_block is null || _failureTaken)
         {
             return null;
         }
 
         _failureTaken = true;
 
-        return _failure;
+        return _block.Summary;
     }
 
-    /// <summary>清除失败并记下一次强制重试，返工入口据此重新激活节点。</summary>
+    /// <summary>清除阻塞并记下一次强制重试，返工入口据此重新激活节点。</summary>
     public override void Retry()
     {
-        _failure = null;
+        _block = null;
         _failureTaken = false;
         Progress.RequestRerun();
     }
@@ -56,7 +56,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
     /// <summary>消费本次输入并产出一次。成功发布一次，失败停在阻塞等待返工。</summary>
     public override void Activate(INodeContext context, INodeInputs inputs)
     {
-        if (_canceled || _failure is not null)
+        if (_canceled || _block is not null)
         {
             return;
         }
@@ -84,12 +84,12 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>捕获自驱节点的进展、发布与失败。</summary>
+    /// <summary>捕获自驱节点的进展、发布与阻塞。</summary>
     public override NodeRecord? CaptureRecord() =>
         new SelfDrivenNodeRecord(
             Path,
             CaptureProgress(),
-            _failure,
+            _block,
             _failureTaken);
 
     /// <summary>从存档恢复自驱节点的进展、发布与失败。</summary>
@@ -101,7 +101,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
         }
 
         RestoreProgress(selfDriven.Common);
-        _failure = selfDriven.Failure;
+        _block = selfDriven.Block;
         _failureTaken = selfDriven.FailureTaken;
     }
 
@@ -113,7 +113,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
         {
             state = NodeState.Canceled;
         }
-        else if (_failure is not null)
+        else if (_block is not null)
         {
             state = NodeState.Blocked;
         }
@@ -122,7 +122,7 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
             state = NodeState.Done;
         }
 
-        return new ExecutableStateSnapshot(Path, state);
+        return new ExecutableStateSnapshot(Path, state, _block);
     }
 
     /// <summary>执行本次产出，成功时写入内容并返回空，失败时返回原因。</summary>
@@ -147,7 +147,8 @@ public abstract class SelfDrivenRuntime(ExecutableNode executable) : RuntimeNode
 
     private void Fail(string failure)
     {
-        _failure = failure;
+        string summary = string.IsNullOrWhiteSpace(failure) ? $"{Action} {Target} 失败。" : failure;
+        _block = new NodeBlock(summary, null, DateTimeOffset.UtcNow);
         _failureTaken = false;
     }
 }

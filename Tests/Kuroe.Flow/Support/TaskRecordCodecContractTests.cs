@@ -20,6 +20,7 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
 
         Assert.Equal(record.Identity, loaded.Identity);
+        Assert.Equal(record.SavedAt, loaded.SavedAt);
         Assert.Equal(record.Flow, loaded.Flow);
         Assert.Equal(record.Lifecycle, loaded.Lifecycle);
         Assert.Equal(record.Completed, loaded.Completed);
@@ -54,6 +55,9 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(record.Executions[1].StartedAt, loaded.Executions[1].StartedAt);
         Assert.Null(Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Common.Publication);
         Assert.Null(loaded.Nodes[1].Common.LastInputGroup);
+        Assert.Equal(
+            Assert.IsType<SelfDrivenNodeRecord>(record.Nodes[1]).Block,
+            Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Block);
     }
 
     [Fact]

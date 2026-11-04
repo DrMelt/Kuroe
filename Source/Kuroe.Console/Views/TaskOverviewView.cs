@@ -28,6 +28,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
         _terminal.Write(Blocks.Section(BoxKind.View, "概览", Blocks.Fields([.. fields])));
 
         PrintWaiting(task);
+        PrintBlocked(task);
         PrintExecutions(task);
     }
 
@@ -53,6 +54,34 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
 
         _terminal.NewLine();
         _terminal.Write(Blocks.Section(BoxKind.View, $"待处理 {found.Value.Count} 项", table));
+    }
+
+    /// <summary>阻塞节点给出路径与原因，不需要先看节点树。</summary>
+    private void PrintBlocked(TaskSnapshot task)
+    {
+        IReadOnlyList<ExecutableStateSnapshot> blocked =
+            [.. task.ExecutableStates.Where(state => state.Block is not null)];
+
+        if (blocked.Count == 0)
+        {
+            return;
+        }
+
+        Table table = Blocks.Table(("节点", false), ("原因", true));
+        foreach (ExecutableStateSnapshot state in blocked)
+        {
+            if (state.Block is not { } block)
+            {
+                continue;
+            }
+
+            table.AddRow(
+                new Text(state.Node.Value, Styles.Key),
+                new Text(ViewLabels.OneLine(block.Summary, ViewLabels.BlockLimit), Styles.Warning));
+        }
+
+        _terminal.NewLine();
+        _terminal.Write(Blocks.Section(BoxKind.View, $"阻塞 {blocked.Count} 项", table));
     }
 
     /// <summary>按执行节点列出执行，执行号是进入执行详情的入口。</summary>

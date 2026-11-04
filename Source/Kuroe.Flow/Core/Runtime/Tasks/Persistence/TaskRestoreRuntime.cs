@@ -28,6 +28,7 @@ public sealed class TaskRestoreRuntime(
 
         registry.Adopt(task.Value);
         runner.Restore(task.Value, seed);
+        task.Value.NotifyChanged();
 
         return task.Value.Snapshot();
     }

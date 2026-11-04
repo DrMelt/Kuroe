@@ -98,6 +98,13 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             line.Add(ViewLabels.Of(state), ViewLabels.StyleOf(state));
         }
 
+        if (facts.Block(executable.Path) is { } block)
+        {
+            line.Add(
+                $"阻塞原因 {ViewLabels.OneLine(block.Summary, ViewLabels.BlockLimit)}",
+                Styles.Warning);
+        }
+
         if ((facts.StaticText(executable.Path, LlmNodeTypes.ModelPort) ?? executable.StaticLabel(LlmNodeTypes.ModelPort)) is { } model)
         {
             line.Add($"模型 {model}", Styles.Hint);
@@ -189,6 +196,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     private sealed class Facts
     {
         private readonly Dictionary<NodePath, NodeState> _states;
+        private readonly Dictionary<NodePath, NodeBlock> _blocks;
         private readonly Dictionary<NodePath, ExecutableSnapshot> _snapshots;
         private readonly Dictionary<NodePath, IReadOnlyList<ExecutionSnapshot>> _executions;
         private readonly Dictionary<NodePath, ContainerSnapshot> _containers;
@@ -201,6 +209,14 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         {
             _task = task;
             _states = task.ExecutableStates.ToDictionary(state => state.Node, state => state.State);
+            _blocks = [];
+            foreach (ExecutableStateSnapshot state in task.ExecutableStates)
+            {
+                if (state.Block is { } block)
+                {
+                    _blocks[state.Node] = block;
+                }
+            }
             _snapshots = task.Executables.ToDictionary(node => node.Executable.Path);
             _executions = task.Executables.ToDictionary(node => node.Executable.Path, node => node.Executions);
             _containers = task.Containers.ToDictionary(container => container.Path);
@@ -213,6 +229,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         public NodeState State(NodePath path) =>
             _states.TryGetValue(path, out NodeState state) ? state : NodeState.Pending;
+
+        public NodeBlock? Block(NodePath path) =>
+            _blocks.GetValueOrDefault(path);
 
         public PendingNode? Waiting(NodePath path) =>
             _waiting.TryGetValue(path, out PendingNode node) ? node : null;

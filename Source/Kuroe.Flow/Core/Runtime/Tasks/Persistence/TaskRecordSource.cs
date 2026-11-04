@@ -3,20 +3,20 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
-/// <summary>按任务号从任务域捕获存档。任务完成时转发任务号。</summary>
+/// <summary>按任务号从任务域捕获存档。任务状态变化时转发任务号。</summary>
 public sealed class TaskRecordSource : ITaskRecordSource
 {
     private readonly TaskRegistry _registry;
 
-    /// <summary>按任务域建立捕获源，并接上任务完成通知。</summary>
+    /// <summary>按任务域建立捕获源，并接上任务状态变化通知。</summary>
     public TaskRecordSource(TaskRegistry registry)
     {
         _registry = registry;
-        registry.Completed += OnCompleted;
+        registry.Changed += OnChanged;
     }
 
     /// <inheritdoc/>
-    public event Action<TaskId>? Completed;
+    public event Action<TaskId>? Changed;
 
     /// <inheritdoc/>
     public TaskRecordCaptureResult Capture(TaskId id)
@@ -35,5 +35,5 @@ public sealed class TaskRecordSource : ITaskRecordSource
         }
     }
 
-    private void OnCompleted(WorkTask task) => Completed?.Invoke(task.Id);
+    private void OnChanged(TaskId id) => Changed?.Invoke(id);
 }

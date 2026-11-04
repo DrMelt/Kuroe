@@ -33,11 +33,35 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
-    public void Read_rejects_previous_version_before_mapping_fields()
+    public void Read_accepts_previous_version()
+    {
+        TaskRecordCodec codec = new();
+        string json = codec.Write(TaskRecordFixture.Create()).ThrowIfError();
+        string legacy = json.Replace(
+            $"\"Version\": {TaskRecordSerializationVersion.Current}",
+            $"\"Version\": {TaskRecordSerializationVersion.MinimumReadable}",
+            StringComparison.Ordinal);
+        Assert.Contains($"\"Version\": {TaskRecordSerializationVersion.MinimumReadable}", legacy);
+
+        Assert.False(codec.Read(legacy).IsError);
+    }
+
+    [Fact]
+    public void Read_rejects_unsupported_old_version_before_mapping_fields()
     {
         const string legacy = """{"Version":1,"Task":{"Nodes":[{"Kind":"Executable","PublishedExecution":1}]}}""";
 
         Assert.Equal(FlowErrorCodes.RecordVersion, new TaskRecordCodec().Read(legacy).FirstError.Code);
+    }
+
+    [Fact]
+    public void Write_emits_save_time_and_block_fields()
+    {
+        string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        Assert.Contains("\"SavedAt\":", json);
+        Assert.Contains("\"Block\":", json);
+        Assert.Contains("\"Summary\": \"读取失败。\"", json);
     }
 
     [Fact]

@@ -10,6 +10,7 @@ public sealed record TaskRecordDocument(int Version, TaskRecordData? Task);
 /// <summary>任务存档的通用形状。</summary>
 public sealed record TaskRecordData(
     TaskIdentityData? Identity,
+    DateTimeOffset? SavedAt,
     FlowSnapshotData? Flow,
     TaskStartData? Start,
     TaskLifecycle Lifecycle,
@@ -67,11 +68,12 @@ public sealed record ContextSourceData(
     NodePathData? Node,
     string? Port);
 
-/// <summary>节点记录的形状。节点类型专属字段按种类使用。</summary>
+/// <summary>节点记录的形状。节点类型专属字段按种类使用，Blocked 与 Failure 只服务版本 5 读取。</summary>
 public sealed record NodeData(
     string? Kind,
     NodePathData? Path,
     NodeCommonData? Common,
+    NodeBlockData? Block,
     List<NodePathData>? ReworkTargets,
     bool? Blocked,
     string? Failure,
@@ -79,6 +81,9 @@ public sealed record NodeData(
     bool? Waiting,
     NodeInputValuesData? Inputs,
     bool? Awaiting);
+
+/// <summary>节点阻塞原因的形状。</summary>
+public sealed record NodeBlockData(string? Summary, int? Execution, DateTimeOffset? At);
 
 /// <summary>节点公共状态的形状。</summary>
 public sealed record NodeCommonData(

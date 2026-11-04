@@ -187,6 +187,7 @@ internal sealed class TaskDriver(
                         }
                     }
 
+                    task.NotifyChanged();
                     continue;
                 }
 
@@ -236,12 +237,19 @@ internal sealed class TaskDriver(
                     task.MarkCompleted();
                 }
 
-                task.NotifyCompleted();
+                task.NotifyChanged();
             }
         }
         catch (Exception ex)
         {
-            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的推进异常：{ex.Message}"));
+            string message = $"{task.Id} 的推进异常：{ex.Message}";
+            lock (task.Gate)
+            {
+                task.Journal.AppendError(message);
+            }
+
+            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, message));
+            task.NotifyChanged();
         }
     }
     /// <summary>挂起推进循环，直到给定条件在锁内成立或被信号唤醒。设置信号后再判定，避免判定与挂起之间丢唤醒。</summary>
@@ -366,8 +374,11 @@ internal sealed class TaskDriver(
                 if (declaration.IsError)
                 {
                     node.ReleaseActive();
-                    node.EnterBlocked([node.Path]);
-                    task.Journal.AppendError(declaration.FirstError.Description);
+                    string reason = string.IsNullOrWhiteSpace(declaration.FirstError.Description)
+                        ? "执行目标解析失败。"
+                        : declaration.FirstError.Description;
+                    node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
+                    task.Journal.AppendError(reason);
                     task.Registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
                     return;
                 }
@@ -396,8 +407,8 @@ internal sealed class TaskDriver(
             catch (Exception ex)
             {
                 // 派发未走完时执行不会自行收口，显式收口后走统一收口路径把执行节点停驻
-                execution.MarkCanceled();
                 string message = $"执行派发异常：{ex.Message}";
+                execution.MarkFailed([Error.Failure("Task.Dispatch", message)]);
                 lock (task.Gate)
                 {
                     task.Journal.AppendError(message);
@@ -434,6 +445,8 @@ internal sealed class TaskDriver(
                 _inflight--;
                 _signal?.TrySetResult();
             }
+
+            task.NotifyChanged();
         }
     }
 

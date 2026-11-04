@@ -10,8 +10,8 @@ public interface ITaskRecordSource
     /// <summary>捕获任务存档。任务不存在时返回未找到，存在但捕获失败时返回错误。</summary>
     TaskRecordCaptureResult Capture(TaskId id);
 
-    /// <summary>任务完成时通知任务号。</summary>
-    event Action<TaskId>? Completed;
+    /// <summary>任务状态变化时通知任务号。</summary>
+    event Action<TaskId>? Changed;
 }
 
 /// <summary>一次存档捕获的结果。</summary>

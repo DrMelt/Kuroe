@@ -365,9 +365,11 @@ public sealed class TaskActions(
         return cleared;
     }
 
-    /// <summary>退出时先写全部任务存档，再中断任务与执行并等待收口。</summary>
+    /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，最后丢弃任务域。</summary>
     public async Task ShutdownAsync()
     {
+        await _driver.ShutdownAsync().ConfigureAwait(false);
+
         if (_records is { } coordinator)
         {
             foreach (TaskId id in _registry.Ids())
@@ -378,6 +380,6 @@ public sealed class TaskActions(
             await coordinator.FlushAsync().ConfigureAwait(false);
         }
 
-        await _driver.ShutdownAsync().ConfigureAwait(false);
+        _registry.Forget();
     }
 }

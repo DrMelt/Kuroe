@@ -29,6 +29,29 @@ public sealed class TaskTreeViewTests
     }
 
     [Fact]
+    public void Tree_prints_the_blocked_reason()
+    {
+        using ConsoleSession cli = new();
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        TaskSnapshot snapshot = Snapshot(cli);
+        DateTimeOffset at = DateTimeOffset.UtcNow;
+
+        new TaskTreeView(terminal, cli.Environment.Pendings).Print(snapshot with
+        {
+            ExecutableStates =
+            [
+                .. snapshot.ExecutableStates.Select(state => state with
+                {
+                    State = NodeState.Blocked,
+                    Block = new NodeBlock("节点失败原因。", null, at),
+                }),
+            ],
+        });
+
+        Assert.Contains("阻塞原因 节点失败原因。", output.Output);
+    }
+
+    [Fact]
     public void Tree_reads_the_node_state_from_the_snapshot()
     {
         using ConsoleSession cli = new();

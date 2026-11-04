@@ -154,6 +154,21 @@ public sealed partial class TaskAndReplTests
     }
 
     [Fact]
+    public void Task_overview_prints_the_blocked_reason()
+    {
+        using ConsoleSession cli = new(flowsJson: TestFlows.BlockingFlow);
+        cli.Environment.Runner.SubmitsPorts = false;
+        cli.Tasks.Submit(new FlowName("默认"), "目标");
+        TaskSnapshot blocked = cli.Environment.Settle(new TaskId(1));
+        Assert.Equal(TaskState.Blocked, blocked.State);
+
+        cli.Overview.Print(blocked);
+
+        Assert.Contains("计划", cli.Output.Output);
+        Assert.Contains("输出端口内容未交回", cli.Output.Output);
+    }
+
+    [Fact]
     public void Task_journal_prints_the_process_records()
     {
         using ConsoleSession cli = new();

@@ -14,7 +14,6 @@ public sealed class FlowEngine(
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<WorkTask, TaskDriver> _drivers = [];
-    private readonly HashSet<TaskRegistry> _registries = [];
 
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
@@ -32,7 +31,7 @@ public sealed class FlowEngine(
         Launch(task, driver);
     }
 
-    /// <summary>登记推进循环与任务域，把待处理目标接到任务上供存档捕获，循环结束后把驱动移出索引。</summary>
+    /// <summary>登记推进循环，把待处理目标接到任务上供存档捕获，循环结束后把驱动移出索引。</summary>
     private void Launch(WorkTask task, TaskDriver driver)
     {
         task.SeedSource = driver.CaptureSeed;
@@ -41,7 +40,6 @@ public sealed class FlowEngine(
         lock (_gate)
         {
             _drivers[task] = driver;
-            _registries.Add(task.Registry);
         }
 
         _ = Task.Run(async () =>
@@ -77,6 +75,7 @@ public sealed class FlowEngine(
         }
 
         Find(task)?.Advance(targets);
+        task.NotifyChanged();
     }
 
     /// <summary>要求持有任务 Gate：对被阻塞的执行节点再开一轮返工，返回实际发出的重跑目标数。</summary>
@@ -102,9 +101,14 @@ public sealed class FlowEngine(
             }
         }
 
-        if (targets.Count > 0 && Find(task) is { } driver)
+        if (targets.Count > 0)
         {
-            driver.Rework(targets);
+            if (Find(task) is { } driver)
+            {
+                driver.Rework(targets);
+            }
+
+            task.NotifyChanged();
         }
 
         return targets.Count;
@@ -124,15 +128,13 @@ public sealed class FlowEngine(
         }
     }
 
-    /// <summary>退出时中断全部任务与推进循环并等待收口。任务控制状态保留，供持久化恢复。</summary>
+    /// <summary>退出时中断全部任务与推进循环并等待收口。任务控制状态与节点状态保留，供持久化收尾。</summary>
     public async Task ShutdownAsync()
     {
         List<TaskDriver> drivers;
-        TaskRegistry[] registries;
         lock (_gate)
         {
             drivers = [.. _drivers.Values];
-            registries = [.. _registries];
         }
 
         foreach (TaskDriver driver in drivers)
@@ -151,12 +153,6 @@ public sealed class FlowEngine(
         lock (_gate)
         {
             _drivers.Clear();
-            _registries.Clear();
-        }
-
-        foreach (TaskRegistry registry in registries)
-        {
-            registry.Forget();
         }
     }
 

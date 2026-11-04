@@ -16,8 +16,8 @@ public sealed class TaskRegistry(ExecutionIndex executions)
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    /// <summary>一个任务走完的通知，存档协调据此写终态。</summary>
-    internal event Action<WorkTask>? Completed;
+    /// <summary>任务状态已变的通知，存档协调据此写存档。</summary>
+    internal event Action<TaskId>? Changed;
 
     /// <summary>把已定键、已备好开始端口文本的任务加入本域。</summary>
     internal WorkTask Add(
@@ -196,5 +196,5 @@ public sealed class TaskRegistry(ExecutionIndex executions)
 
     internal void Report(ExecutionNotice notice) => Notified?.Invoke(notice);
 
-    internal void ReportCompleted(WorkTask task) => Completed?.Invoke(task);
+    internal void ReportChanged(TaskId id) => Changed?.Invoke(id);
 }

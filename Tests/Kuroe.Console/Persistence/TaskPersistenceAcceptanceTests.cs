@@ -107,12 +107,15 @@ public abstract class TaskPersistenceAcceptanceTests
             await using (ITaskPersistenceSession first = await CreateSessionAsync(root))
             {
                 id = first.Submit("阻塞任务");
-                first.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+                TaskSnapshot blocked = first.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+                Assert.Contains(blocked.ExecutableStates, state => state.Block is not null);
                 await first.PauseAsync(id);
                 await first.ShutdownAsync();
             }
 
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
+            TaskSnapshot loaded = second.Snapshot(id);
+            Assert.Contains(loaded.ExecutableStates, state => state.Block is not null);
             ErrorOr<Success> resumed = second.Resume(id);
             ErrorOr<Success> reworked = second.Rework(id);
 

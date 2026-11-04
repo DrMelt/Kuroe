@@ -20,6 +20,9 @@ internal static class ViewLabels
     /// <summary>等待提问一行能看到的文本长度。</summary>
     public const int QuestionLimit = 40;
 
+    /// <summary>阻塞原因一行能看到的文本长度。</summary>
+    public const int BlockLimit = 80;
+
     /// <summary>等待节点的提示：种类与提问，供节点行与选择项共用。</summary>
     public static string WaitingLabel(PendingNode waiting) =>
         waiting.Question is { Length: > 0 } question

@@ -5,6 +5,7 @@ using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.TestSupport;
@@ -65,6 +66,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 
         return new TaskRecord(
             new TaskIdentity(id, "恢复任务", at, at),
+            at,
             new FlowSnapshot(new FlowName("默认"), """{"Nodes":[]}""", """{"Flows":[]}"""),
             new TaskStartSnapshot(
                 StartInputs.Single(target, "目标内容"),
@@ -95,7 +97,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
                         published ? 1 : 0,
                         published ? PublishedRecord(execution, plan, result) : null),
                     blocked ? [plan] : [],
-                    blocked),
+                    blocked ? new NodeBlock("任务已暂停。", execution, at) : null),
                 new ContainerNodeRecord(container, Common(published ? 1 : 0)),
             ],
             new SchedulerSeed([]));

@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime.Process;
-using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -99,11 +98,16 @@ public sealed class WorkTask
         task.FlowSnapshot = record.Flow;
         task._executions.AddRange(executions);
         task.Runtime.Restore(record.Nodes);
-        foreach (NodePath node in executions
-            .Where(execution => execution.State == ExecutionState.Interrupted)
-            .Select(execution => execution.Input.Node))
+        foreach (Execution execution in executions
+            .Where(execution => execution.State == ExecutionState.Interrupted))
         {
-            task.Runtime.Executable(node).EnterBlocked([node]);
+            var runtime = task.Runtime.Executable(execution.Input.Node);
+            if (runtime.Block is null)
+            {
+                runtime.EnterBlocked(
+                    [runtime.Path],
+                    new NodeBlock("进程退出前未收口。", execution.Id, record.SavedAt));
+            }
         }
 
         task._lifecycle = task.DetermineRestoredLifecycle(record);
@@ -157,8 +161,8 @@ public sealed class WorkTask
     /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
     internal void MarkCompleted() => _completed = true;
 
-    /// <summary>通知任务已走完，写存档由任务域决定。</summary>
-    internal void NotifyCompleted() => Registry.ReportCompleted(this);
+    /// <summary>通知任务状态已变，存档捕获据此写存档。</summary>
+    internal void NotifyChanged() => Registry.ReportChanged(Id);
 
     /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>
     internal TaskRegistry Registry { get; }
@@ -229,6 +233,7 @@ public sealed class WorkTask
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     _title = TaskTitle.Shorten(value);
+                    NotifyChanged();
                 }
             }
         }
@@ -312,6 +317,7 @@ public sealed class WorkTask
 
         _lifecycle = TaskLifecycle.Paused;
         _lastActivityAt = DateTimeOffset.UtcNow;
+        NotifyChanged();
 
         return Result.Success;
     }
@@ -331,6 +337,7 @@ public sealed class WorkTask
 
         _lifecycle = TaskLifecycle.Active;
         _lastActivityAt = DateTimeOffset.UtcNow;
+        NotifyChanged();
 
         return Result.Success;
     }
@@ -356,6 +363,7 @@ public sealed class WorkTask
 
         Runtime.Cancel();
         _lastActivityAt = DateTimeOffset.UtcNow;
+        NotifyChanged();
 
         return Result.Success;
     }

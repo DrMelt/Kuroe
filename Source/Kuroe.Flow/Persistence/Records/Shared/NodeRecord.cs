@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
 namespace Kuroe.Flow.Persistence.Records.Shared;
 
@@ -35,14 +36,14 @@ public sealed record ExecutableNodeRecord(
     NodePath Path,
     NodeCommonRecord Common,
     IReadOnlyList<NodePath> ReworkTargets,
-    bool Blocked)
+    NodeBlock? Block)
     : NodeRecord(Path, Common);
 
 /// <summary>自驱型节点的持久状态。</summary>
 public sealed record SelfDrivenNodeRecord(
     NodePath Path,
     NodeCommonRecord Common,
-    string? Failure,
+    NodeBlock? Block,
     bool FailureTaken)
     : NodeRecord(Path, Common);
 
