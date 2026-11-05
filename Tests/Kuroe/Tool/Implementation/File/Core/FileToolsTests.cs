@@ -20,7 +20,7 @@ public sealed class FileToolsTests : IDisposable
 
         string output = Call("ReadFile", ("path", "hello.txt"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 | 你好，工作目录！\n2 | 第二行", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |你好，工作目录！\n2 |第二行", output);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class FileToolsTests : IDisposable
 
         string output = Call("ReadFile", ("path", "long.txt"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 | ", output, StringComparison.Ordinal);
+        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 |", output, StringComparison.Ordinal);
         Assert.EndsWith(new string('a', 10), output, StringComparison.Ordinal);
         Assert.Equal("（内容超过 8000 字符，已截断）\n".Length + 8000, output.Length);
     }
@@ -95,7 +95,7 @@ public sealed class FileToolsTests : IDisposable
 
         string output = Call("ReadFile", ("path", "lines.txt"), ("from", "2"), ("to", "4"));
 
-        Assert.Equal("2 | 二\n3 | 三\n4 | 四", output);
+        Assert.Equal("2 |二\n3 |三\n4 |四", output);
     }
 
     [Fact]
@@ -106,9 +106,9 @@ public sealed class FileToolsTests : IDisposable
 
         string output = Call("ReadFile", ("path", "many.txt"));
 
-        Assert.StartsWith(" 1 | L1\n 2 | L2\n", output, StringComparison.Ordinal);
-        Assert.Contains("50 | L50", output, StringComparison.Ordinal);
-        Assert.DoesNotContain("51 | L51", output, StringComparison.Ordinal);
+        Assert.StartsWith(" 1 |L1\n 2 |L2\n", output, StringComparison.Ordinal);
+        Assert.Contains("50 |L50", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("51 |L51", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class FileToolsTests : IDisposable
 
         string output = Call("ReadFile", ("path", "few.txt"), ("to", "100"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 | 一\n2 | 二", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |一\n2 |二", output);
     }
 
     [Fact]
@@ -985,7 +985,7 @@ public sealed class FileToolsTests : IDisposable
             .Functions.Single()
             .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "mapped.txt" })));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 | 映射内容", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 |映射内容", output);
     }
 
     [Fact]

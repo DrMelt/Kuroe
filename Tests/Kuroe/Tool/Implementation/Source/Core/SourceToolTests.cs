@@ -98,7 +98,7 @@ public sealed class SourceToolTests : IDisposable
         string output = Call(new SourceTool(_root), "ReadSourceFile",
             ("path", "Kuroe.cs"), ("from", "2"), ("to", "4"));
 
-        Assert.Equal("2 | 二\n3 | 三\n4 | 四", output);
+        Assert.Equal("2 |二\n3 |三\n4 |四", output);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class SourceToolTests : IDisposable
         string file = Path.Combine(_root, "Kuroe.cs");
         File.WriteAllText(file, "一\n二\n");
 
-        Assert.Equal("2 | 二", Call(new SourceTool(_root), "ReadSourceFile", ("path", file), ("from", "2"), ("to", "2")));
+        Assert.Equal("2 |二", Call(new SourceTool(_root), "ReadSourceFile", ("path", file), ("from", "2"), ("to", "2")));
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class SourceToolTests : IDisposable
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "..foo.cs"), "一\n");
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 | 一",
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 |一",
             Call(new SourceTool(_root), "ReadSourceFile", ("path", "..foo.cs")));
     }
 
@@ -129,7 +129,7 @@ public sealed class SourceToolTests : IDisposable
 
         string output = Call(new SourceTool(_root), "ReadSourceFile", ("path", "短文档.md"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 | 第一行\n2 | 第二行", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |第一行\n2 |第二行", output);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public sealed class SourceToolTests : IDisposable
 
         string output = Call(new SourceTool(_root), "ReadSourceFile", ("path", "long.cs"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 | ", output, StringComparison.Ordinal);
+        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 |", output, StringComparison.Ordinal);
     }
 
     [Fact]

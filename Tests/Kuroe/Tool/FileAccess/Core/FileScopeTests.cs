@@ -70,7 +70,7 @@ public sealed class FileScopeTests : IDisposable
         ErrorOr<string> text = scope.ReadRange("a.txt", 2, 3, "ListDirectory");
 
         Assert.False(text.IsError);
-        Assert.Equal("2 | 二\n3 | 三", text.Value);
+        Assert.Equal("2 |二\n3 |三", text.Value);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class FileScopeTests : IDisposable
         ErrorOr<string> text = scope.ReadRange("a.txt", 2, 10, "ListDirectory");
 
         Assert.False(text.IsError);
-        Assert.Equal("（已到文件结尾，实际返回第 2 到 4 行）\n2 | 二\n3 | 三\n4 | 四", text.Value);
+        Assert.Equal("（已到文件结尾，实际返回第 2 到 4 行）\n2 |二\n3 |三\n4 |四", text.Value);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class FileScopeTests : IDisposable
         ErrorOr<string> text = scope.ReadRange("a.txt", 8, 12, "ListDirectory");
 
         Assert.False(text.IsError);
-        Assert.Equal(" 8 | L8\n 9 | L9\n10 | L10\n11 | L11\n12 | L12", text.Value);
+        Assert.Equal(" 8 |L8\n 9 |L9\n10 |L10\n11 |L11\n12 |L12", text.Value);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public sealed class FileScopeTests : IDisposable
         Assert.StartsWith(Notice, text.Value, StringComparison.Ordinal);
         string content = text.Value[Notice.Length..];
         Assert.Equal(8000, content.Length);
-        Assert.StartsWith("1 | ", content, StringComparison.Ordinal);
+        Assert.StartsWith("1 |", content, StringComparison.Ordinal);
     }
 
     [Fact]

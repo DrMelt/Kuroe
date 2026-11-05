@@ -203,7 +203,7 @@ public sealed class FileScope(string root, string boundary, string rootName, str
             }
 
             text.Append((from + index).ToString(CultureInfo.InvariantCulture).PadLeft(width));
-            text.Append(" | ");
+            text.Append(" |");
             text.Append(lines[index]);
             if (text.Length > OutputLimit)
             {
