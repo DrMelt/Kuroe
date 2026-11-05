@@ -20,6 +20,7 @@ public sealed class ExecutionRecordTests
         Assert.Single(execution.Inputs);
         Assert.Equal(2, execution.Usage.RequestCount);
         Assert.Equal(150, execution.Usage.Tokens.Total);
+        Assert.Equal(90, execution.Usage.ContextTokens);
         Assert.Equal("目标内容", execution.Texts[new PortName("目标")]);
     }
 

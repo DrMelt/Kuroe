@@ -63,7 +63,8 @@ public sealed record ExecutionData(
 public sealed record ExecutionUsageData(
     int RequestCount,
     int RequestsWithoutUsage,
-    TokenUsageData? Tokens);
+    TokenUsageData? Tokens,
+    long? ContextTokens);
 
 /// <summary>token 用量的形状。</summary>
 public sealed record TokenUsageData(

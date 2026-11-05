@@ -25,6 +25,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
             ("请求", new Text(ViewLabels.Requests(execution.Usage), Styles.Hint)),
             ("模型", new Text((input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)")),
             ("用量", new Text(ViewLabels.Tokens(execution.Usage), Styles.Hint)),
+            ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
             ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
             ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
             ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),

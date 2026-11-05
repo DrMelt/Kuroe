@@ -40,6 +40,11 @@ public static class InfoLabels
         ? $"输入 {Count(tokens.Input)} · 输出 {Count(tokens.Output)} · 合计 {Count(tokens.Total)}"
         : "未提供";
 
+    /// <summary>最近一次请求的上下文 token 数，没有取得时用占位。</summary>
+    public static string Context(ExecutionUsage usage) => usage.ContextTokens is { } tokens
+        ? tokens.ToString("N0")
+        : "未提供";
+
     /// <summary>用量的补充说明：缓存、推理与未提供用量的请求数，都没有时为空。</summary>
     public static string UsageDetails(ExecutionUsage usage)
     {

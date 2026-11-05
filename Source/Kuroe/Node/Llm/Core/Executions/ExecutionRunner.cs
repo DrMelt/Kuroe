@@ -25,7 +25,7 @@ internal sealed class ExecutionRunner(
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
 
-    /// <summary>本次执行的会话累计用量，运行中可读，执行结束后为最终值。</summary>
+    /// <summary>本次执行的会话用量与最近一次请求的上下文，运行中可读，执行结束后为最终值。</summary>
     public ExecutionUsage Usage => _session?.Usage ?? ExecutionUsage.None;
 
     /// <summary>执行一次 Llm 请求，按产出契约补发要求。</summary>

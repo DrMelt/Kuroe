@@ -4,7 +4,7 @@ namespace Kuroe.Flow.Persistence.Serialization.Shared;
 public static class TaskRecordSerializationVersion
 {
     /// <summary>当前版本。</summary>
-    public const int Current = 8;
+    public const int Current = 9;
 
     /// <summary>给定版本是否可读取。</summary>
     public static bool IsReadable(int version) => version == Current;

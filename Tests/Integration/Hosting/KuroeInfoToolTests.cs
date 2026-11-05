@@ -45,6 +45,10 @@ public sealed class KuroeInfoToolTests
     public async Task GetExecution_renders_execution_process_and_tool_entry()
     {
         using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.Usage = new ExecutionUsage(1, 0, new TokenUsage(12, 3, 15, null, null))
+        {
+            ContextTokens = 12,
+        };
         environment.Runner.Emits = (_, journal) =>
             journal.AppendToolCall("file/ReadFile", "{}", "完成", false);
         TaskId id = environment.Submit("做一个测试任务");
@@ -59,6 +63,7 @@ public sealed class KuroeInfoToolTests
             .Replace("\r", string.Empty);
 
         Assert.Contains(executionId.ToString(), output);
+        Assert.Contains("上下文 12", output);
         Assert.Contains("过程：", output);
         Assert.Contains("工具 > file/ReadFile {}", output);
         Assert.Contains("\n         结果 完成", output);

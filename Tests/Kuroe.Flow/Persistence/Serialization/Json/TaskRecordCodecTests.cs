@@ -61,6 +61,14 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
+    public void Write_emits_context_tokens()
+    {
+        string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        Assert.Contains("\"ContextTokens\": 90", json);
+    }
+
+    [Fact]
     public void Write_keeps_non_ascii_characters()
     {
         string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();

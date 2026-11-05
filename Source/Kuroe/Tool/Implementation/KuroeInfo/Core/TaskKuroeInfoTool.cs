@@ -36,7 +36,7 @@ public sealed class TaskKuroeInfoTool : ITool
     /// <summary>查看执行详情的函数定义。</summary>
     private static readonly ToolDefinition GetExecution = new(
         new ToolPath("KuroeInfo/GetExecution"),
-        "查看指定用户任务的执行详情：输入取值与执行过程。",
+        "查看指定用户任务的执行详情：请求用量、输入取值与执行过程。",
         [new ToolParameter(new ToolName("executionId"), "要查看的执行号", Required: true)]);
 
     /// <summary>用任务与执行的索引建立载体。</summary>
@@ -174,7 +174,9 @@ public sealed class TaskKuroeInfoTool : ITool
         text.AppendLine($"状态 {InfoLabels.State(execution)}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
-        text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)} · 用量 {InfoLabels.Tokens(execution.Usage.Tokens)}");
+        text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)}"
+            + $" · 用量 {InfoLabels.Tokens(execution.Usage.Tokens)}"
+            + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
         if (InfoLabels.UsageDetails(execution.Usage) is { Length: > 0 } details)
         {
             text.AppendLine(details);

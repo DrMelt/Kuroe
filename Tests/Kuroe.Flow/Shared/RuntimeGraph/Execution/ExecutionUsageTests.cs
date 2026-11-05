@@ -35,6 +35,42 @@ public sealed class ExecutionUsageTests
     }
 
     [Fact]
+    public void Context_follows_the_latest_request_without_being_summed()
+    {
+        ExecutionUsage usage = ExecutionUsage.None
+            .BeginRequest()
+            .CompleteRequest(new TokenUsage(100, 20, 120, 80, 5))
+            .BeginRequest()
+            .CompleteRequest(new TokenUsage(50, 10, 60, 10, 1));
+
+        Assert.Equal(150, usage.Tokens.Input);
+        Assert.Equal(50, usage.ContextTokens);
+    }
+
+    [Fact]
+    public void A_request_without_usage_clears_the_context()
+    {
+        ExecutionUsage usage = ExecutionUsage.None
+            .BeginRequest()
+            .CompleteRequest(new TokenUsage(100, 20, 120, 80, 5))
+            .BeginRequest()
+            .CompleteRequest(null);
+
+        Assert.Equal(100, usage.Tokens.Input);
+        Assert.Null(usage.ContextTokens);
+    }
+
+    [Fact]
+    public void A_request_without_input_leaves_the_context_empty()
+    {
+        ExecutionUsage usage = ExecutionUsage.None
+            .BeginRequest()
+            .CompleteRequest(new TokenUsage(null, 20, 20, null, null));
+
+        Assert.Null(usage.ContextTokens);
+    }
+
+    [Fact]
     public void Unknown_usage_is_not_treated_as_zero()
     {
         TokenUsage usage = new TokenUsage(100, null, null, null, null)

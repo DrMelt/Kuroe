@@ -98,10 +98,10 @@ public sealed class RunCommandTests
     }
 
     [Fact]
-    public async Task Done_flow_reports_requests_and_tokens()
+    public async Task Done_flow_reports_requests_tokens_and_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        environment.Runner.Usage = new ExecutionUsage(2, 0, new TokenUsage(100, 20, 120, 80, 5));
+        environment.Runner.Usage = new ExecutionUsage(2, 0, new TokenUsage(100, 20, 120, 80, 5)) { ContextTokens = 75 };
         (RunCommand command, _, StringWriter error) = Build(environment);
 
         int code = await command.RunAsync("默认", null, ["目标=目标"]);
@@ -109,7 +109,22 @@ public sealed class RunCommandTests
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("请求 2 次", error.ToString());
         Assert.Contains("输入 100 · 输出 20 · 合计 120", error.ToString());
+        Assert.Contains("上下文 75", error.ToString());
         Assert.Contains("缓存命中 80 · 推理 5", error.ToString());
+    }
+
+    [Fact]
+    public async Task Done_flow_reports_unknown_context()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        environment.Runner.Usage = new ExecutionUsage(1, 1, TokenUsage.None);
+        (RunCommand command, _, StringWriter error) = Build(environment);
+
+        int code = await command.RunAsync("默认", null, ["目标=目标"]);
+
+        Assert.Equal(ExitCodes.Success, code);
+        Assert.Contains("用量 未提供", error.ToString());
+        Assert.Contains("上下文 未提供", error.ToString());
     }
 
     private static (RunCommand Command, StringWriter Output, StringWriter Error) Build(CliEnvironment environment)

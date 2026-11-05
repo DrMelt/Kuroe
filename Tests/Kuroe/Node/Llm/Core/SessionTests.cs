@@ -117,6 +117,22 @@ public sealed class SessionTests
         Assert.Equal(120, session.Usage.Tokens.Total);
         Assert.Equal(80, session.Usage.Tokens.CachedInput);
         Assert.Equal(5, session.Usage.Tokens.Reasoning);
+        Assert.Null(session.Usage.ContextTokens);
+    }
+
+    [Fact]
+    public async Task Context_tokens_follow_the_latest_request()
+    {
+        RecordingTurnClient client = new(
+            UsageReply("第一答", new UsageDetails { InputTokenCount = 100, OutputTokenCount = 20, TotalTokenCount = 120 }),
+            UsageReply("第二答", new UsageDetails { InputTokenCount = 50, OutputTokenCount = 10, TotalTokenCount = 60 }));
+        Session session = Create(client);
+
+        await session.AskAsync("第一问", CancellationToken.None);
+        await session.AskAsync("第二问", CancellationToken.None);
+
+        Assert.Equal(150, session.Usage.Tokens.Input);
+        Assert.Equal(50, session.Usage.ContextTokens);
     }
 
     [Fact]
@@ -137,6 +153,7 @@ public sealed class SessionTests
         Assert.Equal(30, session.Usage.Tokens.Input);
         Assert.Equal(4, session.Usage.Tokens.Output);
         Assert.Equal(34, session.Usage.Tokens.Total);
+        Assert.Equal(30, session.Usage.ContextTokens);
     }
 
     [Fact]
@@ -164,6 +181,7 @@ public sealed class SessionTests
 
         Assert.Equal(1, session.Usage.RequestCount);
         Assert.Equal(1, session.Usage.RequestsWithoutUsage);
+        Assert.Null(session.Usage.ContextTokens);
     }
 
     private static Session Create(ITurnClient client, ProcessJournal? journal = null) =>

@@ -97,7 +97,7 @@ public static class TaskRecordSerializationMapper
             ToData(execution.Texts));
 
     private static ExecutionUsageData ToData(ExecutionUsage usage) =>
-        new(usage.RequestCount, usage.RequestsWithoutUsage, ToData(usage.Tokens));
+        new(usage.RequestCount, usage.RequestsWithoutUsage, ToData(usage.Tokens), usage.ContextTokens);
 
     private static TokenUsageData ToData(TokenUsage tokens) =>
         new(tokens.Input, tokens.Output, tokens.Total, tokens.CachedInput, tokens.Reasoning);
@@ -266,7 +266,10 @@ public static class TaskRecordSerializationMapper
             throw new FormatException("执行记录缺少 token 用量。");
         }
 
-        return new ExecutionUsage(dto.RequestCount, dto.RequestsWithoutUsage, ReadTokenUsage(dto.Tokens));
+        return new ExecutionUsage(dto.RequestCount, dto.RequestsWithoutUsage, ReadTokenUsage(dto.Tokens))
+        {
+            ContextTokens = dto.ContextTokens,
+        };
     }
 
     private static TokenUsage ReadTokenUsage(TokenUsageData dto) =>

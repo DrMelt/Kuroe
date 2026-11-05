@@ -49,7 +49,7 @@ public static class TaskRecordFixture
                     [],
                     [new JournalEntry(At(3, 4, 11), JournalLevel.Information, "回复", "结果")],
                     0,
-                    new ExecutionUsage(2, 0, new TokenUsage(120, 30, 150, 80, 5)),
+                    new ExecutionUsage(2, 0, new TokenUsage(120, 30, 150, 80, 5)) { ContextTokens = 90 },
                     [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
                     new Dictionary<PortName, string> { [target] = "目标内容" }),
                 new ExecutionRecord(

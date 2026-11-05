@@ -33,7 +33,7 @@ internal sealed class Session : IConversation
     /// <summary>本轮可用的工具函数，工具执行按调用名取用。</summary>
     public IReadOnlyList<AIFunction> Functions => _functions;
 
-    /// <summary>本次对话累计的模型请求用量，请求发出即计入。</summary>
+    /// <summary>本次对话的模型请求用量与最近一次请求的上下文，请求发出即计入次数，返回用量后更新累计与上下文。</summary>
     public ExecutionUsage Usage => _usage;
 
     /// <summary>一轮请求。input 非空时作为本轮输入写入历史；工具结果回填后不再给出输入。

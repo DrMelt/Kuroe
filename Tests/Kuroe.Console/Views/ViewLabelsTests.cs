@@ -46,6 +46,15 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
+    public void Context_shows_the_latest_request_and_falls_back_when_unknown()
+    {
+        ExecutionUsage usage = new(2, 0, new TokenUsage(150, 30, 180, null, null)) { ContextTokens = 90 };
+
+        Assert.Equal("90", ViewLabels.Context(usage));
+        Assert.Equal("未提供", ViewLabels.Context(ExecutionUsage.None));
+    }
+
+    [Fact]
     public void Clock_renders_local_time()
     {
         Assert.Matches(@"^\d{2}:\d{2}:\d{2}$", ViewLabels.Clock(DateTimeOffset.Now));
