@@ -12,7 +12,8 @@ public sealed record ExecutionSnapshot(
     DateTimeOffset? FinishedAt,
     IReadOnlyList<string> Failures,
     IReadOnlyList<JournalEntry> Journal,
-    int DroppedEntries)
+    int DroppedEntries,
+    ExecutionUsage Usage)
 {
     /// <summary>已耗时，未结束时按当前时刻算。</summary>
     public TimeSpan Elapsed => (FinishedAt ?? DateTimeOffset.UtcNow) - (StartedAt ?? CreatedAt);

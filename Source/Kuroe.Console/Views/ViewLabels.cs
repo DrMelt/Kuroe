@@ -88,6 +88,15 @@ internal static class ViewLabels
 
     public static string Elapsed(TimeSpan span) => InfoLabels.Elapsed(span);
 
+    /// <summary>执行请求次数的展示名。</summary>
+    public static string Requests(ExecutionUsage usage) => InfoLabels.Requests(usage);
+
+    /// <summary>执行 token 用量的展示名。</summary>
+    public static string Tokens(ExecutionUsage usage) => InfoLabels.Tokens(usage.Tokens);
+
+    /// <summary>用量的补充说明。</summary>
+    public static string UsageDetails(ExecutionUsage usage) => InfoLabels.UsageDetails(usage);
+
     public static string Clock(DateTimeOffset? at) => InfoLabels.Clock(at);
 
     /// <summary>把多行文本压成一行，超过长度时截断并加省略号。</summary>

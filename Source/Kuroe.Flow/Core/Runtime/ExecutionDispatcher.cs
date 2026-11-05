@@ -99,6 +99,11 @@ public sealed class ExecutionDispatcher
         try
         {
             execution.AttachJournal(runner.Journal);
+            if (runner is IExecutionUsageReader usageReader)
+            {
+                execution.AttachUsageReader(usageReader);
+            }
+
             execution.MarkRunning();
             ErrorOr<ExecutionOutput> outcome = await runner.ExecuteAsync(
                 execution.Input,
@@ -119,6 +124,13 @@ public sealed class ExecutionDispatcher
         catch (Exception ex)
         {
             execution.MarkFailed([Error.Failure("Execution.Failure", $"执行失败：{ex.Message}")]);
+        }
+        finally
+        {
+            if (runner is IExecutionUsageReader reader)
+            {
+                execution.SettleUsage(reader.Usage);
+            }
         }
 
         List<Execution> dropped = [];

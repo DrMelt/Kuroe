@@ -22,6 +22,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(record.Lifecycle, loaded.Lifecycle);
         Assert.Equal(record.Completed, loaded.Completed);
         Assert.Equal(record.Executions.Count, loaded.Executions.Count);
+        Assert.Equal(record.Executions[0].Usage, loaded.Executions[0].Usage);
         Assert.Equal(record.Nodes.Count, loaded.Nodes.Count);
         Assert.Equal(record.Pending.Targets, loaded.Pending.Targets);
     }

@@ -49,6 +49,7 @@ public static class TaskRecordFixture
                     [],
                     [new JournalEntry(At(3, 4, 11), JournalLevel.Information, "回复", "结果")],
                     0,
+                    new ExecutionUsage(2, 0, new TokenUsage(120, 30, 150, 80, 5)),
                     [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
                     new Dictionary<PortName, string> { [target] = "目标内容" }),
                 new ExecutionRecord(
@@ -63,6 +64,7 @@ public static class TaskRecordFixture
                     ["读取失败。"],
                     [],
                     0,
+                    ExecutionUsage.None,
                     [],
                     new Dictionary<PortName, string>()),
                 new ExecutionRecord(
@@ -77,6 +79,7 @@ public static class TaskRecordFixture
                     ["任务已暂停。"],
                     [],
                     0,
+                    ExecutionUsage.None,
                     [],
                     new Dictionary<PortName, string>()),
             ],

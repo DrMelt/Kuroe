@@ -92,8 +92,15 @@ public static class TaskRecordSerializationMapper
             [.. execution.Failures],
             [.. execution.Journal.Select(ToData)],
             execution.DroppedEntries,
+            ToData(execution.Usage),
             [.. execution.Inputs.Select(ToData)],
             ToData(execution.Texts));
+
+    private static ExecutionUsageData ToData(ExecutionUsage usage) =>
+        new(usage.RequestCount, usage.RequestsWithoutUsage, ToData(usage.Tokens));
+
+    private static TokenUsageData ToData(TokenUsage tokens) =>
+        new(tokens.Input, tokens.Output, tokens.Total, tokens.CachedInput, tokens.Reasoning);
 
     private static InputValueData ToData(InputValueRecord value) =>
         new(value.Port.Value, ToData(value.Origin), value.Text);
@@ -243,8 +250,27 @@ public static class TaskRecordSerializationMapper
             dto.Failures ?? [],
             ReadJournal(dto.Journal),
             dto.DroppedEntries,
+            ReadUsage(dto.Usage),
             [.. (dto.Inputs ?? []).Select(ReadInputValue)],
             ReadTexts(dto.Texts));
+
+    private static ExecutionUsage ReadUsage(ExecutionUsageData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("执行记录缺少用量。");
+        }
+
+        if (dto.Tokens is null)
+        {
+            throw new FormatException("执行记录缺少 token 用量。");
+        }
+
+        return new ExecutionUsage(dto.RequestCount, dto.RequestsWithoutUsage, ReadTokenUsage(dto.Tokens));
+    }
+
+    private static TokenUsage ReadTokenUsage(TokenUsageData dto) =>
+        new(dto.Input, dto.Output, dto.Total, dto.CachedInput, dto.Reasoning);
 
     private static InputValueRecord ReadInputValue(InputValueData dto) =>
         new(

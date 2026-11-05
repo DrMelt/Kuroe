@@ -16,6 +16,7 @@ public sealed record ExecutionRecord(
     IReadOnlyList<string> Failures,
     IReadOnlyList<JournalEntry> Journal,
     int DroppedEntries,
+    ExecutionUsage Usage,
     IReadOnlyList<InputValueRecord> Inputs,
     IReadOnlyDictionary<PortName, string> Texts);
 

@@ -174,6 +174,11 @@ public sealed class TaskKuroeInfoTool : ITool
         text.AppendLine($"状态 {InfoLabels.State(execution)}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
+        text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)} · 用量 {InfoLabels.Tokens(execution.Usage.Tokens)}");
+        if (InfoLabels.UsageDetails(execution.Usage) is { Length: > 0 } details)
+        {
+            text.AppendLine(details);
+        }
 
         foreach (string failure in execution.Failures)
         {
@@ -229,6 +234,7 @@ public sealed class TaskKuroeInfoTool : ITool
         [
             execution.Id.ToString(),
             $"第 {execution.Input.ExecutionCount} 轮",
+            $"请求 {InfoLabels.Requests(execution.Usage)}",
             InfoLabels.State(execution),
             InfoLabels.Elapsed(execution.Elapsed),
         ];

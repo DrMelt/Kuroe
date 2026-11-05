@@ -55,8 +55,23 @@ public sealed record ExecutionData(
     List<string>? Failures,
     List<JournalEntryData>? Journal,
     int DroppedEntries,
+    ExecutionUsageData? Usage,
     List<InputValueData>? Inputs,
     Dictionary<string, string>? Texts);
+
+/// <summary>一次执行的模型请求用量的形状。</summary>
+public sealed record ExecutionUsageData(
+    int RequestCount,
+    int RequestsWithoutUsage,
+    TokenUsageData? Tokens);
+
+/// <summary>token 用量的形状。</summary>
+public sealed record TokenUsageData(
+    long? Input,
+    long? Output,
+    long? Total,
+    long? CachedInput,
+    long? Reasoning);
 
 /// <summary>输入取值的形状。</summary>
 public sealed record InputValueData(string? Port, ContextSourceData? Origin, string? Text);

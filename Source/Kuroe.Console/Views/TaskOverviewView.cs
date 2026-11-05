@@ -104,6 +104,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
             ("执行", false),
             ("节点", false),
             ("轮次", false),
+            ("请求", false),
             ("状态", false),
             ("耗时", false),
             ("失败", false));
@@ -117,6 +118,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
                     new Text(id, Styles.Key),
                     new Text(node.Executable.Path.Value),
                     new Text(round, Styles.Hint),
+                    new Text(ViewLabels.Requests(execution.Usage), Styles.Hint),
                     new Text(state, ViewLabels.StyleOf(execution.State)),
                     new Text(elapsed, Styles.Hint),
                     new Text(failures ?? string.Empty, Styles.Error));

@@ -32,6 +32,38 @@ public static class InfoLabels
         ? $"{span.TotalSeconds:0}秒"
         : $"{(int)span.TotalMinutes}分{span.Seconds:00}秒";
 
+    /// <summary>执行请求次数的展示名。</summary>
+    public static string Requests(ExecutionUsage usage) => $"{usage.RequestCount} 次";
+
+    /// <summary>token 用量的展示名，未取得请求级计数时用占位。</summary>
+    public static string Tokens(TokenUsage tokens) => tokens.Known
+        ? $"输入 {Count(tokens.Input)} · 输出 {Count(tokens.Output)} · 合计 {Count(tokens.Total)}"
+        : "未提供";
+
+    /// <summary>用量的补充说明：缓存、推理与未提供用量的请求数，都没有时为空。</summary>
+    public static string UsageDetails(ExecutionUsage usage)
+    {
+        List<string> parts = [];
+        if (usage.Tokens.CachedInput is { } cached)
+        {
+            parts.Add($"缓存命中 {cached:N0}");
+        }
+
+        if (usage.Tokens.Reasoning is { } reasoning)
+        {
+            parts.Add($"推理 {reasoning:N0}");
+        }
+
+        if (usage.RequestsWithoutUsage > 0)
+        {
+            parts.Add($"未提供用量 {usage.RequestsWithoutUsage} 次");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
     /// <summary>时刻的展示名，未发生时用占位。</summary>
     public static string Clock(DateTimeOffset? at) => at is null ? "—" : at.Value.ToLocalTime().ToString("HH:mm:ss");
+
+    private static string Count(long? value) => value?.ToString("N0") ?? "—";
 }

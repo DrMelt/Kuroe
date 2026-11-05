@@ -87,6 +87,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
                     state == ExecutionState.Interrupted ? ["任务已暂停。"] : [],
                     [],
                     0,
+                    ExecutionUsage.None,
                     [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
                     new Dictionary<PortName, string> { [target] = "目标内容" }),
             ],

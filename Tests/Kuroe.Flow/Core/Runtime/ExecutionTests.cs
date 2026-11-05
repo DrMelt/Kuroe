@@ -35,6 +35,35 @@ public sealed class ExecutionTests
     }
 
     [Fact]
+    public void Attached_usage_reader_appears_in_snapshot()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
+
+        execution.AttachUsageReader(reader);
+
+        Assert.Equal(reader.Usage, execution.Snapshot().Usage);
+
+        reader.Usage = new ExecutionUsage(2, 0, new TokenUsage(30, 4, 34, null, null));
+
+        Assert.Equal(reader.Usage, execution.Snapshot().Usage);
+    }
+
+    [Fact]
+    public void Settled_usage_stops_following_the_reader()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
+        ExecutionUsage settled = new(2, 0, new TokenUsage(30, 4, 34, null, null));
+
+        execution.AttachUsageReader(reader);
+        execution.SettleUsage(settled);
+        reader.Usage = new ExecutionUsage(3, 0, new TokenUsage(50, 6, 56, null, null));
+
+        Assert.Equal(settled, execution.Snapshot().Usage);
+    }
+
+    [Fact]
     public void Journal_content_entry_and_progress_reach_subscribers()
     {
         Execution execution = new(new ExecutionId(1), Input());
@@ -157,6 +186,11 @@ public sealed class ExecutionTests
         Node = NodePath.Of("实施"),
         Type = TestNodeTypes.Executable,
     };
+
+    private sealed class TestUsageReader : IExecutionUsageReader
+    {
+        public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+    }
 
     private sealed class TestJournal(IReadOnlyList<JournalEntry> entries, int dropped = 0) : IProcessJournal
     {

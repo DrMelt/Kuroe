@@ -92,6 +92,80 @@ public sealed class SessionTests
         Assert.Equal(["第二问"], client.Requests[1].Messages.Select(message => message.Text));
     }
 
+    [Fact]
+    public async Task Requests_are_counted_and_usage_is_summed()
+    {
+        RecordingTurnClient client = new(
+            UsageReply("第一答", new UsageDetails
+            {
+                InputTokenCount = 100,
+                OutputTokenCount = 20,
+                TotalTokenCount = 120,
+                CachedInputTokenCount = 80,
+                ReasoningTokenCount = 5,
+            }),
+            Reply("第二答"));
+        Session session = Create(client);
+
+        await session.AskAsync("第一问", CancellationToken.None);
+        await session.AskAsync("第二问", CancellationToken.None);
+
+        Assert.Equal(2, session.Usage.RequestCount);
+        Assert.Equal(1, session.Usage.RequestsWithoutUsage);
+        Assert.Equal(100, session.Usage.Tokens.Input);
+        Assert.Equal(20, session.Usage.Tokens.Output);
+        Assert.Equal(120, session.Usage.Tokens.Total);
+        Assert.Equal(80, session.Usage.Tokens.CachedInput);
+        Assert.Equal(5, session.Usage.Tokens.Reasoning);
+    }
+
+    [Fact]
+    public async Task The_last_usage_in_a_request_wins()
+    {
+        RecordingTurnClient client = new(
+            [
+                .. Reply("答复"),
+                .. UsageReply(string.Empty, new UsageDetails { InputTokenCount = 10, OutputTokenCount = 2, TotalTokenCount = 12 }),
+                .. UsageReply(string.Empty, new UsageDetails { InputTokenCount = 30, OutputTokenCount = 4, TotalTokenCount = 34 }),
+            ]);
+        Session session = Create(client);
+
+        await session.AskAsync("问题", CancellationToken.None);
+
+        Assert.Equal(1, session.Usage.RequestCount);
+        Assert.Equal(0, session.Usage.RequestsWithoutUsage);
+        Assert.Equal(30, session.Usage.Tokens.Input);
+        Assert.Equal(4, session.Usage.Tokens.Output);
+        Assert.Equal(34, session.Usage.Tokens.Total);
+    }
+
+    [Fact]
+    public async Task Usage_is_not_carried_into_the_history()
+    {
+        RecordingTurnClient client = new(
+            UsageReply("第一答", new UsageDetails { InputTokenCount = 10, OutputTokenCount = 2, TotalTokenCount = 12 }),
+            Reply("第二答"));
+        Session session = Create(client);
+
+        await session.AskAsync("第一问", CancellationToken.None);
+        await session.AskAsync("第二问", CancellationToken.None);
+
+        Assert.DoesNotContain(
+            client.Requests[1].Messages.SelectMany(message => message.Contents),
+            content => content is UsageContent);
+    }
+
+    [Fact]
+    public async Task A_failed_stream_still_counts_the_request()
+    {
+        Session session = Create(new FailingTurnClient());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => session.AskAsync("问题", CancellationToken.None));
+
+        Assert.Equal(1, session.Usage.RequestCount);
+        Assert.Equal(1, session.Usage.RequestsWithoutUsage);
+    }
+
     private static Session Create(ITurnClient client, ProcessJournal? journal = null) =>
         new(
             new Source(client),
@@ -101,6 +175,13 @@ public sealed class SessionTests
 
     private static ChatResponseUpdate[] Reply(string text) =>
         [new ChatResponseUpdate(ChatRole.Assistant, text)];
+
+    private static ChatResponseUpdate[] UsageReply(string text, UsageDetails details)
+    {
+        List<AIContent> contents = [new TextContent(text), new UsageContent(details)];
+
+        return [new ChatResponseUpdate(ChatRole.Assistant, contents)];
+    }
 
     private sealed class Source(ITurnClient client) : ITurnClientSource
     {
@@ -149,6 +230,19 @@ public sealed class SessionTests
                 await Task.Yield();
                 yield return update;
             }
+        }
+    }
+
+    private sealed class FailingTurnClient : ITurnClient
+    {
+        public async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+            IReadOnlyList<ChatMessage> messages,
+            ChatOptions options,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+            yield return new ChatResponseUpdate(ChatRole.Assistant, "半句");
+            throw new InvalidOperationException("流中断。");
         }
     }
 

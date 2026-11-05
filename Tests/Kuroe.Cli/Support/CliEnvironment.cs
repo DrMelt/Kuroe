@@ -10,10 +10,11 @@ namespace Kuroe.Cli.Tests.Support;
 /// <summary>在临时工作目录里装配一次 CLI 会话，用替身执行器驱动流程。</summary>
 internal sealed class CliEnvironment : IAsyncDisposable
 {
-    private CliEnvironment(string root, CliSession session)
+    private CliEnvironment(string root, CliSession session, StubRunner runner)
     {
         Root = root;
         Session = session;
+        Runner = runner;
     }
 
     /// <summary>临时工作目录。</summary>
@@ -21,6 +22,9 @@ internal sealed class CliEnvironment : IAsyncDisposable
 
     /// <summary>本次测试的 CLI 会话。</summary>
     public CliSession Session { get; }
+
+    /// <summary>替身执行器。</summary>
+    public StubRunner Runner { get; }
 
     /// <summary>按给定流程文件装配会话，并注册一个已选中的 fake 模型。</summary>
     public static CliEnvironment Create(string flowsJson)
@@ -30,9 +34,10 @@ internal sealed class CliEnvironment : IAsyncDisposable
         Directory.CreateDirectory(config);
         File.WriteAllText(Path.Combine(config, "flows.json"), flowsJson);
 
+        StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<IExecutionRunnerFactory>(new StubRunner()));
+            services => services.AddSingleton<IExecutionRunnerFactory>(runner));
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -46,7 +51,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
             ProviderModelName.Create("fake").Value).ThrowIfError();
         session.Models.Select(ModelName.Create("fake").Value).ThrowIfError();
 
-        return new CliEnvironment(root, session);
+        return new CliEnvironment(root, session, runner);
     }
 
     public async ValueTask DisposeAsync()
@@ -70,6 +75,9 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 
+    /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
+    public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) => new Run(this);
 
     private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
@@ -83,11 +91,13 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     }
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
-    private sealed class Run(StubRunner owner) : IExecutionRunner
+    private sealed class Run(StubRunner owner) : IExecutionRunner, IExecutionUsageReader
     {
         private readonly StubJournal _journal = new();
 
         public IProcessJournal Journal => _journal;
+
+        public ExecutionUsage Usage => owner.Usage;
 
         public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(_journal, cancellationToken);

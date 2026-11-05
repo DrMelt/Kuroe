@@ -18,6 +18,8 @@ public sealed class ExecutionRecordTests
         Assert.Empty(execution.Failures);
         Assert.Single(execution.Journal);
         Assert.Single(execution.Inputs);
+        Assert.Equal(2, execution.Usage.RequestCount);
+        Assert.Equal(150, execution.Usage.Tokens.Total);
         Assert.Equal("目标内容", execution.Texts[new PortName("目标")]);
     }
 

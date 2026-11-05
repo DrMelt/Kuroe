@@ -84,6 +84,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
     public int Peak { get { lock (_gate) { return _peak; } } }
 
+    /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
+    public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
         new Run(this, execution);
 
@@ -167,11 +170,13 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner
+    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner, IExecutionUsageReader
     {
         private readonly RecordingJournal _journal = new();
 
         public IProcessJournal Journal => _journal;
+
+        public ExecutionUsage Usage => owner.Usage;
 
         public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(execution, input, _journal, cancellationToken);

@@ -15,6 +15,7 @@ internal sealed class Session : IConversation
     private readonly ProcessJournal _journal;
     private readonly List<ChatMessage> _messages = [];
     private readonly IReadOnlyList<AIFunction> _functions;
+    private volatile ExecutionUsage _usage = ExecutionUsage.None;
 
     internal Session(
         ITurnClientSource clients,
@@ -31,6 +32,9 @@ internal sealed class Session : IConversation
 
     /// <summary>本轮可用的工具函数，工具执行按调用名取用。</summary>
     public IReadOnlyList<AIFunction> Functions => _functions;
+
+    /// <summary>本次对话累计的模型请求用量，请求发出即计入。</summary>
+    public ExecutionUsage Usage => _usage;
 
     /// <summary>一轮请求。input 非空时作为本轮输入写入历史；工具结果回填后不再给出输入。
     /// 只报成功或失败，回复中的工具调用交给调用方执行。</summary>
@@ -65,18 +69,25 @@ internal sealed class Session : IConversation
         };
 
         List<ChatResponseUpdate> updates = [];
+        TokenUsage? usage = null;
+        _usage = _usage.BeginRequest();
         try
         {
             await foreach (ChatResponseUpdate update in client.Value.StreamAsync([.. _messages], options, cancellationToken))
             {
                 updates.Add(update);
                 RecordContent(update, _journal);
+                usage = UsageOf(update) ?? usage;
             }
         }
         catch
         {
             _messages.RemoveRange(start, _messages.Count - start);
             throw;
+        }
+        finally
+        {
+            _usage = _usage.CompleteRequest(usage);
         }
 
         ChatMessage? reply = Reply(updates);
@@ -96,6 +107,28 @@ internal sealed class Session : IConversation
     /// <summary>把本轮工具结果写回历史，作为下一次请求的工具消息。</summary>
     public void AppendResults(IReadOnlyList<FunctionResultContent> results) =>
         _messages.Add(new ChatMessage(ChatRole.Tool, [.. results]));
+
+    /// <summary>从一条流式更新里取本次请求的用量，没有时为空。同一请求以最后一次为准。</summary>
+    private static TokenUsage? UsageOf(ChatResponseUpdate update) =>
+        update.Contents.OfType<UsageContent>().LastOrDefault() is { Details: { } details }
+            ? TokenUsageOf(details)
+            : null;
+
+    /// <summary>把模型侧用量转成执行侧用量，合计缺失时由输入与输出补齐。</summary>
+    private static TokenUsage TokenUsageOf(UsageDetails details)
+    {
+        long? input = details.InputTokenCount;
+        long? output = details.OutputTokenCount;
+
+        return new TokenUsage(
+            input,
+            output,
+            details.TotalTokenCount ?? (input is { } inputCount && output is { } outputCount
+                ? inputCount + outputCount
+                : null),
+            details.CachedInputTokenCount,
+            details.ReasoningTokenCount);
+    }
 
     /// <summary>把一条流式更新中的思考与回复内容按种类写进过程记录，其余内容由会话历史承载。</summary>
     internal static void RecordContent(ChatResponseUpdate update, ProcessJournal journal)

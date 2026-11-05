@@ -108,11 +108,13 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
         if (snapshot.State == TaskState.Done)
         {
             output.Hint($"任务 {task.Id} 已完成。");
+            PlainTaskView.Usage(output, snapshot);
 
             return ExitCodes.Success;
         }
 
         PlainTaskView.Failures(output, snapshot);
+        PlainTaskView.Usage(output, snapshot);
         output.ErrorLine($"任务 {task.Id} 已阻塞。");
 
         return ExitCodes.Blocked;

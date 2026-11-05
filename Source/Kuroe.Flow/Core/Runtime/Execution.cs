@@ -18,6 +18,8 @@ public sealed class Execution : IExecution
     private DateTimeOffset? _finishedAt;
     private readonly List<string> _failures = [];
     private ExecutionOutput? _output;
+    private ExecutionUsage _usage = ExecutionUsage.None;
+    private IExecutionUsageReader? _usageReader;
     private bool _interruptRequested;
     private string _interruptReason = "已中断。";
 
@@ -59,6 +61,7 @@ public sealed class Execution : IExecution
         }
 
         _journal = new RestoredProcessJournal(record.Journal, record.DroppedEntries);
+        _usage = record.Usage;
         _cancellation.Dispose();
     }
 
@@ -127,6 +130,25 @@ public sealed class Execution : IExecution
         journal.ContentAppended += PublishContent;
         journal.EntryAppended += PublishEntry;
         journal.ProgressReported += UpdateProgress;
+    }
+
+    /// <summary>附加本次执行的用量来源，快照读取其当前累计。</summary>
+    internal void AttachUsageReader(IExecutionUsageReader reader)
+    {
+        lock (_gate)
+        {
+            _usageReader = reader;
+        }
+    }
+
+    /// <summary>记下本次执行的最终用量并解除用量来源，快照不再随运行器变化。</summary>
+    internal void SettleUsage(ExecutionUsage usage)
+    {
+        lock (_gate)
+        {
+            _usage = usage;
+            _usageReader = null;
+        }
     }
 
     /// <summary>转给订阅者一段流式内容。</summary>
@@ -312,6 +334,8 @@ public sealed class Execution : IExecution
         DateTimeOffset? finishedAt;
         string[] failures;
         IProcessJournal? journal;
+        ExecutionUsage usage;
+        IExecutionUsageReader? usageReader;
         lock (_gate)
         {
             state = _state;
@@ -320,10 +344,12 @@ public sealed class Execution : IExecution
             finishedAt = _finishedAt;
             failures = [.. _failures];
             journal = _journal;
+            usage = _usage;
+            usageReader = _usageReader;
         }
 
         return new ExecutionSnapshot(Id, Input, state, progress, CreatedAt, startedAt, finishedAt,
-            failures, journal?.Entries ?? [], journal?.DroppedEntries ?? 0);
+            failures, journal?.Entries ?? [], journal?.DroppedEntries ?? 0, usageReader?.Usage ?? usage);
     }
 
     /// <summary>捕获本次执行的状态与历史。</summary>
@@ -343,6 +369,7 @@ public sealed class Execution : IExecution
             snapshot.Failures,
             snapshot.Journal,
             snapshot.DroppedEntries,
+            snapshot.Usage,
             [
                 .. snapshot.Input.Inputs.Select(value => new InputValueRecord(
                     value.Port,

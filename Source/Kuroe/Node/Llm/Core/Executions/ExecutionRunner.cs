@@ -12,7 +12,7 @@ namespace Kuroe.Node.Llm.Executions;
 internal sealed class ExecutionRunner(
     SessionFactory sessions,
     IExecutionStatusReader status,
-    ExecutionId execution) : IExecutionRunner
+    ExecutionId execution) : IExecutionRunner, IExecutionUsageReader
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
@@ -20,9 +20,13 @@ internal sealed class ExecutionRunner(
     private readonly SessionFactory _sessions = sessions;
     private readonly ContractReminder _reminder = new(status);
     private readonly ProcessJournal _journal = new();
+    private volatile Session? _session;
 
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
+
+    /// <summary>本次执行的会话累计用量，运行中可读，执行结束后为最终值。</summary>
+    public ExecutionUsage Usage => _session?.Usage ?? ExecutionUsage.None;
 
     /// <summary>执行一次 Llm 请求，按产出契约补发要求。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
@@ -31,6 +35,7 @@ internal sealed class ExecutionRunner(
     {
         LlmNodeType? type = input.Type as LlmNodeType;
         Session session = _sessions.ForExecution(execution, input, _journal);
+        _session = session;
         IToolInvoker tools = new ToolInvoker(session.Functions);
         TurnBudget? budget = type?.MaxTurns is { } maxTurns ? new TurnBudget(maxTurns) : null;
 
@@ -55,7 +60,7 @@ internal sealed class ExecutionRunner(
         {
             if (budget is { } limited && !limited.Take())
             {
-                return [ModelErrors.TurnLimit(limited.Limit)];
+                return [ModelErrors.TurnLimit(limited.Limit, conversation.Usage.RequestCount)];
             }
 
             ErrorOr<TurnReply> reply = await conversation.AskAsync(input, cancellationToken);

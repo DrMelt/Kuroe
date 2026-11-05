@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Microsoft.Extensions.AI;
@@ -50,6 +51,8 @@ public sealed class TurnLoopTests
 
         Assert.True(outcome.IsError);
         Assert.Equal("Execution.TurnLimit", outcome.FirstError.Code);
+        Assert.Contains("已向模型发起 1 次请求", outcome.FirstError.Description);
+        Assert.Contains("上限 1 次", outcome.FirstError.Description);
         Assert.Single(conversation.Asked);
         Assert.Single(conversation.Appended);
     }
@@ -93,9 +96,12 @@ public sealed class TurnLoopTests
 
         public List<IReadOnlyList<FunctionResultContent>> Appended { get; } = [];
 
+        public ExecutionUsage Usage { get; private set; } = ExecutionUsage.None;
+
         public Task<ErrorOr<TurnReply>> AskAsync(string? input, CancellationToken cancellationToken)
         {
             Asked.Add(input);
+            Usage = Usage.BeginRequest();
 
             return Task.FromResult(_replies.Dequeue());
         }
