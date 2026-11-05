@@ -1,3 +1,4 @@
+using ApiHub.Shared.Models;
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Tests.Support;
 using Xunit;
@@ -42,7 +43,9 @@ public sealed class CatalogCommandsTests
         Assert.Equal("k3", environment.Session.Catalog.Snapshot().Providers
             .Single(provider => provider.ProviderName.Value == "p2").ApiKey.Value);
 
-        Assert.Equal(ExitCodes.Success, models.Add("m2", "p2"));
+        Assert.Equal(ExitCodes.Success, models.Add("m2", "p2", "m2"));
+        Assert.Equal("m2", environment.Session.Catalog.Snapshot().Models
+            .Single(model => model.ModelName.Value == "m2").ProviderModelName.Value);
         Assert.Equal(ExitCodes.Success, models.Use("m2"));
         Assert.Equal("m2", environment.Session.Models.Current?.Value);
 
@@ -52,6 +55,24 @@ public sealed class CatalogCommandsTests
         Assert.Equal(ExitCodes.Success, providers.Remove("p2"));
         Assert.DoesNotContain("错误：", error.ToString());
         Assert.NotEmpty(output.ToString());
+    }
+
+    [Fact]
+    public async Task The_same_provider_model_name_can_register_under_two_providers()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
+        (ProviderCommands providers, ModelCommands models, _, StringWriter error) = Build(environment);
+        Assert.Equal(ExitCodes.Success, providers.Add("p2", "https://example.invalid/v2", "k2"));
+
+        Assert.Equal(ExitCodes.Success, models.Add("alias", "p2", "fake"));
+        Assert.Equal(ExitCodes.Success, models.Add("local-only", "p2", string.Empty));
+
+        IReadOnlyList<ModelDefinition> registered = environment.Session.Catalog.Snapshot().Models;
+        Assert.Contains(registered, model =>
+            model.ModelName.Value == "alias" && model.ProviderModelName.Value == "fake");
+        Assert.Contains(registered, model =>
+            model.ModelName.Value == "local-only" && model.ProviderModelName.Value == "local-only");
+        Assert.DoesNotContain("错误：", error.ToString());
     }
 
     [Fact]

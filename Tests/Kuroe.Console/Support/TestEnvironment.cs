@@ -147,7 +147,10 @@ public sealed class TestEnvironment : IDisposable
         {
             CatalogService catalog = provider.GetRequiredService<CatalogService>();
             catalog.AddProvider("test", "https://example.invalid/v1", "key").ThrowIfError();
-            catalog.AddModel(ModelName.Create("fake").Value, ProviderName.Create("test").Value).ThrowIfError();
+            catalog.AddModel(
+                ModelName.Create("fake").Value,
+                ProviderName.Create("test").Value,
+                ProviderModelName.Create("fake").Value).ThrowIfError();
             provider.GetRequiredService<ModelService>().Select(ModelName.Create("fake").Value).ThrowIfError();
         }
 

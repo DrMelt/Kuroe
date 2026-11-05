@@ -40,7 +40,10 @@ internal sealed class CliEnvironment : IAsyncDisposable
 
         CliSession session = created.Value;
         session.Catalog.AddProvider("test", "https://example.invalid/v1", "key").ThrowIfError();
-        session.Catalog.AddModel(ModelName.Create("fake").Value, ProviderName.Create("test").Value).ThrowIfError();
+        session.Catalog.AddModel(
+            ModelName.Create("fake").Value,
+            ProviderName.Create("test").Value,
+            ProviderModelName.Create("fake").Value).ThrowIfError();
         session.Models.Select(ModelName.Create("fake").Value).ThrowIfError();
 
         return new CliEnvironment(root, session);

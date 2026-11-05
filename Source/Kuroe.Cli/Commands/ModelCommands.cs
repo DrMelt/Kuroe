@@ -39,7 +39,7 @@ internal sealed class ModelCommands(CliSession session, CliOutput output)
         if (selected.IsError)
         {
             output.Report(selected.ErrorsOrEmptyList);
-            output.Hint("用 model list 查看已注册模型，用 model add <模型> <提供商> 注册。");
+            output.Hint("用 model list 查看已注册模型，用 model add <本地模型名> <提供商> [提供商模型名] 注册。");
 
             return ExitCodes.Failure;
         }
@@ -65,26 +65,18 @@ internal sealed class ModelCommands(CliSession session, CliOutput output)
         return ExitCodes.Success;
     }
 
-    public int Add(string model, string provider)
+    public int Add(string model, string provider, string providerModelName)
     {
-        ErrorOr<ModelName> modelName = ModelName.Create(model.Trim());
-        ErrorOr<ProviderName> providerName = ProviderName.Create(provider.Trim());
-        if (modelName.IsError || providerName.IsError)
-        {
-            output.Report([.. modelName.ErrorsOrEmptyList, .. providerName.ErrorsOrEmptyList]);
-
-            return ExitCodes.Failure;
-        }
-
-        ErrorOr<Success> added = session.Catalog.AddModel(modelName.Value, providerName.Value);
+        ErrorOr<Success> added = session.Catalog.AddModel(model, provider, providerModelName);
         if (added.IsError)
         {
             output.Report(added.ErrorsOrEmptyList);
+            output.Hint("注册格式：model add <本地模型名> <提供商> [提供商模型名]。用 model list 查看已注册模型。");
 
             return ExitCodes.Failure;
         }
 
-        output.Line($"已注册模型 {modelName.Value.Value}。");
+        output.Line($"已注册模型 {model.Trim()}。");
 
         return ExitCodes.Success;
     }

@@ -42,13 +42,14 @@ internal sealed class CatalogView(Terminal terminal)
             return;
         }
 
-        Table table = Blocks.Table(("模型", false), ("提供商", true), ("当前", false));
+        Table table = Blocks.Table(("本地模型", false), ("提供商", true), ("提供商模型", true), ("当前", false));
         foreach (ModelDefinition model in models)
         {
             bool selected = current is { } name && model.ModelName.Equals(name);
             table.AddRow(
                 new Text(model.ModelName.Value, Styles.Key),
                 new Text(model.ProviderName.Value),
+                new Text(model.ProviderModelName.Value),
                 new Text(selected ? "当前" : string.Empty, Styles.Success));
         }
 

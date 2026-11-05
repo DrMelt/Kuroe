@@ -698,7 +698,10 @@ public sealed partial class TaskAndReplTests
     public async Task Assistant_menu_switches_the_model()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
+        cli.Environment.Catalog.AddModel(
+            ModelName.Create("m2").Value,
+            ProviderName.Create("test").Value,
+            ProviderModelName.Create("m2").Value).ThrowIfError();
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);
         cli.Output.Input.PushKey(ConsoleKey.Enter);
         cli.Output.Input.PushKey(ConsoleKey.DownArrow);

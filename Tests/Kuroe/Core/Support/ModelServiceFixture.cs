@@ -42,7 +42,10 @@ internal sealed class ModelServiceFixture : IDisposable
         if (seedCatalog)
         {
             Ok(catalog.AddProvider("test", "https://example.invalid/v1", "key"));
-            Ok(catalog.AddModel(ModelName.Create("fake").Value, ProviderName.Create("test").Value));
+            Ok(catalog.AddModel(
+                ModelName.Create("fake").Value,
+                ProviderName.Create("test").Value,
+                ProviderModelName.Create("fake").Value));
         }
 
         ModelService models = new(settings, catalog);

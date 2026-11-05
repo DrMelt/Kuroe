@@ -91,7 +91,10 @@ public sealed class DialogueHostTests
         };
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
-        environment.Catalog.AddModel(ModelName.Create("second").Value, ProviderName.Create("test").Value).ThrowIfError();
+        environment.Catalog.AddModel(
+            ModelName.Create("second").Value,
+            ProviderName.Create("test").Value,
+            ProviderModelName.Create("second").Value).ThrowIfError();
         environment.Models.Select(ModelName.Create("second").Value).ThrowIfError();
         ErrorOr<Success> second = await environment.Dialogue.ReplyAsync("第二问", null);
 

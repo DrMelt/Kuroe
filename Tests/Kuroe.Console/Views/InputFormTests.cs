@@ -230,6 +230,23 @@ public sealed class InputFormTests
     }
 
     [Fact]
+    public void Form_submits_when_only_required_fields_are_filled()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        output.Input.PushKey(ConsoleKey.Enter);
+        output.Input.PushTextWithEnter("alpha");
+        output.Input.PushKey(ConsoleKey.Enter);
+
+        IReadOnlyList<string>? values = new InputForm(
+            terminal,
+            "填写",
+            [new FormField("甲"), new FormField("乙", Optional: true)]).Run();
+
+        Assert.Equal(["alpha", ""], values);
+        Assert.Contains("乙 · 可留空", output.Output);
+    }
+
+    [Fact]
     public void Form_allows_rewriting_an_initial_value()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

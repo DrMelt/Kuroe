@@ -18,7 +18,10 @@ internal sealed class ToolCatalogView(CatalogService catalog, ModelService model
                     provider.BaseAddress.Address.ToString(),
                     !CatalogService.IsPlaceholder(provider.ApiKey))),
             ],
-            [.. snapshot.Models.Select(model => new ModelInfo(model.ModelName.Value, model.ProviderName.Value))],
+            [.. snapshot.Models.Select(model => new ModelInfo(
+                model.ModelName.Value,
+                model.ProviderName.Value,
+                model.ProviderModelName.Value))],
             models.Current?.Value);
     }
 }

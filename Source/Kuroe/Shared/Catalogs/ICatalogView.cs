@@ -20,6 +20,7 @@ public sealed record CatalogSummary(IReadOnlyList<ProviderInfo> Providers, IRead
 public sealed record ProviderInfo(string Name, string Endpoint, bool CredentialSet);
 
 /// <summary>目录里的一个模型。</summary>
-/// <param name="Name">模型名。</param>
+/// <param name="Name">本地模型名。</param>
 /// <param name="Provider">所属提供商名。</param>
-public sealed record ModelInfo(string Name, string Provider);
+/// <param name="ProviderModelName">请求提供商时使用的模型名。</param>
+public sealed record ModelInfo(string Name, string Provider, string ProviderModelName);

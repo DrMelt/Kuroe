@@ -50,7 +50,10 @@ public sealed class ModelServiceTests
     public void Removing_an_unselected_model_keeps_the_selection()
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
-        Assert.False(fixture.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).IsError);
+        Assert.False(fixture.Catalog.AddModel(
+            ModelName.Create("m2").Value,
+            ProviderName.Create("test").Value,
+            ProviderModelName.Create("m2").Value).IsError);
         Assert.False(fixture.Models.Select(ModelName.Create("m2").Value).IsError);
 
         ErrorOr<ModelRemoval> removal = fixture.Models.Remove(ModelName.Create("fake").Value);

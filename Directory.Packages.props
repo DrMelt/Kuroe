@@ -1,29 +1,32 @@
 <Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageVersion Include="xunit" Version="2.9.3" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageVersion Include="ApiHub" Version="0.2.0" />
-    <PackageVersion Include="ApiHub.ChatClient" Version="0.2.0" />
-    <PackageVersion Include="ApiHub.Json" Version="0.2.0" />
-    <PackageVersion Include="ApiHub.Shared" Version="0.2.0" />
-    <PackageVersion Include="ErrorOr" Version="2.1.1" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.34.0.3385" />
-    <PackageVersion Include="Spectre.Console" Version="0.57.2" />
-    <PackageVersion Include="Spectre.Console.Testing" Version="0.57.2" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageVersion Include="ApiHub" Version="0.3.0" />
+        <PackageVersion Include="ApiHub.ChatClient" Version="0.3.0" />
+        <PackageVersion Include="ApiHub.Json" Version="0.3.0" />
+        <PackageVersion Include="ApiHub.Shared" Version="0.3.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageVersion Include="ErrorOr" Version="2.1.1" />
+        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
+        <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.34.0.3385" />
+        <PackageVersion Include="Spectre.Console" Version="0.57.2" />
+        <PackageVersion Include="Spectre.Console.Testing" Version="0.57.2" />
+        <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    </ItemGroup>
 
 </Project>

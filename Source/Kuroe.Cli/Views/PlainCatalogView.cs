@@ -28,16 +28,20 @@ internal static class PlainCatalogView
     {
         if (models.Count == 0)
         {
-            output.Hint("还没有注册模型，用 model add <模型> <提供商> 注册。");
+            output.Hint("还没有注册模型，用 model add <本地模型名> <提供商> [提供商模型名] 注册。");
 
             return;
         }
 
-        output.Line("模型\t提供商\t当前");
+        output.Line("本地模型\t提供商\t提供商模型\t当前");
         foreach (ModelDefinition model in models)
         {
             bool selected = current is { } name && model.ModelName.Equals(name);
-            output.Line($"{model.ModelName.Value}\t{model.ProviderName.Value}\t{(selected ? "当前" : string.Empty)}");
+            output.Line(string.Join('\t',
+                model.ModelName.Value,
+                model.ProviderName.Value,
+                model.ProviderModelName.Value,
+                selected ? "当前" : string.Empty));
         }
     }
 }

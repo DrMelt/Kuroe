@@ -64,7 +64,10 @@ public sealed class ClientProviderTests
         public ErrorOr<ModelConnection> Connect(ModelName model) =>
             model.Value == "fake"
                 ? ModelConnection.Create(
-                    ModelDefinition.Create(model, ProviderName.Create("test").Value),
+                    ModelDefinition.Create(
+                        model,
+                        ProviderName.Create("test").Value,
+                        ProviderModelName.Create("fake").Value),
                     ProviderDefinition.Create(
                         ProviderName.Create("test").Value,
                         ProviderEndpoint.Create("https://example.invalid/v1").Value,

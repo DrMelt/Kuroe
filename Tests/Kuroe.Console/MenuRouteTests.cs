@@ -132,7 +132,7 @@ public sealed class MenuRouteTests
     {
         using ConsoleSession cli = new();
 
-        cli.Catalogs.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value);
+        cli.Catalogs.AddModel("m2", "test", "m2");
         Assert.Contains("已注册。", cli.Output.Output);
 
         cli.Catalogs.SelectModel(ModelName.Create("m2").Value);
@@ -166,6 +166,33 @@ public sealed class MenuRouteTests
         Assert.Contains("已注册。", output);
         Assert.Contains(cli.Environment.Catalog.Snapshot().Models,
             model => model.ModelName.Value == "m2");
+    }
+
+    [Fact]
+    public void Model_add_from_the_menu_collects_the_provider_model_name()
+    {
+        using ConsoleSession cli = new();
+
+        for (int index = 0; index < 4; index++)
+        {
+            cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        }
+
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("m2");
+        cli.Output.Input.PushKey(ConsoleKey.DownArrow);
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushTextWithEnter("upstream");
+        cli.Output.Input.PushKey(ConsoleKey.Enter);
+        cli.Output.Input.PushKey(ConsoleKey.Escape);
+
+        cli.Catalogs.Browse();
+
+        Assert.Contains("已注册。", cli.Output.Output);
+        Assert.Contains(cli.Environment.Catalog.Snapshot().Models,
+            model => model.ModelName.Value == "m2" && model.ProviderModelName.Value == "upstream");
     }
 
     [Fact]

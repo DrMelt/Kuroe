@@ -16,12 +16,13 @@ internal enum FieldKind
     Secret,
 }
 
-/// <summary>输入表的一项：标签、说明、输入形态与初始值。</summary>
+/// <summary>输入表的一项：标签、说明、输入形态、初始值，以及是否可留空。</summary>
 internal sealed record FormField(
     string Label,
     string? Description = null,
     FieldKind Kind = FieldKind.Line,
-    string? Initial = null);
+    string? Initial = null,
+    bool Optional = false);
 
 /// <summary>输入表的只读上下文行，不参与输入。</summary>
 internal sealed record FormInfo(string Label, string Value);
@@ -75,28 +76,29 @@ internal sealed class InputForm(
         }
     }
 
-    /// <summary>菜单项：未填字段在前，全部填写后加入提交，已填字段再后，取消在末尾。</summary>
+    /// <summary>菜单项：未填的必填项在前，必填项齐全后加入提交，再列出未填的可留空项与已填项，取消在末尾。</summary>
     private List<Item> Items()
     {
         List<Item> items = [];
-        AddFields(items, filled: false);
-        if (_values.All(value => value.Length > 0))
+        AddFields(items, index => !fields[index].Optional && !Filled(index));
+        if (Complete)
         {
             items.Add(Submit);
         }
 
-        AddFields(items, filled: true);
+        AddFields(items, index => fields[index].Optional && !Filled(index));
+        AddFields(items, Filled);
         items.Add(Cancel);
 
         return items;
     }
 
-    /// <summary>按填写状态加入字段项，保持字段声明序。</summary>
-    private void AddFields(List<Item> items, bool filled)
+    /// <summary>按条件加入字段项，保持字段声明序。</summary>
+    private void AddFields(List<Item> items, Func<int, bool> include)
     {
         for (int index = 0; index < fields.Count; index++)
         {
-            if (Filled(index) == filled)
+            if (include(index))
             {
                 items.Add(FieldItem(index));
             }
@@ -104,9 +106,14 @@ internal sealed class InputForm(
     }
 
     private Item FieldItem(int index) =>
-        new($"{fields[index].Label} · {(Filled(index) ? "已填写" : "未填写")}", index);
+        new($"{fields[index].Label} · {(Filled(index) ? "已填写" : OptionalText(index))}", index);
 
     private bool Filled(int index) => _values[index].Length > 0;
+
+    private bool Complete => Enumerable.Range(0, fields.Count)
+        .All(index => Filled(index) || fields[index].Optional);
+
+    private string OptionalText(int index) => fields[index].Optional ? "可留空" : "未填写";
 
     /// <summary>读取一项；取消返回 false。</summary>
     private bool Fill(int index)
@@ -173,6 +180,10 @@ internal sealed class InputForm(
         else if (text.Length > 0)
         {
             value = new Text(text);
+        }
+        else if (field.Optional)
+        {
+            value = new Text("可留空", Styles.Hint);
         }
         else
         {

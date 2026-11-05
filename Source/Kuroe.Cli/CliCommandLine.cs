@@ -138,15 +138,22 @@ internal static class CliCommandLine
             (session, output) => new ModelCommands(session, output).None()));
 
         Command add = new("add", "把模型注册到提供商。");
-        Argument<string> addedModel = new("模型") { Description = "模型名" };
+        Argument<string> addedModel = new("本地模型名") { Description = "本地模型名" };
         Argument<string> provider = new("提供商") { Description = "提供商名" };
+        Argument<string?> providerModelName = new("提供商模型名")
+        {
+            Description = "请求提供商时使用的模型名，省略时用本地模型名",
+            Arity = ArgumentArity.ZeroOrOne,
+        };
         add.Arguments.Add(addedModel);
         add.Arguments.Add(provider);
+        add.Arguments.Add(providerModelName);
         add.SetAction(parseResult => application.ExecuteAsync(
             parseResult.GetValue(workDirectory),
             (session, output) => new ModelCommands(session, output).Add(
                 parseResult.GetValue(addedModel) ?? string.Empty,
-                parseResult.GetValue(provider) ?? string.Empty)));
+                parseResult.GetValue(provider) ?? string.Empty,
+                parseResult.GetValue(providerModelName) ?? string.Empty)));
 
         Command remove = new("rm", "注销模型，是当前模型时一并取消选择。");
         Argument<string> removedModel = new("模型") { Description = "模型名" };

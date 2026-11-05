@@ -12,7 +12,7 @@ public sealed class CatalogKuroeInfoTool : ITool
     /// <summary>查看模型目录的函数定义。</summary>
     private static readonly ToolDefinition GetCatalog = new(
         new ToolPath("KuroeInfo/GetCatalog"),
-        "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型与当前选中模型。",
+        "查看模型目录：提供商（端点与凭据是否已设置）、已注册模型的本地名与提供商模型名、当前选中模型。",
         []);
 
     /// <summary>本载体的函数声明。</summary>
@@ -56,7 +56,7 @@ public sealed class CatalogKuroeInfoTool : ITool
             text.AppendLine($"模型（{models.Count} 个）：");
             foreach (ModelInfo model in models)
             {
-                text.AppendLine($"  {model.Name} → {model.Provider}");
+                text.AppendLine($"  {model.Name} → {model.Provider} · {model.ProviderModelName}");
             }
         }
 

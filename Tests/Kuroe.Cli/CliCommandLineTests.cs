@@ -23,6 +23,13 @@ public sealed class CliCommandLineTests
     }
 
     [Fact]
+    public void Model_add_accepts_an_optional_provider_model_name()
+    {
+        Assert.Empty(Build().Parse(["model", "add", "alias", "p"]).Errors);
+        Assert.Empty(Build().Parse(["model", "add", "alias", "p", "upstream"]).Errors);
+    }
+
+    [Fact]
     public void Repeated_input_options_parse()
     {
         ParseResult result = Build().Parse(

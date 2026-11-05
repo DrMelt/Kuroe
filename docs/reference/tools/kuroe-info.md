@@ -9,7 +9,7 @@
 | `KuroeInfo/ListTasks`    | 无                 | 列出全部用户任务：编号、标题、状态、节点进度与执行数   |
 | `KuroeInfo/GetTask`      | `taskId` 必填      | 查看任务详情：目标、流程、执行节点状态与执行列表       |
 | `KuroeInfo/GetExecution` | `executionId` 必填 | 查看执行详情：输入取值与执行过程                       |
-| `KuroeInfo/GetCatalog`   | 无                 | 查看提供商、端点、凭据是否已设置、已注册模型与当前模型 |
+| `KuroeInfo/GetCatalog`   | 无                 | 查看提供商、端点、凭据是否已设置、已注册模型的本地名与提供商模型名、当前模型 |
 | `KuroeInfo/ListFlows`    | 无                 | 列出流程模板：流程名、执行节点路径与说明               |
 | `KuroeInfo/GetFlow`      | `flowName` 必填    | 查看指定流程的展开节点表：模型、节点类型名与要求       |
 | `KuroeInfo/GetConfig`    | 无                 | 查看生效配置：各节设置项的生效值与来源标记             |

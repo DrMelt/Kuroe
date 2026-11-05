@@ -130,9 +130,24 @@ public sealed class CatalogService : IModelAccess
             : Mutate(catalog => catalog.RemoveProvider(providerName.Value));
     }
 
+    /// <summary>把模型注册到提供商，提供商不存在时返回错误。提供商模型名留空时取本地模型名。</summary>
+    public ErrorOr<Success> AddModel(string modelName, string providerName, string providerModelName)
+    {
+        ErrorOr<(ModelName Model, ProviderName Provider, ProviderModelName ProviderModel)> parsed =
+            CatalogValues.Model(modelName.Trim(), providerName.Trim(), providerModelName.Trim());
+
+        return parsed.IsError
+            ? parsed.ErrorsOrEmptyList
+            : AddModel(parsed.Value.Model, parsed.Value.Provider, parsed.Value.ProviderModel);
+    }
+
     /// <summary>把模型注册到提供商，提供商不存在时返回错误。</summary>
-    public ErrorOr<Success> AddModel(ModelName modelName, ProviderName providerName) =>
-        Mutate(catalog => catalog.AddModel(ModelDefinition.Create(modelName, providerName)));
+    public ErrorOr<Success> AddModel(
+        ModelName modelName,
+        ProviderName providerName,
+        ProviderModelName providerModelName) =>
+        Mutate(catalog => catalog.AddModel(
+            ModelDefinition.Create(modelName, providerName, providerModelName)));
 
     /// <summary>从目录注销模型。注销当前选中模型时的取消选择由 <see cref="ModelService"/> 负责。</summary>
     internal ErrorOr<Success> RemoveModel(ModelName modelName) =>

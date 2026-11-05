@@ -1,5 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Catalogs;
+using Kuroe.Catalogs.Files;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Tests.Support;
@@ -15,11 +17,71 @@ public sealed class CatalogTests
     {
         using ModelServiceFixture fixture = ModelServiceFixture.Create();
 
-        fixture.Catalog.AddModel(ModelName.Create("m2").Value, ProviderName.Create("test").Value).ThrowIfError();
+        fixture.Catalog.AddModel(
+            ModelName.Create("m2").Value,
+            ProviderName.Create("test").Value,
+            ProviderModelName.Create("m2").Value).ThrowIfError();
 
         Assert.True(fixture.Models.IsRegistered(ModelName.Create("m2").Value));
         fixture.Models.Select(ModelName.Create("m2").Value).ThrowIfError();
         Assert.Equal("m2", fixture.Models.Current?.Value);
+    }
+
+    [Fact]
+    public void Add_model_accepts_the_same_provider_model_name_for_another_provider()
+    {
+        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        fixture.Catalog.AddProvider("other", "https://example.invalid/v2", "k2").ThrowIfError();
+
+        fixture.Catalog.AddModel("fake-other", "other", "fake").ThrowIfError();
+
+        IReadOnlyList<ModelDefinition> models = fixture.Catalog.Snapshot().Models;
+        Assert.Equal(2, models.Count);
+        Assert.Contains(models, model =>
+            model.ModelName.Value == "fake-other" && model.ProviderModelName.Value == "fake");
+    }
+
+    [Fact]
+    public void Add_model_without_a_provider_model_name_uses_the_local_name()
+    {
+        using ModelServiceFixture fixture = ModelServiceFixture.Create();
+        fixture.Catalog.AddProvider("other", "https://example.invalid/v2", "k2").ThrowIfError();
+
+        fixture.Catalog.AddModel("m2", "other", string.Empty).ThrowIfError();
+
+        ModelDefinition model = fixture.Catalog.Snapshot().Models
+            .Single(candidate => candidate.ModelName.Value == "m2");
+        Assert.Equal("m2", model.ProviderModelName.Value);
+    }
+
+    [Fact]
+    public void Legacy_catalog_without_the_provider_model_name_reads_back_the_local_name()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+        KuroePaths paths = KuroePaths.At(root);
+        Directory.CreateDirectory(paths.ConfigDirectory);
+        try
+        {
+            File.WriteAllText(paths.CatalogFile, """
+                {
+                  "providers": [
+                    { "providerName": "test", "baseAddress": "https://example.invalid/v1", "apiKey": "key" }
+                  ],
+                  "models": [
+                    { "modelName": "legacy", "providerName": "test" }
+                  ]
+                }
+                """);
+
+            CatalogService catalog = CatalogService.Create(new CatalogStore(paths.CatalogFile, root)).ThrowIfError();
+
+            ModelDefinition model = Assert.Single(catalog.Snapshot().Models);
+            Assert.Equal("legacy", model.ProviderModelName.Value);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]

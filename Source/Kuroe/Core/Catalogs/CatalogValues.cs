@@ -28,6 +28,25 @@ internal static class CatalogValues
             : (provider.Value, key.Value);
     }
 
+    internal static ErrorOr<(ModelName Model, ProviderName Provider, ProviderModelName ProviderModel)> Model(
+        string name, string provider, string providerModelName)
+    {
+        ErrorOr<ModelName> model = ModelName.Create(name);
+        ErrorOr<ProviderName> providerName = ProviderName.Create(provider);
+
+        string providerModelText = providerModelName;
+        if (string.IsNullOrWhiteSpace(providerModelText))
+        {
+            providerModelText = model.IsError ? name : model.Value.Value;
+        }
+
+        ErrorOr<ProviderModelName> providerModel = ProviderModelName.Create(providerModelText);
+
+        return AllErrors(model, providerName, providerModel) is { Count: > 0 } errors
+            ? errors
+            : (model.Value, providerName.Value, providerModel.Value);
+    }
+
     /// <summary>全部解析结果的错误并集，无错误时为空列表。</summary>
     private static List<Error> AllErrors<T1, T2>(ErrorOr<T1> first, ErrorOr<T2> second)
     {

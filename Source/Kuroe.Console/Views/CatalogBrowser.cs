@@ -115,9 +115,9 @@ internal sealed class CatalogBrowser(
 
     private string CurrentModel => models.Current?.Value ?? "未选择";
 
-    /// <summary>把模型注册到提供商。</summary>
-    public void AddModel(ModelName model, ProviderName provider) =>
-        results.Report(catalog.AddModel(model, provider), "已注册。");
+    /// <summary>把模型注册到提供商。提供商模型名留空时取本地模型名。</summary>
+    public void AddModel(string model, string provider, string providerModelName) =>
+        results.Report(catalog.AddModel(model, provider, providerModelName), "已注册。");
 
     /// <summary>选择已注册的模型。</summary>
     public void SelectModel(ModelName model)
@@ -274,21 +274,14 @@ internal sealed class CatalogBrowser(
         InputForm form = new(
             terminal,
             "注册模型",
-            [new FormField("模型名")],
+            [new FormField("本地模型名"), new FormField("提供商模型名", "省略时用本地模型名", Optional: true)],
             [new FormInfo("提供商", provider.ProviderName.Value)]);
         if (form.Run() is not { } values)
         {
             return;
         }
 
-        ErrorOr<ModelName> parsed = ModelName.Create(values[0].Trim());
-        if (parsed.IsError)
-        {
-            results.Reject(parsed.ErrorsOrEmptyList);
-            return;
-        }
-
-        AddModel(parsed.Value, provider.ProviderName);
+        AddModel(values[0], provider.ProviderName.Value, values[1]);
     }
 
     /// <summary>选择模型，含取消选择。模型选择由目录维护，助手页复用同一入口。</summary>
@@ -373,7 +366,7 @@ internal sealed class CatalogBrowser(
     private string ModelLabel(ModelDefinition model)
     {
         bool selected = models.Current is { } current && model.ModelName.Equals(current);
-        string label = $"{model.ModelName.Value} · {model.ProviderName.Value}";
+        string label = $"{model.ModelName.Value} · {model.ProviderName.Value} · {model.ProviderModelName.Value}";
 
         return selected ? $"{label} · 当前" : label;
     }

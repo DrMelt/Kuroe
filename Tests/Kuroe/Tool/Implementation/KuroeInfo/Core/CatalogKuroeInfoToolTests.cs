@@ -23,13 +23,13 @@ public sealed class CatalogKuroeInfoToolTests
     {
         CatalogKuroeInfoTool tool = new(new FakeCatalog(new CatalogSummary(
             [new ProviderInfo("test", "https://example.invalid/v1", true)],
-            [new ModelInfo("fake", "test")],
+            [new ModelInfo("fake", "test", "fake-upstream")],
             "fake")));
 
         string output = Call(tool);
 
         Assert.Contains("test · https://example.invalid/v1 · 凭据已设置", output, StringComparison.Ordinal);
-        Assert.Contains("fake → test", output, StringComparison.Ordinal);
+        Assert.Contains("fake → test · fake-upstream", output, StringComparison.Ordinal);
         Assert.Contains("当前模型：fake", output, StringComparison.Ordinal);
     }
 
