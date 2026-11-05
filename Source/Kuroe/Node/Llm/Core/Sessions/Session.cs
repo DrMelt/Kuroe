@@ -1,97 +1,104 @@
-using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
 
-/// <summary>一段连续的模型对话。历史由框架会话承载，来源由 <see cref="ISessionHistory"/> 决定。
-/// 会话负责创建框架会话、逐轮请求并把本轮消息留在历史里。</summary>
-public sealed class Session
+/// <summary>一段连续的模型对话。历史由会话持有，来源由 <see cref="ISessionHistory"/> 决定。
+/// 每轮发送完整历史与工具面，工具调用由调用方执行后作为结果写回。</summary>
+internal sealed class Session : IConversation
 {
-    private readonly ClientProvider _clients;
-    private readonly IModelAccess _access;
-    private readonly ToolCollection _tools;
-    private readonly ISessionHistory _history;
-    private ChatClientAgentSession? _session;
+    private readonly ITurnClientSource _clients;
+    private readonly ISessionHistory _source;
+    private readonly ProcessJournal _journal;
+    private readonly List<ChatMessage> _messages = [];
+    private readonly IReadOnlyList<AIFunction> _functions;
 
     internal Session(
-        ClientProvider clients,
-        IModelAccess access,
+        ITurnClientSource clients,
         ToolCollection tools,
-        ISessionHistory history)
+        ISessionHistory source,
+        ProcessJournal journal)
     {
         _clients = clients;
-        _access = access;
-        _tools = tools;
-        _history = history;
+        _source = source;
+        _journal = journal;
+        _functions = tools.Build(journal, source.ToolPaths);
+        source.LayOut(_messages);
     }
 
-    /// <summary>当前是否选定了对话模型，未选定无法发起请求。</summary>
-    public bool HasModel => _history.Model is not null;
+    /// <summary>本轮可用的工具函数，工具执行按调用名取用。</summary>
+    public IReadOnlyList<AIFunction> Functions => _functions;
 
-    /// <summary>丢弃当前上下文，回到该历史来源的起点。</summary>
-    public void Reset()
+    /// <summary>一轮请求。input 非空时作为本轮输入写入历史；工具结果回填后不再给出输入。
+    /// 只报成功或失败，回复中的工具调用交给调用方执行。</summary>
+    public async Task<ErrorOr<TurnReply>> AskAsync(string? input, CancellationToken cancellationToken)
     {
-        if (_session is { } session)
+        if (input is not null)
         {
-            Relayout(session);
+            _journal.AppendPrompt(input);
         }
-    }
 
-    /// <summary>一轮请求。journal 收本次执行的过程记录并播发过程。只报成功或失败。</summary>
-    internal async Task<ErrorOr<Success>> AskAsync(
-        string input,
-        ProcessJournal journal,
-        CancellationToken cancellationToken = default)
-    {
-        journal.AppendPrompt(input);
-
-        if (_history.Model is not { } model)
+        if (_source.Model is not { } model)
         {
             return [ModelErrors.ModelNotSelected()];
         }
 
-        ErrorOr<ModelConnection> resolved = _access.Connect(model);
-        if (resolved.IsError)
+        ErrorOr<ITurnClient> client = _clients.Resolve(model);
+        if (client.IsError)
         {
-            return resolved.ErrorsOrEmptyList;
+            return client.ErrorsOrEmptyList;
         }
 
-        ChatClientAgent agent = _clients.GetAgent(model, resolved.Value);
-        ChatClientAgentSession session = await EnsureSessionAsync(agent, cancellationToken);
-        if (_history.Stale)
+        int start = _messages.Count;
+        if (input is not null)
         {
-            Relayout(session);
+            _messages.Add(new ChatMessage(ChatRole.User, input));
         }
 
-        int historyStart = HistoryCount(session);
-        var updates = new List<AgentResponseUpdate>();
+        ChatOptions options = new()
+        {
+            Tools = [.. _functions],
+            Instructions = _source.SystemPrompt,
+        };
+
+        List<ChatResponseUpdate> updates = [];
         try
         {
-            await foreach (var update in agent.RunStreamingAsync(
-                [new ChatMessage(ChatRole.User, input)],
-                session,
-                Options(journal),
-                cancellationToken))
+            await foreach (ChatResponseUpdate update in client.Value.StreamAsync([.. _messages], options, cancellationToken))
             {
                 updates.Add(update);
-                RecordContent(update, journal);
+                RecordContent(update, _journal);
             }
         }
-        finally
+        catch
         {
-            CompleteReply(updates, journal, session, historyStart);
+            _messages.RemoveRange(start, _messages.Count - start);
+            throw;
         }
 
-        return Result.Success;
+        ChatMessage? reply = Reply(updates);
+        if (reply is null)
+        {
+            _messages.RemoveRange(start, _messages.Count - start);
+            _journal.AppendDiscarded();
+
+            return new TurnReply([]);
+        }
+
+        _messages.Add(reply);
+
+        return new TurnReply([.. reply.Contents.OfType<FunctionCallContent>()]);
     }
 
+    /// <summary>把本轮工具结果写回历史，作为下一次请求的工具消息。</summary>
+    public void AppendResults(IReadOnlyList<FunctionResultContent> results) =>
+        _messages.Add(new ChatMessage(ChatRole.Tool, [.. results]));
+
     /// <summary>把一条流式更新中的思考与回复内容按种类写进过程记录，其余内容由会话历史承载。</summary>
-    internal static void RecordContent(AgentResponseUpdate update, ProcessJournal journal)
+    internal static void RecordContent(ChatResponseUpdate update, ProcessJournal journal)
     {
         foreach (AIContent content in update.Contents)
         {
@@ -108,100 +115,23 @@ public sealed class Session
         }
     }
 
-    /// <summary>首次使用时创建框架会话并按来源布局历史。</summary>
-    private async Task<ChatClientAgentSession> EnsureSessionAsync(
-        ChatClientAgent agent,
-        CancellationToken cancellationToken)
-    {
-        if (_session is { } existing)
-        {
-            return existing;
-        }
-
-        ChatClientAgentSession created = (ChatClientAgentSession)await agent.CreateSessionAsync(cancellationToken);
-        _session = created;
-        Relayout(created);
-
-        return created;
-    }
-
-    /// <summary>按历史来源重铺会话历史。</summary>
-    private void Relayout(ChatClientAgentSession session)
-    {
-        List<ChatMessage> layout = [];
-        _history.LayOut(layout);
-        session.SetInMemoryChatHistory(layout);
-    }
-
-    /// <summary>会话历史当前的条数，收口回退的本轮增量以此为界。</summary>
-    private static int HistoryCount(ChatClientAgentSession session) =>
-        session.TryGetInMemoryChatHistory(out List<ChatMessage>? history) ? history.Count : 0;
-
-    /// <summary>本轮回复的消息由框架写回历史。工具调用缺少结果或没有任何产出时整轮退回，本轮新增全部撤销。</summary>
-    private static void CompleteReply(
-        List<AgentResponseUpdate> updates,
-        ProcessJournal journal,
-        ChatClientAgentSession session,
-        int historyStart)
+    /// <summary>聚合本轮更新，没有内容时为空。</summary>
+    private static ChatMessage? Reply(List<ChatResponseUpdate> updates)
     {
         if (updates.Count == 0)
         {
-            DiscardReply(journal, session, historyStart);
-            return;
+            return null;
         }
 
-        IList<ChatMessage> produced = updates.ToAgentResponse().Messages;
-        if (HasPendingFunctionCall(produced))
+        IList<ChatMessage> messages = updates.ToChatResponse().Messages;
+        if (messages.Count == 1)
         {
-            DiscardReply(journal, session, historyStart);
-        }
-    }
-
-    /// <summary>撤掉本轮期间写入历史的消息，该轮输出保留在记录里。</summary>
-    private static void DiscardReply(ProcessJournal journal, ChatClientAgentSession session, int historyStart)
-    {
-        if (session.TryGetInMemoryChatHistory(out List<ChatMessage>? history) && history.Count > historyStart)
-        {
-            history.RemoveRange(historyStart, history.Count - historyStart);
+            return messages[0].Contents.Count == 0 ? null : messages[0];
         }
 
-        journal.AppendDiscarded();
-    }
+        List<AIContent> contents = [.. messages.SelectMany(message => message.Contents)];
 
-    /// <summary>消息序列中是否有缺少结果的工具调用。</summary>
-    private static bool HasPendingFunctionCall(IEnumerable<ChatMessage> messages)
-    {
-        HashSet<string> calls = [];
-        HashSet<string> results = [];
-
-        foreach (ChatMessage message in messages)
-        {
-            foreach (AIContent content in message.Contents)
-            {
-                switch (content)
-                {
-                    case FunctionCallContent { CallId: { Length: > 0 } id }:
-                        calls.Add(id);
-                        break;
-
-                    case FunctionResultContent { CallId: { Length: > 0 } id }:
-                        results.Add(id);
-                        break;
-                }
-            }
-        }
-
-        return !calls.IsSubsetOf(results);
-    }
-
-    /// <summary>请求选项按本次执行构造，工具与系统指令来自执行输入。</summary>
-    private ChatClientAgentRunOptions Options(ProcessJournal journal)
-    {
-        return new ChatClientAgentRunOptions(new ChatOptions
-        {
-            Tools = [.. _tools.Build(journal, _history.ToolPaths)],
-            Instructions = _history.SystemPrompt,
-        });
+        return contents.Count == 0 ? null : new ChatMessage(ChatRole.Assistant, contents);
     }
 }
 

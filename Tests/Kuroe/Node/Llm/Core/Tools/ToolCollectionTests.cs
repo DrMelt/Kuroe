@@ -20,7 +20,7 @@ public sealed class ToolCollectionTests
         ],
         new ToolJson());
 
-        IReadOnlyList<AITool> built = tools.Build(
+        IReadOnlyList<AIFunction> built = tools.Build(
             Journal(),
             [new ToolPath("GetLocalTime"), new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
@@ -39,7 +39,7 @@ public sealed class ToolCollectionTests
         ],
         new ToolJson());
 
-        IReadOnlyList<AITool> built = tools.Build(
+        IReadOnlyList<AIFunction> built = tools.Build(
             Journal(), [new ToolPath("KuroeInfo")]);
 
         Assert.Equal(
@@ -56,7 +56,7 @@ public sealed class ToolCollectionTests
         ],
         new ToolJson());
 
-        IReadOnlyList<AITool> built = tools.Build(
+        IReadOnlyList<AIFunction> built = tools.Build(
             Journal(), [new ToolPath("KuroeInfo/GetTask")]);
 
         Assert.Equal(["KuroeInfo_GetTask"], built.Select(tool => tool.Name));
@@ -73,7 +73,7 @@ public sealed class ToolCollectionTests
         ],
         new ToolJson());
 
-        IReadOnlyList<AITool> built = tools.Build(
+        IReadOnlyList<AIFunction> built = tools.Build(
             Journal(),
             [new ToolPath("KuroeInfo"), new ToolPath("file")]);
 
@@ -104,7 +104,7 @@ public sealed class ToolCollectionTests
         ],
         new ToolJson());
 
-        IReadOnlyList<AITool> built = tools.Build(
+        IReadOnlyList<AIFunction> built = tools.Build(
             Journal(), [new ToolPath("KuroeInfoX")]);
 
         Assert.Empty(built);
@@ -117,8 +117,7 @@ public sealed class ToolCollectionTests
         List<string> progress = [];
         journal.ProgressReported += progress.Add;
         ToolCollection tools = new([new FakeTool("GetLocalTime")], new ToolJson());
-        AIFunction function = Assert.IsType<AIFunction>(
-            tools.Build(journal, [new ToolPath("GetLocalTime")]).Single(), exactMatch: false);
+        AIFunction function = tools.Build(journal, [new ToolPath("GetLocalTime")]).Single();
 
         await function.InvokeAsync([]);
 

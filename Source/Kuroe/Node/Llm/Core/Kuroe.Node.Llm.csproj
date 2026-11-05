@@ -8,9 +8,7 @@
         <PackageReference Include="ApiHub.Shared" />
         <PackageReference Include="ApiHub.ChatClient" />
         <PackageReference Include="ErrorOr" />
-        <PackageReference Include="Microsoft.Agents.AI" />
         <PackageReference Include="Microsoft.Extensions.AI" />
-        <PackageReference Include="Microsoft.Extensions.Logging" />
     </ItemGroup>
 
     <ItemGroup>

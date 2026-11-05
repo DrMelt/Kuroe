@@ -5,14 +5,11 @@ using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
 
-/// <summary>会话历史的来源：决定用哪个模型、历史何时重铺，以及本轮请求的模型侧内容。</summary>
+/// <summary>会话历史的来源：决定用哪个模型、本轮请求的模型侧内容与历史起点。</summary>
 internal interface ISessionHistory
 {
     /// <summary>本轮使用的模型，未选择时为空。</summary>
     ModelName? Model { get; }
-
-    /// <summary>当前历史是否已不适用。</summary>
-    bool Stale { get; }
 
     /// <summary>本轮系统指令，没有内容时为空。</summary>
     string? SystemPrompt { get; }
@@ -20,18 +17,14 @@ internal interface ISessionHistory
     /// <summary>本轮可用的工具路径，没有能力时为空集合。</summary>
     IReadOnlyList<ToolPath> ToolPaths { get; }
 
-    /// <summary>重铺历史。</summary>
+    /// <summary>按来源重铺历史。</summary>
     void LayOut(List<ChatMessage> messages);
 }
 
-/// <summary>一次执行的会话：只在来源丢失时重铺一次，执行期间来源不再改变。</summary>
+/// <summary>一次执行的会话：历史起点由执行的输入端口给出，执行期间来源不再改变。</summary>
 internal sealed class ExecutionHistory(ExecutionInput input) : ISessionHistory
 {
-    private bool _laidOut;
-
     public ModelName? Model => (input.Declaration as KuroeNodeDeclaration)?.Model;
-
-    public bool Stale => !_laidOut;
 
     /// <summary>该执行的系统指令：节点声明的恒定块，置于请求最前。</summary>
     public string? SystemPrompt => (input.Type as LlmNodeType)?.SystemPrompt();
@@ -41,8 +34,6 @@ internal sealed class ExecutionHistory(ExecutionInput input) : ISessionHistory
 
     public void LayOut(List<ChatMessage> messages)
     {
-        _laidOut = true;
-
         messages.Clear();
         foreach (InputValue value in input.Inputs)
         {

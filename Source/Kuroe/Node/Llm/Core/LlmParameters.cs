@@ -14,6 +14,9 @@ public sealed record LlmParameters
     /// <summary>恒定系统指令块：作为系统指令置于请求最前，内容必须恒定以命中服务商前缀缓存。</summary>
     public IReadOnlyList<string> SystemPrompt { get; init; } = [];
 
+    /// <summary>单次执行内最多向模型发起的请求次数，未写时不限制。</summary>
+    public int? MaxTurns { get; init; }
+
     /// <summary>工具路径到路径变量映射的对应表，键是工具路径，值是变量名到输入端口名。</summary>
     public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> ToolPorts { get; init; } =
         new Dictionary<string, IReadOnlyDictionary<string, string>>();

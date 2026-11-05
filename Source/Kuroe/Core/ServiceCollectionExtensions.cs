@@ -51,7 +51,6 @@ using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Kuroe.Workflows.Flows.Files;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Kuroe;
 
@@ -243,7 +242,6 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FlowEngine>(),
             sp.GetRequiredService<IInputDelivery>()));
         services.AddSingleton(sp => new SessionFactory(
-            sp.GetRequiredService<ILoggerFactory>(),
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IToolFactory>(),
             sp.GetRequiredService<IToolJson>()));

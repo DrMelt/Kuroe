@@ -8,6 +8,7 @@ namespace Kuroe.Node.Llm.Tests;
 public sealed class LlmNodeTypeDescriptionTests
 {
     private const string PromptName = "Prompt";
+    private const string MaxTurnsName = "MaxTurns";
     private const string ToolsName = "Tools";
     private const string SystemPromptName = "SystemPrompt";
 
@@ -26,6 +27,7 @@ public sealed class LlmNodeTypeDescriptionTests
         Assert.Equal(
             [
                 new ParameterField(PromptName, ParameterValueKind.Text),
+                new ParameterField(MaxTurnsName, ParameterValueKind.Integer),
                 new ParameterField(ToolsName, ParameterValueKind.Texts),
                 new ParameterField(SystemPromptName, ParameterValueKind.Texts),
                 new ParameterField("ToolPorts", ParameterValueKind.MapMap),
@@ -36,10 +38,11 @@ public sealed class LlmNodeTypeDescriptionTests
     public void Read_builds_the_type_from_the_values()
     {
         LlmParameters parameters = Declared(File.Read(
-            new Reader("围绕目标展开", ["ReadFile", "file/WriteFile"], ["恒定块"]),
+            new Reader("围绕目标展开", 20, ["ReadFile", "file/WriteFile"], ["恒定块"]),
             _ => { }));
 
         Assert.Equal("围绕目标展开", parameters.Prompt);
+        Assert.Equal(20, parameters.MaxTurns);
         Assert.Equal(["ReadFile", "file/WriteFile"], parameters.Tools.Select(tool => tool.Value));
         Assert.Equal(["恒定块"], parameters.SystemPrompt);
     }
@@ -50,6 +53,7 @@ public sealed class LlmNodeTypeDescriptionTests
         LlmParameters parameters = Declared(File.Read(new Reader(), _ => { }));
 
         Assert.Null(parameters.Prompt);
+        Assert.Null(parameters.MaxTurns);
         Assert.Empty(parameters.Tools);
         Assert.Empty(parameters.SystemPrompt);
     }
@@ -78,6 +82,7 @@ public sealed class LlmNodeTypeDescriptionTests
     /// <summary>测试用的参数段取值：按字段名给出本轮内容，未给的字段取安全默认。</summary>
     private sealed class Reader(
         string? prompt = null,
+        int? maxTurns = null,
         IReadOnlyList<string>? tools = null,
         IReadOnlyList<string>? blocks = null) : IParameterReader
     {
@@ -90,7 +95,7 @@ public sealed class LlmNodeTypeDescriptionTests
             _ => [],
         };
 
-        public int? Integer(string name) => null;
+        public int? Integer(string name) => name == MaxTurnsName ? maxTurns : null;
 
         public bool? Boolean(string name) => null;
 

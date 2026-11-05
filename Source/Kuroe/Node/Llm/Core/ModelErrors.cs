@@ -15,4 +15,8 @@ public static class ModelErrors
     /// <summary>模型静态端口没有任务启动值。</summary>
     public static Error ModelNotProvided(string node) =>
         Error.Validation("Node.Model", $"节点 {node} 的静态端口 {LlmNodeTypes.ModelPort.Value} 没有任务启动值，无法确定使用的模型。");
+
+    /// <summary>单次执行向模型发起的请求次数用尽。</summary>
+    public static Error TurnLimit(int maxTurns) =>
+        Error.Failure("Execution.TurnLimit", $"本次执行向模型发起的请求已达 {maxTurns} 次，无法继续请求。");
 }
