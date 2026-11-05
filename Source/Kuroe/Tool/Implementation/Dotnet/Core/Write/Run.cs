@@ -27,5 +27,5 @@ internal static class Run
             new("{arguments}", null),
         ],
         TimeoutSeconds: 600,
-        OutputLimit: 20000);
+        OutputLimit: 8000);
 }

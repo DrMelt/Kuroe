@@ -15,5 +15,5 @@ internal static class Format
         [new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在路径基准目录里查找", Path: true)],
         [new("dotnet", null), new("format", null), new("{project}", null)],
         TimeoutSeconds: 600,
-        OutputLimit: 20000);
+        OutputLimit: 8000);
 }

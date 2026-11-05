@@ -57,11 +57,21 @@ public sealed class DotnetToolsTests
                 new("{project}", null),
                 new("--configuration", "configuration"),
                 new("{configuration}", null),
+                new("--verbosity", null),
+                new("quiet", null),
             ],
             Template("dotnet/write/Build"));
 
         Assert.Equal(
-            [new("dotnet", null), new("test", null), new("{project}", null), new("--filter", "filter"), new("{filter}", null)],
+            [
+                new("dotnet", null),
+                new("test", null),
+                new("{project}", null),
+                new("--filter", "filter"),
+                new("{filter}", null),
+                new("--verbosity", null),
+                new("quiet", null),
+            ],
             Template("dotnet/write/Test"));
 
         Assert.Equal(
@@ -100,6 +110,12 @@ public sealed class DotnetToolsTests
     }
 
     [Fact]
+    public void Every_function_caps_returned_text_at_8000_characters()
+    {
+        Assert.All(DotnetTools.Definitions, definition => Assert.Equal(8000, definition.OutputLimit));
+    }
+
+    [Fact]
     public void Read_without_arguments_expands_to_fixed_command_lines()
     {
         Assert.Equal(["dotnet", "--info"], Argv("dotnet/read/Info", Given()));
@@ -126,22 +142,24 @@ public sealed class DotnetToolsTests
     [Fact]
     public void Build_carries_project_and_configuration()
     {
-        Assert.Equal(["dotnet", "build"], Argv("dotnet/write/Build", Given()));
-        Assert.Equal(["dotnet", "build", "src/App"], Argv("dotnet/write/Build", Given(("project", "src/App"))));
+        Assert.Equal(["dotnet", "build", "--verbosity", "quiet"], Argv("dotnet/write/Build", Given()));
         Assert.Equal(
-            ["dotnet", "build", "src/App", "--configuration", "Release"],
+            ["dotnet", "build", "src/App", "--verbosity", "quiet"],
+            Argv("dotnet/write/Build", Given(("project", "src/App"))));
+        Assert.Equal(
+            ["dotnet", "build", "src/App", "--configuration", "Release", "--verbosity", "quiet"],
             Argv("dotnet/write/Build", Given(("project", "src/App"), ("configuration", "Release"))));
         Assert.Equal(
-            ["dotnet", "build", "--configuration", "Release"],
+            ["dotnet", "build", "--configuration", "Release", "--verbosity", "quiet"],
             Argv("dotnet/write/Build", Given(("configuration", "Release"))));
     }
 
     [Fact]
     public void Test_carries_project_and_filter()
     {
-        Assert.Equal(["dotnet", "test"], Argv("dotnet/write/Test", Given()));
+        Assert.Equal(["dotnet", "test", "--verbosity", "quiet"], Argv("dotnet/write/Test", Given()));
         Assert.Equal(
-            ["dotnet", "test", "Tests/Kuroe.Tests", "--filter", "FullyQualifiedName~Kuroe"],
+            ["dotnet", "test", "Tests/Kuroe.Tests", "--filter", "FullyQualifiedName~Kuroe", "--verbosity", "quiet"],
             Argv("dotnet/write/Test", Given(("project", "Tests/Kuroe.Tests"), ("filter", "FullyQualifiedName~Kuroe"))));
     }
 

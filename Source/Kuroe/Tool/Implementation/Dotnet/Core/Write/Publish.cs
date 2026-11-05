@@ -27,5 +27,5 @@ internal static class Publish
             new("{configuration}", null),
         ],
         TimeoutSeconds: 600,
-        OutputLimit: 20000);
+        OutputLimit: 8000);
 }

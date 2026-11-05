@@ -11,7 +11,7 @@ internal static class Test
     /// <summary>参数名：测试筛选表达式。</summary>
     private const string Filter = "filter";
 
-    /// <summary>函数定义与模板：dotnet test {project} [--filter {filter}]。</summary>
+    /// <summary>函数定义与模板：dotnet test {project} [--filter {filter}] --verbosity quiet。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/Test"),
         "运行测试，project 是项目、解决方案或目录，filter 是测试筛选表达式。",
@@ -25,7 +25,9 @@ internal static class Test
             new("{project}", null),
             new("--filter", Filter),
             new("{filter}", null),
+            new("--verbosity", null),
+            new("quiet", null),
         ],
         TimeoutSeconds: 600,
-        OutputLimit: 20000);
+        OutputLimit: 8000);
 }

@@ -11,7 +11,7 @@ internal static class Build
     /// <summary>参数名：生成配置。</summary>
     private const string Configuration = "configuration";
 
-    /// <summary>函数定义与模板：dotnet build {project} [--configuration {configuration}]。</summary>
+    /// <summary>函数定义与模板：dotnet build {project} [--configuration {configuration}] --verbosity quiet。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/Build"),
         "编译项目，project 是项目、解决方案或目录，configuration 是生成配置如 Debug 或 Release。",
@@ -25,7 +25,9 @@ internal static class Build
             new("{project}", null),
             new("--configuration", Configuration),
             new("{configuration}", null),
+            new("--verbosity", null),
+            new("quiet", null),
         ],
         TimeoutSeconds: 600,
-        OutputLimit: 20000);
+        OutputLimit: 8000);
 }
