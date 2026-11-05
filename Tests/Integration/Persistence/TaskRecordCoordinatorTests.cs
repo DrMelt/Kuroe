@@ -31,6 +31,17 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
     }
 
     [Fact]
+    public async Task Flush_single_task_writes_it()
+    {
+        TaskId id = _environment.Submit("写单个任务");
+        TaskRecordCoordinator coordinator = CreateCoordinator();
+
+        await coordinator.FlushAsync(id);
+
+        Assert.Equal(id, Assert.Single(_store.ReadAll().Records).Identity.Id);
+    }
+
+    [Fact]
     public void Change_writes_without_explicit_flush()
     {
         _ = CreateCoordinator();

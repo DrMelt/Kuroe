@@ -7,7 +7,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Node.Llm;
 
 /// <summary>执行节点到可用模型的解析：取静态端口 MODEL_NAME 的值，没有声明或目录里没有时报错。
-/// 输入节点不启动执行，不进入解析路径。</summary>
+/// 不经过模型的执行节点由执行目标解析在进入本解析器前给出空声明。</summary>
 public sealed class NodeModelResolver(IModelAccess access) : IExecutionTargetResolver
 {
     /// <summary>解析执行节点使用的模型值。</summary>

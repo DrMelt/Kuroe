@@ -38,6 +38,21 @@ public sealed class ProcessRunnerTests
         Assert.True(result.TimedOut);
     }
 
+    [Fact]
+    public async Task Cancellation_terminates_the_process()
+    {
+        ProcessRunner runner = new();
+        (string program, string[] arguments) = Sleep();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => runner.RunAsync(
+            program,
+            arguments,
+            Path.GetTempPath(),
+            TimeSpan.FromSeconds(10),
+            cancellation.Token));
+    }
+
     private static (string Program, string[] Arguments) Echo(string text) =>
         OperatingSystem.IsWindows()
             ? ("cmd", ["/c", "echo", text])

@@ -91,7 +91,7 @@ public sealed class ExecutionTests
         execution.ContentEmitted += _ => contents++;
         execution.EntryEmitted += _ => entries++;
         execution.MarkRunning();
-        execution.MarkSucceeded();
+        execution.MarkSucceeded(ExecutionOutput.Ports);
 
         journal.EmitContent(ProcessContentKind.Reply, "后");
         journal.EmitContent(ProcessContentKind.Reasoning, "后想");
@@ -137,7 +137,7 @@ public sealed class ExecutionTests
         TestJournal journal = new([]);
         execution.AttachJournal(journal);
         execution.MarkRunning();
-        execution.MarkSucceeded();
+        execution.MarkSucceeded(ExecutionOutput.Ports);
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         execution.ContentEmitted += contents.Add;

@@ -1,15 +1,15 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
-/// <summary>文件写入节点类型：不启动执行，激活时按路径变量解析路径，把唯一的内容 Text 输入写入文件。</summary>
-public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, INodeTypeValidation, INodeRuntimeFactory
+/// <summary>文件写入节点类型：派发执行，按路径变量解析路径，把唯一的内容 Text 输入写入文件，写入内容作为产出。</summary>
+public sealed class FileWriteNodeType(FileParameters? parameters)
+    : INodeType, INodeTypeValidation, INodeExecutionRunnerFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public FileParameters? Parameters { get; } = parameters;
@@ -40,8 +40,8 @@ public sealed class FileWriteNodeType(FileParameters? parameters) : INodeType, I
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
-    /// <summary>文件写入节点的运行期对象。</summary>
-    public NodeRuntime Create(GraphNode node, INodeContext context) =>
-        new FileWriteRuntime((ExecutableNode)node, Parameters
-            ?? throw new InvalidOperationException("文件写入节点缺少 Path 声明，无法建立运行期对象。"));
+    /// <summary>为一次执行建立文件写入运行器。</summary>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+        new FileWriteExecutionRunner(node, Parameters
+            ?? throw new InvalidOperationException("文件写入节点缺少 Path 声明，无法建立执行器。"));
 }

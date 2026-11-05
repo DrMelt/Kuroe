@@ -171,7 +171,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         node.Invalidate();
     }
 
-    /// <summary>作废已发表产出或清除自驱型节点的失败，宿主返工入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
+    /// <summary>作废已发表产出，宿主返工入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
     public void Invalidate(NodePath node)
     {
         if (Frozen(node))
@@ -179,14 +179,10 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return;
         }
 
-        NodeRuntime runtime = _materializer.Get(node);
-        if (runtime is RuntimeExecutable executable)
+        if (_materializer.Get(node) is RuntimeExecutable executable)
         {
             InvalidateNode(executable);
-            return;
         }
-
-        runtime.Retry();
     }
 
     // ---- 返工 ----
@@ -215,7 +211,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     // ---- 汇总 ----
 
-    /// <summary>是否有节点停在阻塞：执行节点失败或未收口，自驱型节点激活失败。</summary>
+    /// <summary>是否有节点停在阻塞：执行节点失败或未收口。</summary>
     public bool HasBlocked =>
         _materializer.Materialized.Any(node => node.Snapshot().State == NodeState.Blocked);
 
@@ -301,6 +297,16 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return Block(node, execution);
         }
 
+        // 内容产出的执行不经过端口交回，产出文本直接发布到承载文本的端口
+        ExecutionOutput output = execution.Output ?? ExecutionOutput.Ports;
+        if (output.Kind == ExecutionOutputKind.Content)
+        {
+            node.Publish(execution, output);
+            _task.NotifyExecutionSettled(execution);
+
+            return Settled(node, Downstream(node));
+        }
+
         // 上报无法完成的当轮不产出，直接停驻并把原因留给返工
         if (node.CannotCompleteReason(execution.Id) is { } cannotComplete)
         {
@@ -315,7 +321,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return Block(node, execution);
         }
 
-        node.Publish(execution);
+        node.Publish(execution, output);
         _task.NotifyExecutionSettled(execution);
 
         return Settled(node, Downstream(node));
@@ -333,6 +339,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ExecutionState.Interrupted => "执行已中断。",
                 _ => "执行未成功收口。",
             };
+        _task.Journal.AppendError($"{node.Path}：{summary}");
         node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, DateTimeOffset.UtcNow));
         NoteLimitReached(node);
 
@@ -575,10 +582,10 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 .Select(container => container.Path)];
 
 
-    /// <summary>一个返工目标：停住的节点，与它要重跑的节点。自驱型节点的失败目标与自身相同。</summary>
+    /// <summary>一个返工目标：停住的节点，与它要重跑的节点。执行失败时目标为节点自身。</summary>
     public readonly record struct ReworkTarget(NodePath Blocked, NodePath Node);
 
-    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行节点记录的目标，以及阻塞的自驱型节点自身。顺序按执行节点表，自驱型节点随后按实例化顺序。不改变状态。要求持有 Gate。</summary>
+    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行节点记录的目标，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<ReworkTarget> PlanRework()
     {
         List<ReworkTarget> targets = [];
@@ -595,15 +602,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             }
         }
 
-        foreach (NodeRuntime node in _materializer.Materialized)
-        {
-            if (node is not RuntimeExecutable
-                && node.Snapshot().State == NodeState.Blocked)
-            {
-                targets.Add(new ReworkTarget(node.Path, node.Path));
-            }
-        }
-
         return targets;
     }
 
@@ -614,7 +612,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private bool Frozen(NodePath node) =>
         HasPublished(node) && Graph[node] is ExecutableNode { Spec.Emission: NodeEmission.Once };
 
-    /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。自驱型节点没有目标表，失败由 <see cref="Invalidate"/> 清除。</summary>
+    /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。</summary>
     public void Unblock(NodePath node, IReadOnlyList<NodePath> handled)
     {
         if (Materialized(node) is RuntimeExecutable executable)

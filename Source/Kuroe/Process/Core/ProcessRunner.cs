@@ -8,12 +8,26 @@ namespace Kuroe.Process;
 /// <summary>用系统进程执行命令。stdout 与 stderr 的行汇入同一份文本，顺序不保；超时终止整个进程树。</summary>
 public sealed class ProcessRunner : IProcessRunner
 {
+    /// <summary>终止进程树后等待退出的上限，避免进程拒绝退出时永久挂起。</summary>
+    private static readonly TimeSpan KillWaitTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>在工作目录启动程序并等待结果，输出按 UTF-8 解码。超时以 TimedOut 交回，无法启动时抛 <see cref="ProcessStartException"/>。</summary>
     public ProcessResult Run(
         string program,
         IReadOnlyList<string> arguments,
         string workingDirectory,
-        TimeSpan timeout)
+        TimeSpan timeout) =>
+        RunAsync(program, arguments, workingDirectory, timeout, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+
+    /// <summary>在工作目录启动程序并等待结果。超时终止整个进程树，取消时终止进程树并抛出 <see cref="OperationCanceledException"/>。</summary>
+    public async Task<ProcessResult> RunAsync(
+        string program,
+        IReadOnlyList<string> arguments,
+        string workingDirectory,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -52,15 +66,39 @@ public sealed class ProcessRunner : IProcessRunner
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        int timeoutMilliseconds = (int)Math.Clamp(timeout.TotalMilliseconds, 0, int.MaxValue);
-        if (!process.WaitForExit(timeoutMilliseconds))
+        using var timeoutSource = new CancellationTokenSource(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            timeoutSource.Token);
+        try
+        {
+            await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
         {
             KillTree(process);
-            process.WaitForExit(5000);
+            using (var exitWait = new CancellationTokenSource(KillWaitTimeout))
+            {
+                try
+                {
+                    await process.WaitForExitAsync(exitWait.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 进程拒绝退出时保留超时结果，不无限等待
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+                {
+                    // 进程可能已被系统清理，收尾不再上报
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
             return new ProcessResult(output.ToString(), 0, TimedOut: true);
         }
 
-        process.WaitForExit();
+        await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
 
         return new ProcessResult(output.ToString(), process.ExitCode, TimedOut: false);
     }

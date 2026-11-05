@@ -17,6 +17,7 @@ namespace Kuroe.Flow.Runtime.Engine;
 internal sealed class TaskDriver(
     WorkTask task,
     ExecutionDispatcher dispatcher,
+    IExecutionRunnerSource runners,
     IExecutionTargetResolver targetResolver)
 {
     private readonly Lock _gate = new();
@@ -226,7 +227,7 @@ internal sealed class TaskDriver(
                 await WaitForSignalAsync(
                         waiting
                             ? () => _stop || _resumeVersion != version
-                            : () => _pending.Count > 0)
+                            : () => _stop || _pending.Count > 0)
                     .ConfigureAwait(false);
             }
 
@@ -402,7 +403,8 @@ internal sealed class TaskDriver(
 
             try
             {
-                await dispatcher.DispatchAsync(execution, CancellationToken.None).ConfigureAwait(false);
+                IExecutionRunner runner = runners.Create(executable, execution.Id, execution.Input);
+                await dispatcher.DispatchAsync(execution, runner, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

@@ -52,6 +52,9 @@ public sealed class TaskService(
     /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进。</summary>
     public ErrorOr<Success> StopTask(TaskId id) => _actions.StopTask(id);
 
+    /// <summary>等待当前待写状态落盘。</summary>
+    public Task FlushAsync() => _actions.FlushAsync();
+
     /// <summary>退出时中断全部任务与执行并等待收口。</summary>
     public Task ShutdownAsync() => _actions.ShutdownAsync();
 }

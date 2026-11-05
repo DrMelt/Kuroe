@@ -37,8 +37,7 @@ public abstract class TaskRecordCodecContractTests
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
 
-        Assert.Single(loaded.Nodes.OfType<ExecutableNodeRecord>());
-        Assert.Single(loaded.Nodes.OfType<SelfDrivenNodeRecord>());
+        Assert.Equal(2, loaded.Nodes.OfType<ExecutableNodeRecord>().Count());
         Assert.Single(loaded.Nodes.OfType<InputNodeRecord>());
         Assert.Single(loaded.Nodes.OfType<ApprovalNodeRecord>());
         Assert.Single(loaded.Nodes.OfType<ContainerNodeRecord>());
@@ -53,11 +52,11 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
 
         Assert.Equal(record.Executions[1].StartedAt, loaded.Executions[1].StartedAt);
-        Assert.Null(Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Common.Publication);
+        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Common.Publication);
         Assert.Null(loaded.Nodes[1].Common.LastInputGroup);
         Assert.Equal(
-            Assert.IsType<SelfDrivenNodeRecord>(record.Nodes[1]).Block,
-            Assert.IsType<SelfDrivenNodeRecord>(loaded.Nodes[1]).Block);
+            Assert.IsType<ExecutableNodeRecord>(record.Nodes[1]).Block,
+            Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Block);
     }
 
     [Fact]

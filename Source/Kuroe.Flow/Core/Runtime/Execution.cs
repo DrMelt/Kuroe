@@ -17,6 +17,7 @@ public sealed class Execution : IExecution
     private DateTimeOffset? _startedAt;
     private DateTimeOffset? _finishedAt;
     private readonly List<string> _failures = [];
+    private ExecutionOutput? _output;
     private bool _interruptRequested;
     private string _interruptReason = "已中断。";
 
@@ -170,7 +171,32 @@ public sealed class Execution : IExecution
         _process.PublishEntry(entry);
     }
 
-    internal void MarkSucceeded() => Settle(ExecutionState.Succeeded, []);
+    /// <summary>本次执行的产出，端口产出的执行交回端口后只给空内容。</summary>
+    internal ExecutionOutput? Output
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _output;
+            }
+        }
+    }
+
+    internal void MarkSucceeded(ExecutionOutput output)
+    {
+        lock (_gate)
+        {
+            if (_state.IsSettled())
+            {
+                return;
+            }
+
+            _output = output;
+        }
+
+        Settle(ExecutionState.Succeeded, []);
+    }
 
     internal void MarkFailed(IEnumerable<Error> errors) =>
         Settle(ExecutionState.Failed, [.. errors.Select(error => error.Description)]);

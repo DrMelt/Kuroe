@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Contract;
 
@@ -26,9 +27,10 @@ public sealed class FakeRunner : IExecutionRunnerFactory
                 ? new PortValue($"{port.Name.Value}产出")
                 : new PortValue(null));
 
-    public IExecutionRunner Create(ExecutionId execution) => new Run(this, execution);
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+        new Run(this, execution);
 
-    private async Task<ErrorOr<Success>> ExecuteAsync(
+    private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionId execution,
         ExecutionInput input,
         OutputJournal journal,
@@ -46,7 +48,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
         journal.AppendContent(ProcessContentKind.Reply, $"{input.Node}产出");
 
-        return Result.Success;
+        return ExecutionOutput.Ports;
     }
 
     /// <summary>测试用的过程记录：保存条目并播发内容。</summary>
@@ -123,7 +125,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
         public IProcessJournal Journal => _journal;
 
-        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
 }

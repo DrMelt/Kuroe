@@ -104,11 +104,11 @@ public static class TaskRecordFixture
                             })),
                     [],
                     null),
-                new SelfDrivenNodeRecord(
+                new ExecutableNodeRecord(
                     read,
                     Common(revision: 0, lastInputGroup: null, rerunRequested: false),
-                    new NodeBlock("读取失败。", new ExecutionId(taskId * 10 + 2), At(3, 4, 22)),
-                    false),
+                    [read],
+                    new NodeBlock("读取失败。", new ExecutionId(taskId * 10 + 2), At(3, 4, 22))),
                 new InputNodeRecord(
                     answer,
                     Common(revision: 1, lastInputGroup: null, rerunRequested: false),

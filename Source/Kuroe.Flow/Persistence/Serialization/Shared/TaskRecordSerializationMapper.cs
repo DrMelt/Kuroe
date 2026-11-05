@@ -40,7 +40,7 @@ public static class TaskRecordSerializationMapper
 
         try
         {
-            return ReadTask(document.Task, document.Version);
+            return ReadTask(document.Task);
         }
         catch (FormatException ex)
         {
@@ -114,33 +114,16 @@ public static class TaskRecordSerializationMapper
                 Common: ToData(executable.Common),
                 Block: ToData(executable.Block),
                 ReworkTargets: [.. executable.ReworkTargets.Select(ToData)],
-                Blocked: null,
-                Failure: null,
-                FailureTaken: null,
                 Waiting: null,
                 Inputs: null,
                 Awaiting: null),
-            SelfDrivenNodeRecord selfDriven => new NodeData(
-                Kind: "SelfDriven",
-                Path: ToData(selfDriven.Path),
-                Common: ToData(selfDriven.Common),
-                Block: ToData(selfDriven.Block),
-                ReworkTargets: null,
-                Blocked: null,
-                Failure: null,
-                FailureTaken: selfDriven.FailureTaken,
-                Waiting: null,
-                Inputs: null,
-                Awaiting: null),
+
             InputNodeRecord input => new NodeData(
                 Kind: "Input",
                 Path: ToData(input.Path),
                 Common: ToData(input.Common),
                 Block: null,
                 ReworkTargets: null,
-                Blocked: null,
-                Failure: null,
-                FailureTaken: null,
                 Waiting: input.Waiting,
                 Inputs: null,
                 Awaiting: null),
@@ -150,9 +133,6 @@ public static class TaskRecordSerializationMapper
                 Common: ToData(approval.Common),
                 Block: null,
                 ReworkTargets: null,
-                Blocked: null,
-                Failure: null,
-                FailureTaken: null,
                 Waiting: null,
                 Inputs: ToData(approval.Inputs),
                 Awaiting: approval.Awaiting),
@@ -162,9 +142,6 @@ public static class TaskRecordSerializationMapper
                 Common: ToData(container.Common),
                 Block: null,
                 ReworkTargets: null,
-                Blocked: null,
-                Failure: null,
-                FailureTaken: null,
                 Waiting: null,
                 Inputs: null,
                 Awaiting: null),
@@ -212,7 +189,7 @@ public static class TaskRecordSerializationMapper
     private static Dictionary<string, string> ToData(IReadOnlyDictionary<PortName, string> values) =>
         values.ToDictionary(pair => pair.Key.Value, pair => pair.Value);
 
-    private static TaskRecord ReadTask(TaskRecordData? dto, int version)
+    private static TaskRecord ReadTask(TaskRecordData? dto)
     {
         if (dto is null)
         {
@@ -249,7 +226,7 @@ public static class TaskRecordSerializationMapper
             dto.Completed,
             new TaskJournalSnapshot(ReadJournal(journal.Entries), journal.DroppedEntries),
             [.. (dto.Executions ?? []).Select(ReadExecution)],
-            [.. (dto.Nodes ?? []).Select(node => ReadNode(node, version, savedAt))],
+            [.. (dto.Nodes ?? []).Select(ReadNode)],
             new SchedulerSeed([.. (pending.Targets ?? []).Select(path => ReadPath(path, "调度目标"))]));
     }
 
@@ -298,13 +275,9 @@ public static class TaskRecordSerializationMapper
                 RequiredText(entry.Label, "过程记录标签"),
                 RequiredText(entry.Text, "过程记录文本")))];
 
-    private static NodeRecord ReadNode(NodeData dto, int version, DateTimeOffset savedAt)
+    private static NodeRecord ReadNode(NodeData dto)
     {
         NodeBlock? block = ReadBlock(dto.Block);
-        if (block is null && version < TaskRecordSerializationVersion.BlockIntroduced)
-        {
-            block = LegacyBlock(dto, savedAt);
-        }
 
         return dto.Kind switch
         {
@@ -313,11 +286,6 @@ public static class TaskRecordSerializationMapper
                 ReadCommon(dto.Common),
                 [.. (dto.ReworkTargets ?? []).Select(path => ReadPath(path, "返工目标"))],
                 block),
-            "SelfDriven" => new SelfDrivenNodeRecord(
-                ReadPath(dto.Path, "节点路径"),
-                ReadCommon(dto.Common),
-                block,
-                dto.FailureTaken ?? false),
             "Input" => new InputNodeRecord(
                 ReadPath(dto.Path, "节点路径"),
                 ReadCommon(dto.Common),
@@ -346,15 +314,6 @@ public static class TaskRecordSerializationMapper
 
         return new NodeBlock(RequiredText(dto.Summary, "阻塞原因"), execution, at);
     }
-
-    private static NodeBlock? LegacyBlock(NodeData dto, DateTimeOffset at) =>
-        dto.Kind switch
-        {
-            "Executable" when dto.Blocked == true => new NodeBlock("存档未记录阻塞原因。", null, at),
-            "SelfDriven" when dto.Failure is { } failure && !string.IsNullOrWhiteSpace(failure) =>
-                new NodeBlock(failure, null, at),
-            _ => null,
-        };
 
     private static NodeCommonRecord ReadCommon(NodeCommonData? dto)
     {

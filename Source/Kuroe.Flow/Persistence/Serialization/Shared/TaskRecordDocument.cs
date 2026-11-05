@@ -68,16 +68,13 @@ public sealed record ContextSourceData(
     NodePathData? Node,
     string? Port);
 
-/// <summary>节点记录的形状。节点类型专属字段按种类使用，Blocked 与 Failure 只服务版本 5 读取。</summary>
+/// <summary>节点记录的形状。节点类型专属字段按种类使用。</summary>
 public sealed record NodeData(
     string? Kind,
     NodePathData? Path,
     NodeCommonData? Common,
     NodeBlockData? Block,
     List<NodePathData>? ReworkTargets,
-    bool? Blocked,
-    string? Failure,
-    bool? FailureTaken,
     bool? Waiting,
     NodeInputValuesData? Inputs,
     bool? Awaiting);

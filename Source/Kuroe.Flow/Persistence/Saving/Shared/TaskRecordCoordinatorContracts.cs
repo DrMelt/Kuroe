@@ -11,6 +11,9 @@ public interface ITaskRecordCoordinator
     /// <summary>刷新全部待写任务。</summary>
     Task FlushAsync();
 
+    /// <summary>立即写入指定任务，等待本次写入完成。</summary>
+    Task FlushAsync(TaskId id);
+
     /// <summary>删除一个任务的存档。</summary>
     void Remove(TaskId id);
 }

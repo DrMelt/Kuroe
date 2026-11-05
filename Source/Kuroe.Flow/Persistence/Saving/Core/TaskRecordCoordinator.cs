@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Persistence.Saving;
 
-/// <summary>存档写盘协调：合并状态变化，后台逐任务捕获并写入，刷新时等待全部待写任务落盘。</summary>
+/// <summary>存档写盘协调：合并状态变化，后台逐任务捕获并写入，刷新时等待全部或指定任务落盘。</summary>
 public sealed class TaskRecordCoordinator : ITaskRecordCoordinator
 {
     private readonly Lock _gate = new();
@@ -65,6 +65,37 @@ public sealed class TaskRecordCoordinator : ITaskRecordCoordinator
     }
 
     /// <inheritdoc/>
+    public async Task FlushAsync(TaskId id)
+    {
+        MarkDirty(id);
+
+        await _write.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            bool pending;
+            lock (_gate)
+            {
+                pending = _dirty.Remove(id);
+            }
+
+            if (pending && !Write(id))
+            {
+                throw new InvalidOperationException($"任务 {id} 的存档写入失败。");
+            }
+        }
+        catch
+        {
+            Halt();
+
+            throw;
+        }
+        finally
+        {
+            _write.Release();
+        }
+    }
+
+    /// <inheritdoc/>
     public void Remove(TaskId id)
     {
         _write.Wait();
@@ -107,47 +138,58 @@ public sealed class TaskRecordCoordinator : ITaskRecordCoordinator
                 continue;
             }
 
-            TaskRecordCaptureResult captured;
-            try
+            if (!Write(next))
             {
-                captured = _source.Capture(next);
-            }
-            catch
-            {
-                Retry(next);
-                throw;
-            }
-
-            if (!captured.Found)
-            {
-                continue;
-            }
-
-            if (captured.Record.IsError)
-            {
-                Retry(next);
-                Halt();
-                return;
-            }
-
-            ErrorOr<Success> written;
-            try
-            {
-                written = _store.Write(captured.Record.Value);
-            }
-            catch
-            {
-                Retry(next);
-                throw;
-            }
-
-            if (written.IsError)
-            {
-                Retry(next);
-                Halt();
                 return;
             }
         }
+    }
+
+    /// <summary>写一个任务；写失败时保留待写标记并结束本轮，返回 false。</summary>
+    private bool Write(TaskId id)
+    {
+        TaskRecordCaptureResult captured;
+        try
+        {
+            captured = _source.Capture(id);
+        }
+        catch
+        {
+            Retry(id);
+            throw;
+        }
+
+        if (!captured.Found)
+        {
+            return true;
+        }
+
+        if (captured.Record.IsError)
+        {
+            Retry(id);
+            Halt();
+            return false;
+        }
+
+        ErrorOr<Success> written;
+        try
+        {
+            written = _store.Write(captured.Record.Value);
+        }
+        catch
+        {
+            Retry(id);
+            throw;
+        }
+
+        if (written.IsError)
+        {
+            Retry(id);
+            Halt();
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>后台写盘：异常已中断本轮并保留待写标记，这里只防止未观察异常。</summary>

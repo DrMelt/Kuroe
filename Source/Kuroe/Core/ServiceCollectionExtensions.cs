@@ -130,7 +130,7 @@ public static class ServiceCollectionExtensions
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
         FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
-        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, coreOptions.CommandNodeProcessRunner);
         coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
 
         ErrorOr<FlowService> flows = FlowService.Create(
@@ -193,6 +193,8 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
+        services.AddSingleton<IExecutionRunnerSource>(sp => new ExecutionRunnerSource(
+            sp.GetRequiredService<IExecutionRunnerFactory>()));
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
@@ -206,10 +208,11 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ITaskRecordStore>()));
 
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
-        services.AddSingleton<IExecutionTargetResolver>(sp => new NodeModelResolver(
-            sp.GetRequiredService<IModelAccess>()));
+        services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
+            new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
         services.AddSingleton(sp => new FlowEngine(
             sp.GetRequiredService<ExecutionDispatcher>(),
+            sp.GetRequiredService<IExecutionRunnerSource>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton<IFlowRunner>(sp => sp.GetRequiredService<FlowEngine>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(

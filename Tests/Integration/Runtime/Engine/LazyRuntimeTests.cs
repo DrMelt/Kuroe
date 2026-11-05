@@ -1,7 +1,10 @@
+using ErrorOr;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Pending;
 using Kuroe.Flow.Runtime.Tasks;
 using Xunit;
@@ -11,6 +14,34 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>运行时节点按激活懒实例化：只有触达的节点才从图定义创建对象。</summary>
 public sealed class LazyRuntimeTests
 {
+    /// <summary>只有审批节点：提交后应保持运行并等待批准。</summary>
+    private const string ApprovalOnlyFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant", "Value": "目标" }] },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
+                "From": [{ "目标": "Start@目标" }],
+                "Bindings": { "基准": "Start@基准" },
+                "Nodes": [
+                  {
+                    "Name": "审阅",
+                    "Kind": "Approval",
+                    "Question": "确认目标",
+                    "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }],
+                    "Bindings": { "基准": "@基准" }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
     /// <summary>计划完成后停在审批节点等待批准，实施与下游收尾永不触达。</summary>
     private const string ReviewQueueFlow = """
         {
@@ -22,6 +53,20 @@ public sealed class LazyRuntimeTests
           ] } } ]
         }
         """;
+
+    [Fact]
+    public void Submit_returns_running_before_the_approval_node_activates()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(ApprovalOnlyFlow);
+
+        ErrorOr<TaskSnapshot> submitted = environment.Tasks.Submit(
+            StartInputs.Single(new PortName("目标"), "目标"),
+            new FlowName("默认"),
+            null);
+
+        Assert.False(submitted.IsError);
+        Assert.Equal(TaskState.Running, submitted.Value.State);
+    }
 
     [Fact]
     public void Untouched_nodes_stay_unmaterialized()

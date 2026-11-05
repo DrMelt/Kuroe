@@ -1,7 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Process;
@@ -9,8 +8,9 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
-/// <summary>命令节点类型：不派发模型执行，激活时按命令变量展开执行目录与参数并执行一次命令，把合并输出写入类型给出的 Output 端口，同一次发布中触发 Completed 端口。</summary>
-public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process) : INodeType, INodeTypeValidation, INodeRuntimeFactory
+/// <summary>命令节点类型：派发执行，按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
+public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process)
+    : INodeType, INodeTypeValidation, INodeExecutionRunnerFactory
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandParameters? Parameters { get; } = parameters;
@@ -46,8 +46,8 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
-    /// <summary>命令节点的运行期对象。</summary>
-    public NodeRuntime Create(GraphNode node, INodeContext context) =>
-        new CommandRuntime((ExecutableNode)node, Parameters
-            ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立运行期对象。"), Process);
+    /// <summary>为一次执行建立命令运行器。</summary>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+        new CommandExecutionRunner(Parameters
+            ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立执行器。"), Process);
 }

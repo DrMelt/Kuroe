@@ -2,6 +2,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Cli.Tests.Support;
@@ -66,16 +67,16 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 
-    public IExecutionRunner Create(ExecutionId execution) => new Run(this);
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) => new Run(this);
 
-    private async Task<ErrorOr<Success>> ExecuteAsync(
+    private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         StubJournal journal,
         CancellationToken cancellationToken)
     {
         await Task.Delay(5, cancellationToken);
         journal.AppendContent(ProcessContentKind.Reply, Text);
 
-        return Result.Success;
+        return ExecutionOutput.Ports;
     }
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
@@ -85,7 +86,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
 
         public IProcessJournal Journal => _journal;
 
-        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(_journal, cancellationToken);
     }
 

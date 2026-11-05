@@ -57,7 +57,7 @@ public sealed record ConstantSource(NodePath Node, PortName Port) : ContextSourc
     public override string Label => $"节点「{Node}」的常量端口「{Port}」";
 }
 
-/// <summary>不派发执行的节点自身在某个输出端口上的产出，如文件读取节点读到的内容。</summary>
+/// <summary>旧存档中节点自身在某个输出端口上的产出。当前执行产出使用 <see cref="ExecutionSource"/>，读取旧存档时仍还原为此出处。</summary>
 public sealed record NodeSource(NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>

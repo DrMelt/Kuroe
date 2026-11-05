@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Tool;
 
@@ -83,9 +84,10 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
     public int Peak { get { lock (_gate) { return _peak; } } }
 
-    public IExecutionRunner Create(ExecutionId execution) => new Run(this, execution);
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+        new Run(this, execution);
 
-    private async Task<ErrorOr<Success>> ExecuteAsync(
+    private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionId execution,
         ExecutionInput input,
         RecordingJournal journal,
@@ -148,7 +150,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
             string reply = Reply?.Invoke(started) ?? $"{input.Node}产出";
             journal.AppendContent(ProcessContentKind.Reply, reply);
 
-            return Result.Success;
+            return ExecutionOutput.Ports;
         }
         finally
         {
@@ -171,7 +173,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
         public IProcessJournal Journal => _journal;
 
-        public Task<ErrorOr<Success>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
+        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
 }

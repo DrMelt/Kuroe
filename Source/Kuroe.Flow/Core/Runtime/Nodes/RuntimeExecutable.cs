@@ -107,8 +107,29 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>产出发布：按这次执行的交回记录构造发布，只保留这次执行的交回记录，版本单调递增，下游据此重新评估。</summary>
-    public void Publish(Execution execution)
+    /// <summary>按端口产出发布，没有内容产出时使用。</summary>
+    public void Publish(Execution execution) => Publish(execution, ExecutionOutput.Ports);
+
+    /// <summary>产出发布：按执行结果的形态选择端口发布或内容发布，版本单调递增，下游据此重新评估。</summary>
+    public void Publish(Execution execution, ExecutionOutput output)
+    {
+        switch (output.Kind)
+        {
+            case ExecutionOutputKind.Ports:
+                PublishPorts(execution);
+                break;
+
+            case ExecutionOutputKind.Content:
+                PublishContent(execution, output.Content);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(output), output.Kind, "未知的执行产出形态。");
+        }
+    }
+
+    /// <summary>端口产出的发布：按这次执行的交回记录构造发布，只保留这次执行的交回记录。</summary>
+    private void PublishPorts(Execution execution)
     {
         Submission? kept = _submissions.GetValueOrDefault(execution.Id);
         _submissions.Clear();
@@ -119,6 +140,13 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
 
         Progress.Publish(CreatePublication(execution, Progress.NextRevision()));
+    }
+
+    /// <summary>内容产出的发布：把同一条文本写入承载文本的输出端口，触发位按默认处理。</summary>
+    private void PublishContent(Execution execution, string content)
+    {
+        _submissions.Clear();
+        Progress.Publish(CreateContentPublication(execution, content, Progress.NextRevision()));
     }
 
     /// <summary>作废已发布产出与交回记录，返工起点用它让下游重新等待。阻塞与返工目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRework"/> 按处理进度解除。</summary>
@@ -151,6 +179,20 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     /// <summary>记下新启动的执行。</summary>
     public void AddActive() => Active++;
+
+    /// <summary>按内容产出构造一次发布：承载文本的输出端口给出同一条内容，出处指向本次执行。内容为空时只发布版本与触发。</summary>
+    private Publication CreateContentPublication(Execution execution, string content, long revision)
+    {
+        Dictionary<PortName, IReadOnlyList<ContextValue>> values = content.Length > 0
+            ? Executable.Outputs
+                .Where(port => PortRules.CarriesText(port.Type))
+                .ToDictionary(
+                    port => port.Name,
+                    port => (IReadOnlyList<ContextValue>)[new ContextValue(new ExecutionSource(execution.Id, Path, port.Name), content)])
+            : [];
+
+        return new Publication(revision, new Dictionary<PortName, bool>(), values);
+    }
 
     /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 Context 端口转发来源输入内容，
     /// 常量与 Text 端口取交回文本，其余端口不承载内容。</summary>

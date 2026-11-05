@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Node.File.Tests;
 
-/// <summary>文件节点类型的形状与类型规则：不启动执行，按版本读写工作目录内文件。</summary>
+/// <summary>文件节点类型的形状与类型规则：派发执行，按版本读写工作目录内文件。</summary>
 public sealed class FileNodeTypeTests
 {
     private static readonly FileParameters Parameters = new()
@@ -52,7 +52,7 @@ public sealed class FileNodeTypeTests
     {
         NodeTypeShape shape = ReadType.Shape;
 
-        Assert.False(shape.DispatchesExecutions);
+        Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);
@@ -64,7 +64,7 @@ public sealed class FileNodeTypeTests
     {
         NodeTypeShape shape = WriteType.Shape;
 
-        Assert.False(shape.DispatchesExecutions);
+        Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);

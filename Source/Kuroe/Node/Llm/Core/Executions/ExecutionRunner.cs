@@ -22,16 +22,18 @@ internal sealed class ExecutionRunner(
     public IProcessJournal Journal => _journal;
 
     /// <summary>执行一次 Llm 请求，按产出契约补发要求。</summary>
-    public async Task<ErrorOr<Success>> ExecuteAsync(
+    public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionInput input,
         CancellationToken cancellationToken)
     {
         Session session = _sessions.ForExecution(execution, input);
 
-        return await AskWithReminders(
+        ErrorOr<Success> reply = await AskWithReminders(
             text => session.AskAsync(text, _journal, cancellationToken),
             (input.Type as LlmNodeType)?.Instruction(input) ?? string.Empty,
             () => _reminder.Text(execution));
+
+        return reply.IsError ? reply.ErrorsOrEmptyList : ExecutionOutput.Ports;
     }
 
     /// <summary>先发本轮指令，随后按产出契约在同一会话里补发要求，最多补发 ReminderLimit 次。</summary>

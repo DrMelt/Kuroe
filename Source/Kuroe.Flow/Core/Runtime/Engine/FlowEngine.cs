@@ -10,6 +10,7 @@ namespace Kuroe.Flow.Runtime.Engine;
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 public sealed class FlowEngine(
     ExecutionDispatcher dispatcher,
+    IExecutionRunnerSource runners,
     IExecutionTargetResolver targetResolver) : IFlowRunner
 {
     private readonly Lock _gate = new();
@@ -18,7 +19,7 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
     {
-        TaskDriver driver = new(task, dispatcher, targetResolver);
+        TaskDriver driver = new(task, dispatcher, runners, targetResolver);
         driver.Start();
         Launch(task, driver);
     }
@@ -26,7 +27,7 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：按调度种子恢复推进循环，任务保持暂停不自动推进。</summary>
     public void Restore(WorkTask task, IReadOnlyList<NodePath> seed)
     {
-        TaskDriver driver = new(task, dispatcher, targetResolver);
+        TaskDriver driver = new(task, dispatcher, runners, targetResolver);
         driver.Restore(seed);
         Launch(task, driver);
     }

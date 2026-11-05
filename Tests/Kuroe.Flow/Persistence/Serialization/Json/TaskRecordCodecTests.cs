@@ -33,17 +33,13 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
-    public void Read_accepts_previous_version()
+    public void Read_accepts_current_version()
     {
         TaskRecordCodec codec = new();
         string json = codec.Write(TaskRecordFixture.Create()).ThrowIfError();
-        string legacy = json.Replace(
-            $"\"Version\": {TaskRecordSerializationVersion.Current}",
-            $"\"Version\": {TaskRecordSerializationVersion.MinimumReadable}",
-            StringComparison.Ordinal);
-        Assert.Contains($"\"Version\": {TaskRecordSerializationVersion.MinimumReadable}", legacy);
 
-        Assert.False(codec.Read(legacy).IsError);
+        Assert.Contains($"\"Version\": {TaskRecordSerializationVersion.Current}", json);
+        Assert.False(codec.Read(json).IsError);
     }
 
     [Fact]

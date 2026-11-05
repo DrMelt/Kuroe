@@ -4,28 +4,31 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 namespace Kuroe.Flow.Runtime;
 
 /// <summary>按并发额度推进执行。派生只入队，收口回调在额度释放后于线程池上执行，可安全再派生。</summary>
-public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
+public sealed class ExecutionDispatcher
 {
     /// <summary>同时在跑的执行数上限，超出的排队等待。</summary>
     private const int MaxConcurrentExecutions = 4;
 
     private readonly Lock _gate = new();
-    private readonly Queue<Execution> _queue = [];
+    private readonly Queue<(Execution Execution, IExecutionRunner Runner)> _queue = [];
     private readonly Dictionary<ExecutionId, (Execution Execution, Task Task)> _live = [];
     private readonly Dictionary<ExecutionId, Action<Execution>> _settled = [];
     private bool _stopping;
 
     /// <summary>入队一个执行并等它收口。推进循环用，结果由任务侧按收口处理。</summary>
-    public Task DispatchAsync(Execution execution, CancellationToken cancellationToken = default)
+    public Task DispatchAsync(
+        Execution execution,
+        IExecutionRunner runner,
+        CancellationToken cancellationToken = default)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatch(execution, _ => completion.TrySetResult());
+        Dispatch(execution, runner, _ => completion.TrySetResult());
 
         return completion.Task.WaitAsync(cancellationToken);
     }
 
     /// <summary>入队一个执行，跑完或失败后回调 settled。</summary>
-    public void Dispatch(Execution execution, Action<Execution> settled)
+    public void Dispatch(Execution execution, IExecutionRunner runner, Action<Execution> settled)
     {
         List<Execution> dropped = [];
         lock (_gate)
@@ -38,7 +41,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
             }
             else
             {
-                _queue.Enqueue(execution);
+                _queue.Enqueue((execution, runner));
                 Pump(dropped);
             }
         }
@@ -54,7 +57,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
         lock (_gate)
         {
             _stopping = true;
-            dropped = [.. _queue];
+            dropped = [.. _queue.Select(entry => entry.Execution)];
             _queue.Clear();
             live = [.. _live.Values];
         }
@@ -79,7 +82,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
     {
         while (_queue.Count > 0 && _live.Count < MaxConcurrentExecutions)
         {
-            Execution execution = _queue.Dequeue();
+            (Execution execution, IExecutionRunner runner) = _queue.Dequeue();
             if (execution.CancellationToken.IsCancellationRequested)
             {
                 execution.MarkCanceledOrInterrupted();
@@ -87,18 +90,17 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
                 continue;
             }
 
-            _live[execution.Id] = (execution, Task.Run(() => ExecuteAsync(execution)));
+            _live[execution.Id] = (execution, Task.Run(() => ExecuteAsync(execution, runner)));
         }
     }
 
-    private async Task ExecuteAsync(Execution execution)
+    private async Task ExecuteAsync(Execution execution, IExecutionRunner runner)
     {
         try
         {
-            IExecutionRunner runner = runners.Create(execution.Id);
             execution.AttachJournal(runner.Journal);
             execution.MarkRunning();
-            ErrorOr<Success> outcome = await runner.ExecuteAsync(
+            ErrorOr<ExecutionOutput> outcome = await runner.ExecuteAsync(
                 execution.Input,
                 execution.CancellationToken);
             if (outcome.IsError)
@@ -107,7 +109,7 @@ public sealed class ExecutionDispatcher(IExecutionRunnerFactory runners)
             }
             else
             {
-                execution.MarkSucceeded();
+                execution.MarkSucceeded(outcome.Value);
             }
         }
         catch (OperationCanceledException)

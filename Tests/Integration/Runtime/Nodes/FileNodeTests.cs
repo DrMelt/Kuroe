@@ -32,7 +32,7 @@ public sealed class FileNodeTests
         IExecution started = environment.Runner.Started
             .Single(execution => execution.Input.Node.Value == "整体/实施");
         Assert.Contains(started.Input.Inputs,
-            value => value.Text == "文件内容" && value.Origin is NodeSource);
+            value => value.Text == "文件内容" && value.Origin is ExecutionSource);
     }
 
     [Fact]

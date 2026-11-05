@@ -80,7 +80,7 @@ public sealed class TaskActions(
             return startErrors;
         }
 
-        // 不启动执行的节点不需要宿主声明；开始直连的派发节点在静态值全部就绪后再要求声明可解析
+        // 等待型节点不进入派发路径；派发节点在静态值全部就绪后再要求执行目标可解析，无模型端口的类型由解析器给空声明
         StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, effectiveInputs));
         foreach (InputBinding binding in graph.Outgoing(graph.Start.Path))
         {
@@ -121,7 +121,8 @@ public sealed class TaskActions(
             _driver.Start(task);
         }
 
-        Persist(task.Id);
+        // 提交是任务身份首次跨会话可见的点，等待这一份存档落盘；其余动作只标记待写，由后台合并写盘
+        PersistImmediately(task.Id);
 
         return task.Snapshot();
     }
@@ -210,17 +211,11 @@ public sealed class TaskActions(
         return errors;
     }
 
-    /// <summary>标记任务状态已变并同步写盘，关键状态变化立即落盘。</summary>
-    private void Persist(TaskId id)
-    {
-        if (_records is not { } coordinator)
-        {
-            return;
-        }
+    /// <summary>标记任务状态已变，由存档协调器在后台写盘，交互路径不等写盘。</summary>
+    private void Persist(TaskId id) => _records?.MarkDirty(id);
 
-        coordinator.MarkDirty(id);
-        coordinator.FlushAsync().GetAwaiter().GetResult();
-    }
+    /// <summary>写入该任务并等待落盘，用于任务身份变更与终止等需要立即可见的动作。</summary>
+    private void PersistImmediately(TaskId id) => _records?.FlushAsync(id).GetAwaiter().GetResult();
 
     /// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。要求任务未完成且未终止。</summary>
     public ErrorOr<Success> Pause(TaskId id)
@@ -356,7 +351,7 @@ public sealed class TaskActions(
         ErrorOr<Success> stopped = _driver.Cancel(found.Value);
         if (!stopped.IsError)
         {
-            Persist(found.Value.Id);
+            PersistImmediately(found.Value.Id);
             _leases?.Release(found.Value.Id);
         }
 
@@ -385,6 +380,9 @@ public sealed class TaskActions(
 
         return cleared;
     }
+
+    /// <summary>等待当前待写状态落盘，不改任务状态。</summary>
+    public Task FlushAsync() => _records?.FlushAsync() ?? Task.CompletedTask;
 
     /// <summary>退出时先中断任务与执行并等待收口，再写全部任务存档，放开占用，最后丢弃任务域。</summary>
     public async Task ShutdownAsync()

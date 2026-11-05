@@ -39,14 +39,6 @@ public sealed record ExecutableNodeRecord(
     NodeBlock? Block)
     : NodeRecord(Path, Common);
 
-/// <summary>自驱型节点的持久状态。</summary>
-public sealed record SelfDrivenNodeRecord(
-    NodePath Path,
-    NodeCommonRecord Common,
-    NodeBlock? Block,
-    bool FailureTaken)
-    : NodeRecord(Path, Common);
-
 /// <summary>输入节点的持久状态。</summary>
 public sealed record InputNodeRecord(
     NodePath Path,

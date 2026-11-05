@@ -15,6 +15,7 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
+using Kuroe.Process;
 using Kuroe.Tool;
 using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;
@@ -142,10 +143,21 @@ public sealed class TestEnvironment : IDisposable
         """;
 
     /// <summary>完整装配的选项：注册全部节点类型，流程失败即启动失败。默认不写存档，持久化用例显式打开。</summary>
-    internal static KuroeCoreOptions Options => new() { RegisterNodeTypes = TestTypeFiles.RegisterAll, PersistTasks = false };
+    internal static KuroeCoreOptions Options => CreateOptions(null);
+
+    private static KuroeCoreOptions CreateOptions(IProcessRunner? process) => new()
+    {
+        RegisterNodeTypes = TestTypeFiles.RegisterAll,
+        PersistTasks = false,
+        CommandNodeProcessRunner = process,
+    };
 
     /// <summary>装配失败时返回错误，用于校验类断言。未给流程文件时写入测试自带流程，flowsJson 传空对象即空流程库。</summary>
-    public static ErrorOr<TestEnvironment> TryCreate(string? flowsJson = null, bool seedCatalog = true, bool persistTasks = false)
+    public static ErrorOr<TestEnvironment> TryCreate(
+        string? flowsJson = null,
+        bool seedCatalog = true,
+        bool persistTasks = false,
+        IProcessRunner? process = null)
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(root);
@@ -161,7 +173,9 @@ public sealed class TestEnvironment : IDisposable
         services.AddLogging();
         var runner = new FakeRunner();
 
-        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(paths, Options with { PersistTasks = persistTasks });
+        ErrorOr<KuroeComposition> composition = services.AddKuroeCore(
+            paths,
+            CreateOptions(process) with { PersistTasks = persistTasks });
         if (composition.IsError)
         {
             return composition.ErrorsOrEmptyList;
@@ -194,8 +208,12 @@ public sealed class TestEnvironment : IDisposable
         return new TestEnvironment(root, provider, runner);
     }
 
-    public static TestEnvironment Create(string? flowsJson = null, bool seedCatalog = true, bool persistTasks = false) =>
-        TryCreate(flowsJson, seedCatalog, persistTasks).ThrowIfError();
+    public static TestEnvironment Create(
+        string? flowsJson = null,
+        bool seedCatalog = true,
+        bool persistTasks = false,
+        IProcessRunner? process = null) =>
+        TryCreate(flowsJson, seedCatalog, persistTasks, process).ThrowIfError();
 
     /// <summary>把测试夹具按顶层字段写成节点库与流程两个文件，空对象不写文件。</summary>
     private static void WriteFlowFiles(KuroePaths paths, string text)

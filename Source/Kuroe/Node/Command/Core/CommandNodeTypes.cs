@@ -20,6 +20,7 @@ public static class CommandNodeTypes
     /// <summary>命令节点的静态形状：路径变量给出执行目录，Signal 输入触发，输出端口由类型给出为命令输出与完成信号。</summary>
     public static NodeTypeShape Shape { get; } = new()
     {
+        DispatchesExecutions = true,
         InputTypes = [PortTypes.Text, PortTypes.Signal],
         Outputs = new OutputDeclaration.Given(
         [

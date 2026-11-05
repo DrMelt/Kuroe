@@ -17,7 +17,7 @@ using Xunit;
 namespace Kuroe.Integration.Tests.Hosting;
 
 /// <summary>不接模型地解析整张服务图：推进、执行与会话装配都建得起来。
-/// 其余测试把 IExecutionRunnerFactory 换成假的，走不到真实执行链。</summary>
+/// 其余测试把 IExecutionRunnerFactory 换成假的，只替换未自带执行器的节点。</summary>
 public sealed class WiringTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
@@ -28,6 +28,7 @@ public sealed class WiringTests : IDisposable
         using ServiceProvider provider = Services();
 
         Assert.NotNull(provider.GetRequiredService<IExecutionRunnerFactory>());
+        Assert.NotNull(provider.GetRequiredService<IExecutionRunnerSource>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 

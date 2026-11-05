@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Kuroe.Node.Command.Tests;
 
-/// <summary>命令节点类型的形状与类型规则：不启动模型执行，按版本执行工作目录内的命令。</summary>
+/// <summary>命令节点类型的形状与类型规则：派发执行，不调用模型，按版本执行工作目录内的命令。</summary>
 public sealed class CommandNodeTypeTests
 {
     private static readonly CommandParameters Parameters = new()
@@ -32,11 +32,11 @@ public sealed class CommandNodeTypeTests
     }
 
     [Fact]
-    public void Shape_takes_text_and_signal_inputs_and_gives_output_ports()
+    public void Shape_dispatches_content_output_with_text_and_signal_inputs()
     {
         NodeTypeShape shape = Type.Shape;
 
-        Assert.False(shape.DispatchesExecutions);
+        Assert.True(shape.DispatchesExecutions);
         Assert.False(shape.Organizes);
         Assert.False(shape.StartsUnaided);
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.InputTypes);

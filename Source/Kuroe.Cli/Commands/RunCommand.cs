@@ -89,6 +89,7 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
     private async Task<int> DriveAsync(TaskSnapshot task)
     {
         TaskSnapshot snapshot = await WaitAsync(task.Id);
+        await session.Tasks.FlushAsync().ConfigureAwait(false);
         output.EnsureLine();
         if (snapshot.State == TaskState.Terminated)
         {

@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Node.Llm.Sessions;
 
 namespace Kuroe.Node.Llm.Executions;
@@ -9,6 +10,6 @@ public sealed class ExecutionRunnerFactory(
     IExecutionStatusReader status) : IExecutionRunnerFactory
 {
     /// <summary>为一次执行建立运行器，过程记录随运行器一同建立。</summary>
-    public IExecutionRunner Create(ExecutionId execution) =>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
         new ExecutionRunner(sessions, status, execution);
 }
