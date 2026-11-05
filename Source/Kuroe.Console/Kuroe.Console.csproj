@@ -33,5 +33,5 @@
         <InternalsVisibleTo Include="Kuroe.Console.Tests" />
     </ItemGroup>
 
-    <Import Project="..\SourceExport.props" />
+    <Import Project="..\..\SourceExport.props" />
 </Project>
