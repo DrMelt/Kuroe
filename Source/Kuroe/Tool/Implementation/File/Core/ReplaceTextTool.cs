@@ -116,15 +116,14 @@ public sealed class ReplaceTextTool : ITool
     private string Render(TextReplaceResult result, IReadOnlyList<string> paths, bool dryRun)
     {
         string scope = string.Join("、", paths);
-        string skipped = result.SkippedFiles == 0 ? string.Empty : $"，跳过 {result.SkippedFiles} 个二进制文件";
         if (result.Files.Count == 0)
         {
-            return $"在 {scope} 中扫描 {result.ScannedFiles} 个文件{skipped}，没有匹配，未修改文件。";
+            return $"在 {scope} 中扫描 {result.ScannedFiles} 个文件，没有匹配，未修改文件。";
         }
 
         string action = dryRun ? "将替换" : "已替换";
         var text = new StringBuilder();
-        string summary = $"在 {scope} 中扫描 {result.ScannedFiles} 个文件{skipped}";
+        string summary = $"在 {scope} 中扫描 {result.ScannedFiles} 个文件";
         text.Append($"{summary}，{action} {result.ChangedFiles} 个文件的 {result.Replacements} 处文本。");
 
         TextReplaceFile[] changed = [.. result.Files.Where(file => file.Error is null)];

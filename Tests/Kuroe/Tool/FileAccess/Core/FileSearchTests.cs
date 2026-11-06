@@ -97,7 +97,6 @@ public sealed class FileSearchTests : IDisposable
         TextSearchMatch match = Assert.Single(result.Matches);
         Assert.Equal("text.txt", Path.GetFileName(match.File));
         Assert.Equal(2, result.ScannedFiles);
-        Assert.Equal(1, result.SkippedFiles);
     }
 
     [Fact]
@@ -138,19 +137,92 @@ public sealed class FileSearchTests : IDisposable
     }
 
     [Fact]
-    public void Search_truncates_a_long_line_and_keeps_later_lines()
+    public void Search_truncates_display_text_and_keeps_later_lines()
     {
         File.WriteAllText(
             Path.Combine(_root, "long.txt"),
-            $"needle{new string('a', 9000)}\nneedle");
+            $"needle{new string('a', 1495)}\nneedle");
 
         IReadOnlyList<TextSearchMatch> matches = Run([], Query("needle"), characterBudget: int.MaxValue).Matches;
 
         Assert.Equal(2, matches.Count);
-        Assert.Equal(FileScope.OutputLimit + 1, matches[0].Text.Length);
-        Assert.EndsWith("…", matches[0].Text, StringComparison.Ordinal);
+        Assert.Equal($"needle{new string('a', 994)}", matches[0].Text);
+        Assert.Equal(0, matches[0].Offset);
+        Assert.Equal(1501, matches[0].FullLength);
+        Assert.True(matches[0].Truncated);
         Assert.Equal(2, matches[1].Line);
         Assert.Equal("needle", matches[1].Text);
+        Assert.Equal(0, matches[1].Offset);
+        Assert.False(matches[1].Truncated);
+    }
+
+    [Fact]
+    public void Search_keeps_the_match_after_the_display_limit_visible()
+    {
+        File.WriteAllText(
+            Path.Combine(_root, "long.txt"),
+            $"{new string('a', TextSearchMatch.DisplayLimit)}needle");
+
+        TextSearchMatch match = Assert.Single(
+            Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
+
+        Assert.Equal(TextSearchMatch.DisplayLimit, match.Text.Length);
+        Assert.Equal(TextSearchMatch.DisplayLimit + 6, match.FullLength);
+        Assert.Equal(6, match.Offset);
+        Assert.Contains("needle", match.Text, StringComparison.Ordinal);
+        Assert.True(match.Truncated);
+    }
+
+    [Fact]
+    public void Search_centers_the_display_window_on_the_match()
+    {
+        string line = $"{new string('a', 700)}needle{new string('b', 794)}";
+        File.WriteAllText(Path.Combine(_root, "long.txt"), line);
+
+        TextSearchMatch match = Assert.Single(
+            Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
+
+        Assert.Equal(200, match.Offset);
+        Assert.Equal(line[200..], match.Text + new string('b', 300));
+        Assert.Equal(TextSearchMatch.DisplayLimit, match.Text.Length);
+        Assert.Contains("needle", match.Text, StringComparison.Ordinal);
+        Assert.True(match.Truncated);
+    }
+
+    [Fact]
+    public void Search_does_not_split_surrogate_pairs_at_the_window_edges()
+    {
+        string emoji = char.ConvertFromUtf32(0x1F600);
+        string leading = $"{new string('a', 499)}{emoji}{new string('a', 499)}needle{new string('b', 493)}";
+        string trailing = $"{new string('a', 1000)}needle{new string('a', 493)}{emoji}{new string('b', 100)}";
+        File.WriteAllText(Path.Combine(_root, "a.txt"), leading);
+        File.WriteAllText(Path.Combine(_root, "b.txt"), trailing);
+
+        IReadOnlyList<TextSearchMatch> matches = Run([], Query("needle"), characterBudget: int.MaxValue).Matches;
+
+        Assert.Equal(2, matches.Count);
+        TextSearchMatch first = Assert.Single(matches, match => Path.GetFileName(match.File) == "a.txt");
+        TextSearchMatch second = Assert.Single(matches, match => Path.GetFileName(match.File) == "b.txt");
+        Assert.Equal(499, first.Offset);
+        Assert.True(char.IsHighSurrogate(first.Text[0]));
+        Assert.True(char.IsLowSurrogate(first.Text[1]));
+        Assert.Equal(999, second.Text.Length);
+        Assert.False(char.IsLowSurrogate(second.Text[^1]));
+    }
+
+    [Fact]
+    public void Search_keeps_a_line_at_the_display_limit_untruncated()
+    {
+        string line = $"needle{new string('a', TextSearchMatch.DisplayLimit - 6)}";
+        File.WriteAllText(Path.Combine(_root, "exact.txt"), line);
+
+        TextSearchMatch match = Assert.Single(
+            Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
+
+        Assert.Equal(line, match.Text);
+        Assert.Equal(0, match.Offset);
+        Assert.Equal(TextSearchMatch.DisplayLimit, match.FullLength);
+        Assert.False(match.Truncated);
     }
 
     [Fact]

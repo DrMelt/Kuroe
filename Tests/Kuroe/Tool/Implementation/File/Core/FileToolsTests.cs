@@ -251,13 +251,41 @@ public sealed class FileToolsTests : IDisposable
     public void SearchText_truncates_output_at_the_character_limit()
     {
         Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "long.txt"), $"needle{new string('a', 9000)}");
+        File.WriteAllText(
+            Path.Combine(_root, "long.txt"),
+            string.Join('\n', Enumerable.Range(1, 12).Select(_ => $"needle{new string('a', 995)}")));
 
         string output = Call("SearchText", ("pattern", "needle"));
 
         const string Notice = "（内容超过 8000 字符，已截断）\n";
         Assert.StartsWith(Notice, output, StringComparison.Ordinal);
         Assert.Equal(Notice.Length + 8000, output.Length);
+        Assert.Contains("（本行共 1001 字符，展示第 1 至 1000 字符）", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_does_not_mark_a_line_at_the_display_limit()
+    {
+        Directory.CreateDirectory(_root);
+        string line = $"needle{new string('a', 994)}";
+        File.WriteAllText(Path.Combine(_root, "a.txt"), line);
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.EndsWith($"1 |{line}", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("（本行共", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_reports_a_match_after_the_display_limit()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), $"{new string('a', 1000)}needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("needle", output, StringComparison.Ordinal);
+        Assert.Contains("（本行共 1006 字符，展示第 7 至 1006 字符）", output, StringComparison.Ordinal);
     }
 
     [Fact]

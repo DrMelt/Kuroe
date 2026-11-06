@@ -5,14 +5,11 @@ using ErrorOr;
 namespace Kuroe.Tool.FileAccess;
 
 /// <summary>根目录内的文本搜索：展开目录或文件范围，递归收集候选文件，按后缀与字面文本筛选，匹配行文本累计到预算后停止收集。
-/// 路径解析与边界沿用文件作用域，递归时跳过路径准入规则命中的目录与重解析点目录。</summary>
+/// 路径解析与边界沿用文件作用域，递归时跳过路径准入规则命中的目录与重解析点目录。匹配覆盖整行，展示保留包含命中位置的窗口。</summary>
 /// <param name="scope">搜索的文件访问作用域。</param>
 /// <param name="access">路径准入规则，null 表示不限制。</param>
 public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
 {
-    /// <summary>按行读取的字符缓冲大小。</summary>
-    private const int BufferSize = 4096;
-
     private readonly FileCandidates _candidates = new(scope, access);
 
     /// <summary>按范围、后缀与文本搜索，匹配行文本累计到预算后停止收集。单个文件读取失败跳过。</summary>
@@ -37,7 +34,6 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
 
         List<TextSearchMatch> matches = [];
         int scannedFiles = 0;
-        int skippedFiles = 0;
         int characters = 0;
 
         foreach (string file in candidates.Value)
@@ -53,17 +49,14 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
             }
 
             scannedFiles++;
-            if (!SearchFile(file, query, matches, ref characters, characterBudget))
-            {
-                skippedFiles++;
-            }
+            SearchFile(file, query, matches, ref characters, characterBudget);
         }
 
-        return new TextSearchResult(matches, scannedFiles, skippedFiles);
+        return new TextSearchResult(matches, scannedFiles);
     }
 
-    /// <summary>读取一个文件中的匹配，匹配行文本累计到预算时停止。文件为二进制或读取失败时返回 false。</summary>
-    private static bool SearchFile(
+    /// <summary>读取一个文件中的匹配，匹配行文本累计到预算时停止。文件为二进制或读取失败时不收集。</summary>
+    private static void SearchFile(
         string file,
         TextQuery query,
         List<TextSearchMatch> matches,
@@ -74,87 +67,32 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
         {
             if (!TextFileProbe.IsText(file))
             {
-                return false;
+                return;
             }
 
             using StreamReader reader = new(file, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
             int lineNumber = 0;
-            foreach ((string line, bool truncated) in ReadLines(reader, FileScope.OutputLimit))
+            while (reader.ReadLine() is { } line)
             {
                 lineNumber++;
-                if (!query.Matches(line))
+                int index = query.IndexOf(line);
+                if (index < 0)
                 {
                     continue;
                 }
 
-                matches.Add(new TextSearchMatch(file, lineNumber, truncated ? $"{line}…" : line));
-                characters += line.Length + lineNumber.ToString(CultureInfo.InvariantCulture).Length + 2;
+                TextSearchMatch match = TextSearchMatch.Create(file, lineNumber, line, index);
+                matches.Add(match);
+                characters += match.Text.Length + lineNumber.ToString(CultureInfo.InvariantCulture).Length + 2;
                 if (characters >= characterBudget)
                 {
                     break;
                 }
             }
-
-            return true;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>按行读取文本，单行最多保留 maxLength 个字符。超出部分丢弃并标记该行被截断。</summary>
-    private static IEnumerable<(string Text, bool Truncated)> ReadLines(TextReader reader, int maxLength)
-    {
-        char[] buffer = new char[BufferSize];
-        var line = new StringBuilder();
-        bool truncated = false;
-        bool started = false;
-        bool skipLineFeed = false;
-        int read;
-        while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
-        {
-            for (int index = 0; index < read; index++)
-            {
-                char current = buffer[index];
-                if (skipLineFeed)
-                {
-                    skipLineFeed = false;
-                    if (current == '\n')
-                    {
-                        continue;
-                    }
-                }
-
-                if (current is '\r' or '\n')
-                {
-                    yield return (line.ToString(), truncated);
-                    line.Clear();
-                    truncated = false;
-                    started = false;
-                    skipLineFeed = current == '\r';
-                    continue;
-                }
-
-                started = true;
-                if (line.Length < maxLength)
-                {
-                    line.Append(current);
-                }
-                else
-                {
-                    truncated = true;
-                }
-            }
-        }
-
-        if (started)
-        {
-            yield return (line.ToString(), truncated);
+            // 读取失败的文件跳过
         }
     }
 }

@@ -44,8 +44,8 @@ public sealed record TextQuery
         return new TextQuery(pattern, normalized.Value, ignoreCase);
     }
 
-    /// <summary>该行是否包含查找文本。</summary>
-    public bool Matches(string line) => line.Contains(Pattern, Comparison);
+    /// <summary>查找文本在该行中的起点，没有匹配时为 -1。</summary>
+    public int IndexOf(string line) => line.IndexOf(Pattern, Comparison);
 
     /// <summary>文件名是否符合后缀过滤，未给后缀时全部符合。</summary>
     public bool MatchesExtension(string file) =>

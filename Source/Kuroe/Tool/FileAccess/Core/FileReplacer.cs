@@ -30,7 +30,6 @@ public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
 
         List<TextReplaceFile> results = [];
         int scannedFiles = 0;
-        int skippedFiles = 0;
 
         foreach (string file in candidates.Value)
         {
@@ -44,7 +43,6 @@ public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
             {
                 if (TextFileProbe.Detect(file) is not { } format)
                 {
-                    skippedFiles++;
                     continue;
                 }
 
@@ -79,7 +77,7 @@ public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
             }
         }
 
-        return new TextReplaceResult(results, scannedFiles, skippedFiles);
+        return new TextReplaceResult(results, scannedFiles);
     }
 
     /// <summary>失败文件的结果，替换处数为 0，没有匹配行。</summary>

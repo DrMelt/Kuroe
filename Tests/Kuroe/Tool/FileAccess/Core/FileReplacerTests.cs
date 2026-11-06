@@ -60,7 +60,6 @@ public sealed class FileReplacerTests : IDisposable
         TextReplaceResult result = Run(["."], Replacement("needle", "x"));
 
         Assert.Equal(1, result.ChangedFiles);
-        Assert.Equal(1, result.SkippedFiles);
         Assert.Equal("x", File.ReadAllText(text));
     }
 
