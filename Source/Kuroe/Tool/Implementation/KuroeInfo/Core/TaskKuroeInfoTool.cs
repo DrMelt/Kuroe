@@ -175,11 +175,10 @@ public sealed class TaskKuroeInfoTool : ITool
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
         text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)}"
-            + $" · 用量 {InfoLabels.Tokens(execution.Usage.Tokens)}"
             + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
-        if (InfoLabels.UsageDetails(execution.Usage) is { Length: > 0 } details)
+        foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
         {
-            text.AppendLine(details);
+            text.AppendLine($"  {label} {value}");
         }
 
         foreach (string failure in execution.Failures)

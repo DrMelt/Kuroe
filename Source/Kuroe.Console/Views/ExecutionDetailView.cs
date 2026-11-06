@@ -24,18 +24,14 @@ internal sealed class ExecutionDetailView(Terminal terminal)
             ("轮次", new Text($"第 {input.ExecutionCount} 轮")),
             ("请求", new Text(ViewLabels.Requests(execution.Usage), Styles.Hint)),
             ("模型", new Text((input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)")),
-            ("用量", new Text(ViewLabels.Tokens(execution.Usage), Styles.Hint)),
+            .. ViewLabels.TokenEntries(execution.Usage)
+                .Select(entry => (entry.Label, (IRenderable)new Text(entry.Value, Styles.Hint))),
             ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
             ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
             ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
             ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),
             ("耗时", new Text(ViewLabels.Elapsed(execution.Elapsed), Styles.Hint)),
         ];
-
-        if (ViewLabels.UsageDetails(execution.Usage) is { Length: > 0 } details)
-        {
-            fields.Add(("明细", new Text(details, Styles.Hint)));
-        }
 
         _terminal.Write(Blocks.Section(BoxKind.View, "概要", Blocks.Fields([.. fields])));
 

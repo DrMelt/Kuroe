@@ -108,9 +108,10 @@ public sealed class RunCommandTests
 
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("请求 2 次", error.ToString());
-        Assert.Contains("输入 100 · 输出 20 · 合计 120", error.ToString());
+        Assert.Contains("输入 100（83%），缓存输入 80（占输入 80%）", error.ToString());
+        Assert.Contains("输出 20（17%），推理 5（占输出 25%）", error.ToString());
+        Assert.Contains("合计 120", error.ToString());
         Assert.Contains("上下文 75", error.ToString());
-        Assert.Contains("缓存命中 80 · 推理 5", error.ToString());
     }
 
     [Fact]
@@ -123,6 +124,7 @@ public sealed class RunCommandTests
         int code = await command.RunAsync("默认", null, ["目标=目标"]);
 
         Assert.Equal(ExitCodes.Success, code);
+        Assert.Contains("请求 1 次（均未返回用量）", error.ToString());
         Assert.Contains("用量 未提供", error.ToString());
         Assert.Contains("上下文 未提供", error.ToString());
     }

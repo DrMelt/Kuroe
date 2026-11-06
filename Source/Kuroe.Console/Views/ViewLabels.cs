@@ -91,14 +91,12 @@ internal static class ViewLabels
     /// <summary>执行请求次数的展示名。</summary>
     public static string Requests(ExecutionUsage usage) => InfoLabels.Requests(usage);
 
-    /// <summary>执行 token 用量的展示名。</summary>
-    public static string Tokens(ExecutionUsage usage) => InfoLabels.Tokens(usage.Tokens);
+    /// <summary>执行 token 用量的展示条目。</summary>
+    public static IReadOnlyList<(string Label, string Value)> TokenEntries(ExecutionUsage usage) =>
+        InfoLabels.TokenEntries(usage);
 
     /// <summary>最近一次请求的上下文 token 数。</summary>
     public static string Context(ExecutionUsage usage) => InfoLabels.Context(usage);
-
-    /// <summary>用量的补充说明。</summary>
-    public static string UsageDetails(ExecutionUsage usage) => InfoLabels.UsageDetails(usage);
 
     public static string Clock(DateTimeOffset? at) => InfoLabels.Clock(at);
 

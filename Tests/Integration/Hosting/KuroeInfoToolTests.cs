@@ -63,7 +63,11 @@ public sealed class KuroeInfoToolTests
             .Replace("\r", string.Empty);
 
         Assert.Contains(executionId.ToString(), output);
+        Assert.Contains("请求 1 次", output);
         Assert.Contains("上下文 12", output);
+        Assert.Contains("输入 12（80%）", output);
+        Assert.Contains("输出 3（20%）", output);
+        Assert.Contains("合计 15", output);
         Assert.Contains("过程：", output);
         Assert.Contains("工具 > file/ReadFile {}", output);
         Assert.Contains("\n         结果 完成", output);

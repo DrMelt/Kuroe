@@ -55,6 +55,19 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
+    public void Token_entries_show_shares_and_group_subsets()
+    {
+        ExecutionUsage usage = new(1, 0, new TokenUsage(100, 20, 120, 80, 5));
+
+        IReadOnlyList<(string Label, string Value)> entries = ViewLabels.TokenEntries(usage);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(("输入", "100（83%），缓存输入 80（占输入 80%）"), entries[0]);
+        Assert.Equal(("输出", "20（17%），推理 5（占输出 25%）"), entries[1]);
+        Assert.Equal(("合计", "120"), entries[2]);
+    }
+
+    [Fact]
     public void Clock_renders_local_time()
     {
         Assert.Matches(@"^\d{2}:\d{2}:\d{2}$", ViewLabels.Clock(DateTimeOffset.Now));

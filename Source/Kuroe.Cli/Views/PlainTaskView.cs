@@ -28,7 +28,7 @@ internal static class PlainTaskView
         }
     }
 
-    /// <summary>按执行给出一行请求次数、token 用量与上下文，没有模型请求的执行不输出。</summary>
+    /// <summary>按执行给出请求次数、上下文与 token 条目，没有模型请求的执行不输出。</summary>
     public static void Usage(CliOutput output, TaskSnapshot task)
     {
         foreach (ExecutableSnapshot executable in task.Executables)
@@ -40,12 +40,13 @@ internal static class PlainTaskView
                     continue;
                 }
 
-                string line = $"节点 {executable.Executable.Path.Value} 第 {execution.Input.ExecutionCount} 轮"
+                output.Hint($"节点 {executable.Executable.Path.Value} 第 {execution.Input.ExecutionCount} 轮"
                     + $" · 请求 {InfoLabels.Requests(execution.Usage)}"
-                    + $" · 用量 {InfoLabels.Tokens(execution.Usage.Tokens)}"
-                    + $" · 上下文 {InfoLabels.Context(execution.Usage)}";
-                string details = InfoLabels.UsageDetails(execution.Usage);
-                output.Hint(details.Length > 0 ? $"{line} · {details}" : line);
+                    + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
+                foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
+                {
+                    output.Hint($"  {label} {value}");
+                }
             }
         }
     }
