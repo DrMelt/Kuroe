@@ -117,6 +117,16 @@ public sealed class FileScopeTests : IDisposable
     }
 
     [Fact]
+    public void Numbered_lines_mark_truncation_before_the_content()
+    {
+        string numbered = FileScope.Numbered([new string('a', 9000)], 1);
+
+        const string Notice = "（内容超过 8000 字符，已截断）\n";
+        Assert.StartsWith(Notice, numbered, StringComparison.Ordinal);
+        Assert.Equal(8000, numbered[Notice.Length..].Length);
+    }
+
+    [Fact]
     public void Read_range_reports_an_empty_file()
     {
         Directory.CreateDirectory(_root);
@@ -127,17 +137,6 @@ public sealed class FileScopeTests : IDisposable
 
         Assert.False(text.IsError);
         Assert.Equal("（已到文件结尾，文件没有内容）", text.Value);
-    }
-
-    [Fact]
-    public void Truncation_keeps_the_limit_and_marks_the_tail()
-    {
-        string text = new('a', 8001);
-
-        string truncated = FileScope.Truncate(text);
-
-        Assert.Equal(8000 + "…内容已截断".Length, truncated.Length);
-        Assert.EndsWith("…内容已截断", truncated, StringComparison.Ordinal);
     }
 
     public void Dispose()

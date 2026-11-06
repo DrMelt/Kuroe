@@ -418,8 +418,21 @@ public sealed class FileToolsTests : IDisposable
             ("original", "写错了"), ("replacement", "新"));
 
         Assert.Contains("与 original 不一致", output);
-        Assert.Contains("二\n三", output);
+        Assert.Contains("实际内容是：\n2 |二\n3 |三", output);
         Assert.Equal("一\n二\n三", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_numbers_and_aligns_mismatch_content()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "many.txt"), string.Concat(Enumerable.Range(1, 12).Select(line => $"L{line}\n")));
+
+        string output = Call("PatchFile",
+            ("path", "many.txt"), ("from", "9"), ("to", "10"),
+            ("original", "写错了"), ("replacement", "新"));
+
+        Assert.Contains("实际内容是：\n 9 |L9\n10 |L10", output);
     }
 
     [Fact]

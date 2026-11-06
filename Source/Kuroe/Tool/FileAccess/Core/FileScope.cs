@@ -168,10 +168,10 @@ public sealed class FileScope(string root, string boundary, string rootName, str
                 return "（已到文件结尾，文件没有内容）";
             }
 
-            string content = Numbered(lines, from, out bool limited);
+            string content = NumberedBody(lines, from, out bool limited);
             if (limited)
             {
-                return $"（内容超过 {OutputLimit} 字符，已截断）\n{content}";
+                return $"{TruncationNotice}\n{content}";
             }
 
             if (!reachedEnd)
@@ -189,8 +189,18 @@ public sealed class FileScope(string root, string boundary, string rootName, str
         }
     }
 
+    /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并在正文前注明。from 是首行的行号。</summary>
+    public static string Numbered(IReadOnlyList<string> lines, int from)
+    {
+        string content = NumberedBody(lines, from, out bool limited);
+        return limited ? $"{TruncationNotice}\n{content}" : content;
+    }
+
+    /// <summary>正文超过字符上限时正文前的截断提示。</summary>
+    private static string TruncationNotice => $"（内容超过 {OutputLimit} 字符，已截断）";
+
     /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并标记。</summary>
-    private static string Numbered(List<string> lines, int from, out bool limited)
+    private static string NumberedBody(IReadOnlyList<string> lines, int from, out bool limited)
     {
         int width = (from + lines.Count - 1).ToString(CultureInfo.InvariantCulture).Length;
         var text = new StringBuilder();
@@ -215,10 +225,6 @@ public sealed class FileScope(string root, string boundary, string rootName, str
         string content = text.ToString();
         return content.Length <= OutputLimit ? content : content[..OutputLimit];
     }
-
-    /// <summary>按字符上限截断文本，超长保留前限并在末尾加截断标记。</summary>
-    public static string Truncate(string text) =>
-        text.Length <= OutputLimit ? text : string.Concat(text.AsSpan(0, OutputLimit), "…内容已截断");
 
     /// <summary>路径的展示。空路径即路径基准目录。</summary>
     public string Display(string path) => path.Length == 0 ? $"{_rootName}根" : path;
