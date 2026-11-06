@@ -15,7 +15,7 @@ public sealed class PatchFileTool : ITool
     /// <summary>按行号范围替换文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/PatchFile"),
-        "按行号范围替换路径基准目录内文件的内容。from 与 to 是行号，from 从 1 起；original 必须是该范围现在的原文，包括空格。逐行不一致时调用被拒绝并在提示里回给带行号的实际内容；replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
+        "按行号范围替换路径基准目录内文件的内容。from 与 to 是行号，from 从 1 起。original 必须是该范围现在的原文，包括空格，不可省略首行前导空格。逐行不一致时调用被拒绝并在提示里回给带行号的实际内容。replacement 是替换后的新内容，行数可增减，为空时删除该范围；写回统一换行符，编码用 encoding 指定，缺省 utf-8 不带 BOM。",
         [
             new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("from"), "起始行号，数字，第 1 行起", Required: true),
