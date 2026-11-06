@@ -12,8 +12,8 @@ namespace Kuroe.Tool.FileAccess;
 /// <param name="boundaryName">边界目录名，越界拒绝文案由它拼出。</param>
 public sealed class FileScope(string root, string boundary, string rootName, string boundaryName)
 {
-    /// <summary>单条读取内容与提示文本的字符上限，超长截断并提示。</summary>
-    private const int OutputLimit = 8000;
+    /// <summary>读取与搜索输出的字符上限，超长截断并提示。</summary>
+    public const int OutputLimit = 8000;
 
     private readonly string _root = root;
     private readonly string _rootName = rootName;
@@ -168,13 +168,10 @@ public sealed class FileScope(string root, string boundary, string rootName, str
                 return "（已到文件结尾，文件没有内容）";
             }
 
-            string content = NumberedBody(lines, from, out bool limited);
-            if (limited)
-            {
-                return $"{TruncationNotice}\n{content}";
-            }
-
-            if (!reachedEnd)
+            string content = Limit(
+                FormatLines([.. lines.Select((line, index) => new NumberedLine(from + index, line))]),
+                out bool limited);
+            if (limited || !reachedEnd)
             {
                 return content;
             }
@@ -190,41 +187,43 @@ public sealed class FileScope(string root, string boundary, string rootName, str
     }
 
     /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并在正文前注明。from 是首行的行号。</summary>
-    public static string Numbered(IReadOnlyList<string> lines, int from)
-    {
-        string content = NumberedBody(lines, from, out bool limited);
-        return limited ? $"{TruncationNotice}\n{content}" : content;
-    }
+    public static string Numbered(IReadOnlyList<string> lines, int from) =>
+        Limit(FormatLines([.. lines.Select((line, index) => new NumberedLine(from + index, line))]), out _);
 
-    /// <summary>正文超过字符上限时正文前的截断提示。</summary>
-    private static string TruncationNotice => $"（内容超过 {OutputLimit} 字符，已截断）";
-
-    /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并标记。</summary>
-    private static string NumberedBody(IReadOnlyList<string> lines, int from, out bool limited)
+    /// <summary>把带原始行号的行渲染成「行号 |内容」，行号按最大行号右对齐，正文不截断。</summary>
+    public static string FormatLines(IReadOnlyList<NumberedLine> lines)
     {
-        int width = (from + lines.Count - 1).ToString(CultureInfo.InvariantCulture).Length;
+        if (lines.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        int width = lines.Max(line => line.Number).ToString(CultureInfo.InvariantCulture).Length;
         var text = new StringBuilder();
-        limited = false;
-        for (int index = 0; index < lines.Count; index++)
+        foreach (NumberedLine line in lines)
         {
             if (text.Length > 0)
             {
                 text.Append('\n');
             }
 
-            text.Append((from + index).ToString(CultureInfo.InvariantCulture).PadLeft(width));
+            text.Append(line.Number.ToString(CultureInfo.InvariantCulture).PadLeft(width));
             text.Append(" |");
-            text.Append(lines[index]);
-            if (text.Length > OutputLimit)
-            {
-                limited = true;
-                break;
-            }
+            text.Append(line.Text);
         }
 
-        string content = text.ToString();
-        return content.Length <= OutputLimit ? content : content[..OutputLimit];
+        return text.ToString();
     }
+
+    /// <summary>正文超过输出上限时截断，并把截断提示放在正文前。</summary>
+    public static string Limit(string content, out bool truncated)
+    {
+        truncated = content.Length > OutputLimit;
+        return truncated ? $"{TruncationNotice}\n{content[..OutputLimit]}" : content;
+    }
+
+    /// <summary>正文超过字符上限时正文前的截断提示。</summary>
+    private static string TruncationNotice => $"（内容超过 {OutputLimit} 字符，已截断）";
 
     /// <summary>路径的展示。空路径即路径基准目录。</summary>
     public string Display(string path) => path.Length == 0 ? $"{_rootName}根" : path;

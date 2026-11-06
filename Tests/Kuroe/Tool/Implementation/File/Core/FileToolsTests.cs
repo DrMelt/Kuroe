@@ -7,10 +7,11 @@ namespace Kuroe.Tool.File.Tests;
 
 using File = System.IO.File;
 
-/// <summary>工作目录文件访问工具：读写文本文件、列出目录条目与删除路径，路径限制在工作目录内。</summary>
+/// <summary>工作目录文件访问工具：读取、搜索、列出目录条目、取文件信息与写入、移动、删除路径，路径限制在工作目录内。</summary>
 public sealed class FileToolsTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
+    private static readonly string[] stringArray = new[] { ".cs" };
 
     [Fact]
     public void ReadFile_defaults_to_head_lines_and_notes_file_end()
@@ -160,6 +161,138 @@ public sealed class FileToolsTests : IDisposable
         string output = Call("ReadFile", ("path", "a.txt"), ("from", "0"));
 
         Assert.Contains("from 从 1 起", output);
+    }
+
+    [Fact]
+    public void SearchText_groups_matches_by_file_with_numbered_lines()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "sub"));
+        File.WriteAllText(
+            Path.Combine(_root, "a.txt"),
+            string.Join('\n', Enumerable.Range(1, 12).Select(line => line is 3 or 12 ? "needle" : $"L{line}")));
+        File.WriteAllText(Path.Combine(_root, "sub", "b.txt"), "one\ntwo\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        string expected = string.Join('\n',
+            "在 路径基准根 中匹配 3 处：",
+            "a.txt",
+            " 3 |needle",
+            "12 |needle",
+            Path.Combine("sub", "b.txt"),
+            "3 |needle");
+        Assert.Equal(expected, output);
+    }
+
+    [Fact]
+    public void SearchText_filters_by_scope_and_extension()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Source"));
+        Directory.CreateDirectory(Path.Combine(_root, "Tests"));
+        File.WriteAllText(Path.Combine(_root, "Source", "a.cs"), "needle");
+        File.WriteAllText(Path.Combine(_root, "Source", "b.md"), "needle");
+        File.WriteAllText(Path.Combine(_root, "Tests", "c.cs"), "needle");
+
+        string[] paths = ["Source"];
+        string output = Call(
+            "SearchText",
+            ("pattern", "needle"),
+            ("paths", paths),
+            ("extensions", stringArray));
+
+        Assert.Contains(Path.Combine("Source", "a.cs"), output);
+        Assert.DoesNotContain("b.md", output);
+        Assert.DoesNotContain(Path.Combine("Tests", "c.cs"), output);
+    }
+
+    [Fact]
+    public void SearchText_is_case_sensitive_by_default_and_accepts_ignore_case()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "Needle");
+
+        Assert.Contains("没有匹配", Call("SearchText", ("pattern", "needle")));
+        Assert.Contains("Needle", Call("SearchText", ("pattern", "needle"), ("ignoreCase", true)));
+    }
+
+    [Fact]
+    public void SearchText_rejects_blank_pattern()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call("SearchText", ("pattern", " "));
+
+        Assert.Contains("pattern", output);
+    }
+
+    [Fact]
+    public void SearchText_rejects_path_escaping_working_directory()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call("SearchText", ("pattern", "x"), ("paths", new[] { ".." }));
+
+        Assert.Contains("不在工作区内", output);
+    }
+
+    [Fact]
+    public void SearchText_skips_denied_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("没有可搜索的文件", output);
+    }
+
+    [Fact]
+    public void SearchText_truncates_output_at_the_character_limit()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "long.txt"), $"needle{new string('a', 9000)}");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        const string Notice = "（内容超过 8000 字符，已截断）\n";
+        Assert.StartsWith(Notice, output, StringComparison.Ordinal);
+        Assert.Equal(Notice.Length + 8000, output.Length);
+    }
+
+    [Fact]
+    public void SearchText_keeps_trailing_whitespace_of_matched_lines()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "needle \n");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.EndsWith("1 |needle ", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_accepts_a_single_path_string()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Source"));
+        File.WriteAllText(Path.Combine(_root, "Source", "a.cs"), "needle");
+        File.WriteAllText(Path.Combine(_root, "b.md"), "needle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("paths", "Source"));
+
+        Assert.Contains(Path.Combine("Source", "a.cs"), output);
+        Assert.DoesNotContain("b.md", output);
+        Assert.Contains("在 Source 中匹配", output);
+    }
+
+    [Fact]
+    public void SearchText_rejects_a_blank_scalar_path()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call("SearchText", ("pattern", "x"), ("paths", " "));
+
+        Assert.Contains("paths", output);
+        Assert.Contains("不能为空", output);
     }
 
     [Fact]
@@ -853,7 +986,7 @@ public sealed class FileToolsTests : IDisposable
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
-        string[] readFunctions = ["ReadFile", "ListDirectory", "GetFileInfo"];
+        string[] readFunctions = ["ReadFile", "SearchText", "ListDirectory", "GetFileInfo"];
         string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile", "DeleteFile"];
         foreach (string name in readFunctions)
         {
@@ -875,6 +1008,7 @@ public sealed class FileToolsTests : IDisposable
         Assert.All(
             [
                 ("ReadFile", "path"),
+                ("SearchText", "paths"),
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
@@ -946,6 +1080,7 @@ public sealed class FileToolsTests : IDisposable
         Assert.All(
             [
                 ("ReadFile", "path"),
+                ("SearchText", "paths"),
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
@@ -1024,6 +1159,7 @@ public sealed class FileToolsTests : IDisposable
     private IReadOnlyList<ITool> Face() =>
     [
         new ReadFileTool(_root),
+        new SearchTextTool(_root),
         new ListDirectoryTool(_root),
         new WriteFileTool(_root),
         new PatchFileTool(_root),

@@ -6,6 +6,7 @@ public sealed class FileToolSource : ToolSource
     private static readonly IReadOnlyList<ToolEntry> Entries =
     [
         new(ReadFileTool.Definition, binding => new ReadFileTool(binding)),
+        new(SearchTextTool.Definition, binding => new SearchTextTool(binding)),
         new(ListDirectoryTool.Definition, binding => new ListDirectoryTool(binding)),
         new(GetFileInfoTool.Definition, binding => new GetFileInfoTool(binding)),
         new(WriteFileTool.Definition, binding => new WriteFileTool(binding)),
