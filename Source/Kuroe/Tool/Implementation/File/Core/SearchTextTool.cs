@@ -42,7 +42,7 @@ public sealed class SearchTextTool : ITool
     /// <summary>按范围、后缀与文本搜索，错误与拒绝以 ErrorOr 表达。</summary>
     private ErrorOr<string> Search(ToolArguments arguments)
     {
-        ErrorOr<TextSearchQuery> query = TextSearchQuery.Create(
+        ErrorOr<TextQuery> query = TextQuery.Create(
             arguments.Text(new ToolName("pattern")),
             arguments.List(new ToolName("extensions")),
             arguments.Flag(new ToolName("ignoreCase")) == true);
@@ -51,43 +51,19 @@ public sealed class SearchTextTool : ITool
             return query.ErrorsOrEmptyList;
         }
 
-        ErrorOr<IReadOnlyList<string>> paths = Paths(arguments);
-        if (paths.IsError)
-        {
-            return paths.ErrorsOrEmptyList;
-        }
+        IReadOnlyList<string> paths = arguments.List(new ToolName("paths")) ?? [];
 
-        ErrorOr<TextSearchResult> result = _search.Search(paths.Value, query.Value, FileScope.OutputLimit);
+        ErrorOr<TextSearchResult> result = _search.Search(paths, query.Value, FileScope.OutputLimit);
         if (result.IsError)
         {
             return result.ErrorsOrEmptyList;
         }
 
-        return Render(result.Value, query.Value, paths.Value);
-    }
-
-    /// <summary>读取 paths 参数。数组按多路径处理，标量按单个路径处理，空白拒绝。</summary>
-    private static ErrorOr<IReadOnlyList<string>> Paths(ToolArguments arguments)
-    {
-        IReadOnlyList<string>? list = arguments.List(new ToolName("paths"));
-        if (list is not null)
-        {
-            return list.ToArray();
-        }
-
-        string? text = arguments.Text(new ToolName("paths"));
-        if (text is null)
-        {
-            return Array.Empty<string>();
-        }
-
-        return string.IsNullOrWhiteSpace(text)
-            ? ToolErrors.Argument("路径参数 paths 不能为空。")
-            : new[] { text };
+        return Render(result.Value, query.Value, paths);
     }
 
     /// <summary>把搜索结果渲染成按文件分组的带行号文本，整体超过输出上限时截断并提示。</summary>
-    private string Render(TextSearchResult result, TextSearchQuery query, IReadOnlyList<string> paths)
+    private string Render(TextSearchResult result, TextQuery query, IReadOnlyList<string> paths)
     {
         string scope = paths.Count == 0 ? _scope.Display(string.Empty) : string.Join('、', paths);
         if (result.Matches.Count == 0)
@@ -117,7 +93,7 @@ public sealed class SearchTextTool : ITool
     }
 
     /// <summary>没有匹配时的交回文本，报告扫描与跳过的文件数。</summary>
-    private static string NoMatches(TextSearchResult result, TextSearchQuery query, string scope)
+    private static string NoMatches(TextSearchResult result, TextQuery query, string scope)
     {
         string skipped = result.SkippedFiles == 0 ? string.Empty : $"，跳过 {result.SkippedFiles} 个文件";
         return result.ScannedFiles == 0

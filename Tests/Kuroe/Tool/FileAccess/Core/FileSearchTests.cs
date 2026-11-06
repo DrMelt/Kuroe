@@ -165,14 +165,14 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Query_normalizes_extensions_and_rejects_invalid_entries()
     {
-        TextSearchQuery query = Query("x", ["CS", ".md", "cs"]);
+        TextQuery query = Query("x", ["CS", ".md", "cs"]);
 
         Assert.Equal([".cs", ".md"], query.Extensions);
-        Assert.True(TextSearchQuery.Create(" ", null, false).IsError);
-        Assert.True(TextSearchQuery.Create("x", [""], false).IsError);
-        Assert.True(TextSearchQuery.Create("x", ["*.cs"], false).IsError);
-        Assert.True(TextSearchQuery.Create("x", ["c?.cs"], false).IsError);
-        Assert.True(TextSearchQuery.Create("x", ["Source/cs"], false).IsError);
+        Assert.True(TextQuery.Create(" ", null, false).IsError);
+        Assert.True(TextQuery.Create("x", [""], false).IsError);
+        Assert.True(TextQuery.Create("x", ["*.cs"], false).IsError);
+        Assert.True(TextQuery.Create("x", ["c?.cs"], false).IsError);
+        Assert.True(TextQuery.Create("x", ["Source/cs"], false).IsError);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class FileSearchTests : IDisposable
 
     private TextSearchResult Run(
         IReadOnlyList<string> paths,
-        TextSearchQuery query,
+        TextQuery query,
         ToolPathAccess? access = null,
         int characterBudget = FileScope.OutputLimit)
     {
@@ -197,12 +197,12 @@ public sealed class FileSearchTests : IDisposable
         return result.Value;
     }
 
-    private static TextSearchQuery Query(
+    private static TextQuery Query(
         string pattern,
         IReadOnlyList<string>? extensions = null,
         bool ignoreCase = false)
     {
-        ErrorOr<TextSearchQuery> query = TextSearchQuery.Create(pattern, extensions, ignoreCase);
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions, ignoreCase);
         Assert.False(query.IsError);
         return query.Value;
     }

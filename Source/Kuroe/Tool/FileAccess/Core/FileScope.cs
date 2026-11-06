@@ -12,7 +12,7 @@ namespace Kuroe.Tool.FileAccess;
 /// <param name="boundaryName">边界目录名，越界拒绝文案由它拼出。</param>
 public sealed class FileScope(string root, string boundary, string rootName, string boundaryName)
 {
-    /// <summary>读取与搜索输出的字符上限，超长截断并提示。</summary>
+    /// <summary>工具输出的字符上限，超长截断并在正文前提示。</summary>
     public const int OutputLimit = 8000;
 
     private readonly string _root = root;

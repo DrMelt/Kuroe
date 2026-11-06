@@ -11,7 +11,8 @@ using File = System.IO.File;
 public sealed class FileToolsTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
-    private static readonly string[] stringArray = new[] { ".cs" };
+    private static readonly string[] stringArray = [".cs"];
+    private static readonly string[] stringArray0 = [".."];
 
     [Fact]
     public void ReadFile_defaults_to_head_lines_and_notes_file_end()
@@ -230,7 +231,7 @@ public sealed class FileToolsTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        string output = Call("SearchText", ("pattern", "x"), ("paths", new[] { ".." }));
+        string output = Call("SearchText", ("pattern", "x"), ("paths", stringArray0));
 
         Assert.Contains("不在工作区内", output);
     }
@@ -981,13 +982,164 @@ public sealed class FileToolsTests : IDisposable
     }
 
     [Fact]
+    public void ReplaceText_replaces_across_files_and_reports_lines()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "sub"));
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "needle\nneedle");
+        File.WriteAllText(Path.Combine(_root, "sub", "b.txt"), "needle");
+        string[] paths = ["."];
+        string[] extensions = ["txt"];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "x"),
+            ("extensions", extensions));
+
+        Assert.Contains("已替换 2 个文件的 3 处文本", output);
+        Assert.Contains("a.txt：2 处，第 1、2 行", output);
+        Assert.Contains(Path.Combine("sub", "b.txt") + "：1 处，第 1 行", output);
+        Assert.Equal("x\nx", File.ReadAllText(Path.Combine(_root, "a.txt")));
+        Assert.Equal("x", File.ReadAllText(Path.Combine(_root, "sub", "b.txt")));
+    }
+
+    [Fact]
+    public void ReplaceText_dry_run_does_not_write()
+    {
+        Directory.CreateDirectory(_root);
+        string file = Path.Combine(_root, "a.txt");
+        File.WriteAllText(file, "needle");
+        string[] paths = ["."];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "x"),
+            ("dryRun", true));
+
+        Assert.Contains("将替换 1 个文件的 1 处文本", output);
+        Assert.Equal("needle", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public void ReplaceText_accepts_a_single_path_string()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Source"));
+        File.WriteAllText(Path.Combine(_root, "Source", "a.txt"), "needle");
+        File.WriteAllText(Path.Combine(_root, "b.txt"), "needle");
+
+        string output = Call("ReplaceText", ("paths", "Source"), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        Assert.Equal("x", File.ReadAllText(Path.Combine(_root, "Source", "a.txt")));
+        Assert.Equal("needle", File.ReadAllText(Path.Combine(_root, "b.txt")));
+    }
+
+    [Fact]
+    public void ReplaceText_reports_one_line_for_multiple_matches_on_the_same_line()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "needle needle");
+        string[] paths = ["."];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("已替换 1 个文件的 2 处文本", output);
+        Assert.Contains("a.txt：2 处，第 1 行", output);
+    }
+
+    [Fact]
+    public void ReplaceText_writes_utf16_with_bom_when_encoding_set()
+    {
+        Directory.CreateDirectory(_root);
+        string file = Path.Combine(_root, "a.txt");
+        File.WriteAllText(file, "needle");
+        string[] paths = ["."];
+
+        string output = Call(
+            "ReplaceText",
+            ("paths", paths),
+            ("pattern", "needle"),
+            ("replacement", "替换"),
+            ("encoding", "utf-16"));
+
+        Assert.Contains("已替换 1 个文件的 1 处文本", output);
+        byte[] bytes = File.ReadAllBytes(file);
+        Assert.Equal(new byte[] { 0xFF, 0xFE }, bytes[..2]);
+        Assert.Equal("替换", Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
+    }
+
+    [Fact]
+    public void ReplaceText_rejects_missing_paths()
+    {
+        Directory.CreateDirectory(_root);
+
+        string output = Call("ReplaceText", ("pattern", "x"), ("replacement", "y"));
+
+        Assert.Contains("缺少参数 paths", output);
+    }
+
+    [Fact]
+    public void ReplaceText_rejects_blank_pattern_and_unknown_encoding()
+    {
+        Directory.CreateDirectory(_root);
+        string[] paths = ["."];
+
+        Assert.Contains("pattern", Call("ReplaceText", ("paths", paths), ("pattern", " "), ("replacement", "y")));
+        Assert.Contains(
+            "encoding 只支持",
+            Call("ReplaceText", ("paths", paths), ("pattern", "x"), ("replacement", "y"), ("encoding", "gbk")));
+    }
+
+    [Fact]
+    public void ReplaceText_reports_no_match()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "other");
+        string[] paths = ["."];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("没有匹配", output);
+        Assert.Equal("other", File.ReadAllText(Path.Combine(_root, "a.txt")));
+    }
+
+    [Fact]
+    public void ReplaceText_rejects_the_denied_directories()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
+        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "needle");
+        string[] paths = [".kuroe/catalog.json"];
+
+        string output = Call("ReplaceText", ("paths", paths), ("pattern", "needle"), ("replacement", "x"));
+
+        Assert.Contains("黑名单", output);
+    }
+
+    [Fact]
+    public void ReplaceText_declares_paths_as_a_required_path_list()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter paths = Parameter(definitions, "ReplaceText", "paths");
+
+        Assert.True(paths.Required);
+        Assert.True(paths.List);
+        Assert.True(paths.Path);
+        Assert.False(Parameter(definitions, "ReplaceText", "replacement").Path);
+    }
+
+    [Fact]
     public void Face_functions_split_into_read_and_write_groups()
     {
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
         string[] readFunctions = ["ReadFile", "SearchText", "ListDirectory", "GetFileInfo"];
-        string[] writeFunctions = ["WriteFile", "PatchFile", "MoveFile", "DeleteFile"];
+        string[] writeFunctions = ["WriteFile", "PatchFile", "ReplaceText", "MoveFile", "DeleteFile"];
         foreach (string name in readFunctions)
         {
             Assert.Equal($"file/read/{name}", paths[name]);
@@ -1013,6 +1165,7 @@ public sealed class FileToolsTests : IDisposable
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
                 ("PatchFile", "path"),
+                ("ReplaceText", "paths"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
                 ("DeleteFile", "path"),
@@ -1085,6 +1238,7 @@ public sealed class FileToolsTests : IDisposable
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
                 ("PatchFile", "path"),
+                ("ReplaceText", "paths"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
                 ("DeleteFile", "path"),
@@ -1163,6 +1317,7 @@ public sealed class FileToolsTests : IDisposable
         new ListDirectoryTool(_root),
         new WriteFileTool(_root),
         new PatchFileTool(_root),
+        new ReplaceTextTool(_root),
         new MoveFileTool(_root),
         new DeleteFileTool(_root),
         new GetFileInfoTool(_root),

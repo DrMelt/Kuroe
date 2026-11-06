@@ -2,17 +2,17 @@ using ErrorOr;
 
 namespace Kuroe.Tool.FileAccess;
 
-/// <summary>文本搜索条件：字面文本、后缀过滤与大小写规则。后缀在创建时归一为带前导点的小写形式。</summary>
-public sealed record TextSearchQuery
+/// <summary>文本查找条件：字面文本、后缀过滤与大小写规则。后缀在创建时归一为带前导点的小写形式。</summary>
+public sealed record TextQuery
 {
-    private TextSearchQuery(string pattern, IReadOnlyList<string> extensions, bool ignoreCase)
+    private TextQuery(string pattern, IReadOnlyList<string> extensions, bool ignoreCase)
     {
         Pattern = pattern;
         Extensions = extensions;
         IgnoreCase = ignoreCase;
     }
 
-    /// <summary>要匹配的字面文本。</summary>
+    /// <summary>要查找的字面文本。</summary>
     public string Pattern { get; }
 
     /// <summary>归一后的后缀名，带前导点，空集合表示不限制。</summary>
@@ -21,8 +21,11 @@ public sealed record TextSearchQuery
     /// <summary>匹配是否忽略大小写。</summary>
     public bool IgnoreCase { get; }
 
-    /// <summary>从工具实参建立查询条件。空文本、空后缀条目或含通配符与路径分隔符的后缀条目拒绝。</summary>
-    public static ErrorOr<TextSearchQuery> Create(
+    /// <summary>字面匹配使用的比较方式。</summary>
+    public StringComparison Comparison => IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    /// <summary>从工具实参建立查找条件。空文本、空后缀条目或含通配符与路径分隔符的后缀条目拒绝。</summary>
+    public static ErrorOr<TextQuery> Create(
         string? pattern,
         IReadOnlyList<string>? extensions,
         bool ignoreCase)
@@ -38,12 +41,11 @@ public sealed record TextSearchQuery
             return normalized.ErrorsOrEmptyList;
         }
 
-        return new TextSearchQuery(pattern, normalized.Value, ignoreCase);
+        return new TextQuery(pattern, normalized.Value, ignoreCase);
     }
 
-    /// <summary>该行是否包含搜索文本。</summary>
-    public bool Matches(string line) =>
-        line.Contains(Pattern, IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    /// <summary>该行是否包含查找文本。</summary>
+    public bool Matches(string line) => line.Contains(Pattern, Comparison);
 
     /// <summary>文件名是否符合后缀过滤，未给后缀时全部符合。</summary>
     public bool MatchesExtension(string file) =>

@@ -11,6 +11,7 @@ public sealed class FileToolSource : ToolSource
         new(GetFileInfoTool.Definition, binding => new GetFileInfoTool(binding)),
         new(WriteFileTool.Definition, binding => new WriteFileTool(binding)),
         new(PatchFileTool.Definition, binding => new PatchFileTool(binding)),
+        new(ReplaceTextTool.Definition, binding => new ReplaceTextTool(binding)),
         new(MoveFileTool.Definition, binding => new MoveFileTool(binding)),
         new(DeleteFileTool.Definition, binding => new DeleteFileTool(binding)),
     ];
