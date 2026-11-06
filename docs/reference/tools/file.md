@@ -4,17 +4,17 @@
 
 ## 函数
 
-| 函数                      | 参数                                                                                          | 作用                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `file/read/ReadFile`      | `path` 必填，`from`、`to` 可选                                                                | 读取文本文件指定行号范围，缺省读前 50 行，超出文件尾时读到文件尾   |
-| `file/read/SearchText`    | `pattern` 必填，`paths`、`extensions`、`ignoreCase` 可选                                      | 在路径范围内按字面文本搜索，按文件分组返回带行号的匹配行           |
-| `file/read/ListDirectory` | `path` 可选                                                                                   | 列出目录直接子项，缺省为路径基准目录                               |
-| `file/read/GetFileInfo`   | `path` 必填                                                                                   | 取文件的字节大小、创建、修改、访问时间与只读、隐藏、系统、归档属性 |
-| `file/write/WriteFile`    | `path`、`content` 必填，`encoding` 可选                                                       | 覆盖写入文本，文件不存在时创建，父目录缺失时自动创建               |
-| `file/write/PatchFile`    | `path`、`from`、`to`、`original`、`replacement` 必填，`encoding` 可选                         | 按行号范围替换内容，原文必须与 `original` 逐行一致                 |
-| `file/write/ReplaceText`  | `paths`、`pattern`、`replacement` 必填，`extensions`、`ignoreCase`、`dryRun`、`encoding` 可选 | 在多个文本文件中按字面文本批量替换                                 |
-| `file/write/MoveFile`     | `source`、`target` 必填                                                                       | 移动文件或目录，同目录改名为重命名，目标已存在时拒绝               |
-| `file/write/DeleteFile`   | `path` 必填，`recursive` 开关                                                                 | 删除文件或目录，目录缺省只删除空目录，路径基准目录本身拒绝删除     |
+| 函数                      | 参数                                                                                          | 作用                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `file/read/ReadFile`      | `path` 必填，`from`、`to` 可选                                                                | 读取文本文件指定行号范围，缺省读前 50 行，超出文件尾时读到文件尾                    |
+| `file/read/SearchText`    | `pattern` 必填，`paths`、`extensions`、`ignoreCase` 可选                                      | 在路径范围内按字面文本搜索，按文件分组返回带行号的匹配行                            |
+| `file/read/ListDirectory` | `path` 可选                                                                                   | 列出目录直接子项，缺省为路径基准目录                                                |
+| `file/read/GetFileInfo`   | `path` 必填                                                                                   | 取文件的字节大小、创建、修改、访问时间与只读、隐藏、系统、归档属性                  |
+| `file/write/WriteFile`    | `path`、`content` 必填，`encoding` 可选                                                       | 覆盖写入文本，文件不存在时创建，父目录缺失时自动创建                                |
+| `file/write/PatchFile`    | `path`、`from`、`to`、`original` 必填，`replacement`、`encoding` 可选                         | 按行号范围替换内容，原文必须与 `original` 逐行一致，省略 `replacement` 时删除该范围 |
+| `file/write/ReplaceText`  | `paths`、`pattern`、`replacement` 必填，`extensions`、`ignoreCase`、`dryRun`、`encoding` 可选 | 在多个文本文件中按字面文本批量替换                                                  |
+| `file/write/MoveFile`     | `source`、`target` 必填                                                                       | 移动文件或目录，同目录改名为重命名，目标已存在时拒绝                                |
+| `file/write/DeleteFile`   | `path` 必填，`recursive` 开关                                                                 | 删除文件或目录，目录缺省只删除空目录，路径基准目录本身拒绝删除                      |
 
 `MoveFile` 的目标落在源目录之内时拒绝，目标父目录缺失时自动创建。`DeleteFile` 的 `recursive` 开关为真时连同目录内容一起删除。
 
@@ -46,7 +46,7 @@
 
 ## 文本
 
-`ReadFile` 按 UTF-8 解码，带 BOM 时识别。读取输出的每行是 `{行号} |{内容}`，行号与请求范围一致并按末行位数右对齐。到达文件尾时正文前给出实际返回的行号范围，正文超过 8000 字符时截断并在正文前提示，截断时不报文件尾。`PatchFile` 的 `original` 与该范围原文不一致时拒绝，并在提示里按同样格式给出该范围的实际内容与行号。目录列表超过 200 条时截断。
+`ReadFile` 按 UTF-8 解码，带 BOM 时识别。读取输出的每行是 `{行号} |{内容}`，行号与请求范围一致并按末行位数右对齐。到达文件尾时正文前给出实际返回的行号范围，正文超过 8000 字符时截断并在正文前提示，截断时不报文件尾。`PatchFile` 的 `original` 与该范围原文不一致时拒绝，提示区分行数与内容差异：行数不同时给出该范围与 `original` 的行数，行数相同时给出不同行数与首个不同行，并按同样格式给出该范围的实际内容与行号。`original` 与 `replacement` 的空文本按一行空行处理，省略 `replacement` 时删除该范围。写回把整个文件的换行统一为 LF，文件末尾不带换行。目录列表超过 200 条时截断。
 
 `WriteFile` 与 `PatchFile` 的写回编码由 `encoding` 指定，支持 `utf-8`、`utf-8-bom`、`utf-16`、`utf-16be`，缺省 `utf-8` 不带 BOM。`ReplaceText` 的写回编码缺省保留各文件检测到的编码与 BOM。`WriteFile` 的 `content` 上限 40000 字符，`PatchFile` 的 `original` 与 `replacement` 各自上限 40000 字符，`ReplaceText` 的 `pattern` 与 `replacement` 各自上限 40000 字符。写入超过上限时整次调用拒绝。
 

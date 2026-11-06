@@ -494,6 +494,20 @@ public sealed class FileToolsTests : IDisposable
     }
 
     [Fact]
+    public void PatchFile_writes_lf_without_trailing_newline()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\r\n二\r\n");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "1"), ("to", "1"),
+            ("original", "一"), ("replacement", "改"));
+
+        Assert.Equal("已替换 code.txt 的第 1 到 1 行（1 行 → 1 行）。", output);
+        Assert.Equal("改\n二", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
     public void PatchFile_writes_utf8_bom_when_encoding_set()
     {
         Directory.CreateDirectory(_root);
@@ -542,7 +556,7 @@ public sealed class FileToolsTests : IDisposable
     }
 
     [Fact]
-    public void PatchFile_rejects_original_mismatch()
+    public void PatchFile_rejects_original_with_different_line_count()
     {
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
@@ -551,9 +565,54 @@ public sealed class FileToolsTests : IDisposable
             ("path", "code.txt"), ("from", "2"), ("to", "3"),
             ("original", "写错了"), ("replacement", "新"));
 
-        Assert.Contains("与 original 不一致", output);
+        Assert.Contains("行数与 original 不一致", output);
+        Assert.Contains("original 有 1 行，该范围有 2 行", output);
         Assert.Contains("实际内容是：\n2 |二\n3 |三", output);
         Assert.Equal("一\n二\n三", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_counts_empty_original_as_one_blank_line()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "3"),
+            ("original", ""), ("replacement", "新"));
+
+        Assert.Contains("行数与 original 不一致", output);
+        Assert.Contains("original 有 1 行，该范围有 2 行", output);
+        Assert.Equal("一\n二\n三", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_reports_the_differing_line()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三\n四");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "4"),
+            ("original", "二\n错\n四"), ("replacement", "新"));
+
+        Assert.Contains("原文与 original 不一致，第 3 行不同", output);
+        Assert.Contains("实际内容是：\n2 |二\n3 |三\n4 |四", output);
+        Assert.Equal("一\n二\n三\n四", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_reports_multiple_differing_lines()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三\n四");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "4"),
+            ("original", "错二\n错三\n四"), ("replacement", "新"));
+
+        Assert.Contains("共 2 行不同，首个不同在第 2 行", output);
+        Assert.Equal("一\n二\n三\n四", File.ReadAllText(Path.Combine(_root, "code.txt")));
     }
 
     [Fact]
@@ -570,7 +629,21 @@ public sealed class FileToolsTests : IDisposable
     }
 
     [Fact]
-    public void PatchFile_deletes_line_range_when_replacement_empty()
+    public void PatchFile_deletes_line_range_when_replacement_omitted()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三\n四");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "3"),
+            ("original", "二\n三"));
+
+        Assert.Equal("已替换 code.txt 的第 2 到 3 行（2 行 → 0 行）。", output);
+        Assert.Equal("一\n四", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_replaces_line_range_with_one_blank_line_when_replacement_empty()
     {
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n二\n三\n四");
@@ -579,8 +652,22 @@ public sealed class FileToolsTests : IDisposable
             ("path", "code.txt"), ("from", "2"), ("to", "3"),
             ("original", "二\n三"), ("replacement", ""));
 
-        Assert.Equal("已替换 code.txt 的第 2 到 3 行（2 行 → 0 行）。", output);
-        Assert.Equal("一\n四", File.ReadAllText(Path.Combine(_root, "code.txt")));
+        Assert.Equal("已替换 code.txt 的第 2 到 3 行（2 行 → 1 行）。", output);
+        Assert.Equal("一\n\n四", File.ReadAllText(Path.Combine(_root, "code.txt")));
+    }
+
+    [Fact]
+    public void PatchFile_matches_a_blank_line_with_empty_original()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "code.txt"), "一\n\n三");
+
+        string output = Call("PatchFile",
+            ("path", "code.txt"), ("from", "2"), ("to", "2"),
+            ("original", ""), ("replacement", "二"));
+
+        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
+        Assert.Equal("一\n二\n三", File.ReadAllText(Path.Combine(_root, "code.txt")));
     }
 
     [Fact]
@@ -638,8 +725,6 @@ public sealed class FileToolsTests : IDisposable
             ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
         Assert.Contains("缺少参数 original", Call("PatchFile",
             ("path", "a.txt"), ("from", "1"), ("to", "1"), ("replacement", "y")));
-        Assert.Contains("缺少参数 replacement", Call("PatchFile",
-            ("path", "a.txt"), ("from", "1"), ("to", "1"), ("original", "x")));
         Assert.Contains("from 从 1 起", Call("PatchFile",
             ("path", "a.txt"), ("to", "1"), ("original", "x"), ("replacement", "y")));
         Assert.Contains("to 从 1 起", Call("PatchFile",
@@ -1130,6 +1215,16 @@ public sealed class FileToolsTests : IDisposable
         Assert.True(paths.List);
         Assert.True(paths.Path);
         Assert.False(Parameter(definitions, "ReplaceText", "replacement").Path);
+    }
+
+    [Fact]
+    public void PatchFile_declares_replacement_as_optional()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        Assert.True(Parameter(definitions, "PatchFile", "original").Required);
+        Assert.False(Parameter(definitions, "PatchFile", "replacement").Required);
     }
 
     [Fact]
