@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 
-/// <summary>执行过程记录：内容合并、进度与保留上限。</summary>
+/// <summary>执行过程记录：内容合并、进度与条目保留。</summary>
 public sealed class ExecutionJournalTests
 {
     [Fact]
@@ -28,7 +28,7 @@ public sealed class ExecutionJournalTests
     }
 
     [Fact]
-    public void Entries_keep_the_retention_limit_and_count_dropped()
+    public void Entries_are_retained_without_a_count_limit()
     {
         ExecutionJournal journal = new();
 
@@ -37,7 +37,9 @@ public sealed class ExecutionJournalTests
             journal.Append("条目", index.ToString());
         }
 
-        Assert.Equal(400, journal.Entries.Count);
-        Assert.Equal(1, journal.DroppedEntries);
+        Assert.Equal(401, journal.Entries.Count);
+        Assert.Equal(0, journal.DroppedEntries);
+        Assert.Equal("0", journal.Entries[0].Text);
+        Assert.Equal("400", journal.Entries[^1].Text);
     }
 }

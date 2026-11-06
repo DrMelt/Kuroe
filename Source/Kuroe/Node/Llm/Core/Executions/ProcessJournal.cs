@@ -3,15 +3,12 @@ using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm.Executions;
 
-/// <summary>一次执行的过程记录：追加与读取共用一把锁，同标签的文本增量与末尾同类条目合并。
+/// <summary>一次执行的过程记录：条目由共享存储保留且不按条数丢弃，同标签文本增量与末尾同类条目合并。
 /// 流式内容、需要即时呈现的条目与进度变化经事件播发。</summary>
 internal sealed class ProcessJournal : IProcessJournal
 {
-    /// <summary>单条文本记录的上限，超出后另起一条，避免逐字增量反复拷贝整段。</summary>
+    /// <summary>同标签流式内容的合并上限，超出后另起一条，避免逐字增量反复拷贝整段。</summary>
     private const int SegmentLimit = 4096;
-
-    /// <summary>保留的记录条数，超出后丢最早的记录。</summary>
-    private const int EntryLimit = 400;
 
     private const string PromptLabel = "输入";
     private const string ReplyLabel = "回复";
@@ -20,9 +17,8 @@ internal sealed class ProcessJournal : IProcessJournal
     private const string DiscardedLabel = "丢弃";
     private const string DiscardedText = "本轮未计入上下文。";
 
-    private readonly Lock _gate = new();
-    private readonly List<JournalEntry> _entries = [];
-    private int _dropped;
+    private readonly ProcessJournalStore _store = new(segmentLimit: SegmentLimit);
+    private readonly Lock _progressGate = new();
     private string _progress = string.Empty;
 
     /// <summary>流式内容追加后给出该增量与种类。</summary>
@@ -37,14 +33,14 @@ internal sealed class ProcessJournal : IProcessJournal
     /// <summary>追加一条发给模型的输入，随后清空当前活动。</summary>
     public void AppendPrompt(string input)
     {
-        Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, PromptLabel, input));
+        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, PromptLabel, input));
         ReportProgress(string.Empty);
     }
 
     /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
     public void AppendContent(ProcessContentKind kind, string delta)
     {
-        if (AppendDelta(LabelOf(kind), delta))
+        if (_store.AppendDelta(LabelOf(kind), delta))
         {
             ReportProgress(ProgressOf(kind));
             ContentAppended?.Invoke(new ProcessContent(kind, delta));
@@ -66,14 +62,14 @@ internal sealed class ProcessJournal : IProcessJournal
             ToolLabel,
             $"{invocation}\n{outcome}");
 
-        Append(entry);
+        _store.Append(entry);
         EntryAppended?.Invoke(entry);
     }
 
     /// <summary>报告当前活动，文本未变化时不播发。</summary>
     public void ReportProgress(string text)
     {
-        lock (_gate)
+        lock (_progressGate)
         {
             if (_progress == text)
             {
@@ -88,31 +84,13 @@ internal sealed class ProcessJournal : IProcessJournal
 
     /// <summary>追加一条本轮未计入上下文的说明。</summary>
     public void AppendDiscarded() =>
-        Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Warning, DiscardedLabel, DiscardedText));
+        _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Warning, DiscardedLabel, DiscardedText));
 
     /// <summary>已记录的条目，按发生顺序。</summary>
-    public IReadOnlyList<JournalEntry> Entries
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return [.. _entries];
-            }
-        }
-    }
+    public IReadOnlyList<JournalEntry> Entries => _store.Entries;
 
-    /// <summary>因超出保留条数被丢弃的条数。</summary>
-    public int DroppedEntries
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _dropped;
-            }
-        }
-    }
+    /// <summary>丢弃条数。Llm 不丢弃条目，始终为 0。</summary>
+    public int DroppedEntries => _store.DroppedEntries;
 
     /// <summary>内容种类对应的记录标签。</summary>
     private static string LabelOf(ProcessContentKind kind) => kind switch
@@ -129,50 +107,4 @@ internal sealed class ProcessJournal : IProcessJournal
         ProcessContentKind.Reasoning => "思考",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
-
-    /// <summary>追加同标签的文本增量，与末尾同类记录合并；空增量不写。</summary>
-    private bool AppendDelta(string label, string delta)
-    {
-        if (delta.Length == 0)
-        {
-            return false;
-        }
-
-        lock (_gate)
-        {
-            if (_entries.Count > 0
-                && _entries[^1].Label == label
-                && _entries[^1].Text.Length + delta.Length <= SegmentLimit)
-            {
-                JournalEntry last = _entries[^1];
-                _entries[^1] = last with { Text = last.Text + delta };
-            }
-            else
-            {
-                AppendCore(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
-            }
-        }
-
-        return true;
-    }
-
-    /// <summary>追加一条过程记录。</summary>
-    private void Append(JournalEntry entry)
-    {
-        lock (_gate)
-        {
-            AppendCore(entry);
-        }
-    }
-
-    /// <summary>要求持有 <see cref="_gate"/>。</summary>
-    private void AppendCore(JournalEntry entry)
-    {
-        _entries.Add(entry);
-        if (_entries.Count > EntryLimit)
-        {
-            _entries.RemoveAt(0);
-            _dropped++;
-        }
-    }
 }

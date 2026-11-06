@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Node.Llm.Tests.Executions;
 
-/// <summary>执行过程记录的具体格式：内容合并、条目上限与过程播发。</summary>
+/// <summary>执行过程记录的具体格式：内容合并、条目保留与过程播发。</summary>
 public sealed class ProcessJournalTests
 {
     [Fact]
@@ -186,7 +186,7 @@ public sealed class ProcessJournalTests
     }
 
     [Fact]
-    public void Entries_beyond_the_limit_drop_the_oldest()
+    public void Entries_are_retained_without_a_count_limit()
     {
         ProcessJournal journal = new();
 
@@ -195,9 +195,9 @@ public sealed class ProcessJournalTests
             journal.AppendPrompt(index.ToString());
         }
 
-        Assert.Equal(400, journal.Entries.Count);
-        Assert.Equal(1, journal.DroppedEntries);
-        Assert.Equal("1", journal.Entries[0].Text);
+        Assert.Equal(401, journal.Entries.Count);
+        Assert.Equal(0, journal.DroppedEntries);
+        Assert.Equal("0", journal.Entries[0].Text);
         Assert.Equal("400", journal.Entries[^1].Text);
     }
 }

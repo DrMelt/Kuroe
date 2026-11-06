@@ -1,7 +1,8 @@
 namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
-/// <summary>过程记录的共享存储：追加、同标签增量合并、保留上限与快照。所有使用方共用同一套保留策略。</summary>
-public sealed class ProcessJournalStore(int entryLimit = 400, int segmentLimit = 4096)
+/// <summary>过程记录的共享存储：追加、同标签增量合并与快照。条目不按条数丢弃。</summary>
+/// <param name="segmentLimit">同标签文本增量合并的单条上限。</param>
+public sealed class ProcessJournalStore(int segmentLimit = 4096)
 {
     private readonly Lock _gate = new();
     private readonly List<JournalEntry> _entries = [];
@@ -19,7 +20,7 @@ public sealed class ProcessJournalStore(int entryLimit = 400, int segmentLimit =
         }
     }
 
-    /// <summary>因超出保留条数被丢弃的条数。</summary>
+    /// <summary>存档恢复的丢弃条数。新记录不丢弃条目，始终为 0。</summary>
     public int DroppedEntries
     {
         get
@@ -81,10 +82,5 @@ public sealed class ProcessJournalStore(int entryLimit = 400, int segmentLimit =
     private void Add(JournalEntry entry)
     {
         _entries.Add(entry);
-        if (_entries.Count > entryLimit)
-        {
-            _entries.RemoveAt(0);
-            _dropped++;
-        }
     }
 }

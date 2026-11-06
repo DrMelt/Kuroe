@@ -21,7 +21,7 @@ internal sealed class Journal
     /// <summary>已记录的条目，按发生顺序。</summary>
     public IReadOnlyList<JournalEntry> Entries => _store.Entries;
 
-    /// <summary>因超出保留条数被丢弃的条数。</summary>
+    /// <summary>存档恢复的丢弃条数。新记录不丢弃条目。</summary>
     public int DroppedEntries => _store.DroppedEntries;
 
     /// <summary>从存档恢复记录与已丢弃条数，覆盖现有记录。</summary>
