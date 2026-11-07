@@ -87,8 +87,8 @@ public sealed class FileNodeTypeTests
 
         string[] errors = [.. Failures(ReadType, node)];
 
-        Assert.Single(errors);
-        Assert.EndsWith("MaxExecutions 必须是正整数。", errors[0]);
+        var item = Assert.Single(errors);
+        Assert.EndsWith("MaxExecutions 必须是正整数。", item);
     }
 
     [Fact]
@@ -101,8 +101,8 @@ public sealed class FileNodeTypeTests
 
         string[] errors = [.. Failures(WriteType, node)];
 
-        Assert.Single(errors);
-        Assert.EndsWith("MaxExecutions 必须是正整数。", errors[0]);
+        var item = Assert.Single(errors);
+        Assert.EndsWith("MaxExecutions 必须是正整数。", item);
     }
 
     [Fact]

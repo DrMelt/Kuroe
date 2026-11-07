@@ -24,7 +24,7 @@ public sealed class FileNodeTests
     public async Task Read_content_enters_the_downstream_execution_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadThenLlmFlow);
-        await File.WriteAllTextAsync(Path.Combine(environment.Root, "in.txt"), "文件内容");
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "in.txt"), "文件内容", TestContext.Current.CancellationToken);
 
         TaskId id = environment.Submit("读取后实施");
         await environment.SettleAsync(id);

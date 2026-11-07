@@ -19,7 +19,7 @@ public sealed class FileExecutionRunnerTests
     public async Task Read_returns_the_file_content()
     {
         using TempRoot root = new();
-        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), "文件内容");
+        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), "文件内容", TestContext.Current.CancellationToken);
         ExecutableNode node = ReadNode(root, "in.txt");
         FileReadExecutionRunner runner = new(node, Parameters(root, "in.txt", FileReadNodeTypes.DefaultMaxChars));
 
@@ -37,7 +37,7 @@ public sealed class FileExecutionRunnerTests
     {
         using TempRoot root = new();
         System.IO.Directory.CreateDirectory(root.Resolve("sub"));
-        await System.IO.File.WriteAllTextAsync(root.Resolve("sub/in.txt"), "基准内容");
+        await System.IO.File.WriteAllTextAsync(root.Resolve("sub/in.txt"), "基准内容", TestContext.Current.CancellationToken);
         ExecutableNode node = ReadNode(root, "in.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
@@ -71,7 +71,7 @@ public sealed class FileExecutionRunnerTests
     public async Task Read_truncates_at_the_declared_limit()
     {
         using TempRoot root = new();
-        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), "abcdef");
+        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), "abcdef", TestContext.Current.CancellationToken);
         ExecutableNode node = ReadNode(root, "in.txt", maxChars: 3);
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
@@ -89,7 +89,7 @@ public sealed class FileExecutionRunnerTests
     {
         using TempRoot root = new();
         string content = new('a', 9000);
-        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), content);
+        await System.IO.File.WriteAllTextAsync(root.Resolve("in.txt"), content, TestContext.Current.CancellationToken);
         ExecutableNode node = ReadNode(root, "in.txt", maxChars: 0);
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
@@ -167,7 +167,7 @@ public sealed class FileExecutionRunnerTests
 
         Assert.False(result.IsError);
         Assert.Equal("写入内容", result.Value.Content);
-        Assert.Equal("写入内容", await System.IO.File.ReadAllTextAsync(root.Resolve("out/nested/result.txt")));
+        Assert.Equal("写入内容", await System.IO.File.ReadAllTextAsync(root.Resolve("out/nested/result.txt"), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public sealed class FileExecutionRunnerTests
                 CancellationToken.None);
 
         Assert.False(result.IsError);
-        Assert.Equal("写入内容", await System.IO.File.ReadAllTextAsync(root.Resolve("sub/out.txt")));
+        Assert.Equal("写入内容", await System.IO.File.ReadAllTextAsync(root.Resolve("sub/out.txt"), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public sealed class FileExecutionRunnerTests
                 CancellationToken.None);
 
         Assert.False(result.IsError);
-        Assert.Equal(content, await System.IO.File.ReadAllTextAsync(root.Resolve("out.txt")));
+        Assert.Equal(content, await System.IO.File.ReadAllTextAsync(root.Resolve("out.txt"), TestContext.Current.CancellationToken));
     }
 
     private static ExecutionInput Input(

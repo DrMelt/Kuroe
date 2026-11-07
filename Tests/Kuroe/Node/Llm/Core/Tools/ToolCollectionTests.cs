@@ -119,7 +119,7 @@ public sealed class ToolCollectionTests
         ToolCollection tools = new([new FakeTool("GetLocalTime")], new ToolJson());
         AIFunction function = tools.Build(journal, [new ToolPath("GetLocalTime")]).Single();
 
-        await function.InvokeAsync([]);
+        await function.InvokeAsync([], TestContext.Current.CancellationToken);
 
         Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
     }

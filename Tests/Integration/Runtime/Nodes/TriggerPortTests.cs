@@ -103,8 +103,8 @@ public sealed class TriggerPortTests
             && Executions(current, "走下游").Count == 1
             && HasTriggerInfo(current));
 
-        Assert.Single(Executions(snapshot, "走下游"));
-        Assert.Contains(Executions(snapshot, "走下游")[0].Input.Inputs, value => value.Text == "走");
+        var item = Assert.Single(Executions(snapshot, "走下游"));
+        Assert.Contains(item.Input.Inputs, value => value.Text == "走");
         Assert.Empty(Executions(snapshot, "停下游"));
     }
 

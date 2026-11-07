@@ -114,7 +114,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(_environment.Registry), store);
 
         coordinator.MarkDirty(id);
-        Assert.True(store.Failed.Wait(TimeSpan.FromSeconds(10)), "写盘没有进入存储。");
+        Assert.True(store.Failed.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken), "写盘没有进入存储。");
 
         await coordinator.FlushAsync();
 
@@ -130,7 +130,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(_environment.Registry), store);
 
         coordinator.MarkDirty(id);
-        Assert.True(store.Entered.Wait(TimeSpan.FromSeconds(10)), "写盘没有进入存储。");
+        Assert.True(store.Entered.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken), "写盘没有进入存储。");
 
         Assert.False(_environment.Tasks.Rename(id, "写入期间改名").IsError);
         store.Release.Set();

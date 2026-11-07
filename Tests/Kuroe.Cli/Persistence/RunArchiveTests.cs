@@ -34,7 +34,7 @@ public sealed class RunArchiveTests
         await environment.Session.Tasks.ShutdownAsync();
 
         Assert.False(probe.TryAcquire(id).IsError);
-        TaskRecord record = new TaskRecordCodec().Read(await File.ReadAllTextAsync(recordFile)).ThrowIfError();
+        TaskRecord record = new TaskRecordCodec().Read(await File.ReadAllTextAsync(recordFile, TestContext.Current.CancellationToken)).ThrowIfError();
         Assert.Equal(id, record.Identity.Id);
         Assert.True(record.Completed);
     }
@@ -51,7 +51,7 @@ public sealed class RunArchiveTests
         TaskId id = Assert.Single(environment.Session.Registry.Snapshots()).Id;
         await environment.Session.Tasks.ShutdownAsync();
         string recordFile = Path.Combine(KuroePaths.At(environment.Root).RecordsDirectory, $"{id.Value}.json");
-        TaskRecord record = new TaskRecordCodec().Read(await File.ReadAllTextAsync(recordFile)).ThrowIfError();
+        TaskRecord record = new TaskRecordCodec().Read(await File.ReadAllTextAsync(recordFile, TestContext.Current.CancellationToken)).ThrowIfError();
 
         Assert.False(record.Completed);
         Assert.Contains(record.Nodes, node => node is ExecutableNodeRecord { Block: not null });

@@ -39,7 +39,7 @@ jobs:
                         "https://github.com/DrMelt/ApiHub/releases/download/v$version/$package.$version.nupkg"
                     done
             - run: dotnet build Kuroe.slnx -c Release
-            - run: dotnet test Kuroe.slnx --configuration Release --no-build --logger "console;verbosity=detailed" --logger "trx" --results-directory ./TestResults
+            - run: dotnet test --solution Kuroe.slnx --configuration Release --no-build --output Detailed --report-trx --results-directory "${{ github.workspace }}/TestResults"
             - run: dotnet publish Source/Kuroe.Console -c Release --no-build -p:UseAppHost=false -o artifacts
             - run: dotnet publish Source/Kuroe.Cli -c Release --no-build -p:UseAppHost=false -o artifacts
             - if: always()
