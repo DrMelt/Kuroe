@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
@@ -12,9 +13,7 @@ public sealed class EngineAdvanceTests
     public async Task Downstream_starts_while_unrelated_slow_execution_is_running()
     {
         using TestEnvironment environment = TestEnvironment.Create(SlowParallelFlow);
-        TaskCompletionSource<bool> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        environment.Runner.HoldFor = execution =>
-            execution.Input.Node.Label.Value == "慢工" ? release.Task : Task.CompletedTask;
+        environment.Runner.Gate.Hold(NodePath.Of("整体", "慢工"));
 
         TaskId id = environment.Submit("并行推进");
 
@@ -24,11 +23,11 @@ public sealed class EngineAdvanceTests
             await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
                 node.Executable.Label.Value == "收官" && node.Executions.Count > 0));
 
-            Assert.Contains(environment.Registry.LiveExecutions(), execution => execution.Input.Node.Label.Value == "慢工");
+            Assert.Contains(environment.TaskReader.LiveExecutions(), execution => execution.Input.Node.Label.Value == "慢工");
         }
         finally
         {
-            release.TrySetResult(true);
+            environment.Runner.Gate.ClearHolds();
         }
 
         Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
@@ -40,16 +39,26 @@ public sealed class EngineAdvanceTests
     public async Task Groups_advance_past_interleaved_source_release()
     {
         using TestEnvironment environment = TestEnvironment.Create(IndependentGroupsFlow);
-        environment.Runner.DelayMs = 30;
+        NodePath second = NodePath.Of("整体", "乙");
+        NodePath merge = NodePath.Of("整体", "汇合");
+        environment.Runner.Gate.Hold(second);
+        environment.Runner.Gate.Hold(merge);
 
-        for (int i = 0; i < 10; i++)
-        {
-            TaskId id = environment.Submit("补齐 README");
-            TaskSnapshot done = await environment.SettleAsync(id);
+        TaskId id = environment.Submit("补齐 README");
 
-            Assert.Equal(TaskState.Done, done.State);
-            Assert.NotEmpty(done.Executables[2].Executions);
-        }
+        // 甲先发布拉起汇合，乙在汇合运行期间发布
+        await environment.Runner.Gate.Entered(merge);
+        environment.Runner.Gate.Open(second);
+        await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
+            node.Executable.Label.Value == "乙"
+            && node.Executions.Any(execution => execution.State == ExecutionState.Succeeded)));
+
+        environment.Runner.Gate.Open(merge);
+
+        TaskSnapshot done = await environment.SettleAsync(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.NotEmpty(done.Executables[2].Executions);
     }
 
     private const string SlowParallelFlow = """

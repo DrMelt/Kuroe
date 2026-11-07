@@ -23,6 +23,9 @@ public sealed class Execution : IExecution
     private bool _interruptRequested;
     private string _interruptReason = "已中断。";
 
+    /// <summary>快照可见的状态或过程变化，宿主据此重新读取。可能在执行锁外触发，处理者只做唤醒。</summary>
+    internal event Action? Changed;
+
     internal Execution(ExecutionId id, ExecutionInput input)
     {
         Id = id;
@@ -117,6 +120,8 @@ public sealed class Execution : IExecution
             _state = ExecutionState.Running;
             _startedAt ??= DateTimeOffset.UtcNow;
         }
+
+        Changed?.Invoke();
     }
 
     /// <summary>记下本次执行的过程记录，快照随之可见，过程通知转给订阅者。</summary>
@@ -170,13 +175,15 @@ public sealed class Execution : IExecution
     {
         lock (_gate)
         {
-            if (_state.IsSettled())
+            if (_state.IsSettled() || _progress == text)
             {
                 return;
             }
 
             _progress = text;
         }
+
+        Changed?.Invoke();
     }
 
     /// <summary>转给订阅者一条需要即时呈现的过程记录。</summary>
@@ -191,6 +198,7 @@ public sealed class Execution : IExecution
         }
 
         _process.PublishEntry(entry);
+        Changed?.Invoke();
     }
 
     /// <summary>本次执行的产出，端口产出的执行交回端口后只给空内容。</summary>
@@ -294,6 +302,7 @@ public sealed class Execution : IExecution
         }
 
         _cancellation.Dispose();
+        Changed?.Invoke();
     }
 
     /// <summary>本次请求正常结束但没交回本执行节点要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>

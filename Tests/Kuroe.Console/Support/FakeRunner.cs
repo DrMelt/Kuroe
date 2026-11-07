@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Contract;
+using Kuroe.Flow.TestSupport;
 
 namespace Kuroe.Console.Tests.Support;
 
@@ -13,8 +14,8 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
 
-    /// <summary>单个执行的人为耗时，用于取消断言。</summary>
-    public int DelayMs { get; set; } = 10;
+    /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
+    public IExecutionGate Gate { get; } = new ExecutionGate();
 
     /// <summary>是否交回声明端口，关闭用于制造未收口阻塞。</summary>
     public bool SubmitsPorts { get; set; } = true;
@@ -36,19 +37,27 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         OutputJournal journal,
         CancellationToken cancellationToken)
     {
-        await Task.Delay(DelayMs, cancellationToken);
-
-        IReadOnlyList<Port> ports = input.RequiredPorts;
-        if (ports.Count > 0 && SubmitsPorts)
+        ExecutionHandle handle = Gate.Arrive(execution, input.Node, input.ExecutionCount);
+        try
         {
-            PortSubmitter submitter = PortSubmitter
-                ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
-            _ = submitter.SubmitValues(execution, PortValuesFor(ports));
+            await Gate.WaitOpen(handle).WaitAsync(cancellationToken);
+
+            IReadOnlyList<Port> ports = input.RequiredPorts;
+            if (ports.Count > 0 && SubmitsPorts)
+            {
+                PortSubmitter submitter = PortSubmitter
+                    ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
+                _ = submitter.SubmitValues(execution, PortValuesFor(ports));
+            }
+
+            journal.AppendContent(ProcessContentKind.Reply, $"{input.Node}产出");
+
+            return ExecutionOutput.Ports;
         }
-
-        journal.AppendContent(ProcessContentKind.Reply, $"{input.Node}产出");
-
-        return ExecutionOutput.Ports;
+        finally
+        {
+            Gate.Leave(handle);
+        }
     }
 
     /// <summary>测试用的过程记录：保存条目并播发内容。</summary>

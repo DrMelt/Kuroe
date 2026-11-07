@@ -17,8 +17,8 @@ public sealed class TaskDomainTests
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
         Assert.False(reply.IsError);
-        Assert.Empty(environment.Registry.Snapshots());
-        Assert.Empty(environment.Registry.LiveExecutions());
+        Assert.Empty(environment.TaskReader.Snapshots());
+        Assert.Empty(environment.TaskReader.LiveExecutions());
         Assert.Single(environment.Runner.Started);
     }
 
@@ -48,8 +48,8 @@ public sealed class TaskDomainTests
         IExecution round = Assert.Single(environment.Runner.Started);
 
         Assert.False(reply.IsError);
-        Assert.True(environment.Registry.Find(round.Input.Task).IsError);
-        Assert.True(environment.Registry.FindExecution(round.Id).IsError);
+        Assert.True(environment.TaskReader.Find(round.Input.Task).IsError);
+        Assert.True(environment.TaskReader.FindExecution(round.Id).IsError);
         Assert.False(environment.Executions.FindOwned(round.Id).IsError);
     }
 

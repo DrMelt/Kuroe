@@ -9,7 +9,9 @@ using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Node.Llm.Tools;
+using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
@@ -25,6 +27,7 @@ public sealed class TestEnvironment : IDisposable
 {
     private readonly ServiceProvider _provider;
     private readonly bool _deleteOnDispose;
+    private readonly NotifiedTaskWaiter _waiter;
 
     private TestEnvironment(
         string root,
@@ -39,8 +42,13 @@ public sealed class TestEnvironment : IDisposable
         Loaded = loaded;
         Runner = runner;
         Registry = provider.GetRequiredService<TaskRegistry>();
+        TaskReader = provider.GetRequiredService<ITaskReader>();
         Tasks = provider.GetRequiredService<TaskService>();
         Pendings = provider.GetRequiredService<PendingService>();
+        _waiter = new NotifiedTaskWaiter(
+            TaskReader,
+            provider.GetRequiredService<ITaskChangeSource>(),
+            id => Awaiting(id));
         runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
     }
 
@@ -54,10 +62,16 @@ public sealed class TestEnvironment : IDisposable
 
     public TaskRegistry Registry { get; }
 
+    /// <summary>任务索引的只读快照面，用例读取任务状态时使用。</summary>
+    public ITaskReader TaskReader { get; }
+
     public TaskService Tasks { get; }
 
     /// <summary>等待型节点的宿主功能，回答与批准经它交付外部输入。</summary>
     public PendingService Pendings { get; }
+
+    /// <summary>存档协调，用例据此把待写状态显式落盘。</summary>
+    public ITaskRecordCoordinator Records => _provider.GetRequiredService<ITaskRecordCoordinator>();
 
     /// <summary>常驻对话任务的管理层宿主。</summary>
     public DialogueHost Dialogue => _provider.GetRequiredService<DialogueHost>();
@@ -215,62 +229,13 @@ public sealed class TestEnvironment : IDisposable
     public TaskId Submit(StartInputs inputs, FlowName? flow = null) =>
         Tasks.Submit(inputs, flow ?? new FlowName("默认"), null).ThrowIfError().Id;
 
-    public TaskSnapshot Snapshot(TaskId id) => Registry.Find(id).ThrowIfError().Snapshot();
+    public TaskSnapshot Snapshot(TaskId id) => TaskReader.Find(id).ThrowIfError();
 
-    /// <summary>执行节点状态摘要，用于超时信息里的定位。</summary>
-    private static string NodeStates(TaskSnapshot snapshot) =>
-        string.Join("、", snapshot.ExecutableStates.Select(state => $"{state.Node} {state.State}"));
+    /// <summary>等到任务满足条件为止。</summary>
+    public TaskSnapshot Wait(TaskId id, TaskPredicate condition) => _waiter.Wait(id, condition);
 
-    /// <summary>等到任务满足条件为止，超时即失败。</summary>
-    public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition, int milliseconds = 5000)
-    {
-        DateTime deadline = DateTime.UtcNow.AddMilliseconds(milliseconds);
-        while (true)
-        {
-            TaskSnapshot snapshot = Snapshot(id);
-            if (condition(snapshot))
-            {
-                return snapshot;
-            }
-
-            if (DateTime.UtcNow > deadline)
-            {
-                throw new TimeoutException($"任务 {id} 未在 {milliseconds} 毫秒内满足条件，状态 {snapshot.State}、执行节点 [{NodeStates(snapshot)}]。");
-            }
-
-            Thread.Sleep(20);
-        }
-    }
-
-    /// <summary>等执行侧不再有任何在跑或待推进的执行。停在等待外部输入时要求连续两次采样一致，避免输入信号落地前的瞬态。</summary>
-    public TaskSnapshot Settle(TaskId id)
-    {
-        DateTime deadline = DateTime.UtcNow.AddMilliseconds(5000);
-        bool previous = false;
-        while (true)
-        {
-            TaskSnapshot snapshot = Snapshot(id);
-            if (snapshot.LiveExecutions == 0
-                && snapshot.State is TaskState.Done or TaskState.Blocked or TaskState.Terminated or TaskState.Paused)
-            {
-                return snapshot;
-            }
-
-            bool waiting = snapshot.LiveExecutions == 0 && Awaiting(id);
-            if (waiting && previous)
-            {
-                return snapshot;
-            }
-
-            if (DateTime.UtcNow > deadline)
-            {
-                throw new TimeoutException($"任务 {id} 未在超时内稳定，状态 {snapshot.State}、LiveExecutions {snapshot.LiveExecutions}、执行节点 [{NodeStates(snapshot)}]。");
-            }
-
-            previous = waiting;
-            Thread.Sleep(20);
-        }
-    }
+    /// <summary>等推进循环没有在跑的活：到终态、阻塞、暂停或停在等待外部输入。</summary>
+    public TaskSnapshot Settle(TaskId id) => _waiter.Settle(id);
 
     /// <summary>任务里是否有停在等待的节点。</summary>
     public bool Awaiting(TaskId id) =>
@@ -284,6 +249,7 @@ public sealed class TestEnvironment : IDisposable
 
     public void Dispose()
     {
+        _waiter.Dispose();
         Tasks.ShutdownAsync().GetAwaiter().GetResult();
         _provider.Dispose();
 

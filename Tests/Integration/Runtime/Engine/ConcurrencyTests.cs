@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
@@ -8,21 +9,27 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 public sealed class ConcurrencyTests
 {
     [Fact]
-    public void Independent_nodes_run_in_parallel_within_the_limit()
+    public async Task Independent_nodes_run_in_parallel_within_the_limit()
     {
         using TestEnvironment environment = TestEnvironment.Create(ParallelFlow);
-        environment.Runner.DelayMs = 120;
+        NodePath first = NodePath.Of("整体", "甲");
+        NodePath second = NodePath.Of("整体", "乙");
+        environment.Runner.Gate.HoldAll();
 
-        environment.Settle(environment.Submit("补齐 README"));
+        TaskId id = environment.Submit("补齐 README");
 
-        Assert.True(environment.Runner.Peak > 1, $"两个并行节点本可并行，实测峰值 {environment.Runner.Peak}。");
+        await environment.Runner.Gate.Entered([first, second]);
+        Assert.Equal(TaskState.Running, environment.Snapshot(id).State);
+
+        environment.Runner.Gate.ClearHolds();
+
+        Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
     }
 
     [Fact]
     public void Several_tasks_run_concurrently_while_being_read()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 30;
 
         TaskId[] ids = [environment.Submit("任务甲"), environment.Submit("任务乙"), environment.Submit("任务丙")];
 

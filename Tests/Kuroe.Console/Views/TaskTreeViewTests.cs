@@ -34,7 +34,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         TaskSnapshot snapshot = Snapshot(cli);
-        DateTimeOffset at = DateTimeOffset.UtcNow;
+        DateTimeOffset at = At;
 
         new TaskTreeView(terminal, cli.Environment.Pendings).Print(snapshot with
         {
@@ -103,7 +103,10 @@ public sealed class TaskTreeViewTests
             containers,
             [],
             0,
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
+            At,
+            At);
     }
+
+    /// <summary>固定的快照时间。</summary>
+    private static readonly DateTimeOffset At = new(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8));
 }

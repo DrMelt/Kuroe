@@ -109,7 +109,7 @@ public static class ServiceCollectionExtensions
             new GitToolSource(),
             new DotnetToolSource(),
             new ConfiguredToolSource(configuredTools.Value),
-            new TimeToolSource(),
+            new TimeToolSource(TimeProvider.System),
         ];
         ErrorOr<Success> definitionTools = composition.AddToolSources(definitionSources);
         if (definitionTools.IsError)
@@ -284,6 +284,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(executions);
         services.AddSingleton(taskRegistry);
+        services.AddSingleton<ITaskChangeSource>(taskRegistry);
         services.AddSingleton<ITaskReader>(taskReader);
         services.AddSingleton(portSubmitter);
         services.AddSingleton<IPortSubmitter>(portSubmitter);

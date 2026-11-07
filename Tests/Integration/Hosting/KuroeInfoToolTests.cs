@@ -77,7 +77,7 @@ public sealed class KuroeInfoToolTests
     public void Execution_state_attaches_ongoing_tool_call_progress()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 60_000;
+        environment.Runner.Gate.HoldAll();
         environment.Runner.Emits = (_, journal) =>
         {
             journal.ReportProgress("调用工具 file/ReadFile");
@@ -101,13 +101,15 @@ public sealed class KuroeInfoToolTests
             Call(tool, "GetExecution", ("executionId", executionId.Value.ToString())));
         Assert.Contains("执行中（调用工具 file/ReadFile）",
             Call(tool, "GetTask", ("taskId", id.Value.ToString())));
+
+        environment.Runner.Gate.ClearHolds();
     }
 
     [Fact]
     public void Execution_state_replaces_tool_progress_with_output()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 60_000;
+        environment.Runner.Gate.HoldAll();
         environment.Runner.Emits = (_, journal) =>
         {
             journal.ReportProgress("调用工具 file/ReadFile");
@@ -131,6 +133,8 @@ public sealed class KuroeInfoToolTests
 
         Assert.Contains("执行中（输出）", output);
         Assert.DoesNotContain("执行中（调用工具", output);
+
+        environment.Runner.Gate.ClearHolds();
     }
 
     [Fact]

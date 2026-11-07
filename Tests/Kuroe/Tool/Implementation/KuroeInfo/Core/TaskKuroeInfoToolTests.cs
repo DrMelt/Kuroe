@@ -53,5 +53,7 @@ public sealed class TaskKuroeInfoToolTests
             Error.NotFound("Execution.NotFound", $"没有执行 {id}。");
 
         public IReadOnlyList<TaskSnapshot> Snapshots() => [];
+
+        public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => [];
     }
 }

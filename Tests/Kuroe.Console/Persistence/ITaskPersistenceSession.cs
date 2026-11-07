@@ -29,5 +29,8 @@ public interface ITaskPersistenceSession : IAsyncDisposable
 
     TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition);
 
+    /// <summary>把该任务当前状态写入存档，返回时存档已落盘。</summary>
+    Task FlushAsync(TaskId id);
+
     Task<ErrorOr<Success>> ShutdownAsync();
 }

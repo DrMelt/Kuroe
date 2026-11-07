@@ -70,7 +70,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Clock_renders_local_time()
     {
-        Assert.Matches(@"^\d{2}:\d{2}:\d{2}$", ViewLabels.Clock(DateTimeOffset.Now));
+        Assert.Equal("15:04:05", ViewLabels.Clock(new DateTimeOffset(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8))));
         Assert.Equal("—", ViewLabels.Clock((DateTimeOffset?)null));
     }
 

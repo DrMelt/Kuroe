@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.TestSupport;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
@@ -182,11 +183,13 @@ public sealed class ContextTests
 
     /// <summary>多组时只取生效组的连接，默认值补齐该组未连接的端口。</summary>
     [Fact]
-    public void Effective_group_limits_inputs_to_its_own_connections()
+    public async Task Effective_group_limits_inputs_to_its_own_connections()
     {
         using TestEnvironment environment = TestEnvironment.Create(ActiveGroupDefaultFlow);
-        environment.Runner.DelayFor = execution =>
-            execution.Input.Node.Value.Contains("准备甲", StringComparison.Ordinal) ? 250 : 10;
+        NodePath slow = NodePath.Of("整体", "准备甲");
+        NodePath implement = NodePath.Of("整体", "实施");
+        environment.Runner.Gate.Hold(slow);
+        environment.Runner.Gate.Hold(implement);
         environment.Runner.PortValuesJsonFor = execution =>
         {
             if (execution.Input.Node.Value.Contains("准备甲", StringComparison.Ordinal))
@@ -199,7 +202,17 @@ public sealed class ContextTests
                 : null;
         };
 
-        TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
+        TaskId id = environment.Submit("补齐 README");
+
+        // 乙先齐备，实施按已完成的组启动；甲在实施运行期间才发布
+        ExecutionHandle implementHandle = await environment.Runner.Gate.Entered(implement);
+        environment.Runner.Gate.Open(slow);
+        await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
+            node.Executable.Label.Value == "准备甲"
+            && node.Executions.Any(execution => execution.State == ExecutionState.Succeeded)));
+        environment.Runner.Gate.Open(implementHandle);
+
+        TaskSnapshot done = await environment.SettleAsync(id);
         ExecutionSnapshot execution = Implement(done);
 
         Assert.Equal(["乙产出", "默认依据", "默认附加"], execution.Input.Inputs.Select(value => value.Text));

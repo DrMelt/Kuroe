@@ -20,17 +20,16 @@ public sealed class ExecutionSnapshotTests
     [Fact]
     public void Elapsed_falls_back_to_now_while_live()
     {
-        DateTimeOffset created = DateTimeOffset.UtcNow.AddSeconds(-10);
-        DateTimeOffset started = DateTimeOffset.UtcNow.AddSeconds(-5);
+        DateTimeOffset created = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        DateTimeOffset started = created.AddSeconds(5);
+        DateTimeOffset now = created.AddSeconds(10);
 
-        Assert.InRange(
-            Execution(ExecutionState.Running, created, started, null).Elapsed,
-            TimeSpan.FromSeconds(4.5),
-            TimeSpan.FromSeconds(5.5));
-        Assert.InRange(
-            Execution(ExecutionState.Queued, created, null, null).Elapsed,
-            TimeSpan.FromSeconds(9.5),
-            TimeSpan.FromSeconds(10.5));
+        Assert.Equal(
+            TimeSpan.FromSeconds(5),
+            Execution(ExecutionState.Running, created, started, null).ElapsedAt(now));
+        Assert.Equal(
+            TimeSpan.FromSeconds(10),
+            Execution(ExecutionState.Queued, created, null, null).ElapsedAt(now));
     }
 
     private static ExecutionSnapshot Execution(

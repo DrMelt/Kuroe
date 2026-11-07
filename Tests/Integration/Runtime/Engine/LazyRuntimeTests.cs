@@ -88,7 +88,7 @@ public sealed class LazyRuntimeTests
     public void Unreleased_container_member_stays_unmaterialized()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
-        environment.Runner.DelayMs = 200;
+        environment.Runner.Gate.Hold(NodePath.Of("整体", "交付", "实施"));
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);

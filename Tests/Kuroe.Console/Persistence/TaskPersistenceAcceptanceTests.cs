@@ -137,6 +137,7 @@ public abstract class TaskPersistenceAcceptanceTests
             await using ITaskPersistenceSession first = await CreateSessionAsync(root);
             TaskId held = first.Submit("占用任务");
             first.WaitForInput(held);
+            await first.FlushAsync(held);
 
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
 

@@ -165,7 +165,7 @@ public sealed class FlowAdvanceTests
     public void Cancel_task_stops_every_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 300;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -179,7 +179,7 @@ public sealed class FlowAdvanceTests
     public void Pause_interrupts_running_execution_and_resume_waits_for_rework()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -198,7 +198,7 @@ public sealed class FlowAdvanceTests
         environment.Tasks.Resume(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
 
-        environment.Runner.DelayMs = 0;
+        environment.Runner.Gate.ClearHolds();
         environment.Tasks.Rework(id).ThrowIfError();
 
         Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
@@ -248,7 +248,7 @@ public sealed class FlowAdvanceTests
     public void Active_task_cannot_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -264,7 +264,7 @@ public sealed class FlowAdvanceTests
     public async Task Shutdown_keeps_control_state_and_interrupts_executions()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         await environment.WaitAsync(id, snapshot => snapshot.LiveExecutions > 0);

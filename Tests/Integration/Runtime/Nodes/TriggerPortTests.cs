@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
@@ -163,21 +164,24 @@ public sealed class TriggerPortTests
 
     /// <summary>抑制发生时另一分支仍在执行，任务保持进行；该分支完成后任务收口。</summary>
     [Fact]
-    public void Suppressed_branch_settles_after_the_other_branch_completes()
+    public async Task Suppressed_branch_settles_after_the_other_branch_completes()
     {
         using TestEnvironment environment = TestEnvironment.Create(ParallelTriggerFlow);
-        environment.Runner.DelayFor = execution => execution.Input.Node.Label.Value == "慢来源" ? 600 : 0;
+        NodePath slow = NodePath.Of("整体", "慢来源");
+        environment.Runner.Gate.Hold(slow);
         environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value == "快来源"
             ? """{ "停": { "text": "停", "trigger": false } }"""
             : null;
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot running = environment.Wait(id, current =>
+        TaskSnapshot running = await environment.WaitAsync(id, current =>
             HasTriggerInfo(current) && current.LiveExecutions > 0);
 
         Assert.Equal(TaskState.Running, running.State);
 
-        TaskSnapshot done = environment.Settle(id);
+        environment.Runner.Gate.Open(slow);
+
+        TaskSnapshot done = await environment.SettleAsync(id);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(Executions(done, "慢下游"));
         Assert.Empty(Executions(done, "快下游"));

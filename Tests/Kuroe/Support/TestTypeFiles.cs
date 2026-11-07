@@ -22,7 +22,7 @@ public static class TestTypeFiles
         .. new FileToolSource().Definitions,
         .. new GitToolSource().Definitions,
         .. new DotnetToolSource().Definitions,
-        .. new TimeToolSource().Definitions,
+        .. new TimeToolSource(TimeProvider.System).Definitions,
     ]);
 
     /// <summary>建出一份含全部可用类型的注册表，外部输入协议取调用方给出的实例。</summary>

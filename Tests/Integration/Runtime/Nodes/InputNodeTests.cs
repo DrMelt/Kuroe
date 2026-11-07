@@ -287,7 +287,8 @@ public sealed class InputNodeTests
     public void Answer_while_loop_replying_fails_as_no_awaiting_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);
-        environment.Runner.DelayMs = 300;
+        NodePath reply = NodePath.Of("整体", "回话");
+        environment.Runner.Gate.Hold(reply);
 
         TaskId id = environment.Submit("对话");
         WaitForInputs(environment, id, 1);
@@ -298,6 +299,8 @@ public sealed class InputNodeTests
         ErrorOr<Success> busy = environment.Pendings.Answer(id, null, "挤进来");
         Assert.True(busy.IsError);
         Assert.Contains(busy.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
+
+        environment.Runner.Gate.Open(reply);
 
         TaskSnapshot back = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, back.State);

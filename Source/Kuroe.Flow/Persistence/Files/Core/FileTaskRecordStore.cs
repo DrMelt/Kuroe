@@ -1,3 +1,4 @@
+using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Serialization.Shared;
@@ -42,7 +43,7 @@ public sealed class FileTaskRecordStore(
             string text;
             try
             {
-                text = File.ReadAllText(file);
+                text = ReadText(file);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -61,6 +62,19 @@ public sealed class FileTaskRecordStore(
         }
 
         return new TaskStoreReadResult(records, failures);
+    }
+
+    /// <summary>读取一个存档文件。共享读写与删除，使读取与另一次原子替换可以并行。</summary>
+    private static string ReadText(string file)
+    {
+        using FileStream stream = new(
+            file,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        using StreamReader reader = new(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+
+        return reader.ReadToEnd();
     }
 
     /// <inheritdoc/>

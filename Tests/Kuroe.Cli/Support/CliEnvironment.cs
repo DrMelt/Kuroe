@@ -80,16 +80,6 @@ internal sealed class StubRunner : IExecutionRunnerFactory
 
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) => new Run(this);
 
-    private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        StubJournal journal,
-        CancellationToken cancellationToken)
-    {
-        await Task.Delay(5, cancellationToken);
-        journal.AppendContent(ProcessContentKind.Reply, Text);
-
-        return ExecutionOutput.Ports;
-    }
-
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
     private sealed class Run(StubRunner owner) : IExecutionRunner, IExecutionUsageReader
     {
@@ -99,8 +89,12 @@ internal sealed class StubRunner : IExecutionRunnerFactory
 
         public ExecutionUsage Usage => owner.Usage;
 
-        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
-            owner.ExecuteAsync(_journal, cancellationToken);
+        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken)
+        {
+            _journal.AppendContent(ProcessContentKind.Reply, owner.Text);
+
+            return Task.FromResult<ErrorOr<ExecutionOutput>>(ExecutionOutput.Ports);
+        }
     }
 
     /// <summary>测试用的过程记录：保存条目并播发内容。</summary>
