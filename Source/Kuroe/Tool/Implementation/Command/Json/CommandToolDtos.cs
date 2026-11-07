@@ -36,7 +36,7 @@ internal sealed class CommandToolDto
     /// <summary>命令超时秒数。</summary>
     public int? TimeoutSeconds { get; set; }
 
-    /// <summary>交回文本上限。</summary>
+    /// <summary>命令输出上限。</summary>
     public int? OutputLimit { get; set; }
 }
 

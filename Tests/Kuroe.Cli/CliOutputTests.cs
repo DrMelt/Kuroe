@@ -49,17 +49,17 @@ public sealed class CliOutputTests
             DateTimeOffset.UtcNow,
             JournalLevel.Information,
             "工具",
-            "file/read {\"path\":\"a\"}\n结果 内容"));
+            "file/read {\"path\":\"a\"}\n内容"));
         cli.Entry(new JournalEntry(
             DateTimeOffset.UtcNow,
             JournalLevel.Warning,
             "工具",
-            "file/read {}\n失败 失败原因"));
+            "file/read {}\n失败原因"));
 
         Assert.Empty(output.ToString());
         Assert.Equal(
-            $"工具 file/read {{\"path\":\"a\"}}{Environment.NewLine}结果 内容{Environment.NewLine}" +
-            $"工具 file/read {{}}{Environment.NewLine}失败 失败原因{Environment.NewLine}",
+            $"工具 file/read {{\"path\":\"a\"}}{Environment.NewLine}内容{Environment.NewLine}" +
+            $"工具 file/read {{}}{Environment.NewLine}失败原因{Environment.NewLine}",
             error.ToString());
     }
 }

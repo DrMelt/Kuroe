@@ -18,3 +18,5 @@
 | `dotnet/write/Format`      | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Publish`     | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/AddPackage`  | `project` 可选，`package` 必填，`version` 可选 | 300  | 8000     |
+
+命令合并 stdout 与 stderr 交回，交回文本以实际执行的命令行开头，随后是输出与退出码。超时与输出上限见上表。

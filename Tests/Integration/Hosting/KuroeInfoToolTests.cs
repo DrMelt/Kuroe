@@ -70,7 +70,7 @@ public sealed class KuroeInfoToolTests
         Assert.Contains("合计 15", output);
         Assert.Contains("过程：", output);
         Assert.Contains("工具 > file/ReadFile {}", output);
-        Assert.Contains("\n         结果 完成", output);
+        Assert.Contains("\n         完成", output);
     }
 
     [Fact]

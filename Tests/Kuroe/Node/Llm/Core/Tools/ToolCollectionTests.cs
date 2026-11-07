@@ -124,7 +124,26 @@ public sealed class ToolCollectionTests
         Assert.Equal(["调用工具 GetLocalTime", string.Empty], progress);
     }
 
+    [Fact]
+    public async Task Failed_tool_call_renders_status_after_its_text_and_records_raw_outcome()
+    {
+        ProcessJournal journal = new();
+        ToolCollection tools = new([new FailingTool()], new ToolJson());
+        AIFunction function = tools.Build(journal, [new ToolPath("cmd/Run")]).Single();
+
+        object? result = await function.InvokeAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal("命令：cmd\n坏了", result?.ToString());
+        Assert.Equal("cmd/Run {}\n命令：cmd\n坏了", Assert.Single(journal.Entries).Text);
+    }
+
     private static ProcessJournal Journal() => new();
+
+    private sealed class FailingTool : ITool
+    {
+        public IReadOnlyList<ToolFunction> Functions { get; } =
+            [new ToolDefinition(new ToolPath("cmd/Run"), "测试工具", []).Bind(_ => ToolErrors.Execute("命令：cmd\n坏了"))];
+    }
 
     private sealed class FakeTool(params string[] paths) : ITool
     {

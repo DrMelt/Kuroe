@@ -81,7 +81,7 @@ public sealed class ExecutionTests
             DateTimeOffset.UtcNow,
             JournalLevel.Information,
             "工具",
-            "GetLocalTime {}\n结果 2026-10-18 19:10:48");
+            "GetLocalTime {}\n2026-10-18 19:10:48");
         journal.EmitEntry(entry);
         journal.EmitProgress("调用工具 GetLocalTime");
 

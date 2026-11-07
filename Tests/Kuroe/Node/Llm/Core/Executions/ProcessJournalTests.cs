@@ -84,7 +84,7 @@ public sealed class ProcessJournalTests
         JournalEntry entry = Assert.Single(journal.Entries);
         Assert.Equal("工具", entry.Label);
         Assert.Equal(JournalLevel.Information, entry.Level);
-        Assert.Equal("GetLocalTime {}\n结果 2026-10-18 19:10:48", entry.Text);
+        Assert.Equal("GetLocalTime {}\n2026-10-18 19:10:48", entry.Text);
         Assert.Equal([entry], entries);
         Assert.Empty(progress);
     }
@@ -129,7 +129,7 @@ public sealed class ProcessJournalTests
 
         JournalEntry entry = Assert.Single(journal.Entries);
         Assert.Equal(JournalLevel.Warning, entry.Level);
-        Assert.Equal("file/ReadFile {}\n失败 不存在", entry.Text);
+        Assert.Equal("file/ReadFile {}\n不存在", entry.Text);
     }
 
     [Fact]

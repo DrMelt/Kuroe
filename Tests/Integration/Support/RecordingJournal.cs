@@ -43,12 +43,11 @@ internal sealed class RecordingJournal : IProcessJournal
     public void AppendToolCall(string name, string arguments, string outcome, bool failed)
     {
         string invocation = arguments.Length == 0 ? name : $"{name} {arguments}";
-        string result = failed ? $"失败 {outcome}" : $"结果 {outcome}";
         JournalEntry entry = new(
             DateTimeOffset.UtcNow,
             failed ? JournalLevel.Warning : JournalLevel.Information,
             ToolLabel,
-            $"{invocation}\n{result}");
+            $"{invocation}\n{outcome}");
 
         Append(entry);
         EntryAppended?.Invoke(entry);

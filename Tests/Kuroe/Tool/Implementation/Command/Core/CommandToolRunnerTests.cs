@@ -10,7 +10,7 @@ namespace Kuroe.Tool.Command.Tests;
 public sealed class CommandToolRunnerTests
 {
     [Fact]
-    public void Execute_returns_merged_output_with_exit_code()
+    public void Execute_returns_merged_output_with_command_and_exit_code()
     {
         FakeProcessRunner process = new()
         {
@@ -20,7 +20,32 @@ public sealed class CommandToolRunnerTests
         ErrorOr<string> result = Invoke(Definition(), Root(), Given(), process);
 
         Assert.False(result.IsError);
-        Assert.Equal($"甲{Environment.NewLine}乙\n（退出码 0）", result.Value);
+        Assert.Equal($"命令：cmd\n甲{Environment.NewLine}乙\n退出码：0", result.Value);
+    }
+
+    [Theory]
+    [InlineData("甲 乙", "\"甲 乙\"")]
+    [InlineData("甲\"乙", "\"甲\"\"乙\"")]
+    [InlineData("", "\"\"")]
+    public void Execute_quotes_arguments_that_need_it_in_the_command_line(string value, string expected)
+    {
+        CommandToolDefinition definition = new(
+            new ToolPath("Execution"),
+            "说明",
+            [new ToolParameter(new ToolName("text"), "文本")],
+            [new("cmd", null), new("echo", null), new("{text}", null)],
+            null,
+            5,
+            200);
+        FakeProcessRunner process = new()
+        {
+            Result = new ProcessResult(string.Empty, 0, false),
+        };
+
+        ErrorOr<string> result = Invoke(definition, Root(), Given(("text", value)), process);
+
+        Assert.False(result.IsError);
+        Assert.Equal($"命令：cmd echo {expected}\n退出码：0", result.Value);
     }
 
     [Fact]
@@ -34,7 +59,7 @@ public sealed class CommandToolRunnerTests
         ErrorOr<string> result = Invoke(Definition(outputLimit: 5), Root(), Given(), process);
 
         Assert.False(result.IsError);
-        Assert.Equal("abcde…输出已截断\n（退出码 1）", result.Value);
+        Assert.Equal("命令：cmd\nabcde…输出已截断\n退出码：1", result.Value);
     }
 
     [Fact]
@@ -48,7 +73,7 @@ public sealed class CommandToolRunnerTests
         ErrorOr<string> result = Invoke(Definition(), Root(), Given(), process);
 
         Assert.False(result.IsError);
-        Assert.Equal("命令已结束，退出码 3，无输出。", result.Value);
+        Assert.Equal("命令：cmd\n退出码：3", result.Value);
     }
 
     [Fact]
@@ -63,7 +88,7 @@ public sealed class CommandToolRunnerTests
 
         Assert.True(result.IsError);
         Assert.Equal(ToolErrorCodes.Execute, result.FirstError.Code);
-        Assert.Equal("命令在 5 秒内未结束，已终止。", result.FirstError.Description);
+        Assert.Equal("命令：cmd\n命令在 5 秒内未结束，已终止。", result.FirstError.Description);
     }
 
     [Fact]
@@ -78,7 +103,7 @@ public sealed class CommandToolRunnerTests
 
         Assert.True(result.IsError);
         Assert.Equal(ToolErrorCodes.Execute, result.FirstError.Code);
-        Assert.Equal("无法启动 cmd。", result.FirstError.Description);
+        Assert.Equal("命令：cmd\n无法启动 cmd。", result.FirstError.Description);
     }
 
     [Fact]

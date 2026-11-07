@@ -76,9 +76,11 @@ internal sealed class CommandToolRunner
         return Invoke(argv.Value);
     }
 
-    /// <summary>在工作目录执行展开后的命令行，格式化输出与退出码；超时或启动失败以 ErrorOr 表达。</summary>
+    /// <summary>在工作目录执行展开后的命令行，交回文本首行是执行的命令，随后是输出与退出码；超时或启动失败以 ErrorOr 表达。</summary>
     private ErrorOr<string> Invoke(IReadOnlyList<string> argv)
     {
+        string command = $"命令：{CommandText(argv)}";
+
         ProcessResult result;
         try
         {
@@ -90,12 +92,12 @@ internal sealed class CommandToolRunner
         }
         catch (ProcessStartException ex)
         {
-            return ToolErrors.Execute(ex.Message);
+            return ExecuteError(command, ex.Message);
         }
 
         if (result.TimedOut)
         {
-            return ToolErrors.Execute($"命令在 {_definition.TimeoutSeconds} 秒内未结束，已终止。");
+            return ExecuteError(command, $"命令在 {_definition.TimeoutSeconds} 秒内未结束，已终止。");
         }
 
         string text = result.Output.TrimEnd();
@@ -104,9 +106,23 @@ internal sealed class CommandToolRunner
             : text;
 
         return body.Length == 0
-            ? $"命令已结束，退出码 {result.ExitCode}，无输出。"
-            : $"{body}\n（退出码 {result.ExitCode}）";
+            ? $"{command}\n退出码：{result.ExitCode}"
+            : $"{command}\n{body}\n退出码：{result.ExitCode}";
     }
+
+    /// <summary>执行失败的文本以命令行开头，后接失败原因。</summary>
+    private static Error ExecuteError(string command, string message) =>
+        ToolErrors.Execute($"{command}\n{message}");
+
+    /// <summary>命令行展示文本：程序与实参逐个拼接，空实参或含空白、双引号的实参加双引号，内部双引号写两个。</summary>
+    private static string CommandText(IReadOnlyList<string> argv) =>
+        string.Join(" ", argv.Select(CommandArgument));
+
+    /// <summary>一个实参的展示文本。</summary>
+    private static string CommandArgument(string argument) =>
+        argument.Length == 0 || argument.Any(char.IsWhiteSpace) || argument.Contains('"')
+            ? $"\"{argument.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
+            : argument;
 
     /// <summary>等待上限，按定义收窄到毫秒换算不溢出的范围。</summary>
     private TimeSpan Timeout() =>

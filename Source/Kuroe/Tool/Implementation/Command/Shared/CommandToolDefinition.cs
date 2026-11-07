@@ -11,7 +11,7 @@ namespace Kuroe.Tool.Command.Shared;
 /// <param name="Template">命令行模板，数组每一项是一个参数项。</param>
 /// <param name="Directory">命令执行目录，相对执行基准；未给时执行目录即基准。</param>
 /// <param name="TimeoutSeconds">命令超时秒数。</param>
-/// <param name="OutputLimit">交回文本上限。</param>
+/// <param name="OutputLimit">命令输出上限。</param>
 /// <param name="Variables">路径变量名，值由使用处的端口映射提供。</param>
 public sealed record CommandToolDefinition(
     ToolPath Path,

@@ -29,12 +29,13 @@ public sealed class JournalViewTests
             DateTimeOffset.Now,
             JournalLevel.Warning,
             "工具",
-            "file/ReadFile {}\n失败 不存在");
+            "file/ReadFile {}\n不存在");
 
         terminal.Write(JournalView.Build([entry], 0));
 
         Assert.Contains("file/ReadFile {}", output.Output);
-        Assert.Contains("失败 不存在", output.Output);
+        Assert.Contains("不存在", output.Output);
+        Assert.DoesNotContain("失败", output.Output);
     }
 
     [Fact]

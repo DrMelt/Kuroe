@@ -53,14 +53,11 @@ internal sealed class ProcessJournal : IProcessJournal
         string invocation = call.Arguments.Length == 0
             ? call.Name
             : $"{call.Name} {call.Arguments}";
-        string outcome = call.Failed
-            ? $"失败 {call.Outcome}"
-            : $"结果 {call.Outcome}";
         JournalEntry entry = new(
             DateTimeOffset.UtcNow,
             call.Failed ? JournalLevel.Warning : JournalLevel.Information,
             ToolLabel,
-            $"{invocation}\n{outcome}");
+            $"{invocation}\n{call.Outcome}");
 
         _store.Append(entry);
         EntryAppended?.Invoke(entry);
