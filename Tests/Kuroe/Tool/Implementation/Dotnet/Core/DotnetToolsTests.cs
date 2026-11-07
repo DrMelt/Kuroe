@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Dotnet.Tests;
 
-/// <summary>内置 dotnet 工具面：十二条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
+/// <summary>内置 dotnet 工具面：十三条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class DotnetToolsTests
 {
     /// <summary>应用参数实参：两个参数。</summary>
@@ -20,6 +20,7 @@ public sealed class DotnetToolsTests
                 "dotnet/read/ListSdks",
                 "dotnet/read/ListPackages",
                 "dotnet/read/NugetSources",
+                "dotnet/read/VerifyFormat",
                 "dotnet/write/Build",
                 "dotnet/write/Test",
                 "dotnet/write/TestMtp",
@@ -100,8 +101,25 @@ public sealed class DotnetToolsTests
             Template("dotnet/write/Restore"));
 
         Assert.Equal(
-            [new("dotnet", null), new("format", null), new("{project}", null)],
+            [
+                new("dotnet", null),
+                new("format", null),
+                new("{project}", null),
+                new("--severity", "severity"),
+                new("{severity}", null),
+            ],
             Template("dotnet/write/Format"));
+
+        Assert.Equal(
+            [
+                new("dotnet", null),
+                new("format", null),
+                new("{project}", null),
+                new("--severity", "severity"),
+                new("{severity}", null),
+                new("--verify-no-changes", null),
+            ],
+            Template("dotnet/read/VerifyFormat"));
 
         Assert.Equal(
             [
@@ -217,11 +235,34 @@ public sealed class DotnetToolsTests
 
         Assert.Equal(["dotnet", "format"], Argv("dotnet/write/Format", Given()));
         Assert.Equal(["dotnet", "format", "Source/Kuroe"], Argv("dotnet/write/Format", Given(("project", "Source/Kuroe"))));
+        Assert.Equal(
+            ["dotnet", "format", "--severity", "info"],
+            Argv("dotnet/write/Format", Given(("severity", "info"))));
+        Assert.Equal(
+            ["dotnet", "format", "Source/Kuroe", "--severity", "warn"],
+            Argv("dotnet/write/Format", Given(("project", "Source/Kuroe"), ("severity", "warn"))));
 
         Assert.Equal(["dotnet", "publish", "--nologo"], Argv("dotnet/write/Publish", Given()));
         Assert.Equal(
             ["dotnet", "publish", "Source/Kuroe.Console", "--configuration", "Release", "--nologo"],
             Argv("dotnet/write/Publish", Given(("project", "Source/Kuroe.Console"), ("configuration", "Release"))));
+    }
+
+    [Fact]
+    public void Verify_format_checks_without_changes()
+    {
+        Assert.Equal(
+            ["dotnet", "format", "--verify-no-changes"],
+            Argv("dotnet/read/VerifyFormat", Given()));
+        Assert.Equal(
+            ["dotnet", "format", "Source/Kuroe", "--verify-no-changes"],
+            Argv("dotnet/read/VerifyFormat", Given(("project", "Source/Kuroe"))));
+        Assert.Equal(
+            ["dotnet", "format", "--severity", "info", "--verify-no-changes"],
+            Argv("dotnet/read/VerifyFormat", Given(("severity", "info"))));
+        Assert.Equal(
+            ["dotnet", "format", "Source/Kuroe", "--severity", "error", "--verify-no-changes"],
+            Argv("dotnet/read/VerifyFormat", Given(("project", "Source/Kuroe"), ("severity", "error"))));
     }
 
     [Fact]
@@ -266,6 +307,7 @@ public sealed class DotnetToolsTests
         Assert.All(
             [
                 "dotnet/read/ListPackages",
+                "dotnet/read/VerifyFormat",
                 "dotnet/write/Build",
                 "dotnet/write/Test",
                 "dotnet/write/TestMtp",
@@ -281,6 +323,8 @@ public sealed class DotnetToolsTests
         Assert.False(Parameter(Definition("dotnet/write/Test"), "filter").Path);
         Assert.False(Parameter(Definition("dotnet/write/TestMtp"), "filter").Path);
         Assert.False(Parameter(Definition("dotnet/write/AddPackage"), "package").Path);
+        Assert.False(Parameter(Definition("dotnet/write/Format"), "severity").Required);
+        Assert.False(Parameter(Definition("dotnet/read/VerifyFormat"), "severity").Required);
     }
 
     [Fact]
