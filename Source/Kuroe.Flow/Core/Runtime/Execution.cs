@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Runtime.Process;
 using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
 namespace Kuroe.Flow.Runtime;
 
@@ -20,13 +21,24 @@ public sealed class Execution : IExecution
     private ExecutionOutput? _output;
     private ExecutionUsage _usage = ExecutionUsage.None;
     private IExecutionUsageReader? _usageReader;
+    private IExecutionRestoreStateReader? _restoreStateReader;
+    private ExecutionRestoreState? _restoreState;
+    private ExecutionContract _contract = ExecutionContract.Empty;
+    private ExecutionId? _continuedFrom;
     private bool _interruptRequested;
     private string _interruptReason = "已中断。";
+    private bool _startedNotified;
 
     internal Execution(ExecutionId id, ExecutionInput input)
+        : this(id, input, 0)
+    {
+    }
+
+    internal Execution(ExecutionId id, ExecutionInput input, int controlVersion)
     {
         Id = id;
         Input = input;
+        ControlVersion = controlVersion;
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
@@ -41,13 +53,13 @@ public sealed class Execution : IExecution
     internal static Execution Restore(ExecutionRecord record, ExecutionInput input)
     {
         Execution execution = new(record.Id, input, record.CreatedAt);
-        execution.RestoreState(record);
+        execution.RestoreFromRecord(record);
 
         return execution;
     }
 
     /// <summary>恢复状态与历史，未收口的执行记为已中断。</summary>
-    private void RestoreState(ExecutionRecord record)
+    private void RestoreFromRecord(ExecutionRecord record)
     {
         bool live = record.State.IsLive();
         _state = live ? ExecutionState.Interrupted : record.State;
@@ -60,8 +72,12 @@ public sealed class Execution : IExecution
             _failures.Add("进程退出前未收口。");
         }
 
-        _journal = new RestoredProcessJournal(record.Journal, record.DroppedEntries);
         _usage = record.Usage;
+        _restoreState = record.RestoreState;
+        _contract = record.Contract is { } contract
+            ? new ExecutionContract(contract.Ports, contract.CannotCompleteReason)
+            : ExecutionContract.Empty;
+        _continuedFrom = record.ContinuedFrom;
         _cancellation.Dispose();
     }
 
@@ -73,6 +89,9 @@ public sealed class Execution : IExecution
 
     /// <summary>执行创建时刻。</summary>
     public DateTimeOffset CreatedAt { get; }
+
+    /// <summary>创建时的任务控制代次，用于收口时判断控制动作是否已经发生。</summary>
+    internal int ControlVersion { get; }
 
     /// <summary>当前执行状态。</summary>
     public ExecutionState State
@@ -107,6 +126,7 @@ public sealed class Execution : IExecution
 
     internal void MarkRunning()
     {
+        bool started;
         lock (_gate)
         {
             if (_state.IsSettled())
@@ -116,8 +136,18 @@ public sealed class Execution : IExecution
 
             _state = ExecutionState.Running;
             _startedAt ??= DateTimeOffset.UtcNow;
+            started = !_startedNotified;
+            _startedNotified = true;
+        }
+
+        if (started)
+        {
+            Started?.Invoke();
         }
     }
+
+    /// <summary>执行进入运行态后触发一次，任务侧据此记录一次执行尝试。</summary>
+    internal event Action? Started;
 
     /// <summary>记下本次执行的过程记录，快照随之可见，过程通知转给订阅者。</summary>
     internal void AttachJournal(IProcessJournal journal)
@@ -191,6 +221,138 @@ public sealed class Execution : IExecution
         }
 
         _process.PublishEntry(entry);
+    }
+
+    /// <summary>本次执行留下的恢复状态，不可恢复时为空。</summary>
+    internal ExecutionRestoreState? RestoreState
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _restoreState;
+            }
+        }
+    }
+
+    /// <summary>恢复状态变化后触发，存档捕获据此写盘。</summary>
+    internal event Action? RestoreStateChanged;
+
+    /// <summary>本次执行从哪次执行恢复，独立执行时为空。</summary>
+    internal ExecutionId? ContinuedFrom
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _continuedFrom;
+            }
+        }
+    }
+
+    /// <summary>本次执行的本轮契约状态。</summary>
+    internal ExecutionContract Contract
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _contract;
+            }
+        }
+    }
+
+    /// <summary>记下本次执行从哪次执行恢复，并继承来源执行的契约状态。</summary>
+    internal void ContinueFrom(Execution source)
+    {
+        ExecutionContract contract = source.Contract;
+        lock (_gate)
+        {
+            _continuedFrom = source.Id;
+            _contract = contract;
+        }
+    }
+
+    /// <summary>记下本次执行交回的端口值。</summary>
+    internal void SubmitPorts(IReadOnlyDictionary<PortName, PortValue> ports)
+    {
+        lock (_gate)
+        {
+            _contract = _contract with { Ports = ports };
+        }
+    }
+
+    /// <summary>记下本次执行上报的无法完成原因，同一执行重复上报覆盖。</summary>
+    internal void ReportCannotComplete(string reason)
+    {
+        lock (_gate)
+        {
+            _contract = _contract with { CannotCompleteReason = reason };
+        }
+    }
+
+    /// <summary>附加运行器的恢复状态读取面，运行中的更新随快照可见。</summary>
+    internal void AttachRestoreStateReader(IExecutionRestoreStateReader reader)
+    {
+        lock (_gate)
+        {
+            _restoreStateReader = reader;
+            _restoreState = reader.RestoreState;
+        }
+
+        reader.RestoreStateChanged += OnRestoreStateChanged;
+    }
+
+    /// <summary>记下运行器的最终恢复状态并解除读取面。</summary>
+    internal void SettleRestoreState(IExecutionRestoreStateReader? reader)
+    {
+        reader?.RestoreStateChanged -= OnRestoreStateChanged;
+
+        lock (_gate)
+        {
+            _restoreStateReader = null;
+            _restoreState = _state is ExecutionState.Succeeded or ExecutionState.Canceled
+                ? null
+                : reader?.RestoreState ?? _restoreState;
+        }
+    }
+
+    /// <summary>丢弃恢复状态。重新执行、上游产出变化与任务收口时调用。</summary>
+    internal void ClearRestoreState()
+    {
+        IExecutionRestoreStateReader? reader;
+        bool changed;
+        lock (_gate)
+        {
+            changed = _restoreState is not null;
+            _restoreState = null;
+            reader = _restoreStateReader;
+            _restoreStateReader = null;
+        }
+
+        reader?.RestoreStateChanged -= OnRestoreStateChanged;
+
+        if (changed)
+        {
+            RestoreStateChanged?.Invoke();
+        }
+    }
+
+    private void OnRestoreStateChanged()
+    {
+        ExecutionRestoreState? state;
+        lock (_gate)
+        {
+            state = _restoreStateReader?.RestoreState;
+            if (Equals(state, _restoreState))
+            {
+                return;
+            }
+
+            _restoreState = state;
+        }
+
+        RestoreStateChanged?.Invoke();
     }
 
     /// <summary>本次执行的产出，端口产出的执行交回端口后只给空内容。</summary>
@@ -336,6 +498,8 @@ public sealed class Execution : IExecution
         IProcessJournal? journal;
         ExecutionUsage usage;
         IExecutionUsageReader? usageReader;
+        ExecutionRestoreState? restoreState;
+        ExecutionId? continuedFrom;
         lock (_gate)
         {
             state = _state;
@@ -346,16 +510,20 @@ public sealed class Execution : IExecution
             journal = _journal;
             usage = _usage;
             usageReader = _usageReader;
+            restoreState = _restoreState;
+            continuedFrom = _continuedFrom;
         }
 
         return new ExecutionSnapshot(Id, Input, state, progress, CreatedAt, startedAt, finishedAt,
-            failures, journal?.Entries ?? [], journal?.DroppedEntries ?? 0, usageReader?.Usage ?? usage);
+            failures, journal?.Entries ?? [], usageReader?.Usage ?? usage,
+            restoreState is not null, continuedFrom);
     }
 
-    /// <summary>捕获本次执行的状态与历史。</summary>
+    /// <summary>捕获本次执行的状态与恢复状态。</summary>
     internal ExecutionRecord CaptureRecord()
     {
         ExecutionSnapshot snapshot = Snapshot();
+        ExecutionContract contract = Contract;
 
         return new ExecutionRecord(
             snapshot.Id,
@@ -367,8 +535,6 @@ public sealed class Execution : IExecution
             snapshot.StartedAt,
             snapshot.FinishedAt,
             snapshot.Failures,
-            snapshot.Journal,
-            snapshot.DroppedEntries,
             snapshot.Usage,
             [
                 .. snapshot.Input.Inputs.Select(value => new InputValueRecord(
@@ -376,7 +542,12 @@ public sealed class Execution : IExecution
                     RecordSources.Write(value.Origin),
                     value.Text)),
             ],
-            snapshot.Input.Texts);
+            snapshot.Input.Texts,
+            snapshot.HasRestoreState ? RestoreState : null,
+            ContinuedFrom,
+            contract is { Ports: null, CannotCompleteReason: null }
+                ? null
+                : new ExecutionContractRecord(contract.Ports, contract.CannotCompleteReason));
     }
 
     /// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>

@@ -42,7 +42,7 @@ public static class AssistantServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
-            TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>());
+            TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
             DialogueRound round = new(registry, new PendingService(
                 registry,
                 sp.GetRequiredService<FlowEngine>(),

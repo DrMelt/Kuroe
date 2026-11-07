@@ -18,6 +18,6 @@ public enum ExecutionState
     /// <summary>被取消。</summary>
     Canceled,
 
-    /// <summary>因任务暂停或进程退出而中断。</summary>
+    /// <summary>因任务暂停、停止执行或进程退出而中断。</summary>
     Interrupted,
 }

@@ -31,5 +31,24 @@ public sealed class TaskRecordCaptureTests : IDisposable
         Assert.NotEmpty(record.Nodes);
     }
 
+    [Fact]
+    public void Capture_retains_published_port_history()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(persistTasks: true);
+        TaskId id = environment.Submit("捕获端口历史");
+        environment.Settle(id);
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
+
+        TaskRecord record = new TaskRecordCapture(task)
+            .CaptureRecord(new SchedulerSeed([]))
+            .ThrowIfError();
+
+        Assert.NotEmpty(record.Ports);
+        Assert.Contains(
+            record.Nodes.OfType<ExecutableNodeRecord>(),
+            node => node.Common.ActivePublicationRevision is not null);
+        Assert.All(record.Ports, port => Assert.NotEqual(default, port.At));
+    }
+
     public void Dispose() => _environment.Dispose();
 }

@@ -19,7 +19,7 @@ public sealed class RuntimeExecutableTests
     public void Published_false_trigger_silences_the_port()
     {
         (RuntimeExecutable node, Execution execution) = Node();
-        node.CollectPorts(execution.Id, Values(new PortValue("内容", false)));
+        execution.SubmitPorts(Values(new PortValue("内容", false)));
 
         Assert.True(node.Triggers(Conclusion));
 
@@ -32,29 +32,29 @@ public sealed class RuntimeExecutableTests
     public void Published_true_trigger_fires_the_port()
     {
         (RuntimeExecutable node, Execution execution) = Node();
-        node.CollectPorts(execution.Id, Values(new PortValue("内容", true)));
+        execution.SubmitPorts(Values(new PortValue("内容", true)));
         node.Publish(execution);
 
         Assert.True(node.Triggers(Conclusion));
     }
 
     [Fact]
-    public void Missing_submission_is_reported_as_a_shortfall()
+    public void Missing_submission_is_reported_as_outstanding_ports()
     {
         (RuntimeExecutable node, Execution execution) = Node();
 
-        Assert.Equal([Conclusion], node.Shortfall(execution.Id));
+        Assert.Equal([Conclusion], node.OutstandingPorts(execution));
 
-        node.CollectPorts(execution.Id, Values(new PortValue("内容")));
+        execution.SubmitPorts(Values(new PortValue("内容")));
 
-        Assert.Empty(node.Shortfall(execution.Id));
+        Assert.Empty(node.OutstandingPorts(execution));
     }
 
     [Fact]
     public void Invalidate_removes_the_published_trigger_value()
     {
         (RuntimeExecutable node, Execution execution) = Node();
-        node.CollectPorts(execution.Id, Values(new PortValue("内容", false)));
+        execution.SubmitPorts(Values(new PortValue("内容", false)));
         node.Publish(execution);
         Assert.False(node.Triggers(Conclusion));
 
@@ -80,7 +80,7 @@ public sealed class RuntimeExecutableTests
             Node = executable.Path,
             Type = executable.Type,
             OutputPorts = executable.Outputs,
-        });
+        }, 0);
 
         return (new RuntimeExecutable(executable), execution);
     }

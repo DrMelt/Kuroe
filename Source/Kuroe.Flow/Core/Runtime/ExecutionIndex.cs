@@ -16,7 +16,7 @@ public sealed class ExecutionIndex
     {
         lock (_gate)
         {
-            Execution execution = new(new ExecutionId(_nextExecution++), input);
+            Execution execution = new(new ExecutionId(_nextExecution++), input, owner.ControlVersion);
             _entries[execution.Id] = new Entry(execution, owner);
 
             return execution;

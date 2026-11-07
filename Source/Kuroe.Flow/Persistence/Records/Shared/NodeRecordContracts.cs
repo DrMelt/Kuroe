@@ -12,6 +12,16 @@ public interface INodeRecordSource
     void RestoreRecord(NodeRecord record, INodeRestoreContext context);
 }
 
+/// <summary>节点端口历史的持久记录契约。</summary>
+public interface IPortRecordSource
+{
+    /// <summary>捕获节点的全部端口发布历史。</summary>
+    IReadOnlyList<PortPublicationRecord> CapturePorts();
+
+    /// <summary>恢复节点的端口发布历史。</summary>
+    void RestorePorts(IReadOnlyList<PortPublicationRecord> records);
+}
+
 /// <summary>节点恢复时可用的执行解析。</summary>
 public interface INodeRestoreContext
 {

@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Flow.Shared.Display;
@@ -20,6 +21,20 @@ public static class InfoLabels
         NodeState.Canceled => "已取消",
         _ => state.ToString(),
     };
+
+    /// <summary>执行节点状态的展示名，阻塞且可恢复时补充可恢复。</summary>
+    public static string Of(ExecutableStateSnapshot state) =>
+        state.State == NodeState.Blocked && state.CanRestore
+            ? "已阻塞，可恢复"
+            : Of(state.State);
+
+    /// <summary>执行恢复状态的展示名。</summary>
+    public static string RestoreState(ExecutionSnapshot execution) =>
+        execution.HasRestoreState ? "有" : "无";
+
+    /// <summary>执行恢复来源的展示名。</summary>
+    public static string ContinuedFrom(ExecutionSnapshot execution) =>
+        execution.ContinuedFrom?.Value.ToString() ?? "—";
 
     /// <summary>执行状态的展示名，未收口时附当前活动。</summary>
     public static string State(ExecutionSnapshot execution) =>

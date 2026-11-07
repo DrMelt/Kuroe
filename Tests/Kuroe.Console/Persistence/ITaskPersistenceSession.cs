@@ -23,7 +23,7 @@ public interface ITaskPersistenceSession : IAsyncDisposable
 
     ErrorOr<Success> Answer(TaskId id, string input);
 
-    ErrorOr<Success> Rework(TaskId id);
+    ErrorOr<Success> Rerun(TaskId id);
 
     TaskSnapshot WaitForInput(TaskId id);
 

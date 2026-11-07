@@ -196,7 +196,6 @@ public sealed class ProcessJournalTests
         }
 
         Assert.Equal(401, journal.Entries.Count);
-        Assert.Equal(0, journal.DroppedEntries);
         Assert.Equal("0", journal.Entries[0].Text);
         Assert.Equal("400", journal.Entries[^1].Text);
     }

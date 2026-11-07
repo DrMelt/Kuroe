@@ -101,14 +101,14 @@ public sealed class ContainerAdvanceTests
     }
 
     [Fact]
-    public void Nested_container_rebroadcasts_after_failed_rework()
+    public void Nested_container_rebroadcasts_after_failed_rerun()
     {
-        using TestEnvironment environment = TestEnvironment.Create(NestedContainerReworkFlow);
+        using TestEnvironment environment = TestEnvironment.Create(NestedContainerRerunFlow);
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "撰写" && execution.Input.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -212,7 +212,7 @@ public sealed class ContainerAdvanceTests
         }
         """;
 
-    private const string NestedContainerReworkFlow = """
+    private const string NestedContainerRerunFlow = """
         {
           "Flows": [
             {

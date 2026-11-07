@@ -47,7 +47,7 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
     }
 
     /// <summary>为一次执行建立命令运行器。</summary>
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new CommandExecutionRunner(Parameters
             ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立执行器。"), Process);
 }

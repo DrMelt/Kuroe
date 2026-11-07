@@ -100,9 +100,12 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
 
         if (snapshot.State == TaskState.Paused)
         {
+            PlainTaskView.Failures(output, snapshot);
+            PlainTaskView.Usage(output, snapshot);
             output.ErrorLine($"任务 {task.Id} 已暂停。");
+            output.Hint("可在 Console 中恢复任务。");
 
-            return ExitCodes.Failure;
+            return ExitCodes.Paused;
         }
 
         if (snapshot.State == TaskState.Done)

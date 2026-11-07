@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
 namespace Kuroe.Flow.Persistence.Records.Shared;
 
@@ -14,11 +15,17 @@ public sealed record ExecutionRecord(
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
     IReadOnlyList<string> Failures,
-    IReadOnlyList<JournalEntry> Journal,
-    int DroppedEntries,
     ExecutionUsage Usage,
     IReadOnlyList<InputValueRecord> Inputs,
-    IReadOnlyDictionary<PortName, string> Texts);
+    IReadOnlyDictionary<PortName, string> Texts,
+    ExecutionRestoreState? RestoreState = null,
+    ExecutionId? ContinuedFrom = null,
+    ExecutionContractRecord? Contract = null);
+
+/// <summary>一次执行的本轮契约状态。</summary>
+public sealed record ExecutionContractRecord(
+    IReadOnlyDictionary<PortName, PortValue>? Ports = null,
+    string? CannotCompleteReason = null);
 
 /// <summary>一次执行进入某个输入端口的取值与出处。</summary>
 public sealed record InputValueRecord(

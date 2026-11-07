@@ -7,9 +7,6 @@ public interface IProcessJournal
     /// <summary>已记录的条目，按发生顺序。</summary>
     IReadOnlyList<JournalEntry> Entries { get; }
 
-    /// <summary>存档恢复的丢弃条数。新记录不丢弃条目。</summary>
-    int DroppedEntries { get; }
-
     /// <summary>流式内容追加后给出该增量与种类。</summary>
     event ProcessContentHandler? ContentAppended;
 

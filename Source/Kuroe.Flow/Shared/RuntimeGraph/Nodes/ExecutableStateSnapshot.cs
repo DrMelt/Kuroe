@@ -6,4 +6,5 @@ namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 public sealed record ExecutableStateSnapshot(
     NodePath Node,
     NodeState State,
-    NodeBlock? Block = null);
+    NodeBlock? Block = null,
+    bool CanRestore = false);

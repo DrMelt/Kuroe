@@ -147,7 +147,7 @@ public static class TestFlows
         }
         """;
 
-    /// <summary>执行节点声明输出端口但不交回，任务停在阻塞，用于返工命令的装配。</summary>
+    /// <summary>执行节点声明输出端口但不交回，任务停在阻塞，用于重新执行命令的装配。</summary>
     public const string BlockingFlow = """
         {
           "Flows": [

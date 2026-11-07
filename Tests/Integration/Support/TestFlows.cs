@@ -131,6 +131,56 @@ public static class TestFlows
           ]
         }
         """;
+    /// <summary>两个并行实施节点：一支失败留恢复状态，另一支完成后把下游留在待处理队列。</summary>
+    public const string ParallelRootFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+              ] },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
+                  { "Name": "先失败", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "后完成", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "下游", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "后完成@结论" } ] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
+    /// <summary>五个并行实施节点：并发额度之外留下一个排队执行，用于验证暂停与恢复的重新排队。</summary>
+    public const string ManyRootsFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Start": { "Outputs": [
+                { "Name": "目标", "Type": "Text" },
+                { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+              ] },
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ], "Nodes": [
+                  { "Name": "一", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                  { "Name": "二", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                  { "Name": "三", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                  { "Name": "四", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] },
+                  { "Name": "五", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
     /// <summary>声明输出端口的文本节点把命名段交给下游，下游按端口精确消费。</summary>
     public const string PortFlow = """
         {

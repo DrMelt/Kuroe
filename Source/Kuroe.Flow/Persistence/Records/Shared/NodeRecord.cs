@@ -6,19 +6,23 @@ namespace Kuroe.Flow.Persistence.Records.Shared;
 /// <summary>一个节点在任务内的持久状态。公共部分与节点类型专属状态分开。</summary>
 public abstract record NodeRecord(NodePath Path, NodeCommonRecord Common);
 
-/// <summary>各节点共有的持久状态：输入侧进展与最近一次发布。</summary>
+/// <summary>各节点共有的持久状态：输入侧进展与当前活动发布版本。</summary>
 public sealed record NodeCommonRecord(
     long Revision,
     int Executions,
     int? LastInputGroup,
     IReadOnlyList<ConsumedRevisionRecord> Consumed,
-    PublicationRecord? Publication,
+    long? ActivePublicationRevision,
     bool ForceRerun);
 
-/// <summary>最近一次发布的持久形态：触发位与各输出端口的内容。</summary>
-public sealed record PublicationRecord(
-    IReadOnlyDictionary<PortName, bool> Triggers,
-    IReadOnlyDictionary<PortName, IReadOnlyList<PublicationValueRecord>> Content);
+/// <summary>一次发布在一个输出端口上的持久记录。</summary>
+public sealed record PortPublicationRecord(
+    NodePath Node,
+    PortName Port,
+    long Revision,
+    DateTimeOffset At,
+    bool Trigger,
+    IReadOnlyList<PublicationValueRecord> Values);
 
 /// <summary>发布内容的一段取值：出处与文本。</summary>
 public sealed record PublicationValueRecord(
@@ -35,7 +39,7 @@ public sealed record ConsumedRevisionRecord(
 public sealed record ExecutableNodeRecord(
     NodePath Path,
     NodeCommonRecord Common,
-    IReadOnlyList<NodePath> ReworkTargets,
+    IReadOnlyList<NodePath> RerunTargets,
     NodeBlock? Block)
     : NodeRecord(Path, Common);
 

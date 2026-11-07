@@ -12,13 +12,37 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
     private readonly IToolFactory _tools = tools;
     private readonly IToolJson _json = json;
 
-    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。</summary>
-    internal Session ForExecution(ExecutionId execution, ExecutionInput context, ProcessJournal journal) =>
-        new(
+    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复状态时恢复历史。</summary>
+    internal Session ForExecution(
+        ExecutionId execution,
+        ExecutionInput context,
+        ProcessJournal journal,
+        LlmExecutionState? restored)
+    {
+        ExecutionHistory history = new(context);
+        if (restored is null)
+        {
+            return new Session(
+                _clients,
+                new ToolCollection(_tools.Create(execution, context), _json),
+                history,
+                journal);
+        }
+
+        string? model = (context.Declaration as KuroeNodeDeclaration)?.Model?.Value;
+        if (restored.Model != model)
+        {
+            throw new InvalidOperationException(
+                $"会话恢复状态属于模型 {restored.Model}，当前执行使用 {model ?? "未声明模型"}。");
+        }
+
+        return new Session(
             _clients,
             new ToolCollection(_tools.Create(execution, context), _json),
-            new ExecutionHistory(context),
-            journal);
+            history,
+            journal,
+            [.. restored.Messages.Select(LlmExecutionStateCodec.ToMessage)]);
+    }
 
     /// <summary>释放缓存的模型客户端。</summary>
     public void Dispose() => _clients.Dispose();

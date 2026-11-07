@@ -6,7 +6,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>用户任务域对任务的动作：按流程名提交、返工、取消、改名。用户任务的提交策略在这里，域内生命周期由 <see cref="TaskActions"/> 承担。</summary>
+/// <summary>用户任务域对任务的动作：按流程名提交、重新执行、取消、改名。用户任务的提交策略在这里，域内生命周期由 <see cref="TaskActions"/> 承担。</summary>
 /// <remarks>装配用户任务提交所需的动作与流程目录。</remarks>
 public sealed class TaskService(
     TaskActions actions,
@@ -34,14 +34,14 @@ public sealed class TaskService(
     /// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。</summary>
     public ErrorOr<Success> Pause(TaskId id) => _actions.Pause(id);
 
-    /// <summary>恢复暂停的任务。</summary>
+    /// <summary>恢复任务：暂停时恢复控制状态，存在恢复计划时派发恢复执行。</summary>
     public ErrorOr<Success> Resume(TaskId id) => _actions.Resume(id);
 
     /// <summary>改任务标题。</summary>
     public ErrorOr<Success> Rename(TaskId id, string title) => _actions.Rename(id, title);
 
-    /// <summary>对被阻塞的执行节点再开一轮实施。</summary>
-    public ErrorOr<Success> Rework(TaskId id) => _actions.Rework(id);
+    /// <summary>对阻塞的执行节点重新执行。</summary>
+    public ErrorOr<Success> Rerun(TaskId id) => _actions.Rerun(id);
 
     /// <summary>取消一个执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id) => _actions.StopExecution(id);

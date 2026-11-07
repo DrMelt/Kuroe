@@ -29,6 +29,8 @@ public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture
                 [.. task.Runtime.Materializer.Materialized
                     .Select(node => ((INodeRecordSource)node).CaptureRecord())
                     .OfType<NodeRecord>()],
+                [.. task.Runtime.Materializer.Materialized
+                    .SelectMany(node => ((IPortRecordSource)node).CapturePorts())],
                 seed);
         }
     }

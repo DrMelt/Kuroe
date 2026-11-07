@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -18,6 +19,7 @@ public sealed record TaskRecordData(
     TaskJournalData? Journal,
     List<ExecutionData>? Executions,
     List<NodeData>? Nodes,
+    List<PortPublicationData>? Ports,
     SchedulerSeedData? Pending);
 
 /// <summary>任务身份的形状。</summary>
@@ -53,11 +55,23 @@ public sealed record ExecutionData(
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
     List<string>? Failures,
-    List<JournalEntryData>? Journal,
-    int DroppedEntries,
     ExecutionUsageData? Usage,
     List<InputValueData>? Inputs,
-    Dictionary<string, string>? Texts);
+    Dictionary<string, string>? Texts,
+    RestoreStateData? RestoreState = null,
+    int? ContinuedFrom = null,
+    ExecutionContractData? Contract = null);
+
+/// <summary>一次执行留在存档中的恢复状态。</summary>
+public sealed record RestoreStateData(string? Format, string? Payload);
+
+/// <summary>一次执行的本轮契约状态。</summary>
+public sealed record ExecutionContractData(
+    List<PortValueData>? Ports,
+    string? CannotCompleteReason);
+
+/// <summary>一个交回端口的值。</summary>
+public sealed record PortValueData(string? Port, string? Text, bool? Trigger);
 
 /// <summary>一次执行的模型请求用量的形状。</summary>
 public sealed record ExecutionUsageData(
@@ -90,7 +104,7 @@ public sealed record NodeData(
     NodePathData? Path,
     NodeCommonData? Common,
     NodeBlockData? Block,
-    List<NodePathData>? ReworkTargets,
+    [property: JsonPropertyName("ReworkTargets")] List<NodePathData>? RerunTargets,
     bool? Waiting,
     NodeInputValuesData? Inputs,
     bool? Awaiting);
@@ -104,13 +118,17 @@ public sealed record NodeCommonData(
     int Executions,
     int? LastInputGroup,
     List<ConsumedRevisionData>? Consumed,
-    PublicationData? Publication,
+    long? ActivePublicationRevision,
     bool ForceRerun);
 
-/// <summary>最近一次发布的形状。</summary>
-public sealed record PublicationData(
-    Dictionary<string, bool>? Triggers,
-    Dictionary<string, List<PublicationValueData>>? Content);
+/// <summary>一次发布在一个输出端口上的形状。</summary>
+public sealed record PortPublicationData(
+    NodePathData? Node,
+    string? Port,
+    long Revision,
+    DateTimeOffset At,
+    bool Trigger,
+    List<PublicationValueData>? Values);
 
 /// <summary>发布内容的形状。</summary>
 public sealed record PublicationValueData(ContextSourceData? Origin, string? Text);

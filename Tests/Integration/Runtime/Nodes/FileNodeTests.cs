@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Nodes;
 
-/// <summary>文件读取与写入节点：按版本读取工作目录内文件，内容写入下游或落到文件，失败阻塞后返工恢复。</summary>
+/// <summary>文件读取与写入节点：按版本读取工作目录内文件，内容写入下游或落到文件，失败阻塞后重新执行。</summary>
 public sealed class FileNodeTests
 {
     [Fact]
@@ -36,7 +36,7 @@ public sealed class FileNodeTests
     }
 
     [Fact]
-    public void Missing_file_blocks_the_task_and_rework_resumes_it()
+    public void Missing_file_blocks_the_task_and_rerun_resumes_it()
     {
         using TestEnvironment environment = TestEnvironment.Create(ReadWriteFlow);
 
@@ -47,7 +47,7 @@ public sealed class FileNodeTests
             entry => entry.Level == JournalLevel.Error && entry.Text.Contains("读取 {root}/in.txt 失败"));
 
         File.WriteAllText(Path.Combine(environment.Root, "in.txt"), "恢复内容");
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);

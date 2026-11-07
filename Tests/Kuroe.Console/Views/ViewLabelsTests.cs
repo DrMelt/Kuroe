@@ -137,7 +137,7 @@ public sealed class ViewLabelsTests
 
     private static ExecutionSnapshot Execution(string progress) => new(
         new ExecutionId(1), Input(), ExecutionState.Running, progress,
-        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], 0, ExecutionUsage.None);
+        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], ExecutionUsage.None);
 
     private static ExecutionInput Input() => new()
     {

@@ -11,7 +11,6 @@ namespace Kuroe.Node.Llm;
 internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = null) : INodeTypeDescription
 {
     private const string PromptName = "Prompt";
-    private const string MaxTurnsName = "MaxTurns";
     private const string ToolsName = "Tools";
     private const string SystemPromptName = "SystemPrompt";
     private const string ToolPortsName = "ToolPorts";
@@ -28,7 +27,6 @@ internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = n
     public IReadOnlyList<ParameterField> Fields { get; } =
     [
         new(PromptName, ParameterValueKind.Text),
-        new(MaxTurnsName, ParameterValueKind.Integer),
         new(ToolsName, ParameterValueKind.Texts),
         new(SystemPromptName, ParameterValueKind.Texts),
         new(ToolPortsName, ParameterValueKind.MapMap),
@@ -55,7 +53,6 @@ internal sealed class LlmNodeTypeDescription(IToolContractCatalog? contracts = n
         return LlmNodeTypes.Create(new LlmParameters
         {
             Prompt = values.Text(PromptName),
-            MaxTurns = values.Integer(MaxTurnsName),
             Tools = [.. tools.Select(tool => new ToolPath(tool))],
             SystemPrompt = systemPrompt,
             ToolPorts = values.MappingMaps(ToolPortsName),

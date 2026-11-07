@@ -16,6 +16,7 @@ internal sealed class ProcessJournal : IProcessJournal
     private const string ToolLabel = "工具";
     private const string DiscardedLabel = "丢弃";
     private const string DiscardedText = "本轮未计入上下文。";
+    private const string RestoreLabel = "恢复";
 
     private readonly ProcessJournalStore _store = new(segmentLimit: SegmentLimit);
     private readonly Lock _progressGate = new();
@@ -86,11 +87,21 @@ internal sealed class ProcessJournal : IProcessJournal
     public void AppendDiscarded() =>
         _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Warning, DiscardedLabel, DiscardedText));
 
+    /// <summary>追加一条从恢复状态继续的说明。</summary>
+    public void AppendRestored()
+    {
+        JournalEntry entry = new(
+            DateTimeOffset.UtcNow,
+            JournalLevel.Information,
+            RestoreLabel,
+            "从上次中断处恢复。");
+
+        _store.Append(entry);
+        EntryAppended?.Invoke(entry);
+    }
+
     /// <summary>已记录的条目，按发生顺序。</summary>
     public IReadOnlyList<JournalEntry> Entries => _store.Entries;
-
-    /// <summary>丢弃条数。Llm 不丢弃条目，始终为 0。</summary>
-    public int DroppedEntries => _store.DroppedEntries;
 
     /// <summary>内容种类对应的记录标签。</summary>
     private static string LabelOf(ProcessContentKind kind) => kind switch

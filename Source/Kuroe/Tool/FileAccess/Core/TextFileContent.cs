@@ -74,7 +74,7 @@ public sealed class TextFileContent
     /// <summary>按替换条件替换原文，一次扫描完成匹配与替换。replacement 的换行转换为文件原有风格，未匹配内容保持原样。</summary>
     public TextFileReplacement Replace(TextReplacement replacement)
     {
-        IReadOnlyList<int> matches = Find(replacement.Pattern, replacement.Comparison);
+        List<int> matches = Find(replacement.Pattern, replacement.Comparison);
         if (matches.Count == 0)
         {
             return new TextFileReplacement(Original, 0, []);

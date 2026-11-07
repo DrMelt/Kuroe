@@ -27,7 +27,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
                 ? new PortValue($"{port.Name.Value}产出")
                 : new PortValue(null));
 
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new Run(this, execution);
 
     private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
@@ -114,8 +114,6 @@ public sealed class FakeRunner : IExecutionRunnerFactory
                 }
             }
         }
-
-        public int DroppedEntries => 0;
     }
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>

@@ -42,8 +42,7 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IPortSubmitter
         lock (task.Gate)
         {
             IReadOnlyList<Port> declared = task.Runtime.Executable(execution.Input.Node).Executable.RequiredPorts;
-            RuntimeExecutable node = task.Runtime.Node(execution);
-            if (node.SubmittedPorts(execution.Id) is not null)
+            if (execution.Contract.Ports is not null)
             {
                 return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
             }
@@ -54,7 +53,7 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IPortSubmitter
                 return valid.ErrorsOrEmptyList;
             }
 
-            node.CollectPorts(execution.Id, parsed);
+            execution.SubmitPorts(parsed);
 
             return ExecutionStatusReader.Of(task, execution);
         }

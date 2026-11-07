@@ -8,9 +8,16 @@ namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>一个任务域内的任务索引：按任务键查找、交出快照、转发执行通知。状态本身存在任务与运行期节点上。</summary>
 /// <param name="executions">全部任务域共享的执行索引。</param>
-public sealed class TaskRegistry(ExecutionIndex executions)
+/// <param name="pauseOnRestore">可恢复的中断收口时是否暂停任务。</param>
+public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore = true)
 {
     private readonly Lock _gate = new();
+
+    /// <summary>任务域是否在可恢复的中断收口时暂停任务，等待宿主恢复。</summary>
+    internal bool PauseOnRestore { get; } = pauseOnRestore;
+
+    /// <summary>本域可用的恢复能力，推进器启动时设置。宿主单独装配任务恢复时可直接给出。</summary>
+    public IExecutionRestorerSource? RestorerSource { get; set; }
     private readonly Dictionary<string, WorkTask> _tasks = [];
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>

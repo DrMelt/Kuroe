@@ -21,6 +21,7 @@ public sealed class WorkTask
     private string _title;
     private DateTimeOffset _lastActivityAt;
     private TaskLifecycle _lifecycle = TaskLifecycle.Active;
+    private int _controlVersion;
     private bool _completed;
 
     internal WorkTask(
@@ -97,11 +98,23 @@ public sealed class WorkTask
         task.Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
         task.FlowSnapshot = record.Flow;
         task._executions.AddRange(executions);
-        task.Runtime.Restore(record.Nodes);
+        task.Runtime.Restore(record.Nodes, record.Ports);
         foreach (Execution execution in executions
             .Where(execution => execution.State == ExecutionState.Interrupted))
         {
+            ExecutionSnapshot snapshot = execution.Snapshot();
             var runtime = task.Runtime.Executable(execution.Input.Node);
+            if (snapshot.StartedAt is null)
+            {
+                if (runtime.Block?.Execution == execution.Id)
+                {
+                    runtime.ClearBlock();
+                }
+
+                runtime.RequestRerun();
+                continue;
+            }
+
             if (runtime.Block is null)
             {
                 runtime.EnterBlocked(
@@ -111,6 +124,12 @@ public sealed class WorkTask
         }
 
         task._lifecycle = task.DetermineRestoredLifecycle(record);
+        if (registry.RestorerSource is not null)
+        {
+            task.Runtime.RefreshRestorePlans();
+        }
+
+        task.Journal.AppendInfo("从存档恢复。");
 
         return task;
     }
@@ -159,7 +178,17 @@ public sealed class WorkTask
     }
 
     /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
-    internal void MarkCompleted() => _completed = true;
+    internal void MarkCompleted()
+    {
+        _completed = true;
+        foreach (Execution execution in _executions)
+        {
+            execution.ClearRestoreState();
+        }
+
+        Runtime.ClearRestorePlans();
+        Journal.AppendInfo("任务完成。");
+    }
 
     /// <summary>通知任务状态已变，存档捕获据此写存档。</summary>
     internal void NotifyChanged() => Registry.ReportChanged(Id);
@@ -297,6 +326,27 @@ public sealed class WorkTask
         return Runtime.HasWork ? TaskState.Running : TaskState.Done;
     }
 
+    /// <summary>任务控制代次，暂停、恢复与收口暂停都会推进。要求持有 Gate 读取。</summary>
+    internal int ControlVersion => _controlVersion;
+
+    /// <summary>任务域是否在可恢复的中断收口时暂停任务。</summary>
+    internal bool PauseOnRestore => Registry.PauseOnRestore;
+
+    /// <summary>可恢复的中断收口后暂停任务，只停止新的调度，不中断在跑的执行。要求持有 <see cref="Gate"/>。</summary>
+    internal void PauseForRestore()
+    {
+        if (_completed || _lifecycle != TaskLifecycle.Active)
+        {
+            return;
+        }
+
+        _lifecycle = TaskLifecycle.Paused;
+        _controlVersion++;
+        _lastActivityAt = DateTimeOffset.UtcNow;
+        Journal.AppendInfo("可恢复的中断已收口，任务暂停等待恢复。");
+        NotifyChanged();
+    }
+
     /// <summary>暂停任务：不再启动新的执行，等待中的在跑执行由推进器中断。要求持有 <see cref="Gate"/>。</summary>
     internal ErrorOr<Success> Pause()
     {
@@ -316,7 +366,9 @@ public sealed class WorkTask
         }
 
         _lifecycle = TaskLifecycle.Paused;
+        _controlVersion++;
         _lastActivityAt = DateTimeOffset.UtcNow;
+        Journal.AppendInfo("任务暂停。");
         NotifyChanged();
 
         return Result.Success;
@@ -336,7 +388,9 @@ public sealed class WorkTask
         }
 
         _lifecycle = TaskLifecycle.Active;
+        _controlVersion++;
         _lastActivityAt = DateTimeOffset.UtcNow;
+        Journal.AppendInfo("任务恢复推进。");
         NotifyChanged();
 
         return Result.Success;
@@ -356,6 +410,14 @@ public sealed class WorkTask
         }
 
         _lifecycle = TaskLifecycle.Terminated;
+        foreach (Execution execution in _executions)
+        {
+            execution.ClearRestoreState();
+        }
+
+        Runtime.ClearRestorePlans();
+        Journal.AppendInfo("任务终止。");
+
         foreach (Execution execution in _executions.Where(execution => execution.IsLive))
         {
             execution.Cancel();
@@ -372,8 +434,10 @@ public sealed class WorkTask
     internal void Attach(Execution execution)
     {
         _executions.Add(execution);
-        Runtime.Executable(execution.Input.Node).RecordExecution();
         _lastActivityAt = DateTimeOffset.UtcNow;
+        execution.RestoreStateChanged += OnRestoreStateChanged;
+        execution.Started += () => OnExecutionStarted(execution);
+        Journal.AppendInfo($"执行 {execution.Id.Value} 创建，节点 {execution.Input.Node}。");
         if (_observer?.Content is { } onContent)
         {
             execution.ContentEmitted += onContent;
@@ -386,6 +450,20 @@ public sealed class WorkTask
 
         ExecutionAttached?.Invoke(execution);
     }
+
+    /// <summary>执行真正进入运行态时记一次执行尝试。</summary>
+    private void OnExecutionStarted(Execution execution)
+    {
+        lock (Gate)
+        {
+            Runtime.Executable(execution.Input.Node).RecordExecution();
+            _lastActivityAt = DateTimeOffset.UtcNow;
+            Journal.AppendInfo($"执行 {execution.Id.Value} 开始，节点 {execution.Input.Node}。");
+            NotifyChanged();
+        }
+    }
+
+    private void OnRestoreStateChanged() => NotifyChanged();
 
     private event Action<Execution>? ExecutionAttached;
 

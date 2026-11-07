@@ -44,7 +44,7 @@ public sealed class FileReadNodeType(FileParameters? parameters)
     }
 
     /// <summary>为一次执行建立文件读取运行器。</summary>
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new FileReadExecutionRunner(node, Parameters
             ?? throw new InvalidOperationException("文件读取节点缺少 Path 声明，无法建立执行器。"));
 }

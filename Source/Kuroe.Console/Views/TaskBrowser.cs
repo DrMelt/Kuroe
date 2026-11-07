@@ -79,8 +79,8 @@ internal sealed class TaskBrowser(
     public void Answer(TaskId id, string? nodePath, string input) =>
         results.Report(pendings.Answer(id, nodePath, input), $"{id} 已收到回答，继续下一步。");
 
-    /// <summary>返工被阻塞的节点。</summary>
-    public void Rework(TaskId id) => results.Report(tasks.Rework(id), $"{id} 已返工。");
+    /// <summary>重新执行被阻塞的节点。</summary>
+    public void Rerun(TaskId id) => results.Report(tasks.Rerun(id), $"{id} 已重新执行。");
 
     /// <summary>暂停任务。</summary>
     public void Pause(TaskId id) => results.Report(tasks.Pause(id), $"{id} 已暂停。");
@@ -91,8 +91,8 @@ internal sealed class TaskBrowser(
     /// <summary>终止任务。</summary>
     public void StopTask(TaskId id) => results.Report(tasks.StopTask(id), $"{id} 已终止。");
 
-    /// <summary>取消单个执行。</summary>
-    public void StopExecution(ExecutionId id) => results.Report(tasks.StopExecution(id), $"{id} 已取消。");
+    /// <summary>停止单个执行。</summary>
+    public void StopExecution(ExecutionId id) => results.Report(tasks.StopExecution(id), $"{id} 已停止。");
 
     /// <summary>打开任务节点树页。</summary>
     public void ShowTree(TaskId id) => ViewPage.Browse(terminal, "节点树", () => PrintTree(id));
@@ -283,8 +283,8 @@ internal sealed class TaskBrowser(
                     PromptAnswer(id);
                     break;
 
-                case "rework":
-                    Rework(id);
+                case "rerun":
+                    Rerun(id);
                     break;
 
                 case "pauseTask":
@@ -385,9 +385,9 @@ internal sealed class TaskBrowser(
                 .Select(value => new Item($"↑ {value.Origin.Label}", "execution", Execution: value.Origin.FromExecution))
                 .DistinctBy(item => item.Execution)];
 
-            if (!snapshot.State.IsSettled())
+            if (!snapshot.State.IsSettled() && snapshot.StartedAt is not null)
             {
-                items.Add(new Item("× 取消该执行", "stopExecution", Execution: executionId));
+                items.Add(new Item("× 停止该执行", "stopExecution", Execution: executionId));
             }
 
             items.Add(Back);
@@ -445,6 +445,12 @@ internal sealed class TaskBrowser(
         if (task.State == TaskState.Paused)
         {
             items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
+
+            if (task.ExecutableStates.Any(state => state.State == NodeState.Blocked))
+            {
+                items.Add(new Item("* 重新执行被阻塞的节点，清除恢复状态", "rerun", Task: task.Id));
+            }
+
             items.Add(new Item("× 终止整个任务", "stopTask", Task: task.Id));
 
             return;
@@ -466,7 +472,12 @@ internal sealed class TaskBrowser(
 
         if (blocked)
         {
-            items.Add(new Item("* 返工被阻塞的节点", "rework", Task: task.Id));
+            if (task.ExecutableStates.Any(state => state.CanRestore))
+            {
+                items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
+            }
+
+            items.Add(new Item("* 重新执行被阻塞的节点", "rerun", Task: task.Id));
         }
 
         items.Add(new Item("Ⅱ 暂停任务", "pauseTask", Task: task.Id));

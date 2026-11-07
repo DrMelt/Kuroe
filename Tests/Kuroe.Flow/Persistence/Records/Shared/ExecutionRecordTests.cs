@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Flow.Persistence.Records.Shared.Tests;
 
-/// <summary>执行存档的数据形状：状态、历史、输入取值与出处。</summary>
+/// <summary>执行存档的数据形状：状态、用量、输入取值与出处。</summary>
 public sealed class ExecutionRecordTests
 {
     [Fact]
@@ -16,7 +16,6 @@ public sealed class ExecutionRecordTests
         Assert.Equal(ExecutionState.Succeeded, execution.State);
         Assert.Equal(1, execution.ExecutionCount);
         Assert.Empty(execution.Failures);
-        Assert.Single(execution.Journal);
         Assert.Single(execution.Inputs);
         Assert.Equal(2, execution.Usage.RequestCount);
         Assert.Equal(150, execution.Usage.Tokens.Total);

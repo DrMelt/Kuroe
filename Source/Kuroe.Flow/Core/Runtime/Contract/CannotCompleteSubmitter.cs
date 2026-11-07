@@ -4,7 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime.Contract;
 
-/// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待返工。
+/// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待重新执行。
 /// 提交者身份在此认定，结果以上报后的本轮契约状态交回，回执措辞由工具实现层给出。</summary>
 public sealed class CannotCompleteSubmitter(ExecutionIndex executions) : ICannotCompleteSubmitter
 {
@@ -26,7 +26,7 @@ public sealed class CannotCompleteSubmitter(ExecutionIndex executions) : ICannot
         string recorded = reason.Trim();
         lock (task.Gate)
         {
-            task.Runtime.Node(execution).CollectCannotComplete(execution.Id, recorded);
+            execution.ReportCannotComplete(recorded);
 
             return ExecutionStatusReader.Of(task, execution);
         }

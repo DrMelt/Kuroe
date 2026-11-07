@@ -8,16 +8,16 @@ namespace Kuroe.Integration.Tests.Runtime.Engine;
 /// <summary>执行次数按执行节点累计，以启动的执行记录为准。</summary>
 public sealed class ExecutionCountTests
 {
-    /// <summary>失败返工后重跑一次，节点执行次数按启动的执行累计。</summary>
+    /// <summary>失败后重新执行一次，节点执行次数按启动的执行累计。</summary>
     [Fact]
-    public void Rework_increments_the_node_execution_count()
+    public void Rerun_increments_the_node_execution_count()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
         environment.Runner.FailsWhen = execution => execution.Input.ExecutionCount == 1;
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
@@ -40,7 +40,7 @@ public sealed class ExecutionCountTests
         Assert.Equal(0, Executions(task, "下游"));
     }
 
-    /// <summary>单个执行节点，失败返工后重跑。</summary>
+    /// <summary>单个执行节点，失败后重新执行。</summary>
     private const string SingleNodeFlow = """
         {
           "Flows": [

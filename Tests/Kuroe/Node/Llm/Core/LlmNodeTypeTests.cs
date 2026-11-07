@@ -47,24 +47,6 @@ public sealed class LlmNodeTypeTests
         Assert.Equal(["流程 测试 的节点 干活：MaxExecutions 必须是正整数。"], errors);
     }
 
-    [Fact]
-    public void Max_turns_below_one_is_rejected()
-    {
-        List<string> errors = [];
-        LlmNodeType type = Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(new LlmParameters { MaxTurns = 0 }));
-        type.Validate(Node(new ExecutableSpec()), NodeScope.Flow("测试"), error => errors.Add(error.Description));
-
-        Assert.Equal(["流程 测试 的节点 干活：MaxTurns 必须是正整数。"], errors);
-    }
-
-    [Fact]
-    public void Max_turns_is_unlimited_without_a_declaration() =>
-        Assert.Null(NodeType.MaxTurns);
-
-    [Fact]
-    public void Declared_max_turns_wins() =>
-        Assert.Equal(20, Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(new LlmParameters { MaxTurns = 20 })).MaxTurns);
-
     private static NodeSpec Node(ExecutableSpec spec) => new()
     {
         Label = new NodeLabel("干活"),

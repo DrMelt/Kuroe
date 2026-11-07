@@ -114,6 +114,4 @@ internal sealed class RecordingJournal : IProcessJournal
         }
     }
 
-    /// <summary>测试记录不丢弃条目。</summary>
-    public int DroppedEntries => 0;
 }

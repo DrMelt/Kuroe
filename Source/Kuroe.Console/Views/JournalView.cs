@@ -10,7 +10,7 @@ internal static class JournalView
     /// <summary>最多呈现的记录数，更早的只报条数。</summary>
     private const int Limit = 40;
 
-    public static IRenderable Build(IReadOnlyList<JournalEntry> entries, int dropped)
+    public static IRenderable Build(IReadOnlyList<JournalEntry> entries, int dropped = 0)
     {
         List<IRenderable> lines = [];
         if (dropped > 0)

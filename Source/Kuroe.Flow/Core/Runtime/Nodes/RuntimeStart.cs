@@ -33,9 +33,18 @@ internal sealed class RuntimeStart : RuntimeNode
     /// <summary>开始节点的产出由任务开始输入重建，不单独持久化。</summary>
     public override NodeRecord? CaptureRecord() => null;
 
+    /// <summary>开始端口值由任务开始快照保存，不写入端口历史。</summary>
+    public override IReadOnlyList<PortPublicationRecord> CapturePorts() => [];
+
     /// <summary>开始节点没有需要从存档恢复的状态。</summary>
     public override void RestoreRecord(NodeRecord record, INodeRestoreContext context)
     {
+    }
+
+    /// <summary>开始节点不从端口历史恢复。</summary>
+    public override void RestorePorts(IReadOnlyList<PortPublicationRecord> records)
+    {
+        // 开始端口不写入端口历史，恢复时没有记录可装载。
     }
 
     /// <summary>开始端口的发布内容：承载文本的端口按启动值各给一条产出，出处指向流程起点。</summary>

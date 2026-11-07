@@ -32,8 +32,10 @@ public sealed class InputProgressRecordsTests
                 [port] = [new ContextValue(new NodeSource(NodePath.Of("来源"), port), "内容")],
             }));
 
+        NodePath node = NodePath.Of("来源");
         NodeCommonRecord record = InputProgressRecords.Capture(original);
         InputProgress restored = new();
+        InputProgressRecords.RestorePorts(restored, PortPublicationRecords.Capture(node, original.History));
         InputProgressRecords.Restore(restored, record);
 
         Assert.Equal(3, restored.Revision);
@@ -41,6 +43,7 @@ public sealed class InputProgressRecordsTests
         Assert.Equal(2, restored.LastInputGroup);
         Assert.True(restored.ForceRerun);
         Assert.Equal(4, restored.ConsumedRevision(key));
+        Assert.Single(restored.History);
         Assert.NotNull(restored.Publication);
         Assert.False(restored.Publication.Triggers[port]);
         Assert.Equal("内容", Assert.Single(restored.Publication.Output(port)).Text);

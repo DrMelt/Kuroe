@@ -26,6 +26,7 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(record.Completed, loaded.Completed);
         Assert.Equal(record.Executions.Count, loaded.Executions.Count);
         Assert.Equal(record.Nodes.Count, loaded.Nodes.Count);
+        Assert.Equal(record.Ports.Count, loaded.Ports.Count);
         Assert.Equal(record.Pending.Targets, loaded.Pending.Targets);
     }
 
@@ -52,7 +53,7 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
 
         Assert.Equal(record.Executions[1].StartedAt, loaded.Executions[1].StartedAt);
-        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Common.Publication);
+        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Common.ActivePublicationRevision);
         Assert.Null(loaded.Nodes[1].Common.LastInputGroup);
         Assert.Equal(
             Assert.IsType<ExecutableNodeRecord>(record.Nodes[1]).Block,
@@ -73,17 +74,20 @@ public abstract class TaskRecordCodecContractTests
     }
 
     [Fact]
-    public void Round_trip_preserves_publication_triggers_and_content()
+    public void Round_trip_preserves_port_history_triggers_and_content()
     {
         ITaskRecordCodec codec = CreateCodec();
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
-        PublicationRecord publication =
-            Assert.IsType<PublicationRecord>(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Common.Publication);
+        PortPublicationRecord[] ports = [.. loaded.Ports.Where(port => port.Node == NodePath.Of("整体", "计划"))];
 
-        Assert.False(publication.Triggers[new PortName("结论")]);
-        Assert.Equal("计划结果", Assert.Single(publication.Content[new PortName("结论")]).Text);
+        Assert.Equal([1L, 2L], ports.Select(port => port.Revision));
+        Assert.True(ports[0].Trigger);
+        Assert.Equal("旧计划结果", Assert.Single(ports[0].Values).Text);
+        Assert.False(ports[1].Trigger);
+        Assert.Equal("计划结果", Assert.Single(ports[1].Values).Text);
+        Assert.Equal(2, Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Common.ActivePublicationRevision);
     }
 
     [Fact]

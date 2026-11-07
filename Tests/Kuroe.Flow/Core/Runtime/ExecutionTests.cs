@@ -1,4 +1,6 @@
+using ErrorOr;
 using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
@@ -17,7 +19,7 @@ public sealed class ExecutionTests
 
         Assert.Equal(ExecutionState.Queued, snapshot.State);
         Assert.Empty(snapshot.Journal);
-        Assert.Equal(0, snapshot.DroppedEntries);
+        Assert.False(snapshot.HasRestoreState);
     }
 
     [Fact]
@@ -25,13 +27,12 @@ public sealed class ExecutionTests
     {
         Execution execution = new(new ExecutionId(1), Input());
         JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "信息", "记录");
-        TestJournal journal = new([entry], 3);
+        TestJournal journal = new([entry]);
 
         execution.AttachJournal(journal);
         ExecutionSnapshot snapshot = execution.Snapshot();
 
         Assert.Same(entry, Assert.Single(snapshot.Journal));
-        Assert.Equal(3, snapshot.DroppedEntries);
     }
 
     [Fact]
@@ -180,6 +181,44 @@ public sealed class ExecutionTests
         Assert.Empty(entries);
     }
 
+    [Fact]
+    public void Started_event_fires_once_when_running()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        int started = 0;
+        execution.Started += () => started++;
+
+        execution.MarkRunning();
+        execution.MarkRunning();
+
+        Assert.Equal(1, started);
+        Assert.NotNull(execution.Snapshot().StartedAt);
+    }
+
+    [Fact]
+    public void StopExecution_rejects_an_execution_that_never_started()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+
+        ErrorOr<Success> stopped = TaskDriver.StopExecution(execution);
+
+        Assert.True(stopped.IsError);
+        Assert.Equal("Execution.NotStarted", stopped.FirstError.Code);
+    }
+
+    [Fact]
+    public void StopExecution_interrupts_a_started_execution()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        execution.MarkRunning();
+
+        ErrorOr<Success> stopped = TaskDriver.StopExecution(execution);
+
+        Assert.False(stopped.IsError);
+        execution.MarkCanceledOrInterrupted();
+        Assert.Equal(ExecutionState.Interrupted, execution.Snapshot().State);
+    }
+
     private static ExecutionInput Input() => new()
     {
         Task = new TaskId(1),
@@ -192,11 +231,9 @@ public sealed class ExecutionTests
         public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
     }
 
-    private sealed class TestJournal(IReadOnlyList<JournalEntry> entries, int dropped = 0) : IProcessJournal
+    private sealed class TestJournal(IReadOnlyList<JournalEntry> entries) : IProcessJournal
     {
         public IReadOnlyList<JournalEntry> Entries { get; } = entries;
-
-        public int DroppedEntries { get; } = dropped;
 
         public event ProcessContentHandler? ContentAppended;
 

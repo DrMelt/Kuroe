@@ -17,6 +17,6 @@ public interface IInputProgress
     /// <summary>是否已经发布过产出。</summary>
     bool Published { get; }
 
-    /// <summary>返工作废后要求越过就绪条件重启一次。</summary>
+    /// <summary>重新执行作废后要求越过就绪条件重启一次。</summary>
     bool ForceRerun { get; }
 }

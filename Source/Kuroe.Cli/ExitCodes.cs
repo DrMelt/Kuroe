@@ -9,6 +9,9 @@ internal static class ExitCodes
     /// <summary>参数、装配或操作失败。</summary>
     public const int Failure = 1;
 
+    /// <summary>任务暂停，等待恢复。</summary>
+    public const int Paused = 2;
+
     /// <summary>任务阻塞。</summary>
     public const int Blocked = 3;
 }

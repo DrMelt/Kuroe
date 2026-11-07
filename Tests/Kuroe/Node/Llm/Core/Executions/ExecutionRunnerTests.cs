@@ -64,16 +64,16 @@ public sealed class ExecutionRunnerTests
         Assert.True(outcome.IsError);
     }
 
-    private static Task<ErrorOr<Success>> Ask(List<string> asked, string text)
+    private static Task<ErrorOr<Success>> Ask(List<string> asked, string? text)
     {
-        asked.Add(text);
+        asked.Add(text ?? string.Empty);
 
         return Task.FromResult<ErrorOr<Success>>(Result.Success);
     }
 
-    private static Task<ErrorOr<Success>> Failed(List<string> asked, string text)
+    private static Task<ErrorOr<Success>> Failed(List<string> asked, string? text)
     {
-        asked.Add(text);
+        asked.Add(text ?? string.Empty);
 
         return Task.FromResult<ErrorOr<Success>>(Error.Failure("Execution.Failed", "模型失败"));
     }

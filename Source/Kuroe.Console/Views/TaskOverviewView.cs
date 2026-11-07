@@ -67,7 +67,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
             return;
         }
 
-        Table table = Blocks.Table(("节点", false), ("原因", true));
+        Table table = Blocks.Table(("节点", false), ("恢复", false), ("原因", true));
         foreach (ExecutableStateSnapshot state in blocked)
         {
             if (state.Block is not { } block)
@@ -77,6 +77,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
 
             table.AddRow(
                 new Text(state.Node.Value, Styles.Key),
+                new Text(state.CanRestore ? "可恢复" : "—", state.CanRestore ? Styles.Success : Styles.Hint),
                 new Text(ViewLabels.OneLine(block.Summary, ViewLabels.BlockLimit), Styles.Warning));
         }
 

@@ -47,7 +47,7 @@ public abstract class NodeRuntime(GraphNode node) : ISourceState, IInputProgress
     /// <summary>取走本次激活产生的失败原因，取后不再返回同一原因。引擎在激活后调用一次。</summary>
     public virtual string? TakeFailure() => null;
 
-    /// <summary>清除节点自身的失败，下一次激活重新尝试。派发型节点由返工作废处理，不使用它。</summary>
+    /// <summary>清除节点自身的失败，下一次激活重新尝试。派发型节点由重新执行作废处理，不使用它。</summary>
     public virtual void Retry()
     {
     }

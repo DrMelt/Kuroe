@@ -4,7 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Flow.Persistence.Records.Shared;
 
-/// <summary>任务在某一刻的完整存档：身份、存档写入时刻、流程快照、开始状态、控制状态、完成事实、执行历史、节点状态与调度种子。</summary>
+/// <summary>任务在某一刻的完整存档：身份、存档写入时刻、流程快照、开始状态、控制状态、完成事实、执行历史、节点状态、端口历史与调度种子。</summary>
 public sealed record TaskRecord(
     TaskIdentity Identity,
     DateTimeOffset SavedAt,
@@ -15,6 +15,7 @@ public sealed record TaskRecord(
     TaskJournalSnapshot Journal,
     IReadOnlyList<ExecutionRecord> Executions,
     IReadOnlyList<NodeRecord> Nodes,
+    IReadOnlyList<PortPublicationRecord> Ports,
     SchedulerSeed Pending);
 
 /// <summary>任务的持久身份。</summary>

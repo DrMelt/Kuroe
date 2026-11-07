@@ -104,6 +104,11 @@ public sealed class ExecutionDispatcher
                 execution.AttachUsageReader(usageReader);
             }
 
+            if (runner is IExecutionRestoreStateReader restoreStateReader)
+            {
+                execution.AttachRestoreStateReader(restoreStateReader);
+            }
+
             execution.MarkRunning();
             ErrorOr<ExecutionOutput> outcome = await runner.ExecuteAsync(
                 execution.Input,
@@ -117,9 +122,13 @@ public sealed class ExecutionDispatcher
                 execution.MarkSucceeded(outcome.Value);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (execution.CancellationToken.IsCancellationRequested)
         {
             execution.MarkCanceledOrInterrupted();
+        }
+        catch (OperationCanceledException)
+        {
+            execution.MarkFailed([Error.Failure("Execution.Timeout", "模型请求超时，执行未收口。")]);
         }
         catch (Exception ex)
         {
@@ -127,6 +136,11 @@ public sealed class ExecutionDispatcher
         }
         finally
         {
+            if (runner is IExecutionRestoreStateReader restoreStateReader)
+            {
+                execution.SettleRestoreState(restoreStateReader);
+            }
+
             if (runner is IExecutionUsageReader reader)
             {
                 execution.SettleUsage(reader.Usage);

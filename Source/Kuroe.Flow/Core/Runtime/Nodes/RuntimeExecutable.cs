@@ -19,11 +19,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>提交时锁定的执行节点定义，不可变。</summary>
     public ExecutableNode Executable { get; } = executable;
 
-    /// <summary>各次执行交回的内容，发布后只保留已发布那次。</summary>
-    private readonly Dictionary<ExecutionId, Submission> _submissions = [];
-
-    /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
-    private readonly List<NodePath> _reworkTargets = [];
+    /// <summary>停在本节点时记下的重新执行目标，全部处理后解除阻塞。</summary>
+    private readonly List<NodePath> _rerunTargets = [];
 
     private bool _canceled;
 
@@ -39,8 +36,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>停在阻塞时的原因，未阻塞时为空。</summary>
     public NodeBlock? Block { get; private set; }
 
-    /// <summary>停在本节点时记下的返工目标，全部处理后解除阻塞。</summary>
-    public IReadOnlyList<NodePath> ReworkTargets => _reworkTargets;
+    /// <summary>当前阻塞是否已有可派发的恢复计划。</summary>
+    public bool HasRestorePlan { get; set; }
+
+    /// <summary>停在本节点时记下的重新执行目标，全部处理后解除阻塞。</summary>
+    public IReadOnlyList<NodePath> RerunTargets => _rerunTargets;
 
     /// <summary>随任务取消。</summary>
     public override bool Canceled => _canceled;
@@ -51,60 +51,51 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>随任务进入取消态。</summary>
     public override void Cancel() => _canceled = true;
 
-    /// <summary>记下重跑请求，供返工作废后的重启判定使用。</summary>
+    /// <summary>记下重跑请求，供重新执行作废后的重启判定使用。</summary>
     public void RequestRerun() => Progress.RequestRerun();
 
     /// <summary>重跑请求已消耗。</summary>
     public void ClearRerun() => Progress.ClearRerun();
 
-    /// <summary>某次执行交回的命名端口值，未交回时为空。</summary>
-    public IReadOnlyDictionary<PortName, PortValue>? SubmittedPorts(ExecutionId execution) =>
-        _submissions.GetValueOrDefault(execution)?.Ports;
-
-    /// <summary>本轮该交回但尚未交回的命名端口，按节点声明的需交回端口判定。</summary>
-    public IReadOnlyList<PortName> Shortfall(ExecutionId execution)
+    /// <summary>本轮该交回但尚未交回的命名端口，按节点声明的需交回端口与执行契约判定。</summary>
+    public IReadOnlyList<PortName> OutstandingPorts(Execution execution)
     {
-        IReadOnlyDictionary<PortName, PortValue>? values = SubmittedPorts(execution);
+        IReadOnlyDictionary<PortName, PortValue>? values = execution.Contract.Ports;
 
         return [.. Executable.RequiredPorts
             .Select(port => port.Name)
             .Where(name => values?.ContainsKey(name) != true)];
     }
 
-    /// <summary>某次执行上报的无法完成原因，未上报时为空。</summary>
-    public string? CannotCompleteReason(ExecutionId execution) =>
-        _submissions.GetValueOrDefault(execution)?.CannotCompleteReason;
-
-    /// <summary>记下一次执行交回的命名端口值。</summary>
-    public void CollectPorts(ExecutionId execution, IReadOnlyDictionary<PortName, PortValue> values) =>
-        _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { Ports = values };
-
-    /// <summary>记下一次执行上报的无法完成原因，同一执行重复上报覆盖。</summary>
-    public void CollectCannotComplete(ExecutionId execution, string reason) =>
-        _submissions[execution] = (_submissions.GetValueOrDefault(execution) ?? new Submission()) with { CannotCompleteReason = reason };
-
-    /// <summary>置为阻塞并合并记下返工目标，重复目标不重复收集。</summary>
+    /// <summary>置为阻塞并合并记下重新执行目标，重复目标不重复收集。</summary>
     public void EnterBlocked(IReadOnlyList<NodePath> targets, NodeBlock block)
     {
         Block = block;
-        foreach (NodePath target in targets.Where(target => !_reworkTargets.Contains(target)))
+        foreach (NodePath target in targets.Where(target => !_rerunTargets.Contains(target)))
         {
-            _reworkTargets.Add(target);
+            _rerunTargets.Add(target);
         }
     }
 
-    /// <summary>移除本次返工处理的目标，全部处理后解除阻塞。</summary>
-    public void FinishRework(IReadOnlyList<NodePath> handled)
+    /// <summary>移除本次重新执行处理的目标，全部处理后解除阻塞。</summary>
+    public void FinishRerun(IReadOnlyList<NodePath> handled)
     {
         foreach (NodePath target in handled)
         {
-            _reworkTargets.Remove(target);
+            _rerunTargets.Remove(target);
         }
 
-        if (_reworkTargets.Count == 0)
+        if (_rerunTargets.Count == 0)
         {
             Block = null;
         }
+    }
+
+    /// <summary>解除阻塞并清空重新执行目标，恢复开始时使用。</summary>
+    public void ClearBlock()
+    {
+        _rerunTargets.Clear();
+        Block = null;
     }
 
     /// <summary>按端口产出发布，没有内容产出时使用。</summary>
@@ -128,33 +119,16 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>端口产出的发布：按这次执行的交回记录构造发布，只保留这次执行的交回记录。</summary>
-    private void PublishPorts(Execution execution)
-    {
-        Submission? kept = _submissions.GetValueOrDefault(execution.Id);
-        _submissions.Clear();
-
-        if (kept is not null)
-        {
-            _submissions[execution.Id] = kept;
-        }
-
+    /// <summary>端口产出的发布：按这次执行的契约构造发布。</summary>
+    private void PublishPorts(Execution execution) =>
         Progress.Publish(CreatePublication(execution, Progress.NextRevision()));
-    }
 
     /// <summary>内容产出的发布：把同一条文本写入承载文本的输出端口，触发位按默认处理。</summary>
-    private void PublishContent(Execution execution, string content)
-    {
-        _submissions.Clear();
+    private void PublishContent(Execution execution, string content) =>
         Progress.Publish(CreateContentPublication(execution, content, Progress.NextRevision()));
-    }
 
-    /// <summary>作废已发布产出与交回记录，返工起点用它让下游重新等待。阻塞与返工目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRework"/> 按处理进度解除。</summary>
-    public void Invalidate()
-    {
-        _submissions.Clear();
-        Progress.Invalidate();
-    }
+    /// <summary>作废已发布产出，重新执行起点用它让下游重新等待。阻塞与重新执行目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRerun"/> 按处理进度解除。</summary>
+    public void Invalidate() => Progress.Invalidate();
 
     /// <summary>记一轮派发。调用点唯一：WorkTask.Attach。</summary>
     public void RecordExecution() => Progress.Started();
@@ -224,8 +198,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         [.. execution.Input.Inputs.Select(value => value.Value)];
 
     /// <summary>按端口取这次执行交回的值，未交回时为空。</summary>
-    private PortValue? SubmittedValue(Execution execution, PortName port) =>
-        SubmittedPorts(execution.Id) is { } values
+    private static PortValue? SubmittedValue(Execution execution, PortName port) =>
+        execution.Contract.Ports is { } values
         && values.TryGetValue(port, out PortValue value)
             ? value
             : null;
@@ -235,7 +209,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         new ExecutableNodeRecord(
             Path,
             CaptureProgress(),
-            [.. _reworkTargets],
+            [.. _rerunTargets],
             Block);
 
     /// <summary>从存档恢复执行节点的进展、发布与阻塞状态。</summary>
@@ -247,10 +221,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
 
         RestoreProgress(state.Common);
-        _reworkTargets.Clear();
-        _reworkTargets.AddRange(state.ReworkTargets);
+        _rerunTargets.Clear();
+        _rerunTargets.AddRange(state.RerunTargets);
         Block = state.Block;
-        _submissions.Clear();
+        HasRestorePlan = false;
     }
 
     /// <summary>执行节点在快照里的一刻状态。</summary>
@@ -274,11 +248,6 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             state = Progress.Published ? NodeState.Done : NodeState.Pending;
         }
 
-        return new ExecutableStateSnapshot(Path, state, Block);
+        return new ExecutableStateSnapshot(Path, state, Block, HasRestorePlan);
     }
-
-    /// <summary>一次执行交回的内容。</summary>
-    private sealed record Submission(
-        IReadOnlyDictionary<PortName, PortValue>? Ports = null,
-        string? CannotCompleteReason = null);
 }

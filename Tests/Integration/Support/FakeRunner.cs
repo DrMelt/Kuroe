@@ -8,7 +8,7 @@ using Kuroe.Tool;
 namespace Kuroe.Integration.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并记录并发峰值。</summary>
-public sealed class FakeRunner : IExecutionRunnerFactory
+public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSource, INodeExecutionRestorer
 {
     private readonly Lock _gate = new();
     private readonly List<IExecution> _started = [];
@@ -48,6 +48,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     /// <summary>按执行决定何时放行，返回的任务完成前执行保持运行。设置后优先于 <see cref="DelayMs"/> 与 <see cref="DelayFor"/>。</summary>
     public Func<IExecution, Task>? HoldFor { get; set; }
 
+    /// <summary>持有期间忽略执行的取消，用于构造暂停与收口之间的竞态。</summary>
+    public bool IgnoreCancellationWhileHeld { get; set; }
+
     /// <summary>按声明的端口生成提交文本：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
     private static string PortValuesFor(IReadOnlyList<Port> ports)
     {
@@ -56,7 +59,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         return "{ " + body + " }";
     }
 
-    /// <summary>命中条件的执行返回模拟失败，用于验证失败后的返工恢复。</summary>
+    /// <summary>命中条件的执行返回模拟失败，用于验证失败后的重新执行。</summary>
     public Func<IExecution, bool>? FailsWhen { get; set; }
 
     /// <summary>本轮回复文本，经过程记录与过程播发送出，缺省为节点路径加产出。</summary>
@@ -87,8 +90,80 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
 
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
-        new Run(this, execution);
+    /// <summary>执行器上报的恢复状态，未设置时不可恢复。</summary>
+    public ExecutionRestoreState? RestoreState { get; set; }
+
+    /// <summary>各次执行收到的恢复状态，普通启动为空，按建立顺序。</summary>
+    public IReadOnlyList<ExecutionRestoreState?> Starts
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _starts];
+            }
+        }
+    }
+
+    private readonly List<ExecutionRestoreState?> _starts = [];
+
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution)
+    {
+        lock (_gate)
+        {
+            _starts.Add(null);
+        }
+
+        return new Run(this, execution);
+    }
+
+    public ErrorOr<PreparedRestore> Prepare(RestorePreparationContext context)
+    {
+        lock (_gate)
+        {
+            _prepareCount++;
+        }
+
+        return new PreparedRestore(context.Input, new TestRestoreState(context.State));
+    }
+
+    /// <summary>准备过恢复计划的次数。</summary>
+    public int PrepareCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _prepareCount;
+            }
+        }
+    }
+
+    private int _prepareCount;
+
+    public IExecutionRunner CreateRestored(
+        ExecutableNode node,
+        ExecutionId execution,
+        PreparedRestore restore)
+    {
+        lock (_gate)
+        {
+            _starts.Add(restore.State is TestRestoreState state ? state.Value : null);
+        }
+
+        return new Run(this, execution);
+    }
+
+    ErrorOr<PreparedRestore> IExecutionRestorerSource.Prepare(
+        ExecutableNode node,
+        RestorePreparationContext context) =>
+        Prepare(context);
+
+    IExecutionRunner IExecutionRestorerSource.CreateRestored(
+        ExecutableNode node,
+        ExecutionId execution,
+        PreparedRestore restore) =>
+        CreateRestored(node, execution, restore);
 
     private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionId execution,
@@ -117,7 +192,8 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
             if (HoldFor is { } hold)
             {
-                await hold(started).WaitAsync(cancellationToken);
+                Task held = hold(started);
+                await (IgnoreCancellationWhileHeld ? held : held.WaitAsync(cancellationToken));
             }
             else
             {
@@ -170,7 +246,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
         tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner, IExecutionUsageReader
+    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreStateReader
     {
         private readonly RecordingJournal _journal = new();
 
@@ -178,7 +254,17 @@ public sealed class FakeRunner : IExecutionRunnerFactory
 
         public ExecutionUsage Usage => owner.Usage;
 
+        public ExecutionRestoreState? RestoreState => owner.RestoreState;
+
+        public event Action? RestoreStateChanged
+        {
+            add => _ = value;
+            remove => _ = value;
+        }
+
         public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
             owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
+
+    private sealed record TestRestoreState(ExecutionRestoreState Value) : IExecutionRestoreState;
 }

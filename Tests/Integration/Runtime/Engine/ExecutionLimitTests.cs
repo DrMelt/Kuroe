@@ -6,14 +6,14 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>单节点最高执行次数：路径达上限后不再启动新执行，未成功的停在阻塞且返工不放行。</summary>
+/// <summary>单节点最高执行次数：路径达上限后不再启动新执行，未成功的停在阻塞且重新执行不放行。</summary>
 public sealed class ExecutionLimitTests
 {
-    /// <summary>执行上限到点后不再重跑，未成功的停在阻塞且返工不放行。</summary>
+    /// <summary>执行上限到点后不再重跑，未成功的停在阻塞且重新执行不放行。</summary>
     [Theory]
     [InlineData("failed")]
     [InlineData("uncollected")]
-    public void Exhausted_limit_blocks_and_rejects_rework(string reason)
+    public void Exhausted_limit_blocks_and_rejects_rerun(string reason)
     {
         string flow = reason == "uncollected" ? SingleNodeLimitFlow : FailingNodeFlow;
 
@@ -30,13 +30,13 @@ public sealed class ExecutionLimitTests
 
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot blocked = environment.Settle(id);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(2, Executions(task, "干活"));
-        Assert.True(environment.Tasks.Rework(id).IsError, "达到上限的节点不能再返工");
+        Assert.True(environment.Tasks.Rerun(id).IsError, "达到上限的节点不能再重新执行");
 
         if (reason == "failed")
         {
@@ -58,7 +58,7 @@ public sealed class ExecutionLimitTests
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Equal(1, Executions(task, "干活"));
-        Assert.False(environment.Tasks.Rework(id).IsError);
+        Assert.False(environment.Tasks.Rerun(id).IsError);
     }
 
     /// <summary>引用容器时覆盖库定义上限，未覆盖时继承库定义。上限属于容器自身，不传给成员。</summary>

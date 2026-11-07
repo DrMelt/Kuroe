@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>图驱动推进：放行、汇拢、返工、未收口与取消。测试流程即计划后实施。</summary>
+/// <summary>图驱动推进：放行、汇拢、重新执行、未收口与取消。测试流程即计划后实施。</summary>
 public sealed class FlowAdvanceTests
 {
     [Fact]
@@ -109,7 +109,7 @@ public sealed class FlowAdvanceTests
     }
 
     [Fact]
-    public void Plan_uncollected_then_rework_reruns_plan()
+    public void Plan_uncollected_then_rerun_reexecutes_plan()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.SubmitsPorts = false;
@@ -121,14 +121,14 @@ public sealed class FlowAdvanceTests
         Assert.Single(blocked.Executables[0].Executions);
 
         environment.Runner.SubmitsPorts = true;
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
 
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
         Assert.Equal(2, done.Executables[0].Executions.Count);
     }
 
     [Fact]
-    public void Execution_failure_then_rework_reruns_the_node()
+    public void Execution_failure_then_rerun_reexecutes_the_node()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "分配执行";
@@ -137,7 +137,7 @@ public sealed class FlowAdvanceTests
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
         environment.Runner.FailsWhen = null;
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -176,7 +176,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(0, canceled.LiveExecutions);
     }
     [Fact]
-    public void Pause_interrupts_running_execution_and_resume_waits_for_rework()
+    public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()
     {
         using TestEnvironment environment = TestEnvironment.Create();
         environment.Runner.DelayMs = 20000;
@@ -199,7 +199,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
 
         environment.Runner.DelayMs = 0;
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
 
         Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
     }

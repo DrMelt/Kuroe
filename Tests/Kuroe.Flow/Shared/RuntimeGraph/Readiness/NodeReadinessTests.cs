@@ -201,7 +201,7 @@ public sealed class NodeReadinessTests
         Assert.False(plan.Ready(node, sources));
     }
 
-    /// <summary>返工作废后的重跑意图越过版本比较直接启动。</summary>
+    /// <summary>重新执行作废后的重跑意图越过版本比较直接启动。</summary>
     [Fact]
     public void Forced_rerun_starts_without_a_new_version()
     {

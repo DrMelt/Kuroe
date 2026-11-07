@@ -60,7 +60,7 @@ public sealed class TaskRecordSerializationMapperTests
     public void From_document_rejects_unsupported_old_version()
     {
         TaskRecordDocument document = Document();
-        TaskRecordDocument legacy = document with { Version = 5 };
+        TaskRecordDocument legacy = document with { Version = 9 };
 
         Assert.Equal(FlowErrorCodes.RecordVersion, TaskRecordSerializationMapper.FromDocument(legacy).FirstError.Code);
     }

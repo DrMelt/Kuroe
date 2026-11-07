@@ -40,7 +40,7 @@ public sealed class ExecutionSnapshotTests
         DateTimeOffset? finished = null) =>
         new(new ExecutionId(1), Input(), state, string.Empty,
             created ?? new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
-            started, finished, [], [], 0, ExecutionUsage.None);
+            started, finished, [], [], ExecutionUsage.None);
 
     private static ExecutionInput Input() => new()
     {

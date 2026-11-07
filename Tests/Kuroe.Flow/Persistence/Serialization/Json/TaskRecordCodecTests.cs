@@ -1,5 +1,9 @@
+using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
@@ -51,6 +55,24 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
+    public void Write_emits_port_history_without_inline_publication()
+    {
+        string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        Assert.Contains("\"Ports\":", json);
+        Assert.DoesNotContain("\"Publication\":", json);
+    }
+
+    [Fact]
+    public void Write_keeps_archive_field_name_for_rerun_targets()
+    {
+        string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
+
+        Assert.Contains("\"ReworkTargets\":", json);
+        Assert.DoesNotContain("\"RerunTargets\":", json);
+    }
+
+    [Fact]
     public void Write_emits_save_time_and_block_fields()
     {
         string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
@@ -66,6 +88,49 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         string json = new TaskRecordCodec().Write(TaskRecordFixture.Create()).ThrowIfError();
 
         Assert.Contains("\"ContextTokens\": 90", json);
+    }
+
+    [Fact]
+    public void Write_and_read_preserve_restore_state()
+    {
+        TaskRecord record = TaskRecordFixture.Create();
+        ExecutionRecord first = record.Executions[0] with
+        {
+            RestoreState = new ExecutionRestoreState("test", """{"payload":true}"""),
+            ContinuedFrom = new ExecutionId(6),
+        };
+        TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
+        TaskRecordCodec codec = new();
+
+        string json = codec.Write(changed).ThrowIfError();
+        TaskRecord loaded = codec.Read(json).ThrowIfError();
+
+        Assert.Contains("\"RestoreState\":", json);
+        Assert.Equal(first.RestoreState, loaded.Executions[0].RestoreState);
+        Assert.Equal(first.ContinuedFrom, loaded.Executions[0].ContinuedFrom);
+    }
+
+    [Fact]
+    public void Write_and_read_preserve_execution_contract()
+    {
+        TaskRecord record = TaskRecordFixture.Create();
+        PortName port = new("结论");
+        PortValue value = new("内容", false);
+        ExecutionContractRecord contract = new(
+            new Dictionary<PortName, PortValue> { [port] = value },
+            "缺少资料");
+        ExecutionRecord first = record.Executions[0] with { Contract = contract };
+        TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
+        TaskRecordCodec codec = new();
+
+        string json = codec.Write(changed).ThrowIfError();
+        TaskRecord loaded = codec.Read(json).ThrowIfError();
+        ExecutionContractRecord? restored = loaded.Executions[0].Contract;
+
+        Assert.Contains("\"Contract\":", json);
+        Assert.NotNull(restored);
+        Assert.Equal("缺少资料", restored.CannotCompleteReason);
+        Assert.Equal(value, Assert.Single(restored.Ports!).Value);
     }
 
     [Fact]

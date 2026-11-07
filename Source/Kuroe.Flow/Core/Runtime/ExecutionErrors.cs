@@ -13,4 +13,8 @@ public static class ExecutionErrors
     /// <summary>该执行已结束。</summary>
     public static Error ExecutionSettled(ExecutionId execution, string action) =>
         Error.Validation("Execution.Settled", $"{execution} 已结束，不能{action}。");
+
+    /// <summary>该执行尚未启动。</summary>
+    public static Error ExecutionNotStarted(ExecutionId execution) =>
+        Error.Validation("Execution.NotStarted", $"{execution} 尚未开始，不能停止。");
 }

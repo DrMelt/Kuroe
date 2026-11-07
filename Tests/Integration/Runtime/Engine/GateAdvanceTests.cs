@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>门控推进：阻塞、返工恢复与 From 汇合。</summary>
+/// <summary>门控推进：阻塞、重新执行与 From 汇合。</summary>
 public sealed class GateAdvanceTests
 {
     [Fact]
@@ -36,7 +36,7 @@ public sealed class GateAdvanceTests
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Empty(blocked.Executables[2].Executions);
 
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -90,7 +90,7 @@ public sealed class GateAdvanceTests
         Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("甲")).State);
         Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("闸门")).Executions);
 
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Done, done.State);

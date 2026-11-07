@@ -12,18 +12,24 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Engine;
 
 /// <summary>一个任务的推进循环：激活目标去重入队后逐个评估，执行异步派发不阻塞循环，
-/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与返工意图经 Advance 与 Rework 从这里入队重新评估，
+/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与重新执行意图经 Advance 与 Rerun 从这里入队重新评估，
 /// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
 internal sealed class TaskDriver(
     WorkTask task,
     ExecutionDispatcher dispatcher,
     IExecutionRunnerSource runners,
+    IExecutionRestorerSource? restorers,
     IExecutionTargetResolver targetResolver)
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
+    private readonly Queue<TaskRuntime.RestorePlan> _restores = [];
+    private readonly HashSet<NodePath> _restoreQueued = [];
     private readonly HashSet<NodePath> _queued = [];
     private readonly HashSet<NodePath> _processing = [];
+
+    /// <summary>未启动即中断的节点，恢复推进时重新排队。</summary>
+    private readonly HashSet<NodePath> _restart = [];
     private TaskCompletionSource? _signal;
     private int _inflight;
     private bool _stop;
@@ -51,6 +57,11 @@ internal sealed class TaskDriver(
         List<NodePath> roots;
         lock (task.Gate)
         {
+            if (!task.Runtime.RestorePlansInitialized)
+            {
+                task.Runtime.RefreshRestorePlans();
+            }
+
             roots = [.. task.Runtime.Roots()];
         }
 
@@ -69,14 +80,14 @@ internal sealed class TaskDriver(
     {
         lock (_gate)
         {
-            List<NodePath> targets = [.. _pending, .. _queued, .. _processing];
+            List<NodePath> targets = [.. _pending, .. _queued, .. _processing, .. _restart];
 
             return new SchedulerSeed([.. targets.Distinct()]);
         }
     }
 
-    /// <summary>返工语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
-    public void Rework(IReadOnlyList<TaskRuntime.ReworkTarget> targets)
+    /// <summary>重新执行语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
+    public void Rerun(IReadOnlyList<TaskRuntime.RerunTarget> targets)
     {
         Enqueue(targets.Select(target => target.Node));
     }
@@ -90,14 +101,75 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>恢复推进：唤醒推进循环重新取待处理目标。要求持有任务 Gate。</summary>
-    public void ResumeTask()
+    /// <summary>停止一个已启动的执行。未启动的执行不构成一次尝试，不能停止。</summary>
+    public static ErrorOr<Success> StopExecution(Execution execution)
+    {
+        ExecutionSnapshot snapshot = execution.Snapshot();
+        if (!execution.IsLive)
+        {
+            return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
+        }
+
+        if (snapshot.StartedAt is null)
+        {
+            return [ExecutionErrors.ExecutionNotStarted(execution.Id)];
+        }
+
+        execution.Interrupt("已停止执行。");
+
+        return Result.Success;
+    }
+
+    /// <summary>恢复推进：唤醒推进循环重新取待处理目标，并把恢复计划按节点去重后排入队列。clearPendingRestores 为真时丢弃此前排队的计划。要求持有任务 Gate。</summary>
+    public void ResumeTask(IReadOnlyList<TaskRuntime.RestorePlan>? restores = null, bool clearPendingRestores = false)
     {
         lock (_gate)
         {
+            if (clearPendingRestores)
+            {
+                _restores.Clear();
+                _restoreQueued.Clear();
+            }
+
+            EnqueueLocked(_restart);
+            _restart.Clear();
+            EnqueueRestoresLocked(restores ?? []);
             _resumeVersion++;
             _signal?.TrySetResult();
         }
+    }
+
+    /// <summary>排入一个收口后仍需继续的恢复计划。要求持有任务 Gate。</summary>
+    private void EnqueueRestore(TaskRuntime.RestorePlan restore)
+    {
+        bool wake;
+        lock (_gate)
+        {
+            if (_stop)
+            {
+                return;
+            }
+
+            wake = EnqueueRestoresLocked([restore]);
+        }
+
+        if (wake)
+        {
+            _signal?.TrySetResult();
+        }
+    }
+
+    /// <summary>要求持有 <see cref="_gate"/>：恢复计划按节点去重入队，返回是否有新计划。</summary>
+    private bool EnqueueRestoresLocked(IEnumerable<TaskRuntime.RestorePlan> restores)
+    {
+        bool added = false;
+        foreach (TaskRuntime.RestorePlan restore in restores.Where(restore => _restoreQueued.Add(restore.Blocked)))
+        {
+            _restores.Enqueue(restore);
+            added = true;
+        }
+
+        return added;
     }
 
     /// <summary>任务当前是否暂停。暂停状态只在任务对象上，推进器只读它。</summary>
@@ -121,8 +193,11 @@ internal sealed class TaskDriver(
         {
             _stop = true;
             _pending.Clear();
+            _restores.Clear();
+            _restoreQueued.Clear();
             _queued.Clear();
             _processing.Clear();
+            _restart.Clear();
             _signal?.TrySetResult();
         }
 
@@ -139,6 +214,8 @@ internal sealed class TaskDriver(
             {
                 _stop = true;
                 _pending.Clear();
+                _restores.Clear();
+                _restoreQueued.Clear();
                 _queued.Clear();
                 _processing.Clear();
                 _signal?.TrySetResult();
@@ -162,19 +239,52 @@ internal sealed class TaskDriver(
             while (true)
             {
                 List<NodePath> batch = [];
+                List<TaskRuntime.RestorePlan> restores = [];
                 bool paused = IsPaused();
                 lock (_gate)
                 {
                     if (!_stop && !paused)
                     {
-                        while (_pending.TryDequeue(out NodePath node))
+                        if (_restores.Count > 0)
                         {
-                            batch.Add(node);
-                            _processing.Add(node);
+                            while (_restores.TryDequeue(out TaskRuntime.RestorePlan? restore))
+                            {
+                                if (restore is null)
+                                {
+                                    continue;
+                                }
+
+                                restores.Add(restore);
+                                _restoreQueued.Remove(restore.Blocked);
+                            }
+                        }
+                        else
+                        {
+                            while (_pending.TryDequeue(out NodePath node))
+                            {
+                                batch.Add(node);
+                                _processing.Add(node);
+                            }
+
+                            _queued.Clear();
+                        }
+                    }
+                }
+
+                if (restores.Count > 0)
+                {
+                    foreach (TaskRuntime.RestorePlan restore in restores)
+                    {
+                        lock (_gate)
+                        {
+                            _inflight++;
                         }
 
-                        _queued.Clear();
+                        _ = DispatchRestoreAndSettleAsync(restore);
                     }
+
+                    task.NotifyChanged();
+                    continue;
                 }
 
                 if (batch.Count > 0)
@@ -195,7 +305,7 @@ internal sealed class TaskDriver(
                 bool exit;
                 lock (_gate)
                 {
-                    exit = _pending.Count == 0 && _stop && _inflight == 0;
+                    exit = _pending.Count == 0 && _restores.Count == 0 && _stop && _inflight == 0;
                 }
 
                 if (!exit)
@@ -208,7 +318,7 @@ internal sealed class TaskDriver(
 
                     lock (_gate)
                     {
-                        exit = _pending.Count == 0 && done && _inflight == 0;
+                        exit = _pending.Count == 0 && _restores.Count == 0 && done && _inflight == 0;
                     }
                 }
 
@@ -227,7 +337,7 @@ internal sealed class TaskDriver(
                 await WaitForSignalAsync(
                         waiting
                             ? () => _stop || _resumeVersion != version
-                            : () => _stop || _pending.Count > 0)
+                            : () => _stop || _pending.Count > 0 || _restores.Count > 0)
                     .ConfigureAwait(false);
             }
 
@@ -352,103 +462,199 @@ internal sealed class TaskDriver(
         {
             task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
         }
+        finally
+        {
+            CompleteDispatch();
+        }
     }
 
-    /// <summary>为一个执行装配、派发并收口，再按收口计划入队下游或重派目标。
-    /// 无论收口结果如何必释放在途并唤醒挂起，让主循环重新判定退出或取批。</summary>
-    private async Task DispatchExecutionAsync(RuntimeExecutable node, NodeInputValues inputs)
+    /// <summary>恢复装配与启动的包装：收口异常上报为推进异常，不越过调度循环。</summary>
+    private async Task DispatchRestoreAndSettleAsync(TaskRuntime.RestorePlan target)
     {
         try
         {
-            ExecutableNode executable = node.Executable;
-            Execution? execution;
-            bool paused = false;
-            lock (task.Gate)
+            await DispatchRestoreExecutionAsync(target).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
+        }
+        finally
+        {
+            CompleteDispatch();
+        }
+    }
+
+    /// <summary>在途释放与挂起唤醒。无论收口结果如何都要执行。</summary>
+    private void CompleteDispatch()
+    {
+        lock (_gate)
+        {
+            _inflight--;
+            _signal?.TrySetResult();
+        }
+
+        task.NotifyChanged();
+    }
+
+    /// <summary>为一个执行装配、派发并收口，再按收口计划入队下游或重派目标。</summary>
+    private async Task DispatchExecutionAsync(RuntimeExecutable node, NodeInputValues inputs)
+    {
+        ExecutableNode executable = node.Executable;
+        (Execution Execution, bool Paused)? prepared;
+        lock (task.Gate)
+        {
+            if (task.Lifecycle == TaskLifecycle.Terminated)
             {
-                if (task.Lifecycle == TaskLifecycle.Terminated)
-                {
-                    node.ReleaseActive();
-                    return;
-                }
-
-                ErrorOr<INodeDeclaration> declaration = targetResolver.For(executable, inputs);
-                if (declaration.IsError)
-                {
-                    node.ReleaseActive();
-                    string reason = string.IsNullOrWhiteSpace(declaration.FirstError.Description)
-                        ? "执行目标解析失败。"
-                        : declaration.FirstError.Description;
-                    node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
-                    task.Journal.AppendError(reason);
-                    task.Registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
-                    return;
-                }
-
-                execution = task.Registry.NewExecution(
-                    task,
-                    ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value));
-                task.Attach(execution);
-                paused = task.Lifecycle == TaskLifecycle.Paused;
+                node.ReleaseActive();
+                return;
             }
 
-            if (execution is null)
+            ErrorOr<INodeDeclaration> declaration = targetResolver.For(executable, inputs);
+            if (declaration.IsError)
+            {
+                node.ReleaseActive();
+                string reason = string.IsNullOrWhiteSpace(declaration.FirstError.Description)
+                    ? "执行目标解析失败。"
+                    : declaration.FirstError.Description;
+                node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
+                task.Journal.AppendError(reason);
+                task.Registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
+                return;
+            }
+
+            ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
+            Execution execution = task.Registry.NewExecution(task, input);
+            task.Attach(execution);
+            prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
+        }
+
+        if (prepared is not { } step)
+        {
+            return;
+        }
+
+        if (step.Paused)
+        {
+            step.Execution.Interrupt("任务已暂停。");
+        }
+
+        await RunAndSettleAsync(node, step.Execution, null).ConfigureAwait(false);
+    }
+
+    /// <summary>按恢复计划装配一次恢复执行，派发并收口。</summary>
+    private async Task DispatchRestoreExecutionAsync(TaskRuntime.RestorePlan target)
+    {
+        (RuntimeExecutable Node, Execution Execution, PreparedRestore Restore)? prepared;
+        lock (task.Gate)
+        {
+            RuntimeExecutable node = task.Runtime.Executable(target.Blocked);
+            if (task.Lifecycle is TaskLifecycle.Terminated or TaskLifecycle.Paused
+                || node.Block is null
+                || !task.Runtime.IsCurrentRestorePlan(target))
             {
                 return;
             }
 
-            if (paused)
-            {
-                execution.Interrupt("任务已暂停。");
-            }
+            task.Runtime.RemoveRestorePlan(target);
+            Execution execution = task.Registry.NewExecution(task, target.Prepared.Input);
+            execution.ContinueFrom(target.Source);
+            node.ClearRerun();
+            node.ClearBlock();
+            task.Attach(execution);
+            node.AddActive();
+            task.Journal.AppendInfo(
+                $"从执行 {target.Source.Id.Value} 恢复为执行 {execution.Id.Value}，节点 {node.Path}。");
+            prepared = (node, execution, target.Prepared);
+        }
 
-            try
-            {
-                IExecutionRunner runner = runners.Create(executable, execution.Id, execution.Input);
-                await dispatcher.DispatchAsync(execution, runner, CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                // 派发未走完时执行不会自行收口，显式收口后走统一收口路径把执行节点停驻
-                string message = $"执行派发异常：{ex.Message}";
-                execution.MarkFailed([Error.Failure("Task.Dispatch", message)]);
-                lock (task.Gate)
-                {
-                    task.Journal.AppendError(message);
-                }
+        if (prepared is not { } step)
+        {
+            return;
+        }
 
-                task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
-            }
+        await RunAndSettleAsync(step.Node, step.Execution, step.Restore).ConfigureAwait(false);
+    }
 
-            TaskRuntime.SettlePlan plan;
-            bool selfActivate;
+    /// <summary>派发一个已装配的执行并收口，再按收口计划入队下游或重派目标。</summary>
+    private async Task RunAndSettleAsync(
+        RuntimeExecutable node,
+        Execution execution,
+        PreparedRestore? restore)
+    {
+        try
+        {
+            IExecutionRunner runner = restore is null
+                ? runners.Create(node.Executable, execution.Id)
+                : restorers?.CreateRestored(node.Executable, execution.Id, restore)
+                    ?? throw new InvalidOperationException("任务域没有配置恢复能力。");
+            await dispatcher.DispatchAsync(execution, runner, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // 派发未走完时执行不会自行收口，显式收口后走统一收口路径把执行节点停驻
+            string message = $"执行派发异常：{ex.Message}";
+            execution.MarkFailed([Error.Failure("Task.Dispatch", message)]);
             lock (task.Gate)
             {
-                node.ReleaseActive();
-                plan = task.Runtime.Settle(node, execution);
-                // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
-                // 否则该节点停在可启动状态而无人再激活，任务会一直等待
-                selfActivate = task.Runtime.CanStart(node);
+                task.Journal.AppendError(message);
             }
 
-            if (selfActivate)
-            {
-                Enqueue([node.Path]);
-            }
-
-            foreach (NodePath next in plan.Notify)
-            {
-                Enqueue([next]);
-            }
+            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
         }
-        finally
+
+        TaskRuntime.SettlePlan plan;
+        TaskRuntime.RestorePlan? autoRestore = null;
+        bool selfActivate;
+        lock (task.Gate)
         {
-            lock (_gate)
+            node.ReleaseActive();
+            plan = task.Runtime.Settle(node, execution);
+            if (plan.Interruption == ExecutionInterruption.Restorable && plan.Restore is { } restorable)
             {
-                _inflight--;
-                _signal?.TrySetResult();
+                if (task.Lifecycle == TaskLifecycle.Paused)
+                {
+                    // 任务已经暂停，恢复计划留给用户恢复时派发
+                }
+                else if (task.PauseOnRestore && execution.ControlVersion == task.ControlVersion)
+                {
+                    task.PauseForRestore();
+                }
+                else
+                {
+                    // 控制动作已发生在这次执行创建之后，保持运行并直接继续恢复
+                    autoRestore = restorable;
+                }
             }
 
-            task.NotifyChanged();
+            if (plan.Interruption == ExecutionInterruption.NotStarted
+                && task.Lifecycle != TaskLifecycle.Terminated)
+            {
+                node.RequestRerun();
+                lock (_gate)
+                {
+                    _restart.Add(node.Path);
+                }
+            }
+
+            // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
+            // 否则该节点停在可启动状态而无人再激活，任务会一直等待
+            selfActivate = task.Runtime.CanStart(node);
+        }
+
+        if (autoRestore is { } restorePlan)
+        {
+            EnqueueRestore(restorePlan);
+        }
+
+        if (selfActivate)
+        {
+            Enqueue([node.Path]);
+        }
+
+        foreach (NodePath next in plan.Notify)
+        {
+            Enqueue([next]);
         }
     }
 
@@ -464,13 +670,7 @@ internal sealed class TaskDriver(
                 return;
             }
 
-            shouldWake = false;
-            foreach (NodePath node in nodes.Where(n => _queued.Add(n)))
-            {
-                _pending.Enqueue(node);
-                shouldWake = true;
-            }
-
+            shouldWake = EnqueueLocked(nodes);
             shouldWake &= !paused;
         }
 
@@ -478,5 +678,18 @@ internal sealed class TaskDriver(
         {
             _signal?.TrySetResult();
         }
+    }
+
+    /// <summary>要求持有 <see cref="_gate"/>：去重入队待激活节点，返回是否有新目标。</summary>
+    private bool EnqueueLocked(IEnumerable<NodePath> nodes)
+    {
+        bool added = false;
+        foreach (NodePath node in nodes.Where(node => _queued.Add(node)))
+        {
+            _pending.Enqueue(node);
+            added = true;
+        }
+
+        return added;
     }
 }

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Node.Llm.Tests.Executions;
 
-/// <summary>回合循环：模型请求工具时执行并回填，直到模型给出回复；次数用尽与请求失败都停止循环。</summary>
+/// <summary>回合循环：模型请求工具时执行并回填，直到模型给出回复；请求失败停止循环。</summary>
 public sealed class TurnLoopTests
 {
     [Fact]
@@ -17,7 +17,7 @@ public sealed class TurnLoopTests
         RecordingInvoker invoker = new();
 
         ErrorOr<Success> outcome = await ExecutionRunner.TurnLoop(
-            conversation, invoker, new TurnBudget(5), "开始", CancellationToken.None);
+            conversation, invoker, "开始", CancellationToken.None);
 
         Assert.False(outcome.IsError);
         Assert.Equal(["开始", null], conversation.Asked);
@@ -26,7 +26,7 @@ public sealed class TurnLoopTests
     }
 
     [Fact]
-    public async Task Without_a_budget_the_loop_runs_until_the_model_replies()
+    public async Task The_loop_runs_until_the_model_replies()
     {
         Conversation conversation = new(
             Calls(("call-1", "GetLocalTime")),
@@ -34,40 +34,11 @@ public sealed class TurnLoopTests
             new TurnReply([]));
 
         ErrorOr<Success> outcome = await ExecutionRunner.TurnLoop(
-            conversation, new RecordingInvoker(), null, "开始", CancellationToken.None);
+            conversation, new RecordingInvoker(), "开始", CancellationToken.None);
 
         Assert.False(outcome.IsError);
         Assert.Equal(3, conversation.Asked.Count);
         Assert.Equal(2, conversation.Appended.Count);
-    }
-
-    [Fact]
-    public async Task Budget_exhaustion_reports_the_limit()
-    {
-        Conversation conversation = new(Calls(("call-1", "GetLocalTime")));
-
-        ErrorOr<Success> outcome = await ExecutionRunner.TurnLoop(
-            conversation, new RecordingInvoker(), new TurnBudget(1), "开始", CancellationToken.None);
-
-        Assert.True(outcome.IsError);
-        Assert.Equal("Execution.TurnLimit", outcome.FirstError.Code);
-        Assert.Contains("已向模型发起 1 次请求", outcome.FirstError.Description);
-        Assert.Contains("上限 1 次", outcome.FirstError.Description);
-        Assert.Single(conversation.Asked);
-        Assert.Single(conversation.Appended);
-    }
-
-    [Fact]
-    public async Task The_last_request_within_the_budget_can_reply()
-    {
-        Conversation conversation = new(Calls(("call-1", "GetLocalTime")), new TurnReply([]));
-
-        ErrorOr<Success> outcome = await ExecutionRunner.TurnLoop(
-            conversation, new RecordingInvoker(), new TurnBudget(2), "开始", CancellationToken.None);
-
-        Assert.False(outcome.IsError);
-        Assert.Equal(2, conversation.Asked.Count);
-        Assert.Single(conversation.Appended);
     }
 
     [Fact]
@@ -77,7 +48,7 @@ public sealed class TurnLoopTests
         RecordingInvoker invoker = new();
 
         ErrorOr<Success> outcome = await ExecutionRunner.TurnLoop(
-            conversation, invoker, new TurnBudget(5), "开始", CancellationToken.None);
+            conversation, invoker, "开始", CancellationToken.None);
 
         Assert.True(outcome.IsError);
         Assert.Equal("Model.Failed", outcome.FirstError.Code);

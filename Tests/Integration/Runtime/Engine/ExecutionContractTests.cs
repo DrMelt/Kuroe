@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>执行的接口契约：需交回的产出由交回工具的说明给出，查看工具报出本轮状态，上报无法完成使本轮停驻待返工。</summary>
+/// <summary>执行的接口契约：需交回的产出由交回工具的说明给出，查看工具报出本轮状态，上报无法完成使本轮停驻待重新执行。</summary>
 public sealed class ExecutionContractTests
 {
     /// <summary>契约工具各自声明路径：交回工具的说明带端口清单，上报与查看工具不带。</summary>

@@ -67,7 +67,4 @@ public sealed class ExecutionJournal : IProcessJournal
 
     /// <inheritdoc/>
     public IReadOnlyList<JournalEntry> Entries => _store.Entries;
-
-    /// <inheritdoc/>
-    public int DroppedEntries => _store.DroppedEntries;
 }

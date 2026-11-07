@@ -78,7 +78,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
 
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) => new Run(this);
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) => new Run(this);
 
     private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         StubJournal journal,
@@ -166,8 +166,6 @@ internal sealed class StubRunner : IExecutionRunnerFactory
                 }
             }
         }
-
-        public int DroppedEntries => 0;
     }
 }
 

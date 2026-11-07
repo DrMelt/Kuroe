@@ -9,7 +9,7 @@ public enum NodeState
     /// <summary>有执行在跑。</summary>
     Running,
 
-    /// <summary>停在执行错误或未收口，等待返工或放行。</summary>
+    /// <summary>停在执行错误、未收口或可恢复的中断，等待恢复、重新执行或放行。</summary>
     Blocked,
 
     /// <summary>产出已发布，后续不会再自动执行。</summary>

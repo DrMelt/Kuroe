@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -74,6 +75,7 @@ public static class TaskRecordSerializationMapper
                 new TaskJournalData([.. record.Journal.Entries.Select(ToData)], record.Journal.DroppedEntries),
                 [.. record.Executions.Select(ToData)],
                 [.. record.Nodes.Select(ToData)],
+                [.. record.Ports.Select(ToData)],
                 new SchedulerSeedData([.. record.Pending.Targets.Select(ToData)])));
 
     private static JournalEntryData ToData(JournalEntry entry) =>
@@ -90,11 +92,39 @@ public static class TaskRecordSerializationMapper
             execution.StartedAt,
             execution.FinishedAt,
             [.. execution.Failures],
-            [.. execution.Journal.Select(ToData)],
-            execution.DroppedEntries,
             ToData(execution.Usage),
             [.. execution.Inputs.Select(ToData)],
-            ToData(execution.Texts));
+            ToData(execution.Texts),
+            ToData(execution.RestoreState),
+            execution.ContinuedFrom?.Value,
+            ToData(execution.Contract));
+
+    private static RestoreStateData? ToData(ExecutionRestoreState? state) =>
+        state is null
+            ? null
+            : new RestoreStateData(state.Format, state.Payload);
+
+    private static ExecutionContractData? ToData(ExecutionContractRecord? contract)
+    {
+        if (contract is null)
+        {
+            return null;
+        }
+
+        List<PortValueData>? ports = null;
+        if (contract.Ports is { } values)
+        {
+            ports =
+            [
+                .. values.Select(pair => new PortValueData(
+                    pair.Key.Value,
+                    pair.Value.Text,
+                    pair.Value.Trigger)),
+            ];
+        }
+
+        return new ExecutionContractData(ports, contract.CannotCompleteReason);
+    }
 
     private static ExecutionUsageData ToData(ExecutionUsage usage) =>
         new(usage.RequestCount, usage.RequestsWithoutUsage, ToData(usage.Tokens), usage.ContextTokens);
@@ -120,7 +150,7 @@ public static class TaskRecordSerializationMapper
                 Path: ToData(executable.Path),
                 Common: ToData(executable.Common),
                 Block: ToData(executable.Block),
-                ReworkTargets: [.. executable.ReworkTargets.Select(ToData)],
+                RerunTargets: [.. executable.RerunTargets.Select(ToData)],
                 Waiting: null,
                 Inputs: null,
                 Awaiting: null),
@@ -130,7 +160,7 @@ public static class TaskRecordSerializationMapper
                 Path: ToData(input.Path),
                 Common: ToData(input.Common),
                 Block: null,
-                ReworkTargets: null,
+                RerunTargets: null,
                 Waiting: input.Waiting,
                 Inputs: null,
                 Awaiting: null),
@@ -139,7 +169,7 @@ public static class TaskRecordSerializationMapper
                 Path: ToData(approval.Path),
                 Common: ToData(approval.Common),
                 Block: null,
-                ReworkTargets: null,
+                RerunTargets: null,
                 Waiting: null,
                 Inputs: ToData(approval.Inputs),
                 Awaiting: approval.Awaiting),
@@ -148,7 +178,7 @@ public static class TaskRecordSerializationMapper
                 Path: ToData(container.Path),
                 Common: ToData(container.Common),
                 Block: null,
-                ReworkTargets: null,
+                RerunTargets: null,
                 Waiting: null,
                 Inputs: null,
                 Awaiting: null),
@@ -164,19 +194,17 @@ public static class TaskRecordSerializationMapper
                 ToData(entry.Source),
                 entry.Port?.Value,
                 entry.Revision))],
-            ToData(common.Publication),
+            common.ActivePublicationRevision,
             common.ForceRerun);
 
-    private static PublicationData? ToData(PublicationRecord? publication) =>
-        publication is null
-            ? null
-            : new PublicationData(
-                publication.Triggers.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
-                publication.Content.ToDictionary(
-                    pair => pair.Key.Value,
-                    pair => pair.Value
-                        .Select(value => new PublicationValueData(ToData(value.Origin), value.Text))
-                        .ToList()));
+    private static PortPublicationData ToData(PortPublicationRecord record) =>
+        new(
+            ToData(record.Node),
+            record.Port.Value,
+            record.Revision,
+            record.At,
+            record.Trigger,
+            [.. record.Values.Select(value => new PublicationValueData(ToData(value.Origin), value.Text))]);
 
     private static NodeBlockData? ToData(NodeBlock? block) =>
         block is null
@@ -210,6 +238,9 @@ public static class TaskRecordSerializationMapper
         SchedulerSeedData pending = dto.Pending ?? throw new FormatException("存档缺少调度种子。");
         DateTimeOffset savedAt = dto.SavedAt ?? identity.LastActivityAt;
 
+        List<NodeRecord> nodes = [.. (dto.Nodes ?? []).Select(ReadNode)];
+        List<PortPublicationRecord> ports = [.. (dto.Ports ?? []).Select(ReadPortPublication)];
+
         return new TaskRecord(
             new TaskIdentity(
                 ReadId(identity.Id),
@@ -233,7 +264,8 @@ public static class TaskRecordSerializationMapper
             dto.Completed,
             new TaskJournalSnapshot(ReadJournal(journal.Entries), journal.DroppedEntries),
             [.. (dto.Executions ?? []).Select(ReadExecution)],
-            [.. (dto.Nodes ?? []).Select(ReadNode)],
+            nodes,
+            ports,
             new SchedulerSeed([.. (pending.Targets ?? []).Select(path => ReadPath(path, "调度目标"))]));
     }
 
@@ -248,11 +280,35 @@ public static class TaskRecordSerializationMapper
             dto.StartedAt,
             dto.FinishedAt,
             dto.Failures ?? [],
-            ReadJournal(dto.Journal),
-            dto.DroppedEntries,
             ReadUsage(dto.Usage),
             [.. (dto.Inputs ?? []).Select(ReadInputValue)],
-            ReadTexts(dto.Texts));
+            ReadTexts(dto.Texts),
+            ReadRestoreState(dto.RestoreState),
+            dto.ContinuedFrom is { } continuedFrom ? new ExecutionId(continuedFrom) : null,
+            ReadContract(dto.Contract));
+
+    private static ExecutionContractRecord? ReadContract(ExecutionContractData? dto)
+    {
+        if (dto is null)
+        {
+            return null;
+        }
+
+        Dictionary<PortName, PortValue>? ports = dto.Ports is null
+            ? null
+            : dto.Ports.ToDictionary(
+                value => ReadPort(value.Port, "契约端口"),
+                value => new PortValue(value.Text, value.Trigger));
+
+        return new ExecutionContractRecord(ports, dto.CannotCompleteReason);
+    }
+
+    private static ExecutionRestoreState? ReadRestoreState(RestoreStateData? dto) =>
+        dto is null
+            ? null
+            : new ExecutionRestoreState(
+                dto.Format ?? throw new FormatException("恢复状态缺少格式。"),
+                dto.Payload ?? throw new FormatException("恢复状态缺少负载。"));
 
     private static ExecutionUsage ReadUsage(ExecutionUsageData? dto)
     {
@@ -306,27 +362,29 @@ public static class TaskRecordSerializationMapper
 
     private static NodeRecord ReadNode(NodeData dto)
     {
+        NodePath path = ReadPath(dto.Path, "节点路径");
+        NodeCommonRecord common = ReadCommon(dto.Common);
         NodeBlock? block = ReadBlock(dto.Block);
 
         return dto.Kind switch
         {
             "Executable" => new ExecutableNodeRecord(
-                ReadPath(dto.Path, "节点路径"),
-                ReadCommon(dto.Common),
-                [.. (dto.ReworkTargets ?? []).Select(path => ReadPath(path, "返工目标"))],
+                path,
+                common,
+                [.. (dto.RerunTargets ?? []).Select(target => ReadPath(target, "重新执行目标"))],
                 block),
             "Input" => new InputNodeRecord(
-                ReadPath(dto.Path, "节点路径"),
-                ReadCommon(dto.Common),
+                path,
+                common,
                 dto.Waiting ?? false),
             "Approval" => new ApprovalNodeRecord(
-                ReadPath(dto.Path, "节点路径"),
-                ReadCommon(dto.Common),
+                path,
+                common,
                 ReadNodeInputs(dto.Inputs),
                 dto.Awaiting ?? false),
             "Container" => new ContainerNodeRecord(
-                ReadPath(dto.Path, "节点路径"),
-                ReadCommon(dto.Common)),
+                path,
+                common),
             _ => throw new FormatException($"未知的节点记录种类 {dto.Kind}。"),
         };
     }
@@ -359,23 +417,22 @@ public static class TaskRecordSerializationMapper
                 ReadPath(entry.Source, "已消费来源"),
                 entry.Port is null ? null : new PortName(entry.Port),
                 entry.Revision))],
-            ReadPublication(dto.Publication),
+            dto.ActivePublicationRevision,
             dto.ForceRerun);
     }
 
-    private static PublicationRecord? ReadPublication(PublicationData? dto) =>
-        dto is null
-            ? null
-            : new PublicationRecord(
-                (dto.Triggers ?? []).ToDictionary(pair => new PortName(pair.Key), pair => pair.Value),
-                (dto.Content ?? []).ToDictionary(
-                    pair => new PortName(pair.Key),
-                    pair => (IReadOnlyList<PublicationValueRecord>)
-                    [
-                        .. pair.Value.Select(value => new PublicationValueRecord(
-                            ReadContextSource(value.Origin),
-                            value.Text ?? string.Empty)),
-                    ]));
+    private static PortPublicationRecord ReadPortPublication(PortPublicationData dto) =>
+        new(
+            ReadPath(dto.Node, "端口记录节点"),
+            ReadPort(dto.Port, "端口记录端口"),
+            dto.Revision,
+            dto.At,
+            dto.Trigger,
+            [
+                .. (dto.Values ?? []).Select(value => new PublicationValueRecord(
+                    ReadContextSource(value.Origin),
+                    value.Text ?? string.Empty)),
+            ]);
 
     private static NodeInputValuesRecord ReadNodeInputs(NodeInputValuesData? dto)
     {

@@ -41,7 +41,7 @@ public sealed class FileWriteNodeType(FileParameters? parameters)
     }
 
     /// <summary>为一次执行建立文件写入运行器。</summary>
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input) =>
+    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new FileWriteExecutionRunner(node, Parameters
             ?? throw new InvalidOperationException("文件写入节点缺少 Path 声明，无法建立执行器。"));
 }

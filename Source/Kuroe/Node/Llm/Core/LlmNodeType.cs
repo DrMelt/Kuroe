@@ -53,11 +53,6 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
             fail(scope.Node(node.Label.Value, "MaxExecutions 必须是正整数。"));
         }
 
-        if (Parameters?.MaxTurns is { } maxTurns && maxTurns < 1)
-        {
-            fail(scope.Node(node.Label.Value, "MaxTurns 必须是正整数。"));
-        }
-
         if (node.FindInput(LlmNodeTypes.ModelPort) is not { IsStatic: true, Role: InputRole.Configuration } model)
         {
             fail(scope.Node(node.Label.Value,
@@ -92,9 +87,6 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     /// <summary>本轮系统指令：节点声明的恒定块，都没有时为空。</summary>
     public string? SystemPrompt() =>
         Parameters?.SystemPrompt is { Count: > 0 } blocks ? string.Join('\n', blocks) : null;
-
-    /// <summary>单次执行最多向模型发起的请求次数，未声明时不限制。</summary>
-    public int? MaxTurns => Parameters?.MaxTurns;
 
     /// <summary>本轮可用的工具路径：节点声明的白名单，加按需交回输出端口附上的交回能力，以及所有执行节点都有的上报与查看通道。</summary>
     public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<Port> outputs)

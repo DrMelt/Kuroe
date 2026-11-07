@@ -68,6 +68,27 @@ public sealed class InputProgressTests
     }
 
     [Fact]
+    public void Publish_history_keeps_invalidated_publications()
+    {
+        InputProgress progress = new();
+        Publication first = new(
+            1,
+            new Dictionary<PortName, bool>(),
+            new Dictionary<PortName, IReadOnlyList<ContextValue>>());
+        Publication second = new(
+            2,
+            new Dictionary<PortName, bool>(),
+            new Dictionary<PortName, IReadOnlyList<ContextValue>>());
+
+        progress.Publish(first);
+        progress.Invalidate();
+        progress.Publish(second);
+
+        Assert.Equal([1L, 2L], progress.History.Select(entry => entry.Publication.Revision));
+        Assert.Same(second, progress.Publication);
+    }
+
+    [Fact]
     public void Started_counts_executions_and_rerun_is_consumed()
     {
         InputProgress progress = new();

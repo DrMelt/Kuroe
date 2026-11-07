@@ -9,9 +9,10 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
 /// <summary>从存档恢复任务对象：重建执行历史与节点状态，不启动推进循环。</summary>
-public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
+public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver? targets = null) : ITaskRestorer
 {
     private readonly TaskRegistry _registry = registry;
+    private readonly IExecutionTargetResolver? _targets = targets;
 
     /// <inheritdoc/>
     public ErrorOr<WorkTask> Restore(TaskRecord record, CompiledFlow flow)
@@ -46,9 +47,9 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
         }
     }
 
-    private static ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
+    private ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
     {
-        return new ExecutionInput
+        ExecutionInput input = new()
         {
             Task = task,
             Node = node.Path,
@@ -63,5 +64,12 @@ public sealed class TaskRestorer(TaskRegistry registry) : ITaskRestorer
             Texts = saved.Texts,
             OutputPorts = node.SubmittablePorts,
         };
+
+        if (_targets is not null && _targets.For(node, input) is { IsError: false } declaration)
+        {
+            input = input with { Declaration = declaration.Value };
+        }
+
+        return input;
     }
 }

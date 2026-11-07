@@ -200,7 +200,9 @@ public static class ServiceCollectionExtensions
             paths.RecordsDirectory,
             sp.GetRequiredService<ITaskRecordCodec>()));
         services.AddSingleton<ITaskLeaseStore>(sp => new FileTaskLeaseStore(paths.RecordsDirectory));
-        services.AddSingleton<ITaskRestorer>(new TaskRestorer(taskRegistry));
+        services.AddSingleton<ITaskRestorer>(sp => new TaskRestorer(
+            taskRegistry,
+            sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton<ITaskRecordSource>(new TaskRecordSource(taskRegistry));
         services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
             sp.GetRequiredService<ITaskRecordSource>(),

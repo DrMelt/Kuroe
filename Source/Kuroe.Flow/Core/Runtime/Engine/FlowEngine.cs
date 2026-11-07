@@ -6,7 +6,7 @@ using Kuroe.Flow.Runtime.Graph;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
-/// <summary>任务推进的宿主：每次提交为任务建一个推进循环，暂停、恢复、返工与终止经信号或状态迁移落地。
+/// <summary>任务推进的宿主：每次提交为任务建一个推进循环，暂停、恢复、重新执行与终止经信号或状态迁移落地。
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 public sealed class FlowEngine(
     ExecutionDispatcher dispatcher,
@@ -19,7 +19,8 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
     {
-        TaskDriver driver = new(task, dispatcher, runners, targetResolver);
+        task.Registry.RestorerSource = runners as IExecutionRestorerSource;
+        TaskDriver driver = new(task, dispatcher, runners, runners as IExecutionRestorerSource, targetResolver);
         driver.Start();
         Launch(task, driver);
     }
@@ -27,7 +28,8 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：按调度种子恢复推进循环，任务保持暂停不自动推进。</summary>
     public void Restore(WorkTask task, IReadOnlyList<NodePath> seed)
     {
-        TaskDriver driver = new(task, dispatcher, runners, targetResolver);
+        task.Registry.RestorerSource = runners as IExecutionRestorerSource;
+        TaskDriver driver = new(task, dispatcher, runners, runners as IExecutionRestorerSource, targetResolver);
         driver.Restore(seed);
         Launch(task, driver);
     }
@@ -59,10 +61,46 @@ public sealed class FlowEngine(
         Find(task)?.Pause();
     }
 
-    /// <summary>要求持有任务 Gate：恢复任务的推进循环。</summary>
-    public void ResumeTask(WorkTask task)
+    /// <summary>要求持有任务 Gate：停止一个已启动的执行。</summary>
+    public ErrorOr<Success> StopExecution(WorkTask task, Execution execution)
     {
-        Find(task)?.ResumeTask();
+        if (Find(task) is not null)
+        {
+            return TaskDriver.StopExecution(execution);
+        }
+
+        if (!execution.IsLive)
+        {
+            return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
+        }
+
+        if (execution.Snapshot().StartedAt is null)
+        {
+            return [ExecutionErrors.ExecutionNotStarted(execution.Id)];
+        }
+
+        return StopDirect(execution);
+    }
+
+    private static ErrorOr<Success> StopDirect(Execution execution)
+    {
+        execution.Interrupt("已停止执行。");
+
+        return Result.Success;
+    }
+
+    /// <summary>要求持有任务 Gate：恢复任务的推进循环，并把可恢复的阻塞排入恢复队列。</summary>
+    public void ResumeTask(WorkTask task, bool continueRestores = true)
+    {
+        if (Find(task) is not { } driver)
+        {
+            return;
+        }
+
+        IReadOnlyList<TaskRuntime.RestorePlan> restores = continueRestores
+            ? task.Runtime.PlanRestores()
+            : [];
+        driver.ResumeTask(restores, clearPendingRestores: !continueRestores);
     }
 
     /// <summary>要求持有任务 Gate 之外的调用：给定节点的产出已变，推进它的下游与祖先容器。</summary>
@@ -72,6 +110,12 @@ public sealed class FlowEngine(
         lock (task.Gate)
         {
             targets = [.. task.Runtime.Notify(nodes)];
+            task.Runtime.ClearRestoreStates(targets);
+            if (targets.Count > 0)
+            {
+                task.Journal.AppendInfo("上游产出变化，清除下游恢复状态。");
+            }
+
             task.Touch();
         }
 
@@ -79,19 +123,21 @@ public sealed class FlowEngine(
         task.NotifyChanged();
     }
 
-    /// <summary>要求持有任务 Gate：对被阻塞的执行节点再开一轮返工，返回实际发出的重跑目标数。</summary>
-    public int Rework(WorkTask task)
+    /// <summary>要求持有任务 Gate：对阻塞的执行节点重新执行，返回实际发出的重新执行目标数。</summary>
+    public int Rerun(WorkTask task)
     {
-        IReadOnlyList<TaskRuntime.ReworkTarget> targets;
+        IReadOnlyList<TaskRuntime.RerunTarget> targets;
         lock (task.Gate)
         {
-            targets = task.Runtime.PlanRework();
-            foreach (IGrouping<NodePath, TaskRuntime.ReworkTarget> group in targets.GroupBy(target => target.Blocked))
+            targets = task.Runtime.PlanReruns();
+            foreach (IGrouping<NodePath, TaskRuntime.RerunTarget> group in targets.GroupBy(target => target.Blocked))
             {
+                task.Runtime.ClearRestoreState(group.Key);
                 task.Runtime.Unblock(group.Key, [.. group.Select(target => target.Node)]);
+                task.Journal.AppendInfo($"重新执行节点 {group.Key}，清除恢复状态。");
             }
 
-            foreach (TaskRuntime.ReworkTarget target in targets)
+            foreach (TaskRuntime.RerunTarget target in targets)
             {
                 task.Runtime.Invalidate(target.Node);
             }
@@ -106,7 +152,7 @@ public sealed class FlowEngine(
         {
             if (Find(task) is { } driver)
             {
-                driver.Rework(targets);
+                driver.Rerun(targets);
             }
 
             task.NotifyChanged();

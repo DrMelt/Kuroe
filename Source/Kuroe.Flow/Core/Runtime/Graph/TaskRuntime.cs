@@ -1,3 +1,4 @@
+using ErrorOr;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -5,6 +6,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -14,7 +16,23 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
-/// <summary>按图驱动的执行推进：激活、发布、返工与会合。节点状态在运行时节点对象上，这里是图算法面。
+/// <summary>一次执行中断后的结果，只由执行状态与节点限制决定。</summary>
+public enum ExecutionInterruption
+{
+    /// <summary>正常收口，没有中断。</summary>
+    None,
+
+    /// <summary>执行在启动前被中断，不构成一次失败尝试。</summary>
+    NotStarted,
+
+    /// <summary>执行已启动并留下可恢复状态。</summary>
+    Restorable,
+
+    /// <summary>执行已启动，没有可恢复状态。</summary>
+    NonRestorable,
+}
+
+/// <summary>按图驱动的执行推进：激活、发布、重新执行与会合。节点状态在运行时节点对象上，这里是图算法面。
 /// 启动条件按节点输入侧方案判定，不参与方案的节点在评估时按图上的常量依赖单独挡住。来源侧读数不创建节点。
 /// 所有方法都要求调用者持有所属任务的 Gate。</summary>
 internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeConstantSource
@@ -22,6 +40,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly WorkTask _task;
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
+    private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
@@ -60,9 +79,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>某节点的输入侧方案，开始为空。</summary>
     public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);
 
-    /// <summary>按存档恢复节点状态。容器先于成员恢复，路径深度升序。</summary>
-    internal void Restore(IReadOnlyList<NodeRecord> nodes)
+    /// <summary>按存档恢复节点状态。先装载端口历史，再按路径深度升序恢复节点。</summary>
+    internal void Restore(IReadOnlyList<NodeRecord> nodes, IReadOnlyList<PortPublicationRecord> ports)
     {
+        foreach (IGrouping<NodePath, PortPublicationRecord> group in ports.GroupBy(record => record.Node))
+        {
+            ((IPortRecordSource)this[group.Key]).RestorePorts([.. group]);
+        }
+
         foreach (NodeRecord record in nodes.OrderBy(node => node.Path.Depth))
         {
             ((INodeRecordSource)this[record.Path]).RestoreRecord(record, this);
@@ -159,7 +183,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     // ---- 发布与作废 ----
 
-    /// <summary>作废执行节点的产出并刷新祖先容器，返工起点用它让下游重新等待。已发布的 Once 节点不重跑。</summary>
+    /// <summary>作废执行节点的产出并刷新祖先容器，重新执行起点用它让下游重新等待。已发布的 Once 节点不重跑。</summary>
     private void InvalidateNode(RuntimeExecutable node)
     {
         if (Frozen(node.Path))
@@ -167,11 +191,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return;
         }
 
+        ClearRestoreState(node.Path);
         node.RequestRerun();
         node.Invalidate();
     }
 
-    /// <summary>作废已发表产出，宿主返工入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
+    /// <summary>作废已发表产出，宿主重新执行入口按节点路径定位节点。已发布的 Once 节点不重跑。</summary>
     public void Invalidate(NodePath node)
     {
         if (Frozen(node))
@@ -185,7 +210,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
     }
 
-    // ---- 返工 ----
+    // ---- 重新执行 ----
 
     /// <summary>顺着下游绑定要通知的执行节点路径，去重保持顺序。</summary>
     public IReadOnlyList<NodePath> Downstream(NodeRuntime node) => Downstream(node.Path);
@@ -285,10 +310,13 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     // ---- 执行收口 ----
 
-    /// <summary>执行收口的决策结果：要通知的执行节点。</summary>
-    public sealed record SettlePlan(IReadOnlyList<NodePath> Notify);
+    /// <summary>执行收口的决策结果：要通知的执行节点、执行中断后的状态分类与本次建立的可恢复计划。</summary>
+    public sealed record SettlePlan(
+        IReadOnlyList<NodePath> Notify,
+        ExecutionInterruption Interruption = ExecutionInterruption.None,
+        RestorePlan? Restore = null);
 
-    /// <summary>执行收口：失败与未收口先停驻阻塞，通过后发布产出并给出下游通知。
+    /// <summary>执行收口：未启动的中断单独分类，失败与未收口先停驻阻塞，通过后发布产出并给出下游通知。
     /// 接收器先经 ReleaseActive 再进入。</summary>
     public SettlePlan Settle(RuntimeExecutable node, Execution execution)
     {
@@ -307,15 +335,15 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return Settled(node, Downstream(node));
         }
 
-        // 上报无法完成的当轮不产出，直接停驻并把原因留给返工
-        if (node.CannotCompleteReason(execution.Id) is { } cannotComplete)
+        // 上报无法完成的当轮不产出，直接停驻并把原因留给重新执行
+        if (execution.Contract.CannotCompleteReason is { } cannotComplete)
         {
             execution.MarkUncollected($"模型报告无法完成：{cannotComplete}");
 
             return Block(node, execution);
         }
 
-        if (node.Shortfall(execution.Id).Count > 0)
+        if (node.OutstandingPorts(execution).Count > 0)
         {
             execution.MarkUncollected("输出端口内容未交回，本步未收口。");
             return Block(node, execution);
@@ -332,6 +360,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     {
         _task.NotifyExecutionSettled(execution);
         ExecutionSnapshot snapshot = execution.Snapshot();
+        if (snapshot.StartedAt is null
+            && snapshot.State is ExecutionState.Interrupted or ExecutionState.Canceled)
+        {
+            _task.Journal.AppendInfo($"{node.Path}：执行未启动即中断。");
+
+            return new SettlePlan([], ExecutionInterruption.NotStarted);
+        }
+
         string summary = snapshot.Failures.FirstOrDefault(failure => !string.IsNullOrWhiteSpace(failure))
             ?? snapshot.State switch
             {
@@ -343,10 +379,19 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, DateTimeOffset.UtcNow));
         NoteLimitReached(node);
 
-        return new SettlePlan([]);
+        RestorePlan? restore = CreateRestorePlan(node);
+        if (restore is not null)
+        {
+            _task.Journal.AppendInfo($"{node.Path} 的阻塞可恢复。");
+        }
+
+        return new SettlePlan(
+            [],
+            restore is not null ? ExecutionInterruption.Restorable : ExecutionInterruption.NonRestorable,
+            restore);
     }
 
-    /// <summary>失败停驻的路径已达执行上限时记录提示，后续返工不会放行。</summary>
+    /// <summary>失败停驻的路径已达执行上限时记录提示，后续重新执行不会放行。</summary>
     private void NoteLimitReached(RuntimeExecutable node)
     {
         if (LimitOf(node) is not { } limit || node.Executions < limit)
@@ -361,8 +406,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private SettlePlan Settled(RuntimeExecutable node, IReadOnlyList<NodePath> downstream)
     {
         IReadOnlyList<NodePath> containers = AncestorContainers(node.Path);
+        List<NodePath> notify = [.. downstream, .. containers, .. Graph.Dependents(node.Path)];
+        ClearRestoreState(node.Path);
+        ClearRestoreStates(notify);
+        _task.Journal.AppendInfo($"{node.Path} 执行成功。");
 
-        return new SettlePlan([.. downstream, .. containers, .. Graph.Dependents(node.Path)]);
+        return new SettlePlan(notify);
     }
 
     // ---- 推进评估 ----
@@ -582,42 +631,202 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 .Select(container => container.Path)];
 
 
-    /// <summary>一个返工目标：停住的节点，与它要重跑的节点。执行失败时目标为节点自身。</summary>
-    public readonly record struct ReworkTarget(NodePath Blocked, NodePath Node);
+    /// <summary>一个重新执行目标：停住的节点，与它要重跑的节点。执行失败时目标为节点自身。</summary>
+    public readonly record struct RerunTarget(NodePath Blocked, NodePath Node);
 
-    /// <summary>计算返工会作废并重跑的目标：各停在阻塞的执行节点记录的目标，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
-    public IReadOnlyList<ReworkTarget> PlanRework()
+    /// <summary>计算重新执行会作废并重跑的目标：各停在阻塞的执行节点记录的目标，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
+    public IReadOnlyList<RerunTarget> PlanReruns()
     {
-        List<ReworkTarget> targets = [];
+        List<RerunTarget> targets = [];
         foreach (RuntimeExecutable node in MaterializedExecutables())
         {
-            foreach (NodePath target in node.ReworkTargets)
+            foreach (NodePath target in node.RerunTargets)
             {
                 if (AtLimit(Executable(target)) || Frozen(target))
                 {
                     continue;
                 }
 
-                targets.Add(new ReworkTarget(node.Path, target));
+                targets.Add(new RerunTarget(node.Path, target));
             }
         }
 
         return targets;
     }
 
+    /// <summary>一个可执行的恢复计划：停住的节点、提供恢复状态的来源执行与已装配的恢复。</summary>
+    public sealed record RestorePlan(
+        NodePath Blocked,
+        Execution Source,
+        PreparedRestore Prepared);
+
+    /// <summary>是否存在可派发的恢复计划。要求持有 Gate。</summary>
+    public bool HasRestorePlans => _restorePlans.Count > 0;
+
+    /// <summary>恢复计划是否已按当前节点状态建立过。要求持有 Gate。</summary>
+    public bool RestorePlansInitialized { get; private set; }
+
+    /// <summary>取出当前恢复计划，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
+    public IReadOnlyList<RestorePlan> PlanRestores() =>
+        [.. MaterializedExecutables()
+            .Select(node => _restorePlans.GetValueOrDefault(node.Path))
+            .OfType<RestorePlan>()];
+
+    /// <summary>阻塞节点此刻是否已有恢复计划。要求持有 Gate。</summary>
+    public bool CanRestore(NodePath path) => _restorePlans.ContainsKey(path);
+
+    /// <summary>从存档恢复任务后按当前阻塞与来源执行重建全部恢复计划。要求持有 Gate。</summary>
+    public void RefreshRestorePlans()
+    {
+        ClearRestorePlans();
+        foreach (RuntimeExecutable node in MaterializedExecutables())
+        {
+            _ = CreateRestorePlan(node);
+        }
+
+        RestorePlansInitialized = true;
+    }
+
+    /// <summary>清除全部恢复计划。任务完成与终止时调用。</summary>
+    public void ClearRestorePlans()
+    {
+        foreach (RuntimeExecutable node in MaterializedExecutables())
+        {
+            node.HasRestorePlan = false;
+        }
+
+        _restorePlans.Clear();
+        RestorePlansInitialized = false;
+    }
+
+    /// <summary>给定计划是否仍是该节点当前的恢复计划。要求持有 Gate。</summary>
+    internal bool IsCurrentRestorePlan(RestorePlan plan) =>
+        _restorePlans.TryGetValue(plan.Blocked, out RestorePlan? current)
+        && ReferenceEquals(current, plan);
+
+    /// <summary>恢复计划已经派发，移除缓存。要求持有 Gate。</summary>
+    internal void RemoveRestorePlan(RestorePlan plan)
+    {
+        if (IsCurrentRestorePlan(plan) && Materialized(plan.Blocked) is RuntimeExecutable node)
+        {
+            SetRestorePlan(node, null);
+        }
+    }
+
+    /// <summary>清除这些目标上执行留下的恢复状态与恢复计划。上游产出变化与重新执行时调用。</summary>
+    public void ClearRestoreStates(IReadOnlyList<NodePath> nodes)
+    {
+        foreach (NodePath path in nodes)
+        {
+            ClearRestoreState(path);
+        }
+    }
+
+    /// <summary>清除该节点的恢复计划与全部执行的恢复状态。</summary>
+    public void ClearRestoreState(NodePath path)
+    {
+        if (Materialized(path) is RuntimeExecutable node)
+        {
+            SetRestorePlan(node, null);
+        }
+
+        foreach (Execution execution in _task.Executions.Where(candidate => candidate.Input.Node == path).ToArray())
+        {
+            execution.ClearRestoreState();
+        }
+    }
+
+    /// <summary>按阻塞执行与恢复来源建立一次恢复计划，调用节点类型校验并缓存结果。</summary>
+    private RestorePlan? CreateRestorePlan(RuntimeExecutable node)
+    {
+        SetRestorePlan(node, null);
+
+        if (_task.Completed
+            || _task.Lifecycle == TaskLifecycle.Terminated
+            || node.Canceled
+            || node.Block?.Execution is not { } blocked
+            || AtLimit(node)
+            || Frozen(node.Path)
+            || _task.Registry.RestorerSource is not { } restorers)
+        {
+            return null;
+        }
+
+        Execution? candidate = _task.Executions.FirstOrDefault(execution => execution.Id == blocked);
+        while (candidate is not null)
+        {
+            if (candidate.RestoreState is { } state)
+            {
+                ExecutionInput input = candidate.Input with
+                {
+                    ExecutionCount = node.Executions + 1,
+                    OutputPorts = node.Executable.SubmittablePorts,
+                };
+
+                RestorePreparationContext context = new(input, state, candidate.Contract);
+                ErrorOr<PreparedRestore> prepared;
+                try
+                {
+                    prepared = restorers.Prepare(node.Executable, context);
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+
+                if (prepared.IsError)
+                {
+                    return null;
+                }
+
+                RestorePlan plan = new(node.Path, candidate, prepared.Value);
+                SetRestorePlan(node, plan);
+
+                return plan;
+            }
+
+            // 已经消耗过请求但没有留下恢复状态的尝试不能回退到更早的状态，否则会从更早历史重放请求与工具调用
+            if (candidate.Snapshot().Usage.RequestCount > 0)
+            {
+                return null;
+            }
+
+            candidate = candidate.ContinuedFrom is { } previous
+                ? _task.Executions.FirstOrDefault(execution => execution.Id == previous)
+                : null;
+        }
+
+        return null;
+    }
+
+    /// <summary>缓存或移除节点的恢复计划，并同步快照标记。</summary>
+    private void SetRestorePlan(RuntimeExecutable node, RestorePlan? plan)
+    {
+        if (plan is null)
+        {
+            _restorePlans.Remove(node.Path);
+        }
+        else
+        {
+            _restorePlans[node.Path] = plan;
+        }
+
+        node.HasRestorePlan = plan is not null;
+    }
+
     /// <summary>节点是否已经产出过内容。</summary>
     private bool HasPublished(NodePath node) => State(node).Revision > 0;
 
-    /// <summary>已发布的 Once 节点冻结，不再返工或作废。</summary>
+    /// <summary>已发布的 Once 节点冻结，不再重新执行或作废。</summary>
     private bool Frozen(NodePath node) =>
         HasPublished(node) && Graph[node] is ExecutableNode { Spec.Emission: NodeEmission.Once };
 
-    /// <summary>解除一个执行节点的阻塞：移除本次返工处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。</summary>
+    /// <summary>解除一个执行节点的阻塞：移除本次重新执行处理的目标，剩余目标保持阻塞，全部处理后解除阻塞。</summary>
     public void Unblock(NodePath node, IReadOnlyList<NodePath> handled)
     {
         if (Materialized(node) is RuntimeExecutable executable)
         {
-            executable.FinishRework(handled);
+            executable.FinishRerun(handled);
         }
     }
 

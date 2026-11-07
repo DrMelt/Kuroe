@@ -14,7 +14,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>一个任务域内的任务动作：提交、返工、取消与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
+/// <summary>一个任务域内的任务动作：提交、重新执行、取消与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
 /// <remarks>装配任务动作所需的注册表、推进器、执行目标解析与宿主开始输入钩子。
 /// 任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
 public sealed class TaskActions(
@@ -243,7 +243,7 @@ public sealed class TaskActions(
         return Result.Success;
     }
 
-    /// <summary>恢复暂停的任务：推进循环重新取待处理目标。</summary>
+    /// <summary>恢复任务：暂停时恢复控制状态，存在恢复计划时保留控制状态，两者都派发恢复计划并唤醒推进。</summary>
     public ErrorOr<Success> Resume(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
@@ -255,10 +255,24 @@ public sealed class TaskActions(
         WorkTask task = found.Value;
         lock (task.Gate)
         {
-            ErrorOr<Success> resumed = task.Resume();
-            if (resumed.IsError)
+            if (task.Lifecycle == TaskLifecycle.Terminated)
             {
-                return resumed;
+                return [TaskErrors.Terminated(id)];
+            }
+
+            if (task.Lifecycle == TaskLifecycle.Paused)
+            {
+                ErrorOr<Success> resumed = task.Resume();
+                if (resumed.IsError)
+                {
+                    return resumed;
+                }
+            }
+            else if (task.Lifecycle != TaskLifecycle.Active
+                || task.Completed
+                || !task.Runtime.HasRestorePlans)
+            {
+                return [TaskErrors.NotPaused(id)];
             }
 
             _driver.ResumeTask(task);
@@ -284,8 +298,8 @@ public sealed class TaskActions(
         return Result.Success;
     }
 
-    /// <summary>对被阻塞的执行节点再开一轮实施。</summary>
-    public ErrorOr<Success> Rework(TaskId id)
+    /// <summary>对阻塞的执行节点重新执行，清除恢复状态。暂停任务先重新执行再恢复推进。</summary>
+    public ErrorOr<Success> Rerun(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
         if (found.IsError)
@@ -294,7 +308,7 @@ public sealed class TaskActions(
         }
 
         WorkTask task = found.Value;
-        int reworked;
+        int rerun;
         lock (task.Gate)
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
@@ -302,17 +316,22 @@ public sealed class TaskActions(
                 return [TaskErrors.Terminated(id)];
             }
 
-            if (task.Lifecycle == TaskLifecycle.Paused)
+            rerun = _driver.Rerun(task);
+            if (rerun == 0)
             {
-                return [TaskErrors.Paused(id)];
+                return [TaskErrors.NotBlocked(id)];
             }
 
-            reworked = _driver.Rework(task);
-        }
+            if (task.Lifecycle == TaskLifecycle.Paused)
+            {
+                ErrorOr<Success> resumed = task.Resume();
+                if (resumed.IsError)
+                {
+                    return resumed;
+                }
 
-        if (reworked == 0)
-        {
-            return [TaskErrors.NotBlocked(id)];
+                _driver.ResumeTask(task, continueRestores: false);
+            }
         }
 
         Persist(id);
@@ -320,7 +339,7 @@ public sealed class TaskActions(
         return Result.Success;
     }
 
-    /// <summary>取消一个执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
+    /// <summary>停止一个已启动的执行。它所在的执行节点随后被阻塞，Llm 节点可随任务恢复。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id)
     {
         ErrorOr<Execution> found = _registry.FindExecution(id);
@@ -329,14 +348,17 @@ public sealed class TaskActions(
             return found.ErrorsOrEmptyList;
         }
 
-        if (!found.Value.IsLive)
+        Execution execution = found.Value;
+        ErrorOr<WorkTask> owner = _registry.Find(execution.Input.Task);
+        if (owner.IsError)
         {
-            return [ExecutionErrors.ExecutionSettled(id, "取消")];
+            return owner.ErrorsOrEmptyList;
         }
 
-        found.Value.Cancel();
-
-        return Result.Success;
+        lock (owner.Value.Gate)
+        {
+            return _driver.StopExecution(owner.Value, execution);
+        }
     }
 
     /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进，之后不可恢复。</summary>

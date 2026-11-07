@@ -6,5 +6,5 @@ namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
 public interface IExecutionRunnerFactory
 {
     /// <summary>为一次执行建立运行器，过程记录随运行器一同建立。</summary>
-    IExecutionRunner Create(ExecutableNode node, ExecutionId execution, ExecutionInput input);
+    IExecutionRunner Create(ExecutableNode node, ExecutionId execution);
 }

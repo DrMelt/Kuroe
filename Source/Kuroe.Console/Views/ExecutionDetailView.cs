@@ -28,6 +28,8 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 .Select(entry => (entry.Label, (IRenderable)new Text(entry.Value, Styles.Hint))),
             ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
             ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
+            ("恢复状态", new Text(execution.HasRestoreState ? "有" : "无", Styles.Hint)),
+            ("继续自", new Text(execution.ContinuedFrom?.Value.ToString() ?? "—", Styles.Hint)),
             ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
             ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),
             ("耗时", new Text(ViewLabels.Elapsed(execution.Elapsed), Styles.Hint)),
@@ -49,7 +51,12 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 : InputTable(input)));
 
         _terminal.NewLine();
-        _terminal.Write(Blocks.Section(BoxKind.View, "过程记录", JournalView.Build(execution.Journal, execution.DroppedEntries)));
+        _terminal.Write(Blocks.Section(
+            BoxKind.View,
+            "过程记录",
+            execution.Journal.Count == 0 && !execution.State.IsLive()
+                ? new Text("过程记录只在运行中可见。", Styles.Hint)
+                : JournalView.Build(execution.Journal)));
     }
 
     /// <summary>输入取值按出处分组，内容一行内截断。</summary>

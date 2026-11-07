@@ -16,9 +16,9 @@ internal sealed class TaskProjection(
     NodeMaterializer materializer,
     StaticPortValues staticPorts)
 {
-    /// <summary>节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。</summary>
-    public ExecutableStateSnapshot State(NodePath path) => materializer.Find(path)?.Snapshot()
-        ?? new ExecutableStateSnapshot(path, NodeState.Pending);
+    /// <summary>节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。阻塞节点的可恢复标记来自恢复计划缓存。</summary>
+    public ExecutableStateSnapshot State(NodePath path) =>
+        materializer.Find(path)?.Snapshot() ?? new ExecutableStateSnapshot(path, NodeState.Pending);
 
     /// <summary>各执行节点在快照里的一刻状态：静态文本、执行与次数上限。</summary>
     public IReadOnlyList<ExecutableSnapshot> Executables(IReadOnlyList<ExecutionSnapshot> executions)

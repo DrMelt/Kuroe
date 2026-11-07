@@ -52,7 +52,7 @@ public sealed class ConstantChainTests
 
         TaskId id = environment.Submit("目标内容");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-        environment.Tasks.Rework(id).ThrowIfError();
+        environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
@@ -279,7 +279,7 @@ public sealed class ConstantChainTests
         Assert.Equal("上下文值", first.Text);
     }
 
-    /// <summary>单个 Once 节点首次执行失败，返工后可以再次执行并完成发布。</summary>
+    /// <summary>单个 Once 节点首次执行失败，重新执行后可以再次执行并完成发布。</summary>
     private const string RetryOnceFlow = """
         {
           "Flows": [

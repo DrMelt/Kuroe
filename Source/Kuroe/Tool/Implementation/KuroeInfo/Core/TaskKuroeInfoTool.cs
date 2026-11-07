@@ -134,7 +134,7 @@ public sealed class TaskKuroeInfoTool : ITool
             text.AppendLine("执行节点状态：");
             foreach (ExecutableStateSnapshot node in task.ExecutableStates)
             {
-                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node.State)}");
+                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node)}");
             }
         }
 
@@ -174,6 +174,8 @@ public sealed class TaskKuroeInfoTool : ITool
         text.AppendLine($"状态 {InfoLabels.State(execution)}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
+        text.AppendLine($"恢复状态 {InfoLabels.RestoreState(execution)}"
+            + $" · 继续自 {InfoLabels.ContinuedFrom(execution)}");
         text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)}"
             + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
         foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
@@ -199,13 +201,20 @@ public sealed class TaskKuroeInfoTool : ITool
         }
 
         text.AppendLine("过程：");
-        AppendJournal(text, execution.Journal, execution.DroppedEntries);
+        if (execution.Journal.Count == 0 && !execution.State.IsLive())
+        {
+            text.AppendLine("  过程记录只在运行中可见。");
+        }
+        else
+        {
+            AppendJournal(text, execution.Journal);
+        }
 
         return text.ToString().TrimEnd();
     }
 
     /// <summary>过程记录的最近条目。<paramref name="dropped"/> 是更早已丢弃的条数。</summary>
-    private static void AppendJournal(StringBuilder text, IReadOnlyList<JournalEntry> entries, int dropped)
+    private static void AppendJournal(StringBuilder text, IReadOnlyList<JournalEntry> entries, int dropped = 0)
     {
         text.AppendLine("过程记录：");
         if (dropped > 0)

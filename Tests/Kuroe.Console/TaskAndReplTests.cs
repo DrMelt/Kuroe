@@ -552,7 +552,7 @@ public sealed partial class TaskAndReplTests
     }
 
     [Fact]
-    public void Task_rework_resumes_a_blocked_task()
+    public void Task_rerun_resumes_a_blocked_task()
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.BlockingFlow);
         cli.Environment.Runner.SubmitsPorts = false;
@@ -560,9 +560,9 @@ public sealed partial class TaskAndReplTests
         cli.Environment.Settle(new TaskId(1));
         Assert.Equal(TaskState.Blocked, cli.Environment.Snapshot(new TaskId(1)).State);
 
-        cli.Tasks.Rework(new TaskId(1));
+        cli.Tasks.Rerun(new TaskId(1));
 
-        Assert.Contains("任务 00000001 已返工。", cli.Output.Output);
+        Assert.Contains("任务 00000001 已重新执行。", cli.Output.Output);
     }
 
     [Fact]
@@ -613,7 +613,7 @@ public sealed partial class TaskAndReplTests
 
 
     [Fact]
-    public void Task_stop_execution_cancels_a_single_execution()
+    public void Task_stop_execution_stops_a_single_execution()
     {
         using ConsoleSession cli = new();
         cli.Environment.Runner.DelayMs = 20000;
@@ -622,7 +622,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.StopExecution(new ExecutionId(1));
 
-        Assert.Contains("执行 #1 已取消。", cli.Output.Output);
+        Assert.Contains("执行 #1 已停止。", cli.Output.Output);
     }
 
     [Fact]

@@ -98,7 +98,7 @@ public abstract class TaskPersistenceAcceptanceTests
     }
 
     [Fact]
-    public async Task Resume_loaded_blocked_task_allows_rework()
+    public async Task Resume_loaded_blocked_task_allows_rerun()
     {
         string root = CreateRoot();
         try
@@ -117,10 +117,10 @@ public abstract class TaskPersistenceAcceptanceTests
             TaskSnapshot loaded = second.Snapshot(id);
             Assert.Contains(loaded.ExecutableStates, state => state.Block is not null);
             ErrorOr<Success> resumed = second.Resume(id);
-            ErrorOr<Success> reworked = second.Rework(id);
+            ErrorOr<Success> rerun = second.Rerun(id);
 
             Assert.False(resumed.IsError);
-            Assert.False(reworked.IsError);
+            Assert.False(rerun.IsError);
         }
         finally
         {

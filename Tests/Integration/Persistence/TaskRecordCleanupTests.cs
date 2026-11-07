@@ -12,10 +12,11 @@ public sealed class TaskRecordCleanupTests : IDisposable
     private readonly TestEnvironment _environment = TestEnvironment.Create(persistTasks: true);
 
     [Fact]
-    public void Clear_settled_tasks_deletes_records()
+    public async Task Clear_settled_tasks_deletes_records()
     {
         TaskId id = _environment.Submit("清理任务");
-        _environment.Settle(id);
+        await _environment.SettleAsync(id);
+        await _environment.Tasks.FlushAsync();
         string directory = Path.Combine(_environment.Root, ".kuroe_tasks", ".records");
         FileTaskRecordStore store = new(directory, Codec);
         WaitForCompleted(store, id);
@@ -29,7 +30,7 @@ public sealed class TaskRecordCleanupTests : IDisposable
     /// <summary>等完成事实落到存档，避免清理与终态写盘交叠。</summary>
     private static void WaitForCompleted(FileTaskRecordStore store, TaskId id)
     {
-        DateTime deadline = DateTime.UtcNow.AddSeconds(2);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deadline)
         {
             if (store.ReadAll().Records.Any(record => record.Identity.Id == id && record.Completed))

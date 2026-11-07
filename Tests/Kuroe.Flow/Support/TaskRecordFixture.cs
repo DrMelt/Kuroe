@@ -47,8 +47,6 @@ public static class TaskRecordFixture
                     At(3, 4, 11),
                     At(3, 4, 12),
                     [],
-                    [new JournalEntry(At(3, 4, 11), JournalLevel.Information, "回复", "结果")],
-                    0,
                     new ExecutionUsage(2, 0, new TokenUsage(120, 30, 150, 80, 5)) { ContextTokens = 90 },
                     [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
                     new Dictionary<PortName, string> { [target] = "目标内容" }),
@@ -62,8 +60,6 @@ public static class TaskRecordFixture
                     At(3, 4, 21),
                     At(3, 4, 22),
                     ["读取失败。"],
-                    [],
-                    0,
                     ExecutionUsage.None,
                     [],
                     new Dictionary<PortName, string>()),
@@ -77,8 +73,6 @@ public static class TaskRecordFixture
                     At(3, 4, 31),
                     At(3, 4, 32),
                     ["任务已暂停。"],
-                    [],
-                    0,
                     ExecutionUsage.None,
                     [],
                     new Dictionary<PortName, string>()),
@@ -90,21 +84,7 @@ public static class TaskRecordFixture
                         revision: 2,
                         lastInputGroup: 0,
                         rerunRequested: false,
-                        publication: new PublicationRecord(
-                            new Dictionary<PortName, bool> { [new PortName("结论")] = false },
-                            new Dictionary<PortName, IReadOnlyList<PublicationValueRecord>>
-                            {
-                                [new PortName("结论")] =
-                                [
-                                    new PublicationValueRecord(
-                                        new ContextSourceRecord(
-                                            ContextSourceKind.Execution,
-                                            new ExecutionId(taskId * 10 + 1),
-                                            plan,
-                                            new PortName("结论")),
-                                        "计划结果"),
-                                ],
-                            })),
+                        activePublicationRevision: 2),
                     [],
                     null),
                 new ExecutableNodeRecord(
@@ -126,6 +106,34 @@ public static class TaskRecordFixture
                     container,
                     Common(revision: 1, lastInputGroup: null, rerunRequested: false)),
             ],
+            [
+                new PortPublicationRecord(
+                    plan,
+                    new PortName("结论"),
+                    1,
+                    At(3, 4, 9),
+                    true,
+                    [new PublicationValueRecord(
+                        new ContextSourceRecord(
+                            ContextSourceKind.Execution,
+                            new ExecutionId(taskId * 10 + 1),
+                            plan,
+                            new PortName("结论")),
+                        "旧计划结果")]),
+                new PortPublicationRecord(
+                    plan,
+                    new PortName("结论"),
+                    2,
+                    At(3, 4, 13),
+                    false,
+                    [new PublicationValueRecord(
+                        new ContextSourceRecord(
+                            ContextSourceKind.Execution,
+                            new ExecutionId(taskId * 10 + 1),
+                            plan,
+                            new PortName("结论")),
+                        "计划结果")]),
+            ],
             new SchedulerSeed([plan, read]));
     }
 
@@ -136,12 +144,12 @@ public static class TaskRecordFixture
         long revision,
         int? lastInputGroup,
         bool rerunRequested,
-        PublicationRecord? publication = null) =>
+        long? activePublicationRevision = null) =>
         new(
             revision,
             1,
             lastInputGroup,
             [new ConsumedRevisionRecord(NodePath.Of("Start"), null, 1)],
-            publication,
+            activePublicationRevision,
             rerunRequested);
 }

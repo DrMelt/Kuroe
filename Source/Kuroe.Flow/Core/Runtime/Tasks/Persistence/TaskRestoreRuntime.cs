@@ -3,6 +3,7 @@ using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
@@ -27,7 +28,15 @@ public sealed class TaskRestoreRuntime(
         }
 
         registry.Adopt(task.Value);
-        runner.Restore(task.Value, seed);
+        IReadOnlyList<NodePath> restart =
+        [
+            .. task.Value.Executions
+                .Where(execution => execution.State == ExecutionState.Interrupted
+                    && execution.Snapshot().StartedAt is null)
+                .Select(execution => execution.Input.Node)
+                .Distinct(),
+        ];
+        runner.Restore(task.Value, [.. seed, .. restart]);
         task.Value.NotifyChanged();
 
         return task.Value.Snapshot();
