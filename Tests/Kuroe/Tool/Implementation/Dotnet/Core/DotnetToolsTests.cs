@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Dotnet.Tests;
 
-/// <summary>内置 dotnet 工具面：十一条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
+/// <summary>内置 dotnet 工具面：十二条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class DotnetToolsTests
 {
     /// <summary>应用参数实参：两个参数。</summary>
@@ -22,6 +22,7 @@ public sealed class DotnetToolsTests
                 "dotnet/read/NugetSources",
                 "dotnet/write/Build",
                 "dotnet/write/Test",
+                "dotnet/write/TestMtp",
                 "dotnet/write/Run",
                 "dotnet/write/Restore",
                 "dotnet/write/Format",
@@ -59,6 +60,7 @@ public sealed class DotnetToolsTests
                 new("{configuration}", null),
                 new("--verbosity", null),
                 new("quiet", null),
+                new("--nologo", null),
             ],
             Template("dotnet/write/Build"));
 
@@ -75,11 +77,26 @@ public sealed class DotnetToolsTests
             Template("dotnet/write/Test"));
 
         Assert.Equal(
+            [
+                new("dotnet", null),
+                new("test", null),
+                new("--project", "project"),
+                new("{project}", null),
+                new("--filter", "filter"),
+                new("{filter}", null),
+                new("--ignore-exit-code", "filter"),
+                new("8", "filter"),
+                new("--verbosity", null),
+                new("quiet", null),
+            ],
+            Template("dotnet/write/TestMtp"));
+
+        Assert.Equal(
             [new("dotnet", null), new("run", null), new("{project}", null), new("--", "arguments"), new("{arguments}", null)],
             Template("dotnet/write/Run"));
 
         Assert.Equal(
-            [new("dotnet", null), new("restore", null), new("{project}", null)],
+            [new("dotnet", null), new("restore", null), new("{project}", null), new("--nologo", null)],
             Template("dotnet/write/Restore"));
 
         Assert.Equal(
@@ -93,6 +110,7 @@ public sealed class DotnetToolsTests
                 new("{project}", null),
                 new("--configuration", "configuration"),
                 new("{configuration}", null),
+                new("--nologo", null),
             ],
             Template("dotnet/write/Publish"));
 
@@ -142,15 +160,15 @@ public sealed class DotnetToolsTests
     [Fact]
     public void Build_carries_project_and_configuration()
     {
-        Assert.Equal(["dotnet", "build", "--verbosity", "quiet"], Argv("dotnet/write/Build", Given()));
+        Assert.Equal(["dotnet", "build", "--verbosity", "quiet", "--nologo"], Argv("dotnet/write/Build", Given()));
         Assert.Equal(
-            ["dotnet", "build", "src/App", "--verbosity", "quiet"],
+            ["dotnet", "build", "src/App", "--verbosity", "quiet", "--nologo"],
             Argv("dotnet/write/Build", Given(("project", "src/App"))));
         Assert.Equal(
-            ["dotnet", "build", "src/App", "--configuration", "Release", "--verbosity", "quiet"],
+            ["dotnet", "build", "src/App", "--configuration", "Release", "--verbosity", "quiet", "--nologo"],
             Argv("dotnet/write/Build", Given(("project", "src/App"), ("configuration", "Release"))));
         Assert.Equal(
-            ["dotnet", "build", "--configuration", "Release", "--verbosity", "quiet"],
+            ["dotnet", "build", "--configuration", "Release", "--verbosity", "quiet", "--nologo"],
             Argv("dotnet/write/Build", Given(("configuration", "Release"))));
     }
 
@@ -161,6 +179,21 @@ public sealed class DotnetToolsTests
         Assert.Equal(
             ["dotnet", "test", "Tests/Kuroe.Tests", "--filter", "FullyQualifiedName~Kuroe", "--verbosity", "quiet"],
             Argv("dotnet/write/Test", Given(("project", "Tests/Kuroe.Tests"), ("filter", "FullyQualifiedName~Kuroe"))));
+    }
+
+    [Fact]
+    public void TestMtp_carries_project_filter_and_ignores_empty_modules()
+    {
+        Assert.Equal(["dotnet", "test", "--verbosity", "quiet"], Argv("dotnet/write/TestMtp", Given()));
+        Assert.Equal(
+            ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--verbosity", "quiet"],
+            Argv("dotnet/write/TestMtp", Given(("project", "Tests/Kuroe.Tests"))));
+        Assert.Equal(
+            ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--filter", "FullyQualifiedName~Kuroe", "--ignore-exit-code", "8", "--verbosity", "quiet"],
+            Argv("dotnet/write/TestMtp", Given(("project", "Tests/Kuroe.Tests"), ("filter", "FullyQualifiedName~Kuroe"))));
+        Assert.Equal(
+            ["dotnet", "test", "--filter", "FullyQualifiedName~Kuroe", "--ignore-exit-code", "8", "--verbosity", "quiet"],
+            Argv("dotnet/write/TestMtp", Given(("filter", "FullyQualifiedName~Kuroe"))));
     }
 
     [Fact]
@@ -179,15 +212,15 @@ public sealed class DotnetToolsTests
     [Fact]
     public void Restore_format_and_publish_carry_their_arguments()
     {
-        Assert.Equal(["dotnet", "restore"], Argv("dotnet/write/Restore", Given()));
-        Assert.Equal(["dotnet", "restore", "Kuroe.slnx"], Argv("dotnet/write/Restore", Given(("project", "Kuroe.slnx"))));
+        Assert.Equal(["dotnet", "restore", "--nologo"], Argv("dotnet/write/Restore", Given()));
+        Assert.Equal(["dotnet", "restore", "Kuroe.slnx", "--nologo"], Argv("dotnet/write/Restore", Given(("project", "Kuroe.slnx"))));
 
         Assert.Equal(["dotnet", "format"], Argv("dotnet/write/Format", Given()));
         Assert.Equal(["dotnet", "format", "Source/Kuroe"], Argv("dotnet/write/Format", Given(("project", "Source/Kuroe"))));
 
-        Assert.Equal(["dotnet", "publish"], Argv("dotnet/write/Publish", Given()));
+        Assert.Equal(["dotnet", "publish", "--nologo"], Argv("dotnet/write/Publish", Given()));
         Assert.Equal(
-            ["dotnet", "publish", "Source/Kuroe.Console", "--configuration", "Release"],
+            ["dotnet", "publish", "Source/Kuroe.Console", "--configuration", "Release", "--nologo"],
             Argv("dotnet/write/Publish", Given(("project", "Source/Kuroe.Console"), ("configuration", "Release"))));
     }
 
@@ -235,6 +268,7 @@ public sealed class DotnetToolsTests
                 "dotnet/read/ListPackages",
                 "dotnet/write/Build",
                 "dotnet/write/Test",
+                "dotnet/write/TestMtp",
                 "dotnet/write/Run",
                 "dotnet/write/Restore",
                 "dotnet/write/Format",
@@ -245,6 +279,7 @@ public sealed class DotnetToolsTests
 
         Assert.False(Parameter(Definition("dotnet/write/Build"), "configuration").Path);
         Assert.False(Parameter(Definition("dotnet/write/Test"), "filter").Path);
+        Assert.False(Parameter(Definition("dotnet/write/TestMtp"), "filter").Path);
         Assert.False(Parameter(Definition("dotnet/write/AddPackage"), "package").Path);
     }
 

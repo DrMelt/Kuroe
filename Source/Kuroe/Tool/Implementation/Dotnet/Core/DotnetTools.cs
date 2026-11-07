@@ -18,6 +18,7 @@ public static class DotnetTools
         NugetSources.Definition with { Variables = [PathVariables.RootName] },
         Build.Definition with { Variables = [PathVariables.RootName] },
         Test.Definition with { Variables = [PathVariables.RootName] },
+        TestMtp.Definition with { Variables = [PathVariables.RootName] },
         Run.Definition with { Variables = [PathVariables.RootName] },
         Restore.Definition with { Variables = [PathVariables.RootName] },
         Format.Definition with { Variables = [PathVariables.RootName] },

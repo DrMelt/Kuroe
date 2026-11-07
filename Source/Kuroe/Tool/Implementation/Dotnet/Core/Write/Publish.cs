@@ -11,7 +11,7 @@ internal static class Publish
     /// <summary>参数名：生成配置。</summary>
     private const string Configuration = "configuration";
 
-    /// <summary>函数定义与模板：dotnet publish {project} [--configuration {configuration}]。</summary>
+    /// <summary>函数定义与模板：dotnet publish {project} [--configuration {configuration}] --nologo。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/Publish"),
         "发布项目到输出目录，project 是项目、解决方案或目录，configuration 是生成配置如 Debug 或 Release。",
@@ -25,6 +25,7 @@ internal static class Publish
             new("{project}", null),
             new("--configuration", Configuration),
             new("{configuration}", null),
+            new("--nologo", null),
         ],
         TimeoutSeconds: 600,
         OutputLimit: 8000);
