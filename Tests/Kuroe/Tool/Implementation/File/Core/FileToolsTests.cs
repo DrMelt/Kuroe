@@ -424,284 +424,6 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void PatchFile_replaces_lines_within_file()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n要被换掉\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "2"),
-            ("original", "要被换掉"), ("replacement", "新的二\n新增行"));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 2 行）。", output);
-        Assert.Equal("一\n新的二\n新增行\n三", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_matches_original_in_crlf_file_and_writes_lf()
-    {
-        _files.AddFile(PathOf("win.txt"), "一\r\n二\r\n三");
-
-        string output = Call("PatchFile",
-            ("path", "win.txt"), ("from", "2"), ("to", "2"),
-            ("original", "二"), ("replacement", "改二"));
-
-        Assert.Equal("已替换 win.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
-        Assert.Equal("一\n改二\n三", ReadText("win.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_writes_lf_without_trailing_newline()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\r\n二\r\n");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "1"), ("to", "1"),
-            ("original", "一"), ("replacement", "改"));
-
-        Assert.Equal("已替换 code.txt 的第 1 到 1 行（1 行 → 1 行）。", output);
-        Assert.Equal("改\n二", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_writes_utf8_bom_when_encoding_set()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "2"),
-            ("original", "二"), ("replacement", "改二"), ("encoding", "utf-8-bom"));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
-        byte[] written = ReadBytes("code.txt");
-        Assert.Equal(0xEF, written[0]);
-        Assert.Equal(0xBB, written[1]);
-        Assert.Equal(0xBF, written[2]);
-    }
-
-    [Fact]
-    public void PatchFile_writes_utf16_when_encoding_set()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "2"),
-            ("original", "二"), ("replacement", "改二"), ("encoding", "utf-16"));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
-        byte[] written = ReadBytes("code.txt");
-        Assert.Equal(0xFF, written[0]);
-        Assert.Equal(0xFE, written[1]);
-        Assert.Equal("一\n改二\n三", Encoding.Unicode.GetString(written, 2, written.Length - 2));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_unknown_encoding()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "2"),
-            ("original", "二"), ("replacement", "改二"), ("encoding", "gbk"));
-
-        Assert.Contains("encoding 只支持", output);
-        Assert.Equal("一\n二\n三", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_original_with_different_line_count()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "3"),
-            ("original", "写错了"), ("replacement", "新"));
-
-        Assert.Contains("行数与 original 不一致", output);
-        Assert.Contains("original 有 1 行，该范围有 2 行", output);
-        Assert.Contains("实际内容是：\n2 |二\n3 |三", output);
-        Assert.Equal("一\n二\n三", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_counts_empty_original_as_one_blank_line()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "3"),
-            ("original", ""), ("replacement", "新"));
-
-        Assert.Contains("行数与 original 不一致", output);
-        Assert.Contains("original 有 1 行，该范围有 2 行", output);
-        Assert.Equal("一\n二\n三", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_reports_the_differing_line()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三\n四");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "4"),
-            ("original", "二\n错\n四"), ("replacement", "新"));
-
-        Assert.Contains("原文与 original 不一致，第 3 行不同", output);
-        Assert.Contains("实际内容是：\n2 |二\n3 |三\n4 |四", output);
-        Assert.Equal("一\n二\n三\n四", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_reports_multiple_differing_lines()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三\n四");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "4"),
-            ("original", "错二\n错三\n四"), ("replacement", "新"));
-
-        Assert.Contains("共 2 行不同，首个不同在第 2 行", output);
-        Assert.Equal("一\n二\n三\n四", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_numbers_and_aligns_mismatch_content()
-    {
-        _files.AddFile(
-            PathOf("many.txt"),
-            string.Concat(Enumerable.Range(1, 12).Select(line => $"L{line}\n")));
-
-        string output = Call("PatchFile",
-            ("path", "many.txt"), ("from", "9"), ("to", "10"),
-            ("original", "写错了"), ("replacement", "新"));
-
-        Assert.Contains("实际内容是：\n 9 |L9\n10 |L10", output);
-    }
-
-    [Fact]
-    public void PatchFile_deletes_line_range_when_replacement_omitted()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三\n四");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "3"),
-            ("original", "二\n三"));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 3 行（2 行 → 0 行）。", output);
-        Assert.Equal("一\n四", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_replaces_line_range_with_one_blank_line_when_replacement_empty()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二\n三\n四");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "3"),
-            ("original", "二\n三"), ("replacement", ""));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 3 行（2 行 → 1 行）。", output);
-        Assert.Equal("一\n\n四", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_matches_a_blank_line_with_empty_original()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n\n三");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "2"), ("to", "2"),
-            ("original", ""), ("replacement", "二"));
-
-        Assert.Equal("已替换 code.txt 的第 2 到 2 行（1 行 → 1 行）。", output);
-        Assert.Equal("一\n二\n三", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_to_beyond_file_end()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "1"), ("to", "9"),
-            ("original", "一\n二"), ("replacement", "x"));
-
-        Assert.Contains("结束行 9 超出", output);
-        Assert.Equal("一\n二", ReadText("code.txt"));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_from_beyond_file_end()
-    {
-        _files.AddFile(PathOf("code.txt"), "一\n二");
-
-        string output = Call("PatchFile",
-            ("path", "code.txt"), ("from", "3"), ("to", "5"),
-            ("original", "x"), ("replacement", "y"));
-
-        Assert.Contains("起始行 3 超出", output);
-    }
-
-    [Fact]
-    public void PatchFile_rejects_to_below_from()
-    {
-        string output = Call("PatchFile",
-            ("path", "a.txt"), ("from", "5"), ("to", "3"),
-            ("original", "x"), ("replacement", "y"));
-
-        Assert.Contains("to 不能小于", output);
-    }
-
-    [Fact]
-    public void PatchFile_rejects_non_numeric_line_numbers()
-    {
-        Assert.Contains("参数 from 要写成数字", Call("PatchFile",
-            ("path", "a.txt"), ("from", "x"), ("to", "3"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("参数 to 要写成数字", Call("PatchFile",
-            ("path", "a.txt"), ("from", "1"), ("to", "x"), ("original", "x"), ("replacement", "y")));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_missing_arguments()
-    {
-        Assert.Contains("缺少参数 path", Call("PatchFile",
-            ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("缺少参数 original", Call("PatchFile",
-            ("path", "a.txt"), ("from", "1"), ("to", "1"), ("replacement", "y")));
-        Assert.Contains("from 从 1 起", Call("PatchFile",
-            ("path", "a.txt"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-        Assert.Contains("to 从 1 起", Call("PatchFile",
-            ("path", "a.txt"), ("from", "1"), ("original", "x"), ("replacement", "y")));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_wrong_path()
-    {
-        Assert.Contains("不在工作区内", Call("PatchFile",
-            ("path", ".."), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-
-        _files.AddDirectory(PathOf("dir"));
-        Assert.Contains("是目录", Call("PatchFile",
-            ("path", "dir"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-
-        Assert.Contains("不存在", Call("PatchFile",
-            ("path", "nope.txt"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
-    }
-
-    [Fact]
-    public void PatchFile_rejects_content_beyond_limit()
-    {
-        _files.AddFile(PathOf("code.txt"), "一");
-
-        string tooLong = new('a', 40001);
-        Assert.Contains("original 超过上限", Call("PatchFile",
-            ("path", "code.txt"), ("from", "1"), ("to", "1"), ("original", tooLong), ("replacement", "y")));
-        Assert.Contains("replacement 超过上限", Call("PatchFile",
-            ("path", "code.txt"), ("from", "1"), ("to", "1"), ("original", "一"), ("replacement", tooLong)));
-
-        Assert.Equal("一", ReadText("code.txt"));
-    }
-
-    [Fact]
     public void GetFileInfo_reports_size_and_times()
     {
         string target = PathOf("notes.txt");
@@ -1115,23 +837,13 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void PatchFile_declares_replacement_as_optional()
-    {
-        IReadOnlyList<ToolDefinition> definitions =
-            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
-
-        Assert.True(Parameter(definitions, "PatchFile", "original").Required);
-        Assert.False(Parameter(definitions, "PatchFile", "replacement").Required);
-    }
-
-    [Fact]
     public void Face_functions_split_into_read_and_write_groups()
     {
         Dictionary<string, string> paths = Face().SelectMany(tool => tool.Functions)
             .ToDictionary(function => function.Definition.Path.Name.Value, function => function.Definition.Path.Value);
 
         string[] readFunctions = ["ReadFile", "SearchText", "ListDirectory", "GetFileInfo"];
-        string[] writeFunctions = ["WriteFile", "PatchFile", "ReplaceText", "MoveFile", "DeleteFile"];
+        string[] writeFunctions = ["WriteFile", "ReplaceText", "MoveFile", "DeleteFile"];
         foreach (string name in readFunctions)
         {
             Assert.Equal($"file/read/{name}", paths[name]);
@@ -1156,7 +868,6 @@ public sealed class FileToolsTests
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
-                ("PatchFile", "path"),
                 ("ReplaceText", "paths"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
@@ -1200,13 +911,11 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void Write_Patch_and_Move_reject_the_denied_directories()
+    public void Write_and_Move_reject_the_denied_directories()
     {
         _files.AddFile(PathOf("a.txt"), "一\n二\n三");
 
         Assert.Contains("黑名单", Call("WriteFile", ("path", ".git/config"), ("content", "x")));
-        Assert.Contains("黑名单", Call("PatchFile",
-            ("path", ".kuroe/catalog.json"), ("from", "1"), ("to", "1"), ("original", "x"), ("replacement", "y")));
         Assert.Contains("黑名单", Call("MoveFile", ("source", "a.txt"), ("target", ".kuroe/a.txt")));
         Assert.Contains("黑名单", Call("MoveFile", ("source", ".git/config"), ("target", "b.txt")));
     }
@@ -1224,7 +933,6 @@ public sealed class FileToolsTests
                 ("ListDirectory", "path"),
                 ("GetFileInfo", "path"),
                 ("WriteFile", "path"),
-                ("PatchFile", "path"),
                 ("ReplaceText", "paths"),
                 ("MoveFile", "source"),
                 ("MoveFile", "target"),
@@ -1303,7 +1011,6 @@ public sealed class FileToolsTests
         new SearchTextTool(_root, _files),
         new ListDirectoryTool(_root, _files),
         new WriteFileTool(_root, _files),
-        new PatchFileTool(_root, _files),
         new ReplaceTextTool(_root, _files),
         new MoveFileTool(_root, _files),
         new DeleteFileTool(_root, _files),

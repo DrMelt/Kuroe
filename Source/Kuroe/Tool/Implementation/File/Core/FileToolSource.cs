@@ -15,7 +15,6 @@ public sealed class FileToolSource(IWorkspaceFiles files) : ToolSource(Entries(f
         new(ListDirectoryTool.Definition, binding => new ListDirectoryTool(binding, files)),
         new(GetFileInfoTool.Definition, binding => new GetFileInfoTool(binding, files)),
         new(WriteFileTool.Definition, binding => new WriteFileTool(binding, files)),
-        new(PatchFileTool.Definition, binding => new PatchFileTool(binding, files)),
         new(ReplaceTextTool.Definition, binding => new ReplaceTextTool(binding, files)),
         new(MoveFileTool.Definition, binding => new MoveFileTool(binding, files)),
         new(DeleteFileTool.Definition, binding => new DeleteFileTool(binding, files)),

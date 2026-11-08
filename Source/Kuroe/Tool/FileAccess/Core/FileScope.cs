@@ -190,10 +190,6 @@ public sealed class FileScope(
         }
     }
 
-    /// <summary>把行按行号编号，行号右对齐，正文超过字符上限时截断并在正文前注明。from 是首行的行号。</summary>
-    public static string Numbered(IReadOnlyList<string> lines, int from) =>
-        Limit(FormatLines([.. lines.Select((line, index) => new NumberedLine(from + index, line))]), out _);
-
     /// <summary>把带原始行号的行渲染成「行号 |内容」，行号按最大行号右对齐，正文不截断。</summary>
     public static string FormatLines(IReadOnlyList<NumberedLine> lines)
     {

@@ -23,7 +23,6 @@ public sealed class ToolFaceTests : IDisposable
         Assert.Contains(new ToolName("ReadFile"), tools.Names);
         Assert.Contains(new ToolName("ListDirectory"), tools.Names);
         Assert.Contains(new ToolName("WriteFile"), tools.Names);
-        Assert.Contains(new ToolName("PatchFile"), tools.Names);
         Assert.Contains(new ToolName("MoveFile"), tools.Names);
         Assert.Contains(new ToolName("DeleteFile"), tools.Names);
         Assert.Contains(new ToolName("GetFileInfo"), tools.Names);
