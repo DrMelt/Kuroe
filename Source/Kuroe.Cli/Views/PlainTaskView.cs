@@ -13,7 +13,7 @@ internal static class PlainTaskView
     {
         foreach (JournalEntry entry in task.Journal.Where(entry => entry.Level == JournalLevel.Error))
         {
-            output.ErrorLine($"任务记录：{entry.Text}");
+            output.ErrorLine($"任务记录：{JournalText.Normalize(entry.Text)}");
         }
 
         foreach (ExecutableSnapshot executable in task.Executables)

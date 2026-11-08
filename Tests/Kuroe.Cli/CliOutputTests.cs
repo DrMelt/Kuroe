@@ -64,4 +64,24 @@ public sealed class CliOutputTests
             $"工具 file/read {{}}{Environment.NewLine}失败原因{Environment.NewLine}",
             error.ToString());
     }
+
+    [Fact]
+    public void Entry_splits_crlf_and_cr_text()
+    {
+        StringWriter output = new();
+        StringWriter error = new();
+        CliOutput cli = new(output, error);
+
+        cli.Entry(new JournalEntry(
+            At,
+            JournalLevel.Information,
+            "工具",
+            "file/read {}\n1 |一\r\n2 |二\r3 |三"));
+
+        Assert.Empty(output.ToString());
+        Assert.Equal(
+            $"工具 file/read {{}}{Environment.NewLine}1 |一{Environment.NewLine}" +
+            $"2 |二{Environment.NewLine}3 |三{Environment.NewLine}",
+            error.ToString());
+    }
 }

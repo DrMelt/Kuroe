@@ -54,7 +54,7 @@ public sealed class SearchTextTool : ITool
 
         IReadOnlyList<string> paths = arguments.List(new ToolName("paths")) ?? [];
 
-        ErrorOr<TextSearchResult> result = _search.Search(paths, query.Value, FileScope.OutputLimit);
+        ErrorOr<TextSearchResult> result = _search.Search(paths, query.Value, TextLimit.Characters);
         if (result.IsError)
         {
             return result.ErrorsOrEmptyList;
@@ -79,17 +79,17 @@ public sealed class SearchTextTool : ITool
         {
             text.Append(DisplayPath(group.Key));
             text.Append('\n');
-            text.Append(FileScope.FormatLines(
+            text.Append(LineView.Format(
                 [.. group.Select(match => new NumberedLine(match.Line, DisplayText(match)))]));
             text.Append('\n');
 
-            if (text.Length > FileScope.OutputLimit)
+            if (text.Length > TextLimit.Characters)
             {
                 break;
             }
         }
 
-        return FileScope.Limit(text.ToString().TrimEnd('\n'), out _);
+        return TextLimit.WithNotice(text.ToString().TrimEnd('\n'), out _);
     }
 
     /// <summary>匹配行的展示文本，被截断时在内容后标注完整字符数与展示区间。</summary>

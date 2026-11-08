@@ -232,7 +232,7 @@ public sealed class TaskKuroeInfoTool : ITool
         foreach (JournalEntry entry in shown)
         {
             string at = InfoLabels.Clock(entry.At);
-            string content = entry.Text.Replace("\n", "\n         ", StringComparison.Ordinal);
+            string content = JournalText.Normalize(entry.Text).Replace("\n", "\n         ", StringComparison.Ordinal);
             text.AppendLine($"  [{at}] {entry.Label} > {content}");
         }
     }

@@ -41,6 +41,23 @@ public sealed class JournalViewTests
     }
 
     [Fact]
+    public void Crlf_and_cr_text_renders_each_line()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        JournalEntry entry = new(At, JournalLevel.Information, "工具", "1 |一\r\n2 |二\r3 |三");
+
+        terminal.Write(JournalView.Build([entry], 0));
+
+        string[] lines = output.Output.Replace("\r", string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        int first = Array.FindIndex(lines, line => line.Contains("1 |一", StringComparison.Ordinal));
+        int second = Array.FindIndex(lines, line => line.Contains("2 |二", StringComparison.Ordinal));
+        int third = Array.FindIndex(lines, line => line.Contains("3 |三", StringComparison.Ordinal));
+        Assert.True(first >= 0);
+        Assert.True(second > first);
+        Assert.True(third > second);
+    }
+
+    [Fact]
     public void Dropped_and_limited_entries_are_reported()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Cli;
@@ -77,7 +78,7 @@ internal sealed class CliOutput(TextWriter output, TextWriter error)
     /// <summary>一条过程记录写 stderr，避免与 stdout 上的模型文本交错。</summary>
     public void Entry(JournalEntry entry)
     {
-        string[] lines = entry.Text.Split('\n');
+        string[] lines = JournalText.Lines(entry.Text);
         lock (_gate)
         {
             error.WriteLine($"{entry.Label} {lines[0]}");

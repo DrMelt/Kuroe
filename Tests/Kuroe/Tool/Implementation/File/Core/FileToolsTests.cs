@@ -23,7 +23,27 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "hello.txt"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |你好，工作目录！\n2 |第二行", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |你好，工作目录！\n2 |第二行<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact]
+    public void ReadFile_preserves_crlf_line_terminators()
+    {
+        _files.AddFile(PathOf("crlf.txt"), "一\r\n二\r\n");
+
+        string output = Call("ReadFile", ("path", "crlf.txt"), ("from", "1"), ("to", "2"));
+
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact]
+    public void ReadFile_can_omit_line_numbers()
+    {
+        _files.AddFile(PathOf("raw.txt"), "一\r\n二\r三\n四");
+
+        string output = Call("ReadFile", ("path", "raw.txt"), ("lineNumbers", false));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", output);
     }
 
     [Fact]
@@ -66,8 +86,9 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "long.txt"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 |", output, StringComparison.Ordinal);
-        Assert.Equal("（内容超过 8000 字符，已截断）\n".Length + 8000, output.Length);
+        Assert.StartsWith("（内容超过 8000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |", output, StringComparison.Ordinal);
+        Assert.EndsWith("<<<KUROE_TEXT_END>>>", output, StringComparison.Ordinal);
+        Assert.Equal("（内容超过 8000 字符，已截断）\n".Length + "<<<KUROE_TEXT_BEGIN>>>".Length + 8000 + "<<<KUROE_TEXT_END>>>".Length, output.Length);
     }
 
     [Fact]
@@ -77,7 +98,7 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "lines.txt"), ("from", "2"), ("to", "4"));
 
-        Assert.Equal("2 |二\n3 |三\n4 |四", output);
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n<<<KUROE_TEXT_END>>>", output);
     }
 
     [Fact]
@@ -89,7 +110,7 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "many.txt"));
 
-        Assert.StartsWith(" 1 |L1\n 2 |L2\n", output, StringComparison.Ordinal);
+        Assert.StartsWith("<<<KUROE_TEXT_BEGIN>>> 1 |L1\n 2 |L2\n", output, StringComparison.Ordinal);
         Assert.Contains("50 |L50", output, StringComparison.Ordinal);
         Assert.DoesNotContain("51 |L51", output, StringComparison.Ordinal);
     }
@@ -101,7 +122,7 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "few.txt"), ("to", "100"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |一\n2 |二", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 3 行）\n<<<KUROE_TEXT_BEGIN>>>1 |一\n2 |二\n3 |<<<KUROE_TEXT_END>>>", output);
     }
 
     [Fact]
@@ -109,7 +130,7 @@ public sealed class FileToolsTests
     {
         _files.AddFile(PathOf("few.txt"), "一\n二\n");
 
-        string output = Call("ReadFile", ("path", "few.txt"), ("from", "10"), ("to", "20"));
+        string output = Call("ReadFile", ("path", "few.txt"), ("from", "4"), ("to", "20"));
 
         Assert.Contains("超出文件长度", output);
     }
@@ -880,6 +901,18 @@ public sealed class FileToolsTests
     }
 
     [Fact]
+    public void ReadFile_declares_line_numbers_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter lineNumbers = Parameter(definitions, "ReadFile", "lineNumbers");
+
+        Assert.True(lineNumbers.Flag);
+        Assert.False(lineNumbers.Required);
+    }
+
+    [Fact]
     public void DeleteFile_declares_recursive_as_an_optional_switch()
     {
         IReadOnlyList<ToolDefinition> definitions =
@@ -978,7 +1011,7 @@ public sealed class FileToolsTests
             .Functions.Single()
             .Invoke(new ToolArguments(new Dictionary<string, object?> { ["path"] = "mapped.txt" })));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 |映射内容", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n<<<KUROE_TEXT_BEGIN>>>1 |映射内容<<<KUROE_TEXT_END>>>", output);
     }
 
     [Fact]

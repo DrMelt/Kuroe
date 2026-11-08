@@ -1,11 +1,9 @@
-using System.Globalization;
-using System.Text;
 using ErrorOr;
 using Kuroe.Files.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
-/// <summary>根目录内的文件访问：路径解析与越界拒绝，按行号范围读取并按字符上限截断。
+/// <summary>根目录内的文件访问：路径解析与越界拒绝，按行号范围读取并按字符上限截断，行尾保留原始终止符。
 /// 不解析链接，根目录内指向外部的符号链接、目录联接点与硬链接不被拦截。</summary>
 /// <param name="root">路径参数的解析基准目录，绝对路径。</param>
 /// <param name="boundary">允许的边界目录，绝对路径。</param>
@@ -19,9 +17,6 @@ public sealed class FileScope(
     string boundaryName,
     IWorkspaceFiles files)
 {
-    /// <summary>工具输出的字符上限，超长截断并在正文前提示。</summary>
-    public const int OutputLimit = 8000;
-
     private readonly string _root = root;
     private readonly string _rootName = rootName;
     private readonly IWorkspaceFiles _files = files;
@@ -81,12 +76,12 @@ public sealed class FileScope(
         }
     }
 
-    /// <summary>读取根目录内文件指定行号范围的内容，每行带行号并按字符上限截断。
+    /// <summary>读取根目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断。
     /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。listFunction 是提示里指出的列目录函数名。</summary>
-    public ErrorOr<string> ReadRange(string path, int from, int to, string listFunction)
+    public ErrorOr<string> ReadRange(string path, int from, int to, bool lineNumbers, string listFunction)
     {
         ErrorOr<string> file = ExistingFile(path, listFunction);
-        return file.IsError ? file.ErrorsOrEmptyList : ReadLines(file.Value, path, from, to);
+        return file.IsError ? file.ErrorsOrEmptyList : ReadLines(file.Value, path, from, to, lineNumbers);
     }
 
     /// <summary>取根目录内文件的文件系统事实，只受理文件。listFunction 是提示里指出的列目录函数名。</summary>
@@ -130,57 +125,38 @@ public sealed class FileScope(
         return resolved.Value;
     }
 
-    /// <summary>读取文件指定行号范围的内容，每行带行号并按字符上限截断。
+    /// <summary>读取文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断，正文包在范围标记内。
     /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。</summary>
-    private ErrorOr<string> ReadLines(string fullPath, string path, int from, int to)
+    private ErrorOr<string> ReadLines(string fullPath, string path, int from, int to, bool lineNumbers)
     {
         try
         {
             using StreamReader reader = new(_files.OpenRead(fullPath));
 
-            for (int line = 1; line < from; line++)
+            SourceLineReadResult read = SourceLineReader.Read(reader, from, to, TextLimit.Characters);
+            if (read.FromBeyondEnd)
             {
-                if (reader.ReadLine() is null)
-                {
-                    return ToolErrors.Argument($"起始行 {from} 超出文件长度，该范围没有内容。");
-                }
+                return ToolErrors.Argument($"起始行 {from} 超出文件长度，该范围没有内容。");
             }
 
-            int maxLines = to - from + 1;
-            List<string> lines = [];
-            bool reachedEnd = false;
-            int rawLength = 0;
-            while (lines.Count < maxLines)
-            {
-                string? line = reader.ReadLine();
-                if (line is null)
-                {
-                    reachedEnd = true;
-                    break;
-                }
-
-                lines.Add(line);
-                rawLength += line.Length + 1;
-                if (rawLength > OutputLimit)
-                {
-                    break;
-                }
-            }
-
-            if (lines.Count == 0)
+            if (read.Lines.Count == 0)
             {
                 return "（已到文件结尾，文件没有内容）";
             }
 
-            string content = Limit(
-                FormatLines([.. lines.Select((line, index) => new NumberedLine(from + index, line))]),
-                out bool limited);
-            if (limited || !reachedEnd)
+            string body = TextLimit.Body(LineView.Format(read.Lines, lineNumbers), out bool truncated);
+            string content = TextRange.Wrap(body);
+            if (truncated)
+            {
+                return $"{TextLimit.Notice}\n{content}";
+            }
+
+            if (!read.ToBeyondEnd)
             {
                 return content;
             }
 
-            int last = from + lines.Count - 1;
+            int last = from + read.Lines.Count - 1;
             string range = from == last ? $"第 {from} 行" : $"第 {from} 到 {last} 行";
             return $"（已到文件结尾，实际返回{range}）\n{content}";
         }
@@ -189,41 +165,6 @@ public sealed class FileScope(
             return ToolErrors.ReadFailed($"读取 {path} 失败：{ex.Message}");
         }
     }
-
-    /// <summary>把带原始行号的行渲染成「行号 |内容」，行号按最大行号右对齐，正文不截断。</summary>
-    public static string FormatLines(IReadOnlyList<NumberedLine> lines)
-    {
-        if (lines.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        int width = lines.Max(line => line.Number).ToString(CultureInfo.InvariantCulture).Length;
-        var text = new StringBuilder();
-        foreach (NumberedLine line in lines)
-        {
-            if (text.Length > 0)
-            {
-                text.Append('\n');
-            }
-
-            text.Append(line.Number.ToString(CultureInfo.InvariantCulture).PadLeft(width));
-            text.Append(" |");
-            text.Append(line.Text);
-        }
-
-        return text.ToString();
-    }
-
-    /// <summary>正文超过输出上限时截断，并把截断提示放在正文前。</summary>
-    public static string Limit(string content, out bool truncated)
-    {
-        truncated = content.Length > OutputLimit;
-        return truncated ? $"{TruncationNotice}\n{content[..OutputLimit]}" : content;
-    }
-
-    /// <summary>正文超过字符上限时正文前的截断提示。</summary>
-    private static string TruncationNotice => $"（内容超过 {OutputLimit} 字符，已截断）";
 
     /// <summary>路径的展示。空路径即路径基准目录。</summary>
     public string Display(string path) => path.Length == 0 ? $"{_rootName}根" : path;

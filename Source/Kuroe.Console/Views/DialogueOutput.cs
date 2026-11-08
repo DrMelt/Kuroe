@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Spectre.Console;
 
@@ -50,7 +51,7 @@ internal sealed class DialogueOutput(Terminal terminal)
         lock (_gate)
         {
             CloseContent();
-            string[] lines = entry.Text.Split('\n');
+            string[] lines = JournalText.Lines(entry.Text);
             terminal.ToolCall($"{entry.Label} {lines[0]}");
 
             for (int index = 1; index < lines.Length; index++)

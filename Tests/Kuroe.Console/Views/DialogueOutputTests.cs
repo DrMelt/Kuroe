@@ -28,6 +28,24 @@ public sealed class DialogueOutputTests
     }
 
     [Fact]
+    public void Entry_splits_crlf_and_cr_result_lines()
+    {
+        Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
+        DialogueOutput dialogue = new(terminal);
+
+        dialogue.Entry(new JournalEntry(
+            TestTime.At,
+            JournalLevel.Information,
+            "工具",
+            "ReadFile {}\n1 |一\r\n2 |二\r3 |三"));
+
+        string[] lines = output.Output.Replace("\r", string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Contains(lines, line => line.Trim() == "1 |一");
+        Assert.Contains(lines, line => line.Trim() == "2 |二");
+        Assert.Contains(lines, line => line.Trim() == "3 |三");
+    }
+
+    [Fact]
     public void Entry_failure_prints_warning_line()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);

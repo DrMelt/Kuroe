@@ -218,7 +218,7 @@ public sealed class FileSearchTests
     [Fact]
     public void Search_rejects_a_missing_scope()
     {
-        ErrorOr<TextSearchResult> result = new FileSearch(Scope()).Search(["nope"], Query("needle"), FileScope.OutputLimit);
+        ErrorOr<TextSearchResult> result = new FileSearch(Scope()).Search(["nope"], Query("needle"), TextLimit.Characters);
 
         Assert.True(result.IsError);
         Assert.Contains("不存在", result.FirstError.Description, StringComparison.Ordinal);
@@ -252,7 +252,7 @@ public sealed class FileSearchTests
         IReadOnlyList<string> paths,
         TextQuery query,
         ToolPathAccess? access = null,
-        int characterBudget = FileScope.OutputLimit)
+        int characterBudget = TextLimit.Characters)
     {
         ErrorOr<TextSearchResult> result = new FileSearch(Scope(), access).Search(paths, query, characterBudget);
         Assert.False(result.IsError);

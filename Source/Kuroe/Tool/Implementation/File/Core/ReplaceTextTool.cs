@@ -148,7 +148,7 @@ public sealed class ReplaceTextTool : ITool
             }
         }
 
-        return FileScope.Limit(text.ToString(), out _);
+        return TextLimit.WithNotice(text.ToString(), out _);
     }
 
     /// <summary>文件的展示路径，相对路径基准目录。</summary>

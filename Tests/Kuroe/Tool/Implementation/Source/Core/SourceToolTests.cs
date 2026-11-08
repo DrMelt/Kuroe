@@ -91,7 +91,27 @@ public sealed class SourceToolTests
 
         string output = Call("ReadSourceFile", ("path", "Kuroe.cs"), ("from", "2"), ("to", "4"));
 
-        Assert.Equal("2 |二\n3 |三\n4 |四", output);
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact]
+    public void ReadSourceFile_can_omit_line_numbers()
+    {
+        _files.AddFile(Path.Combine(_root, "raw.cs"), "一\r\n二\r三\n四");
+
+        string output = Call("ReadSourceFile", ("path", "raw.cs"), ("lineNumbers", false));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Fact]
+    public void ReadSourceFile_preserves_crlf_line_terminators()
+    {
+        _files.AddFile(Path.Combine(_root, "Kuroe.cs"), "一\r\n二\r\n");
+
+        Assert.Equal(
+            "<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>",
+            Call("ReadSourceFile", ("path", "Kuroe.cs"), ("from", "1"), ("to", "2")));
     }
 
     [Fact]
@@ -100,7 +120,7 @@ public sealed class SourceToolTests
         string file = Path.Combine(_root, "Kuroe.cs");
         _files.AddFile(file, "一\n二\n");
 
-        Assert.Equal("2 |二", Call("ReadSourceFile", ("path", file), ("from", "2"), ("to", "2")));
+        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n<<<KUROE_TEXT_END>>>", Call("ReadSourceFile", ("path", file), ("from", "2"), ("to", "2")));
     }
 
     [Fact]
@@ -108,7 +128,7 @@ public sealed class SourceToolTests
     {
         _files.AddFile(Path.Combine(_root, "..foo.cs"), "一\n");
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n1 |一", Call("ReadSourceFile", ("path", "..foo.cs")));
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |一\n2 |<<<KUROE_TEXT_END>>>", Call("ReadSourceFile", ("path", "..foo.cs")));
     }
 
     [Fact]
@@ -118,7 +138,7 @@ public sealed class SourceToolTests
 
         string output = Call("ReadSourceFile", ("path", "短文档.md"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n1 |第一行\n2 |第二行", output);
+        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |第一行\n2 |第二行<<<KUROE_TEXT_END>>>", output);
     }
 
     [Fact]
@@ -128,7 +148,7 @@ public sealed class SourceToolTests
 
         string output = Call("ReadSourceFile", ("path", "long.cs"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n1 |", output, StringComparison.Ordinal);
+        Assert.StartsWith("（内容超过 8000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -174,6 +194,10 @@ public sealed class SourceToolTests
         Assert.True(list.Parameters.Single(parameter => parameter.Name.Value == "path").Path);
         Assert.True(read.Parameters.Single(parameter => parameter.Name.Value == "path").Path);
         Assert.False(read.Parameters.Single(parameter => parameter.Name.Value == "from").Path);
+
+        ToolParameter lineNumbers = read.Parameters.Single(parameter => parameter.Name.Value == "lineNumbers");
+        Assert.True(lineNumbers.Flag);
+        Assert.False(lineNumbers.Required);
     }
 
     private SourceTool Tool() => new(_root, _files);

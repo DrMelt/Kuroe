@@ -26,11 +26,12 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
-        "读取导出目录内源码或文档指定行号范围的内容，每行带行号。from 与 to 是行号，缺省读前 50 行，to 超出文件行数时读到文件尾并在正文前注明实际范围。",
+        $"读取导出目录内源码或文档指定行号范围的内容，缺省每行带行号，行尾保留文件原有的换行符。lineNumbers 为假时只输出行内容与原始换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {TextRange.Begin} 与 {TextRange.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。from 与 to 是行号，缺省读前 50 行，from 超出文件行数时拒绝，to 超出文件行数时读到文件尾并在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
+            new ToolParameter(new ToolName("lineNumbers"), "是否在每行前输出行号，布尔，缺省为真；为假时只输出行内容与原始换行符", Flag: true),
         ]);
 
     /// <summary>本载体的函数声明。</summary>
@@ -74,7 +75,7 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>读取导出目录内文件指定行号范围的内容，每行带行号并按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
+    /// <summary>读取导出目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
     private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
         string path = arguments.RequiredText(new ToolName("path"));
@@ -85,6 +86,7 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
             return range.ErrorsOrEmptyList;
         }
 
-        return scope.ReadRange(path, range.Value.From, range.Value.To, "ListSourceDirectory");
+        bool lineNumbers = arguments.Flag(new ToolName("lineNumbers")) ?? true;
+        return scope.ReadRange(path, range.Value.From, range.Value.To, lineNumbers, "ListSourceDirectory");
     }
 }

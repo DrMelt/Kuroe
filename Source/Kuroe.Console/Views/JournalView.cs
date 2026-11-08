@@ -1,3 +1,4 @@
+using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -48,6 +49,6 @@ internal static class JournalView
         table.AddRow(
             new Text(ViewLabels.Clock(entry.At), Styles.Hint),
             new Text(entry.Label, Styles.Hint),
-            new Text(entry.Text, style));
+            new Text(JournalText.Normalize(entry.Text), style));
     }
 }
