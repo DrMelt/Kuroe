@@ -47,6 +47,26 @@ public sealed record TextQuery
     /// <summary>查找文本在该行中的起点，没有匹配时为 -1。</summary>
     public int IndexOf(string line) => line.IndexOf(Pattern, Comparison);
 
+    /// <summary>查找文本在该行中的非重叠出现次数。</summary>
+    public int CountOccurrences(string line)
+    {
+        int count = 0;
+        int start = 0;
+        while (start < line.Length)
+        {
+            int index = line.IndexOf(Pattern, start, Comparison);
+            if (index < 0)
+            {
+                break;
+            }
+
+            count++;
+            start = index + Pattern.Length;
+        }
+
+        return count;
+    }
+
     /// <summary>文件名是否符合后缀过滤，未给后缀时全部符合。</summary>
     public bool MatchesExtension(string file) =>
         Extensions.Count == 0

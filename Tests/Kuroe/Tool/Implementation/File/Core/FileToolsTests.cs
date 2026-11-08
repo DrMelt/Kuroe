@@ -179,6 +179,17 @@ public sealed class FileToolsTests
     }
 
     [Fact]
+    public void SearchText_counts_each_occurrence_on_a_line()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle needle");
+
+        string output = Call("SearchText", ("pattern", "needle"));
+
+        Assert.Contains("在 路径基准根 中匹配 2 处：", output);
+        Assert.Contains("1 |needle needle", output);
+    }
+
+    [Fact]
     public void SearchText_filters_by_scope_and_extension()
     {
         _files.AddFile(PathOf("Source/a.cs"), "needle");
@@ -304,6 +315,83 @@ public sealed class FileToolsTests
         string output = Call("SearchText", ("pattern", "needle"));
 
         Assert.EndsWith("1 |needle ", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_unique_returns_the_single_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "before\nneedle\nafter");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("2 |needle", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_rejects_no_occurrence()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle");
+
+        string output = Call("SearchText", ("pattern", "other"), ("unique", true));
+
+        Assert.Equal("在 路径基准根 中 other 出现 0 次，不是唯一匹配。", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_reports_no_searchable_file()
+    {
+        _files.AddDirectory(_root);
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Equal("在 路径基准根 中没有可搜索的文件。", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_rejects_multiple_lines()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+        Assert.Contains("不是唯一匹配", output);
+        Assert.Contains("1 |needle", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_rejects_a_second_occurrence_in_a_long_line()
+    {
+        _files.AddFile(
+            PathOf("a.txt"),
+            $"needle{new string('a', 9000)}\nneedle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_accepts_a_single_occurrence_in_a_long_line()
+    {
+        _files.AddFile(PathOf("a.txt"), $"needle{new string('a', 9000)}");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("匹配 1 处", output);
+        Assert.Contains("1 |needle", output);
+    }
+
+    [Fact]
+    public void SearchText_unique_rejects_multiple_occurrences_on_one_line()
+    {
+        _files.AddFile(PathOf("a.txt"), "needle needle");
+
+        string output = Call("SearchText", ("pattern", "needle"), ("unique", true));
+
+        Assert.Contains("至少出现 2 处", output);
+        Assert.Contains("1 |needle needle", output);
     }
 
     [Fact]
@@ -910,6 +998,18 @@ public sealed class FileToolsTests
 
         Assert.True(lineNumbers.Flag);
         Assert.False(lineNumbers.Required);
+    }
+
+    [Fact]
+    public void SearchText_declares_unique_as_an_optional_switch()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        ToolParameter unique = Parameter(definitions, "SearchText", "unique");
+
+        Assert.True(unique.Flag);
+        Assert.False(unique.Required);
     }
 
     [Fact]

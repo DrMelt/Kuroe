@@ -116,6 +116,75 @@ public sealed class FileSearchTests
     }
 
     [Fact]
+    public void Search_counts_all_occurrences_on_a_line()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "needle needle\n");
+
+        TextSearchResult result = Run([], Query("needle"));
+
+        TextSearchMatch match = Assert.Single(result.Matches);
+        Assert.Equal("needle needle", match.Text);
+        Assert.Equal(2, result.Occurrences);
+    }
+
+    [Fact]
+    public void Search_stops_at_the_occurrence_limit()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "needle\nneedle\nneedle\n");
+
+        TextSearchResult result = Run(
+            [],
+            Query("needle"),
+            characterBudget: int.MaxValue,
+            occurrenceLimit: 2);
+
+        Assert.Equal(2, result.Matches.Count);
+        Assert.Equal(2, result.Occurrences);
+    }
+
+    [Fact]
+    public void Search_counts_non_overlapping_occurrences()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "aaa\n");
+
+        TextSearchResult result = Run([], Query("aa"));
+
+        TextSearchMatch match = Assert.Single(result.Matches);
+        Assert.Equal("aaa", match.Text);
+        Assert.Equal(1, result.Occurrences);
+    }
+
+    [Fact]
+    public void Search_counts_occurrences_ignoring_case()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "Needle needle\n");
+
+        TextSearchResult result = Run([], Query("needle", ignoreCase: true));
+
+        Assert.Equal(2, result.Occurrences);
+    }
+
+    [Fact]
+    public void Search_stops_at_the_character_budget_before_the_occurrence_limit()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "needle\nneedle\n");
+
+        TextSearchResult result = Run([], Query("needle"), characterBudget: 1, occurrenceLimit: 2);
+
+        Assert.Equal(1, result.Occurrences);
+    }
+
+    [Fact]
+    public void Search_rejects_a_non_positive_occurrence_limit()
+    {
+        ErrorOr<TextSearchResult> result = new FileSearch(Scope())
+            .Search([], Query("needle"), TextLimit.Characters, 0);
+
+        Assert.True(result.IsError);
+        Assert.Contains("出现次数上限", result.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Search_splits_lines_on_carriage_returns_and_line_feeds()
     {
         _files.AddFile(Path.Combine(_root, "mixed.txt"), "a1\r\na2\ra3\na4");
@@ -252,9 +321,11 @@ public sealed class FileSearchTests
         IReadOnlyList<string> paths,
         TextQuery query,
         ToolPathAccess? access = null,
-        int characterBudget = TextLimit.Characters)
+        int characterBudget = TextLimit.Characters,
+        int occurrenceLimit = int.MaxValue)
     {
-        ErrorOr<TextSearchResult> result = new FileSearch(Scope(), access).Search(paths, query, characterBudget);
+        ErrorOr<TextSearchResult> result = new FileSearch(Scope(), access)
+            .Search(paths, query, characterBudget, occurrenceLimit);
         Assert.False(result.IsError);
         return result.Value;
     }
