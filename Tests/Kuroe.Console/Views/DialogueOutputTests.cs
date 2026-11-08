@@ -1,5 +1,6 @@
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.TestSupport;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -15,7 +16,7 @@ public sealed class DialogueOutputTests
         DialogueOutput dialogue = new(terminal);
 
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
             "WriteFile {\"path\":\"a.txt\"}\n已写入 5 字符。"));
@@ -33,7 +34,7 @@ public sealed class DialogueOutputTests
         DialogueOutput dialogue = new(terminal);
 
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Warning,
             "工具",
             "WriteFile {\"path\":\"a.txt\"}\n缺少参数。"));
@@ -51,7 +52,7 @@ public sealed class DialogueOutputTests
 
         dialogue.Content(new ProcessContent(ProcessContentKind.Reply, "我来查看一下。"));
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
             "ListTools {}\n内置对话可用函数与分组"));
@@ -92,7 +93,7 @@ public sealed class DialogueOutputTests
 
         dialogue.Content(new ProcessContent(ProcessContentKind.Reasoning, "先想"));
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
             "ListTools {}\n内置对话可用函数与分组"));
@@ -150,7 +151,7 @@ public sealed class DialogueOutputTests
             dialogue.Content(new ProcessContent(ProcessContentKind.Reasoning, "先想"));
             dialogue.Content(new ProcessContent(ProcessContentKind.Reply, "我来查看一下。"));
             dialogue.Entry(new JournalEntry(
-                DateTimeOffset.UtcNow,
+                TestTime.At,
                 JournalLevel.Information,
                 "工具",
                 "ListTools {}\n内置对话可用函数与分组"));

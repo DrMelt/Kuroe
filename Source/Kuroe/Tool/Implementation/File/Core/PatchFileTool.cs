@@ -1,16 +1,16 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
-
-using File = System.IO.File;
 
 /// <summary>按行号范围替换路径基准目录内文件内容的工具。路径解析后必须落回工作区内，替换区间的原文须与 original 逐行一致。</summary>
 public sealed class PatchFileTool : ITool
 {
     private readonly FileScope _scope;
+    private readonly IWorkspaceFiles _files;
 
     /// <summary>按行号范围替换文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -28,16 +28,17 @@ public sealed class PatchFileTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public PatchFileTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public PatchFileTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public PatchFileTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public PatchFileTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
+        _files = files;
         Functions = [Definition.Bind(Patch, _scope.Paths)];
     }
 
@@ -81,12 +82,12 @@ public sealed class PatchFileTool : ITool
             return resolved.ErrorsOrEmptyList;
         }
 
-        if (Directory.Exists(resolved.Value))
+        if (_files.DirectoryExists(resolved.Value))
         {
             return ToolErrors.Path($"{path} 是目录，不能替换。");
         }
 
-        if (!File.Exists(resolved.Value))
+        if (!_files.FileExists(resolved.Value))
         {
             return ToolErrors.Path($"{path} 不存在。");
         }
@@ -94,7 +95,8 @@ public sealed class PatchFileTool : ITool
         string[] lines;
         try
         {
-            lines = [.. File.ReadLines(resolved.Value)];
+            using StreamReader reader = new(_files.OpenRead(resolved.Value));
+            lines = [.. ReadLines(reader)];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -122,7 +124,7 @@ public sealed class PatchFileTool : ITool
         string[] newLines = [.. lines[..(range.Value.From - 1)], .. replacementLines, .. lines[range.Value.To..]];
         try
         {
-            File.WriteAllText(resolved.Value, string.Join("\n", newLines), encoding.Value);
+            _files.WriteText(resolved.Value, string.Join("\n", newLines), encoding.Value);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -159,6 +161,15 @@ public sealed class PatchFileTool : ITool
             ? $"第 {first} 行不同"
             : $"共 {differing} 行不同，首个不同在第 {first} 行";
         return $"第 {range.From} 到 {range.To} 行的原文与 original 不一致，{detail}。实际内容是：\n{content}";
+    }
+
+    /// <summary>逐行读取到结束。</summary>
+    private static IEnumerable<string> ReadLines(TextReader reader)
+    {
+        while (reader.ReadLine() is { } line)
+        {
+            yield return line;
+        }
     }
 
     /// <summary>按行拆文本并去行尾回车的行数组，空文本得一行空行。</summary>

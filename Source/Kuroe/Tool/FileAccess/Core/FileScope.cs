@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using ErrorOr;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -10,22 +11,32 @@ namespace Kuroe.Tool.FileAccess;
 /// <param name="boundary">允许的边界目录，绝对路径。</param>
 /// <param name="rootName">基准目录名，空路径的展示名由它拼出。</param>
 /// <param name="boundaryName">边界目录名，越界拒绝文案由它拼出。</param>
-public sealed class FileScope(string root, string boundary, string rootName, string boundaryName)
+/// <param name="files">文件访问实现。</param>
+public sealed class FileScope(
+    string root,
+    string boundary,
+    string rootName,
+    string boundaryName,
+    IWorkspaceFiles files)
 {
     /// <summary>工具输出的字符上限，超长截断并在正文前提示。</summary>
     public const int OutputLimit = 8000;
 
     private readonly string _root = root;
     private readonly string _rootName = rootName;
+    private readonly IWorkspaceFiles _files = files;
 
     /// <summary>路径解析基准与边界相同的根目录。</summary>
-    public FileScope(string root, string name)
-        : this(root, root, name, name)
+    public FileScope(string root, string name, IWorkspaceFiles files)
+        : this(root, root, name, name, files)
     {
     }
 
     /// <summary>根目录的绝对路径。</summary>
     public string Root => _root;
+
+    /// <summary>本作用域使用的文件访问实现。</summary>
+    public IWorkspaceFiles Workspace => _files;
 
     /// <summary>建立作用域时的绑定错误，非空时所有解析都返回它。</summary>
     public Error? BindingError { get; init; }
@@ -47,20 +58,20 @@ public sealed class FileScope(string root, string boundary, string rootName, str
             return resolved.ErrorsOrEmptyList;
         }
 
-        if (File.Exists(resolved.Value))
+        if (_files.FileExists(resolved.Value))
         {
             return ToolErrors.Path($"{Display(path)} 是文件，用 {fileFunction} 读取它的内容。");
         }
 
-        if (!Directory.Exists(resolved.Value))
+        if (!_files.DirectoryExists(resolved.Value))
         {
             return ToolErrors.Path($"{Display(path)} 不存在。");
         }
 
         try
         {
-            return Directory.GetFileSystemEntries(resolved.Value)
-                .Select(entry => new DirectoryEntry(Path.GetFileName(entry), Directory.Exists(entry)))
+            return _files.Entries(resolved.Value)
+                .Select(entry => new DirectoryEntry(Path.GetFileName(entry), _files.DirectoryExists(entry)))
                 .OrderBy(entry => entry.Name, StringComparer.Ordinal)
                 .ToArray();
         }
@@ -79,7 +90,7 @@ public sealed class FileScope(string root, string boundary, string rootName, str
     }
 
     /// <summary>取根目录内文件的文件系统事实，只受理文件。listFunction 是提示里指出的列目录函数名。</summary>
-    public ErrorOr<FileDetails> Inspect(string path, string listFunction)
+    public ErrorOr<FileFacts> Inspect(string path, string listFunction)
     {
         ErrorOr<string> file = ExistingFile(path, listFunction);
         if (file.IsError)
@@ -89,14 +100,7 @@ public sealed class FileScope(string root, string boundary, string rootName, str
 
         try
         {
-            FileInfo info = new(file.Value);
-
-            return new FileDetails(
-                info.Length,
-                new DateTimeOffset(info.CreationTime),
-                new DateTimeOffset(info.LastWriteTime),
-                new DateTimeOffset(info.LastAccessTime),
-                info.Attributes);
+            return _files.Inspect(file.Value);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -113,12 +117,12 @@ public sealed class FileScope(string root, string boundary, string rootName, str
             return resolved.ErrorsOrEmptyList;
         }
 
-        if (Directory.Exists(resolved.Value))
+        if (_files.DirectoryExists(resolved.Value))
         {
             return ToolErrors.Path($"{path} 是目录，用 {listFunction} 列出它的条目。");
         }
 
-        if (!File.Exists(resolved.Value))
+        if (!_files.FileExists(resolved.Value))
         {
             return ToolErrors.Path($"{path} 不存在。");
         }
@@ -128,11 +132,11 @@ public sealed class FileScope(string root, string boundary, string rootName, str
 
     /// <summary>读取文件指定行号范围的内容，每行带行号并按字符上限截断。
     /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。</summary>
-    private static ErrorOr<string> ReadLines(string fullPath, string path, int from, int to)
+    private ErrorOr<string> ReadLines(string fullPath, string path, int from, int to)
     {
         try
         {
-            using StreamReader reader = new(fullPath);
+            using StreamReader reader = new(_files.OpenRead(fullPath));
 
             for (int line = 1; line < from; line++)
             {

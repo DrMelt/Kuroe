@@ -109,7 +109,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
 
-            Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+            Append(new JournalEntry(TestTime.At, JournalLevel.Information, label, delta));
             ContentAppended?.Invoke(new ProcessContent(kind, delta));
         }
 

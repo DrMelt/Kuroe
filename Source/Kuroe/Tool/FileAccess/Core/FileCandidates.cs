@@ -38,13 +38,13 @@ public sealed class FileCandidates(FileScope scope, ToolPathAccess? access = nul
                 }
             }
 
-            if (File.Exists(resolved.Value))
+            if (_scope.Workspace.FileExists(resolved.Value))
             {
                 files.Add(resolved.Value);
                 continue;
             }
 
-            if (!Directory.Exists(resolved.Value))
+            if (!_scope.Workspace.DirectoryExists(resolved.Value))
             {
                 return ToolErrors.Path($"{_scope.Display(path)} 不存在。");
             }
@@ -64,19 +64,19 @@ public sealed class FileCandidates(FileScope scope, ToolPathAccess? access = nul
         while (pending.Count > 0)
         {
             string current = pending.Dequeue();
-            if (IsExcluded(current) || IsReparsePoint(current))
+            if (IsExcluded(current) || _scope.Workspace.IsReparsePoint(current))
             {
                 continue;
             }
 
             try
             {
-                foreach (string file in Directory.EnumerateFiles(current))
+                foreach (string file in _scope.Workspace.Files(current))
                 {
                     files.Add(file);
                 }
 
-                foreach (string child in Directory.EnumerateDirectories(current))
+                foreach (string child in _scope.Workspace.Directories(current))
                 {
                     pending.Enqueue(child);
                 }
@@ -95,21 +95,4 @@ public sealed class FileCandidates(FileScope scope, ToolPathAccess? access = nul
     /// <summary>该目录是否被路径准入规则排除。</summary>
     private bool IsExcluded(string directory) =>
         _access is not null && !_access.Allows(directory, _scope.Root);
-
-    /// <summary>该目录是否是重解析点，读取属性失败时按是处理。</summary>
-    private static bool IsReparsePoint(string directory)
-    {
-        try
-        {
-            return (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0;
-        }
-        catch (IOException)
-        {
-            return true;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return true;
-        }
-    }
 }

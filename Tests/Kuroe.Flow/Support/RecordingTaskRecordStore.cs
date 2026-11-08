@@ -8,9 +8,6 @@ namespace Kuroe.Flow.TestSupport;
 /// <summary>内存存档存储加写入记录：每次写入成功后记下序号与内容，并唤醒等待方。</summary>
 public sealed class RecordingTaskRecordStore : ITaskRecordRecordingStore
 {
-    /// <summary>等待写入的上限，只用于把挂起变成失败。</summary>
-    private static readonly TimeSpan HangGuard = TimeSpan.FromSeconds(60);
-
     private readonly Lock _gate = new();
     private readonly InMemoryTaskRecordStore _inner = new();
     private readonly List<TaskRecordWrite> _writes = [];
@@ -86,11 +83,12 @@ public sealed class RecordingTaskRecordStore : ITaskRecordRecordingStore
 
         try
         {
-            return await write.WaitAsync(HangGuard).ConfigureAwait(false);
+            return await write.WaitAsync(TestTimeouts.HangGuard).ConfigureAwait(false);
         }
         catch (TimeoutException)
         {
-            throw new TimeoutException($"存档在 {HangGuard.TotalSeconds} 秒内没有出现满足条件的写入。");
+            throw new TimeoutException(
+                $"存档在 {TestTimeouts.HangGuard.TotalSeconds} 秒内没有出现满足条件的写入。");
         }
     }
 

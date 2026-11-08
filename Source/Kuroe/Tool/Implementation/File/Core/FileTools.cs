@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
@@ -15,22 +16,22 @@ internal static class FileTools
     internal static ToolPathAccess PathAccess { get; } = new([], [".kuroe", ".git"]);
 
     /// <summary>按执行绑定读取 root 变量，建立文件访问作用域。缺变量时作用域返回绑定错误。</summary>
-    internal static FileScope Scope(ToolBinding binding)
+    internal static FileScope Scope(ToolBinding binding, IWorkspaceFiles files)
     {
         string? root = binding.Variable(PathVariables.RootName);
         if (string.IsNullOrWhiteSpace(root))
         {
-            return Failed(binding, $"路径变量 {PathVariables.RootName} 未映射或端口为空。");
+            return Failed(binding, $"路径变量 {PathVariables.RootName} 未映射或端口为空。", files);
         }
 
         return WorkspacePath.TryResolve(binding.WorkspaceDirectory, root, out string baseDirectory)
-            ? new FileScope(baseDirectory, binding.WorkspaceDirectory, "路径基准", "工作区")
-            : Failed(binding, $"路径变量 {PathVariables.RootName} 的值 {root} 不是工作区内的合法路径。");
+            ? new FileScope(baseDirectory, binding.WorkspaceDirectory, "路径基准", "工作区", files)
+            : Failed(binding, $"路径变量 {PathVariables.RootName} 的值 {root} 不是工作区内的合法路径。", files);
     }
 
     /// <summary>建立带绑定错误的空作用域，根取工作区根。</summary>
-    private static FileScope Failed(ToolBinding binding, string message) =>
-        new(binding.WorkspaceDirectory, binding.WorkspaceDirectory, "路径基准", "工作区")
+    private static FileScope Failed(ToolBinding binding, string message, IWorkspaceFiles files) =>
+        new(binding.WorkspaceDirectory, binding.WorkspaceDirectory, "路径基准", "工作区", files)
         {
             BindingError = ToolErrors.Path(message),
         };

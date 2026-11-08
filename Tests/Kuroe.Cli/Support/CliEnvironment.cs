@@ -100,6 +100,8 @@ internal sealed class StubRunner : IExecutionRunnerFactory
     /// <summary>测试用的过程记录：保存条目并播发内容。</summary>
     private sealed class StubJournal : IProcessJournal
     {
+        private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
         private readonly Lock _gate = new();
         private readonly List<JournalEntry> _entries = [];
         private JournalEntryHandler? _entryAppended;
@@ -146,7 +148,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
 
-            Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+            Append(new JournalEntry(At, JournalLevel.Information, label, delta));
             ContentAppended?.Invoke(new ProcessContent(kind, delta));
         }
 

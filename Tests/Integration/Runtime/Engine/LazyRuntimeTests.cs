@@ -74,7 +74,7 @@ public sealed class LazyRuntimeTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewQueueFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot snapshot = environment.Settle(id);
+        TaskSnapshot snapshot = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
@@ -106,7 +106,7 @@ public sealed class LazyRuntimeTests
         using TestEnvironment environment = TestEnvironment.Create(FlowSamples.ReviewFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        environment.Settle(id);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         int before = MaterializedCount(task);

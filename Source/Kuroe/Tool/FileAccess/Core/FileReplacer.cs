@@ -9,6 +9,7 @@ namespace Kuroe.Tool.FileAccess;
 /// <param name="access">路径准入规则，null 表示不限制。</param>
 public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
 {
+    private readonly FileScope _scope = scope;
     private readonly FileCandidates _candidates = new(scope, access);
 
     /// <summary>在路径范围内批量替换文本。dryRun 为真时不写入文件。</summary>
@@ -41,12 +42,12 @@ public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
             scannedFiles++;
             try
             {
-                if (TextFileProbe.Detect(file) is not { } format)
+                if (TextFileProbe.Detect(_scope.Workspace, file) is not { } format)
                 {
                     continue;
                 }
 
-                ErrorOr<TextFileContent> content = TextFileContent.Read(file, format);
+                ErrorOr<TextFileContent> content = TextFileContent.Read(_scope.Workspace, file, format);
                 if (content.IsError)
                 {
                     results.Add(Failed(file, content.FirstError.Description));
@@ -61,7 +62,7 @@ public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
 
                 if (!dryRun)
                 {
-                    ErrorOr<Success> written = content.Value.Write(file, change.Text, encodingOverride);
+                    ErrorOr<Success> written = content.Value.Write(_scope.Workspace, file, change.Text, encodingOverride);
                     if (written.IsError)
                     {
                         results.Add(Failed(file, written.FirstError.Description));

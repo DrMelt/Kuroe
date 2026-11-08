@@ -145,7 +145,7 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerReviewFlow);
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
@@ -165,7 +165,7 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewContainerTriggerFlow);
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));

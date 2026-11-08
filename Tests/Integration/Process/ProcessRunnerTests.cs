@@ -1,6 +1,7 @@
+using Kuroe.Process;
 using Xunit;
 
-namespace Kuroe.Process.Tests;
+namespace Kuroe.Integration.Tests.Process;
 
 /// <summary>进程执行的边界：启动失败、输出与退出码。</summary>
 public sealed class ProcessRunnerTests

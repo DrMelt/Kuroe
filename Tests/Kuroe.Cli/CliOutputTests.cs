@@ -7,6 +7,8 @@ namespace Kuroe.Cli.Tests;
 /// <summary>stdout 与 stderr 的分流与行闭合。</summary>
 public sealed class CliOutputTests
 {
+    private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     [Fact]
     public void Text_and_lines_go_to_stdout_and_errors_go_to_stderr()
     {
@@ -46,12 +48,12 @@ public sealed class CliOutputTests
         CliOutput cli = new(output, error);
 
         cli.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            At,
             JournalLevel.Information,
             "工具",
             "file/read {\"path\":\"a\"}\n内容"));
         cli.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            At,
             JournalLevel.Warning,
             "工具",
             "file/read {}\n失败原因"));

@@ -6,9 +6,6 @@ namespace Kuroe.Flow.TestSupport;
 /// <summary>执行闸门的实现：在场执行按执行号登记，保持集合按节点生效。</summary>
 public sealed class ExecutionGate : IExecutionGate
 {
-    /// <summary>等待进入或离开的上限，只用于把挂起变成失败。</summary>
-    private static readonly TimeSpan HangGuard = TimeSpan.FromSeconds(60);
-
     private readonly Lock _gate = new();
     private readonly Dictionary<int, Entry> _entries = [];
     private readonly HashSet<NodePath> _held = [];
@@ -30,6 +27,7 @@ public sealed class ExecutionGate : IExecutionGate
 
     public Task WaitOpen(ExecutionHandle handle)
     {
+        Task open;
         lock (_gate)
         {
             if (!_entries.TryGetValue(handle.Id.Value, out Entry? entry)
@@ -38,8 +36,10 @@ public sealed class ExecutionGate : IExecutionGate
                 return Task.CompletedTask;
             }
 
-            return entry.Open.Task;
+            open = entry.Open.Task;
         }
+
+        return WaitOpenAsync(handle, open);
     }
 
     public void Leave(ExecutionHandle handle)
@@ -198,11 +198,25 @@ public sealed class ExecutionGate : IExecutionGate
     {
         try
         {
-            await _signal.WaitAsync(version).WaitAsync(HangGuard).ConfigureAwait(false);
+            await _signal.WaitAsync(version).WaitAsync(TestTimeouts.HangGuard).ConfigureAwait(false);
         }
         catch (TimeoutException)
         {
-            throw new TimeoutException($"{target} 在 {HangGuard.TotalSeconds} 秒内没有执行进入或离开。");
+            throw new TimeoutException(
+                $"{target} 在 {TestTimeouts.HangGuard.TotalSeconds} 秒内没有执行进入或离开。");
+        }
+    }
+
+    private static async Task WaitOpenAsync(ExecutionHandle handle, Task open)
+    {
+        try
+        {
+            await open.WaitAsync(TestTimeouts.HangGuard).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            throw new TimeoutException(
+                $"执行 {handle.Id.Value} 在 {TestTimeouts.HangGuard.TotalSeconds} 秒内没有被放行。");
         }
     }
 

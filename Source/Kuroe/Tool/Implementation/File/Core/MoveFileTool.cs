@@ -1,15 +1,15 @@
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
-
-using File = System.IO.File;
 
 /// <summary>移动路径基准目录内文件或目录的工具。路径解析后必须落回工作区内，目标已存在时拒绝。</summary>
 public sealed class MoveFileTool : ITool
 {
     private readonly FileScope _scope;
+    private readonly IWorkspaceFiles _files;
 
     /// <summary>把文件或目录移动到另一个路径。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -23,16 +23,17 @@ public sealed class MoveFileTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public MoveFileTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public MoveFileTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public MoveFileTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public MoveFileTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
+        _files = files;
         Functions = [Definition.Bind(Move, _scope.Paths)];
     }
 
@@ -54,13 +55,13 @@ public sealed class MoveFileTool : ITool
             return resolvedTarget.ErrorsOrEmptyList;
         }
 
-        bool isDirectory = Directory.Exists(resolvedSource.Value);
-        if (!isDirectory && !File.Exists(resolvedSource.Value))
+        bool isDirectory = _files.DirectoryExists(resolvedSource.Value);
+        if (!isDirectory && !_files.FileExists(resolvedSource.Value))
         {
             return ToolErrors.Path($"{source} 不存在。");
         }
 
-        if (File.Exists(resolvedTarget.Value) || Directory.Exists(resolvedTarget.Value))
+        if (_files.FileExists(resolvedTarget.Value) || _files.DirectoryExists(resolvedTarget.Value))
         {
             return ToolErrors.Path($"{target} 已存在，不能覆盖。");
         }
@@ -75,16 +76,16 @@ public sealed class MoveFileTool : ITool
             string? directory = Path.GetDirectoryName(resolvedTarget.Value);
             if (!string.IsNullOrEmpty(directory))
             {
-                Directory.CreateDirectory(directory);
+                _files.CreateDirectory(directory);
             }
 
             if (isDirectory)
             {
-                Directory.Move(resolvedSource.Value, resolvedTarget.Value);
+                _files.MoveDirectory(resolvedSource.Value, resolvedTarget.Value);
             }
             else
             {
-                File.Move(resolvedSource.Value, resolvedTarget.Value);
+                _files.MoveFile(resolvedSource.Value, resolvedTarget.Value);
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

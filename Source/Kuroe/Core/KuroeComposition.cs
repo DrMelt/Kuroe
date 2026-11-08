@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool;
 using Kuroe.Tool.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,15 +16,20 @@ public sealed class KuroeComposition
     internal KuroeComposition(
         IServiceCollection services,
         IReadOnlyList<ConfiguredTool> configuredTools,
-        KuroeStartup startup)
+        KuroeStartup startup,
+        IWorkspaceFiles files)
     {
         _services = services;
         ConfiguredTools = configuredTools;
         Startup = startup;
+        Files = files;
     }
 
     /// <summary>启动信息，其中的日志级别用于宿主注册日志输出。</summary>
     public KuroeStartup Startup { get; }
+
+    /// <summary>本次装配使用的文件访问实现，后续并入的工具源共用它。</summary>
+    public IWorkspaceFiles Files { get; }
 
     /// <summary>已装载的配置命令工具，供状态查询工具呈现。</summary>
     public IReadOnlyList<ConfiguredTool> ConfiguredTools { get; }

@@ -144,7 +144,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Settle(new TaskId(1));
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
 
         cli.Overview.Print(cli.Environment.Snapshot(new TaskId(1)));
 
@@ -204,7 +204,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Settle(new TaskId(1));
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
 
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
@@ -464,7 +464,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "补齐 README");
-        TaskSnapshot parked = cli.Environment.Settle(new TaskId(1));
+        TaskSnapshot parked = cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
         Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve));
 
         cli.Tasks.Approve(new TaskId(1));

@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.TestSupport;
 using Spectre.Console;
 using Xunit;
 
@@ -137,7 +138,7 @@ public sealed class ViewLabelsTests
 
     private static ExecutionSnapshot Execution(string progress) => new(
         new ExecutionId(1), Input(), ExecutionState.Running, progress,
-        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], 0, ExecutionUsage.None);
+        TestTime.At, TestTime.At, null, [], [], 0, ExecutionUsage.None);
 
     private static ExecutionInput Input() => new()
     {

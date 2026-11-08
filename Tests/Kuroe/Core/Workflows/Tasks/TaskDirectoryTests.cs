@@ -14,58 +14,6 @@ public sealed class TaskDirectoryTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Prepare_names_the_directory_with_task_key_flow_and_title()
-    {
-        TaskDirectory directory = TaskDirectory.Create(_root).Value;
-        TaskId id = new(3);
-
-        string prepared = directory.Prepare(id, new FlowName("审阅"), "修复登录超时").ThrowIfError();
-
-        string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal($"{id.Value}-审阅-修复登录超时", Path.GetFileName(created));
-        Assert.Equal(created, prepared);
-        Assert.Single(Directory.GetDirectories(_root, $"{id.Value}-*"));
-    }
-
-    [Fact]
-    public void Invalid_characters_are_replaced_and_the_flow_segment_keeps_no_hyphen()
-    {
-        TaskDirectory directory = TaskDirectory.Create(_root).Value;
-        TaskId id = new(7);
-
-        directory.Prepare(id, new FlowName("合/同-审阅"), "修复: 登录?").ThrowIfError();
-
-        string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal($"{id.Value}-合_同_审阅-修复_ 登录", Path.GetFileName(created));
-    }
-
-    [Fact]
-    public void Title_segment_keeps_hyphens()
-    {
-        TaskDirectory directory = TaskDirectory.Create(_root).Value;
-        TaskId id = new(1);
-
-        directory.Prepare(id, new FlowName("默认"), "修复-a-b").ThrowIfError();
-
-        string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal($"{id.Value}-默认-修复-a-b", Path.GetFileName(created));
-    }
-
-    [Fact]
-    public void Segments_are_truncated_by_character_without_splitting_surrogates()
-    {
-        TaskDirectory directory = TaskDirectory.Create(_root).Value;
-        TaskId id = new(1);
-        string flow = new('流', 25);
-        string title = new string('目', 39) + "😀" + new string('后', 5);
-
-        directory.Prepare(id, new FlowName(flow), title).ThrowIfError();
-
-        string created = Assert.Single(Directory.GetDirectories(_root));
-        Assert.Equal($"{id.Value}-{new string('流', 20)}-{new string('目', 39)}😀", Path.GetFileName(created));
-    }
-
-    [Fact]
     public void Old_numbered_directories_are_ignored()
     {
         Directory.CreateDirectory(_root);

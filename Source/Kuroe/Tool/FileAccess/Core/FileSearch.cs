@@ -10,6 +10,7 @@ namespace Kuroe.Tool.FileAccess;
 /// <param name="access">路径准入规则，null 表示不限制。</param>
 public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
 {
+    private readonly FileScope _scope = scope;
     private readonly FileCandidates _candidates = new(scope, access);
 
     /// <summary>按范围、后缀与文本搜索，匹配行文本累计到预算后停止收集。单个文件读取失败跳过。</summary>
@@ -56,7 +57,7 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
     }
 
     /// <summary>读取一个文件中的匹配，匹配行文本累计到预算时停止。文件为二进制或读取失败时不收集。</summary>
-    private static void SearchFile(
+    private void SearchFile(
         string file,
         TextQuery query,
         List<TextSearchMatch> matches,
@@ -65,12 +66,12 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
     {
         try
         {
-            if (!TextFileProbe.IsText(file))
+            if (!TextFileProbe.IsText(_scope.Workspace, file))
             {
                 return;
             }
 
-            using StreamReader reader = new(file, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            using StreamReader reader = new(_scope.Workspace.OpenRead(file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
             int lineNumber = 0;
             while (reader.ReadLine() is { } line)
             {

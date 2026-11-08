@@ -1,28 +1,22 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;
 
-using File = System.IO.File;
-
 /// <summary>根目录内的文本搜索：范围展开、后缀过滤、字面匹配与输出字符上限。</summary>
-public sealed class FileSearchTests : IDisposable
+public sealed class FileSearchTests
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
-
-    public FileSearchTests()
-    {
-        Directory.CreateDirectory(_root);
-    }
+    private readonly InMemoryWorkspaceFiles _files = new();
 
     [Fact]
     public void Search_returns_matches_in_path_order()
     {
-        Directory.CreateDirectory(Path.Combine(_root, "sub"));
-        File.WriteAllText(Path.Combine(_root, "b.txt"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "first\nneedle\n");
-        File.WriteAllText(Path.Combine(_root, "sub", "c.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "b.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "a.txt"), "first\nneedle\n");
+        _files.AddFile(Path.Combine(_root, "sub", "c.txt"), "needle\n");
 
         TextSearchResult result = Run([], Query("needle"));
 
@@ -36,11 +30,9 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_filters_by_scope_and_extension()
     {
-        Directory.CreateDirectory(Path.Combine(_root, "Source"));
-        Directory.CreateDirectory(Path.Combine(_root, "Tests"));
-        File.WriteAllText(Path.Combine(_root, "Source", "a.cs"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, "Source", "b.md"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, "Tests", "c.cs"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "Source", "a.cs"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "Source", "b.md"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "Tests", "c.cs"), "needle\n");
 
         TextSearchResult result = Run(["Source"], Query("needle", ["cs"]));
 
@@ -51,8 +43,8 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_restricts_to_explicit_files_and_deduplicates_overlaps()
     {
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, "b.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "a.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "b.txt"), "needle\n");
 
         TextSearchResult result = Run(["a.txt", "."], Query("needle"));
 
@@ -63,7 +55,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_filters_explicit_files_by_extension()
     {
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "a.txt"), "needle\n");
 
         TextSearchResult result = Run(["a.txt"], Query("needle", ["md"]));
 
@@ -74,11 +66,9 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_skips_denied_directories()
     {
-        Directory.CreateDirectory(Path.Combine(_root, ".kuroe"));
-        Directory.CreateDirectory(Path.Combine(_root, ".git"));
-        File.WriteAllText(Path.Combine(_root, ".kuroe", "catalog.json"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, ".git", "config"), "needle\n");
-        File.WriteAllText(Path.Combine(_root, "visible.txt"), "needle\n");
+        _files.AddFile(Path.Combine(_root, ".kuroe", "catalog.json"), "needle\n");
+        _files.AddFile(Path.Combine(_root, ".git", "config"), "needle\n");
+        _files.AddFile(Path.Combine(_root, "visible.txt"), "needle\n");
 
         TextSearchResult result = Run([], Query("needle"), new ToolPathAccess([], [".kuroe", ".git"]));
 
@@ -89,8 +79,8 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_skips_binary_files()
     {
-        File.WriteAllText(Path.Combine(_root, "text.txt"), "needle\n");
-        File.WriteAllBytes(Path.Combine(_root, "binary.bin"), [0x6E, 0x65, 0x65, 0x64, 0x6C, 0x65, 0x00, 0x0A]);
+        _files.AddFile(Path.Combine(_root, "text.txt"), "needle\n");
+        _files.AddBytes(Path.Combine(_root, "binary.bin"), [0x6E, 0x65, 0x65, 0x64, 0x6C, 0x65, 0x00, 0x0A]);
 
         TextSearchResult result = Run([], Query("needle"));
 
@@ -102,7 +92,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_reads_utf16_files_with_bom()
     {
-        File.WriteAllText(Path.Combine(_root, "utf16.txt"), "needle", Encoding.Unicode);
+        _files.AddFile(Path.Combine(_root, "utf16.txt"), "needle", Encoding.Unicode);
 
         TextSearchResult result = Run([], Query("needle"));
 
@@ -113,7 +103,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_stops_at_the_character_budget()
     {
-        File.WriteAllText(
+        _files.AddFile(
             Path.Combine(_root, "long.txt"),
             string.Join('\n', Enumerable.Range(1, 100).Select(_ => $"needle{new string('a', 100)}")));
 
@@ -128,7 +118,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_splits_lines_on_carriage_returns_and_line_feeds()
     {
-        File.WriteAllText(Path.Combine(_root, "mixed.txt"), "a1\r\na2\ra3\na4");
+        _files.AddFile(Path.Combine(_root, "mixed.txt"), "a1\r\na2\ra3\na4");
 
         TextSearchResult result = Run([], Query("a"), characterBudget: int.MaxValue);
 
@@ -139,7 +129,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_truncates_display_text_and_keeps_later_lines()
     {
-        File.WriteAllText(
+        _files.AddFile(
             Path.Combine(_root, "long.txt"),
             $"needle{new string('a', 1495)}\nneedle");
 
@@ -159,7 +149,7 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_keeps_the_match_after_the_display_limit_visible()
     {
-        File.WriteAllText(
+        _files.AddFile(
             Path.Combine(_root, "long.txt"),
             $"{new string('a', TextSearchMatch.DisplayLimit)}needle");
 
@@ -177,7 +167,7 @@ public sealed class FileSearchTests : IDisposable
     public void Search_centers_the_display_window_on_the_match()
     {
         string line = $"{new string('a', 700)}needle{new string('b', 794)}";
-        File.WriteAllText(Path.Combine(_root, "long.txt"), line);
+        _files.AddFile(Path.Combine(_root, "long.txt"), line);
 
         TextSearchMatch match = Assert.Single(
             Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
@@ -195,8 +185,8 @@ public sealed class FileSearchTests : IDisposable
         string emoji = char.ConvertFromUtf32(0x1F600);
         string leading = $"{new string('a', 499)}{emoji}{new string('a', 499)}needle{new string('b', 493)}";
         string trailing = $"{new string('a', 1000)}needle{new string('a', 493)}{emoji}{new string('b', 100)}";
-        File.WriteAllText(Path.Combine(_root, "a.txt"), leading);
-        File.WriteAllText(Path.Combine(_root, "b.txt"), trailing);
+        _files.AddFile(Path.Combine(_root, "a.txt"), leading);
+        _files.AddFile(Path.Combine(_root, "b.txt"), trailing);
 
         IReadOnlyList<TextSearchMatch> matches = Run([], Query("needle"), characterBudget: int.MaxValue).Matches;
 
@@ -214,7 +204,7 @@ public sealed class FileSearchTests : IDisposable
     public void Search_keeps_a_line_at_the_display_limit_untruncated()
     {
         string line = $"needle{new string('a', TextSearchMatch.DisplayLimit - 6)}";
-        File.WriteAllText(Path.Combine(_root, "exact.txt"), line);
+        _files.AddFile(Path.Combine(_root, "exact.txt"), line);
 
         TextSearchMatch match = Assert.Single(
             Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
@@ -250,13 +240,13 @@ public sealed class FileSearchTests : IDisposable
     [Fact]
     public void Search_is_case_sensitive_by_default()
     {
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "Needle\n");
+        _files.AddFile(Path.Combine(_root, "a.txt"), "Needle\n");
 
         Assert.Empty(Run([], Query("needle")).Matches);
         Assert.Single(Run([], Query("needle", ignoreCase: true)).Matches);
     }
 
-    private FileScope Scope() => new(_root, "工作目录");
+    private FileScope Scope() => new(_root, "工作目录", _files);
 
     private TextSearchResult Run(
         IReadOnlyList<string> paths,
@@ -277,20 +267,5 @@ public sealed class FileSearchTests : IDisposable
         ErrorOr<TextQuery> query = TextQuery.Create(pattern, extensions, ignoreCase);
         Assert.False(query.IsError);
         return query.Value;
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_root))
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // 临时目录可能已被清理或占用，收尾不再上报
-        }
     }
 }

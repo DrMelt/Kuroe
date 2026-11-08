@@ -11,7 +11,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Source\Kuroe\Process\Core\Kuroe.Process.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Files\Core\Kuroe.Files.csproj" />
+        <ProjectReference Include="..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
     </ItemGroup>
 
 </Project>

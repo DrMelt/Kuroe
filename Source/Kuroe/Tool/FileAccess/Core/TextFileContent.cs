@@ -1,5 +1,6 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -27,12 +28,12 @@ public sealed class TextFileContent
     public string NewLine { get; }
 
     /// <summary>读取文本文件。二进制文件与读取失败返回错误。</summary>
-    public static ErrorOr<TextFileContent> Read(string file)
+    public static ErrorOr<TextFileContent> Read(IWorkspaceFiles files, string file)
     {
         try
         {
-            return TextFileProbe.Detect(file) is { } format
-                ? Read(file, format)
+            return TextFileProbe.Detect(files, file) is { } format
+                ? Read(files, file, format)
                 : ToolErrors.ReadFailed("文件是二进制文件。");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -42,11 +43,11 @@ public sealed class TextFileContent
     }
 
     /// <summary>按已识别的格式读取文本文件。读取失败返回错误。</summary>
-    public static ErrorOr<TextFileContent> Read(string file, TextFileFormat format)
+    public static ErrorOr<TextFileContent> Read(IWorkspaceFiles files, string file, TextFileFormat format)
     {
         try
         {
-            byte[] bytes = File.ReadAllBytes(file);
+            byte[] bytes = files.ReadBytes(file);
             if (bytes.Length < format.PreambleLength)
             {
                 return ToolErrors.ReadFailed("文件长度小于 BOM 长度。");
@@ -147,11 +148,11 @@ public sealed class TextFileContent
     }
 
     /// <summary>把内容写回文件。encodingOverride 为 null 时使用读取时的编码与 BOM。</summary>
-    public ErrorOr<Success> Write(string file, string content, Encoding? encodingOverride)
+    public ErrorOr<Success> Write(IWorkspaceFiles files, string file, string content, Encoding? encodingOverride)
     {
         try
         {
-            File.WriteAllText(file, content, encodingOverride ?? _encoding);
+            files.WriteText(file, content, encodingOverride ?? _encoding);
 
             return Result.Success;
         }

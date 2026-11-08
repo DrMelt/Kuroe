@@ -42,6 +42,8 @@ using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Files;
+using Kuroe.Files.Shared;
 using Kuroe.Flow.InputChannel;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Json;
@@ -69,6 +71,7 @@ public static class ServiceCollectionExtensions
         KuroeCoreOptions? options = null)
     {
         KuroeCoreOptions coreOptions = options ?? new KuroeCoreOptions();
+        IWorkspaceFiles files = SystemWorkspaceFiles.Instance;
         ErrorOr<SettingsProvider> settings = SettingsProvider.Create(paths);
         if (settings.IsError)
         {
@@ -100,12 +103,13 @@ public static class ServiceCollectionExtensions
         KuroeComposition composition = new(
             services,
             configuredTools.Value,
-            new KuroeStartup(settings.Value.Current.Runtime.LogLevel));
+            new KuroeStartup(settings.Value.Current.Runtime.LogLevel),
+            files);
 
         // 工具定义先于流程编译，供 ToolPorts 在装载期校验变量映射
         List<IToolSource> definitionSources =
         [
-            new FileToolSource(),
+            new FileToolSource(files),
             new GitToolSource(),
             new DotnetToolSource(),
             new ConfiguredToolSource(configuredTools.Value),
@@ -128,7 +132,7 @@ public static class ServiceCollectionExtensions
         IFlowDescriptionCompiler descriptionCompiler = new FlowDescriptionCompiler(typeFiles, expander);
         ContainerNodeTypeDescriptions.RegisterInto(typeFiles);
         LlmNodeTypeDescriptions.RegisterInto(typeFiles, contracts);
-        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory);
+        FileNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, files);
         CommandNodeTypeDescriptions.RegisterInto(typeFiles, paths.WorkingDirectory, coreOptions.CommandNodeProcessRunner);
         coreOptions.RegisterNodeTypes?.Invoke(typeFiles, inputs);
 

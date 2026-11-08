@@ -19,7 +19,7 @@ public static class TestTypeFiles
     /// <summary>核心可变变量工具的契约，供直接编译流程的测试校验 ToolPorts。</summary>
     public static IToolContractCatalog Contracts { get; } = new ToolContractCatalog(
     [
-        .. new FileToolSource().Definitions,
+        .. new FileToolSource(new InMemoryWorkspaceFiles()).Definitions,
         .. new GitToolSource().Definitions,
         .. new DotnetToolSource().Definitions,
         .. new TimeToolSource(TimeProvider.System).Definitions,

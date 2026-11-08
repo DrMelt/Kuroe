@@ -47,8 +47,7 @@ public sealed class TestEnvironment : IDisposable
         Pendings = provider.GetRequiredService<PendingService>();
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
-            provider.GetRequiredService<ITaskChangeSource>(),
-            id => Awaiting(id));
+            provider.GetRequiredService<ITaskChangeSource>());
         runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
     }
 
@@ -234,7 +233,7 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>等到任务满足条件为止。</summary>
     public TaskSnapshot Wait(TaskId id, TaskPredicate condition) => _waiter.Wait(id, condition);
 
-    /// <summary>等推进循环没有在跑的活：到终态、阻塞、暂停或停在等待外部输入。</summary>
+    /// <summary>等任务不再自动推进：已完成、阻塞、终止或暂停，且没有在跑执行。停在等待节点不构成收口。</summary>
     public TaskSnapshot Settle(TaskId id) => _waiter.Settle(id);
 
     /// <summary>任务里是否有停在等待的节点。</summary>

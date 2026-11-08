@@ -3,6 +3,7 @@ using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.TestSupport;
 using Xunit;
 
 namespace Kuroe.Node.File.Tests;
@@ -18,8 +19,9 @@ public sealed class FileNodeTypeTests
         MaxChars = 8000,
     };
 
-    private static readonly FileReadNodeType ReadType = new(Parameters);
-    private static readonly FileWriteNodeType WriteType = new(Parameters);
+    private static readonly InMemoryWorkspaceFiles Files = new();
+    private static readonly FileReadNodeType ReadType = new(Parameters, Files);
+    private static readonly FileWriteNodeType WriteType = new(Parameters, Files);
 
     [Fact]
     public void Names_are_the_kinds_written_in_files()
@@ -33,8 +35,8 @@ public sealed class FileNodeTypeTests
     [Fact]
     public void Create_keeps_the_declaration_on_the_instance()
     {
-        INodeType read = FileReadNodeTypes.Create(Parameters);
-        INodeType write = FileWriteNodeTypes.Create(Parameters);
+        INodeType read = FileReadNodeTypes.Create(Parameters, Files);
+        INodeType write = FileWriteNodeTypes.Create(Parameters, Files);
 
         Assert.Same(Parameters, Assert.IsType<FileReadNodeType>(read).Parameters);
         Assert.Same(Parameters, Assert.IsType<FileWriteNodeType>(write).Parameters);

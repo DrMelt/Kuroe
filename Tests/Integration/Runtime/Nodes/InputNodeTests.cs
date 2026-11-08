@@ -123,7 +123,10 @@ public sealed class InputNodeTests
             && environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, "整体/收话", "第二问").ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = environment.Wait(id, _ =>
+            environment.Awaiting(id, PendingKind.Answer).Count == 1
+            && environment.Runner.Started.Count(execution =>
+                execution.Input.Node.Label.Value == "回话" && execution.State == ExecutionState.Succeeded) == 2);
 
         Assert.Equal(TaskState.Running, done.State);
         Assert.Equal([1, 2], [.. environment.Runner.Started
@@ -192,14 +195,16 @@ public sealed class InputNodeTests
 
         environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
 
-        TaskSnapshot awaiting = environment.Settle(id);
+        TaskSnapshot awaiting = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && snapshot.Containers.Single(container => container.Path.Label == new NodeLabel("审查容器")).State == NodeState.Done);
         Assert.Equal(TaskState.Running, awaiting.State);
         Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Label == new NodeLabel("审查容器")).State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Pendings.Approve(id).ThrowIfError();
 
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Empty(environment.Awaiting(id, PendingKind.Approve));
     }

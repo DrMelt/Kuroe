@@ -2,12 +2,16 @@ using ErrorOr;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件节点的一次执行：保存文件声明，路径解析与失败说明由具体节点复用。</summary>
-internal abstract class FileExecutionRunner(ExecutableNode node, FileParameters parameters) : IExecutionRunner
+internal abstract class FileExecutionRunner(
+    ExecutableNode node,
+    FileParameters parameters,
+    IWorkspaceFiles files) : IExecutionRunner
 {
     private readonly ExecutionJournal _journal = new();
 
@@ -16,6 +20,9 @@ internal abstract class FileExecutionRunner(ExecutableNode node, FileParameters 
 
     /// <summary>本节点的类型专属声明。</summary>
     protected FileParameters Parameters { get; } = parameters;
+
+    /// <summary>本次执行使用的文件访问实现。</summary>
+    protected IWorkspaceFiles Files { get; } = files;
 
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
