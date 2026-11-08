@@ -1,8 +1,10 @@
-using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
+using Kuroe.Tool.File.Output;
 
 namespace Kuroe.Tool.File;
 
@@ -12,8 +14,8 @@ public sealed class SearchTextTool : ITool
     /// <summary>判定不唯一需要观察到的出现次数，第二次出现即停止文件内容扫描。</summary>
     private const int DuplicateThreshold = 2;
 
-    private readonly FileScope _scope;
-    private readonly FileSearch _search;
+    private readonly IFileScope _scope;
+    private readonly IFileSearch _search;
 
     /// <summary>在路径范围内按字面文本搜索文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -38,10 +40,22 @@ public sealed class SearchTextTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public SearchTextTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files))
     {
-        _scope = FileTools.Scope(binding, files);
-        _search = new FileSearch(_scope, FileTools.PathAccess);
-        Functions = [Definition.Bind(Search, _scope.Paths)];
+    }
+
+    /// <summary>用已建立的文件访问作用域建立载体，搜索使用该作用域内的文本搜索。</summary>
+    private SearchTextTool(FileScope scope)
+        : this(scope, new FileSearch(scope, FileTools.PathAccess))
+    {
+    }
+
+    /// <summary>用已建立的文件访问作用域与文本搜索建立载体。</summary>
+    public SearchTextTool(IFileScope scope, IFileSearch search)
+    {
+        _scope = scope;
+        _search = search;
+        Functions = [Definition.Bind(Search, scope.Paths)];
     }
 
     /// <summary>按范围、后缀与文本搜索，错误与拒绝以 ErrorOr 表达。unique 为真时要求恰好出现 1 次。</summary>
@@ -62,7 +76,7 @@ public sealed class SearchTextTool : ITool
 
         ErrorOr<TextSearchResult> result = unique
             ? _search.Search(paths, query.Value, characterBudget: int.MaxValue, occurrenceLimit: DuplicateThreshold)
-            : _search.Search(paths, query.Value, TextLimit.Characters);
+            : _search.Search(paths, query.Value, TextOutputLimit.Characters);
         if (result.IsError)
         {
             return result.ErrorsOrEmptyList;
@@ -72,7 +86,7 @@ public sealed class SearchTextTool : ITool
         {
             if (result.Value.ScannedFiles == 0)
             {
-                return ToolErrors.Argument(NoSearchableFiles(scope));
+                return ToolErrors.Argument(SearchReportText.NoSearchableFiles(scope));
             }
 
             if (result.Value.Occurrences == 0)
@@ -86,80 +100,21 @@ public sealed class SearchTextTool : ITool
             }
         }
 
-        return Render(result.Value, query.Value, scope);
+        return new SearchReportText(result.Value, query.Value, scope, _scope.Root).ToString();
     }
 
     /// <summary>搜索范围的展示文本，省略路径时取路径基准。</summary>
     private string Scope(IReadOnlyList<string> paths) =>
         paths.Count == 0 ? _scope.Display(string.Empty) : string.Join('、', paths);
 
-    /// <summary>把搜索结果渲染成按文件分组的带行号文本，整体超过输出上限时截断并提示。</summary>
-    private string Render(TextSearchResult result, TextQuery query, string scope)
-    {
-        if (result.Matches.Count == 0)
-        {
-            return result.ScannedFiles == 0
-                ? NoSearchableFiles(scope)
-                : NoMatchingText(result, query, scope);
-        }
-
-        var text = new StringBuilder();
-        text.Append($"在 {scope} 中匹配 {result.Occurrences} 处：\n");
-
-        foreach (IGrouping<string, TextSearchMatch> group in result.Matches.GroupBy(match => match.File))
-        {
-            AppendGroup(text, group);
-
-            if (text.Length > TextLimit.Characters)
-            {
-                break;
-            }
-        }
-
-        return TextLimit.WithNotice(text.ToString().TrimEnd('\n'), out _);
-    }
-
     /// <summary>唯一性校验失败的交回文本，列出已定位的匹配行。</summary>
     private string Duplicate(TextSearchResult result, TextQuery query, string scope)
     {
-        var text = new StringBuilder();
-        text.Append($"在 {scope} 中 {query.Pattern} 至少出现 {result.Occurrences} 处，不是唯一匹配：\n");
-
-        foreach (IGrouping<string, TextSearchMatch> group in result.Matches.GroupBy(match => match.File))
-        {
-            AppendGroup(text, group);
-        }
-
-        return text.ToString().TrimEnd('\n');
+        string header = $"在 {scope} 中 {query.Pattern} 至少出现 {result.Occurrences} 处，不是唯一匹配：";
+        return new SearchMatchListText(result.Matches, header, _scope.Root).ToString();
     }
 
     /// <summary>唯一匹配要求出现 1 次但没有出现时的交回文本。</summary>
     private static string NoUniqueMatch(TextQuery query, string scope) =>
         $"在 {scope} 中 {query.Pattern} 出现 0 次，不是唯一匹配。";
-
-    /// <summary>追加一个文件的匹配段：相对路径一行，其后是带行号与展示文本的匹配行。</summary>
-    private void AppendGroup(StringBuilder text, IGrouping<string, TextSearchMatch> group)
-    {
-        text.Append(DisplayPath(group.Key));
-        text.Append('\n');
-        text.Append(LineView.Format(
-            [.. group.Select(match => new NumberedLine(match.Line, DisplayText(match)))]));
-        text.Append('\n');
-    }
-
-    /// <summary>匹配行的展示文本，被截断时在内容后标注完整字符数与展示区间。</summary>
-    private static string DisplayText(TextSearchMatch match) =>
-        match.Truncated
-            ? $"{match.Text}（本行共 {match.FullLength} 字符，展示第 {match.Offset + 1} 至 {match.Offset + match.Text.Length} 字符）"
-            : match.Text;
-
-    /// <summary>范围内没有可搜索文件时的交回文本。</summary>
-    private static string NoSearchableFiles(string scope) => $"在 {scope} 中没有可搜索的文件。";
-
-    /// <summary>搜索完成但没有匹配时的交回文本，报告扫描的文件数。</summary>
-    private static string NoMatchingText(TextSearchResult result, TextQuery query, string scope) =>
-        $"在 {scope} 中搜索 {query.Pattern} 没有匹配，已扫描 {result.ScannedFiles} 个文件。";
-
-    /// <summary>文件的展示路径，相对路径基准目录。</summary>
-    private string DisplayPath(string file) => Path.GetRelativePath(_scope.Root, file);
 }

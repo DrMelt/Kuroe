@@ -1,5 +1,6 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -7,7 +8,7 @@ namespace Kuroe.Tool.FileAccess;
 /// 单个文件读取或写入失败时记录失败并继续处理其余文件。</summary>
 /// <param name="scope">文件访问作用域。</param>
 /// <param name="access">路径准入规则，null 表示不限制。</param>
-public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null)
+public sealed class FileReplacer(FileScope scope, ToolPathAccess? access = null) : IFileReplacer
 {
     private readonly FileScope _scope = scope;
     private readonly FileCandidates _candidates = new(scope, access);

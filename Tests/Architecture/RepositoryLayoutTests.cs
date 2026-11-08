@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Kuroe.Architecture.Tests;
 
-/// <summary>仓库结构的约束：IVT 只指向对应测试程序集，Shared 测试只引用共享源码。</summary>
+/// <summary>仓库结构的约束：IVT 只指向对应测试程序集，Shared 测试只引用共享源码与工具内核，文件访问 Shared 不引用同模块 Core 与 Kuroe.Files。</summary>
 public sealed class RepositoryLayoutTests
 {
     private static readonly string Root = FindRoot();
@@ -27,7 +27,7 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Shared_test_projects_reference_only_shared_source()
+    public void Shared_test_projects_reference_only_shared_source_and_tool_kernel()
     {
         IReadOnlyList<string> projects = [.. ProjectFiles(TestsRoot).Where(IsSharedTestProject)];
 
@@ -44,6 +44,20 @@ public sealed class RepositoryLayoutTests
                     allowed.Any(directory => IsUnder(reference, directory)),
                     $"{Path.GetFileName(project)} 引用了共享源码之外的 {reference}。"));
         }
+    }
+
+    [Fact]
+    public void FileAccess_shared_project_stays_free_of_core_and_file_io()
+    {
+        string fileAccess = Path.Combine(SourceRoot, "Kuroe", "Tool", "FileAccess");
+        string shared = Path.Combine(fileAccess, "Shared", "Kuroe.Tool.FileAccess.Shared.csproj");
+        string core = Path.Combine(fileAccess, "Core", "Kuroe.Tool.FileAccess.csproj");
+        IReadOnlyList<string> sharedReferences = ProjectReferences(shared);
+
+        Assert.DoesNotContain(sharedReferences, reference => IsUnder(reference, Path.Combine(fileAccess, "Core")));
+        Assert.DoesNotContain(sharedReferences, reference =>
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Files")));
+        Assert.Contains(shared, ProjectReferences(core));
     }
 
     [Fact]
@@ -90,19 +104,10 @@ public sealed class RepositoryLayoutTests
         }
     }
 
-    private static bool IsSharedTestProject(string project)
-    {
-        string[] segments = Path.GetRelativePath(TestsRoot, DirectoryOf(project))
-            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        bool flowShared = segments.Length >= 2
-            && segments[0] == "Kuroe.Flow"
-            && segments.Contains("Shared", StringComparer.Ordinal);
-        bool kuroeShared = segments.Length == 2
-            && segments[0] == "Kuroe"
-            && segments[1] == "Shared";
-
-        return flowShared || kuroeShared;
-    }
+    private static bool IsSharedTestProject(string project) =>
+        Path.GetRelativePath(TestsRoot, DirectoryOf(project))
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+            .Contains("Shared", StringComparer.Ordinal);
 
     private static List<string> SharedDirectories(string project)
     {
@@ -122,6 +127,11 @@ public sealed class RepositoryLayoutTests
         if (!directories.Contains(sourceDirectory, StringComparer.Ordinal))
         {
             directories.Add(sourceDirectory);
+        }
+
+        if (segments.Length >= 2 && segments[0] == "Kuroe" && segments[1] == "Tool")
+        {
+            directories.Add(Path.Combine(SourceRoot, "Kuroe", "Tool", "Core"));
         }
 
         return directories;

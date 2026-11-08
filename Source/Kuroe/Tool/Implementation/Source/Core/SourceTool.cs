@@ -1,7 +1,8 @@
-using System.Text;
 using ErrorOr;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.Source;
 
@@ -14,9 +15,6 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
     /// <summary>ReadSourceFile 缺省读取的行数，不传范围时只读文件开头这些行。</summary>
     private const int DefaultLines = 50;
 
-    /// <summary>目录列表的条目上限，超出截断并提示。</summary>
-    private const int MaxEntries = 200;
-
     /// <summary>列出导出目录内一个目录的直接子项。</summary>
     private static readonly ToolDefinition ListSourceDirectory = new(
         new ToolPath("source/ListSourceDirectory"),
@@ -26,7 +24,7 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
-        $"读取导出目录内源码或文档指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {TextRange.Begin} 与 {TextRange.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
+        $"读取导出目录内源码或文档指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {MarkedText.Begin} 与 {MarkedText.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
@@ -55,24 +53,7 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
             return entries.ErrorsOrEmptyList;
         }
 
-        if (entries.Value.Count == 0)
-        {
-            return $"目录 {scope.Display(path)} 为空。";
-        }
-
-        var text = new StringBuilder();
-        text.AppendLine($"{scope.Display(path)} 的条目（{entries.Value.Count}）：");
-        foreach (DirectoryEntry entry in entries.Value.Take(MaxEntries))
-        {
-            text.AppendLine($"  {entry.Name}{(entry.IsDirectory ? "/" : string.Empty)}");
-        }
-
-        if (entries.Value.Count > MaxEntries)
-        {
-            text.Append($"…仅列出前 {MaxEntries} 条");
-        }
-
-        return text.ToString().TrimEnd();
+        return new DirectoryListingText(scope.Display(path), entries.Value).ToString();
     }
 
     /// <summary>读取导出目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
@@ -87,6 +68,17 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
         }
 
         bool lineNumbers = arguments.Flag(new ToolName("lineNumbers")) ?? true;
-        return scope.ReadRange(path, range.Value.From, range.Value.To, lineNumbers, "ListSourceDirectory");
+        ErrorOr<SourceLineReadResult> read = scope.ReadRange(
+            path,
+            range.Value.From,
+            range.Value.To,
+            TextOutputLimit.Characters,
+            "ListSourceDirectory");
+        if (read.IsError)
+        {
+            return read.ErrorsOrEmptyList;
+        }
+
+        return new ReadRangeText(read.Value, lineNumbers).ToString();
     }
 }

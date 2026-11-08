@@ -1,18 +1,15 @@
-using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.File;
 
 /// <summary>列出路径基准目录内目录条目的工具。路径解析后必须落回工作区内。</summary>
 public sealed class ListDirectoryTool : ITool
 {
-    /// <summary>目录列表的条目上限，超出截断并提示。</summary>
-    private const int MaxEntries = 200;
-
-    private readonly FileScope _scope;
+    private readonly IFileScope _scope;
 
     /// <summary>列出目录的直接子项。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -32,9 +29,15 @@ public sealed class ListDirectoryTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public ListDirectoryTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files))
     {
-        _scope = FileTools.Scope(binding, files);
-        Functions = [Definition.Bind(List, _scope.Paths)];
+    }
+
+    /// <summary>用已建立的文件访问作用域建立载体。</summary>
+    public ListDirectoryTool(IFileScope scope)
+    {
+        _scope = scope;
+        Functions = [Definition.Bind(List, scope.Paths)];
     }
 
     /// <summary>列出目录的直接子项，按名字排序并标注目录；错误与拒绝以 ErrorOr 表达。</summary>
@@ -49,23 +52,6 @@ public sealed class ListDirectoryTool : ITool
             return entries.ErrorsOrEmptyList;
         }
 
-        if (entries.Value.Count == 0)
-        {
-            return $"目录 {_scope.Display(path)} 为空。";
-        }
-
-        var text = new StringBuilder();
-        text.AppendLine($"{_scope.Display(path)} 的条目（{entries.Value.Count}）：");
-        foreach (DirectoryEntry entry in entries.Value.Take(MaxEntries))
-        {
-            text.AppendLine($"  {entry.Name}{(entry.IsDirectory ? "/" : string.Empty)}");
-        }
-
-        if (entries.Value.Count > MaxEntries)
-        {
-            text.Append($"…仅列出前 {MaxEntries} 条");
-        }
-
-        return text.ToString().TrimEnd();
+        return new DirectoryListingText(_scope.Display(path), entries.Value).ToString();
     }
 }

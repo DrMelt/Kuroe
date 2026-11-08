@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.TestSupport;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;
@@ -99,7 +100,7 @@ public sealed class TextFileContentTests
         TextFileContent content = Read(file);
         TextFileReplacement change = content.Replace(Replacement("b", "B"));
 
-        Assert.Equal("\r\n", content.NewLine);
+        Assert.Equal(NewLineStyle.CrLf, content.NewLine);
         Assert.Equal("a\r\nB\nc\r\n", change.Text);
     }
 
@@ -124,7 +125,7 @@ public sealed class TextFileContentTests
         TextFileContent content = Read(file);
         TextFileReplacement change = content.Replace(Replacement("a", "x\ny"));
 
-        Assert.Equal("\r", content.NewLine);
+        Assert.Equal(NewLineStyle.Cr, content.NewLine);
         Assert.Equal("x\ry\rb", change.Text);
     }
 
@@ -137,7 +138,7 @@ public sealed class TextFileContentTests
         TextFileContent content = Read(file);
         TextFileReplacement change = content.Replace(Replacement("a", "x\ny"));
 
-        Assert.Equal("\n", content.NewLine);
+        Assert.Equal(NewLineStyle.Lf, content.NewLine);
         Assert.Equal("x\ny", change.Text);
     }
 

@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.TestSupport;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;

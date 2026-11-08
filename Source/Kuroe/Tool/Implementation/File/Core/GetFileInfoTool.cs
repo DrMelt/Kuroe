@@ -1,14 +1,16 @@
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Shared;
+using Kuroe.Tool.File.Output;
 
 namespace Kuroe.Tool.File;
 
 /// <summary>取路径基准目录内文件的文件系统信息的工具。路径解析后必须落回工作区内，只受理文件。</summary>
 public sealed class GetFileInfoTool : ITool
 {
-    private readonly FileScope _scope;
+    private readonly IFileScope _scope;
+    private readonly IWorkspaceFiles _files;
 
     /// <summary>取一个文件的文件系统信息。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -28,9 +30,16 @@ public sealed class GetFileInfoTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public GetFileInfoTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files), files)
     {
-        _scope = FileTools.Scope(binding, files);
-        Functions = [Definition.Bind(Info, _scope.Paths)];
+    }
+
+    /// <summary>用已建立的文件访问作用域与文件访问实现建立载体。</summary>
+    public GetFileInfoTool(IFileScope scope, IWorkspaceFiles files)
+    {
+        _scope = scope;
+        _files = files;
+        Functions = [Definition.Bind(Info, scope.Paths)];
     }
 
     /// <summary>取一个文件的文件系统事实并渲染成文本，错误与拒绝以 ErrorOr 表达。目录不受理，提示改用 ListDirectory。</summary>
@@ -38,45 +47,19 @@ public sealed class GetFileInfoTool : ITool
     {
         string path = arguments.RequiredText(new ToolName("path"));
 
-        ErrorOr<FileFacts> details = _scope.Inspect(path, "ListDirectory");
-        if (details.IsError)
+        ErrorOr<string> file = _scope.ResolveFile(path, "ListDirectory");
+        if (file.IsError)
         {
-            return details.ErrorsOrEmptyList;
+            return file.ErrorsOrEmptyList;
         }
 
-        return string.Join('\n',
-            path,
-            $"大小：{details.Value.Size} 字节",
-            $"创建时间：{details.Value.Created:yyyy-MM-dd HH:mm:ss}",
-            $"修改时间：{details.Value.LastWrite:yyyy-MM-dd HH:mm:ss}",
-            $"访问时间：{details.Value.LastAccess:yyyy-MM-dd HH:mm:ss}",
-            $"属性：{Describe(details.Value.Attributes)}");
-    }
-
-    /// <summary>属性位里的四项映射成中文名并以顿号连接，四项都为假时为「无」。</summary>
-    private static string Describe(FileAttributes attributes)
-    {
-        List<string> names = [];
-        if (attributes.HasFlag(FileAttributes.ReadOnly))
+        try
         {
-            names.Add("只读");
+            return new FileInfoText(path, _files.Inspect(file.Value)).ToString();
         }
-
-        if (attributes.HasFlag(FileAttributes.Hidden))
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            names.Add("隐藏");
+            return ToolErrors.ReadFailed($"读取 {path} 信息失败：{ex.Message}");
         }
-
-        if (attributes.HasFlag(FileAttributes.System))
-        {
-            names.Add("系统");
-        }
-
-        if (attributes.HasFlag(FileAttributes.Archive))
-        {
-            names.Add("归档");
-        }
-
-        return names.Count == 0 ? "无" : string.Join('、', names);
     }
 }

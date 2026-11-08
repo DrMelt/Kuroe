@@ -3,14 +3,16 @@ using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Shared;
+using Kuroe.Tool.File.Output;
 
 namespace Kuroe.Tool.File;
 
 /// <summary>在路径基准目录内多个文本文件中按字面文本批量替换的工具。路径解析后必须落回工作区内，逐文件保留编码、BOM 与换行风格。</summary>
 public sealed class ReplaceTextTool : ITool
 {
-    private readonly FileScope _scope;
-    private readonly FileReplacer _replacer;
+    private readonly IFileScope _scope;
+    private readonly IFileReplacer _replacer;
 
     /// <summary>在多个文本文件中按字面文本批量替换。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -37,10 +39,22 @@ public sealed class ReplaceTextTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public ReplaceTextTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files))
     {
-        _scope = FileTools.Scope(binding, files);
-        _replacer = new FileReplacer(_scope, FileTools.PathAccess);
-        Functions = [Definition.Bind(Replace, _scope.Paths)];
+    }
+
+    /// <summary>用已建立的文件访问作用域建立载体，替换使用该作用域内的批量文本替换。</summary>
+    private ReplaceTextTool(FileScope scope)
+        : this(scope, new FileReplacer(scope, FileTools.PathAccess))
+    {
+    }
+
+    /// <summary>用已建立的文件访问作用域与批量文本替换建立载体。</summary>
+    public ReplaceTextTool(IFileScope scope, IFileReplacer replacer)
+    {
+        _scope = scope;
+        _replacer = replacer;
+        Functions = [Definition.Bind(Replace, scope.Paths)];
     }
 
     /// <summary>按路径范围批量替换文本，错误与拒绝以 ErrorOr 表达。单个文件读写失败写入结果文本，不中断整批。</summary>
@@ -110,47 +124,6 @@ public sealed class ReplaceTextTool : ITool
             return result.ErrorsOrEmptyList;
         }
 
-        return Render(result.Value, paths, dryRun);
+        return new ReplaceReportText(result.Value, paths, dryRun, _scope.Root).ToString();
     }
-
-    /// <summary>把批处理结果渲染成总数、失败项与逐文件明细，整体超过输出上限时截断并提示。</summary>
-    private string Render(TextReplaceResult result, IReadOnlyList<string> paths, bool dryRun)
-    {
-        string scope = string.Join("、", paths);
-        if (result.Files.Count == 0)
-        {
-            return $"在 {scope} 中扫描 {result.ScannedFiles} 个文件，没有匹配，未修改文件。";
-        }
-
-        string action = dryRun ? "将替换" : "已替换";
-        var text = new StringBuilder();
-        string summary = $"在 {scope} 中扫描 {result.ScannedFiles} 个文件";
-        text.Append($"{summary}，{action} {result.ChangedFiles} 个文件的 {result.Replacements} 处文本。");
-
-        TextReplaceFile[] changed = [.. result.Files.Where(file => file.Error is null)];
-        TextReplaceFile[] failed = [.. result.Files.Where(file => file.Error is not null)];
-
-        if (failed.Length > 0)
-        {
-            text.Append($"\n失败 {failed.Length} 个文件：");
-            foreach (TextReplaceFile file in failed)
-            {
-                text.Append($"\n{DisplayPath(file.File)}：{file.Error}");
-            }
-        }
-
-        if (changed.Length > 0)
-        {
-            text.Append(dryRun ? "\n将修改：" : "\n已修改：");
-            foreach (TextReplaceFile file in changed)
-            {
-                text.Append($"\n{DisplayPath(file.File)}：{file.Replacements} 处，第 {string.Join("、", file.Lines)} 行");
-            }
-        }
-
-        return TextLimit.WithNotice(text.ToString(), out _);
-    }
-
-    /// <summary>文件的展示路径，相对路径基准目录。</summary>
-    private string DisplayPath(string file) => Path.GetRelativePath(_scope.Root, file);
 }

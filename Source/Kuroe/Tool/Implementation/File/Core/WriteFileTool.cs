@@ -2,14 +2,14 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.File;
 
 /// <summary>把文本覆盖写入路径基准目录内文件的工具。路径解析后必须落回工作区内，父目录缺失时自动创建。</summary>
 public sealed class WriteFileTool : ITool
 {
-    private readonly FileScope _scope;
+    private readonly IFileScope _scope;
     private readonly IWorkspaceFiles _files;
 
     /// <summary>覆盖写入文件。</summary>
@@ -33,10 +33,16 @@ public sealed class WriteFileTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public WriteFileTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files), files)
     {
-        _scope = FileTools.Scope(binding, files);
+    }
+
+    /// <summary>用已建立的文件访问作用域与文件访问实现建立载体。</summary>
+    public WriteFileTool(IFileScope scope, IWorkspaceFiles files)
+    {
+        _scope = scope;
         _files = files;
-        Functions = [Definition.Bind(Write, _scope.Paths)];
+        Functions = [Definition.Bind(Write, scope.Paths)];
     }
 
     /// <summary>把文本覆盖写入工作目录内的文件，父目录缺失时自动创建，已有文件直接覆盖；错误与拒绝以 ErrorOr 表达。编码按 encoding 参数，缺省 UTF-8 无 BOM。</summary>

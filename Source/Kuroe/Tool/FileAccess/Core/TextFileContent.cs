@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Files.Shared;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -12,7 +13,12 @@ public sealed class TextFileContent
     private readonly Encoding _encoding;
     private readonly int[] _map;
 
-    private TextFileContent(string original, string normalized, string newLine, Encoding encoding, int[] map)
+    private TextFileContent(
+        string original,
+        string normalized,
+        NewLineStyle newLine,
+        Encoding encoding,
+        int[] map)
     {
         Original = original;
         _normalized = normalized;
@@ -25,7 +31,7 @@ public sealed class TextFileContent
     public string Original { get; }
 
     /// <summary>文件首处换行的风格，没有换行时为 LF。</summary>
-    public string NewLine { get; }
+    public NewLineStyle NewLine { get; }
 
     /// <summary>读取文本文件。二进制文件与读取失败返回错误。</summary>
     public static ErrorOr<TextFileContent> Read(IWorkspaceFiles files, string file)
@@ -57,12 +63,12 @@ public sealed class TextFileContent
                 bytes,
                 format.PreambleLength,
                 bytes.Length - format.PreambleLength);
-            string normalized = TextNewLines.Normalize(original);
+            string normalized = NewLineStyle.Normalize(original);
 
             return new TextFileContent(
                 original,
                 normalized,
-                TextNewLines.Detect(original),
+                NewLineStyle.Detect(original),
                 format.Encoding,
                 BuildMap(original, normalized));
         }
@@ -81,7 +87,7 @@ public sealed class TextFileContent
             return new TextFileReplacement(Original, 0, []);
         }
 
-        string text = TextNewLines.Convert(replacement.Replacement, NewLine);
+        string text = NewLine.Convert(replacement.Replacement);
         var result = new StringBuilder(Original.Length);
         int last = 0;
         foreach (int match in matches)

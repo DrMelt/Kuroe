@@ -1,7 +1,8 @@
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.File;
 
@@ -11,12 +12,12 @@ public sealed class ReadFileTool : ITool
     /// <summary>缺省读取的行数，不传范围时只读文件开头这些行。</summary>
     private const int DefaultLines = 50;
 
-    private readonly FileScope _scope;
+    private readonly IFileScope _scope;
 
     /// <summary>读取单个文件指定行号范围。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/ReadFile"),
-        $"读取路径基准目录内文本文件指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {TextRange.Begin} 与 {TextRange.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
+        $"读取路径基准目录内文本文件指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {MarkedText.Begin} 与 {MarkedText.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
@@ -35,9 +36,15 @@ public sealed class ReadFileTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public ReadFileTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files))
     {
-        _scope = FileTools.Scope(binding, files);
-        Functions = [Definition.Bind(Read, _scope.Paths)];
+    }
+
+    /// <summary>用已建立的文件访问作用域建立载体。</summary>
+    public ReadFileTool(IFileScope scope)
+    {
+        _scope = scope;
+        Functions = [Definition.Bind(Read, scope.Paths)];
     }
 
     /// <summary>读取指定文本文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
@@ -52,6 +59,17 @@ public sealed class ReadFileTool : ITool
         }
 
         bool lineNumbers = arguments.Flag(new ToolName("lineNumbers")) ?? true;
-        return _scope.ReadRange(path, range.Value.From, range.Value.To, lineNumbers, "ListDirectory");
+        ErrorOr<SourceLineReadResult> read = _scope.ReadRange(
+            path,
+            range.Value.From,
+            range.Value.To,
+            TextOutputLimit.Characters,
+            "ListDirectory");
+        if (read.IsError)
+        {
+            return read.ErrorsOrEmptyList;
+        }
+
+        return new ReadRangeText(read.Value, lineNumbers).ToString();
     }
 }

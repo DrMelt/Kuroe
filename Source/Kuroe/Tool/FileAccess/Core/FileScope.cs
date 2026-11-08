@@ -1,9 +1,10 @@
 using ErrorOr;
 using Kuroe.Files.Shared;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
-/// <summary>根目录内的文件访问：路径解析与越界拒绝，按行号范围读取并按字符上限截断，行尾保留原始终止符。
+/// <summary>根目录内的文件访问：路径解析与越界拒绝，按行号范围读取并保留每行终止符。
 /// 不解析链接，根目录内指向外部的符号链接、目录联接点与硬链接不被拦截。</summary>
 /// <param name="root">路径参数的解析基准目录，绝对路径。</param>
 /// <param name="boundary">允许的边界目录，绝对路径。</param>
@@ -15,7 +16,7 @@ public sealed class FileScope(
     string boundary,
     string rootName,
     string boundaryName,
-    IWorkspaceFiles files)
+    IWorkspaceFiles files) : IFileScope
 {
     private readonly string _root = root;
     private readonly string _rootName = rootName;
@@ -31,7 +32,7 @@ public sealed class FileScope(
     public string Root => _root;
 
     /// <summary>本作用域使用的文件访问实现。</summary>
-    public IWorkspaceFiles Workspace => _files;
+    internal IWorkspaceFiles Workspace => _files;
 
     /// <summary>建立作用域时的绑定错误，非空时所有解析都返回它。</summary>
     public Error? BindingError { get; init; }
@@ -76,35 +77,39 @@ public sealed class FileScope(
         }
     }
 
-    /// <summary>读取根目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断。
-    /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。listFunction 是提示里指出的列目录函数名。</summary>
-    public ErrorOr<string> ReadRange(string path, int from, int to, bool lineNumbers, string listFunction)
+    /// <summary>读取根目录内文件指定行号范围的内容，保留行尾终止符。
+    /// 行号从 1 起，结束行超出文件长度时读到文件尾，起始行超出文件长度时给出拒绝错误。
+    /// characterBudget 是行内容与终止符的字符预算。listFunction 是提示里指出的列目录函数名。</summary>
+    public ErrorOr<SourceLineReadResult> ReadRange(
+        string path,
+        int from,
+        int to,
+        int characterBudget,
+        string listFunction)
     {
-        ErrorOr<string> file = ExistingFile(path, listFunction);
-        return file.IsError ? file.ErrorsOrEmptyList : ReadLines(file.Value, path, from, to, lineNumbers);
+        if (from < 1)
+        {
+            return ToolErrors.Argument("起始行号 from 从 1 起。");
+        }
+
+        if (to < from)
+        {
+            return ToolErrors.Argument("结束行号 to 不能小于起始行号 from。");
+        }
+
+        if (characterBudget < 1)
+        {
+            return ToolErrors.Argument("字符预算必须大于 0。");
+        }
+
+        ErrorOr<string> file = ResolveFile(path, listFunction);
+        return file.IsError
+            ? file.ErrorsOrEmptyList
+            : ReadLines(file.Value, path, from, to, characterBudget);
     }
 
-    /// <summary>取根目录内文件的文件系统事实，只受理文件。listFunction 是提示里指出的列目录函数名。</summary>
-    public ErrorOr<FileFacts> Inspect(string path, string listFunction)
-    {
-        ErrorOr<string> file = ExistingFile(path, listFunction);
-        if (file.IsError)
-        {
-            return file.ErrorsOrEmptyList;
-        }
-
-        try
-        {
-            return _files.Inspect(file.Value);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return ToolErrors.ReadFailed($"读取 {path} 信息失败：{ex.Message}");
-        }
-    }
-
-    /// <summary>解析到根目录内已存在的文件。目标是目录或不存在时给出拒绝错误。</summary>
-    private ErrorOr<string> ExistingFile(string path, string listFunction)
+    /// <summary>解析到根目录内已存在的文件。目标是目录或不存在时给出拒绝错误。listFunction 是提示里指出的列目录函数名。</summary>
+    public ErrorOr<string> ResolveFile(string path, string listFunction)
     {
         ErrorOr<string> resolved = Resolve(path);
         if (resolved.IsError)
@@ -125,40 +130,25 @@ public sealed class FileScope(
         return resolved.Value;
     }
 
-    /// <summary>读取文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断，正文包在范围标记内。
-    /// 行号从 1 起，结束行超出文件长度时读到文件尾并在正文前注明实际范围。</summary>
-    private ErrorOr<string> ReadLines(string fullPath, string path, int from, int to, bool lineNumbers)
+    /// <summary>读取文件指定行号范围，保留每行终止符。起始行超出文件长度时给出拒绝错误。</summary>
+    private ErrorOr<SourceLineReadResult> ReadLines(
+        string fullPath,
+        string path,
+        int from,
+        int to,
+        int characterBudget)
     {
         try
         {
             using StreamReader reader = new(_files.OpenRead(fullPath));
 
-            SourceLineReadResult read = SourceLineReader.Read(reader, from, to, TextLimit.Characters);
-            if (read.FromBeyondEnd)
+            SourceLineReadResult read = SourceLineReader.Read(reader, from, to, characterBudget);
+            if (read.Lines.Count == 0 && read.ToBeyondEnd && from > 1)
             {
                 return ToolErrors.Argument($"起始行 {from} 超出文件长度，该范围没有内容。");
             }
 
-            if (read.Lines.Count == 0)
-            {
-                return "（已到文件结尾，文件没有内容）";
-            }
-
-            string body = TextLimit.Body(LineView.Format(read.Lines, lineNumbers), out bool truncated);
-            string content = TextRange.Wrap(body);
-            if (truncated)
-            {
-                return $"{TextLimit.Notice}\n{content}";
-            }
-
-            if (!read.ToBeyondEnd)
-            {
-                return content;
-            }
-
-            int last = from + read.Lines.Count - 1;
-            string range = from == last ? $"第 {from} 行" : $"第 {from} 到 {last} 行";
-            return $"（已到文件结尾，实际返回{range}）\n{content}";
+            return read;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

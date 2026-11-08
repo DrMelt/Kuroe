@@ -1,3 +1,5 @@
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;
@@ -10,9 +12,13 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\n二\n", 1, 10);
 
-        Assert.False(result.FromBeyondEnd);
         Assert.True(result.ToBeyondEnd);
-        SourceLine[] expected = [new(1, "一", "\n"), new(2, "二", "\n"), new(3, string.Empty, string.Empty)];
+        SourceLine[] expected =
+        [
+            new(1, "一", NewLineStyle.Lf),
+            new(2, "二", NewLineStyle.Lf),
+            new(3, string.Empty, null),
+        ];
         Assert.Equal(expected, result.Lines);
     }
 
@@ -21,7 +27,12 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\r\n二\r\n", 1, 10);
 
-        SourceLine[] expected = [new(1, "一", "\r\n"), new(2, "二", "\r\n"), new(3, string.Empty, string.Empty)];
+        SourceLine[] expected =
+        [
+            new(1, "一", NewLineStyle.CrLf),
+            new(2, "二", NewLineStyle.CrLf),
+            new(3, string.Empty, null),
+        ];
         Assert.Equal(expected, result.Lines);
     }
 
@@ -30,7 +41,12 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\r二\r", 1, 10);
 
-        SourceLine[] expected = [new(1, "一", "\r"), new(2, "二", "\r"), new(3, string.Empty, string.Empty)];
+        SourceLine[] expected =
+        [
+            new(1, "一", NewLineStyle.Cr),
+            new(2, "二", NewLineStyle.Cr),
+            new(3, string.Empty, null),
+        ];
         Assert.Equal(expected, result.Lines);
     }
 
@@ -41,10 +57,10 @@ public sealed class SourceLineReaderTests
 
         SourceLine[] expected =
         [
-            new(1, "一", "\r\n"),
-            new(2, "二", "\r"),
-            new(3, "三", "\n"),
-            new(4, "四", string.Empty),
+            new(1, "一", NewLineStyle.CrLf),
+            new(2, "二", NewLineStyle.Cr),
+            new(3, "三", NewLineStyle.Lf),
+            new(4, "四", null),
         ];
         Assert.Equal(expected, result.Lines);
     }
@@ -56,10 +72,10 @@ public sealed class SourceLineReaderTests
 
         SourceLine[] expected =
         [
-            new(1, "一", "\r\n"),
-            new(2, string.Empty, "\r\n"),
-            new(3, "二", "\n"),
-            new(4, string.Empty, string.Empty),
+            new(1, "一", NewLineStyle.CrLf),
+            new(2, string.Empty, NewLineStyle.CrLf),
+            new(3, "二", NewLineStyle.Lf),
+            new(4, string.Empty, null),
         ];
         Assert.Equal(expected, result.Lines);
     }
@@ -69,7 +85,7 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\n二", 1, 10);
 
-        SourceLine[] expected = [new(1, "一", "\n"), new(2, "二", string.Empty)];
+        SourceLine[] expected = [new(1, "一", NewLineStyle.Lf), new(2, "二", null)];
         Assert.Equal(expected, result.Lines);
     }
 
@@ -78,7 +94,7 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\n", 1, 10);
 
-        SourceLine[] expected = [new(1, "一", "\n"), new(2, string.Empty, string.Empty)];
+        SourceLine[] expected = [new(1, "一", NewLineStyle.Lf), new(2, string.Empty, null)];
         Assert.Equal(expected, result.Lines);
         Assert.True(result.ToBeyondEnd);
     }
@@ -88,7 +104,7 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\r\n二\r\n三\r\n", 2, 3);
 
-        SourceLine[] expected = [new(2, "二", "\r\n"), new(3, "三", "\r\n")];
+        SourceLine[] expected = [new(2, "二", NewLineStyle.CrLf), new(3, "三", NewLineStyle.CrLf)];
         Assert.Equal(expected, result.Lines);
         Assert.False(result.ToBeyondEnd);
     }
@@ -98,7 +114,6 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\r\n", 3, 3);
 
-        Assert.True(result.FromBeyondEnd);
         Assert.True(result.ToBeyondEnd);
         Assert.Empty(result.Lines);
     }
@@ -108,10 +123,9 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一\n", 2, 2);
 
-        Assert.False(result.FromBeyondEnd);
         Assert.False(result.ToBeyondEnd);
         SourceLine line = Assert.Single(result.Lines);
-        Assert.Equal(new SourceLine(2, string.Empty, string.Empty), line);
+        Assert.Equal(new SourceLine(2, string.Empty, null), line);
     }
 
     [Fact]
@@ -119,7 +133,6 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read("一", 2, 50);
 
-        Assert.True(result.FromBeyondEnd);
         Assert.True(result.ToBeyondEnd);
         Assert.Empty(result.Lines);
     }
@@ -138,7 +151,7 @@ public sealed class SourceLineReaderTests
         SourceLineReadResult result = Read("一\r\n二\r\n", 1, 10, characterBudget: 1);
 
         SourceLine line = Assert.Single(result.Lines);
-        Assert.Equal(new SourceLine(1, "一", "\r\n"), line);
+        Assert.Equal(new SourceLine(1, "一", NewLineStyle.CrLf), line);
         Assert.False(result.ToBeyondEnd);
     }
 
@@ -151,8 +164,8 @@ public sealed class SourceLineReaderTests
 
         Assert.Equal(2, result.Lines.Count);
         Assert.Equal(4095, result.Lines[0].Text.Length);
-        Assert.Equal("\r\n", result.Lines[0].NewLine);
-        Assert.Equal(new SourceLine(2, "b", string.Empty), result.Lines[1]);
+        Assert.Equal(NewLineStyle.CrLf, result.Lines[0].Terminator);
+        Assert.Equal(new SourceLine(2, "b", null), result.Lines[1]);
     }
 
     [Fact]
@@ -164,7 +177,7 @@ public sealed class SourceLineReaderTests
 
         SourceLine line = Assert.Single(result.Lines);
         Assert.Equal(5000, line.Text.Length);
-        Assert.Equal("\n", line.NewLine);
+        Assert.Equal(NewLineStyle.Lf, line.Terminator);
     }
 
     [Fact]
@@ -175,7 +188,7 @@ public sealed class SourceLineReaderTests
 
         SourceLine line = Assert.Single(result.Lines);
         Assert.Equal(content, line.Text);
-        Assert.Equal("\n", line.NewLine);
+        Assert.Equal(NewLineStyle.Lf, line.Terminator);
     }
 
     [Fact]
@@ -183,7 +196,6 @@ public sealed class SourceLineReaderTests
     {
         SourceLineReadResult result = Read(string.Empty, 1, 10);
 
-        Assert.False(result.FromBeyondEnd);
         Assert.True(result.ToBeyondEnd);
         Assert.Empty(result.Lines);
     }
@@ -192,6 +204,6 @@ public sealed class SourceLineReaderTests
         string text,
         int from,
         int to,
-        int characterBudget = TextLimit.Characters) =>
+        int characterBudget = TextOutputLimit.Characters) =>
         SourceLineReader.Read(new StringReader(text), from, to, characterBudget);
 }

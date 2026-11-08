@@ -1,4 +1,5 @@
 using System.Text;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -8,11 +9,12 @@ public static class SourceLineReader
     /// <summary>单次从文本来源读取的字符数。</summary>
     private const int BufferSize = 4096;
 
-    /// <summary>读取指定行号范围，行内容与终止符的字符数达到预算后停止收集。</summary>
+    /// <summary>读取指定行号范围，行内容与终止符的字符数达到预算后停止收集。
+    /// 起始行超出文件长度时返回空行集合且 ToBeyondEnd 为真。</summary>
     /// <param name="reader">文本来源。</param>
     /// <param name="from">起始行号，从 1 起。</param>
     /// <param name="to">结束行号，不小于起始行号。</param>
-    /// <param name="characterBudget">行内容与终止符的字符数预算，超出后停止收集。</param>
+    /// <param name="characterBudget">行内容与终止符的字符数预算，大于 0。</param>
     public static SourceLineReadResult Read(TextReader reader, int from, int to, int characterBudget)
     {
         Cursor cursor = new(reader);
@@ -20,7 +22,7 @@ public static class SourceLineReader
         {
             if (!cursor.TrySkipLine())
             {
-                return new SourceLineReadResult([], FromBeyondEnd: true, ToBeyondEnd: true);
+                return new SourceLineReadResult([], ToBeyondEnd: true);
             }
         }
 
@@ -31,22 +33,21 @@ public static class SourceLineReader
         for (int index = 0; index < count; index++)
         {
             int number = from + index;
-            if (!cursor.TryReadLine(out string text, out string newLine))
+            if (!cursor.TryReadLine(out string text, out NewLineStyle? terminator))
             {
                 toBeyondEnd = true;
                 break;
             }
 
-            lines.Add(new SourceLine(number, text, newLine));
-            characters += text.Length + newLine.Length;
+            lines.Add(new SourceLine(number, text, terminator));
+            characters += text.Length + (terminator?.Value.Length ?? 0);
             if (characters > characterBudget)
             {
                 break;
             }
         }
 
-        bool fromBeyondEnd = lines.Count == 0 && count > 0 && from > 1 && toBeyondEnd;
-        return new SourceLineReadResult(lines, fromBeyondEnd, toBeyondEnd);
+        return new SourceLineReadResult(lines, toBeyondEnd);
     }
 
     /// <summary>读取位置与字符缓冲。</summary>
@@ -60,13 +61,13 @@ public static class SourceLineReader
         private bool _trailingLineRead;
 
         /// <summary>读取一行，没有更多内容时返回假。</summary>
-        public bool TryReadLine(out string text, out string newLine)
+        public bool TryReadLine(out string text, out NewLineStyle? terminator)
         {
             if (AtTrailingLine())
             {
                 _trailingLineRead = true;
                 text = string.Empty;
-                newLine = string.Empty;
+                terminator = null;
                 return true;
             }
 
@@ -77,7 +78,7 @@ public static class SourceLineReader
                 if (current < 0)
                 {
                     text = content.ToString();
-                    newLine = string.Empty;
+                    terminator = null;
                     return content.Length > 0;
                 }
 
@@ -87,11 +88,11 @@ public static class SourceLineReader
                     if (Peek() == '\n')
                     {
                         Consume();
-                        newLine = "\r\n";
+                        terminator = NewLineStyle.CrLf;
                     }
                     else
                     {
-                        newLine = "\r";
+                        terminator = NewLineStyle.Cr;
                     }
 
                     _endedWithTerminator = true;
@@ -104,7 +105,7 @@ public static class SourceLineReader
                     Consume();
                     _endedWithTerminator = true;
                     text = content.ToString();
-                    newLine = "\n";
+                    terminator = NewLineStyle.Lf;
                     return true;
                 }
 

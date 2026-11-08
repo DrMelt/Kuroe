@@ -1,14 +1,14 @@
 using ErrorOr;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using Kuroe.Tool.FileAccess;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.File;
 
 /// <summary>移动路径基准目录内文件或目录的工具。路径解析后必须落回工作区内，目标已存在时拒绝。</summary>
 public sealed class MoveFileTool : ITool
 {
-    private readonly FileScope _scope;
+    private readonly IFileScope _scope;
     private readonly IWorkspaceFiles _files;
 
     /// <summary>把文件或目录移动到另一个路径。</summary>
@@ -31,10 +31,16 @@ public sealed class MoveFileTool : ITool
 
     /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
     public MoveFileTool(ToolBinding binding, IWorkspaceFiles files)
+        : this(FileTools.Scope(binding, files), files)
     {
-        _scope = FileTools.Scope(binding, files);
+    }
+
+    /// <summary>用已建立的文件访问作用域与文件访问实现建立载体。</summary>
+    public MoveFileTool(IFileScope scope, IWorkspaceFiles files)
+    {
+        _scope = scope;
         _files = files;
-        Functions = [Definition.Bind(Move, _scope.Paths)];
+        Functions = [Definition.Bind(Move, scope.Paths)];
     }
 
     /// <summary>把文件或目录移动到工作目录内的另一个路径，目标已存在时拒绝，父目录缺失时自动创建；错误与拒绝以 ErrorOr 表达。</summary>

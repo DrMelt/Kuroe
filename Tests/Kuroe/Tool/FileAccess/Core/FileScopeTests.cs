@@ -1,5 +1,7 @@
 using ErrorOr;
 using Kuroe.TestSupport;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;
@@ -58,45 +60,17 @@ public sealed class FileScopeTests
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n二\n三\n四\n");
 
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 2, 3, true, "ListDirectory");
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            2,
+            3,
+            TextOutputLimit.Characters,
+            "ListDirectory");
 
-        Assert.False(text.IsError);
-        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_numbers_lines_and_marks_the_file_end()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), "一\n二\n三\n四\n");
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 2, 10, true, "ListDirectory");
-
-        Assert.False(text.IsError);
-        Assert.Equal("（已到文件结尾，实际返回第 2 到 5 行）\n<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n5 |<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_can_omit_line_numbers()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), "一\r\n二\r三\n四");
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 10, false, "ListDirectory");
-
-        Assert.False(text.IsError);
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_aligns_line_numbers_to_the_last_line()
-    {
-        _files.AddFile(
-            Path.Combine(_root, "a.txt"),
-            string.Concat(Enumerable.Range(1, 12).Select(line => $"L{line}\n")));
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 8, 12, true, "ListDirectory");
-
-        Assert.False(text.IsError);
-        Assert.Equal("<<<KUROE_TEXT_BEGIN>>> 8 |L8\n 9 |L9\n10 |L10\n11 |L11\n12 |L12\n<<<KUROE_TEXT_END>>>", text.Value);
+        Assert.False(read.IsError);
+        SourceLine[] expected = [new(2, "二", NewLineStyle.Lf), new(3, "三", NewLineStyle.Lf)];
+        Assert.Equal(expected, read.Value.Lines);
+        Assert.False(read.Value.ToBeyondEnd);
     }
 
     [Fact]
@@ -104,50 +78,23 @@ public sealed class FileScopeTests
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\r\n二\r三\n四");
 
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 10, true, "ListDirectory");
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            1,
+            10,
+            TextOutputLimit.Characters,
+            "ListDirectory");
 
-        Assert.False(text.IsError);
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r3 |三\n4 |四<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_keeps_the_terminator_of_the_last_line()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), "一\r\n二\r\n");
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 2, true, "ListDirectory");
-
-        Assert.False(text.IsError);
-        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_places_the_end_marker_after_a_cr_terminator()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), "一\r二\r");
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 2, true, "ListDirectory");
-
-        Assert.False(text.IsError);
-        Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r2 |二\r<<<KUROE_TEXT_END>>>", text.Value);
-    }
-
-    [Fact]
-    public void Read_range_marks_truncation_before_the_content()
-    {
-        _files.AddFile(Path.Combine(_root, "a.txt"), new string('a', 9000));
-
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 1, true, "ListDirectory");
-
-        Assert.False(text.IsError);
-        const string Notice = "（内容超过 8000 字符，已截断）\n";
-        const string Begin = "<<<KUROE_TEXT_BEGIN>>>";
-        const string End = "<<<KUROE_TEXT_END>>>";
-        Assert.StartsWith(Notice + Begin, text.Value, StringComparison.Ordinal);
-        Assert.EndsWith(End, text.Value, StringComparison.Ordinal);
-        string content = text.Value[(Notice.Length + Begin.Length)..^End.Length];
-        Assert.Equal(8000, content.Length);
-        Assert.StartsWith("1 |", content, StringComparison.Ordinal);
+        Assert.False(read.IsError);
+        SourceLine[] expected =
+        [
+            new(1, "一", NewLineStyle.CrLf),
+            new(2, "二", NewLineStyle.Cr),
+            new(3, "三", NewLineStyle.Lf),
+            new(4, "四", null),
+        ];
+        Assert.Equal(expected, read.Value.Lines);
+        Assert.True(read.Value.ToBeyondEnd);
     }
 
     [Fact]
@@ -155,21 +102,47 @@ public sealed class FileScopeTests
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");
 
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 3, 50, true, "ListDirectory");
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            3,
+            50,
+            TextOutputLimit.Characters,
+            "ListDirectory");
 
-        Assert.True(text.IsError);
-        Assert.Contains("超出文件长度", text.FirstError.Description, StringComparison.Ordinal);
+        Assert.True(read.IsError);
+        Assert.Contains("超出文件长度", read.FirstError.Description, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Read_range_reports_an_empty_file()
+    public void Read_range_rejects_a_start_line_in_an_empty_file()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), string.Empty);
 
-        ErrorOr<string> text = Scope().ReadRange("a.txt", 1, 50, true, "ListDirectory");
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            2,
+            50,
+            TextOutputLimit.Characters,
+            "ListDirectory");
 
-        Assert.False(text.IsError);
-        Assert.Equal("（已到文件结尾，文件没有内容）", text.Value);
+        Assert.True(read.IsError);
+        Assert.Contains("超出文件长度", read.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Read_range_rejects_a_non_positive_character_budget()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");
+
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            1,
+            1,
+            0,
+            "ListDirectory");
+
+        Assert.True(read.IsError);
+        Assert.Contains("字符预算", read.FirstError.Description, StringComparison.Ordinal);
     }
 
     private FileScope Scope() => new(_root, "工作目录", _files);

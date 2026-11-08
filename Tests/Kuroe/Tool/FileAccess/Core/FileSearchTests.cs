@@ -1,6 +1,8 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.TestSupport;
+using Kuroe.Tool.FileAccess.Output;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.FileAccess.Tests;
@@ -178,7 +180,7 @@ public sealed class FileSearchTests
     public void Search_rejects_a_non_positive_occurrence_limit()
     {
         ErrorOr<TextSearchResult> result = new FileSearch(Scope())
-            .Search([], Query("needle"), TextLimit.Characters, 0);
+            .Search([], Query("needle"), TextOutputLimit.Characters, 0);
 
         Assert.True(result.IsError);
         Assert.Contains("出现次数上限", result.FirstError.Description, StringComparison.Ordinal);
@@ -287,23 +289,11 @@ public sealed class FileSearchTests
     [Fact]
     public void Search_rejects_a_missing_scope()
     {
-        ErrorOr<TextSearchResult> result = new FileSearch(Scope()).Search(["nope"], Query("needle"), TextLimit.Characters);
+        ErrorOr<TextSearchResult> result = new FileSearch(Scope())
+            .Search(["nope"], Query("needle"), TextOutputLimit.Characters);
 
         Assert.True(result.IsError);
         Assert.Contains("不存在", result.FirstError.Description, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Query_normalizes_extensions_and_rejects_invalid_entries()
-    {
-        TextQuery query = Query("x", ["CS", ".md", "cs"]);
-
-        Assert.Equal([".cs", ".md"], query.Extensions);
-        Assert.True(TextQuery.Create(" ", null, false).IsError);
-        Assert.True(TextQuery.Create("x", [""], false).IsError);
-        Assert.True(TextQuery.Create("x", ["*.cs"], false).IsError);
-        Assert.True(TextQuery.Create("x", ["c?.cs"], false).IsError);
-        Assert.True(TextQuery.Create("x", ["Source/cs"], false).IsError);
     }
 
     [Fact]
@@ -321,7 +311,7 @@ public sealed class FileSearchTests
         IReadOnlyList<string> paths,
         TextQuery query,
         ToolPathAccess? access = null,
-        int characterBudget = TextLimit.Characters,
+        int characterBudget = TextOutputLimit.Characters,
         int occurrenceLimit = int.MaxValue)
     {
         ErrorOr<TextSearchResult> result = new FileSearch(Scope(), access)

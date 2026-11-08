@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using ErrorOr;
+using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
@@ -8,7 +9,7 @@ namespace Kuroe.Tool.FileAccess;
 /// 路径解析与边界沿用文件作用域，递归时跳过路径准入规则命中的目录与重解析点目录。匹配覆盖整行，展示保留包含命中位置的窗口。</summary>
 /// <param name="scope">搜索的文件访问作用域。</param>
 /// <param name="access">路径准入规则，null 表示不限制。</param>
-public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null)
+public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null) : IFileSearch
 {
     private readonly FileScope _scope = scope;
     private readonly FileCandidates _candidates = new(scope, access);
