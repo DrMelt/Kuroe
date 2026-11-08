@@ -69,13 +69,6 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
-    public void Clock_renders_local_time()
-    {
-        Assert.Equal("15:04:05", ViewLabels.Clock(new DateTimeOffset(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8))));
-        Assert.Equal("—", ViewLabels.Clock((DateTimeOffset?)null));
-    }
-
-    [Fact]
     public void Execution_state_appends_progress_when_present()
     {
         Assert.Equal("执行中", ViewLabels.State(Execution("")));

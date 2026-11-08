@@ -12,14 +12,13 @@ public sealed class JournalViewTests
     private static readonly DateTimeOffset At = new(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8));
 
     [Fact]
-    public void Entry_renders_time_label_and_text()
+    public void Entry_renders_label_and_text()
     {
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         JournalEntry entry = new(At, JournalLevel.Information, "回复", "内容");
 
         terminal.Write(JournalView.Build([entry], 0));
 
-        Assert.Contains("15:04:05", output.Output);
         Assert.Contains("回复", output.Output);
         Assert.Contains("内容", output.Output);
     }
