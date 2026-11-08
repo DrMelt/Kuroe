@@ -20,13 +20,13 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
     /// <summary>列出导出目录内一个目录的直接子项。</summary>
     private static readonly ToolDefinition ListSourceDirectory = new(
         new ToolPath("source/ListSourceDirectory"),
-        "列出导出目录内一个目录的直接子项。path 缺省时列出导出目录根的条目。",
+        "列出导出目录内一个目录的直接子项。",
         [new ToolParameter(new ToolName("path"), "相对导出目录的目录路径，缺省为导出目录根", Path: true)]);
 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
-        $"读取导出目录内源码或文档指定行号范围的内容，缺省每行带行号，行尾保留文件原有的换行符。lineNumbers 为假时只输出行内容与原始换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {TextRange.Begin} 与 {TextRange.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。from 与 to 是行号，缺省读前 50 行，from 超出文件行数时拒绝，to 超出文件行数时读到文件尾并在正文前注明实际范围。",
+        $"读取导出目录内源码或文档指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {TextRange.Begin} 与 {TextRange.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),

@@ -14,7 +14,7 @@ public sealed class MoveFileTool : ITool
     /// <summary>把文件或目录移动到另一个路径。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/MoveFile"),
-        "把路径基准目录内的文件或目录移动到另一个路径。source 是现有的文件或目录，target 是移动后的完整路径，移动到同一目录下的新名字即重命名。目标已存在时拒绝，目标父目录缺失时自动创建。",
+        "把路径基准目录内的文件或目录移动到另一个路径，移动到同一目录下的新名字即重命名。目标已存在时拒绝，目标父目录缺失时自动创建。",
         [
             new ToolParameter(new ToolName("source"), "相对路径基准目录的现有文件或目录路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("target"), "相对路径基准目录的移动后完整路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),

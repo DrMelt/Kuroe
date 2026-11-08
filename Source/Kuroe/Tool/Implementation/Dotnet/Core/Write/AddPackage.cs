@@ -17,7 +17,7 @@ internal static class AddPackage
     /// <summary>函数定义与模板：dotnet add {project} package {package} [--version {version}]。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/AddPackage"),
-        "给项目添加包引用，project 是项目、解决方案或目录，package 是包名，version 是版本号。",
+        "给项目添加包引用。",
         [
             new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在路径基准目录里查找", Path: true),
             new ToolParameter(new ToolName(Package), "要添加的包名", Required: true),

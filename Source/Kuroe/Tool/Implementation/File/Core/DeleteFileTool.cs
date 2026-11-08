@@ -14,7 +14,7 @@ public sealed class DeleteFileTool : ITool
     /// <summary>删除文件或目录。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/DeleteFile"),
-        "删除路径基准目录内的文件或目录。文件直接删除；目录在 recursive 为真时连同内容一起删除，缺省时只删除空目录。路径基准目录本身不能删除，目标不存在时拒绝。",
+        "删除路径基准目录内的文件或目录。文件直接删除；目录缺省只删除空目录。路径基准目录本身不能删除，目标不存在时拒绝。",
         [
             new ToolParameter(new ToolName("path"), "相对路径基准目录的现有文件或目录路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("recursive"), "删除目录时是否连同其内容一起删除，布尔，缺省为假", Flag: true),

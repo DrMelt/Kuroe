@@ -11,7 +11,7 @@ internal static class TestMtp
     /// <summary>函数定义与模板：dotnet test [--project {project}] --ignore-exit-code 8 --verbosity quiet -- --report-trx。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/TestMtp"),
-        "使用 Microsoft.Testing.Platform 运行测试，project 是测试项目。",
+        "使用 Microsoft.Testing.Platform 运行测试。",
         [
             new ToolParameter(new ToolName(Project), "测试项目路径，缺省在路径基准目录里查找", Path: true),
         ],

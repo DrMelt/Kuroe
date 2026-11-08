@@ -15,11 +15,11 @@ public sealed class WriteFileTool : ITool
     /// <summary>覆盖写入文件。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/WriteFile"),
-        "把文本覆盖写入路径基准目录内的文件，文件不存在时创建，已存在时直接覆盖其内容。content 上限 40000 字符，父目录缺失时自动创建；encoding 指定写回编码，缺省 utf-8 不带 BOM。",
+        "把文本覆盖写入路径基准目录内的文件，文件不存在时创建，已存在时直接覆盖其内容；父目录缺失时自动创建。",
         [
             new ToolParameter(new ToolName("path"), "相对路径基准目录的文件路径", Required: true, Path: true, PathAccess: FileTools.PathAccess),
-            new ToolParameter(new ToolName("content"), "要写入文件的文本", Required: true),
-            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8"),
+            new ToolParameter(new ToolName("content"), $"要写入文件的文本，上限 {FileTools.ContentLimit} 字符", Required: true),
+            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省 utf-8 不带 BOM"),
         ], [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>

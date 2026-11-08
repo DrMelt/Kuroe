@@ -17,7 +17,7 @@ public sealed class ListDirectoryTool : ITool
     /// <summary>列出目录的直接子项。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/ListDirectory"),
-        "列出路径基准目录内一个目录的直接子项。path 缺省时列出路径基准目录的条目。",
+        "列出路径基准目录内一个目录的直接子项。",
         [new ToolParameter(new ToolName("path"), "相对路径基准目录的目录路径，缺省为路径基准目录", Path: true, PathAccess: FileTools.PathAccess)],
         [PathVariables.RootName]);
 

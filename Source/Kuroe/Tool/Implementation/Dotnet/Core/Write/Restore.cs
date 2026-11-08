@@ -11,7 +11,7 @@ internal static class Restore
     /// <summary>函数定义与模板：dotnet restore {project} --nologo。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("dotnet/write/Restore"),
-        "还原项目的包依赖，project 是项目、解决方案或目录。",
+        "还原项目的包依赖。",
         [new ToolParameter(new ToolName(Project), "项目、解决方案或目录路径，缺省在路径基准目录里查找", Path: true)],
         [new("dotnet", null), new("restore", null), new("{project}", null), new("--nologo", null)],
         TimeoutSeconds: 600);

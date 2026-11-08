@@ -15,15 +15,15 @@ public sealed class ReplaceTextTool : ITool
     /// <summary>在多个文本文件中按字面文本批量替换。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/write/ReplaceText"),
-        "在 paths 给出的目录或文件内的文本文件中，按字面文本 pattern 批量替换为 replacement。paths 必填，目录递归展开；extensions 限定后缀，写 cs 或 .cs；ignoreCase 为真时忽略大小写。每个文件替换全部不重叠匹配，保留原文件的编码、BOM 与换行风格，跳过二进制文件。dryRun 为真时只报告不写入；encoding 给出时所有写回文件用该编码，缺省保留各文件检测到的编码。",
+        "在指定目录或文件内的文本文件中，按字面文本批量替换。每个文件替换全部不重叠匹配，保留原文件的编码、BOM 与换行风格，跳过二进制文件。",
         [
-            new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表", Required: true, List: true, Path: true, PathAccess: FileTools.PathAccess),
+            new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表，目录递归展开", Required: true, List: true, Path: true, PathAccess: FileTools.PathAccess),
             new ToolParameter(new ToolName("pattern"), "要查找的字面文本，不按正则解释", Required: true),
             new ToolParameter(new ToolName("replacement"), "替换后的文本，可为空用于删除", Required: true),
             new ToolParameter(new ToolName("extensions"), "限定文件后缀名，例如 cs 或 .cs，省略时不限制", List: true),
             new ToolParameter(new ToolName("ignoreCase"), "匹配是否忽略大小写，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName("dryRun"), "只报告将发生的替换，不写入文件，布尔，缺省为假", Flag: true),
-            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省保留各文件编码"),
+            new ToolParameter(new ToolName("encoding"), "写回编码，支持 utf-8、utf-8-bom、utf-16、utf-16be，缺省保留各文件编码；给出时所有写回文件使用该编码"),
         ], [PathVariables.RootName]);
 
     /// <summary>本载体的函数声明。</summary>
