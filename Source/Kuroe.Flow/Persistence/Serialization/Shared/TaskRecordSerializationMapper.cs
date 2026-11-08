@@ -294,9 +294,7 @@ public static class TaskRecordSerializationMapper
             return null;
         }
 
-        Dictionary<PortName, PortValue>? ports = dto.Ports is null
-            ? null
-            : dto.Ports.ToDictionary(
+        Dictionary<PortName, PortValue>? ports = dto.Ports?.ToDictionary(
                 value => ReadPort(value.Port, "契约端口"),
                 value => new PortValue(value.Text, value.Trigger));
 
