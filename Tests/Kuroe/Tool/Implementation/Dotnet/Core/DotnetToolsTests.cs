@@ -83,12 +83,12 @@ public sealed class DotnetToolsTests
                 new("test", null),
                 new("--project", "project"),
                 new("{project}", null),
-                new("--filter", "filter"),
-                new("{filter}", null),
-                new("--ignore-exit-code", "filter"),
-                new("8", "filter"),
+                new("--ignore-exit-code", null),
+                new("8", null),
                 new("--verbosity", null),
                 new("quiet", null),
+                new("--", null),
+                new("--report-trx", null),
             ],
             Template("dotnet/write/TestMtp"));
 
@@ -200,18 +200,14 @@ public sealed class DotnetToolsTests
     }
 
     [Fact]
-    public void TestMtp_carries_project_filter_and_ignores_empty_modules()
+    public void TestMtp_carries_project_ignores_missing_tests_and_reports_trx()
     {
-        Assert.Equal(["dotnet", "test", "--verbosity", "quiet"], Argv("dotnet/write/TestMtp", Given()));
         Assert.Equal(
-            ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--verbosity", "quiet"],
+            ["dotnet", "test", "--ignore-exit-code", "8", "--verbosity", "quiet", "--", "--report-trx"],
+            Argv("dotnet/write/TestMtp", Given()));
+        Assert.Equal(
+            ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--ignore-exit-code", "8", "--verbosity", "quiet", "--", "--report-trx"],
             Argv("dotnet/write/TestMtp", Given(("project", "Tests/Kuroe.Tests"))));
-        Assert.Equal(
-            ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--filter", "FullyQualifiedName~Kuroe", "--ignore-exit-code", "8", "--verbosity", "quiet"],
-            Argv("dotnet/write/TestMtp", Given(("project", "Tests/Kuroe.Tests"), ("filter", "FullyQualifiedName~Kuroe"))));
-        Assert.Equal(
-            ["dotnet", "test", "--filter", "FullyQualifiedName~Kuroe", "--ignore-exit-code", "8", "--verbosity", "quiet"],
-            Argv("dotnet/write/TestMtp", Given(("filter", "FullyQualifiedName~Kuroe"))));
     }
 
     [Fact]
@@ -321,7 +317,6 @@ public sealed class DotnetToolsTests
 
         Assert.False(Parameter(Definition("dotnet/write/Build"), "configuration").Path);
         Assert.False(Parameter(Definition("dotnet/write/Test"), "filter").Path);
-        Assert.False(Parameter(Definition("dotnet/write/TestMtp"), "filter").Path);
         Assert.False(Parameter(Definition("dotnet/write/AddPackage"), "package").Path);
         Assert.False(Parameter(Definition("dotnet/write/Format"), "severity").Required);
         Assert.False(Parameter(Definition("dotnet/read/VerifyFormat"), "severity").Required);

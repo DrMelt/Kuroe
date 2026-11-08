@@ -13,7 +13,7 @@
 | `dotnet/read/VerifyFormat` | `project`、`severity` 可选                     | 600  | 8000     |
 | `dotnet/write/Build`       | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/Test`        | `project`、`filter` 可选                       | 600  | 8000     |
-| `dotnet/write/TestMtp`     | `project`、`filter` 可选                       | 600  | 8000     |
+| `dotnet/write/TestMtp`     | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Run`         | `project` 可选，`arguments` 列表               | 600  | 8000     |
 | `dotnet/write/Restore`     | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Format`      | `project`、`severity` 可选                     | 600  | 8000     |
@@ -25,5 +25,9 @@
 `dotnet/write/Format` 按项目里的格式设置整理源码。`severity` 是诊断严重级别，可选 `info`、`warn`、`error`，省略时不传 `--severity`，由 `dotnet format` 使用自身缺省级别。
 
 `dotnet/read/VerifyFormat` 只校验不改动文件，存在待整理的文件时命令以非零退出码结束。`severity` 的取值与省略规则与 `Format` 相同。退出码与输出按命令结果原样交回。
+
+## MTP 测试
+
+`project` 是测试项目路径。`dotnet/write/TestMtp` 以 `--ignore-exit-code 8` 忽略未发现测试的退出码，并在 `--verbosity quiet` 之后以 `-- --report-trx` 让每个测试应用生成 TRX 报告。目标测试项目必须引用 `Microsoft.Testing.Extensions.TrxReport`，缺少扩展时测试应用把 `--report-trx` 当作未知选项并以退出码 5 结束。报告写到 `root` 目录下的 `TestResults`。
 
 命令合并 stdout 与 stderr 交回，交回文本以实际执行的命令行开头，随后是输出与退出码。超时与输出上限见上表。
