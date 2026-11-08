@@ -3,20 +3,22 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.TestSupport;
 using Kuroe.Tool;
 
 namespace Kuroe.Integration.Tests.Support;
 
-/// <summary>不接模型的执行器：按节点产出要求交回端口取值，并记录并发峰值。</summary>
+/// <summary>不接模型的执行器：按节点产出要求交回端口取值，按声明收口，并提供恢复能力。</summary>
 public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSource, INodeExecutionRestorer
 {
     private readonly Lock _gate = new();
     private readonly List<IExecution> _started = [];
 
+    /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
+    public IExecutionGate Gate { get; } = new ExecutionGate();
+
     /// <summary>执行索引，用于按执行号取执行对象供测试断言。</summary>
     public ExecutionIndex? Executions { get; set; }
-    private int _live;
-    private int _peak;
 
     /// <summary>按执行创建契约工具的工厂。</summary>
     public Func<ExecutionId, ExecutionInput, IReadOnlyList<ITool>>? ContractToolFactory { get; set; }
@@ -38,15 +40,6 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
 
     /// <summary>端口节点连续提交两次取值，第二次用于验证重复提交被拒。</summary>
     public bool DoubleSubmitPorts { get; set; }
-
-    /// <summary>单个执行的人为耗时，用于并发与取消断言。</summary>
-    public int DelayMs { get; set; } = 10;
-
-    /// <summary>按执行差异化的人为耗时，未给定时统一用 <see cref="DelayMs"/>，用于推进时序断言。</summary>
-    public Func<IExecution, int>? DelayFor { get; set; }
-
-    /// <summary>按执行决定何时放行，返回的任务完成前执行保持运行。设置后优先于 <see cref="DelayMs"/> 与 <see cref="DelayFor"/>。</summary>
-    public Func<IExecution, Task>? HoldFor { get; set; }
 
     /// <summary>持有期间忽略执行的取消，用于构造暂停与收口之间的竞态。</summary>
     public bool IgnoreCancellationWhileHeld { get; set; }
@@ -84,8 +77,6 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
             }
         }
     }
-
-    public int Peak { get { lock (_gate) { return _peak; } } }
 
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
@@ -180,25 +171,13 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
             _started.Add(started);
         }
 
-        int now = Interlocked.Increment(ref _live);
-        lock (_gate)
-        {
-            _peak = Math.Max(_peak, now);
-        }
-
+        ExecutionHandle handle = Gate.Arrive(execution, input.Node, input.ExecutionCount);
         try
         {
             Emits?.Invoke(started, journal);
 
-            if (HoldFor is { } hold)
-            {
-                Task held = hold(started);
-                await (IgnoreCancellationWhileHeld ? held : held.WaitAsync(cancellationToken));
-            }
-            else
-            {
-                await Task.Delay(DelayFor?.Invoke(started) ?? DelayMs, cancellationToken);
-            }
+            Task opened = Gate.WaitOpen(handle);
+            await (IgnoreCancellationWhileHeld ? opened : opened.WaitAsync(cancellationToken));
 
             IReadOnlyList<Port> requiredPorts = input.RequiredPorts;
             IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(execution, input) ?? [];
@@ -233,7 +212,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
         }
         finally
         {
-            Interlocked.Decrement(ref _live);
+            Gate.Leave(handle);
         }
     }
 

@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Node.File;
 
@@ -22,5 +23,5 @@ public static class FileReadNodeTypes
     };
 
     /// <summary>按类型专属声明建出类型实例。</summary>
-    public static INodeType Create(FileParameters parameters) => new FileReadNodeType(parameters);
+    public static INodeType Create(FileParameters parameters, IWorkspaceFiles files) => new FileReadNodeType(parameters, files);
 }

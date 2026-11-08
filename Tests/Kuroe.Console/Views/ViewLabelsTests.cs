@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.TestSupport;
 using Spectre.Console;
 using Xunit;
 
@@ -70,7 +71,7 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Clock_renders_local_time()
     {
-        Assert.Matches(@"^\d{2}:\d{2}:\d{2}$", ViewLabels.Clock(DateTimeOffset.Now));
+        Assert.Equal("15:04:05", ViewLabels.Clock(new DateTimeOffset(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8))));
         Assert.Equal("—", ViewLabels.Clock((DateTimeOffset?)null));
     }
 
@@ -137,7 +138,7 @@ public sealed class ViewLabelsTests
 
     private static ExecutionSnapshot Execution(string progress) => new(
         new ExecutionId(1), Input(), ExecutionState.Running, progress,
-        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, [], [], ExecutionUsage.None);
+        TestTime.At, TestTime.At, null, [], [], ExecutionUsage.None);
 
     private static ExecutionInput Input() => new()
     {

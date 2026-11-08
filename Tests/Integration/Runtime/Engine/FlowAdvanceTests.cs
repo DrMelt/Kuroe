@@ -80,7 +80,9 @@ public sealed class FlowAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && snapshot.Executables[0].Executions.Count == 1);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Single(parked.Executables[0].Executions);
@@ -165,7 +167,7 @@ public sealed class FlowAdvanceTests
     public void Cancel_task_stops_every_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 300;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -179,7 +181,7 @@ public sealed class FlowAdvanceTests
     public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -198,7 +200,7 @@ public sealed class FlowAdvanceTests
         environment.Tasks.Resume(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
 
-        environment.Runner.DelayMs = 0;
+        environment.Runner.Gate.ClearHolds();
         environment.Tasks.Rerun(id).ThrowIfError();
 
         Assert.Equal(TaskState.Done, environment.Wait(id, snapshot => snapshot.State == TaskState.Done).State);
@@ -210,7 +212,7 @@ public sealed class FlowAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewOnPlanFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        await environment.SettleAsync(id);
+        await environment.WaitAsync(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Tasks.Pause(id).ThrowIfError();
@@ -223,7 +225,7 @@ public sealed class FlowAdvanceTests
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Pendings.Approve(id).ThrowIfError();
 
-        Assert.Equal(TaskState.Done, (await environment.SettleAsync(id)).State);
+        Assert.Equal(TaskState.Done, (await environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Done)).State);
     }
 
     [Fact]
@@ -248,7 +250,7 @@ public sealed class FlowAdvanceTests
     public void Active_task_cannot_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -264,7 +266,7 @@ public sealed class FlowAdvanceTests
     public async Task Shutdown_keeps_control_state_and_interrupts_executions()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.DelayMs = 20000;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("补齐 README");
         await environment.WaitAsync(id, snapshot => snapshot.LiveExecutions > 0);
@@ -284,7 +286,7 @@ public sealed class FlowAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(ParallelApprovalFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 2);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Equal(2, environment.Awaiting(id, PendingKind.Approve).Count);
 
@@ -292,9 +294,13 @@ public sealed class FlowAdvanceTests
         environment.Pendings.Approve(id, [review]).ThrowIfError();
 
         // 只放行甲分支的审批节点，乙分支仍停在待批准
-        TaskSnapshot partial = environment.Settle(id);
+        TaskSnapshot partial = environment.Wait(id, _ =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && environment.Runner.Started.Any(execution =>
+                execution.Input.Node.Label.Value == "撰写" && execution.State == ExecutionState.Succeeded));
         Assert.Equal(TaskState.Running, partial.State);
-        Assert.Single(environment.Awaiting(id, PendingKind.Approve));
+        Assert.Equal("整体/审阅乙", Assert.Single(environment.Awaiting(id, PendingKind.Approve)).Value);
+        Assert.DoesNotContain(environment.Runner.Started, execution => execution.Input.Node.Label.Value == "排版");
     }
 
     /// <summary>计划经审批放行后实施。</summary>

@@ -25,10 +25,9 @@ public sealed class ExecutionUsageTests
     public void Runner_usage_is_visible_while_the_execution_runs()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ExecutionUsage usage = new(1, 0, new TokenUsage(12, 3, 15, 4, 1)) { ContextTokens = 12 };
         environment.Runner.Usage = usage;
-        environment.Runner.HoldFor = _ => release.Task;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("统计用量");
         TaskSnapshot running = environment.Wait(
@@ -39,7 +38,7 @@ public sealed class ExecutionUsageTests
 
         Assert.Equal(usage, Assert.Single(Assert.Single(running.Executables).Executions).Usage);
 
-        release.SetResult();
+        environment.Runner.Gate.ClearHolds();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(usage, Assert.Single(Assert.Single(done.Executables).Executions).Usage);

@@ -44,7 +44,10 @@ public sealed class TriggerNodeTests
         Assert.DoesNotContain(first.Input.Inputs, value => value.Text.Contains("第一问"));
 
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot done = environment.Wait(id, snapshot => RoundCount(snapshot, "回话") == 2);
+        TaskSnapshot done = environment.Wait(id, snapshot =>
+            RoundCount(snapshot, "回话") == 2
+            && environment.Runner.Started.Any(execution =>
+                execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 2));
         Assert.Equal(2, RoundCount(done, "回话"));
         ExecutionSnapshot second = environment.Runner.Started
             .Single(execution => execution.Input.Node.Label.Value == "回话" && execution.Input.ExecutionCount == 2)
@@ -145,7 +148,7 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TriggerReviewFlow);
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
@@ -165,7 +168,7 @@ public sealed class TriggerNodeTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewContainerTriggerFlow);
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));

@@ -37,7 +37,7 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
 
     public TaskSnapshot Snapshot(TaskId id) => _environment.Snapshot(id);
 
-    public IReadOnlyList<TaskSnapshot> Tasks() => _environment.Registry.Snapshots();
+    public IReadOnlyList<TaskSnapshot> Tasks() => _environment.TaskReader.Snapshots();
 
     public Task<ErrorOr<Success>> PauseAsync(TaskId id) => Task.FromResult(_environment.Tasks.Pause(id));
 
@@ -56,7 +56,9 @@ internal sealed class ConsoleTaskPersistenceSession : ITaskPersistenceSession
     }
 
     public TaskSnapshot Wait(TaskId id, Func<TaskSnapshot, bool> condition) =>
-        _environment.Wait(id, condition);
+        _environment.Wait(id, snapshot => condition(snapshot));
+
+    public Task FlushAsync(TaskId id) => _environment.Records.FlushAsync(id);
 
     public Task<ErrorOr<Success>> ShutdownAsync() => Task.FromResult<ErrorOr<Success>>(Result.Success);
 

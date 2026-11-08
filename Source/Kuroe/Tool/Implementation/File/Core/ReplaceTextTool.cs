@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
@@ -28,16 +29,16 @@ public sealed class ReplaceTextTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public ReplaceTextTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public ReplaceTextTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public ReplaceTextTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public ReplaceTextTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
         _replacer = new FileReplacer(_scope, FileTools.PathAccess);
         Functions = [Definition.Bind(Replace, _scope.Paths)];
     }
@@ -116,15 +117,14 @@ public sealed class ReplaceTextTool : ITool
     private string Render(TextReplaceResult result, IReadOnlyList<string> paths, bool dryRun)
     {
         string scope = string.Join("、", paths);
-        string skipped = result.SkippedFiles == 0 ? string.Empty : $"，跳过 {result.SkippedFiles} 个二进制文件";
         if (result.Files.Count == 0)
         {
-            return $"在 {scope} 中扫描 {result.ScannedFiles} 个文件{skipped}，没有匹配，未修改文件。";
+            return $"在 {scope} 中扫描 {result.ScannedFiles} 个文件，没有匹配，未修改文件。";
         }
 
         string action = dryRun ? "将替换" : "已替换";
         var text = new StringBuilder();
-        string summary = $"在 {scope} 中扫描 {result.ScannedFiles} 个文件{skipped}";
+        string summary = $"在 {scope} 中扫描 {result.ScannedFiles} 个文件";
         text.Append($"{summary}，{action} {result.ChangedFiles} 个文件的 {result.Replacements} 处文本。");
 
         TextReplaceFile[] changed = [.. result.Files.Where(file => file.Error is null)];

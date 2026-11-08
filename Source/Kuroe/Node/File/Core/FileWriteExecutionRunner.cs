@@ -1,13 +1,17 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Files.Shared;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件写入节点的一次执行：把唯一的 Text 输入内容写入文件，写入内容作为产出。</summary>
-internal sealed class FileWriteExecutionRunner(ExecutableNode node, FileParameters parameters)
-    : FileExecutionRunner(node, parameters)
+internal sealed class FileWriteExecutionRunner(
+    ExecutableNode node,
+    FileParameters parameters,
+    IWorkspaceFiles files)
+    : FileExecutionRunner(node, parameters, files)
 {
     /// <inheritdoc/>
     public override Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
@@ -21,7 +25,7 @@ internal sealed class FileWriteExecutionRunner(ExecutableNode node, FileParamete
             return Task.FromResult(Failure(failure));
         }
 
-        if (Directory.Exists(fullPath))
+        if (Files.DirectoryExists(fullPath))
         {
             return Task.FromResult(Failure($"写入 {Parameters.Path} 失败：目标是目录。"));
         }
@@ -29,7 +33,7 @@ internal sealed class FileWriteExecutionRunner(ExecutableNode node, FileParamete
         string content = Content(input);
         try
         {
-            if (FileContent.Write(fullPath, content, Parameters.MaxChars) is { } writeFailure)
+            if (FileContent.Write(Files, fullPath, content, Parameters.MaxChars) is { } writeFailure)
             {
                 return Task.FromResult(Failure(writeFailure));
             }

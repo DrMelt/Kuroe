@@ -6,6 +6,8 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 /// <summary>过程记录存储：默认保留全部记录。</summary>
 public sealed class ProcessJournalStoreTests
 {
+    private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     [Fact]
     public void Default_store_keeps_all_entries()
     {
@@ -23,5 +25,5 @@ public sealed class ProcessJournalStoreTests
     }
 
     private static JournalEntry Entry(string text) =>
-        new(DateTimeOffset.UtcNow, JournalLevel.Information, "条目", text);
+        new(At, JournalLevel.Information, "条目", text);
 }

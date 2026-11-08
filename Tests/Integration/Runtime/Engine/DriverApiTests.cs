@@ -18,8 +18,8 @@ public sealed class DriverApiTests
         environment.Tasks.Rename(id, "文档补齐").ThrowIfError();
 
         Assert.Equal("文档补齐", environment.Snapshot(id).Title);
-        Assert.Single(environment.Registry.ClearSettled());
-        Assert.Empty(environment.Registry.Snapshots());
+        Assert.Single(environment.Tasks.ClearSettled());
+        Assert.Empty(environment.TaskReader.Snapshots());
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class DriverApiTests
         string receipt = ToolResult.Render(submit.Invoke(
             new ToolArguments(new Dictionary<string, object?> { ["valuesJson"] = """{ "计划": "改一下" }""" })));
 
-        Assert.Contains("被拒绝", receipt);
+        Assert.Contains("没有可交回的端口声明", receipt);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class DriverApiTests
         ExecutionSnapshot plan = Assert.Single(blocked.Executables[0].Executions);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Contains(environment.Runner.Submissions, text => text.Contains("被拒绝"));
+        Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口必须与需交回的端口一一对应"));
         Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
     }
 }

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
@@ -19,16 +20,16 @@ public sealed class GetFileInfoTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public GetFileInfoTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public GetFileInfoTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public GetFileInfoTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public GetFileInfoTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
         Functions = [Definition.Bind(Info, _scope.Paths)];
     }
 
@@ -37,7 +38,7 @@ public sealed class GetFileInfoTool : ITool
     {
         string path = arguments.RequiredText(new ToolName("path"));
 
-        ErrorOr<FileDetails> details = _scope.Inspect(path, "ListDirectory");
+        ErrorOr<FileFacts> details = _scope.Inspect(path, "ListDirectory");
         if (details.IsError)
         {
             return details.ErrorsOrEmptyList;

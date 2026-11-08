@@ -1,5 +1,5 @@
 using System.Text;
-using IOFile = System.IO.File;
+using Kuroe.Files.Shared;
 
 namespace Kuroe.Node.File;
 
@@ -10,14 +10,14 @@ internal static class FileContent
     private static readonly UTF8Encoding Utf8 = new(false);
 
     /// <summary>读取文件，超出字符上限时截断并加标记。上限为 0 时不限制。</summary>
-    internal static string Read(string fullPath, int maxChars)
+    internal static string Read(IWorkspaceFiles files, string fullPath, int maxChars)
     {
+        using StreamReader reader = new(files.OpenRead(fullPath));
         if (maxChars is <= 0 or int.MaxValue)
         {
-            return IOFile.ReadAllText(fullPath);
+            return reader.ReadToEnd();
         }
 
-        using StreamReader reader = new(fullPath);
         char[] buffer = new char[maxChars + 1];
         int length = 0;
         while (length < buffer.Length)
@@ -37,7 +37,7 @@ internal static class FileContent
     }
 
     /// <summary>覆盖写入整个文件，父目录缺失时建立。内容超出字符上限时不写入并返回原因，上限为 0 时不限制。</summary>
-    internal static string? Write(string fullPath, string content, int maxChars)
+    internal static string? Write(IWorkspaceFiles files, string fullPath, string content, int maxChars)
     {
         if (maxChars > 0 && content.Length > maxChars)
         {
@@ -47,10 +47,10 @@ internal static class FileContent
         string? directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrEmpty(directory))
         {
-            Directory.CreateDirectory(directory);
+            files.CreateDirectory(directory);
         }
 
-        IOFile.WriteAllText(fullPath, content, Utf8);
+        files.WriteText(fullPath, content, Utf8);
 
         return null;
     }

@@ -5,7 +5,7 @@ using Kuroe.Tool.Dotnet.Write;
 
 namespace Kuroe.Tool.Dotnet;
 
-/// <summary>内置 dotnet 工具面：只查环境的函数在 dotnet/read，会改动项目与产物的函数在 dotnet/write。
+/// <summary>内置 dotnet 工具面：只读的函数在 dotnet/read，会改动项目与产物的函数在 dotnet/write。
 /// 全部函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
 public static class DotnetTools
 {
@@ -16,8 +16,10 @@ public static class DotnetTools
         ListSdks.Definition with { Variables = [PathVariables.RootName] },
         ListPackages.Definition with { Variables = [PathVariables.RootName] },
         NugetSources.Definition with { Variables = [PathVariables.RootName] },
+        VerifyFormat.Definition with { Variables = [PathVariables.RootName] },
         Build.Definition with { Variables = [PathVariables.RootName] },
         Test.Definition with { Variables = [PathVariables.RootName] },
+        TestMtp.Definition with { Variables = [PathVariables.RootName] },
         Run.Definition with { Variables = [PathVariables.RootName] },
         Restore.Definition with { Variables = [PathVariables.RootName] },
         Format.Definition with { Variables = [PathVariables.RootName] },

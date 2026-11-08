@@ -16,32 +16,15 @@ public sealed class TaskRecordCleanupTests : IDisposable
     {
         TaskId id = _environment.Submit("清理任务");
         await _environment.SettleAsync(id);
-        await _environment.Tasks.FlushAsync();
         string directory = Path.Combine(_environment.Root, ".kuroe_tasks", ".records");
         FileTaskRecordStore store = new(directory, Codec);
-        WaitForCompleted(store, id);
+        await _environment.Records.FlushAsync(id);
+        Assert.Contains(store.ReadAll().Records, record => record.Identity.Id == id);
 
         _environment.Tasks.ClearSettled();
 
         Assert.DoesNotContain(store.ReadAll().Records, record => record.Identity.Id == id);
         Assert.False(File.Exists(Path.Combine(directory, $"{id.Value}{Codec.FileExtension}")));
-    }
-
-    /// <summary>等完成事实落到存档，避免清理与终态写盘交叠。</summary>
-    private static void WaitForCompleted(FileTaskRecordStore store, TaskId id)
-    {
-        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
-        while (DateTime.UtcNow < deadline)
-        {
-            if (store.ReadAll().Records.Any(record => record.Identity.Id == id && record.Completed))
-            {
-                return;
-            }
-
-            Thread.Sleep(20);
-        }
-
-        Assert.Fail($"任务 {id} 的终态存档没有写入。");
     }
 
     public void Dispose() => _environment.Dispose();

@@ -16,7 +16,9 @@ public sealed class ContainerAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(ApprovalGateFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && ContainerState(snapshot, "交付") == NodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         // 两条分支各一个执行，审批节点停在待批准，汇总还没有执行
@@ -64,7 +66,10 @@ public sealed class ContainerAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(NestedApprovalFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && ContainerState(snapshot, "交付") == NodeState.Done
+            && ContainerState(snapshot, "撰写组") == NodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables[3].Executions);
@@ -86,7 +91,9 @@ public sealed class ContainerAdvanceTests
         using TestEnvironment environment = TestEnvironment.Create(ApprovalOfContainerFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = environment.Settle(id);
+        TaskSnapshot parked = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && ContainerState(snapshot, "交付") == NodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         Assert.Empty(parked.Executables[3].Executions);
@@ -116,6 +123,10 @@ public sealed class ContainerAdvanceTests
         Assert.Equal(2, done.Executables[0].Executions.Count);
         Assert.Single(done.Executables[1].Executions);
     }
+
+    /// <summary>容器在快照里的状态。</summary>
+    private static NodeState ContainerState(TaskSnapshot snapshot, string label) =>
+        snapshot.Containers.Single(container => container.Path.Label == new NodeLabel(label)).State;
 
     private const string ApprovalGateFlow = """
         {

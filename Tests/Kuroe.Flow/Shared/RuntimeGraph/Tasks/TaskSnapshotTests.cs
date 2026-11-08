@@ -16,6 +16,8 @@ namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Tasks;
 /// <summary>任务快照的派生属性：任务进度与执行节点顺位。</summary>
 public sealed class TaskSnapshotTests
 {
+    private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     [Fact]
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
@@ -56,7 +58,7 @@ public sealed class TaskSnapshotTests
                 [],
                 0,
                 executable.MaxExecutions))],
-            states, [], [], 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            states, [], [], 0, At, At);
     }
 
     private static readonly INodeType ContainerType = new TestNodeType(

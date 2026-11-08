@@ -26,7 +26,7 @@ public sealed class FlowCommandsTests
     public async Task Flow_add_imports_only_compilable_flows()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), Mixed);
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "mixed.json"), Mixed, TestContext.Current.CancellationToken);
         StringWriter output = new();
         StringWriter error = new();
 
@@ -44,7 +44,7 @@ public sealed class FlowCommandsTests
     public async Task Flow_add_with_only_uncompilable_flows_saves_nothing()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        await File.WriteAllTextAsync(Path.Combine(environment.Root, "input.json"), CliFlows.Input);
+        await File.WriteAllTextAsync(Path.Combine(environment.Root, "input.json"), CliFlows.Input, TestContext.Current.CancellationToken);
         StringWriter output = new();
         StringWriter error = new();
 

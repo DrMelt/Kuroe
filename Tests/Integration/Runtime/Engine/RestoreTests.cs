@@ -1,8 +1,10 @@
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Pending;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
@@ -98,8 +100,7 @@ public sealed class RestoreTests
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
         environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
-        TaskCompletionSource hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        environment.Runner.HoldFor = _ => hold.Task;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
@@ -114,12 +115,10 @@ public sealed class RestoreTests
         Assert.True(stopped.HasRestoreState);
         Assert.True(Assert.Single(paused.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
 
-        environment.Runner.HoldFor = null;
+        environment.Runner.Gate.ClearHolds();
         environment.Runner.RestoreState = null;
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
-
-        hold.TrySetResult();
     }
 
     [Fact]
@@ -127,27 +126,27 @@ public sealed class RestoreTests
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ManyRootsFlow);
         environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
-        TaskCompletionSource hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        environment.Runner.HoldFor = _ => hold.Task;
+        environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot running = environment.Wait(id, snapshot =>
-            snapshot.Executables.Sum(node => node.Executions.Count) == 5);
+            snapshot.Executables.Sum(node => node.Executions.Count) == 5
+            && environment.Runner.Started.Count == 4);
         Assert.Equal(5, running.LiveExecutions);
 
         environment.Tasks.Pause(id).ThrowIfError();
-        environment.Runner.HoldFor = null;
         environment.Wait(id, snapshot => snapshot.State == TaskState.Paused && snapshot.LiveExecutions == 0);
+        environment.Runner.Gate.ClearHolds();
         environment.Tasks.Resume(id).ThrowIfError();
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.DoesNotContain(done.ExecutableStates, state => state.State == NodeState.Blocked);
-        Assert.All(done.Executables, node => Assert.Single(node.Executions, execution => execution.State == ExecutionState.Succeeded));
-
-        ExecutableSnapshot queued = done.Executables.Single(node => node.Executable.Label.Value == "五");
-        Assert.Equal(1, queued.ExecutionCount);
-        Assert.Equal(2, queued.Executions.Count);
-        hold.TrySetResult();
+        Assert.All(done.Executables, node =>
+        {
+            Assert.Equal(2, node.ExecutionCount);
+            Assert.Equal(2, node.Executions.Count);
+            Assert.Single(node.Executions, execution => execution.State == ExecutionState.Succeeded);
+        });
     }
 
     [Fact]
@@ -186,10 +185,11 @@ public sealed class RestoreTests
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ParallelRootFlow);
         environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "先失败";
-        environment.Runner.DelayFor = execution => execution.Input.Node.Label.Value == "先失败" ? 1 : 300;
+        environment.Runner.Gate.Hold(NodePath.Of("后完成"));
 
         TaskId id = environment.Submit("目标");
         Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
+        environment.Runner.Gate.Open(NodePath.Of("后完成"));
         environment.Wait(id, snapshot => snapshot.ExecutableStates.Any(
             state => state.Node.Label.Value == "后完成" && state.State == NodeState.Done));
 
@@ -205,7 +205,7 @@ public sealed class RestoreTests
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
         TaskId id = environment.Submit("目标");
-        environment.Settle(id);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count == 1);
         environment.Tasks.Pause(id).ThrowIfError();
 
         Assert.True(environment.Tasks.Rerun(id).IsError);
@@ -223,8 +223,7 @@ public sealed class RestoreTests
         Assert.Equal(TaskState.Paused, environment.Settle(id).State);
 
         environment.Runner.FailsWhen = null;
-        TaskCompletionSource hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        environment.Runner.HoldFor = _ => hold.Task;
+        environment.Runner.Gate.HoldAll();
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
 
@@ -236,7 +235,7 @@ public sealed class RestoreTests
         Assert.DoesNotContain(terminated.ExecutableStates, state => state.State == NodeState.Blocked);
         Assert.True(environment.Tasks.Resume(id).IsError);
 
-        hold.TrySetResult();
+        environment.Runner.Gate.ClearHolds();
     }
 
     [Fact]
@@ -293,8 +292,7 @@ public sealed class RestoreTests
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
         environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        environment.Runner.HoldFor = _ => release.Task;
+        environment.Runner.Gate.HoldAll();
         environment.Runner.IgnoreCancellationWhileHeld = true;
 
         TaskId id = environment.Submit("目标");
@@ -303,11 +301,10 @@ public sealed class RestoreTests
 
         environment.Tasks.Pause(id).ThrowIfError();
         environment.Tasks.Resume(id).ThrowIfError();
-        environment.Runner.HoldFor = null;
         environment.Runner.IgnoreCancellationWhileHeld = false;
         environment.Runner.FailsWhen = execution => execution.Id == first;
 
-        release.TrySetResult();
+        environment.Runner.Gate.ClearHolds();
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.Equal(TaskState.Done, done.State);

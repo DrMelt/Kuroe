@@ -190,7 +190,7 @@ public sealed class WorkTask
         Journal.AppendInfo("任务完成。");
     }
 
-    /// <summary>通知任务状态已变，存档捕获据此写存档。</summary>
+    /// <summary>通知任务状态已变，存档捕获与观察方据此读取新状态。</summary>
     internal void NotifyChanged() => Registry.ReportChanged(Id);
 
     /// <summary>任务所属的任务域，域内任务号与任务列表的范围由它给出。</summary>
@@ -448,6 +448,7 @@ public sealed class WorkTask
             execution.EntryEmitted += onEntry;
         }
 
+        execution.Changed += NotifyChanged;
         ExecutionAttached?.Invoke(execution);
     }
 

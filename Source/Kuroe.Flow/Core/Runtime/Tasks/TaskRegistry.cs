@@ -9,7 +9,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// <summary>一个任务域内的任务索引：按任务键查找、交出快照、转发执行通知。状态本身存在任务与运行期节点上。</summary>
 /// <param name="executions">全部任务域共享的执行索引。</param>
 /// <param name="pauseOnRestore">可恢复的中断收口时是否暂停任务。</param>
-public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore = true)
+public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore = true) : ITaskChangeSource
 {
     private readonly Lock _gate = new();
 
@@ -23,8 +23,8 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
     public event Action<ExecutionNotice>? Notified;
 
-    /// <summary>任务状态已变的通知，存档协调据此写存档。</summary>
-    internal event Action<TaskId>? Changed;
+    /// <summary>任务状态已变，存档协调与观察方据此读取新状态。</summary>
+    public event Action<TaskId>? Changed;
 
     /// <summary>把已定键、已备好开始端口文本的任务加入本域。</summary>
     internal WorkTask Add(

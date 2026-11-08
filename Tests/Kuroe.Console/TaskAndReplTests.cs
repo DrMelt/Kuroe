@@ -21,7 +21,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "补齐 README");
 
         Assert.Contains("已提交 任务 00000001", cli.Output.Output);
-        Assert.Single(cli.Environment.Registry.Snapshots());
+        Assert.Single(cli.Environment.TaskReader.Snapshots());
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "   ");
 
         Assert.Contains("开始端口 目标 的输入不能为空。", cli.ErrorsOut.Output);
-        Assert.Empty(cli.Environment.Registry.Snapshots());
+        Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed partial class TaskAndReplTests
 
         cli.Tasks.Browse();
 
-        Assert.Empty(cli.Environment.Registry.Snapshots());
+        Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Settle(new TaskId(1));
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
 
         cli.Overview.Print(cli.Environment.Snapshot(new TaskId(1)));
 
@@ -204,7 +204,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "目标");
-        cli.Environment.Settle(new TaskId(1));
+        cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
 
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
         new TaskTreeView(terminal, cli.Environment.Pendings).Print(cli.Environment.Snapshot(new TaskId(1)));
@@ -273,7 +273,7 @@ public sealed partial class TaskAndReplTests
     public void Task_browser_keeps_the_task_when_the_stop_confirmation_is_not_accepted()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Runner.DelayMs = 20000;
+        cli.Environment.Runner.Gate.HoldAll();
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
@@ -304,7 +304,7 @@ public sealed partial class TaskAndReplTests
     public void Task_browser_stops_the_task_after_confirmation()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Runner.DelayMs = 20000;
+        cli.Environment.Runner.Gate.HoldAll();
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
@@ -381,7 +381,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Browse();
 
         Assert.Contains("已提交 任务 00000001", cli.Output.Output);
-        Assert.Equal("menu-submit", Assert.Single(cli.Environment.Registry.Snapshots()).Title);
+        Assert.Equal("menu-submit", Assert.Single(cli.Environment.TaskReader.Snapshots()).Title);
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        ExecutionSnapshot execution = cli.Environment.Registry.FindExecution(new ExecutionId(1)).ThrowIfError().Snapshot();
+        ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(new ExecutionId(1)).ThrowIfError();
         cli.Tasks.ShowExecution(execution.Id);
 
         Assert.Contains("执行 #1", cli.Output.Output);
@@ -456,7 +456,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Clear();
 
         Assert.Contains("已丢掉 1 个任务。", cli.Output.Output);
-        Assert.Empty(cli.Environment.Registry.Snapshots());
+        Assert.Empty(cli.Environment.TaskReader.Snapshots());
     }
 
     [Fact]
@@ -464,7 +464,7 @@ public sealed partial class TaskAndReplTests
     {
         using ConsoleSession cli = new(flowsJson: TestFlows.ReviewFlow);
         cli.Tasks.Submit(new FlowName("默认"), "补齐 README");
-        TaskSnapshot parked = cli.Environment.Settle(new TaskId(1));
+        TaskSnapshot parked = cli.Environment.Wait(new TaskId(1), _ => cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve).Count == 1);
         Assert.Single(cli.Environment.Awaiting(new TaskId(1), PendingKind.Approve));
 
         cli.Tasks.Approve(new TaskId(1));
@@ -569,7 +569,7 @@ public sealed partial class TaskAndReplTests
     public void Task_stop_terminates_the_task()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Runner.DelayMs = 20000;
+        cli.Environment.Runner.Gate.HoldAll();
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
@@ -583,7 +583,7 @@ public sealed partial class TaskAndReplTests
     public void Task_browser_offers_pause_then_resume()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Runner.DelayMs = 20000;
+        cli.Environment.Runner.Gate.HoldAll();
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
@@ -616,7 +616,7 @@ public sealed partial class TaskAndReplTests
     public void Task_stop_execution_stops_a_single_execution()
     {
         using ConsoleSession cli = new();
-        cli.Environment.Runner.DelayMs = 20000;
+        cli.Environment.Runner.Gate.HoldAll();
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 

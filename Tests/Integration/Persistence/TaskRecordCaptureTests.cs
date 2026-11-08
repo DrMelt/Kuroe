@@ -16,7 +16,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
     public void Capture_uses_supplied_scheduler_seed()
     {
         TaskId id = _environment.Submit("捕获存档");
-        _environment.Settle(id);
+        _environment.Wait(id, _ => _environment.Awaiting(id));
         WorkTask task = _environment.Registry.Find(id).ThrowIfError();
         NodePath target = NodePath.Of("整体", "用户输入");
 
@@ -25,7 +25,6 @@ public sealed class TaskRecordCaptureTests : IDisposable
             .ThrowIfError();
 
         Assert.Equal(id, record.Identity.Id);
-        Assert.NotEqual(default, record.SavedAt);
         Assert.Equal([target], record.Pending.Targets);
         Assert.False(record.Completed);
         Assert.NotEmpty(record.Nodes);

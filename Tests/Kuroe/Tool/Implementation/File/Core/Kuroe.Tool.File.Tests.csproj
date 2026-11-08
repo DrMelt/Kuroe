@@ -2,12 +2,12 @@
 
     <PropertyGroup>
         <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="xunit" />
-        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
     </ItemGroup>
 
     <ItemGroup>
@@ -15,7 +15,9 @@
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Tool\FileAccess\Core\Kuroe.Tool.FileAccess.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Shared\Kuroe.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Files\Shared\Kuroe.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Tests\Kuroe\Support\Kuroe.TestSupport.csproj" />
     </ItemGroup>
 
 </Project>

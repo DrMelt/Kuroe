@@ -154,8 +154,8 @@ public sealed class MultilinePromptTests
         output.Input.PushTextWithEnter(MultilinePrompt.Terminator);
 
         Assert.Equal("firstx", terminal.AskMultiline("p"));
-        Assert.Single(recording.Moves);
-        Assert.Equal((CursorDirection.Up, 1), recording.Moves[0]);
+        var item = Assert.Single(recording.Moves);
+        Assert.Equal((CursorDirection.Up, 1), item);
     }
 
     [Fact]
@@ -170,8 +170,8 @@ public sealed class MultilinePromptTests
         output.Input.PushTextWithEnter(MultilinePrompt.Terminator);
 
         Assert.Equal($"{line}x", terminal.AskMultiline("p"));
-        Assert.Single(recording.Moves);
-        Assert.Equal((CursorDirection.Up, 2), recording.Moves[0]);
+        var item = Assert.Single(recording.Moves);
+        Assert.Equal((CursorDirection.Up, 2), item);
     }
 
     [Fact]

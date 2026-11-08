@@ -1,5 +1,6 @@
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.TestSupport;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -15,14 +16,15 @@ public sealed class DialogueOutputTests
         DialogueOutput dialogue = new(terminal);
 
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
-            "WriteFile {\"path\":\"a.txt\"}\n结果 已写入 5 字符。"));
+            "WriteFile {\"path\":\"a.txt\"}\n已写入 5 字符。"));
 
         Assert.Contains($"工具 WriteFile {{\"path\":\"a.txt\"}}", output.Output);
-        Assert.Contains("结果 已写入 5 字符。", output.Output);
-        Assert.DoesNotContain("失败 ", output.Output);
+        Assert.Contains("已写入 5 字符。", output.Output);
+        Assert.DoesNotContain("结果", output.Output);
+        Assert.DoesNotContain("失败", output.Output);
     }
 
     [Fact]
@@ -32,13 +34,14 @@ public sealed class DialogueOutputTests
         DialogueOutput dialogue = new(terminal);
 
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Warning,
             "工具",
-            "WriteFile {\"path\":\"a.txt\"}\n失败 被拒绝：缺少参数。"));
+            "WriteFile {\"path\":\"a.txt\"}\n缺少参数。"));
 
-        Assert.Contains("失败 被拒绝：缺少参数。", output.Output);
-        Assert.DoesNotContain("结果 ", output.Output);
+        Assert.Contains("缺少参数。", output.Output);
+        Assert.DoesNotContain("结果", output.Output);
+        Assert.DoesNotContain("失败", output.Output);
     }
 
     [Fact]
@@ -49,10 +52,10 @@ public sealed class DialogueOutputTests
 
         dialogue.Content(new ProcessContent(ProcessContentKind.Reply, "我来查看一下。"));
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
-            "ListTools {}\n结果 内置对话可用函数与分组"));
+            "ListTools {}\n内置对话可用函数与分组"));
 
         Assert.Contains($"我来查看一下。{Environment.NewLine}工具 ListTools {{}}", output.Output);
     }
@@ -90,10 +93,10 @@ public sealed class DialogueOutputTests
 
         dialogue.Content(new ProcessContent(ProcessContentKind.Reasoning, "先想"));
         dialogue.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
-            "ListTools {}\n结果 内置对话可用函数与分组"));
+            "ListTools {}\n内置对话可用函数与分组"));
 
         Assert.Contains($"思考 先想{Environment.NewLine}工具 ListTools {{}}", output.Output);
     }
@@ -148,16 +151,16 @@ public sealed class DialogueOutputTests
             dialogue.Content(new ProcessContent(ProcessContentKind.Reasoning, "先想"));
             dialogue.Content(new ProcessContent(ProcessContentKind.Reply, "我来查看一下。"));
             dialogue.Entry(new JournalEntry(
-                DateTimeOffset.UtcNow,
+                TestTime.At,
                 JournalLevel.Information,
                 "工具",
-                "ListTools {}\n结果 内置对话可用函数与分组"));
+                "ListTools {}\n内置对话可用函数与分组"));
         }
 
         string[] lines = output.Output.Replace("\r", string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Contains(lines, line => line.Contains("│ 思考 先想") && line.EndsWith('│'));
         Assert.Contains(lines, line => line.Contains("│ 我来查看一下。") && line.EndsWith('│'));
         Assert.Contains(lines, line => line.Contains("│ 工具 ListTools {}") && line.EndsWith('│'));
-        Assert.Contains(lines, line => line.Contains("│ 结果 内置对话可用函数与分组") && line.EndsWith('│'));
+        Assert.Contains(lines, line => line.Contains("│ 内置对话可用函数与分组") && line.EndsWith('│'));
     }
 }

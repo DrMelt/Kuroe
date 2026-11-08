@@ -31,7 +31,7 @@ public static class AssistantServiceCollectionExtensions
     {
         ErrorOr<Success> tools = composition.AddToolSources(
         [
-            new SourceToolSource(sourceDirectory),
+            new SourceToolSource(sourceDirectory, composition.Files),
             new ToolboxToolSource(DialogueFlow.Tools, composition.ConfiguredTools),
         ]);
         if (tools.IsError)

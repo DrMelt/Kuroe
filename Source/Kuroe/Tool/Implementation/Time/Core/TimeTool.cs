@@ -1,7 +1,8 @@
 namespace Kuroe.Tool.Time;
 
 /// <summary>系统时间工具。</summary>
-public sealed class TimeTool : ITool
+/// <param name="time">本地时间的来源。</param>
+public sealed class TimeTool(TimeProvider time) : ITool
 {
     /// <summary>获取当前系统时区与当地时间的函数定义。</summary>
     private static readonly ToolDefinition GetLocalTime =
@@ -12,7 +13,7 @@ public sealed class TimeTool : ITool
     [
         GetLocalTime.Bind(_ =>
         {
-            DateTimeOffset now = DateTimeOffset.Now;
+            DateTimeOffset now = time.GetLocalNow();
 
             return $"当前系统时间是：{now:yyyy-MM-dd HH:mm:ss}，时区 UTC{now:zzz}";
         }),

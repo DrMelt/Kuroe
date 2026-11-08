@@ -15,14 +15,13 @@ public sealed class CommandExecutionTests
         using TestEnvironment environment = TestEnvironment.Create(BlockingCommandFlow, process: process);
 
         TaskId id = environment.Submit("阻塞命令");
-        await process.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await process.Started.WaitAsync(TestContext.Current.CancellationToken);
 
-        TaskSnapshot running = await Task.Run(() => environment.Snapshot(id))
-            .WaitAsync(TimeSpan.FromSeconds(2));
+        TaskSnapshot running = environment.Snapshot(id);
         Assert.Equal(TaskState.Running, running.State);
 
         environment.Tasks.Pause(id).ThrowIfError();
-        await process.Interrupted.WaitAsync(TimeSpan.FromSeconds(5));
+        await process.Interrupted.WaitAsync(TestContext.Current.CancellationToken);
 
         TaskSnapshot paused = await environment.SettleAsync(id);
         Assert.Equal(TaskState.Paused, paused.State);
@@ -35,10 +34,10 @@ public sealed class CommandExecutionTests
         using TestEnvironment environment = TestEnvironment.Create(BlockingCommandFlow, process: process);
 
         TaskId id = environment.Submit("阻塞命令");
-        await process.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await process.Started.WaitAsync(TestContext.Current.CancellationToken);
 
         environment.Tasks.StopTask(id).ThrowIfError();
-        await process.Interrupted.WaitAsync(TimeSpan.FromSeconds(5));
+        await process.Interrupted.WaitAsync(TestContext.Current.CancellationToken);
 
         TaskSnapshot stopped = await environment.WaitAsync(
             id,

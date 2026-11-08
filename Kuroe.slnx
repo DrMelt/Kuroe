@@ -1,5 +1,7 @@
 <Solution>
     <Project Path="Source/Kuroe/Shared/Kuroe.Shared.csproj" />
+    <Project Path="Source/Kuroe.Files/Shared/Kuroe.Files.Shared.csproj" />
+    <Project Path="Source/Kuroe.Files/Core/Kuroe.Files.csproj" />
     <Project Path="Source/Kuroe/Process/Core/Kuroe.Process.csproj" />
     <Project Path="Source/Kuroe/Tool/Core/Kuroe.Tool.csproj" />
     <Project Path="Source/Kuroe/Tool/Json/Kuroe.Tool.Json.csproj" />
@@ -46,9 +48,9 @@
     <Project Path="Tests/Integration/Kuroe.Integration.Tests.csproj" />
     <Project Path="Tests/Kuroe/Core/Kuroe.Tests.csproj" />
     <Project Path="Tests/Kuroe/Shared/Kuroe.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Files/Core/Kuroe.Files.Tests.csproj" />
     <Project Path="Tests/Kuroe/Support/Kuroe.TestSupport.csproj" />
     <Project Path="Tests/Kuroe/Assistant/Core/Kuroe.Assistant.Tests.csproj" />
-    <Project Path="Tests/Kuroe/Process/Core/Kuroe.Process.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Llm/Core/Kuroe.Node.Llm.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/Input/Core/Kuroe.Node.Input.Tests.csproj" />
     <Project Path="Tests/Kuroe/Node/File/Core/Kuroe.Node.File.Tests.csproj" />

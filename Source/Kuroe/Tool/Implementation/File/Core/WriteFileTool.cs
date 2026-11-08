@@ -1,16 +1,16 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
-
-using File = System.IO.File;
 
 /// <summary>把文本覆盖写入路径基准目录内文件的工具。路径解析后必须落回工作区内，父目录缺失时自动创建。</summary>
 public sealed class WriteFileTool : ITool
 {
     private readonly FileScope _scope;
+    private readonly IWorkspaceFiles _files;
 
     /// <summary>覆盖写入文件。</summary>
     public static ToolDefinition Definition { get; } = new(
@@ -25,16 +25,17 @@ public sealed class WriteFileTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public WriteFileTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public WriteFileTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public WriteFileTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public WriteFileTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
+        _files = files;
         Functions = [Definition.Bind(Write, _scope.Paths)];
     }
 
@@ -66,7 +67,7 @@ public sealed class WriteFileTool : ITool
             return resolved.ErrorsOrEmptyList;
         }
 
-        if (Directory.Exists(resolved.Value))
+        if (_files.DirectoryExists(resolved.Value))
         {
             return ToolErrors.Path($"{path} 是目录，不能写入。");
         }
@@ -76,10 +77,10 @@ public sealed class WriteFileTool : ITool
             string? directory = Path.GetDirectoryName(resolved.Value);
             if (!string.IsNullOrEmpty(directory))
             {
-                Directory.CreateDirectory(directory);
+                _files.CreateDirectory(directory);
             }
 
-            File.WriteAllText(resolved.Value, content, encoding.Value);
+            _files.WriteText(resolved.Value, content, encoding.Value);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

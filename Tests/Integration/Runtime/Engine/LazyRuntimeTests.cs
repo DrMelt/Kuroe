@@ -74,7 +74,7 @@ public sealed class LazyRuntimeTests
         using TestEnvironment environment = TestEnvironment.Create(ReviewQueueFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot snapshot = environment.Settle(id);
+        TaskSnapshot snapshot = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(TaskState.Running, snapshot.State);
@@ -88,7 +88,7 @@ public sealed class LazyRuntimeTests
     public void Unreleased_container_member_stays_unmaterialized()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ContainerOutputsFlow);
-        environment.Runner.DelayMs = 200;
+        environment.Runner.Gate.Hold(NodePath.Of("整体", "交付", "实施"));
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
@@ -106,7 +106,7 @@ public sealed class LazyRuntimeTests
         using TestEnvironment environment = TestEnvironment.Create(FlowSamples.ReviewFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        environment.Settle(id);
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         int before = MaterializedCount(task);

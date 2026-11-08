@@ -32,5 +32,8 @@ public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader
     }
 
     /// <inheritdoc/>
+    public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
+
+    /// <inheritdoc/>
     public IReadOnlyList<TaskSnapshot> Snapshots() => registry.Snapshots();
 }

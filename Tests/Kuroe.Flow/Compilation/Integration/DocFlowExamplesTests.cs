@@ -26,7 +26,7 @@ public sealed class DocFlowExamplesTests
         LlmNodeTypeDescriptions.RegisterInto(files, TestTypeFiles.Contracts);
         InputNodeTypeDescriptions.RegisterInto(files, inputs);
         ApprovalNodeTypeDescriptions.RegisterInto(files, inputs);
-        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath());
+        FileNodeTypeDescriptions.RegisterInto(files, Path.GetTempPath(), new InMemoryWorkspaceFiles());
 
         IFlowDescriptionCompiler compiler = new FlowDescriptionCompiler(files, new NodeLibraryExpander());
         return compiler.Compile(document, []);

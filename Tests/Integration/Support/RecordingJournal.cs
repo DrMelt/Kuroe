@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.TestSupport;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -35,7 +36,7 @@ internal sealed class RecordingJournal : IProcessJournal
     /// <summary>追加一条发给模型的输入，随后清空当前活动。</summary>
     public void AppendPrompt(string input)
     {
-        Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "输入", input));
+        Append(new JournalEntry(TestTime.At, JournalLevel.Information, "输入", input));
         ReportProgress(string.Empty);
     }
 
@@ -43,12 +44,11 @@ internal sealed class RecordingJournal : IProcessJournal
     public void AppendToolCall(string name, string arguments, string outcome, bool failed)
     {
         string invocation = arguments.Length == 0 ? name : $"{name} {arguments}";
-        string result = failed ? $"失败 {outcome}" : $"结果 {outcome}";
         JournalEntry entry = new(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             failed ? JournalLevel.Warning : JournalLevel.Information,
             ToolLabel,
-            $"{invocation}\n{result}");
+            $"{invocation}\n{outcome}");
 
         Append(entry);
         EntryAppended?.Invoke(entry);
@@ -94,7 +94,7 @@ internal sealed class RecordingJournal : IProcessJournal
             }
             else
             {
-                _entries.Add(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, label, delta));
+                _entries.Add(new JournalEntry(TestTime.At, JournalLevel.Information, label, delta));
             }
         }
 

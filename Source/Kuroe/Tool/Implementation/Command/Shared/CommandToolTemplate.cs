@@ -12,7 +12,7 @@ public static partial class CommandToolTemplate
     /// <summary>命令超时的最大秒数，毫秒换算后不溢出等待参数。</summary>
     public const int MaxTimeoutSeconds = int.MaxValue / 1000;
 
-    /// <summary>交回文本的缺省上限。</summary>
+    /// <summary>命令输出的缺省上限。</summary>
     public const int DefaultOutputLimit = 8000;
 
     /// <summary>模板里出现的全部占位符名，按出现顺序并去重。</summary>

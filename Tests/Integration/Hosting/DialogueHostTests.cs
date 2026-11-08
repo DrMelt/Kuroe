@@ -206,7 +206,7 @@ public sealed class DialogueHostTests
         Assert.False(reply.IsError, ErrorText(reply));
         JournalEntry entry = Assert.Single(observer.Entries);
         Assert.Equal("工具", entry.Label);
-        Assert.Equal("GetLocalTime {}\n结果 2026-10-18 19:10:48", entry.Text);
+        Assert.Equal("GetLocalTime {}\n2026-10-18 19:10:48", entry.Text);
     }
 
     [Fact]

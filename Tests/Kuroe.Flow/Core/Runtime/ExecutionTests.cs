@@ -3,6 +3,7 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.TestSupport;
 using Xunit;
 
 namespace Kuroe.Flow.Tests.Runtime;
@@ -26,7 +27,7 @@ public sealed class ExecutionTests
     public void Attached_journal_appears_in_snapshot()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "信息", "记录");
+        JournalEntry entry = new(TestTime.At, JournalLevel.Information, "信息", "记录");
         TestJournal journal = new([entry]);
 
         execution.AttachJournal(journal);
@@ -79,10 +80,10 @@ public sealed class ExecutionTests
         journal.EmitContent(ProcessContentKind.Reply, "增量");
         journal.EmitContent(ProcessContentKind.Reasoning, "思考");
         JournalEntry entry = new(
-            DateTimeOffset.UtcNow,
+            TestTime.At,
             JournalLevel.Information,
             "工具",
-            "GetLocalTime {}\n结果 2026-10-18 19:10:48");
+            "GetLocalTime {}\n2026-10-18 19:10:48");
         journal.EmitEntry(entry);
         journal.EmitProgress("调用工具 GetLocalTime");
 
@@ -114,7 +115,7 @@ public sealed class ExecutionTests
     public void Settled_execution_stops_events_and_keeps_journal()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestJournal journal = new([new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "回复", "保留")]);
+        TestJournal journal = new([new JournalEntry(TestTime.At, JournalLevel.Information, "回复", "保留")]);
         execution.AttachJournal(journal);
         int contents = 0;
         int entries = 0;
@@ -125,7 +126,7 @@ public sealed class ExecutionTests
 
         journal.EmitContent(ProcessContentKind.Reply, "后");
         journal.EmitContent(ProcessContentKind.Reasoning, "后想");
-        journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
+        journal.EmitEntry(new JournalEntry(TestTime.At, JournalLevel.Information, "工具", "GetLocalTime {}"));
         journal.EmitProgress("调用工具 GetLocalTime");
 
         Assert.Equal(0, contents);
@@ -151,7 +152,7 @@ public sealed class ExecutionTests
         execution.MarkRunning();
 
         journal.EmitContent(ProcessContentKind.Reply, "增量");
-        JournalEntry entry = new(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}");
+        JournalEntry entry = new(TestTime.At, JournalLevel.Information, "工具", "GetLocalTime {}");
         journal.EmitEntry(entry);
 
         Assert.Equal([new ProcessContent(ProcessContentKind.Reply, "增量")], firstContents);
@@ -175,7 +176,7 @@ public sealed class ExecutionTests
 
         journal.EmitContent(ProcessContentKind.Reply, "后");
         journal.EmitContent(ProcessContentKind.Reasoning, "后想");
-        journal.EmitEntry(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Information, "工具", "GetLocalTime {}"));
+        journal.EmitEntry(new JournalEntry(TestTime.At, JournalLevel.Information, "工具", "GetLocalTime {}"));
 
         Assert.Empty(contents);
         Assert.Empty(entries);

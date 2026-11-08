@@ -7,6 +7,8 @@ namespace Kuroe.Cli.Tests;
 /// <summary>stdout 与 stderr 的分流与行闭合。</summary>
 public sealed class CliOutputTests
 {
+    private static readonly DateTimeOffset At = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     [Fact]
     public void Text_and_lines_go_to_stdout_and_errors_go_to_stderr()
     {
@@ -46,20 +48,20 @@ public sealed class CliOutputTests
         CliOutput cli = new(output, error);
 
         cli.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            At,
             JournalLevel.Information,
             "工具",
-            "file/read {\"path\":\"a\"}\n结果 内容"));
+            "file/read {\"path\":\"a\"}\n内容"));
         cli.Entry(new JournalEntry(
-            DateTimeOffset.UtcNow,
+            At,
             JournalLevel.Warning,
             "工具",
-            "file/read {}\n失败 失败原因"));
+            "file/read {}\n失败原因"));
 
         Assert.Empty(output.ToString());
         Assert.Equal(
-            $"工具 file/read {{\"path\":\"a\"}}{Environment.NewLine}结果 内容{Environment.NewLine}" +
-            $"工具 file/read {{}}{Environment.NewLine}失败 失败原因{Environment.NewLine}",
+            $"工具 file/read {{\"path\":\"a\"}}{Environment.NewLine}内容{Environment.NewLine}" +
+            $"工具 file/read {{}}{Environment.NewLine}失败原因{Environment.NewLine}",
             error.ToString());
     }
 }

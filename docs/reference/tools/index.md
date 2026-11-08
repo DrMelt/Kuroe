@@ -7,7 +7,7 @@
 | 契约工具       | [契约工具](contract.md)    | 执行节点自动附加的交回、状态与上报工具                             |
 | `file`         | [文件](file.md)            | 读取、搜索、列出、取信息与写入、按行替换、批量文本替换、移动、删除 |
 | `git`          | [git](git.md)              | 状态、差异、历史与暂存、提交、分支操作                             |
-| `dotnet`       | [dotnet](dotnet.md)        | 环境查询、包查询与构建、测试、发布                                 |
+| `dotnet`       | [dotnet](dotnet.md)        | 环境查询、包查询、格式整理与校验、构建、测试、发布                 |
 | `KuroeInfo`    | [KuroeInfo](kuroe-info.md) | 任务、执行、流程、目录与配置查询                                   |
 | `source`       | [导出资料](source.md)      | 随产物导出的源码与文档查询                                         |
 | `GetLocalTime` | [时间](time.md)            | 当前时区与当地时间                                                 |

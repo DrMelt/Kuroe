@@ -15,7 +15,7 @@ namespace Kuroe.Integration.Tests.Persistence;
 public sealed class TaskRecordCoordinatorTests : IDisposable
 {
     private readonly TestEnvironment _environment = TestEnvironment.Create(persistTasks: true);
-    private readonly InMemoryTaskRecordStore _store = new();
+    private readonly RecordingTaskRecordStore _store = new();
 
     [Fact]
     public async Task Flush_writes_dirty_task()
@@ -42,30 +42,30 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
     }
 
     [Fact]
-    public void Change_writes_without_explicit_flush()
+    public async Task Change_writes_without_explicit_flush()
     {
         _ = CreateCoordinator();
         TaskId id = _environment.Submit("自动写盘");
 
-        WaitForDocument(id);
+        await _store.NextWrite(record => record.Identity.Id == id);
 
         Assert.Equal(id, Assert.Single(_store.ReadAll().Records).Identity.Id);
     }
 
     [Fact]
-    public void Blocked_task_writes_reason_without_explicit_flush()
+    public async Task Blocked_task_writes_reason_without_explicit_flush()
     {
         _ = CreateCoordinator();
         _environment.Runner.SubmitsPorts = false;
         TaskId id = _environment.Submit("阻塞写盘");
-        _environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
+        await _environment.WaitAsync(id, snapshot => snapshot.State == TaskState.Blocked);
 
-        TaskRecord record = WaitForRecord(
-            id,
-            saved => saved.Nodes.OfType<ExecutableNodeRecord>().Any(node => node.Block is not null));
+        TaskRecordWrite write = await _store.NextWrite(saved =>
+            saved.Identity.Id == id
+            && saved.Nodes.OfType<ExecutableNodeRecord>().Any(node => node.Block is not null));
 
         ExecutableNodeRecord blocked = Assert.Single(
-            record.Nodes.OfType<ExecutableNodeRecord>(),
+            write.Record.Nodes.OfType<ExecutableNodeRecord>(),
             node => node.Block is not null);
         NodeBlock block = Assert.IsType<NodeBlock>(blocked.Block);
         Assert.Contains("未交回", block.Summary);
@@ -94,15 +94,15 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
     }
 
     [Fact]
-    public void Completed_task_writes_terminal_record()
+    public async Task Completed_task_writes_terminal_record()
     {
         _ = CreateCoordinator();
         TaskId id = _environment.Submit("完成写盘");
 
-        _environment.Settle(id);
-        TaskRecord record = WaitForRecord(id, saved => saved.Completed);
+        await _environment.SettleAsync(id);
+        TaskRecordWrite write = await _store.NextWrite(record => record.Identity.Id == id && record.Completed);
 
-        Assert.True(record.Completed);
+        Assert.True(write.Record.Completed);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(_environment.Registry), store);
 
         coordinator.MarkDirty(id);
-        Assert.True(store.Failed.Wait(TimeSpan.FromSeconds(10)), "写盘没有进入存储。");
+        await store.Failed;
 
         await coordinator.FlushAsync();
 
@@ -130,10 +130,10 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         TaskRecordCoordinator coordinator = new(new TaskRecordSource(_environment.Registry), store);
 
         coordinator.MarkDirty(id);
-        Assert.True(store.Entered.Wait(TimeSpan.FromSeconds(10)), "写盘没有进入存储。");
+        await store.Entered;
 
         Assert.False(_environment.Tasks.Rename(id, "写入期间改名").IsError);
-        store.Release.Set();
+        store.Release();
 
         await coordinator.FlushAsync();
 
@@ -144,33 +144,13 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
     private TaskRecordCoordinator CreateCoordinator() =>
         new(new TaskRecordSource(_environment.Registry), _store);
 
-    /// <summary>等任务存档落到存储，最多十秒。</summary>
-    private void WaitForDocument(TaskId id) => WaitForRecord(id, _ => true);
-
-    /// <summary>等满足条件的存档落到存储，最多十秒。</summary>
-    private TaskRecord WaitForRecord(TaskId id, Func<TaskRecord, bool> condition)
-    {
-        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
-        while (DateTime.UtcNow < deadline)
-        {
-            TaskRecord? record = _store.ReadAll().Records
-                .FirstOrDefault(saved => saved.Identity.Id == id && condition(saved));
-            if (record is not null)
-            {
-                return record;
-            }
-
-            Thread.Sleep(20);
-        }
-
-        throw new TimeoutException($"任务 {id} 的存档没有写入。");
-    }
-
     private sealed class FailOnceStore(ITaskRecordStore inner) : ITaskRecordStore
     {
+        private readonly TaskCompletionSource _failed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _pending = 1;
 
-        public ManualResetEventSlim Failed { get; } = new(false);
+        /// <summary>第一次写入已尝试并失败。</summary>
+        public Task Failed => _failed.Task;
 
         public TaskStoreReadResult ReadAll() => inner.ReadAll();
 
@@ -178,7 +158,7 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         {
             if (Interlocked.Exchange(ref _pending, 0) == 1)
             {
-                Failed.Set();
+                _failed.TrySetResult();
 
                 return [Error.Failure("Test.Write", "写入失败。")];
             }
@@ -191,11 +171,15 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
 
     private sealed class BlockingStore(ITaskRecordStore inner) : ITaskRecordStore
     {
+        private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _first = 1;
 
-        public ManualResetEventSlim Entered { get; } = new(false);
+        /// <summary>第一次写入已进入并在此保持。</summary>
+        public Task Entered => _entered.Task;
 
-        public ManualResetEventSlim Release { get; } = new(false);
+        /// <summary>放行第一次写入。</summary>
+        public void Release() => _release.TrySetResult();
 
         public TaskStoreReadResult ReadAll() => inner.ReadAll();
 
@@ -203,8 +187,8 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
         {
             if (Interlocked.Exchange(ref _first, 0) == 1)
             {
-                Entered.Set();
-                Release.Wait(TimeSpan.FromSeconds(10));
+                _entered.TrySetResult();
+                _release.Task.GetAwaiter().GetResult();
             }
 
             return inner.Write(record);

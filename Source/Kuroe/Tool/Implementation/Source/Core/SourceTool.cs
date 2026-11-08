@@ -1,12 +1,15 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.Source;
 
 /// <summary>导出资料的查阅工具：按目录列出程序随附的源码与文档路径，按行号范围读取原文。
 /// 只读，路径解析后必须落回导出目录内。</summary>
-public sealed class SourceTool(string sourceDirectory) : ITool
+/// <param name="sourceDirectory">随程序导出的源码与文档目录。</param>
+/// <param name="files">文件访问实现。</param>
+public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : ITool
 {
     /// <summary>ReadSourceFile 缺省读取的行数，不传范围时只读文件开头这些行。</summary>
     private const int DefaultLines = 50;
@@ -31,7 +34,7 @@ public sealed class SourceTool(string sourceDirectory) : ITool
         ]);
 
     /// <summary>本载体的函数声明。</summary>
-    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(new FileScope(sourceDirectory, "导出目录"));
+    public IReadOnlyList<ToolFunction> Functions { get; } = Declare(new FileScope(sourceDirectory, "导出目录", files));
 
     /// <summary>把各定义绑上导出目录的调用体。</summary>
     private static IReadOnlyList<ToolFunction> Declare(FileScope scope) =>

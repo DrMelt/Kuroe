@@ -123,7 +123,10 @@ public sealed class InputNodeTests
             && environment.Awaiting(id, PendingKind.Answer).Count > 0);
 
         environment.Pendings.Answer(id, "整体/收话", "第二问").ThrowIfError();
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = environment.Wait(id, _ =>
+            environment.Awaiting(id, PendingKind.Answer).Count == 1
+            && environment.Runner.Started.Count(execution =>
+                execution.Input.Node.Label.Value == "回话" && execution.State == ExecutionState.Succeeded) == 2);
 
         Assert.Equal(TaskState.Running, done.State);
         Assert.Equal([1, 2], [.. environment.Runner.Started
@@ -192,14 +195,16 @@ public sealed class InputNodeTests
 
         environment.Pendings.Answer(id, null, "需要支持多语言").ThrowIfError();
 
-        TaskSnapshot awaiting = environment.Settle(id);
+        TaskSnapshot awaiting = environment.Wait(id, snapshot =>
+            environment.Awaiting(id, PendingKind.Approve).Count == 1
+            && snapshot.Containers.Single(container => container.Path.Label == new NodeLabel("审查容器")).State == NodeState.Done);
         Assert.Equal(TaskState.Running, awaiting.State);
         Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Label == new NodeLabel("审查容器")).State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Pendings.Approve(id).ThrowIfError();
 
-        TaskSnapshot done = environment.Settle(id);
+        TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
         Assert.Equal(TaskState.Done, done.State);
         Assert.Empty(environment.Awaiting(id, PendingKind.Approve));
     }
@@ -287,7 +292,8 @@ public sealed class InputNodeTests
     public void Answer_while_loop_replying_fails_as_no_awaiting_input()
     {
         using TestEnvironment environment = TestEnvironment.Create(DialogueLoopFlow);
-        environment.Runner.DelayMs = 300;
+        NodePath reply = NodePath.Of("整体", "回话");
+        environment.Runner.Gate.Hold(reply);
 
         TaskId id = environment.Submit("对话");
         WaitForInputs(environment, id, 1);
@@ -298,6 +304,8 @@ public sealed class InputNodeTests
         ErrorOr<Success> busy = environment.Pendings.Answer(id, null, "挤进来");
         Assert.True(busy.IsError);
         Assert.Contains(busy.ErrorsOrEmptyList, error => error.Description.Contains("没有等待回答的输入节点"));
+
+        environment.Runner.Gate.Open(reply);
 
         TaskSnapshot back = WaitForInputs(environment, id, 1);
         Assert.Equal(TaskState.Running, back.State);

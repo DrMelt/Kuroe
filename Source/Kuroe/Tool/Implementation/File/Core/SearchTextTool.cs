@@ -1,6 +1,7 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Shared;
+using Kuroe.Files.Shared;
 using Kuroe.Tool.FileAccess;
 
 namespace Kuroe.Tool.File;
@@ -14,7 +15,7 @@ public sealed class SearchTextTool : ITool
     /// <summary>在路径范围内按字面文本搜索文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/SearchText"),
-        "在路径基准目录内按字面文本搜索文件内容，按文件分组返回相对路径与带行号的整行内容。paths 限定搜索的目录或文件，省略时搜索整个路径基准目录；extensions 限定后缀名，可写 cs 或 .cs，省略时不限制；ignoreCase 为真时忽略大小写。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，单行最多读取前 8000 字符并加省略号，输出超过 8000 字符时截断。",
+        "在路径基准目录内按字面文本搜索文件内容，按文件分组返回相对路径与带行号的匹配行。paths 限定搜索的目录或文件，省略时搜索整个路径基准目录；extensions 限定后缀名，可写 cs 或 .cs，省略时不限制；ignoreCase 为真时忽略大小写。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，匹配整行，输出单行保留包含命中位置的 1000 字符窗口，被截断时在保留内容后标注该行完整字符数与展示的字符区间，输出超过 8000 字符时截断。",
         [
             new ToolParameter(new ToolName("pattern"), "要搜索的字面文本，不按正则解释，空或空白拒绝", Required: true),
             new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表，省略时搜索整个路径基准目录", List: true, Path: true, PathAccess: FileTools.PathAccess),
@@ -25,16 +26,16 @@ public sealed class SearchTextTool : ITool
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>用工作目录建立载体。</summary>
-    public SearchTextTool(string baseDirectory)
-        : this(ToolBinding.Root(baseDirectory))
+    /// <summary>用工作目录与文件访问实现建立载体。</summary>
+    public SearchTextTool(string baseDirectory, IWorkspaceFiles files)
+        : this(ToolBinding.Root(baseDirectory), files)
     {
     }
 
-    /// <summary>用执行绑定建立载体，路径变量由工具自行读取。</summary>
-    public SearchTextTool(ToolBinding binding)
+    /// <summary>用执行绑定与文件访问实现建立载体，路径变量由工具自行读取。</summary>
+    public SearchTextTool(ToolBinding binding, IWorkspaceFiles files)
     {
-        _scope = FileTools.Scope(binding);
+        _scope = FileTools.Scope(binding, files);
         _search = new FileSearch(_scope, FileTools.PathAccess);
         Functions = [Definition.Bind(Search, _scope.Paths)];
     }
@@ -71,16 +72,15 @@ public sealed class SearchTextTool : ITool
             return NoMatches(result, query, scope);
         }
 
-        string skipped = result.SkippedFiles == 0 ? string.Empty : $"，跳过 {result.SkippedFiles} 个文件";
         var text = new StringBuilder();
-        text.Append($"在 {scope} 中匹配 {result.Matches.Count} 处{skipped}：\n");
+        text.Append($"在 {scope} 中匹配 {result.Matches.Count} 处：\n");
 
         foreach (IGrouping<string, TextSearchMatch> group in result.Matches.GroupBy(match => match.File))
         {
             text.Append(DisplayPath(group.Key));
             text.Append('\n');
             text.Append(FileScope.FormatLines(
-                [.. group.Select(match => new NumberedLine(match.Line, match.Text))]));
+                [.. group.Select(match => new NumberedLine(match.Line, DisplayText(match)))]));
             text.Append('\n');
 
             if (text.Length > FileScope.OutputLimit)
@@ -92,13 +92,18 @@ public sealed class SearchTextTool : ITool
         return FileScope.Limit(text.ToString().TrimEnd('\n'), out _);
     }
 
-    /// <summary>没有匹配时的交回文本，报告扫描与跳过的文件数。</summary>
+    /// <summary>匹配行的展示文本，被截断时在内容后标注完整字符数与展示区间。</summary>
+    private static string DisplayText(TextSearchMatch match) =>
+        match.Truncated
+            ? $"{match.Text}（本行共 {match.FullLength} 字符，展示第 {match.Offset + 1} 至 {match.Offset + match.Text.Length} 字符）"
+            : match.Text;
+
+    /// <summary>没有匹配时的交回文本，报告扫描的文件数。</summary>
     private static string NoMatches(TextSearchResult result, TextQuery query, string scope)
     {
-        string skipped = result.SkippedFiles == 0 ? string.Empty : $"，跳过 {result.SkippedFiles} 个文件";
         return result.ScannedFiles == 0
             ? $"在 {scope} 中没有可搜索的文件。"
-            : $"在 {scope} 中搜索 {query.Pattern} 没有匹配，已扫描 {result.ScannedFiles} 个文件{skipped}。";
+            : $"在 {scope} 中搜索 {query.Pattern} 没有匹配，已扫描 {result.ScannedFiles} 个文件。";
     }
 
     /// <summary>文件的展示路径，相对路径基准目录。</summary>

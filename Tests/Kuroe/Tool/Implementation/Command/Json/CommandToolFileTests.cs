@@ -46,8 +46,8 @@ public sealed class CommandToolFileTests
         ConfiguredTool diff = loaded.Value[0];
         Assert.Equal(new ToolPath("RunDiff"), diff.Definition.Path);
         Assert.Equal("git diff {path}", diff.Configuration);
-        Assert.Single(diff.Definition.Parameters);
-        Assert.True(diff.Definition.Parameters[0].Required);
+        var item = Assert.Single(diff.Definition.Parameters);
+        Assert.True(item.Required);
 
         ConfiguredTool log = loaded.Value[1];
         Assert.Equal("git log --oneline -- {files}", log.Configuration);
