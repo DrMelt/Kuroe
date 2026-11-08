@@ -6,6 +6,9 @@
         <EnablePlatformAnalyzer>true</EnablePlatformAnalyzer>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>obj\generated</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
