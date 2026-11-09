@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
@@ -13,6 +14,7 @@ namespace Kuroe.Console.Views;
 /// <summary>流程菜单：列表、编译结果查看与文件导入。</summary>
 internal sealed class FlowBrowser(
     FlowService flows,
+    IHostStartInputs hostStartInputs,
     Terminal terminal,
     ResultView results)
 {
@@ -89,8 +91,9 @@ internal sealed class FlowBrowser(
                     Styles.Hint)))));
 
         terminal.NewLine();
+        IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(compiled.Model.Name);
         terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(),
-            node => Line(node, compiled.Model.HostStartInputs)));
+            node => Line(node, hostInputs)));
     }
 
     /// <summary>从文件导入节点库或流程，同名覆盖。</summary>

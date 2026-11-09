@@ -35,9 +35,10 @@ internal static class CliFlows
         }
         """;
 
-    /// <summary>开始声明一个绑定宿主输入的开始端口，执行节点把它接进输入。</summary>
+    /// <summary>开始声明一个由宿主给值的开始端口，执行节点把它接进输入。</summary>
     public const string HostInput = """
         {
+          "HostStartInputs": { "默认": { "启动路径": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
@@ -48,7 +49,6 @@ internal static class CliFlows
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
                 ]
               },
-              "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",

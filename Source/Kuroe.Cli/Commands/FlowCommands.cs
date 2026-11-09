@@ -33,7 +33,7 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        PlainFlowView.Show(output, found.Value);
+        PlainFlowView.Show(output, found.Value, session.HostStartInputs.Bindings(found.Value.Model.Name));
 
         return ExitCodes.Success;
     }

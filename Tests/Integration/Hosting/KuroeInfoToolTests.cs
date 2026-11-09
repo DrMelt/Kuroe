@@ -142,7 +142,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
         string output = Call(tool, "ListFlows");
 
         Assert.Contains("默认", output);
@@ -153,18 +153,20 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
         Assert.Contains("模型 Start@MODEL_NAME", output);
     }
 
+    /// <summary>开始端口的宿主输入名来自宿主开始输入表，端口名可以自定义。</summary>
     [Fact]
-    public void GetFlow_shows_host_start_inputs()
+    public void GetFlow_shows_the_host_start_input_from_the_form()
     {
         using TestEnvironment environment = TestEnvironment.Create("""
             {
+              "HostStartInputs": { "默认": { "启动路径": "WORKSPACE_PATH" } },
               "Flows": [
                 {
                   "Name": "默认",
@@ -175,7 +177,6 @@ public sealed class KuroeInfoToolTests
                       { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
                     ]
                   },
-                  "HostStartInputs": { "启动路径": "WORKSPACE_PATH" },
                   "Root": {
                     "Name": "实施",
                     "Kind": "Llm",
@@ -188,7 +189,7 @@ public sealed class KuroeInfoToolTests
             }
             """);
 
-        FlowKuroeInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("启动路径←WORKSPACE_PATH", output);
@@ -199,7 +200,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows);
+        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
 
         Assert.Contains("没有名为 missing 的流程", Call(tool, "GetFlow", ("flowName", "missing")));
     }

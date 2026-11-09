@@ -142,7 +142,7 @@ public readonly record struct StaticResolution(
     public static StaticResolution StartFixed(NodePath node, PortName port, string text) =>
         new(StaticSourceKind.StartFixed, node, port, text, null);
 
-    /// <summary>开始端口的非固定值：宿主输入或提交输入。</summary>
+    /// <summary>开始端口的非固定值：宿主给值或提交输入。</summary>
     public static StaticResolution StartInjected(NodePath node, PortName port) =>
         new(StaticSourceKind.StartInjected, node, port, null, null);
 
@@ -169,7 +169,7 @@ public enum StaticSourceKind
     /// <summary>开始端口的固定值。</summary>
     StartFixed,
 
-    /// <summary>开始端口的非固定值，来自宿主输入或提交输入。</summary>
+    /// <summary>开始端口的非固定值，来自宿主给值或提交输入。</summary>
     StartInjected,
 
     /// <summary>常量输出的字面量。</summary>

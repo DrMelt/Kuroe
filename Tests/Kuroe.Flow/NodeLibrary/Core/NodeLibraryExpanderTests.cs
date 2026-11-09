@@ -60,7 +60,6 @@ public sealed class NodeLibraryExpanderTests
         new FlowName("默认"),
         null,
         [],
-        new Dictionary<PortName, string>(),
         NodeSpec.Define(new NodeName("整体")) with
         {
             Type = ContainerNodeTypes.Type,

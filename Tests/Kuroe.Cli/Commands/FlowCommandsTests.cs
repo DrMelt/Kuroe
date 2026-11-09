@@ -71,6 +71,21 @@ public sealed class FlowCommandsTests
         Assert.Empty(error.ToString());
     }
 
+    /// <summary>开始端口的宿主输入名取自宿主开始输入表。</summary>
+    [Fact]
+    public async Task Flow_show_prints_host_start_inputs_from_the_form()
+    {
+        await using CliEnvironment environment = CliEnvironment.Create(CliFlows.HostInput);
+        StringWriter output = new();
+        StringWriter error = new();
+
+        int code = new FlowCommands(environment.Session, new CliOutput(output, error)).Show("默认");
+
+        Assert.Equal(ExitCodes.Success, code);
+        Assert.Contains("启动路径←WORKSPACE_PATH", output.ToString(), StringComparison.Ordinal);
+        Assert.Empty(error.ToString());
+    }
+
     private const string Mixed = """
         {
           "Flows": [

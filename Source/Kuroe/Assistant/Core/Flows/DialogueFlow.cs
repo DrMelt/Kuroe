@@ -51,6 +51,13 @@ internal static class DialogueFlow
         new ToolPath("dotnet/read"),
     ];
 
+    /// <summary>对话流程的宿主开始输入表单：工作区与模型由宿主给值，其余开始端口按提交输入处理。</summary>
+    internal static IReadOnlyDictionary<PortName, string> HostInputs { get; } = new Dictionary<PortName, string>
+    {
+        [WorkspacePort] = StartSources.Workspace,
+        [LlmNodeTypes.ModelPort] = StartSources.Model,
+    };
+
     /// <summary>回话节点的固定身份说明。</summary>
     private const string Identity = "你是Kuroe的内置助手，直接回应用户的输入。回复内容写在正常输出里。";
 
@@ -61,7 +68,7 @@ internal static class DialogueFlow
         $"使用「{language}」语言母语者语言风格回答。",
     ];
 
-    /// <summary>内置对话流程：回话使用宿主在对话任务启动时给出的模型。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
+    /// <summary>内置对话流程：开始端口只声明形状，回话使用宿主在任务启动时给出的模型。外部输入协议由类型描述提供，语言由宿主的助手配置给出。</summary>
     internal static FlowDocument Build(string language) => new(
         [],
         [
@@ -77,11 +84,6 @@ internal static class DialogueFlow
                         PortMode.Constant,
                         "执行使用的模型名，由宿主在任务启动时给出。"),
                 ],
-                new Dictionary<string, string>
-                {
-                    [WorkspacePort.Value] = StartSources.Workspace,
-                    [LlmNodeTypes.ModelPort.Value] = StartSources.Model,
-                },
                 new NodeDefinitionDocument
                 {
                     Name = "对话",

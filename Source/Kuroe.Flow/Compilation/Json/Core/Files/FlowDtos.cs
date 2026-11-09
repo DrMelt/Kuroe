@@ -22,9 +22,6 @@ public sealed class FlowDto
     /// <summary>开始入口的输出端口，条目形状与节点输出端口一致。</summary>
     public StartDto? Start { get; set; }
 
-    /// <summary>开始端口到宿主输入名的绑定。</summary>
-    public Dictionary<string, string>? HostStartInputs { get; set; }
-
     /// <summary>装配树的根节点，唯一。</summary>
     public NodeDto? Root { get; set; }
 }

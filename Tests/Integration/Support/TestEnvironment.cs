@@ -82,6 +82,9 @@ public sealed class TestEnvironment : IDisposable
 
     public FlowService Flows => _provider.GetRequiredService<FlowService>();
 
+    /// <summary>宿主开始输入表，流程展示与任务提交共用。</summary>
+    public IHostStartInputs HostStartInputs => _provider.GetRequiredService<IHostStartInputs>();
+
     /// <summary>端口产出的交回通道，测试直接调用它验证提交校验。</summary>
     public PortSubmitter PortSubmitter => _provider.GetRequiredService<PortSubmitter>();
 
@@ -123,9 +126,10 @@ public sealed class TestEnvironment : IDisposable
     public IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool> ConfiguredTools =>
         _provider.GetRequiredService<IReadOnlyList<Kuroe.Tool.Json.ConfiguredTool>>();
 
-    /// <summary>测试默认写入的流程文件，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
+    /// <summary>测试默认写入的流程文件与宿主开始输入表，模型经宿主输入 MODEL 取当前选择，供按名提交的执行测试使用。</summary>
     private const string TestFlowFile = """
         {
+          "HostStartInputs": { "默认": { "MODEL_NAME": "MODEL" } },
           "Flows": [
             {
               "Name": "默认",
@@ -133,7 +137,6 @@ public sealed class TestEnvironment : IDisposable
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
               ] },
-              "HostStartInputs": { "MODEL_NAME": "MODEL" },
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -228,7 +231,7 @@ public sealed class TestEnvironment : IDisposable
         IProcessRunner? process = null) =>
         TryCreate(flowsJson, seedCatalog, persistTasks, process).ThrowIfError();
 
-    /// <summary>把测试夹具按顶层字段写成节点库与流程两个文件，空对象不写文件。</summary>
+    /// <summary>把测试夹具按顶层字段写成节点库、流程与宿主开始输入表，空对象不写文件。</summary>
     private static void WriteFlowFiles(KuroePaths paths, string text)
     {
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(paths.FlowsFile)
@@ -255,6 +258,11 @@ public sealed class TestEnvironment : IDisposable
                     else if (string.Equals(property.Name, "Flows", StringComparison.OrdinalIgnoreCase))
                     {
                         File.WriteAllText(paths.FlowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
+                        written = true;
+                    }
+                    else if (string.Equals(property.Name, "HostStartInputs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(paths.HostStartInputsFile, $"{{\"HostStartInputs\":{property.Value.GetRawText()}}}");
                         written = true;
                     }
                 }

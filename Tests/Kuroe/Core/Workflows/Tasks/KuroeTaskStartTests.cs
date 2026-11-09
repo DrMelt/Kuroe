@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Kuroe.Tests.Workflows.Tasks;
 
-/// <summary>宿主开始输入：未知名称拒绝，模型输入取当前选择，未选择时拒绝。</summary>
+/// <summary>宿主开始输入：模型输入取当前选择，未选择时拒绝。输入名是否受支持由宿主开始输入表判定。</summary>
 public sealed class KuroeTaskStartTests
 {
     private static readonly PortName Model = new("MODEL_NAME");
@@ -44,6 +44,7 @@ public sealed class KuroeTaskStartTests
         Assert.Equal("当前未选择模型。", values.FirstError.Description);
     }
 
+    /// <summary>未知的宿主输入名返回错误，不抛异常。</summary>
     [Fact]
     public void Unknown_host_input_is_rejected()
     {

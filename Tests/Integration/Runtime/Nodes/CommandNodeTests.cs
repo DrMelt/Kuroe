@@ -37,11 +37,12 @@ public sealed class CommandNodeTests
     /// <summary>命令节点执行 dotnet --version，输出经文件写入节点落到文件。</summary>
     private const string CommandFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -90,11 +91,12 @@ public sealed class CommandNodeTests
     /// <summary>程序不存在，命令节点停在阻塞，完成信号不触发下游。</summary>
     private const string MissingProgramFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",

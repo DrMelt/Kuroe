@@ -2,7 +2,7 @@ namespace Kuroe.Shared;
 
 /// <summary>错误码由库侧错误构造与进入宿主链路的错误共用，宿主按码给可操作指引。
 /// 工具调用链路的运行时码在工具契约的 ToolErrorCodes 里；引擎侧的契约提交链不依赖工具契约，以同值文本产出 Tool.Argument 与 Tool.Internal。
-/// 流程与任务推进码在引擎侧的 FlowErrorCodes 里；任务目录与宿主开始输入的码在这里。</summary>
+/// 流程与任务推进码在引擎侧的 FlowErrorCodes 里；任务目录、宿主开始输入表与设置改动的码在这里。</summary>
 public static class ErrorCodes
 {
     /// <summary>模型选择不按设置路径写入，只经模型选择维护。</summary>
@@ -38,6 +38,6 @@ public static class ErrorCodes
     /// <summary>任务工作目录无法建立。</summary>
     public const string TaskWorkspaceCreate = "TaskWorkspace.Create";
 
-    /// <summary>流程绑定的宿主开始输入无法解析。</summary>
+    /// <summary>宿主开始输入表的读取、名字校验与流程开始入口不一致，或宿主输入无法解析。</summary>
     public const string TaskStartInput = "Task.StartInput";
 }

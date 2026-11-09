@@ -2,7 +2,6 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.Validation;
-using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
@@ -67,18 +66,6 @@ static class FlowFileReader
             return errors;
         }
 
-        Dictionary<string, string> hostStartInputs = [];
-        foreach ((string port, string? input) in dto.HostStartInputs ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(port) || string.IsNullOrWhiteSpace(input))
-            {
-                errors.Add(FlowErrors.Body(name, "宿主开始输入的端口名与输入名都不能为空。"));
-                continue;
-            }
-
-            hostStartInputs[port.Trim()] = input.Trim();
-        }
-
         NodeDocument? root = null;
         if (dto.Root is { } rootNode)
         {
@@ -91,7 +78,7 @@ static class FlowFileReader
 
         return errors.Count > 0
             ? errors
-            : new FlowDocumentFlow(name, dto.Description, startOutputs.Value, hostStartInputs, root);
+            : new FlowDocumentFlow(name, dto.Description, startOutputs.Value, root);
     }
 
     private static ErrorOr<NodeDocument> ReadNode(NodeDto dto, NodeScope scope, List<Error> errors)
