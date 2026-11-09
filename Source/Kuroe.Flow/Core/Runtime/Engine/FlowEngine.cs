@@ -110,10 +110,10 @@ public sealed class FlowEngine(
         lock (task.Gate)
         {
             targets = [.. task.Runtime.Notify(nodes)];
-            task.Runtime.ClearRestoreStates(targets);
+            task.Runtime.InvalidateRestores(targets);
             if (targets.Count > 0)
             {
-                task.Journal.AppendInfo("上游产出变化，清除下游恢复状态。");
+                task.Journal.AppendInfo("上游产出变化，下游放弃恢复。");
             }
 
             task.Touch();
@@ -132,9 +132,9 @@ public sealed class FlowEngine(
             targets = task.Runtime.PlanReruns();
             foreach (IGrouping<NodePath, TaskRuntime.RerunTarget> group in targets.GroupBy(target => target.Blocked))
             {
-                task.Runtime.ClearRestoreState(group.Key);
+                task.Runtime.InvalidateRestore(group.Key);
                 task.Runtime.Unblock(group.Key, [.. group.Select(target => target.Node)]);
-                task.Journal.AppendInfo($"重新执行节点 {group.Key}，清除恢复状态。");
+                task.Journal.AppendInfo($"重新执行节点 {group.Key}，放弃恢复。");
             }
 
             foreach (TaskRuntime.RerunTarget target in targets)
@@ -162,7 +162,7 @@ public sealed class FlowEngine(
     }
 
     /// <summary>终止任务：任务对象停止全部执行，推进循环随之终止。推进循环已收口时只终止任务状态。</summary>
-    public ErrorOr<Success> Cancel(WorkTask task)
+    public ErrorOr<Success> Terminate(WorkTask task)
     {
         if (Find(task) is { } driver)
         {

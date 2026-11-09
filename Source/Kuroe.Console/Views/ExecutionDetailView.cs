@@ -28,7 +28,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 .Select(entry => (entry.Label, (IRenderable)new Text(entry.Value, Styles.Hint))),
             ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
             ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
-            ("恢复状态", new Text(execution.HasRestoreState ? "有" : "无", Styles.Hint)),
+            ("恢复数据", new Text(execution.HasRestoreData ? "有" : "无", Styles.Hint)),
             ("继续自", new Text(execution.ContinuedFrom?.Value.ToString() ?? "—", Styles.Hint)),
             ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
             ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),

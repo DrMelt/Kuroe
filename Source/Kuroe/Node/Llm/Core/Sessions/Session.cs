@@ -53,7 +53,7 @@ internal sealed class Session : IConversation
     /// <summary>本次对话的模型请求用量与最近一次请求的上下文，请求发出即计入次数，返回用量后更新累计与上下文。</summary>
     public ExecutionUsage Usage => _usage;
 
-    /// <summary>本次执行是否从恢复状态开始。</summary>
+    /// <summary>本次执行是否从恢复数据开始。</summary>
     public bool IsRestored => _isRestored;
 
     /// <summary>一轮请求。input 非空时作为本轮输入写入历史；工具结果回填后不再给出输入。
@@ -137,10 +137,10 @@ internal sealed class Session : IConversation
             : -1;
     }
 
-    /// <summary>生成本次执行可恢复的状态，历史末尾不合法时为空。</summary>
-    public LlmExecutionState? CreateRestoreState()
+    /// <summary>生成本次执行可恢复的数据，历史末尾不合法时为空。</summary>
+    public LlmExecutionState? CreateRestoreData()
     {
-        if (_source.Model is not { } model || !CanCreateRestoreState())
+        if (_source.Model is not { } model || !CanCreateRestoreData())
         {
             return null;
         }
@@ -151,7 +151,7 @@ internal sealed class Session : IConversation
     }
 
     /// <summary>历史末尾是否可以从下一次请求恢复。</summary>
-    private bool CanCreateRestoreState()
+    private bool CanCreateRestoreData()
     {
         if (_messages.Count == 0)
         {

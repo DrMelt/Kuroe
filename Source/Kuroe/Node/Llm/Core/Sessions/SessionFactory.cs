@@ -12,7 +12,7 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
     private readonly IToolFactory _tools = tools;
     private readonly IToolJson _json = json;
 
-    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复状态时恢复历史。</summary>
+    /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复数据时恢复历史。</summary>
     internal Session ForExecution(
         ExecutionId execution,
         ExecutionInput context,
@@ -33,7 +33,7 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
         if (restored.Model != model)
         {
             throw new InvalidOperationException(
-                $"会话恢复状态属于模型 {restored.Model}，当前执行使用 {model ?? "未声明模型"}。");
+                $"会话恢复数据属于模型 {restored.Model}，当前执行使用 {model ?? "未声明模型"}。");
         }
 
         return new Session(

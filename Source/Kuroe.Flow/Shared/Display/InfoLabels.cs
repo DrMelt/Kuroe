@@ -28,9 +28,9 @@ public static class InfoLabels
             ? "已阻塞，可恢复"
             : Of(state.State);
 
-    /// <summary>执行恢复状态的展示名。</summary>
-    public static string RestoreState(ExecutionSnapshot execution) =>
-        execution.HasRestoreState ? "有" : "无";
+    /// <summary>执行恢复数据的展示名。</summary>
+    public static string RestoreData(ExecutionSnapshot execution) =>
+        execution.HasRestoreData ? "有" : "无";
 
     /// <summary>执行恢复来源的展示名。</summary>
     public static string ContinuedFrom(ExecutionSnapshot execution) =>

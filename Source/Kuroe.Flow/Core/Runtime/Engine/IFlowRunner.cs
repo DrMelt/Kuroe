@@ -29,7 +29,7 @@ public interface IFlowRunner
     int Rerun(WorkTask task);
 
     /// <summary>要求持有任务 Gate：终止任务并结束流程运行。</summary>
-    ErrorOr<Success> Cancel(WorkTask task);
+    ErrorOr<Success> Terminate(WorkTask task);
 
     /// <summary>退出时中断全部任务的推进与执行并等待收口，不改变任务控制状态。</summary>
     Task ShutdownAsync();

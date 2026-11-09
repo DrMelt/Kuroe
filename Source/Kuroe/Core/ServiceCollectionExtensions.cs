@@ -213,8 +213,10 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
-        services.AddSingleton<IExecutionRunnerSource>(sp => new ExecutionRunnerSource(
+        services.AddSingleton<ExecutionRunnerSource>(sp => new ExecutionRunnerSource(
             sp.GetRequiredService<IExecutionRunnerFactory>()));
+        services.AddSingleton<IExecutionRunnerSource>(sp => sp.GetRequiredService<ExecutionRunnerSource>());
+        services.AddSingleton<IExecutionRestorerSource>(sp => sp.GetRequiredService<ExecutionRunnerSource>());
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
@@ -240,7 +242,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
             taskRegistry,
             sp.GetRequiredService<ITaskRestorer>(),
-            sp.GetRequiredService<IFlowRunner>()));
+            sp.GetRequiredService<IFlowRunner>(),
+            sp.GetRequiredService<IExecutionRestorerSource>()));
         if (coreOptions.PersistTasks)
         {
             services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(

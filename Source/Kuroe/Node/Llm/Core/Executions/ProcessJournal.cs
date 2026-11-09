@@ -84,7 +84,7 @@ internal sealed class ProcessJournal : IProcessJournal
     public void AppendDiscarded() =>
         _store.Append(new JournalEntry(DateTimeOffset.UtcNow, JournalLevel.Warning, DiscardedLabel, DiscardedText));
 
-    /// <summary>追加一条从恢复状态继续的说明。</summary>
+    /// <summary>追加一条从恢复数据继续的说明。</summary>
     public void AppendRestored()
     {
         JournalEntry entry = new(

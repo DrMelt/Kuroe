@@ -57,11 +57,6 @@ internal sealed class TaskDriver(
         List<NodePath> roots;
         lock (task.Gate)
         {
-            if (!task.Runtime.RestorePlansInitialized)
-            {
-                task.Runtime.RefreshRestorePlans();
-            }
-
             roots = [.. task.Runtime.Roots()];
         }
 
@@ -175,7 +170,7 @@ internal sealed class TaskDriver(
     /// <summary>任务当前是否暂停。暂停状态只在任务对象上，推进器只读它。</summary>
     private bool IsPaused() => task.UnderLock(() => task.Lifecycle == TaskLifecycle.Paused);
 
-    /// <summary>终止任务：取消任务状态与在跑的执行，唤醒挂起点后主循环按停止位退出。要求持有任务 Gate。</summary>
+    /// <summary>终止任务：置任务为已终止并中断在跑的执行，唤醒挂起点后主循环按停止位退出。要求持有任务 Gate。</summary>
     public ErrorOr<Success> Stop()
     {
         ErrorOr<Success> result;

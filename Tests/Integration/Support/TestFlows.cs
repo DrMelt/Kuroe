@@ -131,7 +131,7 @@ public static class TestFlows
           ]
         }
         """;
-    /// <summary>两个并行实施节点：一支失败留恢复状态，另一支完成后把下游留在待处理队列。</summary>
+    /// <summary>两个并行实施节点：一支失败留恢复数据，另一支完成后把下游留在待处理队列。</summary>
     public const string ParallelRootFlow = """
         {
           "Flows": [

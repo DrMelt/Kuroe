@@ -4,7 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
 namespace Kuroe.Flow.Persistence.Records.Shared;
 
-/// <summary>一次执行的持久状态。</summary>
+/// <summary>一次执行的持久状态。恢复数据作为执行历史保留。</summary>
 public sealed record ExecutionRecord(
     ExecutionId Id,
     NodePath Node,
@@ -18,7 +18,7 @@ public sealed record ExecutionRecord(
     ExecutionUsage Usage,
     IReadOnlyList<InputValueRecord> Inputs,
     IReadOnlyDictionary<PortName, string> Texts,
-    ExecutionRestoreState? RestoreState = null,
+    ExecutionRestorePayload? RestoreData = null,
     ExecutionId? ContinuedFrom = null,
     ExecutionContractRecord? Contract = null);
 

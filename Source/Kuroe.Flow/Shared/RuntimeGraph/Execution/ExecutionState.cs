@@ -15,9 +15,6 @@ public enum ExecutionState
     /// <summary>请求失败或执行节点未收口。</summary>
     Failed,
 
-    /// <summary>被取消。</summary>
-    Canceled,
-
-    /// <summary>因任务暂停、停止执行或进程退出而中断。</summary>
+    /// <summary>因任务暂停、停止执行、任务终止或进程退出而中断。</summary>
     Interrupted,
 }

@@ -9,11 +9,12 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
-/// <summary>从存档恢复任务，加入任务域并恢复推进循环。</summary>
+/// <summary>从存档恢复任务并加入任务域。未完成的任务启动推进循环；完成与终止的任务只恢复状态，不再推进。</summary>
 public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
     ITaskRestorer restorer,
-    IFlowRunner runner) : ITaskRestoreRuntime
+    IFlowRunner runner,
+    IExecutionRestorerSource restorers) : ITaskRestoreRuntime
 {
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(
@@ -21,6 +22,7 @@ public sealed class TaskRestoreRuntime(
         CompiledFlow flow,
         IReadOnlyList<NodePath> seed)
     {
+        registry.RestorerSource = restorers;
         ErrorOr<WorkTask> task = restorer.Restore(record, flow);
         if (task.IsError)
         {
@@ -28,15 +30,19 @@ public sealed class TaskRestoreRuntime(
         }
 
         registry.Adopt(task.Value);
-        IReadOnlyList<NodePath> restart =
-        [
-            .. task.Value.Executions
-                .Where(execution => execution.State == ExecutionState.Interrupted
-                    && execution.Snapshot().StartedAt is null)
-                .Select(execution => execution.Input.Node)
-                .Distinct(),
-        ];
-        runner.Restore(task.Value, [.. seed, .. restart]);
+        if (task.Value.State is not (TaskState.Done or TaskState.Terminated))
+        {
+            IReadOnlyList<NodePath> restart =
+            [
+                .. task.Value.Executions
+                    .Where(execution => execution.State == ExecutionState.Interrupted
+                        && execution.Snapshot().StartedAt is null)
+                    .Select(execution => execution.Input.Node)
+                    .Distinct(),
+            ];
+            runner.Restore(task.Value, [.. seed, .. restart]);
+        }
+
         task.Value.NotifyChanged();
 
         return task.Value.Snapshot();

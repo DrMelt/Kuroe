@@ -19,7 +19,6 @@ public sealed class ExecutionStatesTests
         Assert.False(ExecutionState.Succeeded.IsLive());
 
         Assert.True(ExecutionState.Failed.IsSettled());
-        Assert.True(ExecutionState.Canceled.IsSettled());
         Assert.True(ExecutionState.Interrupted.IsSettled());
         Assert.False(ExecutionState.Interrupted.IsLive());
         Assert.Equal("已中断", ExecutionState.Interrupted.Label());

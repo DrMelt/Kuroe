@@ -174,7 +174,7 @@ public sealed class TaskKuroeInfoTool : ITool
         text.AppendLine($"状态 {InfoLabels.State(execution)}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
             + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
-        text.AppendLine($"恢复状态 {InfoLabels.RestoreState(execution)}"
+        text.AppendLine($"恢复数据 {InfoLabels.RestoreData(execution)}"
             + $" · 继续自 {InfoLabels.ContinuedFrom(execution)}");
         text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)}"
             + $" · 上下文 {InfoLabels.Context(execution.Usage)}");

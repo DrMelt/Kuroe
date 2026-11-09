@@ -6,17 +6,17 @@ using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
 
-/// <summary>一次对话的恢复状态：模型与完整历史。</summary>
+/// <summary>一次对话的恢复数据：模型与完整历史。</summary>
 internal sealed record LlmExecutionState(
     string Model,
-    IReadOnlyList<LlmMessageState> Messages) : IExecutionRestoreState;
+    IReadOnlyList<LlmMessageState> Messages) : IExecutionRestoreData;
 
-/// <summary>恢复状态中的一条消息。</summary>
+/// <summary>恢复数据中的一条消息。</summary>
 internal sealed record LlmMessageState(
     string Role,
     IReadOnlyList<LlmContentState> Contents);
 
-/// <summary>恢复状态中的一段内容，按种类使用对应字段。</summary>
+/// <summary>恢复数据中的一段内容，按种类使用对应字段。</summary>
 internal sealed record LlmContentState(
     string Kind,
     string? Text = null,
@@ -26,10 +26,10 @@ internal sealed record LlmContentState(
     string? Arguments = null,
     string? Result = null);
 
-/// <summary>会话恢复状态的编解码。工具参数保存为 JSON 文本，恢复为普通值供工具绑定使用。</summary>
+/// <summary>会话恢复数据的编解码。工具参数保存为 JSON 文本，恢复为普通值供工具绑定使用。</summary>
 internal static class LlmExecutionStateCodec
 {
-    /// <summary>当前恢复状态的格式名。</summary>
+    /// <summary>当前恢复数据的格式名。</summary>
     internal const string Format = "llm.session.v2";
 
     private const string TextKind = "text";
@@ -37,20 +37,20 @@ internal static class LlmExecutionStateCodec
     private const string CallKind = "call";
     private const string ResultKind = "result";
 
-    /// <summary>把恢复状态写成执行记录中的恢复状态。</summary>
-    internal static ExecutionRestoreState Encode(LlmExecutionState state) =>
+    /// <summary>把恢复数据写成执行记录中的恢复数据。</summary>
+    internal static ExecutionRestorePayload Encode(LlmExecutionState state) =>
         new(Format, JsonSerializer.Serialize(state, LlmExecutionStateJson.Default.LlmExecutionState));
 
-    /// <summary>从执行记录中的恢复状态读回。</summary>
-    internal static LlmExecutionState Decode(ExecutionRestoreState state)
+    /// <summary>从执行记录中的恢复负载读回。</summary>
+    internal static LlmExecutionState Decode(ExecutionRestorePayload data)
     {
-        if (state.Format != Format)
+        if (data.Format != Format)
         {
-            throw new FormatException($"不支持的会话恢复状态格式 {state.Format}。");
+            throw new FormatException($"不支持的会话恢复数据格式 {data.Format}。");
         }
 
-        return JsonSerializer.Deserialize(state.Payload, LlmExecutionStateJson.Default.LlmExecutionState)
-            ?? throw new FormatException("会话恢复状态为空。");
+        return JsonSerializer.Deserialize(data.Payload, LlmExecutionStateJson.Default.LlmExecutionState)
+            ?? throw new FormatException("会话恢复数据为空。");
     }
 
     /// <summary>历史末尾与工具调用配对是否允许从下一次请求恢复。</summary>
@@ -101,7 +101,7 @@ internal static class LlmExecutionStateCodec
             && last.Contents.Any(content => content.Kind is TextKind or ReasoningKind);
     }
 
-    /// <summary>把一条会话消息写成恢复状态，只保留可回放的内容。</summary>
+    /// <summary>把一条会话消息写成恢复数据，只保留可回放的内容。</summary>
     internal static LlmMessageState ToState(ChatMessage message)
     {
         List<LlmContentState> contents = [];
@@ -140,7 +140,7 @@ internal static class LlmExecutionStateCodec
         return new LlmMessageState(message.Role.Value, contents);
     }
 
-    /// <summary>把恢复状态中的一条消息恢复为会话消息。</summary>
+    /// <summary>把恢复数据中的一条消息恢复为会话消息。</summary>
     internal static ChatMessage ToMessage(LlmMessageState message)
     {
         List<AIContent> contents = [];
@@ -318,7 +318,7 @@ internal static class LlmExecutionStateCodec
     }
 }
 
-/// <summary>会话恢复状态的 JSON 绑定。</summary>
+/// <summary>会话恢复数据的 JSON 绑定。</summary>
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]

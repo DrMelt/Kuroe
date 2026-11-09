@@ -14,7 +14,7 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>一个任务域内的任务动作：提交、重新执行、取消与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
+/// <summary>一个任务域内的任务动作：提交、重新执行、终止与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
 /// <remarks>装配任务动作所需的注册表、推进器、执行目标解析、宿主开始输入表与宿主开始输入钩子。
 /// 任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
 public sealed class TaskActions(
@@ -308,7 +308,7 @@ public sealed class TaskActions(
         return Result.Success;
     }
 
-    /// <summary>对阻塞的执行节点重新执行，清除恢复状态。暂停任务先重新执行再恢复推进。</summary>
+    /// <summary>对阻塞的执行节点重新执行，放弃恢复，保留恢复数据。暂停任务先重新执行再恢复推进。</summary>
     public ErrorOr<Success> Rerun(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
@@ -371,7 +371,7 @@ public sealed class TaskActions(
         }
     }
 
-    /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进，之后不可恢复。</summary>
+    /// <summary>终止任务：在跑的执行随之中断，未走完的执行节点不再推进，之后不可恢复。</summary>
     public ErrorOr<Success> StopTask(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);
@@ -380,7 +380,7 @@ public sealed class TaskActions(
             return found.ErrorsOrEmptyList;
         }
 
-        ErrorOr<Success> stopped = _driver.Cancel(found.Value);
+        ErrorOr<Success> stopped = _driver.Terminate(found.Value);
         if (!stopped.IsError)
         {
             PersistImmediately(found.Value.Id);

@@ -450,7 +450,7 @@ internal sealed class TaskBrowser(
 
             if (task.ExecutableStates.Any(state => state.State == NodeState.Blocked))
             {
-                items.Add(new Item("* 重新执行被阻塞的节点，清除恢复状态", "rerun", Task: task.Id));
+                items.Add(new Item("* 重新执行被阻塞的节点，放弃恢复，保留恢复数据", "rerun", Task: task.Id));
             }
 
             items.Add(new Item("× 终止整个任务", "stopTask", Task: task.Id));

@@ -16,9 +16,6 @@ public interface IExecution
     /// <summary>当前状态的只读快照。</summary>
     ExecutionSnapshot Snapshot();
 
-    /// <summary>取消本次执行，进行中的一轮请求随之结束。</summary>
-    void Cancel();
-
     /// <summary>执行输出的一段流式内容，按到达顺序给出。收口后不再触发。</summary>
     event ProcessContentHandler? ContentEmitted;
 

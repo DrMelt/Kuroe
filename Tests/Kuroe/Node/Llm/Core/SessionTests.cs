@@ -185,13 +185,13 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task An_interrupted_stream_keeps_the_partial_reply_in_the_restore_state()
+    public async Task An_interrupted_stream_keeps_the_partial_reply_in_the_restore_data()
     {
         Session session = Create(new FailingTurnClient());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => session.AskAsync("问题", CancellationToken.None));
 
-        LlmExecutionState? state = session.CreateRestoreState();
+        LlmExecutionState? state = session.CreateRestoreData();
         Assert.NotNull(state);
         Assert.Equal(ChatRole.Assistant.Value, state.Messages[^1].Role);
         Assert.Equal("半句", Assert.Single(state.Messages[^1].Contents).Text);
@@ -202,7 +202,7 @@ public sealed class SessionTests
     {
         Session original = Create(new FailingTurnClient());
         await Assert.ThrowsAsync<InvalidOperationException>(() => original.AskAsync("问题", CancellationToken.None));
-        LlmExecutionState state = original.CreateRestoreState()!;
+        LlmExecutionState state = original.CreateRestoreData()!;
 
         RecordingTurnClient client = new(Reply("续写"));
         Session restored = CreateRestored(state, client);
@@ -217,7 +217,7 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task A_restore_state_round_trips_tool_calls_and_results()
+    public async Task A_restore_data_round_trips_tool_calls_and_results()
     {
         RecordingTurnClient client = new(
             [new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("call-1", "GetLocalTime")])]);
@@ -226,7 +226,7 @@ public sealed class SessionTests
         await session.AskAsync("现在几点", CancellationToken.None);
         session.AppendResults([new FunctionResultContent("call-1", "十二点")]);
 
-        LlmExecutionState state = session.CreateRestoreState()!;
+        LlmExecutionState state = session.CreateRestoreData()!;
         IReadOnlyList<LlmContentState> contents = [.. state.Messages.SelectMany(message => message.Contents)];
 
         Assert.Contains(contents, content => content.Kind == "call" && content.Name == "GetLocalTime");
@@ -242,7 +242,7 @@ public sealed class SessionTests
 
         await session.AskAsync("现在几点", CancellationToken.None);
 
-        Assert.Null(session.CreateRestoreState());
+        Assert.Null(session.CreateRestoreData());
     }
 
     [Fact]
@@ -254,11 +254,11 @@ public sealed class SessionTests
 
         session.DiscardRound();
 
-        Assert.Null(session.CreateRestoreState());
+        Assert.Null(session.CreateRestoreData());
     }
 
     [Fact]
-    public void A_restore_state_round_trips_through_the_record_codec()
+    public void A_restore_data_round_trips_through_the_record_codec()
     {
         LlmExecutionState state = new(
             "fake",
@@ -267,13 +267,25 @@ public sealed class SessionTests
                 new LlmMessageState("assistant", [new LlmContentState("text", Text: "回答")]),
             ]);
 
-        ExecutionRestoreState encoded = LlmExecutionStateCodec.Encode(state);
+        ExecutionRestorePayload encoded = LlmExecutionStateCodec.Encode(state);
         LlmExecutionState decoded = LlmExecutionStateCodec.Decode(encoded);
 
         Assert.Equal(LlmExecutionStateCodec.Format, encoded.Format);
         Assert.Equal("fake", decoded.Model);
         Assert.Equal("回答", decoded.Messages[^1].Contents[0].Text);
         Assert.True(LlmExecutionStateCodec.IsRestorable(decoded));
+    }
+
+    [Fact]
+    public async Task A_completed_reply_produces_restore_data()
+    {
+        Session session = Create(new RecordingTurnClient(Reply("完成")));
+
+        await session.AskAsync("问题", CancellationToken.None);
+
+        LlmExecutionState? state = session.CreateRestoreData();
+        Assert.NotNull(state);
+        Assert.Equal("完成", state.Messages[^1].Contents[0].Text);
     }
 
     private static Session Create(ITurnClient client, ProcessJournal? journal = null) =>

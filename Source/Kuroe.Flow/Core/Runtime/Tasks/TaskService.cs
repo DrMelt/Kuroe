@@ -6,7 +6,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>用户任务域对任务的动作：按流程名提交、重新执行、取消、改名。用户任务的提交策略在这里，域内生命周期由 <see cref="TaskActions"/> 承担。</summary>
+/// <summary>用户任务域对任务的动作：按流程名提交、重新执行、终止、改名。用户任务的提交策略在这里，域内生命周期由 <see cref="TaskActions"/> 承担。</summary>
 /// <remarks>装配用户任务提交所需的动作与流程目录。</remarks>
 public sealed class TaskService(
     TaskActions actions,
@@ -43,13 +43,13 @@ public sealed class TaskService(
     /// <summary>对阻塞的执行节点重新执行。</summary>
     public ErrorOr<Success> Rerun(TaskId id) => _actions.Rerun(id);
 
-    /// <summary>取消一个执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
+    /// <summary>停止一个已启动的执行。它所在的执行节点随后被阻塞，任务不再自动推进。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id) => _actions.StopExecution(id);
 
     /// <summary>丢掉已完成或已终止的任务，同时删除它们的存档。</summary>
     public IReadOnlyList<TaskId> ClearSettled() => _actions.ClearSettled();
 
-    /// <summary>终止任务：在跑的执行全部取消，未走完的执行节点不再推进。</summary>
+    /// <summary>终止任务：在跑的执行随之中断，未走完的执行节点不再推进。</summary>
     public ErrorOr<Success> StopTask(TaskId id) => _actions.StopTask(id);
 
     /// <summary>等待当前待写状态落盘。</summary>

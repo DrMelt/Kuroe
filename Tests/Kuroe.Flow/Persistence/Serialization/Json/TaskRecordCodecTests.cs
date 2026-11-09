@@ -91,12 +91,12 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     }
 
     [Fact]
-    public void Write_and_read_preserve_restore_state()
+    public void Write_and_read_preserve_restore_data()
     {
         TaskRecord record = TaskRecordFixture.Create();
         ExecutionRecord first = record.Executions[0] with
         {
-            RestoreState = new ExecutionRestoreState("test", """{"payload":true}"""),
+            RestoreData = new ExecutionRestorePayload("test", """{"payload":true}"""),
             ContinuedFrom = new ExecutionId(6),
         };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
@@ -105,9 +105,25 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         string json = codec.Write(changed).ThrowIfError();
         TaskRecord loaded = codec.Read(json).ThrowIfError();
 
-        Assert.Contains("\"RestoreState\":", json);
-        Assert.Equal(first.RestoreState, loaded.Executions[0].RestoreState);
+        Assert.Contains("\"RestoreData\":", json);
+        Assert.Equal(first.RestoreData, loaded.Executions[0].RestoreData);
         Assert.Equal(first.ContinuedFrom, loaded.Executions[0].ContinuedFrom);
+    }
+
+    [Fact]
+    public void Read_rejects_a_previous_version()
+    {
+        TaskRecord record = TaskRecordFixture.Create();
+        TaskRecordCodec codec = new();
+        string json = codec.Write(record)
+            .ThrowIfError()
+            .Replace(
+                $"\"Version\": {TaskRecordSerializationVersion.Current}",
+                $"\"Version\": {TaskRecordSerializationVersion.Current - 1}");
+
+        var loaded = codec.Read(json);
+
+        Assert.Equal(FlowErrorCodes.RecordVersion, loaded.FirstError.Code);
     }
 
     [Fact]

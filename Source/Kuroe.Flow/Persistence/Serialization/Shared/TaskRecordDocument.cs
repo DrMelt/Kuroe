@@ -58,12 +58,12 @@ public sealed record ExecutionData(
     ExecutionUsageData? Usage,
     List<InputValueData>? Inputs,
     Dictionary<string, string>? Texts,
-    RestoreStateData? RestoreState = null,
+    RestorePayloadData? RestoreData = null,
     int? ContinuedFrom = null,
     ExecutionContractData? Contract = null);
 
-/// <summary>一次执行留在存档中的恢复状态。</summary>
-public sealed record RestoreStateData(string? Format, string? Payload);
+/// <summary>一次执行保留的恢复负载。</summary>
+public sealed record RestorePayloadData(string? Format, string? Payload);
 
 /// <summary>一次执行的本轮契约状态。</summary>
 public sealed record ExecutionContractData(

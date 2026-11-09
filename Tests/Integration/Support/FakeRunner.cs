@@ -81,11 +81,11 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
     public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
 
-    /// <summary>执行器上报的恢复状态，未设置时不可恢复。</summary>
-    public ExecutionRestoreState? RestoreState { get; set; }
+    /// <summary>执行器上报的恢复数据，未设置时不可恢复。</summary>
+    public ExecutionRestorePayload? RestoreData { get; set; }
 
-    /// <summary>各次执行收到的恢复状态，普通启动为空，按建立顺序。</summary>
-    public IReadOnlyList<ExecutionRestoreState?> Starts
+    /// <summary>各次执行收到的恢复数据，普通启动为空，按建立顺序。</summary>
+    public IReadOnlyList<ExecutionRestorePayload?> Starts
     {
         get
         {
@@ -96,7 +96,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
         }
     }
 
-    private readonly List<ExecutionRestoreState?> _starts = [];
+    private readonly List<ExecutionRestorePayload?> _starts = [];
 
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution)
     {
@@ -115,7 +115,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
             _prepareCount++;
         }
 
-        return new PreparedRestore(context.Input, new TestRestoreState(context.State));
+        return new PreparedRestore(context.Input, new TestRestoreData(context.Payload));
     }
 
     /// <summary>准备过恢复计划的次数。</summary>
@@ -139,7 +139,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
     {
         lock (_gate)
         {
-            _starts.Add(restore.State is TestRestoreState state ? state.Value : null);
+            _starts.Add(restore.Data is TestRestoreData data ? data.Value : null);
         }
 
         return new Run(this, execution);
@@ -225,7 +225,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
         tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreStateReader
+    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreDataReader
     {
         private readonly RecordingJournal _journal = new();
 
@@ -233,9 +233,9 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
 
         public ExecutionUsage Usage => owner.Usage;
 
-        public ExecutionRestoreState? RestoreState => owner.RestoreState;
+        public ExecutionRestorePayload? RestoreData => owner.RestoreData;
 
-        public event Action? RestoreStateChanged
+        public event Action? RestoreDataChanged
         {
             add => _ = value;
             remove => _ = value;
@@ -245,5 +245,5 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
             owner.ExecuteAsync(execution, input, _journal, cancellationToken);
     }
 
-    private sealed record TestRestoreState(ExecutionRestoreState Value) : IExecutionRestoreState;
+    private sealed record TestRestoreData(ExecutionRestorePayload Value) : IExecutionRestoreData;
 }

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
@@ -58,17 +59,17 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     }
 
     [Fact]
-    public void Restore_preserves_restore_state()
+    public void Restore_preserves_restore_data()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        ExecutionRestoreState state = new("test", "state");
+        ExecutionRestorePayload data = new("test", "state");
         TaskRecord record = InterruptedRecord with
         {
             Executions =
             [
                 InterruptedRecord.Executions[0] with
                 {
-                    RestoreState = state,
+                    RestoreData = data,
                     ContinuedFrom = new ExecutionId(9),
                 },
             ],
@@ -78,11 +79,153 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 
         Assert.False(restored.IsError);
         ExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
-        Assert.True(execution.HasRestoreState);
+        Assert.True(execution.HasRestoreData);
         Assert.Equal(new ExecutionId(9), execution.ContinuedFrom);
 
         TaskSnapshot snapshot = restored.Value.Snapshot();
         Assert.True(Assert.Single(snapshot.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
+    }
+
+    [Fact]
+    public void Restore_does_not_plan_a_block_without_a_resumable_execution()
+    {
+        _registry.RestorerSource = new AcceptAllRestorer();
+        ExecutableNodeRecord blocked = Assert.IsType<ExecutableNodeRecord>(InterruptedRecord.Nodes[0]);
+        TaskRecord record = InterruptedRecord with
+        {
+            Executions =
+            [
+                InterruptedRecord.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+            ],
+            Nodes =
+            [
+                blocked with { Block = blocked.Block is { } block ? block with { Execution = null } : null },
+                .. InterruptedRecord.Nodes.Skip(1),
+            ],
+        };
+
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
+
+        Assert.False(restored.IsError);
+        TaskSnapshot snapshot = restored.Value.Snapshot();
+        Assert.False(Assert.Single(snapshot.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
+    }
+
+    [Fact]
+    public void Restore_keeps_restore_data_of_a_finished_execution()
+    {
+        ExecutionRestorePayload data = new("test", "state");
+        TaskRecord record = DoneRecord with
+        {
+            Executions = [DoneRecord.Executions[0] with { RestoreData = data }],
+        };
+
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
+
+        Assert.False(restored.IsError);
+        ExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
+        Assert.True(execution.HasRestoreData);
+    }
+
+    [Fact]
+    public void Restore_terminated_record_cancels_nodes_and_clears_blocks()
+    {
+        _registry.RestorerSource = new AcceptAllRestorer();
+        TaskRecord template = Create(TaskLifecycle.Terminated, ExecutionState.Interrupted, published: false, blocked: true);
+        TaskRecord record = template with
+        {
+            Executions =
+            [
+                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+            ],
+        };
+
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
+
+        Assert.False(restored.IsError);
+        TaskSnapshot snapshot = restored.Value.Snapshot();
+        Assert.Equal(TaskState.Terminated, snapshot.State);
+        Assert.Contains(snapshot.ExecutableStates, state => state.State == NodeState.Canceled);
+        Assert.DoesNotContain(snapshot.ExecutableStates, state => state.Block is not null);
+        Assert.DoesNotContain(snapshot.ExecutableStates, state => state.CanRestore);
+        Assert.True(restored.Value.Executions[0].Snapshot().HasRestoreData);
+    }
+
+    [Fact]
+    public void Restore_does_not_plan_a_block_associated_with_a_succeeded_execution()
+    {
+        _registry.RestorerSource = new AcceptAllRestorer();
+        TaskRecord template = Create(TaskLifecycle.Paused, ExecutionState.Succeeded, published: false, blocked: true);
+        TaskRecord record = template with
+        {
+            Executions =
+            [
+                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+            ],
+        };
+
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
+
+        Assert.False(restored.IsError);
+        ExecutableStateSnapshot blocked = Assert.Single(
+            restored.Value.Snapshot().ExecutableStates,
+            state => state.State == NodeState.Blocked);
+        Assert.False(blocked.CanRestore);
+    }
+
+    [Fact]
+    public void Restore_does_not_plan_a_block_of_a_completed_task()
+    {
+        _registry.RestorerSource = new AcceptAllRestorer();
+        TaskRecord template = Create(TaskLifecycle.Active, ExecutionState.Failed, published: true, blocked: true);
+        TaskRecord record = template with
+        {
+            Completed = true,
+            Executions =
+            [
+                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+            ],
+        };
+
+        ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
+
+        Assert.False(restored.IsError);
+        TaskSnapshot snapshot = restored.Value.Snapshot();
+        Assert.Equal(TaskState.Done, snapshot.State);
+        Assert.False(Assert.Single(snapshot.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
+    }
+
+    [Fact]
+    public void Restore_runtime_does_not_resume_a_terminated_task()
+    {
+        TaskRecord record = Create(TaskLifecycle.Terminated, ExecutionState.Interrupted, published: false, blocked: true);
+        RecordingRunner runner = new();
+        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, new AcceptAllRestorer());
+
+        ErrorOr<TaskSnapshot> restored = runtime.Restore(record, CompileFixtureFlow(), []);
+
+        Assert.False(restored.IsError);
+        Assert.Equal(TaskState.Terminated, restored.Value.State);
+        Assert.Equal(0, runner.RestoreCount);
+    }
+
+    [Fact]
+    public void Restore_runtime_resumes_a_paused_task()
+    {
+        TaskRecord template = Create(TaskLifecycle.Paused, ExecutionState.Interrupted, published: false, blocked: true);
+        TaskRecord record = template with
+        {
+            Executions = [template.Executions[0] with { StartedAt = null }],
+        };
+        RecordingRunner runner = new();
+        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, new AcceptAllRestorer());
+
+        ErrorOr<TaskSnapshot> restored = runtime.Restore(record, CompileFixtureFlow(), []);
+
+        Assert.False(restored.IsError);
+        Assert.Equal(TaskState.Paused, restored.Value.State);
+        Assert.Equal(1, runner.RestoreCount);
+        Assert.Contains(NodePath.Of("整体", "制定计划"), runner.Seed);
     }
 
     [Fact]
@@ -205,12 +348,42 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         Assert.Equal("计划结果", task.Context.Runtime(plan).PortText(port));
     }
 
+    private sealed class RecordingRunner : IFlowRunner
+    {
+        public int RestoreCount { get; private set; }
+
+        public IReadOnlyList<NodePath> Seed { get; private set; } = [];
+
+        public void Start(WorkTask task) => throw new NotSupportedException();
+
+        public void Restore(WorkTask task, IReadOnlyList<NodePath> seed)
+        {
+            RestoreCount++;
+            Seed = seed;
+        }
+
+        public void Pause(WorkTask task) => throw new NotSupportedException();
+
+        public ErrorOr<Success> StopExecution(WorkTask task, Execution execution) =>
+            throw new NotSupportedException();
+
+        public void ResumeTask(WorkTask task, bool continueRestores = true) => throw new NotSupportedException();
+
+        public void Advance(WorkTask task, IReadOnlyList<NodePath> nodes) => throw new NotSupportedException();
+
+        public int Rerun(WorkTask task) => throw new NotSupportedException();
+
+        public ErrorOr<Success> Terminate(WorkTask task) => throw new NotSupportedException();
+
+        public Task ShutdownAsync() => Task.CompletedTask;
+    }
+
     private sealed class AcceptAllRestorer : IExecutionRestorerSource
     {
         public ErrorOr<PreparedRestore> Prepare(
             ExecutableNode node,
             RestorePreparationContext context) =>
-            new PreparedRestore(context.Input, new TestState());
+            new PreparedRestore(context.Input, new TestData());
 
         public IExecutionRunner CreateRestored(
             ExecutableNode node,
@@ -219,7 +392,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             throw new NotSupportedException();
     }
 
-    private sealed record TestState : IExecutionRestoreState;
+    private sealed record TestData : IExecutionRestoreData;
 
     public void Dispose() => _environment.Dispose();
 }

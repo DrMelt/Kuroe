@@ -13,7 +13,7 @@ public sealed record ExecutionSnapshot(
     IReadOnlyList<string> Failures,
     IReadOnlyList<JournalEntry> Journal,
     ExecutionUsage Usage,
-    bool HasRestoreState = false,
+    bool HasRestoreData = false,
     ExecutionId? ContinuedFrom = null)
 {
     /// <summary>已耗时，未结束时按当前时刻算。</summary>

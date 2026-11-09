@@ -49,5 +49,23 @@ public sealed class TaskRecordCaptureTests : IDisposable
         Assert.All(record.Ports, port => Assert.NotEqual(default, port.At));
     }
 
+    [Fact]
+    public void Capture_retains_restore_data_of_a_successful_execution()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow, persistTasks: true);
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "data");
+        TaskId id = environment.Submit("保留恢复数据");
+        environment.Settle(id);
+        WorkTask task = environment.Registry.Find(id).ThrowIfError();
+
+        TaskRecord record = new TaskRecordCapture(task)
+            .CaptureRecord(new SchedulerSeed([]))
+            .ThrowIfError();
+
+        Assert.Contains(
+            record.Executions,
+            execution => execution.State == ExecutionState.Succeeded && execution.RestoreData is not null);
+    }
+
     public void Dispose() => _environment.Dispose();
 }

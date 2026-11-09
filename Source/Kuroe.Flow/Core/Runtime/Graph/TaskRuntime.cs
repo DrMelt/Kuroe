@@ -25,10 +25,10 @@ public enum ExecutionInterruption
     /// <summary>执行在启动前被中断，不构成一次失败尝试。</summary>
     NotStarted,
 
-    /// <summary>执行已启动并留下可恢复状态。</summary>
+    /// <summary>执行已启动并留下可恢复的恢复数据。</summary>
     Restorable,
 
-    /// <summary>执行已启动，没有可恢复状态。</summary>
+    /// <summary>执行已启动，没有可用于恢复的数据。</summary>
     NonRestorable,
 }
 
@@ -191,7 +191,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return;
         }
 
-        ClearRestoreState(node.Path);
+        InvalidateRestore(node.Path);
         node.RequestRerun();
         node.Invalidate();
     }
@@ -317,9 +317,16 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         RestorePlan? Restore = null);
 
     /// <summary>执行收口：未启动的中断单独分类，失败与未收口先停驻阻塞，通过后发布产出并给出下游通知。
-    /// 接收器先经 ReleaseActive 再进入。</summary>
+    /// 接收器先经 ReleaseActive 再进入。终止任务的收口只通知等待方，不再阻塞或发布。</summary>
     public SettlePlan Settle(RuntimeExecutable node, Execution execution)
     {
+        if (_task.Lifecycle == TaskLifecycle.Terminated)
+        {
+            _task.NotifyExecutionSettled(execution);
+
+            return new SettlePlan([]);
+        }
+
         if (execution.State != ExecutionState.Succeeded)
         {
             return Block(node, execution);
@@ -361,7 +368,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         _task.NotifyExecutionSettled(execution);
         ExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.StartedAt is null
-            && snapshot.State is ExecutionState.Interrupted or ExecutionState.Canceled)
+            && snapshot.State == ExecutionState.Interrupted)
         {
             _task.Journal.AppendInfo($"{node.Path}：执行未启动即中断。");
 
@@ -371,7 +378,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         string summary = snapshot.Failures.FirstOrDefault(failure => !string.IsNullOrWhiteSpace(failure))
             ?? snapshot.State switch
             {
-                ExecutionState.Canceled => "执行已取消。",
                 ExecutionState.Interrupted => "执行已中断。",
                 _ => "执行未成功收口。",
             };
@@ -407,8 +413,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     {
         IReadOnlyList<NodePath> containers = AncestorContainers(node.Path);
         List<NodePath> notify = [.. downstream, .. containers, .. Graph.Dependents(node.Path)];
-        ClearRestoreState(node.Path);
-        ClearRestoreStates(notify);
+        InvalidateRestore(node.Path);
+        InvalidateRestores(notify);
         _task.Journal.AppendInfo($"{node.Path} 执行成功。");
 
         return new SettlePlan(notify);
@@ -654,7 +660,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         return targets;
     }
 
-    /// <summary>一个可执行的恢复计划：停住的节点、提供恢复状态的来源执行与已装配的恢复。</summary>
+    /// <summary>一个可执行的恢复计划：停住的节点、提供恢复数据的来源执行与已装配的恢复。</summary>
     public sealed record RestorePlan(
         NodePath Blocked,
         Execution Source,
@@ -662,9 +668,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     /// <summary>是否存在可派发的恢复计划。要求持有 Gate。</summary>
     public bool HasRestorePlans => _restorePlans.Count > 0;
-
-    /// <summary>恢复计划是否已按当前节点状态建立过。要求持有 Gate。</summary>
-    public bool RestorePlansInitialized { get; private set; }
 
     /// <summary>取出当前恢复计划，按执行节点表顺序。不改变状态。要求持有 Gate。</summary>
     public IReadOnlyList<RestorePlan> PlanRestores() =>
@@ -683,8 +686,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         {
             _ = CreateRestorePlan(node);
         }
-
-        RestorePlansInitialized = true;
     }
 
     /// <summary>清除全部恢复计划。任务完成与终止时调用。</summary>
@@ -696,7 +697,6 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
 
         _restorePlans.Clear();
-        RestorePlansInitialized = false;
     }
 
     /// <summary>给定计划是否仍是该节点当前的恢复计划。要求持有 Gate。</summary>
@@ -713,26 +713,22 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
     }
 
-    /// <summary>清除这些目标上执行留下的恢复状态与恢复计划。上游产出变化与重新执行时调用。</summary>
-    public void ClearRestoreStates(IReadOnlyList<NodePath> nodes)
+    /// <summary>让这些目标的当前阻塞不再关联可恢复的执行并丢弃恢复计划。上游产出变化与重新执行时调用；恢复数据作为历史保留。</summary>
+    public void InvalidateRestores(IReadOnlyList<NodePath> nodes)
     {
         foreach (NodePath path in nodes)
         {
-            ClearRestoreState(path);
+            InvalidateRestore(path);
         }
     }
 
-    /// <summary>清除该节点的恢复计划与全部执行的恢复状态。</summary>
-    public void ClearRestoreState(NodePath path)
+    /// <summary>让该节点的当前阻塞不再关联可恢复的执行并丢弃恢复计划；恢复数据作为历史保留。</summary>
+    public void InvalidateRestore(NodePath path)
     {
         if (Materialized(path) is RuntimeExecutable node)
         {
             SetRestorePlan(node, null);
-        }
-
-        foreach (Execution execution in _task.Executions.Where(candidate => candidate.Input.Node == path).ToArray())
-        {
-            execution.ClearRestoreState();
+            node.InvalidateRestore();
         }
     }
 
@@ -755,7 +751,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         Execution? candidate = _task.Executions.FirstOrDefault(execution => execution.Id == blocked);
         while (candidate is not null)
         {
-            if (candidate.RestoreState is { } state)
+            if (!Resumable(candidate))
+            {
+                return null;
+            }
+
+            if (candidate.RestoreData is { } data)
             {
                 ExecutionInput input = candidate.Input with
                 {
@@ -763,7 +764,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                     OutputPorts = node.Executable.SubmittablePorts,
                 };
 
-                RestorePreparationContext context = new(input, state, candidate.Contract);
+                RestorePreparationContext context = new(input, data, candidate.Contract);
                 ErrorOr<PreparedRestore> prepared;
                 try
                 {
@@ -785,7 +786,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 return plan;
             }
 
-            // 已经消耗过请求但没有留下恢复状态的尝试不能回退到更早的状态，否则会从更早历史重放请求与工具调用
+            // 已经消耗过请求但没有留下恢复数据的尝试不能回退到更早的状态，否则会从更早历史重放请求与工具调用
             if (candidate.Snapshot().Usage.RequestCount > 0)
             {
                 return null;
@@ -798,6 +799,10 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
         return null;
     }
+
+    /// <summary>可从这次执行继续：失败与中断可以恢复，完成不恢复。</summary>
+    private static bool Resumable(Execution execution) =>
+        execution.State is ExecutionState.Failed or ExecutionState.Interrupted;
 
     /// <summary>缓存或移除节点的恢复计划，并同步快照标记。</summary>
     private void SetRestorePlan(RuntimeExecutable node, RestorePlan? plan)

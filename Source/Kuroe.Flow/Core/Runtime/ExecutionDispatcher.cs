@@ -49,7 +49,7 @@ public sealed class ExecutionDispatcher
         Settle(dropped);
     }
 
-    /// <summary>取消排队与在跑的执行并等待收口，之后不再开新的。</summary>
+    /// <summary>中断排队与在跑的执行并等待收口，之后不再开新的。</summary>
     public async Task ShutdownAsync()
     {
         List<(Execution Execution, Task Task)> live;
@@ -77,7 +77,7 @@ public sealed class ExecutionDispatcher
         await Task.WhenAll(live.Select(entry => entry.Task));
     }
 
-    /// <summary>要求持有 <see cref="_gate"/>。额度有空位就取一个开跑，已取消的直接交回收口。</summary>
+    /// <summary>要求持有 <see cref="_gate"/>。额度有空位就取一个开跑，已中断的直接交回收口。</summary>
     private void Pump(List<Execution> dropped)
     {
         while (_queue.Count > 0 && _live.Count < MaxConcurrentExecutions)
@@ -85,7 +85,7 @@ public sealed class ExecutionDispatcher
             (Execution execution, IExecutionRunner runner) = _queue.Dequeue();
             if (execution.CancellationToken.IsCancellationRequested)
             {
-                execution.MarkCanceledOrInterrupted();
+                execution.MarkInterrupted();
                 dropped.Add(execution);
                 continue;
             }
@@ -104,9 +104,9 @@ public sealed class ExecutionDispatcher
                 execution.AttachUsageReader(usageReader);
             }
 
-            if (runner is IExecutionRestoreStateReader restoreStateReader)
+            if (runner is IExecutionRestoreDataReader restoreDataReader)
             {
-                execution.AttachRestoreStateReader(restoreStateReader);
+                execution.AttachRestoreDataReader(restoreDataReader);
             }
 
             execution.MarkRunning();
@@ -124,7 +124,7 @@ public sealed class ExecutionDispatcher
         }
         catch (OperationCanceledException) when (execution.CancellationToken.IsCancellationRequested)
         {
-            execution.MarkCanceledOrInterrupted();
+            execution.MarkInterrupted();
         }
         catch (OperationCanceledException)
         {
@@ -136,9 +136,9 @@ public sealed class ExecutionDispatcher
         }
         finally
         {
-            if (runner is IExecutionRestoreStateReader restoreStateReader)
+            if (runner is IExecutionRestoreDataReader restoreDataReader)
             {
-                execution.SettleRestoreState(restoreStateReader);
+                execution.SettleRestoreData(restoreDataReader);
             }
 
             if (runner is IExecutionUsageReader reader)

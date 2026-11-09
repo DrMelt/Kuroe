@@ -23,7 +23,7 @@ public sealed class ExecutionRunnerSource(IExecutionRunnerFactory fallback) : IE
         throw new InvalidOperationException($"节点类型 {node.Type.Kind.Value} 既没有自带执行器，也没有模型端口。");
     }
 
-    /// <summary>校验恢复状态并装配一次恢复。</summary>
+    /// <summary>校验恢复数据并装配一次恢复。</summary>
     public ErrorOr<PreparedRestore> Prepare(
         ExecutableNode node,
         RestorePreparationContext context) =>

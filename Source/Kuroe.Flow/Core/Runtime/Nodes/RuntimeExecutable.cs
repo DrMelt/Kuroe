@@ -48,8 +48,12 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     /// <summary>产出可消费：不在阻塞与取消。</summary>
     protected override bool Consumable => Block is null && !Canceled;
 
-    /// <summary>随任务进入取消态。</summary>
-    public override void Cancel() => _canceled = true;
+    /// <summary>随任务进入取消态，解除当前阻塞与重跑目标。</summary>
+    public override void Cancel()
+    {
+        _canceled = true;
+        ClearBlock();
+    }
 
     /// <summary>记下重跑请求，供重新执行作废后的重启判定使用。</summary>
     public void RequestRerun() => Progress.RequestRerun();
@@ -67,9 +71,14 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
             .Where(name => values?.ContainsKey(name) != true)];
     }
 
-    /// <summary>置为阻塞并合并记下重新执行目标，重复目标不重复收集。</summary>
+    /// <summary>置为阻塞并合并记下重新执行目标，重复目标不重复收集。已取消的节点不接受阻塞。</summary>
     public void EnterBlocked(IReadOnlyList<NodePath> targets, NodeBlock block)
     {
+        if (_canceled)
+        {
+            return;
+        }
+
         Block = block;
         foreach (NodePath target in targets.Where(target => !_rerunTargets.Contains(target)))
         {
@@ -91,11 +100,20 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
         }
     }
 
-    /// <summary>解除阻塞并清空重新执行目标，恢复开始时使用。</summary>
+    /// <summary>解除阻塞并清空重新执行目标，恢复开始与任务取消时使用。</summary>
     public void ClearBlock()
     {
         _rerunTargets.Clear();
         Block = null;
+    }
+
+    /// <summary>当前阻塞不再关联可恢复的执行，阻塞原因与时刻保留。</summary>
+    public void InvalidateRestore()
+    {
+        if (Block is { } block)
+        {
+            Block = block with { Execution = null };
+        }
     }
 
     /// <summary>按端口产出发布，没有内容产出时使用。</summary>

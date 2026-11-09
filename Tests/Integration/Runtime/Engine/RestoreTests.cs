@@ -9,14 +9,14 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>可恢复的中断：收口后自动暂停，恢复时从记录继续，重新执行清除恢复状态。</summary>
+/// <summary>可恢复的中断：收口后自动暂停，恢复时从记录继续，重新执行与上游变化只让编排失效，恢复数据作为历史保留。</summary>
 public sealed class RestoreTests
 {
     [Fact]
     public void A_restorable_failure_pauses_the_task_and_resume_restores()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -39,10 +39,10 @@ public sealed class RestoreTests
     }
 
     [Fact]
-    public void Rerun_on_a_paused_task_starts_without_restore_state()
+    public void Rerun_on_a_paused_task_starts_without_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -56,19 +56,36 @@ public sealed class RestoreTests
         Assert.True(environment.Runner.Starts.Count >= 2);
         Assert.Null(environment.Runner.Starts[1]);
         Assert.Null(environment.Runner.Started[1].Snapshot().ContinuedFrom);
+        ExecutionSnapshot first = environment.Registry.Find(id).ThrowIfError().Executions[0].Snapshot();
+        Assert.True(first.HasRestoreData);
     }
 
     [Fact]
-    public void A_failed_restore_can_retry_from_the_source_state()
+    public void A_successful_execution_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+
+        TaskId id = environment.Submit("目标");
+        TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
+
+        Assert.Equal(TaskState.Done, done.State);
+        ExecutionSnapshot execution = environment.Registry.Find(id).ThrowIfError().Executions[0].Snapshot();
+        Assert.Equal(ExecutionState.Succeeded, execution.State);
+        Assert.True(execution.HasRestoreData);
+    }
+
+    [Fact]
+    public void A_failed_restore_can_retry_from_the_source_data()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.State == TaskState.Paused);
 
-        environment.Runner.RestoreState = null;
+        environment.Runner.RestoreData = null;
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Paused);
 
@@ -96,10 +113,10 @@ public sealed class RestoreTests
     }
 
     [Fact]
-    public void Stopping_an_execution_interrupts_it_and_keeps_the_restore_state()
+    public void Stopping_an_execution_interrupts_it_and_keeps_the_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
@@ -112,11 +129,11 @@ public sealed class RestoreTests
         var task = environment.Registry.Find(id).ThrowIfError();
         ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
         Assert.Equal(ExecutionState.Interrupted, stopped.State);
-        Assert.True(stopped.HasRestoreState);
+        Assert.True(stopped.HasRestoreData);
         Assert.True(Assert.Single(paused.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
 
         environment.Runner.Gate.ClearHolds();
-        environment.Runner.RestoreState = null;
+        environment.Runner.RestoreData = null;
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
     }
@@ -125,7 +142,7 @@ public sealed class RestoreTests
     public void A_queued_execution_restarts_after_pause_and_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ManyRootsFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
@@ -153,13 +170,13 @@ public sealed class RestoreTests
     public void A_failed_restore_that_consumed_requests_does_not_fall_back()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
         Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
 
-        environment.Runner.RestoreState = null;
+        environment.Runner.RestoreData = null;
         environment.Runner.Usage = new ExecutionUsage(1, 0, TokenUsage.None);
         environment.Tasks.Resume(id).ThrowIfError();
         TaskSnapshot blocked = environment.Wait(id, snapshot =>
@@ -173,7 +190,7 @@ public sealed class RestoreTests
         Assert.NotNull(second.ContinuedFrom);
         Assert.Equal(1, environment.Runner.Usage.RequestCount);
         Assert.Equal(1, second.Usage.RequestCount);
-        Assert.False(second.HasRestoreState);
+        Assert.False(second.HasRestoreData);
         Assert.False(Assert.Single(blocked.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
         Assert.Equal(2, environment.Runner.Starts.Count);
         Assert.True(environment.Tasks.Resume(id).IsError);
@@ -183,7 +200,7 @@ public sealed class RestoreTests
     public void A_pending_target_survives_resume_alongside_a_restore()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ParallelRootFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "先失败";
         environment.Runner.Gate.Hold(NodePath.Of("后完成"));
 
@@ -213,10 +230,10 @@ public sealed class RestoreTests
     }
 
     [Fact]
-    public void Terminating_a_running_restore_leaves_no_state()
+    public void Terminating_a_running_restore_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -231,7 +248,10 @@ public sealed class RestoreTests
         TaskSnapshot terminated = environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
         var task = environment.Registry.Find(id).ThrowIfError();
-        Assert.DoesNotContain(task.Executions, execution => execution.Snapshot().HasRestoreState);
+        Assert.Contains(task.Executions, execution => execution.Snapshot().HasRestoreData);
+        ExecutionSnapshot terminatedExecution = task.Executions[^1].Snapshot();
+        Assert.Equal(ExecutionState.Interrupted, terminatedExecution.State);
+        Assert.True(terminatedExecution.HasRestoreData);
         Assert.DoesNotContain(terminated.ExecutableStates, state => state.State == NodeState.Blocked);
         Assert.True(environment.Tasks.Resume(id).IsError);
 
@@ -242,7 +262,7 @@ public sealed class RestoreTests
     public void Restore_preparation_runs_once_for_snapshots_and_dispatch()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -269,7 +289,7 @@ public sealed class RestoreTests
     public void Restore_inherits_submitted_ports()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -290,7 +310,7 @@ public sealed class RestoreTests
     public void Resume_during_a_held_execution_does_not_pause_again()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreState = new ExecutionRestoreState("test", "state");
+        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
         environment.Runner.FailsWhen = _ => true;
         environment.Runner.Gate.HoldAll();
         environment.Runner.IgnoreCancellationWhileHeld = true;

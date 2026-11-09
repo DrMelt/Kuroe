@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kuroe.Node.Llm.Tests.Executions;
 
-/// <summary>Llm 恢复准备：无法完成的执行不允许恢复，其余可恢复状态由会话历史决定。</summary>
+/// <summary>Llm 恢复准备：无法完成的执行不允许恢复，其余可恢复数据由会话历史决定。</summary>
 public sealed class ExecutionRunnerFactoryTests
 {
     [Fact]

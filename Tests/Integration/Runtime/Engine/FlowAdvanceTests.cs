@@ -160,6 +160,7 @@ public sealed class FlowAdvanceTests
 
         Assert.Equal(TaskState.Terminated, canceled.State);
         Assert.DoesNotContain(canceled.ExecutableStates, state => state.State == NodeState.Blocked);
+        Assert.DoesNotContain(canceled.ExecutableStates, state => state.Block is not null);
         Assert.Single(environment.Registry.ClearSettled());
     }
 
@@ -176,6 +177,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot canceled = environment.Settle(id);
         Assert.Equal(TaskState.Terminated, canceled.State);
         Assert.Equal(0, canceled.LiveExecutions);
+        Assert.DoesNotContain(canceled.ExecutableStates, state => state.Block is not null);
     }
     [Fact]
     public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()

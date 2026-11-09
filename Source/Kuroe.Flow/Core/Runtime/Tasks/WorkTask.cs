@@ -74,7 +74,7 @@ public sealed class WorkTask
         _title = title;
     }
 
-    /// <summary>从存档恢复任务。未完成任务恢复为暂停，完成的任务保持完成，终止的任务保持终止。</summary>
+    /// <summary>从存档恢复任务。未完成任务恢复为暂停，完成的任务保持完成，终止的任务保持终止且节点恢复为取消态。</summary>
     internal static WorkTask Restore(
         TaskRegistry registry,
         TaskRecord record,
@@ -99,31 +99,38 @@ public sealed class WorkTask
         task.FlowSnapshot = record.Flow;
         task._executions.AddRange(executions);
         task.Runtime.Restore(record.Nodes, record.Ports);
-        foreach (Execution execution in executions
-            .Where(execution => execution.State == ExecutionState.Interrupted))
+        task._lifecycle = task.DetermineRestoredLifecycle(record);
+        if (task._lifecycle == TaskLifecycle.Terminated)
         {
-            ExecutionSnapshot snapshot = execution.Snapshot();
-            var runtime = task.Runtime.Executable(execution.Input.Node);
-            if (snapshot.StartedAt is null)
+            task.Runtime.Cancel();
+        }
+        else
+        {
+            foreach (Execution execution in executions
+                .Where(execution => execution.State == ExecutionState.Interrupted))
             {
-                if (runtime.Block?.Execution == execution.Id)
+                ExecutionSnapshot snapshot = execution.Snapshot();
+                var runtime = task.Runtime.Executable(execution.Input.Node);
+                if (snapshot.StartedAt is null)
                 {
-                    runtime.ClearBlock();
+                    if (runtime.Block?.Execution == execution.Id)
+                    {
+                        runtime.ClearBlock();
+                    }
+
+                    runtime.RequestRerun();
+                    continue;
                 }
 
-                runtime.RequestRerun();
-                continue;
-            }
-
-            if (runtime.Block is null)
-            {
-                runtime.EnterBlocked(
-                    [runtime.Path],
-                    new NodeBlock("进程退出前未收口。", execution.Id, record.SavedAt));
+                if (runtime.Block is null)
+                {
+                    runtime.EnterBlocked(
+                        [runtime.Path],
+                        new NodeBlock("进程退出前未收口。", execution.Id, record.SavedAt));
+                }
             }
         }
 
-        task._lifecycle = task.DetermineRestoredLifecycle(record);
         if (registry.RestorerSource is not null)
         {
             task.Runtime.RefreshRestorePlans();
@@ -181,11 +188,6 @@ public sealed class WorkTask
     internal void MarkCompleted()
     {
         _completed = true;
-        foreach (Execution execution in _executions)
-        {
-            execution.ClearRestoreState();
-        }
-
         Runtime.ClearRestorePlans();
         Journal.AppendInfo("任务完成。");
     }
@@ -410,17 +412,12 @@ public sealed class WorkTask
         }
 
         _lifecycle = TaskLifecycle.Terminated;
-        foreach (Execution execution in _executions)
-        {
-            execution.ClearRestoreState();
-        }
-
         Runtime.ClearRestorePlans();
         Journal.AppendInfo("任务终止。");
 
         foreach (Execution execution in _executions.Where(execution => execution.IsLive))
         {
-            execution.Cancel();
+            execution.Interrupt("任务终止。");
         }
 
         Runtime.Cancel();
@@ -435,7 +432,7 @@ public sealed class WorkTask
     {
         _executions.Add(execution);
         _lastActivityAt = DateTimeOffset.UtcNow;
-        execution.RestoreStateChanged += OnRestoreStateChanged;
+        execution.RestoreDataChanged += OnRestoreDataChanged;
         execution.Started += () => OnExecutionStarted(execution);
         Journal.AppendInfo($"执行 {execution.Id.Value} 创建，节点 {execution.Input.Node}。");
         if (_observer?.Content is { } onContent)
@@ -464,7 +461,7 @@ public sealed class WorkTask
         }
     }
 
-    private void OnRestoreStateChanged() => NotifyChanged();
+    private void OnRestoreDataChanged() => NotifyChanged();
 
     private event Action<Execution>? ExecutionAttached;
 

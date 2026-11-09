@@ -19,7 +19,38 @@ public sealed class ExecutionTests
 
         Assert.Equal(ExecutionState.Queued, snapshot.State);
         Assert.Empty(snapshot.Journal);
-        Assert.False(snapshot.HasRestoreState);
+        Assert.False(snapshot.HasRestoreData);
+    }
+
+    [Fact]
+    public void Successful_settle_keeps_restore_data()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        TestRestoreReader reader = new() { RestoreData = new ExecutionRestorePayload("test", "data") };
+
+        execution.AttachRestoreDataReader(reader);
+        execution.MarkRunning();
+        execution.MarkSucceeded(ExecutionOutput.Ports);
+        execution.SettleRestoreData(reader);
+
+        ExecutionSnapshot snapshot = execution.Snapshot();
+        Assert.True(snapshot.HasRestoreData);
+        Assert.Equal(reader.RestoreData, execution.RestoreData);
+    }
+
+    [Fact]
+    public void Settling_without_data_clears_restore_data()
+    {
+        Execution execution = new(new ExecutionId(1), Input());
+        TestRestoreReader reader = new() { RestoreData = new ExecutionRestorePayload("test", "data") };
+
+        execution.AttachRestoreDataReader(reader);
+        reader.RestoreData = null;
+        execution.SettleRestoreData(reader);
+
+        ExecutionSnapshot snapshot = execution.Snapshot();
+        Assert.False(snapshot.HasRestoreData);
+        Assert.Null(execution.RestoreData);
     }
 
     [Fact]
@@ -215,7 +246,7 @@ public sealed class ExecutionTests
         ErrorOr<Success> stopped = TaskDriver.StopExecution(execution);
 
         Assert.False(stopped.IsError);
-        execution.MarkCanceledOrInterrupted();
+        execution.MarkInterrupted();
         Assert.Equal(ExecutionState.Interrupted, execution.Snapshot().State);
     }
 
@@ -229,6 +260,17 @@ public sealed class ExecutionTests
     private sealed class TestUsageReader : IExecutionUsageReader
     {
         public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+    }
+
+    private sealed class TestRestoreReader : IExecutionRestoreDataReader
+    {
+        public ExecutionRestorePayload? RestoreData { get; set; }
+
+        public event Action? RestoreDataChanged
+        {
+            add => _ = value;
+            remove => _ = value;
+        }
     }
 
     private sealed class TestJournal(IReadOnlyList<JournalEntry> entries) : IProcessJournal

@@ -95,14 +95,14 @@ public static class TaskRecordSerializationMapper
             ToData(execution.Usage),
             [.. execution.Inputs.Select(ToData)],
             ToData(execution.Texts),
-            ToData(execution.RestoreState),
+            ToData(execution.RestoreData),
             execution.ContinuedFrom?.Value,
             ToData(execution.Contract));
 
-    private static RestoreStateData? ToData(ExecutionRestoreState? state) =>
-        state is null
+    private static RestorePayloadData? ToData(ExecutionRestorePayload? data) =>
+        data is null
             ? null
-            : new RestoreStateData(state.Format, state.Payload);
+            : new RestorePayloadData(data.Format, data.Payload);
 
     private static ExecutionContractData? ToData(ExecutionContractRecord? contract)
     {
@@ -283,7 +283,7 @@ public static class TaskRecordSerializationMapper
             ReadUsage(dto.Usage),
             [.. (dto.Inputs ?? []).Select(ReadInputValue)],
             ReadTexts(dto.Texts),
-            ReadRestoreState(dto.RestoreState),
+            ReadRestoreData(dto.RestoreData),
             dto.ContinuedFrom is { } continuedFrom ? new ExecutionId(continuedFrom) : null,
             ReadContract(dto.Contract));
 
@@ -301,12 +301,12 @@ public static class TaskRecordSerializationMapper
         return new ExecutionContractRecord(ports, dto.CannotCompleteReason);
     }
 
-    private static ExecutionRestoreState? ReadRestoreState(RestoreStateData? dto) =>
+    private static ExecutionRestorePayload? ReadRestoreData(RestorePayloadData? dto) =>
         dto is null
             ? null
-            : new ExecutionRestoreState(
-                dto.Format ?? throw new FormatException("恢复状态缺少格式。"),
-                dto.Payload ?? throw new FormatException("恢复状态缺少负载。"));
+            : new ExecutionRestorePayload(
+                dto.Format ?? throw new FormatException("恢复数据缺少格式。"),
+                dto.Payload ?? throw new FormatException("恢复数据缺少负载。"));
 
     private static ExecutionUsage ReadUsage(ExecutionUsageData? dto)
     {

@@ -13,7 +13,7 @@ internal sealed class ExecutionRunner(
     SessionFactory sessions,
     IExecutionStatusReader status,
     ExecutionId execution,
-    LlmExecutionState? restored = null) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreStateReader
+    LlmExecutionState? restored = null) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreDataReader
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
@@ -23,7 +23,7 @@ internal sealed class ExecutionRunner(
     private readonly ProcessJournal _journal = new();
     private readonly LlmExecutionState? _restored = restored;
     private volatile Session? _session;
-    private volatile ExecutionRestoreState? _restoreState;
+    private volatile ExecutionRestorePayload? _restoreData;
 
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
@@ -31,13 +31,13 @@ internal sealed class ExecutionRunner(
     /// <summary>本次执行的会话用量与最近一次请求的上下文，运行中可读，执行结束后为最终值。</summary>
     public ExecutionUsage Usage => _session?.Usage ?? ExecutionUsage.None;
 
-    /// <summary>本次执行留给后续恢复的状态，不可恢复时为空。</summary>
-    public ExecutionRestoreState? RestoreState => _restoreState;
+    /// <summary>本次执行留下的恢复数据，不产生时为空。</summary>
+    public ExecutionRestorePayload? RestoreData => _restoreData;
 
-    /// <summary>恢复状态更新后触发。</summary>
-    public event Action? RestoreStateChanged;
+    /// <summary>运行中恢复数据变化后触发。</summary>
+    public event Action? RestoreDataChanged;
 
-    /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复状态存在时从上次中断处继续。</summary>
+    /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复数据存在时从上次中断处继续。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
         ExecutionInput input,
         CancellationToken cancellationToken)
@@ -61,39 +61,51 @@ internal sealed class ExecutionRunner(
 
             if (reply.IsError)
             {
-                CaptureRestoreState(session);
+                CaptureInterruptedRound(session);
 
                 return reply.ErrorsOrEmptyList;
             }
+
+            _ = CaptureRestoreData(session);
 
             return ExecutionOutput.Ports;
         }
         catch (Exception)
         {
-            CaptureRestoreState(session);
+            CaptureInterruptedRound(session);
             throw;
         }
     }
 
-    /// <summary>按会话当前状态留下恢复状态；历史不能继续时丢弃尚未收口的一轮。</summary>
-    private void CaptureRestoreState(Session session)
+    /// <summary>按会话当前状态留下恢复数据；历史不能继续时丢弃尚未收口的一轮并通知。</summary>
+    private void CaptureInterruptedRound(Session session)
+    {
+        if (!CaptureRestoreData(session))
+        {
+            session.DiscardRound();
+
+            return;
+        }
+
+        RestoreDataChanged?.Invoke();
+    }
+
+    /// <summary>按会话当前状态记下恢复数据，返回是否得到可继续的历史。</summary>
+    private bool CaptureRestoreData(Session session)
     {
         try
         {
-            LlmExecutionState? state = session.CreateRestoreState();
-            if (state is null)
-            {
-                session.DiscardRound();
-            }
+            LlmExecutionState? state = session.CreateRestoreData();
+            _restoreData = state is null ? null : LlmExecutionStateCodec.Encode(state);
 
-            _restoreState = state is null ? null : LlmExecutionStateCodec.Encode(state);
+            return state is not null;
         }
         catch (Exception)
         {
-            _restoreState = null;
-        }
+            _restoreData = null;
 
-        RestoreStateChanged?.Invoke();
+            return false;
+        }
     }
 
     /// <summary>以一条指令开始，执行模型请求的每次工具调用，直到模型不再请求工具或请求次数用尽。</summary>
