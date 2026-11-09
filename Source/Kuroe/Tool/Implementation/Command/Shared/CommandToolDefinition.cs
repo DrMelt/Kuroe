@@ -13,6 +13,7 @@ namespace Kuroe.Tool.Command.Shared;
 /// <param name="TimeoutSeconds">命令超时秒数。</param>
 /// <param name="OutputLimit">命令输出上限。</param>
 /// <param name="Variables">路径变量名，值由使用处的端口映射提供。</param>
+/// <param name="Groups">互斥参数组，缺省时组内参数可以任意组合。</param>
 public sealed record CommandToolDefinition(
     ToolPath Path,
     string Description,
@@ -21,13 +22,14 @@ public sealed record CommandToolDefinition(
     string? Directory = null,
     int TimeoutSeconds = CommandToolTemplate.DefaultTimeoutSeconds,
     int OutputLimit = CommandToolTemplate.DefaultOutputLimit,
-    IReadOnlyList<string>? Variables = null)
+    IReadOnlyList<string>? Variables = null,
+    IReadOnlyList<ToolParameterGroup>? Groups = null)
 {
     /// <summary>路径变量名集合，未声明时为空。</summary>
     public IReadOnlyList<string> PathVariables => Variables ?? [];
 
-    /// <summary>交给工具契约的函数定义：路径、说明、参数与变量。</summary>
-    public ToolDefinition Definition => new(Path, Description, Parameters, PathVariables);
+    /// <summary>交给工具契约的函数定义：路径、说明、参数、变量与互斥参数组。</summary>
+    public ToolDefinition Definition => new(Path, Description, Parameters, PathVariables, Groups);
 
     /// <summary>按模板与实参展开命令行，第一项是程序本身。返回非空表示实参缺项或模板不合法。</summary>
     public ErrorOr<IReadOnlyList<string>> CommandLine(ToolArguments arguments) =>
@@ -68,7 +70,7 @@ public sealed record CommandToolDefinition(
         if (item.OmitWhenMissing is { } linkedName)
         {
             ToolParameter? linked = parameters.FirstOrDefault(candidate => candidate.Name.Value == linkedName);
-            if (linked is not null && IsMissing(arguments, linked))
+            if (linked is not null && !linked.IsGiven(arguments))
             {
                 return linked.Required ? ToolErrors.Argument($"缺少参数 {linkedName}。") : null;
             }
@@ -83,14 +85,6 @@ public sealed record CommandToolDefinition(
 
         return ExpandToken(parameters, arguments, variables, item.Text, argv);
     }
-
-    /// <summary>关联参数是否缺省：布尔参数为真才算给出，列表参数为空算缺省，文本参数未给算缺省。</summary>
-    private static bool IsMissing(ToolArguments arguments, ToolParameter parameter) => parameter switch
-    {
-        { Flag: true } => arguments.Flag(parameter.Name) != true,
-        { List: true } => (arguments.List(parameter.Name) ?? []).Count == 0,
-        _ => arguments.Text(parameter.Name) is null,
-    };
 
     /// <summary>展开一个含占位符的参数项。变量优先，其次才是参数声明。展开后追加参数项，返回非空表示中断调用。</summary>
     private static Error? ExpandToken(
