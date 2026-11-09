@@ -4,7 +4,6 @@ using Kuroe.Catalogs;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 
@@ -23,9 +22,7 @@ public sealed class KuroeTaskStart(
     /// <summary>准备任务目录并给出每个绑定端口的值。缺少模型选择与当前任务域不支持的任务目录在准备前拒绝。</summary>
     public ErrorOr<IPortTexts> Prepare(
         TaskId id,
-        IReadOnlyDictionary<PortName, string> bindings,
-        FlowName flow,
-        string title)
+        IReadOnlyDictionary<PortName, string> bindings)
     {
         ModelName? model = models.Current;
         foreach (string input in bindings.Values)
@@ -49,7 +46,7 @@ public sealed class KuroeTaskStart(
         string? taskPath = null;
         if (taskDirectory is { } directory)
         {
-            ErrorOr<string> prepared = directory.Prepare(id, flow, title);
+            ErrorOr<string> prepared = directory.Prepare(id);
             if (prepared.IsError)
             {
                 return prepared.ErrorsOrEmptyList;

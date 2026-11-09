@@ -79,7 +79,7 @@ public sealed class HostStartInputsStoreTests : IDisposable
     [Fact]
     public void Flow_and_port_names_must_be_present_and_unique()
     {
-        IReadOnlyList<Error> errors = Errors("""
+        List<Error> errors = Errors("""
             {
               "HostStartInputs": {
                 " ": {},
@@ -98,7 +98,7 @@ public sealed class HostStartInputsStoreTests : IDisposable
     [Fact]
     public void A_port_value_must_be_a_non_blank_string()
     {
-        IReadOnlyList<Error> errors = Errors("""
+        List<Error> errors = Errors("""
             {
               "HostStartInputs": {
                 "默认": { "启动": 1, "模型": " " }

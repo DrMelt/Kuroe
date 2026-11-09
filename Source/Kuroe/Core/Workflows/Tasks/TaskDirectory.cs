@@ -1,11 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Shared;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>任务工作目录：按任务键、流程与标题给目录命名，在启动目录下建立。</summary>
+/// <summary>任务工作目录：以任务键给目录命名，在启动目录下建立。</summary>
 public sealed class TaskDirectory
 {
     private readonly Lock _gate = new();
@@ -29,10 +28,10 @@ public sealed class TaskDirectory
         }
     }
 
-    /// <summary>按名字建立任务目录并给出它的绝对路径。名字已被目录或文件占用时给出冲突错误。</summary>
-    public ErrorOr<string> Prepare(TaskId id, FlowName flow, string title)
+    /// <summary>按任务键建立任务目录并给出它的绝对路径。名字已被目录或文件占用时给出冲突错误。</summary>
+    public ErrorOr<string> Prepare(TaskId id)
     {
-        string path = Path.Combine(_root, TaskDirectoryName.Of(id, flow, title));
+        string path = Path.Combine(_root, id.Value);
 
         lock (_gate)
         {
@@ -54,16 +53,16 @@ public sealed class TaskDirectory
         }
     }
 
-    /// <summary>按键前缀查找任务目录，未建立时为空。</summary>
+    /// <summary>按任务键查找任务目录，未建立时为空。</summary>
     public string? Find(TaskId id)
     {
         lock (_gate)
         {
             try
             {
-                return Directory.Exists(_root)
-                    ? Directory.EnumerateDirectories(_root, $"{id.Value}-*").FirstOrDefault()
-                    : null;
+                string path = Path.Combine(_root, id.Value);
+
+                return Directory.Exists(path) ? path : null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -79,14 +78,10 @@ public sealed class TaskDirectory
         {
             try
             {
-                if (!Directory.Exists(_root))
+                string path = Path.Combine(_root, id.Value);
+                if (Directory.Exists(path))
                 {
-                    return Result.Success;
-                }
-
-                foreach (string directory in Directory.EnumerateDirectories(_root, $"{id.Value}-*"))
-                {
-                    Directory.Delete(directory, recursive: true);
+                    Directory.Delete(path, recursive: true);
                 }
 
                 return Result.Success;

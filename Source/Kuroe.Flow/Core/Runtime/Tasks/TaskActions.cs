@@ -39,7 +39,7 @@ public sealed class TaskActions(
     private readonly ITaskLeaseStore? _leases = leases;
 
     /// <summary>按编译结果提交：解析宿主开始输入表、校验开始输入与开始直连下游的宿主声明、分配任务号、占用任务键、取注入的开始端口值，再建任务并启动推进。
-    /// 任务号被宿主资源占用时换下一个任务号重来。observer 收到该任务全部执行的过程事件。</summary>
+    /// observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
         CompiledFlow flow,
@@ -79,7 +79,7 @@ public sealed class TaskActions(
             flowSnapshot = captured.Value;
         }
 
-        ErrorOr<IPortTexts> startTexts = _host.Prepare(id, hostInputs, flow.Model.Name, taskTitle);
+        ErrorOr<IPortTexts> startTexts = _host.Prepare(id, hostInputs);
         if (startTexts.IsError)
         {
             return startTexts.ErrorsOrEmptyList;

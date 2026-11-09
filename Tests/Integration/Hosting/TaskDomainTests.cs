@@ -35,7 +35,7 @@ public sealed class TaskDomainTests
         Assert.Equal(new TaskId(1), id);
         string tasks = Path.Combine(environment.Root, ".kuroe_tasks");
         string created = Assert.Single(Directory.GetDirectories(tasks), path => Path.GetFileName(path) != ".records");
-        Assert.Equal($"{id.Value}-默认-修复登录超时", Path.GetFileName(created));
+        Assert.Equal(id.Value, Path.GetFileName(created));
     }
 
     [Fact]

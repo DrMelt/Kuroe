@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Tests.Support;
 using Kuroe.Workflows.Tasks;
 using Xunit;
@@ -21,9 +20,7 @@ public sealed class KuroeTaskStartTests
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),
-            new Dictionary<PortName, string> { [Model] = StartSources.Model },
-            new FlowName("默认"),
-            "标题");
+            new Dictionary<PortName, string> { [Model] = StartSources.Model });
 
         Assert.False(values.IsError, string.Join("；", values.ErrorsOrEmptyList.Select(error => error.Description)));
         Assert.Equal("fake", values.Value.Text(Model));
@@ -36,9 +33,7 @@ public sealed class KuroeTaskStartTests
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),
-            new Dictionary<PortName, string> { [Model] = StartSources.Model },
-            new FlowName("默认"),
-            "标题");
+            new Dictionary<PortName, string> { [Model] = StartSources.Model });
 
         Assert.True(values.IsError);
         Assert.Equal("当前未选择模型。", values.FirstError.Description);
@@ -52,9 +47,7 @@ public sealed class KuroeTaskStartTests
 
         ErrorOr<IPortTexts> values = Start(fixture).Prepare(
             new TaskId(1),
-            new Dictionary<PortName, string> { [Model] = "NOPE" },
-            new FlowName("默认"),
-            "标题");
+            new Dictionary<PortName, string> { [Model] = "NOPE" });
 
         Assert.True(values.IsError);
         Assert.Contains("未知的宿主开始输入 NOPE", values.FirstError.Description, StringComparison.Ordinal);

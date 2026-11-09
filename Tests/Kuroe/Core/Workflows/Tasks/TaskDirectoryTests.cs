@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Shared;
 using Kuroe.Tests.Support;
 using Kuroe.Workflows.Tasks;
@@ -14,7 +13,7 @@ public sealed class TaskDirectoryTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Old_numbered_directories_are_ignored()
+    public void Unrelated_directories_are_ignored()
     {
         Directory.CreateDirectory(_root);
         Directory.CreateDirectory(Path.Combine(_root, "0002-审阅-甲"));
@@ -23,9 +22,9 @@ public sealed class TaskDirectoryTests : IDisposable
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
         TaskId id = new(5);
 
-        string prepared = directory.Prepare(id, new FlowName("默认"), "目标").ThrowIfError();
+        string prepared = directory.Prepare(id).ThrowIfError();
 
-        Assert.Equal(Path.Combine(_root, $"{id.Value}-默认-目标"), prepared);
+        Assert.Equal(Path.Combine(_root, id.Value), prepared);
         Assert.Equal(3, Directory.GetDirectories(_root).Length);
         Assert.Null(directory.Find(new TaskId(999)));
         Assert.Equal(prepared, directory.Find(id));
@@ -35,9 +34,9 @@ public sealed class TaskDirectoryTests : IDisposable
     public void An_occupied_name_reports_a_conflict()
     {
         TaskDirectory directory = TaskDirectory.Create(_root).Value;
-        directory.Prepare(new TaskId(1), new FlowName("默认"), "目标").ThrowIfError();
+        directory.Prepare(new TaskId(1)).ThrowIfError();
 
-        ErrorOr<string> second = directory.Prepare(new TaskId(1), new FlowName("默认"), "目标");
+        ErrorOr<string> second = directory.Prepare(new TaskId(1));
 
         Assert.True(second.IsError);
         Assert.Equal(ErrorCodes.TaskWorkspaceConflict, second.FirstError.Code);
@@ -56,10 +55,7 @@ public sealed class TaskDirectoryTests : IDisposable
         {
             TaskDirectory directory = TaskDirectory.Create(root).Value;
 
-            ErrorOr<string> result = directory.Prepare(
-                new TaskId(1),
-                new FlowName("默认"),
-                "目标");
+            ErrorOr<string> result = directory.Prepare(new TaskId(1));
 
             Assert.True(result.IsError);
             Assert.Equal(ErrorType.Failure, result.FirstError.Type);
