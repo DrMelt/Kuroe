@@ -19,7 +19,7 @@ public sealed class ReadRangeTextTests
         ];
         SourceLineReadResult read = new(lines, ToBeyondEnd: true);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("（已到文件结尾，实际返回第 2 到 5 行）\n<<<KUROE_TEXT_BEGIN>>>2 |二\n3 |三\n4 |四\n5 |<<<KUROE_TEXT_END>>>", text);
     }
@@ -36,7 +36,7 @@ public sealed class ReadRangeTextTests
         ];
         SourceLineReadResult read = new(lines, ToBeyondEnd: true);
 
-        string text = new ReadRangeText(read, LineNumbers: false).ToString();
+        string text = new ReadRangeText(read, LineNumbers: false, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("（已到文件结尾，实际返回第 1 到 4 行）\n<<<KUROE_TEXT_BEGIN>>>一\r\n二\r三\n四<<<KUROE_TEXT_END>>>", text);
     }
@@ -54,7 +54,7 @@ public sealed class ReadRangeTextTests
         ];
         SourceLineReadResult read = new(lines, ToBeyondEnd: false);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>> 8 |L8\n 9 |L9\n10 |L10\n11 |L11\n12 |L12\n<<<KUROE_TEXT_END>>>", text);
     }
@@ -65,7 +65,7 @@ public sealed class ReadRangeTextTests
         SourceLine[] lines = [new(1, "一", NewLineStyle.CrLf), new(2, "二", NewLineStyle.CrLf)];
         SourceLineReadResult read = new(lines, ToBeyondEnd: false);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r\n2 |二\r\n<<<KUROE_TEXT_END>>>", text);
     }
@@ -76,7 +76,7 @@ public sealed class ReadRangeTextTests
         SourceLine[] lines = [new(1, "一", NewLineStyle.Cr), new(2, "二", NewLineStyle.Cr)];
         SourceLineReadResult read = new(lines, ToBeyondEnd: false);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一\r2 |二\r<<<KUROE_TEXT_END>>>", text);
     }
@@ -87,7 +87,7 @@ public sealed class ReadRangeTextTests
         SourceLine[] lines = [new(1, new string('a', 9000), null)];
         SourceLineReadResult read = new(lines, ToBeyondEnd: false);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         string notice = $"（内容超过 {TextOutputLimit.Characters} 字符，已截断）\n";
         const string Begin = "<<<KUROE_TEXT_BEGIN>>>";
@@ -100,12 +100,23 @@ public sealed class ReadRangeTextTests
     }
 
     [Fact]
+    public void ToString_marks_truncation_with_the_given_limit()
+    {
+        SourceLine[] lines = [new(1, "abcdef", null)];
+        SourceLineReadResult read = new(lines, ToBeyondEnd: false);
+
+        string text = new ReadRangeText(read, LineNumbers: true, MaxCharacters: 3).ToString();
+
+        Assert.Equal("（内容超过 3 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |<<<KUROE_TEXT_END>>>", text);
+    }
+
+    [Fact]
     public void ToString_reports_truncation_instead_of_the_file_end()
     {
         SourceLine[] lines = [new(1, new string('a', TextOutputLimit.Characters + 1000), null)];
         SourceLineReadResult read = new(lines, ToBeyondEnd: true);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.StartsWith(
             $"（内容超过 {TextOutputLimit.Characters} 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>",
@@ -119,7 +130,7 @@ public sealed class ReadRangeTextTests
     {
         SourceLineReadResult read = new([], ToBeyondEnd: true);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("（已到文件结尾，文件没有内容）", text);
     }
@@ -130,7 +141,7 @@ public sealed class ReadRangeTextTests
         SourceLine[] lines = [new(1, "一", null)];
         SourceLineReadResult read = new(lines, ToBeyondEnd: false);
 
-        string text = new ReadRangeText(read, LineNumbers: true).ToString();
+        string text = new ReadRangeText(read, LineNumbers: true, TextOutputLimit.Characters).ToString();
 
         Assert.Equal("<<<KUROE_TEXT_BEGIN>>>1 |一<<<KUROE_TEXT_END>>>", text);
     }

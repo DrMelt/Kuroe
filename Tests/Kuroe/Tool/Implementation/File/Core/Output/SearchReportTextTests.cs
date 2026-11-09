@@ -34,7 +34,7 @@ public sealed class SearchReportTextTests
     [Fact]
     public void ToString_renders_matches_under_a_count_header()
     {
-        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 2, "needle", 6, 0)];
+        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 2, "needle", 6, 0, 0)];
         TextSearchResult result = new(matches, ScannedFiles: 1, Occurrences: 1);
 
         string text = new SearchReportText(result, Query("needle"), "路径基准根", Root).ToString();
@@ -48,7 +48,7 @@ public sealed class SearchReportTextTests
     public void ToString_marks_truncation()
     {
         string longText = new('a', TextOutputLimit.Characters + 1000);
-        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, longText, longText.Length, 0)];
+        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, longText, longText.Length, 0, 0)];
         TextSearchResult result = new(matches, ScannedFiles: 1, Occurrences: 1);
 
         string text = new SearchReportText(result, Query("a"), "路径基准根", Root).ToString();

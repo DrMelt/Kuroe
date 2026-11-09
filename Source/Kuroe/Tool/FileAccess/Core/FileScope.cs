@@ -79,12 +79,14 @@ public sealed class FileScope(
 
     /// <summary>读取根目录内文件指定行号范围的内容，保留行尾终止符。
     /// 行号从 1 起，结束行超出文件长度时读到文件尾，起始行超出文件长度时给出拒绝错误。
-    /// characterBudget 是行内容与终止符的字符预算。listFunction 是提示里指出的列目录函数名。</summary>
+    /// characterBudget 是保留内容与终止符的字符预算，lineCharacterBudget 是含终止符的单行行长上限。
+    /// listFunction 是提示里指出的列目录函数名。</summary>
     public ErrorOr<SourceLineReadResult> ReadRange(
         string path,
         int from,
         int to,
         int characterBudget,
+        int lineCharacterBudget,
         string listFunction)
     {
         if (from < 1)
@@ -102,10 +104,15 @@ public sealed class FileScope(
             return ToolErrors.Argument("字符预算必须大于 0。");
         }
 
+        if (lineCharacterBudget < 1)
+        {
+            return ToolErrors.Argument("单行字符预算必须大于 0。");
+        }
+
         ErrorOr<string> file = ResolveFile(path, listFunction);
         return file.IsError
             ? file.ErrorsOrEmptyList
-            : ReadLines(file.Value, path, from, to, characterBudget);
+            : ReadLines(file.Value, path, from, to, characterBudget, lineCharacterBudget);
     }
 
     /// <summary>解析到根目录内已存在的文件。目标是目录或不存在时给出拒绝错误。listFunction 是提示里指出的列目录函数名。</summary>
@@ -136,13 +143,19 @@ public sealed class FileScope(
         string path,
         int from,
         int to,
-        int characterBudget)
+        int characterBudget,
+        int lineCharacterBudget)
     {
         try
         {
             using StreamReader reader = new(_files.OpenRead(fullPath));
 
-            SourceLineReadResult read = SourceLineReader.Read(reader, from, to, characterBudget);
+            SourceLineReadResult read = SourceLineReader.Read(
+                reader,
+                from,
+                to,
+                characterBudget,
+                lineCharacterBudget);
             if (read.Lines.Count == 0 && read.ToBeyondEnd && from > 1)
             {
                 return ToolErrors.Argument($"起始行 {from} 超出文件长度，该范围没有内容。");

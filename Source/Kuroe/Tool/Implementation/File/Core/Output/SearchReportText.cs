@@ -25,7 +25,9 @@ public readonly record struct SearchReportText(
         }
 
         string header = $"在 {Scope} 中匹配 {Result.Occurrences} 处：";
-        return new LimitedText(new SearchMatchListText(Result.Matches, header, Root).ToString()).ToString();
+        return new LimitedText(
+            new SearchMatchListText(Result.Matches, header, Root).ToString(),
+            TextOutputLimit.Characters).ToString();
     }
 
     /// <summary>范围内没有可搜索文件时的文本。</summary>

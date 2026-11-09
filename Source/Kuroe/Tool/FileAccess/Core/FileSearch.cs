@@ -83,8 +83,9 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null) :
             }
 
             using StreamReader reader = new(_scope.Workspace.OpenRead(file), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            SourceLineCursor cursor = new(reader);
             int lineNumber = 0;
-            while (reader.ReadLine() is { } line)
+            while (cursor.TryReadLine(out string line, out NewLineStyle? terminator))
             {
                 lineNumber++;
                 int index = query.IndexOf(line);
@@ -94,7 +95,12 @@ public sealed class FileSearch(FileScope scope, ToolPathAccess? access = null) :
                 }
 
                 occurrences += query.CountOccurrences(line);
-                TextSearchMatch match = TextSearchMatch.Create(file, lineNumber, line, index);
+                TextSearchMatch match = TextSearchMatch.Create(
+                    file,
+                    lineNumber,
+                    line,
+                    terminator?.Value.Length ?? 0,
+                    index);
                 matches.Add(match);
                 characters += match.Text.Length + lineNumber.ToString(CultureInfo.InvariantCulture).Length + 2;
                 if (characters >= characterBudget || occurrences >= occurrenceLimit)

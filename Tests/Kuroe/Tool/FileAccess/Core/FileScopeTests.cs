@@ -65,6 +65,7 @@ public sealed class FileScopeTests
             2,
             3,
             TextOutputLimit.Characters,
+            int.MaxValue,
             "ListDirectory");
 
         Assert.False(read.IsError);
@@ -83,6 +84,7 @@ public sealed class FileScopeTests
             1,
             10,
             TextOutputLimit.Characters,
+            int.MaxValue,
             "ListDirectory");
 
         Assert.False(read.IsError);
@@ -107,6 +109,7 @@ public sealed class FileScopeTests
             3,
             50,
             TextOutputLimit.Characters,
+            int.MaxValue,
             "ListDirectory");
 
         Assert.True(read.IsError);
@@ -123,6 +126,7 @@ public sealed class FileScopeTests
             2,
             50,
             TextOutputLimit.Characters,
+            int.MaxValue,
             "ListDirectory");
 
         Assert.True(read.IsError);
@@ -139,10 +143,28 @@ public sealed class FileScopeTests
             1,
             1,
             0,
+            int.MaxValue,
             "ListDirectory");
 
         Assert.True(read.IsError);
         Assert.Contains("字符预算", read.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Read_range_rejects_a_non_positive_line_budget()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "一\n");
+
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            1,
+            1,
+            TextOutputLimit.Characters,
+            0,
+            "ListDirectory");
+
+        Assert.True(read.IsError);
+        Assert.Contains("单行字符预算", read.FirstError.Description, StringComparison.Ordinal);
     }
 
     private FileScope Scope() => new(_root, "工作目录", _files);

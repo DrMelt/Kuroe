@@ -14,8 +14,8 @@ public sealed class SearchMatchListTextTests
     {
         TextSearchMatch[] matches =
         [
-            new(Path.Combine(Root, "a.txt"), 3, "needle", 6, 0),
-            new(Path.Combine(Root, "sub", "b.txt"), 12, "needle", 6, 0),
+            new(Path.Combine(Root, "a.txt"), 3, "needle", 6, 0, 0),
+            new(Path.Combine(Root, "sub", "b.txt"), 12, "needle", 6, 0, 0),
         ];
 
         string text = new SearchMatchListText(matches, "在 路径基准根 中匹配 2 处：", Root).ToString();
@@ -32,12 +32,12 @@ public sealed class SearchMatchListTextTests
     [Fact]
     public void ToString_marks_a_truncated_display_window()
     {
-        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, "needle", 1001, 0)];
+        TextSearchMatch[] matches = [new(Path.Combine(Root, "a.txt"), 1, "needle", 1001, 1, 0)];
 
         string text = new SearchMatchListText(matches, "匹配：", Root).ToString();
 
         Assert.EndsWith(
-            "1 |needle（本行共 1001 字符，展示第 1 至 6 字符）",
+            "1 |needle（本行共 1002 字符，展示行内容第 1 至 6 字符）",
             text,
             StringComparison.Ordinal);
     }

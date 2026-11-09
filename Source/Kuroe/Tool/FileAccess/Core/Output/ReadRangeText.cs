@@ -5,7 +5,11 @@ namespace Kuroe.Tool.FileAccess.Output;
 /// <summary>按行号范围读取的输出：行渲染、截断、范围标记与文件尾提示。</summary>
 /// <param name="Read">读取结果。</param>
 /// <param name="LineNumbers">是否在每行前输出行号。</param>
-public readonly record struct ReadRangeText(SourceLineReadResult Read, bool LineNumbers)
+/// <param name="MaxCharacters">正文总字符上限。</param>
+public readonly record struct ReadRangeText(
+    SourceLineReadResult Read,
+    bool LineNumbers,
+    int MaxCharacters)
 {
     /// <summary>读取结果文本。截断提示与文件尾提示放在范围标记之前，结束标记后不追加换行。</summary>
     public override string ToString()
@@ -15,12 +19,14 @@ public readonly record struct ReadRangeText(SourceLineReadResult Read, bool Line
             return "（已到文件结尾，文件没有内容）";
         }
 
-        LimitedText limited = new(new SourceLineText(Read.Lines, LineNumbers).ToString());
+        LimitedText limited = new(
+            new SourceLineText(Read.Lines, LineNumbers).ToString(),
+            MaxCharacters);
         string content = new MarkedText(limited.Body).ToString();
 
         if (limited.Truncated)
         {
-            return new NoticeText(LimitedText.Notice, content).ToString();
+            return new NoticeText(limited.Notice, content).ToString();
         }
 
         if (!Read.ToBeyondEnd)

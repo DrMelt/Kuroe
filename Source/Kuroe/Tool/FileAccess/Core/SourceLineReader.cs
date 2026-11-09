@@ -1,23 +1,26 @@
-using System.Text;
+using Kuroe.Tool.FileAccess.Output;
 using Kuroe.Tool.FileAccess.Shared;
 
 namespace Kuroe.Tool.FileAccess;
 
-/// <summary>按行读取文本，保留每行在原文中的终止符。CRLF、CR 与 LF 都识别为行终止符。</summary>
+/// <summary>按行读取文本，保留每行在原文中的终止符，并按单行行长上限截断。CRLF、CR 与 LF 都识别为行终止符。</summary>
 public static class SourceLineReader
 {
-    /// <summary>单次从文本来源读取的字符数。</summary>
-    private const int BufferSize = 4096;
-
-    /// <summary>读取指定行号范围，行内容与终止符的字符数达到预算后停止收集。
-    /// 起始行超出文件长度时返回空行集合且 ToBeyondEnd 为真。</summary>
+    /// <summary>读取指定行号范围，保留的行内容与终止符的字符数达到预算后停止收集。
+    /// 行长达到单行上限时保留内容前缀并丢弃终止符。起始行超出文件长度时返回空行集合且 ToBeyondEnd 为真。</summary>
     /// <param name="reader">文本来源。</param>
     /// <param name="from">起始行号，从 1 起。</param>
     /// <param name="to">结束行号，不小于起始行号。</param>
-    /// <param name="characterBudget">行内容与终止符的字符数预算，大于 0。</param>
-    public static SourceLineReadResult Read(TextReader reader, int from, int to, int characterBudget)
+    /// <param name="characterBudget">保留的行内容与终止符的字符数预算，大于 0。</param>
+    /// <param name="lineCharacterBudget">单行行长上限，含终止符，大于 0。</param>
+    public static SourceLineReadResult Read(
+        TextReader reader,
+        int from,
+        int to,
+        int characterBudget,
+        int lineCharacterBudget)
     {
-        Cursor cursor = new(reader);
+        SourceLineCursor cursor = new(reader);
         for (int number = 1; number < from; number++)
         {
             if (!cursor.TrySkipLine())
@@ -39,8 +42,9 @@ public static class SourceLineReader
                 break;
             }
 
-            lines.Add(new SourceLine(number, text, terminator));
-            characters += text.Length + (terminator?.Value.Length ?? 0);
+            SourceLine line = Limit(number, text, terminator, lineCharacterBudget);
+            lines.Add(line);
+            characters += line.Text.Length + (line.Terminator?.Value.Length ?? 0);
             if (characters > characterBudget)
             {
                 break;
@@ -50,145 +54,22 @@ public static class SourceLineReader
         return new SourceLineReadResult(lines, toBeyondEnd);
     }
 
-    /// <summary>读取位置与字符缓冲。</summary>
-    private sealed class Cursor(TextReader reader)
+    /// <summary>按单行上限生成源行。超限时保留内容前缀并丢弃终止符，原始行长写入结果。</summary>
+    private static SourceLine Limit(
+        int number,
+        string text,
+        NewLineStyle? terminator,
+        int lineCharacterBudget)
     {
-        private readonly TextReader _reader = reader;
-        private readonly char[] _buffer = new char[BufferSize];
-        private int _index;
-        private int _count;
-        private bool _endedWithTerminator;
-        private bool _trailingLineRead;
-
-        /// <summary>读取一行，没有更多内容时返回假。</summary>
-        public bool TryReadLine(out string text, out NewLineStyle? terminator)
+        int lineLength = text.Length + (terminator?.Value.Length ?? 0);
+        if (lineLength <= lineCharacterBudget)
         {
-            if (AtTrailingLine())
-            {
-                _trailingLineRead = true;
-                text = string.Empty;
-                terminator = null;
-                return true;
-            }
-
-            StringBuilder content = new();
-            while (true)
-            {
-                int current = Peek();
-                if (current < 0)
-                {
-                    text = content.ToString();
-                    terminator = null;
-                    return content.Length > 0;
-                }
-
-                if (current == '\r')
-                {
-                    Consume();
-                    if (Peek() == '\n')
-                    {
-                        Consume();
-                        terminator = NewLineStyle.CrLf;
-                    }
-                    else
-                    {
-                        terminator = NewLineStyle.Cr;
-                    }
-
-                    _endedWithTerminator = true;
-                    text = content.ToString();
-                    return true;
-                }
-
-                if (current == '\n')
-                {
-                    Consume();
-                    _endedWithTerminator = true;
-                    text = content.ToString();
-                    terminator = NewLineStyle.Lf;
-                    return true;
-                }
-
-                content.Append((char)Consume());
-                _endedWithTerminator = false;
-            }
+            return new SourceLine(number, text, terminator);
         }
 
-        /// <summary>跳过一行，没有更多内容时返回假。</summary>
-        public bool TrySkipLine()
+        return new SourceLine(number, TextBoundary.Take(text, lineCharacterBudget), null)
         {
-            if (AtTrailingLine())
-            {
-                _trailingLineRead = true;
-                return true;
-            }
-
-            bool any = false;
-            while (true)
-            {
-                int current = Peek();
-                if (current < 0)
-                {
-                    return any;
-                }
-
-                any = true;
-                Consume();
-                if (current == '\r')
-                {
-                    if (Peek() == '\n')
-                    {
-                        Consume();
-                    }
-
-                    _endedWithTerminator = true;
-                    return true;
-                }
-
-                if (current == '\n')
-                {
-                    _endedWithTerminator = true;
-                    return true;
-                }
-
-                _endedWithTerminator = false;
-            }
-        }
-
-        /// <summary>当前位置是否还有终止符之后的空行。</summary>
-        private bool AtTrailingLine() =>
-            !_trailingLineRead && _endedWithTerminator && Peek() < 0;
-
-        /// <summary>查看下一个字符，不移动读取位置。到达结尾时返回 -1。</summary>
-        private int Peek()
-        {
-            if (_index < _count)
-            {
-                return _buffer[_index];
-            }
-
-            return Fill() ? _buffer[_index] : -1;
-        }
-
-        /// <summary>取下一个字符并移动读取位置。到达结尾时返回 -1。</summary>
-        private int Consume()
-        {
-            int current = Peek();
-            if (current < 0)
-            {
-                return -1;
-            }
-
-            _index++;
-            return current;
-        }
-
-        /// <summary>从文本来源填充缓冲，到达结尾时返回假。</summary>
-        private bool Fill()
-        {
-            _count = _reader.Read(_buffer, 0, _buffer.Length);
-            _index = 0;
-            return _count > 0;
-        }
+            OriginalLineLength = lineLength,
+        };
     }
 }

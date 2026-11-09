@@ -49,7 +49,7 @@ public readonly record struct ReplaceReportText(
             }
         }
 
-        return new LimitedText(text.ToString()).ToString();
+        return new LimitedText(text.ToString(), TextOutputLimit.Characters).ToString();
     }
 
     /// <summary>文件的展示路径，相对路径基准目录。</summary>

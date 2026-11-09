@@ -31,9 +31,9 @@ public readonly record struct SearchMatchListText(
         return text.ToString().TrimEnd('\n');
     }
 
-    /// <summary>匹配行的展示文本，被截断时在内容后标注完整字符数与展示区间。</summary>
+    /// <summary>匹配行的展示文本，被截断时在内容后标注完整行长与展示的行内容区间。</summary>
     private static string DisplayText(TextSearchMatch match) =>
         match.Truncated
-            ? $"{match.Text}（本行共 {match.FullLength} 字符，展示第 {match.Offset + 1} 至 {match.Offset + match.Text.Length} 字符）"
+            ? $"{match.Text}（本行共 {match.LineLength} 字符，展示行内容第 {match.Offset + 1} 至 {match.Offset + match.Text.Length} 字符）"
             : match.Text;
 }

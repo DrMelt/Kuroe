@@ -198,6 +198,18 @@ public sealed class FileSearchTests
     }
 
     [Fact]
+    public void Search_counts_crlf_as_two_terminator_characters()
+    {
+        _files.AddFile(Path.Combine(_root, "crlf.txt"), "needle\r\n");
+
+        TextSearchMatch match = Assert.Single(Run([], Query("needle")).Matches);
+
+        Assert.Equal(6, match.ContentLength);
+        Assert.Equal(2, match.TerminatorLength);
+        Assert.Equal(8, match.LineLength);
+    }
+
+    [Fact]
     public void Search_truncates_display_text_and_keeps_later_lines()
     {
         _files.AddFile(
@@ -209,7 +221,9 @@ public sealed class FileSearchTests
         Assert.Equal(2, matches.Count);
         Assert.Equal($"needle{new string('a', 994)}", matches[0].Text);
         Assert.Equal(0, matches[0].Offset);
-        Assert.Equal(1501, matches[0].FullLength);
+        Assert.Equal(1501, matches[0].ContentLength);
+        Assert.Equal(1, matches[0].TerminatorLength);
+        Assert.Equal(1502, matches[0].LineLength);
         Assert.True(matches[0].Truncated);
         Assert.Equal(2, matches[1].Line);
         Assert.Equal("needle", matches[1].Text);
@@ -228,7 +242,7 @@ public sealed class FileSearchTests
             Run([], Query("needle"), characterBudget: int.MaxValue).Matches);
 
         Assert.Equal(TextSearchMatch.DisplayLimit, match.Text.Length);
-        Assert.Equal(TextSearchMatch.DisplayLimit + 6, match.FullLength);
+        Assert.Equal(TextSearchMatch.DisplayLimit + 6, match.LineLength);
         Assert.Equal(6, match.Offset);
         Assert.Contains("needle", match.Text, StringComparison.Ordinal);
         Assert.True(match.Truncated);
@@ -282,7 +296,7 @@ public sealed class FileSearchTests
 
         Assert.Equal(line, match.Text);
         Assert.Equal(0, match.Offset);
-        Assert.Equal(TextSearchMatch.DisplayLimit, match.FullLength);
+        Assert.Equal(TextSearchMatch.DisplayLimit, match.LineLength);
         Assert.False(match.Truncated);
     }
 

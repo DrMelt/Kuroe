@@ -3,6 +3,7 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.TestSupport;
+using Kuroe.Tool.FileAccess.Shared;
 using Xunit;
 
 namespace Kuroe.Tool.File.Tests;
@@ -80,15 +81,87 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void ReadFile_truncates_long_content()
+    public void ReadFile_truncates_content_beyond_the_default_total_limit()
     {
-        _files.AddFile(PathOf("long.txt"), new string('a', 9000));
+        _files.AddFile(
+            PathOf("long.txt"),
+            string.Concat(Enumerable.Repeat($"{new string('a', 200)}\n", 60)));
 
-        string output = Call("ReadFile", ("path", "long.txt"));
+        string output = Call("ReadFile", ("path", "long.txt"), ("to", "60"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |", output, StringComparison.Ordinal);
-        Assert.EndsWith("<<<KUROE_TEXT_END>>>", output, StringComparison.Ordinal);
-        Assert.Equal("（内容超过 8000 字符，已截断）\n".Length + "<<<KUROE_TEXT_BEGIN>>>".Length + 8000 + "<<<KUROE_TEXT_END>>>".Length, output.Length);
+        string notice = $"（内容超过 {ReadLimits.DefaultCharacters} 字符，已截断）\n";
+        const string Begin = "<<<KUROE_TEXT_BEGIN>>>";
+        const string End = "<<<KUROE_TEXT_END>>>";
+        Assert.StartsWith(notice + Begin, output, StringComparison.Ordinal);
+        Assert.EndsWith(End, output, StringComparison.Ordinal);
+        Assert.Equal(notice.Length + Begin.Length + ReadLimits.DefaultCharacters + End.Length, output.Length);
+    }
+
+    [Fact]
+    public void ReadFile_truncates_a_line_at_the_default_line_limit()
+    {
+        _files.AddFile(PathOf("line.txt"), new string('a', 400));
+
+        string output = Call("ReadFile", ("path", "line.txt"), ("to", "1"));
+
+        Assert.Equal(
+            $"<<<KUROE_TEXT_BEGIN>>>1 |{new string('a', ReadLimits.DefaultLineCharacters)}（本行共 400 字符，已截断）<<<KUROE_TEXT_END>>>",
+            output);
+    }
+
+    [Fact]
+    public void ReadFile_counts_the_terminator_in_the_line_limit()
+    {
+        _files.AddFile(PathOf("line.txt"), $"{new string('a', 300)}\nnext");
+
+        string output = Call("ReadFile", ("path", "line.txt"), ("to", "2"));
+
+        Assert.Equal(
+            $"<<<KUROE_TEXT_BEGIN>>>1 |{new string('a', 300)}（本行共 301 字符，已截断）2 |next<<<KUROE_TEXT_END>>>",
+            output);
+    }
+
+    [Fact]
+    public void ReadFile_uses_max_chars_and_max_line_chars()
+    {
+        _files.AddFile(PathOf("line.txt"), "abcdef");
+
+        string total = Call("ReadFile", ("path", "line.txt"), ("to", "1"), ("maxChars", "5"), ("maxLineChars", "100"));
+        string line = Call("ReadFile", ("path", "line.txt"), ("to", "1"), ("maxLineChars", "3"));
+
+        Assert.Equal(
+            "（内容超过 5 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |ab<<<KUROE_TEXT_END>>>",
+            total);
+        Assert.Equal(
+            "<<<KUROE_TEXT_BEGIN>>>1 |abc（本行共 6 字符，已截断）<<<KUROE_TEXT_END>>>",
+            line);
+    }
+
+    [Fact]
+    public void ReadFile_accepts_the_maximum_total_limit_and_a_larger_line_limit()
+    {
+        _files.AddFile(PathOf("short.txt"), "内容");
+
+        string output = Call(
+            "ReadFile",
+            ("path", "short.txt"),
+            ("maxChars", "50000"),
+            ("maxLineChars", "50001"));
+
+        Assert.Equal("（已到文件结尾，实际返回第 1 行）\n<<<KUROE_TEXT_BEGIN>>>1 |内容<<<KUROE_TEXT_END>>>", output);
+    }
+
+    [Theory]
+    [InlineData("maxChars", "x", "要写成数字")]
+    [InlineData("maxChars", "0", "maxChars")]
+    [InlineData("maxChars", "50001", "maxChars")]
+    [InlineData("maxLineChars", "x", "要写成数字")]
+    [InlineData("maxLineChars", "0", "maxLineChars")]
+    public void ReadFile_rejects_invalid_limits(string name, string value, string expected)
+    {
+        string output = Call("ReadFile", ("path", "a.txt"), (name, value));
+
+        Assert.Contains(expected, output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -281,7 +354,7 @@ public sealed class FileToolsTests
         const string Notice = "（内容超过 8000 字符，已截断）\n";
         Assert.StartsWith(Notice, output, StringComparison.Ordinal);
         Assert.Equal(Notice.Length + 8000, output.Length);
-        Assert.Contains("（本行共 1001 字符，展示第 1 至 1000 字符）", output, StringComparison.Ordinal);
+        Assert.Contains("（本行共 1002 字符，展示行内容第 1 至 1000 字符）", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -304,7 +377,7 @@ public sealed class FileToolsTests
         string output = Call("SearchText", ("pattern", "needle"));
 
         Assert.Contains("needle", output, StringComparison.Ordinal);
-        Assert.Contains("（本行共 1006 字符，展示第 7 至 1006 字符）", output, StringComparison.Ordinal);
+        Assert.Contains("（本行共 1006 字符，展示行内容第 7 至 1006 字符）", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -998,6 +1071,22 @@ public sealed class FileToolsTests
 
         Assert.True(lineNumbers.Flag);
         Assert.False(lineNumbers.Required);
+    }
+
+    [Fact]
+    public void ReadFile_declares_optional_read_limits()
+    {
+        IReadOnlyList<ToolDefinition> definitions =
+            [.. Face().SelectMany(tool => tool.Functions).Select(function => function.Definition)];
+
+        foreach (string name in new[] { "maxChars", "maxLineChars" })
+        {
+            ToolParameter limit = Parameter(definitions, "ReadFile", name);
+
+            Assert.False(limit.Required);
+            Assert.False(limit.Flag);
+            Assert.False(limit.Path);
+        }
     }
 
     [Fact]

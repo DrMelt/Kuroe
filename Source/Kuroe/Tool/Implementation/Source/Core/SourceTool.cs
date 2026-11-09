@@ -24,12 +24,14 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
     /// <summary>读取导出目录内文件指定行号范围。</summary>
     private static readonly ToolDefinition ReadSourceFile = new(
         new ToolPath("source/ReadSourceFile"),
-        $"读取导出目录内源码或文档指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。输出文本以 {MarkedText.Begin} 与 {MarkedText.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
+        $"读取导出目录内源码或文档指定行号范围的内容，行尾保留文件原有的换行符；以终止符结尾的文件在末尾还有一个空行。正文总字符缺省 {ReadLimits.DefaultCharacters}，最多 {ReadLimits.MaximumCharacters}；单行行长缺省 {ReadLimits.DefaultLineCharacters} 字符，超出时截断并丢弃终止符。输出文本以 {MarkedText.Begin} 与 {MarkedText.End} 包住，结束标记不额外添加换行；文件没有内容时只返回提示，不带范围标记。起始行超出文件行数时拒绝，到达文件尾时在正文前注明实际范围。",
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
             new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
             new ToolParameter(new ToolName("lineNumbers"), "是否在每行前输出行号，布尔，缺省为真；为假时只输出行内容与原始换行符", Flag: true),
+            new ToolParameter(new ToolName("maxChars"), $"正文总字符上限，数字，缺省 {ReadLimits.DefaultCharacters}，最大 {ReadLimits.MaximumCharacters}"),
+            new ToolParameter(new ToolName("maxLineChars"), $"单行行长上限，含终止符，数字，缺省 {ReadLimits.DefaultLineCharacters}"),
         ]);
 
     /// <summary>本载体的函数声明。</summary>
@@ -67,18 +69,25 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
             return range.ErrorsOrEmptyList;
         }
 
+        ErrorOr<ReadLimits> limits = ReadLimits.Parse(arguments);
+        if (limits.IsError)
+        {
+            return limits.ErrorsOrEmptyList;
+        }
+
         bool lineNumbers = arguments.Flag(new ToolName("lineNumbers")) ?? true;
         ErrorOr<SourceLineReadResult> read = scope.ReadRange(
             path,
             range.Value.From,
             range.Value.To,
-            TextOutputLimit.Characters,
+            limits.Value.Characters,
+            limits.Value.LineCharacters,
             "ListSourceDirectory");
         if (read.IsError)
         {
             return read.ErrorsOrEmptyList;
         }
 
-        return new ReadRangeText(read.Value, lineNumbers).ToString();
+        return new ReadRangeText(read.Value, lineNumbers, limits.Value.Characters).ToString();
     }
 }

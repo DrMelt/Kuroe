@@ -200,10 +200,72 @@ public sealed class SourceLineReaderTests
         Assert.Empty(result.Lines);
     }
 
+    [Fact]
+    public void Line_at_the_limit_keeps_the_terminator()
+    {
+        SourceLineReadResult result = Read("abcd\n", 1, 1, lineCharacterBudget: 5);
+
+        SourceLine line = Assert.Single(result.Lines);
+        Assert.Equal(new SourceLine(1, "abcd", NewLineStyle.Lf), line);
+        Assert.False(line.Truncated);
+        Assert.Equal(5, line.LineLength);
+    }
+
+    [Fact]
+    public void Line_over_the_limit_keeps_the_text_prefix_and_drops_the_terminator()
+    {
+        SourceLineReadResult result = Read("abcdef\n", 1, 1, lineCharacterBudget: 5);
+
+        SourceLine line = Assert.Single(result.Lines);
+        Assert.Equal("abcde", line.Text);
+        Assert.Null(line.Terminator);
+        Assert.True(line.Truncated);
+        Assert.Equal(7, line.LineLength);
+    }
+
+    [Fact]
+    public void Terminator_alone_can_exceed_the_line_limit()
+    {
+        SourceLineReadResult result = Read("abcd\r\n", 1, 1, lineCharacterBudget: 5);
+
+        SourceLine line = Assert.Single(result.Lines);
+        Assert.Equal("abcd", line.Text);
+        Assert.Null(line.Terminator);
+        Assert.True(line.Truncated);
+        Assert.Equal(6, line.LineLength);
+    }
+
+    [Fact]
+    public void Line_truncation_does_not_split_a_surrogate_pair()
+    {
+        SourceLineReadResult result = Read("ab𠀀c", 1, 1, lineCharacterBudget: 3);
+
+        SourceLine line = Assert.Single(result.Lines);
+        Assert.Equal("ab", line.Text);
+        Assert.Equal(5, line.LineLength);
+        Assert.True(line.Truncated);
+    }
+
+    [Fact]
+    public void Truncated_line_does_not_consume_the_character_budget()
+    {
+        SourceLineReadResult result = Read(
+            $"{new string('a', 100)}\nnext",
+            1,
+            2,
+            characterBudget: 10,
+            lineCharacterBudget: 5);
+
+        Assert.Equal(2, result.Lines.Count);
+        Assert.Equal("aaaaa", result.Lines[0].Text);
+        Assert.Equal("next", result.Lines[1].Text);
+    }
+
     private static SourceLineReadResult Read(
         string text,
         int from,
         int to,
-        int characterBudget = TextOutputLimit.Characters) =>
-        SourceLineReader.Read(new StringReader(text), from, to, characterBudget);
+        int characterBudget = TextOutputLimit.Characters,
+        int lineCharacterBudget = int.MaxValue) =>
+        SourceLineReader.Read(new StringReader(text), from, to, characterBudget, lineCharacterBudget);
 }

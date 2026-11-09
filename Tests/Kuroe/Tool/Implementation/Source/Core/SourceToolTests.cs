@@ -144,11 +144,47 @@ public sealed class SourceToolTests
     [Fact]
     public void ReadSourceFile_truncates_long_content()
     {
-        _files.AddFile(Path.Combine(_root, "long.cs"), new string('a', 9000));
+        _files.AddFile(Path.Combine(_root, "long.cs"), new string('a', 12000));
 
-        string output = Call("ReadSourceFile", ("path", "long.cs"));
+        string output = Call("ReadSourceFile", ("path", "long.cs"), ("maxLineChars", "50000"));
 
-        Assert.StartsWith("（内容超过 8000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>", output, StringComparison.Ordinal);
+        Assert.StartsWith("（内容超过 10000 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReadSourceFile_truncates_a_long_line_by_default()
+    {
+        _files.AddFile(Path.Combine(_root, "line.cs"), new string('a', 400));
+
+        string output = Call("ReadSourceFile", ("path", "line.cs"), ("to", "1"));
+
+        Assert.StartsWith(
+            $"<<<KUROE_TEXT_BEGIN>>>1 |{new string('a', 300)}（本行共 400 字符，已截断）",
+            output,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReadSourceFile_accepts_read_limits()
+    {
+        _files.AddFile(Path.Combine(_root, "short.cs"), "abcdef");
+
+        Assert.Equal(
+            "（内容超过 5 字符，已截断）\n<<<KUROE_TEXT_BEGIN>>>1 |ab<<<KUROE_TEXT_END>>>",
+            Call("ReadSourceFile", ("path", "short.cs"), ("maxChars", "5"), ("maxLineChars", "100")));
+    }
+
+    [Fact]
+    public void ReadSourceFile_rejects_invalid_read_limits()
+    {
+        Assert.Contains(
+            "maxChars",
+            Call("ReadSourceFile", ("path", "a.cs"), ("maxChars", "50001")),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "maxLineChars",
+            Call("ReadSourceFile", ("path", "a.cs"), ("maxLineChars", "0")),
+            StringComparison.Ordinal);
     }
 
     [Fact]

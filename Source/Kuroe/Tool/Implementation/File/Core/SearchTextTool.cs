@@ -20,7 +20,7 @@ public sealed class SearchTextTool : ITool
     /// <summary>在路径范围内按字面文本搜索文件内容。</summary>
     public static ToolDefinition Definition { get; } = new(
         new ToolPath("file/read/SearchText"),
-        "在路径基准目录内按字面文本搜索文件内容，按文件分组返回相对路径与带行号的匹配行。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，匹配整行，同一行多处只展示一行，输出单行保留包含命中位置的 1000 字符窗口，被截断时在保留内容后标注该行完整字符数与展示的字符区间，输出超过 8000 字符时截断。",
+        "在路径基准目录内按字面文本搜索文件内容，按文件分组返回相对路径与带行号的匹配行。递归搜索跳过工作区根下的 .kuroe 与 .git，跳过二进制文件，匹配整行，同一行多处只展示一行，输出单行保留包含命中位置的 1000 字符窗口，被截断时在保留内容后标注包含终止符的完整行长与展示的行内容区间，输出超过 8000 字符时截断。",
         [
             new ToolParameter(new ToolName("pattern"), "要搜索的字面文本，不按正则解释，空或空白拒绝", Required: true),
             new ToolParameter(new ToolName("paths"), "相对路径基准目录的目录或文件路径列表，省略时搜索整个路径基准目录", List: true, Path: true, PathAccess: FileTools.PathAccess),

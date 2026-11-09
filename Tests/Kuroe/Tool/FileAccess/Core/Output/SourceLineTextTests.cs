@@ -33,4 +33,20 @@ public sealed class SourceLineTextTests
     {
         Assert.Equal(string.Empty, new SourceLineText([], true).ToString());
     }
+
+    [Fact]
+    public void ToString_marks_a_truncated_line_with_its_original_length()
+    {
+        SourceLine line = new(1, "abc", null) { OriginalLineLength = 10 };
+
+        Assert.Equal("1 |abc（本行共 10 字符，已截断）", new SourceLineText([line], true).ToString());
+    }
+
+    [Fact]
+    public void ToString_without_numbers_marks_a_truncated_line()
+    {
+        SourceLine line = new(1, "abc", null) { OriginalLineLength = 10 };
+
+        Assert.Equal("abc（本行共 10 字符，已截断）", new SourceLineText([line], false).ToString());
+    }
 }
