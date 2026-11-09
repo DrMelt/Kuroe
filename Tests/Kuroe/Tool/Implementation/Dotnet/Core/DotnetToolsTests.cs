@@ -83,6 +83,8 @@ public sealed class DotnetToolsTests
                 new("test", null),
                 new("--project", "project"),
                 new("{project}", null),
+                new("--solution", "solution"),
+                new("{solution}", null),
                 new("--ignore-exit-code", null),
                 new("8", null),
                 new("--verbosity", null),
@@ -200,7 +202,7 @@ public sealed class DotnetToolsTests
     }
 
     [Fact]
-    public void TestMtp_carries_project_ignores_missing_tests_and_reports_trx()
+    public void TestMtp_carries_project_or_solution_and_reports_trx()
     {
         Assert.Equal(
             ["dotnet", "test", "--ignore-exit-code", "8", "--verbosity", "quiet", "--", "--report-trx"],
@@ -208,6 +210,25 @@ public sealed class DotnetToolsTests
         Assert.Equal(
             ["dotnet", "test", "--project", "Tests/Kuroe.Tests", "--ignore-exit-code", "8", "--verbosity", "quiet", "--", "--report-trx"],
             Argv("dotnet/write/TestMtp", Given(("project", "Tests/Kuroe.Tests"))));
+        Assert.Equal(
+            ["dotnet", "test", "--solution", "Kuroe.slnx", "--ignore-exit-code", "8", "--verbosity", "quiet", "--", "--report-trx"],
+            Argv("dotnet/write/TestMtp", Given(("solution", "Kuroe.slnx"))));
+    }
+
+    [Fact]
+    public void TestMtp_rejects_project_and_solution_together()
+    {
+        ToolDefinition definition = Definition("dotnet/write/TestMtp").Definition;
+        ToolFunction function = definition.Bind(_ => "已运行", new ToolPathScope(Path.GetTempPath(), Path.GetTempPath(), "工作区"));
+
+        ErrorOr<string> both = function.Invoke(
+            new ToolArguments(Given(("project", "Tests/Kuroe.Tests"), ("solution", "Kuroe.slnx"))));
+
+        Assert.True(both.IsError);
+        Assert.Equal("参数 project、solution 只能给出一个。", both.FirstError.Description);
+        Assert.Equal(
+            [new ToolName("project"), new ToolName("solution")],
+            Assert.Single(definition.ParameterGroups).Parameters);
     }
 
     [Fact]
@@ -314,6 +335,8 @@ public sealed class DotnetToolsTests
                 "dotnet/write/AddPackage",
             ],
             path => Assert.True(Parameter(Definition(path), "project").Path));
+
+        Assert.True(Parameter(Definition("dotnet/write/TestMtp"), "solution").Path);
 
         Assert.False(Parameter(Definition("dotnet/write/Build"), "configuration").Path);
         Assert.False(Parameter(Definition("dotnet/write/Test"), "filter").Path);

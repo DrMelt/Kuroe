@@ -19,6 +19,48 @@ public sealed class ToolDefinitionTests
     }
 
     [Fact]
+    public void Parameter_groups_declare_the_exclusive_choices()
+    {
+        ToolParameter project = new(new ToolName("project"), "项目", Path: true);
+        ToolParameter solution = new(new ToolName("solution"), "解决方案", Path: true);
+        ToolDefinition definition = new(
+            new ToolPath("Test"),
+            "测试",
+            [project, solution],
+            Groups: [new ToolParameterGroup([project.Name, solution.Name])]);
+
+        ToolParameterGroup group = Assert.Single(definition.ParameterGroups);
+
+        Assert.Equal([project.Name, solution.Name], group.Parameters);
+        Assert.Null(group.InvalidReason(definition.Parameters));
+    }
+
+    [Fact]
+    public void Bind_rejects_groups_with_duplicates_or_undeclared_parameters()
+    {
+        ToolParameter project = new(new ToolName("project"), "项目");
+
+        Assert.Contains(
+            "含重复参数 project。",
+            Assert.Throws<InvalidOperationException>(() => new ToolDefinition(
+                    new ToolPath("Test"),
+                    "测试",
+                    [project],
+                    Groups: [new ToolParameterGroup([project.Name, project.Name])])
+                .Bind(_ => "结果")).Message,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "含未声明的参数 solution。",
+            Assert.Throws<InvalidOperationException>(() => new ToolDefinition(
+                    new ToolPath("Test"),
+                    "测试",
+                    [project],
+                    Groups: [new ToolParameterGroup([new ToolName("solution")])])
+                .Bind(_ => "结果")).Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolDefinition_path_is_the_declared_identity()
     {
         ToolDefinition grouped = new(new ToolPath("file/ReadFile"), "读文件", []);

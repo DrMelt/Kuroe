@@ -13,7 +13,7 @@
 | `dotnet/read/VerifyFormat` | `project`、`severity` 可选                     | 600  | 8000     |
 | `dotnet/write/Build`       | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/Test`        | `project`、`filter` 可选                       | 600  | 8000     |
-| `dotnet/write/TestMtp`     | `project` 可选                                 | 600  | 8000     |
+| `dotnet/write/TestMtp`     | `project` 与 `solution` 二选一                 | 600  | 8000     |
 | `dotnet/write/Run`         | `project` 可选，`arguments` 列表               | 600  | 8000     |
 | `dotnet/write/Restore`     | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Format`      | `project`、`severity` 可选                     | 600  | 8000     |
@@ -28,6 +28,8 @@
 
 ## MTP 测试
 
-`project` 是测试项目路径。`dotnet/write/TestMtp` 以 `--ignore-exit-code 8` 忽略未发现测试的退出码，并在 `--verbosity quiet` 之后以 `-- --report-trx` 让每个测试应用生成 TRX 报告。目标测试项目必须引用 `Microsoft.Testing.Extensions.TrxReport`，缺少扩展时测试应用把 `--report-trx` 当作未知选项并以退出码 5 结束。报告写到 `root` 目录下的 `TestResults`。
+`project` 是测试项目路径，`solution` 是解决方案路径，两者二选一，同时给出时调用被拒绝。两者分别对应 `--project` 与 `--solution`，都不给时由 `dotnet test` 在 `root` 目录里查找。
+
+命令以 `--ignore-exit-code 8` 忽略未发现测试的退出码，并在 `--verbosity quiet` 之后以 `-- --report-trx` 让每个测试应用生成 TRX 报告。指定解决方案时 `dotnet test` 把 `--` 之后的选项转给各个测试应用。目标测试项目必须引用 `Microsoft.Testing.Extensions.TrxReport`，缺少扩展时测试应用把 `--report-trx` 当作未知选项并以退出码 5 结束。报告写到 `root` 目录下的 `TestResults`。
 
 命令合并 stdout 与 stderr 交回，交回文本以实际执行的命令行开头，随后是输出与退出码。超时与输出上限见上表。

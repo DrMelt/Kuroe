@@ -101,6 +101,44 @@ public sealed class ToolFunctionTests
     }
 
     [Fact]
+    public void Exclusive_group_rejects_more_than_one_parameter_before_invoking()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = Grouped()
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已运行";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> both = function.Invoke(Given(("project", "a.csproj"), ("solution", "a.slnx")));
+
+        Assert.True(both.IsError);
+        Assert.Equal("参数 project、solution 只能给出一个。", both.FirstError.Description);
+        Assert.False(called);
+
+        ErrorOr<string> solution = function.Invoke(Given(("solution", "a.slnx")));
+
+        Assert.False(solution.IsError);
+        Assert.True(called);
+    }
+
+    /// <summary>项目与解决方案二选一的定义。</summary>
+    private static ToolDefinition Grouped()
+    {
+        ToolParameter project = new(new ToolName("project"), "项目", Path: true);
+        ToolParameter solution = new(new ToolName("solution"), "解决方案", Path: true);
+
+        return new ToolDefinition(
+            new ToolPath("Test"),
+            "测试",
+            [project, solution],
+            Groups: [new ToolParameterGroup([project.Name, solution.Name])]);
+    }
+
+    [Fact]
     public void Bind_rejects_path_parameter_without_scope()
     {
         ToolDefinition definition = Definition(RequiredPath());

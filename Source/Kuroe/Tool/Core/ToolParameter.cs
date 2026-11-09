@@ -15,4 +15,13 @@ public sealed record ToolParameter(
     bool Required = false,
     bool List = false,
     bool Path = false,
-    ToolPathAccess? PathAccess = null);
+    ToolPathAccess? PathAccess = null)
+{
+    /// <summary>这次调用是否给出了该参数：布尔参数为真、列表参数非空、其余参数取到文本。</summary>
+    public bool IsGiven(ToolArguments arguments) => this switch
+    {
+        { Flag: true } => arguments.Flag(Name) == true,
+        { List: true } => (arguments.List(Name) ?? []).Count > 0,
+        _ => arguments.Text(Name) is not null,
+    };
+}
