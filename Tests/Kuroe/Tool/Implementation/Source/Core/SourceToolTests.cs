@@ -132,13 +132,20 @@ public sealed class SourceToolTests
     }
 
     [Fact]
-    public void ReadSourceFile_defaults_to_head_lines_and_notes_file_end()
+    public void ReadSourceFile_defaults_to_the_whole_file_and_notes_file_end()
     {
-        _files.AddFile(Path.Combine(_root, "短文档.md"), "第一行\n第二行");
+        _files.AddFile(
+            Path.Combine(_root, "长文档.md"),
+            string.Concat(Enumerable.Range(1, 60).Select(line => $"L{line}\n")));
 
-        string output = Call("ReadSourceFile", ("path", "短文档.md"));
+        string output = Call("ReadSourceFile", ("path", "长文档.md"));
 
-        Assert.Equal("（已到文件结尾，实际返回第 1 到 2 行）\n<<<KUROE_TEXT_BEGIN>>>1 |第一行\n2 |第二行<<<KUROE_TEXT_END>>>", output);
+        Assert.StartsWith(
+            "（已到文件结尾，实际返回第 1 到 61 行）\n<<<KUROE_TEXT_BEGIN>>> 1 |L1\n 2 |L2\n",
+            output,
+            StringComparison.Ordinal);
+        Assert.Contains("60 |L60\n", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("已截断", output, StringComparison.Ordinal);
     }
 
     [Fact]

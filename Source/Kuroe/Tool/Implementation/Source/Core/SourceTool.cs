@@ -12,9 +12,6 @@ namespace Kuroe.Tool.Source;
 /// <param name="files">文件访问实现。</param>
 public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : ITool
 {
-    /// <summary>ReadSourceFile 缺省读取的行数，不传范围时只读文件开头这些行。</summary>
-    private const int DefaultLines = 50;
-
     /// <summary>列出导出目录内一个目录的直接子项。</summary>
     private static readonly ToolDefinition ListSourceDirectory = new(
         new ToolPath("source/ListSourceDirectory"),
@@ -28,7 +25,7 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
         [
             new ToolParameter(new ToolName("path"), "相对导出目录的文件路径", Required: true, Path: true),
             new ToolParameter(new ToolName("from"), "起始行号，数字，缺省 1"),
-            new ToolParameter(new ToolName("to"), "结束行号，数字，缺省 50，超出文件行数时读到文件尾"),
+            new ToolParameter(new ToolName("to"), "结束行号，数字，缺省读到文件尾"),
             new ToolParameter(new ToolName("lineNumbers"), "是否在每行前输出行号，布尔，缺省为真；为假时只输出行内容与原始换行符", Flag: true),
             new ToolParameter(new ToolName("maxChars"), $"正文总字符上限，数字，缺省 {ReadLimits.DefaultCharacters}，最大 {ReadLimits.MaximumCharacters}"),
             new ToolParameter(new ToolName("maxLineChars"), $"单行行长上限，含终止符，数字，缺省 {ReadLimits.DefaultLineCharacters}"),
@@ -58,12 +55,12 @@ public sealed class SourceTool(string sourceDirectory, IWorkspaceFiles files) : 
         return new DirectoryListingText(scope.Display(path), entries.Value).ToString();
     }
 
-    /// <summary>读取导出目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行超出文件长度时读到文件尾。</summary>
+    /// <summary>读取导出目录内文件指定行号范围的内容，缺省每行带行号并保留行尾终止符，按字符上限截断；错误与拒绝以 ErrorOr 表达。行号从 1 起，结束行省略或超出文件长度时读到文件尾。</summary>
     private static ErrorOr<string> Read(FileScope scope, ToolArguments arguments)
     {
         string path = arguments.RequiredText(new ToolName("path"));
 
-        ErrorOr<LineRange> range = LineRange.Parse(arguments, 1, DefaultLines);
+        ErrorOr<LineRange> range = LineRange.Parse(arguments, 1, null);
         if (range.IsError)
         {
             return range.ErrorsOrEmptyList;

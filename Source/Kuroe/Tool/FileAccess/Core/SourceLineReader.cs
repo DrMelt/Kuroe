@@ -10,13 +10,13 @@ public static class SourceLineReader
     /// 行长达到单行上限时保留内容前缀并丢弃终止符。起始行超出文件长度时返回空行集合且 ToBeyondEnd 为真。</summary>
     /// <param name="reader">文本来源。</param>
     /// <param name="from">起始行号，从 1 起。</param>
-    /// <param name="to">结束行号，不小于起始行号。</param>
+    /// <param name="to">结束行号，不小于起始行号；为空表示读到文件尾。</param>
     /// <param name="characterBudget">保留的行内容与终止符的字符数预算，大于 0。</param>
     /// <param name="lineCharacterBudget">单行行长上限，含终止符，大于 0。</param>
     public static SourceLineReadResult Read(
         TextReader reader,
         int from,
-        int to,
+        int? to,
         int characterBudget,
         int lineCharacterBudget)
     {
@@ -32,7 +32,7 @@ public static class SourceLineReader
         List<SourceLine> lines = [];
         int characters = 0;
         bool toBeyondEnd = false;
-        int count = to - from + 1;
+        int count = to is { } end ? end - from + 1 : int.MaxValue;
         for (int index = 0; index < count; index++)
         {
             int number = from + index;

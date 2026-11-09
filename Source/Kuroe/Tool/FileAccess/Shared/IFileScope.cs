@@ -30,14 +30,14 @@ public interface IFileScope
     /// <summary>读取根目录内文件指定行号范围的内容，保留行尾终止符。</summary>
     /// <param name="path">相对路径基准目录的文件路径。</param>
     /// <param name="from">起始行号，从 1 起。</param>
-    /// <param name="to">结束行号，不小于起始行号。</param>
+    /// <param name="to">结束行号，不小于起始行号；为空表示读到文件尾。</param>
     /// <param name="characterBudget">保留的行内容与终止符的字符预算。</param>
     /// <param name="lineCharacterBudget">单行行长上限，含终止符。</param>
     /// <param name="listFunction">提示里指出的列目录函数名。</param>
     ErrorOr<SourceLineReadResult> ReadRange(
         string path,
         int from,
-        int to,
+        int? to,
         int characterBudget,
         int lineCharacterBudget,
         string listFunction);

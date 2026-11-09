@@ -75,6 +75,24 @@ public sealed class FileScopeTests
     }
 
     [Fact]
+    public void Read_range_without_an_end_returns_every_line()
+    {
+        _files.AddFile(Path.Combine(_root, "a.txt"), "一\n二\n三\n");
+
+        ErrorOr<SourceLineReadResult> read = Scope().ReadRange(
+            "a.txt",
+            1,
+            null,
+            TextOutputLimit.Characters,
+            int.MaxValue,
+            "ListDirectory");
+
+        Assert.False(read.IsError);
+        Assert.Equal(4, read.Value.Lines.Count);
+        Assert.True(read.Value.ToBeyondEnd);
+    }
+
+    [Fact]
     public void Read_range_preserves_each_line_terminator()
     {
         _files.AddFile(Path.Combine(_root, "a.txt"), "一\r\n二\r三\n四");

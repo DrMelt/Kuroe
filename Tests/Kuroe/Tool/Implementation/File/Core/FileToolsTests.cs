@@ -18,7 +18,7 @@ public sealed class FileToolsTests
     private readonly InMemoryWorkspaceFiles _files = new();
 
     [Fact]
-    public void ReadFile_defaults_to_head_lines_and_notes_file_end()
+    public void ReadFile_defaults_to_the_whole_file_and_notes_file_end()
     {
         _files.AddFile(PathOf("hello.txt"), "你好，工作目录！\n第二行");
 
@@ -175,7 +175,7 @@ public sealed class FileToolsTests
     }
 
     [Fact]
-    public void ReadFile_defaults_to_first_fifty_lines()
+    public void ReadFile_defaults_to_the_whole_file()
     {
         _files.AddFile(
             PathOf("many.txt"),
@@ -183,9 +183,12 @@ public sealed class FileToolsTests
 
         string output = Call("ReadFile", ("path", "many.txt"));
 
-        Assert.StartsWith("<<<KUROE_TEXT_BEGIN>>> 1 |L1\n 2 |L2\n", output, StringComparison.Ordinal);
-        Assert.Contains("50 |L50", output, StringComparison.Ordinal);
-        Assert.DoesNotContain("51 |L51", output, StringComparison.Ordinal);
+        Assert.StartsWith(
+            "（已到文件结尾，实际返回第 1 到 61 行）\n<<<KUROE_TEXT_BEGIN>>> 1 |L1\n 2 |L2\n",
+            output,
+            StringComparison.Ordinal);
+        Assert.Contains("60 |L60\n", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("已截断", output, StringComparison.Ordinal);
     }
 
     [Fact]

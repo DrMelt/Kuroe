@@ -23,6 +23,21 @@ public sealed class SourceLineReaderTests
     }
 
     [Fact]
+    public void Reads_to_the_end_when_to_is_missing()
+    {
+        SourceLineReadResult result = Read("一\n二\n", 1, null);
+
+        Assert.True(result.ToBeyondEnd);
+        SourceLine[] expected =
+        [
+            new(1, "一", NewLineStyle.Lf),
+            new(2, "二", NewLineStyle.Lf),
+            new(3, string.Empty, null),
+        ];
+        Assert.Equal(expected, result.Lines);
+    }
+
+    [Fact]
     public void Reads_crlf_lines_with_terminators()
     {
         SourceLineReadResult result = Read("一\r\n二\r\n", 1, 10);
@@ -264,7 +279,7 @@ public sealed class SourceLineReaderTests
     private static SourceLineReadResult Read(
         string text,
         int from,
-        int to,
+        int? to,
         int characterBudget = TextOutputLimit.Characters,
         int lineCharacterBudget = int.MaxValue) =>
         SourceLineReader.Read(new StringReader(text), from, to, characterBudget, lineCharacterBudget);

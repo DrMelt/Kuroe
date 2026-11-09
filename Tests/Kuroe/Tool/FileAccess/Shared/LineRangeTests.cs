@@ -7,11 +7,11 @@ namespace Kuroe.Tool.FileAccess.Shared.Tests;
 public sealed class LineRangeTests
 {
     [Fact]
-    public void Missing_values_take_the_given_defaults()
+    public void Missing_to_leaves_the_end_open()
     {
-        LineRange range = Ok(LineRange.Parse(Given(), 1, 200));
+        LineRange range = Ok(LineRange.Parse(Given(), 1, null));
 
-        Assert.Equal(new LineRange(1, 200), range);
+        Assert.Equal(new LineRange(1, null), range);
     }
 
     [Fact]

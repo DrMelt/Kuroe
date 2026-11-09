@@ -78,13 +78,13 @@ public sealed class FileScope(
     }
 
     /// <summary>读取根目录内文件指定行号范围的内容，保留行尾终止符。
-    /// 行号从 1 起，结束行超出文件长度时读到文件尾，起始行超出文件长度时给出拒绝错误。
+    /// 行号从 1 起，结束行省略或超出文件长度时读到文件尾，起始行超出文件长度时给出拒绝错误。
     /// characterBudget 是保留内容与终止符的字符预算，lineCharacterBudget 是含终止符的单行行长上限。
     /// listFunction 是提示里指出的列目录函数名。</summary>
     public ErrorOr<SourceLineReadResult> ReadRange(
         string path,
         int from,
-        int to,
+        int? to,
         int characterBudget,
         int lineCharacterBudget,
         string listFunction)
@@ -94,7 +94,7 @@ public sealed class FileScope(
             return ToolErrors.Argument("起始行号 from 从 1 起。");
         }
 
-        if (to < from)
+        if (to is { } end && end < from)
         {
             return ToolErrors.Argument("结束行号 to 不能小于起始行号 from。");
         }
@@ -142,7 +142,7 @@ public sealed class FileScope(
         string fullPath,
         string path,
         int from,
-        int to,
+        int? to,
         int characterBudget,
         int lineCharacterBudget)
     {
