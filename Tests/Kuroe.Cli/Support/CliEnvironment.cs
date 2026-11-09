@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 
@@ -26,13 +27,13 @@ internal sealed class CliEnvironment : IAsyncDisposable
     /// <summary>替身执行器。</summary>
     public StubRunner Runner { get; }
 
-    /// <summary>按给定流程文件装配会话，并注册一个已选中的 fake 模型。</summary>
+    /// <summary>按给定流程文件装配会话，并注册一个已选中的 fake 模型。顶层同时给出 HostStartInputs 时按宿主开始输入表另存一个文件。</summary>
     public static CliEnvironment Create(string flowsJson)
     {
         string root = Path.Combine(Path.GetTempPath(), "kuroe-cli-tests", Guid.NewGuid().ToString("N"));
         string config = Path.Combine(root, ".kuroe");
         Directory.CreateDirectory(config);
-        File.WriteAllText(Path.Combine(config, "flows.json"), flowsJson);
+        WriteFlowFiles(config, flowsJson);
 
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
@@ -52,6 +53,49 @@ internal sealed class CliEnvironment : IAsyncDisposable
         session.Models.Select(ModelName.Create("fake").Value).ThrowIfError();
 
         return new CliEnvironment(root, session, runner);
+    }
+
+    /// <summary>把测试夹具按顶层字段写成流程文件与宿主开始输入表，其余内容整体写进流程文件。</summary>
+    private static void WriteFlowFiles(string config, string text)
+    {
+        string flowsFile = Path.Combine(config, "flows.json");
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            });
+            JsonElement root = document.RootElement;
+            bool written = false;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in root.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, "Flows", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(flowsFile, $"{{\"Flows\":{property.Value.GetRawText()}}}");
+                        written = true;
+                    }
+                    else if (string.Equals(property.Name, "HostStartInputs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(
+                            Path.Combine(config, "hostStartInputs.json"),
+                            $"{{\"HostStartInputs\":{property.Value.GetRawText()}}}");
+                        written = true;
+                    }
+                }
+            }
+
+            if (!written)
+            {
+                File.WriteAllText(flowsFile, text);
+            }
+        }
+        catch (JsonException)
+        {
+            File.WriteAllText(flowsFile, text);
+        }
     }
 
     public async ValueTask DisposeAsync()

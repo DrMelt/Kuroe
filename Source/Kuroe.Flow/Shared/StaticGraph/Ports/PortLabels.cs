@@ -46,7 +46,7 @@ public static class PortLabels
     public static string SourceLabel(this FromLink link) =>
         link.Condition == TriggerCondition.Negative ? $"{link.Ref.Display}·翻转" : link.Ref.Display;
 
-    /// <summary>开始端口的展示：带固定值时写出端口与值，带默认值时写出默认值，绑定宿主输入时附宿主输入名，常量端口标出常量。</summary>
+    /// <summary>开始端口的展示：带固定值时写出端口与值，带默认值时写出默认值，由宿主给值时附宿主输入名，常量端口标出常量。</summary>
     public static string StartLabel(
         this Port port,
         IReadOnlyDictionary<PortName, string>? hostInputs = null)

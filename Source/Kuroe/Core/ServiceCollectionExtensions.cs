@@ -90,6 +90,20 @@ public static class ServiceCollectionExtensions
             return taskDirectory.ErrorsOrEmptyList;
         }
 
+        // 宿主开始输入表只承载流程名到开始端口的映射，与流程开始入口的一致性在任务提交时校验
+        ErrorOr<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> hostForms =
+            new HostStartInputsStore(paths.HostStartInputsFile).Load();
+        if (hostForms.IsError)
+        {
+            return hostForms.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<HostStartInputs> hostStartInputs = HostStartInputs.Create(hostForms.Value, StartSources.Supported);
+        if (hostStartInputs.IsError)
+        {
+            return hostStartInputs.ErrorsOrEmptyList;
+        }
+
         ToolFileRegistry toolFiles = new();
         CommandToolFiles.RegisterInto(toolFiles);
 
@@ -165,6 +179,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
         services.AddSingleton<IFlowSnapshotSource>(flows.Value);
         services.AddSingleton<IFlowSnapshotCompiler>(flows.Value);
+        services.AddSingleton(hostStartInputs.Value);
+        services.AddSingleton<IHostStartInputs>(hostStartInputs.Value);
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
@@ -181,6 +197,7 @@ public static class ServiceCollectionExtensions
             settings.Value,
             catalog.Value,
             flows.Value,
+            hostStartInputs.Value,
             modelService,
             paths.WorkingDirectory,
             taskRegistry,
@@ -237,6 +254,7 @@ public static class ServiceCollectionExtensions
                 taskRegistry,
                 sp.GetRequiredService<FlowEngine>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
+                sp.GetRequiredService<IHostStartInputs>(),
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<ITaskIdSource>(),
                 coreOptions.PersistTasks ? flows.Value : null,
@@ -266,6 +284,7 @@ public static class ServiceCollectionExtensions
         SettingsProvider settings,
         CatalogService catalog,
         FlowService flows,
+        HostStartInputs hostStartInputs,
         ModelService models,
         string workingDirectory,
         TaskRegistry taskRegistry,
@@ -278,7 +297,8 @@ public static class ServiceCollectionExtensions
 
         List<IToolSource> sources =
         [
-            new KuroeInfoToolSource(taskReader, new ToolCatalogView(catalog, models), flows, settings),
+            new KuroeInfoToolSource(
+                taskReader, new ToolCatalogView(catalog, models), flows, hostStartInputs, settings),
             new ContractToolSource(portSubmitter, cannotCompleteSubmitter, statusReader),
         ];
 

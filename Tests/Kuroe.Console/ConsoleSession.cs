@@ -44,12 +44,13 @@ internal sealed class ConsoleSession : IDisposable
             TaskTreeView tree = new(Terminal, Environment.Pendings);
             ExecutionDetailView execution = new(Terminal);
 
-            return new TaskBrowser(Environment.Registry, Environment.Tasks, Environment.Pendings, Environment.Flows,
-                list, overview, tree, execution, Terminal, Results);
+            return new TaskBrowser(
+                Environment.Registry, Environment.Tasks, Environment.Pendings, Environment.Flows,
+                Environment.HostStartInputs, list, overview, tree, execution, Terminal, Results);
         }
     }
 
-    public FlowBrowser Flows => new(Environment.Flows, Terminal, Results);
+    public FlowBrowser Flows => new(Environment.Flows, Environment.HostStartInputs, Terminal, Results);
 
     public CatalogBrowser Catalogs =>
         new(Environment.Catalog, Environment.Models, Printer, Terminal, Results, Errors);

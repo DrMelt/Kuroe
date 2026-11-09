@@ -18,6 +18,7 @@ internal sealed class TaskBrowser(
     TaskService tasks,
     PendingService pendings,
     FlowService flows,
+    IHostStartInputs hostStartInputs,
     TaskListView list,
     TaskOverviewView overview,
     TaskTreeView tree,
@@ -148,12 +149,13 @@ internal sealed class TaskBrowser(
         }
     }
 
-    /// <summary>按开始端口询问不带固定值且未绑定宿主输入的项目，默认值作为初始内容预填。
+    /// <summary>按开始端口询问不带固定值且不由宿主给值的项目，默认值作为初始内容预填。
     /// 每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
     private StartInputs? AskInputs(FlowDefinition flow)
     {
+        IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(flow.Name);
         List<Port> ports = [.. flow.StartOutputs.Where(port =>
-            port.Value is null && !flow.HostStartInputs.ContainsKey(port.Name))];
+            port.Value is null && !hostInputs.ContainsKey(port.Name))];
         List<FormInfo> info =
         [
             new("流程", flow.Name.Value),
@@ -161,8 +163,8 @@ internal sealed class TaskBrowser(
                 .Select(port => port.Value is { } value ? new FormInfo(port.Name.Value, value) : null)
                 .OfType<FormInfo>(),
             .. flow.StartOutputs
-                .Where(port => flow.HostStartInputs.ContainsKey(port.Name))
-                .Select(port => new FormInfo(port.Name.Value, $"宿主 {flow.HostStartInputs[port.Name]}")),
+                .Where(port => hostInputs.ContainsKey(port.Name))
+                .Select(port => new FormInfo(port.Name.Value, $"宿主 {hostInputs[port.Name]}")),
         ];
         InputForm form = new(
             terminal,

@@ -24,9 +24,6 @@ static class FlowFileWriter
         Name = flow.Name,
         Description = flow.Description,
         Start = new StartDto { Outputs = WritePorts(flow.StartOutputs) },
-        HostStartInputs = flow.HostStartInputs.Count > 0
-            ? new Dictionary<string, string>(flow.HostStartInputs)
-            : null,
         Root = flow.Root is null ? null : WriteNode(flow.Root),
     };
 

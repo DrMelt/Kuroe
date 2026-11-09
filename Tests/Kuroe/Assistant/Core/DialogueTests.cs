@@ -118,16 +118,15 @@ public sealed class DialogueTests
             DialogueFlow.Tools);
     }
 
-    /// <summary>回话节点的模型端口绑定宿主输入 MODEL，流程文件不写模型值。</summary>
+    /// <summary>对话流程只声明开始端口，模型端口由宿主的开始输入表单给值，流程模型不带绑定。</summary>
     [Fact]
-    public void Dialogue_model_port_is_bound_to_the_host_model_input()
+    public void Dialogue_model_port_is_declared_and_bound_by_the_host_form()
     {
         FlowDefinition flow = Build(DefaultLanguage);
         PortName model = LlmNodeTypes.ModelPort;
 
-        Assert.True(flow.HostStartInputs.TryGetValue(model, out string? input));
-        Assert.Equal("MODEL", input);
         Assert.Null(Assert.NotNull(flow.StartOutputs.Find(model)).Value);
+        Assert.Equal("MODEL", DialogueFlow.HostInputs[model]);
     }
 
     private static FlowDefinition Build(string language)

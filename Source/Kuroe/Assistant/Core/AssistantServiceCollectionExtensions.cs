@@ -9,8 +9,11 @@ using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Pending;
+using Kuroe.Workflows.Flows;
 using Kuroe.Tool.Source;
 using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,24 +46,31 @@ public static class AssistantServiceCollectionExtensions
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
             TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
+            FlowEngine engine = sp.GetRequiredService<FlowEngine>();
             DialogueRound round = new(registry, new PendingService(
                 registry,
-                sp.GetRequiredService<FlowEngine>(),
+                engine,
                 sp.GetRequiredService<IInputDelivery>()));
 
+            IExecutionTargetResolver targets = sp.GetRequiredService<IExecutionTargetResolver>();
+            ModelService models = sp.GetRequiredService<ModelService>();
+
+            // 对话任务只有内置流程一张表单，不与用户流程的宿主输入表混用
+            HostStartInputs hostInputs = new(
+                new Dictionary<FlowName, IReadOnlyDictionary<PortName, string>>
+                {
+                    [DialogueFlow.Name] = DialogueFlow.HostInputs,
+                },
+                StartSources.Supported);
+
+            KuroeTaskStart start = new(sp.GetRequiredService<KuroePaths>().WorkingDirectory, null, models);
+            // 对话任务自有任务域，任务键不占用用户任务域的序列
+            GuidTaskIdSource ids = new();
+
             return new DialogueHost(
-                new TaskActions(
-                    registry,
-                    sp.GetRequiredService<FlowEngine>(),
-                    sp.GetRequiredService<IExecutionTargetResolver>(),
-                    new KuroeTaskStart(
-                        sp.GetRequiredService<KuroePaths>().WorkingDirectory,
-                        null,
-                        sp.GetRequiredService<ModelService>()),
-                    // 对话任务自有任务域，任务键不占用用户任务域的序列
-                    new GuidTaskIdSource()),
+                new TaskActions(registry, engine, targets, hostInputs, start, ids),
                 round,
-                sp.GetRequiredService<ModelService>(),
+                models,
                 sp.GetRequiredService<SettingsProvider>(),
                 registry,
                 sp.GetRequiredService<IFlowDescriptionCompiler>());

@@ -15,12 +15,13 @@ using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>一个任务域内的任务动作：提交、重新执行、取消与改名。前置条件与回执在这里判定，状态改动经推进器落地。</summary>
-/// <remarks>装配任务动作所需的注册表、推进器、执行目标解析与宿主开始输入钩子。
+/// <remarks>装配任务动作所需的注册表、推进器、执行目标解析、宿主开始输入表与宿主开始输入钩子。
 /// 任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
 public sealed class TaskActions(
     TaskRegistry registry,
     IFlowRunner driver,
     IExecutionTargetResolver targets,
+    IHostStartInputs hostStartInputs,
     IHostTaskStart host,
     ITaskIdSource ids,
     IFlowSnapshotSource? snapshots = null,
@@ -30,13 +31,14 @@ public sealed class TaskActions(
     private readonly TaskRegistry _registry = registry;
     private readonly IFlowRunner _driver = driver;
     private readonly IExecutionTargetResolver _targets = targets;
+    private readonly IHostStartInputs _hostStartInputs = hostStartInputs;
     private readonly IHostTaskStart _host = host;
     private readonly ITaskIdSource _ids = ids;
     private readonly IFlowSnapshotSource? _snapshots = snapshots;
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
 
-    /// <summary>按编译结果提交：校验开始输入与开始直连下游的宿主声明、分配任务号、占用任务键、取注入的开始端口值，再建任务并启动推进。
+    /// <summary>按编译结果提交：解析宿主开始输入表、校验开始输入与开始直连下游的宿主声明、分配任务号、占用任务键、取注入的开始端口值，再建任务并启动推进。
     /// 任务号被宿主资源占用时换下一个任务号重来。observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> SubmitCompiled(
         StartInputs inputs,
@@ -45,7 +47,15 @@ public sealed class TaskActions(
         ProcessObserver? observer = null)
     {
         NodeGraph graph = flow.Graph;
-        IReadOnlyDictionary<PortName, string> hostInputs = flow.Model.HostStartInputs;
+
+        // 宿主输入表在提交时解析，流程编译不涉及这份配置
+        ErrorOr<IReadOnlyDictionary<PortName, string>> resolved = _hostStartInputs.Resolve(flow.Model);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        IReadOnlyDictionary<PortName, string> hostInputs = resolved.Value;
 
         if (CheckInputs(graph.Start, hostInputs, inputs) is { Count: > 0 } inputErrors)
         {

@@ -2,6 +2,7 @@ using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -12,6 +13,7 @@ namespace Kuroe.Tool.KuroeInfo;
 public sealed class FlowKuroeInfoTool : ITool
 {
     private readonly IFlowCatalog _flows;
+    private readonly IHostStartInputs _hostStartInputs;
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
@@ -28,10 +30,11 @@ public sealed class FlowKuroeInfoTool : ITool
         "查看指定流程的展开节点表：模型、节点类型名与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)]);
 
-    /// <summary>用流程模板查询建立载体。</summary>
-    public FlowKuroeInfoTool(IFlowCatalog flows)
+    /// <summary>用流程模板查询与宿主开始输入表建立载体。</summary>
+    public FlowKuroeInfoTool(IFlowCatalog flows, IHostStartInputs hostStartInputs)
     {
         _flows = flows;
+        _hostStartInputs = hostStartInputs;
         Functions =
         [
             ListFlows.Bind(_ => List()),
@@ -76,7 +79,8 @@ public sealed class FlowKuroeInfoTool : ITool
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
         IEnumerable<Port> startPorts = found.Value.StartOutputs;
-        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => port.StartLabel(found.Value.HostStartInputs)))}");
+        IReadOnlyDictionary<PortName, string> hostInputs = _hostStartInputs.Bindings(found.Value.Name);
+        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => port.StartLabel(hostInputs)))}");
 
         foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
         {

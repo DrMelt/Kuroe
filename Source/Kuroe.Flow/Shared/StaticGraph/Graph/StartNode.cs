@@ -4,7 +4,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
 /// <summary>流程的唯一来源节点：不属于任何容器，任务启动时即已放行。
-/// 产出是任务启动时确定的开始端口值，来源是固定值、宿主输入或提交输入。
+/// 产出是任务启动时确定的开始端口值，来源是固定值、宿主给值或提交输入。
 /// 动态端口经 From 引用 Start@端口 取用，常量端口经 Bindings 读取。</summary>
 public sealed record StartNode : GraphNode
 {

@@ -74,7 +74,7 @@ internal sealed class ErrorView(Terminal terminal)
                     break;
 
                 case ErrorCodes.TaskStartInput:
-                    terminal.Hint("检查流程的 HostStartInputs 与当前宿主支持的输入名，改完重新提交。");
+                    terminal.Hint("检查工作目录 `.kuroe/` 下 hostStartInputs.json 的流程名、开始端口与宿主输入名，改完重启 Kuroe。");
                     break;
             }
         }

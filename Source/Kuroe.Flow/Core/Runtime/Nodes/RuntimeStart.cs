@@ -9,7 +9,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Flow.Runtime.Nodes;
 
 /// <summary>开始节点在任务内的运行时对象：任务启动即发布一次，产出是任务启动时确定的开始端口值，
-/// 固定值、宿主输入与提交输入共用同一份解析。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
+/// 固定值、宿主给值与提交输入共用同一份解析。版本恒为 1，下游只消费一次。不派发执行、不等待、不取消。</summary>
 internal sealed class RuntimeStart : RuntimeNode
 {
     private readonly StartNode _start;

@@ -29,12 +29,12 @@
   "Name": "保存定稿",
   "Kind": "FileWrite",
   "Path": "{root}/定稿.md",
-  "Variables": { "root": "TASK_WORK_PATH" },
+  "Variables": { "root": "任务路径" },
   "Inputs": [
     { "Name": "正文", "Type": "Text", "Mode": "Constant", "Role": "Content" },
-    { "Name": "TASK_WORK_PATH", "Type": "Text", "Mode": "Constant" }
+    { "Name": "任务路径", "Type": "Text", "Mode": "Constant" }
   ],
-  "Bindings": { "正文": "校对@定稿", "TASK_WORK_PATH": "Start@TASK_WORK_PATH" },
+  "Bindings": { "正文": "校对@定稿", "任务路径": "Start@任务路径" },
   "Outputs": [{ "Name": "完成", "Type": "Signal" }]
 }
 ```

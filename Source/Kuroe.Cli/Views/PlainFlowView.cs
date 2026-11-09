@@ -50,15 +50,18 @@ internal static class PlainFlowView
         }
     }
 
-    /// <summary>打印流程字段与按层级缩进的节点树。</summary>
-    public static void Show(CliOutput output, CompiledFlow compiled)
+    /// <summary>打印流程字段与按层级缩进的节点树。开始端口的宿主输入名取自宿主开始输入表。</summary>
+    public static void Show(
+        CliOutput output,
+        CompiledFlow compiled,
+        IReadOnlyDictionary<PortName, string> hostInputs)
     {
         output.Line($"流程\t{compiled.Model.Name.Value}");
         output.Line($"执行节点\t{compiled.Graph.TotalExecutables}");
         output.Line($"容器\t{compiled.Graph.Containers.Count}");
         output.Line($"说明\t{compiled.Model.Description ?? "—"}");
         output.Line();
-        Walk(output, compiled.Graph.ChildrenOf(null), 0, compiled.Model.HostStartInputs);
+        Walk(output, compiled.Graph.ChildrenOf(null), 0, hostInputs);
     }
 
     private static void Walk(CliOutput output, IReadOnlyList<GraphNode> nodes, int depth, IReadOnlyDictionary<PortName, string> hostInputs)

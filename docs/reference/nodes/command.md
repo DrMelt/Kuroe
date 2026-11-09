@@ -4,15 +4,15 @@
 
 ## 类型参数
 
-| 参数                    | 类型     | 含义                                                                |
-| ----------------------- | -------- | ------------------------------------------------------------------- |
-| `Program`               | string   | 程序名或路径，必填                                                  |
-| `Arguments`             | string[] | 传给程序的参数，逐项传入，不经 shell 解释，可含 `{变量}`            |
-| `Directory`             | string   | 执行目录，可含 `{变量}`，未写时在工作区根执行                       |
+| 参数                    | 类型     | 含义                                                                               |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `Program`               | string   | 程序名或路径，必填                                                                 |
+| `Arguments`             | string[] | 传给程序的参数，逐项传入，不经 shell 解释，可含 `{变量}`                           |
+| `Directory`             | string   | 执行目录，可含 `{变量}`，未写时在工作区根执行                                      |
 | `Variables`             | object   | 命令变量名到 `Text` 输入端口的映射，与 `Directory` 和 `Arguments` 的占位符一一对应 |
-| `TimeoutSeconds`        | int      | 等待秒数，未写时 120，必须是正整数                                  |
-| `MaxChars`              | int      | 输出字符上限，未写时 8000，0 不限制，负数在导入时报错               |
-| `FailOnNonZeroExitCode` | bool     | 退出码非零时是否停在阻塞，未写时不阻塞                              |
+| `TimeoutSeconds`        | int      | 等待秒数，未写时 120，必须是正整数                                                 |
+| `MaxChars`              | int      | 输出字符上限，未写时 8000，0 不限制，负数在导入时报错                              |
+| `FailOnNonZeroExitCode` | bool     | 退出码非零时是否停在阻塞，未写时不阻塞                                             |
 
 ## 端口
 
@@ -43,7 +43,7 @@
     { "Name": "工作路径", "Type": "Text", "Mode": "Constant" },
     { "Name": "触发", "Type": "Signal" }
   ],
-  "Bindings": { "工作路径": "Start@WORKSPACE_PATH" },
+  "Bindings": { "工作路径": "Start@工作路径" },
   "From": [{ "触发": "计划@结论" }]
 }
 ```
@@ -69,7 +69,7 @@
     { "Name": "触发", "Type": "Signal" }
   ],
   "Bindings": {
-    "任务路径": "Start@TASK_WORK_PATH",
+    "任务路径": "Start@任务路径",
     "分支名": "Start@分支名",
     "仓库地址": "Start@仓库地址"
   },

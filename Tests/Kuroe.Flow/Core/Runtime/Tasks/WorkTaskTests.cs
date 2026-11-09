@@ -85,7 +85,6 @@ public sealed class WorkTaskTests
             new FlowName("默认"),
             null,
             start.Outputs,
-            new Dictionary<PortName, string>(),
             NodeSpec.Define(new NodeName("整体")) with { Type = TestNodeTypes.Container });
 
         return new WorkTask(

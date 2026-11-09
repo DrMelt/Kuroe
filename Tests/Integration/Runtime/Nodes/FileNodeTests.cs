@@ -81,11 +81,12 @@ public sealed class FileNodeTests
     /// <summary>读入后写出：文件内容直接落到另一个文件。</summary>
     private const string ReadWriteFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -119,11 +120,12 @@ public sealed class FileNodeTests
     /// <summary>读入后交给执行节点：读取内容进入下游执行输入。</summary>
     private const string ReadThenLlmFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -155,11 +157,12 @@ public sealed class FileNodeTests
     /// <summary>读入按声明的字符上限截断，结果经写出落到文件。</summary>
     private const string LimitedReadFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -194,11 +197,12 @@ public sealed class FileNodeTests
     /// <summary>路径越出工作区：运行期解析失败并停在阻塞。</summary>
     private const string EscapePathFlow = """
         {
+          "HostStartInputs": { "默认": { "基准": "WORKSPACE_PATH" } },
           "Flows": [
             {
               "Name": "默认",
               "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
-              "HostStartInputs": { "基准": "WORKSPACE_PATH" },
+              
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",

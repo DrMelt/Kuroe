@@ -70,7 +70,7 @@ public sealed class TaskSnapshotTests
         new NodeTypeShape { DispatchesExecutions = true });
 
     private static readonly FlowDefinition Flow = new(new FlowName("默认"), null,
-        [new Port(new PortName("目标"), PortTypes.Text)], new Dictionary<PortName, string>(),
+        [new Port(new PortName("目标"), PortTypes.Text)],
         new NodeSpec
         {
             Label = new NodeLabel("整体"),

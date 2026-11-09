@@ -199,10 +199,10 @@ public sealed class WorkTask
     /// <summary>提交时按开始端口给出的输入。</summary>
     public StartInputs Inputs { get; }
 
-    /// <summary>任务启动时注入的开始端口文本，绑定到宿主输入名的端口按它取值。</summary>
+    /// <summary>任务启动时由宿主给出的开始端口文本，宿主开始输入表里的端口按它取值。</summary>
     internal IPortTexts StartTexts { get; }
 
-    /// <summary>任务启动时确定的开始端口值，固定值、宿主输入与提交输入按端口解析。</summary>
+    /// <summary>任务启动时确定的开始端口值，固定值、宿主给值与提交输入按端口解析。</summary>
     internal IPortTexts StartPorts { get; }
 
     /// <summary>提交时锁定的流程模板。</summary>

@@ -3,6 +3,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ internal sealed class CliSession : IAsyncDisposable
         Catalog = provider.GetRequiredService<CatalogService>();
         Models = provider.GetRequiredService<ModelService>();
         Settings = provider.GetRequiredService<SettingsProvider>();
+        HostStartInputs = provider.GetRequiredService<IHostStartInputs>();
     }
 
     /// <summary>用户任务域。</summary>
@@ -43,6 +45,9 @@ internal sealed class CliSession : IAsyncDisposable
 
     /// <summary>偏好配置。</summary>
     public SettingsProvider Settings { get; }
+
+    /// <summary>宿主开始输入表，流程展示与任务提交共用。</summary>
+    public IHostStartInputs HostStartInputs { get; }
 
     /// <summary>装配一次调用的服务。工作目录为空时用进程当前目录，装配失败时返回全部启动错误。</summary>
     public static ErrorOr<CliSession> Create(

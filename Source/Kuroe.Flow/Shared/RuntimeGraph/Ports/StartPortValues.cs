@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
-/// <summary>任务开始端口的文本视图：固定值优先，其次宿主注入值，最后提交输入。
+/// <summary>任务开始端口的文本视图：固定值优先，其次宿主给值，最后提交输入。
 /// 动态 Text 端口与全部常量端口共用这一取值顺序，运行期开始节点与静态解析读取同一份结果。</summary>
 public sealed class StartPortValues : IPortTexts
 {

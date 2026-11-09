@@ -83,7 +83,7 @@ public sealed class FlowRulesLimitTests
     }
 
     private static FlowDefinition Flow(NodeSpec root) =>
-        new(new FlowName("默认"), null, [new Port(StartPort, PortTypes.Text)], new Dictionary<PortName, string>(), root);
+        new(new FlowName("默认"), null, [new Port(StartPort, PortTypes.Text)], root);
 
     private static NodeSpec Container(
         string name,

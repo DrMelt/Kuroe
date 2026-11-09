@@ -10,8 +10,8 @@ using Kuroe.Shared;
 
 namespace Kuroe.Workflows.Tasks;
 
-/// <summary>Kuroe 的宿主开始输入：把流程 HostStartInputs 的输入名解析为工作区、任务目录与当前模型，
-/// 并为用户任务准备任务目录。</summary>
+/// <summary>Kuroe 的宿主开始输入：把表项里的宿主输入名解析为工作区、任务目录与当前模型，
+/// 并为用户任务准备任务目录。表项的键是开始端口名，由宿主的开始输入表给出。</summary>
 /// <param name="workspaceDirectory">工作区根目录的绝对路径。</param>
 /// <param name="taskDirectory">任务目录的根，任务域没有任务目录时为空。</param>
 /// <param name="models">当前模型选择，模型宿主输入按它给值。</param>
@@ -20,7 +20,7 @@ public sealed class KuroeTaskStart(
     TaskDirectory? taskDirectory,
     ModelService models) : IHostTaskStart
 {
-    /// <summary>校验绑定后准备任务目录并给出每个绑定端口的值。未知输入名、缺少模型选择与当前任务域不支持的任务目录在准备前拒绝。</summary>
+    /// <summary>准备任务目录并给出每个绑定端口的值。缺少模型选择与当前任务域不支持的任务目录在准备前拒绝。</summary>
     public ErrorOr<IPortTexts> Prepare(
         TaskId id,
         IReadOnlyDictionary<PortName, string> bindings,
@@ -30,11 +30,6 @@ public sealed class KuroeTaskStart(
         ModelName? model = models.Current;
         foreach (string input in bindings.Values)
         {
-            if (input is not (StartSources.Workspace or StartSources.Task or StartSources.Model))
-            {
-                return [Error.Validation(ErrorCodes.TaskStartInput, $"未知的宿主开始输入 {input}。")];
-            }
-
             if (input == StartSources.Task && taskDirectory is null)
             {
                 return [Error.Validation(ErrorCodes.TaskStartInput, "当前任务域没有任务目录，不能提供 TASK_WORK_PATH。")];
@@ -43,6 +38,11 @@ public sealed class KuroeTaskStart(
             if (input == StartSources.Model && model is null)
             {
                 return [ModelErrors.ModelNotSelected()];
+            }
+
+            if (input is not (StartSources.Workspace or StartSources.Task or StartSources.Model))
+            {
+                return [Error.Validation(ErrorCodes.TaskStartInput, $"未知的宿主开始输入 {input}。")];
             }
         }
 
@@ -61,15 +61,20 @@ public sealed class KuroeTaskStart(
         Dictionary<PortName, string> values = [];
         foreach ((PortName port, string input) in bindings)
         {
-            values[port] = input switch
+            string? value = input switch
             {
                 StartSources.Workspace => workspaceDirectory,
-                StartSources.Task => taskPath
-                    ?? throw new InvalidOperationException("任务开始输入缺少 TASK_WORK_PATH 的值。"),
-                StartSources.Model => model?.Value
-                    ?? throw new InvalidOperationException("模型开始输入缺少当前模型选择。"),
-                _ => throw new InvalidOperationException($"未知的宿主开始输入 {input}。"),
+                StartSources.Task => taskPath,
+                StartSources.Model => model?.Value,
+                _ => null,
             };
+
+            if (value is null)
+            {
+                return [Error.Validation(ErrorCodes.TaskStartInput, $"宿主开始输入 {input} 没有可用的值。")];
+            }
+
+            values[port] = value;
         }
 
         return new PortTexts(values);

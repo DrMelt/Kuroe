@@ -38,10 +38,11 @@ public sealed class FlowDocumentTests
         Assert.Contains(Errors(StartValueAndDefaultFlow),
             error => error.Contains("开始端口 分支 不能同时写 Value 与 Default。"));
 
+    /// <summary>流程文件不认宿主输入绑定，写着 HostStartInputs 的文件在读取时即被拒绝。</summary>
     [Fact]
-    public void Start_default_cannot_bind_a_host_input() =>
+    public void Host_start_inputs_are_rejected_by_the_flow_file() =>
         Assert.Contains(Errors(StartDefaultWithHostInputFlow),
-            error => error.Contains("开始端口 分支 带默认值，不能绑定宿主输入。"));
+            error => error.Contains("HostStartInputs"));
 
     [Fact]
     public void Node_output_default_is_rejected() =>
@@ -893,6 +894,7 @@ public sealed class FlowDocumentTests
         }
         """;
 
+    /// <summary>流程文件还写着 HostStartInputs：这份配置已不属于流程文件。</summary>
     private const string StartDefaultWithHostInputFlow = """
         {
           "Flows": [
