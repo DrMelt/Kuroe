@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Git.Tests;
 
-/// <summary>内置 git 工具面：十四条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
+/// <summary>内置 git 工具面：十七条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class GitToolsTests
 {
     /// <summary>路径实参：一个文件的列表。</summary>
@@ -33,6 +33,9 @@ public sealed class GitToolsTests
                 "git/read/Log",
                 "git/read/Show",
                 "git/read/Branches",
+                "git/read/PreviewAdd",
+                "git/read/PreviewCommit",
+                "git/read/PreviewRemove",
                 "git/write/Add",
                 "git/write/Commit",
                 "git/write/Restore",
@@ -119,6 +122,43 @@ public sealed class GitToolsTests
                 new("{pattern}", null),
             ],
             Template("git/read/Branches"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("add", null),
+                new("--dry-run", null),
+                new("--", null),
+                new("{paths}", null),
+                new(":(exclude){excludePaths}", null),
+            ],
+            Template("git/read/PreviewAdd"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("commit", null),
+                new("--dry-run", null),
+                new("--short", null),
+                new("--branch", null),
+                new("--", "paths"),
+                new("{paths}", null),
+                new(":(exclude){excludePaths}", "paths"),
+            ],
+            Template("git/read/PreviewCommit"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("rm", null),
+                new("-r", null),
+                new("--dry-run", null),
+                new("--cached", "cached"),
+                new("--", null),
+                new("{paths}", null),
+                new(":(exclude){excludePaths}", null),
+            ],
+            Template("git/read/PreviewRemove"));
 
         Assert.Equal(
             [
@@ -316,6 +356,52 @@ public sealed class GitToolsTests
         Assert.Equal(
             ["git", "branch", "--all", "--verbose", "--list", "main*"],
             Argv("git/read/Branches", Given(("pattern", "main*"))));
+    }
+
+    [Fact]
+    public void Preview_functions_fix_the_flag_and_carry_paths()
+    {
+        Assert.All(
+            ["git/read/PreviewAdd", "git/read/PreviewCommit", "git/read/PreviewRemove"],
+            path =>
+            {
+                CommandToolDefinition definition = Definition(path);
+
+                Assert.DoesNotContain(definition.Parameters, parameter => parameter.Name.Value == "dryRun");
+                Assert.Contains(definition.Template, item => item.Text == "--dry-run" && item.OmitWhenMissing is null);
+            });
+
+        Assert.Equal(
+            ["git", "add", "--dry-run", "--", "a.txt"],
+            Argv("git/read/PreviewAdd", Given(("paths", OnePath))));
+        Assert.Equal(
+            ["git", "add", "--dry-run", "--", "a.txt", ":(exclude)docs"],
+            Argv("git/read/PreviewAdd", Given(("paths", OnePath), ("excludePaths", DocsPath))));
+        Assert.Equal("缺少参数 paths。", Rejected("git/read/PreviewAdd", Given()));
+
+        Assert.Equal(
+            ["git", "commit", "--dry-run", "--short", "--branch"],
+            Argv("git/read/PreviewCommit", Given()));
+        Assert.Equal(
+            ["git", "commit", "--dry-run", "--short", "--branch"],
+            Argv("git/read/PreviewCommit", Given(("excludePaths", DocsPath))));
+        Assert.Equal(
+            ["git", "commit", "--dry-run", "--short", "--branch", "--", "a.txt"],
+            Argv("git/read/PreviewCommit", Given(("paths", OnePath))));
+        Assert.Equal(
+            ["git", "commit", "--dry-run", "--short", "--branch", "--", "a.txt", ":(exclude)docs"],
+            Argv("git/read/PreviewCommit", Given(("paths", OnePath), ("excludePaths", DocsPath))));
+
+        Assert.Equal(
+            ["git", "rm", "-r", "--dry-run", "--", "a.txt"],
+            Argv("git/read/PreviewRemove", Given(("paths", OnePath))));
+        Assert.Equal(
+            ["git", "rm", "-r", "--dry-run", "--cached", "--", "a.txt"],
+            Argv("git/read/PreviewRemove", Given(("cached", true), ("paths", OnePath))));
+        Assert.Equal(
+            ["git", "rm", "-r", "--dry-run", "--", "a.txt", ":(exclude)docs"],
+            Argv("git/read/PreviewRemove", Given(("paths", OnePath), ("excludePaths", DocsPath))));
+        Assert.Equal("缺少参数 paths。", Rejected("git/read/PreviewRemove", Given()));
     }
 
     [Fact]
@@ -574,6 +660,24 @@ public sealed class GitToolsTests
 
         Assert.False(Parameter(Definition("git/read/Branches"), "pattern").Required);
 
+        CommandToolDefinition previewAdd = Definition("git/read/PreviewAdd");
+
+        Assert.True(Parameter(previewAdd, "paths").Required);
+        Assert.True(Parameter(previewAdd, "paths").List);
+        Assert.True(Parameter(previewAdd, "excludePaths").List);
+
+        CommandToolDefinition previewCommit = Definition("git/read/PreviewCommit");
+
+        Assert.False(Parameter(previewCommit, "paths").Required);
+        Assert.True(Parameter(previewCommit, "paths").List);
+        Assert.True(Parameter(previewCommit, "excludePaths").List);
+
+        CommandToolDefinition previewRemove = Definition("git/read/PreviewRemove");
+
+        Assert.True(Parameter(previewRemove, "cached").Flag);
+        Assert.True(Parameter(previewRemove, "paths").Required);
+        Assert.True(Parameter(previewRemove, "excludePaths").List);
+
         CommandToolDefinition commit = Definition("git/write/Commit");
 
         Assert.True(Parameter(commit, "message").Required);
@@ -633,6 +737,12 @@ public sealed class GitToolsTests
                 ("git/read/Log", "excludePaths"),
                 ("git/read/Show", "paths"),
                 ("git/read/Status", "paths"),
+                ("git/read/PreviewAdd", "paths"),
+                ("git/read/PreviewAdd", "excludePaths"),
+                ("git/read/PreviewCommit", "paths"),
+                ("git/read/PreviewCommit", "excludePaths"),
+                ("git/read/PreviewRemove", "paths"),
+                ("git/read/PreviewRemove", "excludePaths"),
                 ("git/write/Add", "paths"),
                 ("git/write/Add", "excludePaths"),
                 ("git/write/Commit", "paths"),

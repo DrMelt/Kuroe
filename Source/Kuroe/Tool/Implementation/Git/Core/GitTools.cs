@@ -6,10 +6,10 @@ using Kuroe.Tool.Git.Write;
 
 namespace Kuroe.Tool.Git;
 
-/// <summary>内置 git 工具面：十四个函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
+/// <summary>内置 git 工具面：十七个函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
 public static class GitTools
 {
-    /// <summary>十四个函数的命令定义，按只读、当前分支改动与分支操作分组，模板与参数在各函数文件里给出。</summary>
+    /// <summary>十七个函数的命令定义，按只读、当前分支改动与分支操作分组，模板与参数在各函数文件里给出。</summary>
     public static IReadOnlyList<CommandToolDefinition> Definitions { get; } = Create();
 
     /// <summary>装配定义并校验模板与参数的一致性。</summary>
@@ -22,6 +22,9 @@ public static class GitTools
             Log.Definition with { Variables = [PathVariables.RootName] },
             Show.Definition with { Variables = [PathVariables.RootName] },
             Branches.Definition with { Variables = [PathVariables.RootName] },
+            PreviewAdd.Definition with { Variables = [PathVariables.RootName] },
+            PreviewCommit.Definition with { Variables = [PathVariables.RootName] },
+            PreviewRemove.Definition with { Variables = [PathVariables.RootName] },
             Add.Definition with { Variables = [PathVariables.RootName] },
             Commit.Definition with { Variables = [PathVariables.RootName] },
             Restore.Definition with { Variables = [PathVariables.RootName] },
