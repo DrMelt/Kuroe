@@ -58,6 +58,33 @@ public sealed class NodeSpecRulesFromTests
             Errors(fail => node.CheckFrom(fail)).Single());
     }
 
+    [Fact]
+    public void Executable_group_may_omit_control_input()
+    {
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Spec = new ExecutableSpec(),
+            Inputs = [new InputPort(Input), new InputPort(new PortName("触发"), PortTypes.Signal)],
+            From = [new FromGroup([new FromLink(Input, PortRef.Named(new NodeLabel("来源"), Output))])],
+        };
+
+        Assert.Empty(Errors(fail => node.CheckFrom(fail)));
+    }
+
+    [Fact]
+    public void Executable_dynamic_control_input_still_requires_from()
+    {
+        NodeSpec node = NodeSpec.Define(new NodeName("实施")) with
+        {
+            Spec = new ExecutableSpec(),
+            Inputs = [new InputPort(new PortName("触发"), PortTypes.Signal)],
+        };
+
+        Assert.Equal(
+            ["声明动态输入端口的节点必须至少给出一组 From 启动条件。"],
+            Errors(fail => node.CheckFrom(fail)));
+    }
+
     private static List<string> Errors(Action<ValidationMessageHandler> check)
     {
         List<string> errors = [];

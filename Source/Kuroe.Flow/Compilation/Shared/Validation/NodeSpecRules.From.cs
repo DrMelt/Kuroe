@@ -8,14 +8,14 @@ namespace Kuroe.Flow.Compilation.Shared.Validation;
 /// 成员通过 @端口 读取的传入来源因此唯一。触发条件只用于触发端口。</summary>
 public static partial class NodeSpecRules
 {
-    /// <summary>检查 From 的目标、覆盖与条件，按节点形态判定需要的动态输入。</summary>
+    /// <summary>检查 From 的目标、覆盖与条件，按节点形态判定需要覆盖的动态内容输入。</summary>
     public static void CheckFrom(this NodeSpec node, ValidationMessageHandler fail)
     {
         IReadOnlyList<InputPort> declared = node.DeclaredInputs;
         bool container = node.IsContainer;
-        var required = new HashSet<PortName>([.. declared
-            .Where(port => !port.IsStatic)
-            .Where(port => container || port.Default is null)
+        IReadOnlyList<InputPort> dynamicInputs = [.. declared.Where(port => !port.IsStatic)];
+        var required = new HashSet<PortName>([.. dynamicInputs
+            .Where(port => container || (port.Role != InputRole.Control && port.Default is null))
             .Select(port => port.Name)]);
 
         if (container && node.From.Count > 1)
@@ -23,7 +23,10 @@ public static partial class NodeSpecRules
             fail("容器只能写一组 From，成员经 @端口 读取的传入来源必须唯一。");
         }
 
-        if (required.Count > 0 && node.From.Count == 0)
+        bool needsFrom = container
+            ? dynamicInputs.Count > 0
+            : dynamicInputs.Any(port => port.Role == InputRole.Control || port.Default is null);
+        if (needsFrom && node.From.Count == 0)
         {
             fail(container
                 ? "容器声明动态输入端口时必须给出一组 From。"

@@ -498,6 +498,18 @@ public sealed class FlowRulesTests
                         From = [Ref("准备", "结论")],
                     }))));
 
+    /// <summary>控制输入不承载内容，可以不出现在 From 组里。</summary>
+    [Fact]
+    public void Group_may_omit_control_input() =>
+        Assert.Empty(Errors(Flow(
+            Container("整体",
+                Text("准备") with { Outputs = [P("结论")] },
+                Exec("实施", new ExecutableSpec()) with
+                {
+                    Inputs = [In("结论"), new InputPort(PN("触发"), PortTypes.Signal)],
+                    From = [Ref("准备", "结论")],
+                }))));
+
     /// <summary>默认值只用于 Text 输入端口，Context 输入端口不能声明。</summary>
     [Fact]
     public void Default_on_context_input_is_rejected() =>
