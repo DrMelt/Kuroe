@@ -4,25 +4,25 @@
 
 ## 函数
 
-| 函数                | 参数                                                                                                       | 作用                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `git/read/Status`   | `paths`、`untracked` 可选                                                                                  | 查看当前分支与各项的暂存、未暂存、未跟踪情况             |
-| `git/read/Diff`     | `staged`、`stat`、`nameOnly`、`nameStatus` 开关，`diffFilter`、`revision`、`paths`、`excludePaths` 可选      | 查看改动差异，`nameOnly` 与 `nameStatus` 二选一          |
-| `git/read/Log`      | `count` 必填，`revision`、`author`、`grep`、`since`、`until`、`paths`、`excludePaths` 可选，`stat`、`firstParent` 开关 | 查看提交历史，可按作者、说明、时间与修订筛选             |
-| `git/read/Show`     | `revision` 必填，`stat`、`firstParent` 开关，`paths` 可选                                                  | 查看一个提交的说明与改动                                 |
-| `git/read/Branches` | `pattern` 可选                                                                                             | 列出全部分支及其当前提交，含远端分支                     |
-| `git/read/PreviewAdd` | `paths` 必填，`excludePaths` 可选                                                                       | 预演把路径的改动放入暂存区，列出将暂存的路径             |
-| `git/read/PreviewCommit` | `paths`、`excludePaths` 可选                                                                         | 给出提交摘要，列出将提交、有本地改动但不会被提交与未跟踪的路径           |
-| `git/read/PreviewRemove` | `paths` 必填，`cached` 开关，`excludePaths` 可选                                                     | 预演删除已跟踪文件，列出将删除的文件                     |
-| `git/write/Add`     | `paths` 必填，`excludePaths` 可选                                                                          | 把路径的改动放入暂存区                                   |
-| `git/write/Commit`  | `message` 必填，`paths` 可选，`excludePaths` 只在给出 `paths` 时生效                                                               | 提交暂存区的改动，给 `paths` 时只提交这些路径             |
-| `git/write/Restore` | `paths` 必填，`staged` 开关，`excludePaths` 可选                                                           | 丢弃改动，`staged` 为真时移出暂存区并保留工作树内容      |
-| `git/write/Remove`  | `paths` 必填，`cached` 开关，`excludePaths` 可选                                                           | 删除已跟踪文件，总是递归，`cached` 为真时只移出索引      |
-| `git/write/Clean`   | `paths` 必填，`dryRun`、`force` 开关                                                                       | 清理未跟踪文件与目录，`dryRun` 为真时只预演              |
-| `git/write/Apply`   | `patch` 必填，`check`、`stat`、`reverse` 开关                                                              | 把补丁应用到工作树，`check` 为真时只校验                 |
-| `git/branch/Switch` | `branch` 必填，`create` 开关                                                                               | 切到分支，`create` 为真时新建分支并切过去                |
-| `git/branch/Merge`  | `revision` 与 `abort`、`continue` 三选一，`fastForwardOnly`、`noFastForward` 开关只在合并时用 | 把分支或提交合并进当前分支，可中止或继续一次合并         |
-| `git/branch/Rebase` | `upstream` 与 `abort`、`continue`、`skip` 四选一，`autostash` 开关只在变基时用                  | 把当前分支变基到上游，可中止、继续或跳过                 |
+| 函数                     | 参数                                                                                                                   | 作用                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `git/read/Status`        | `paths`、`untracked` 可选                                                                                              | 查看当前分支与各项的暂存、未暂存、未跟踪情况                   |
+| `git/read/Diff`          | `staged`、`stat`、`nameOnly`、`nameStatus` 开关，`diffFilter`、`revision`、`paths`、`excludePaths` 可选                | 查看改动差异，`nameOnly` 与 `nameStatus` 二选一                |
+| `git/read/Log`           | `count` 必填，`revision`、`author`、`grep`、`since`、`until`、`paths`、`excludePaths` 可选，`stat`、`firstParent` 开关 | 查看提交历史，可按作者、说明、时间与修订筛选                   |
+| `git/read/Show`          | `revision` 必填，`stat`、`firstParent` 开关，`paths` 可选                                                              | 查看一个提交的说明与改动                                       |
+| `git/read/Branches`      | `pattern` 可选                                                                                                         | 列出全部分支及其当前提交，含远端分支                           |
+| `git/read/PreviewAdd`    | `paths` 必填，`excludePaths` 可选                                                                                      | 预演把路径的改动放入暂存区，列出将暂存的路径                   |
+| `git/read/PreviewCommit` | `paths`、`excludePaths` 可选                                                                                           | 给出提交摘要，列出将提交、有本地改动但不会被提交与未跟踪的路径 |
+| `git/read/PreviewRemove` | `paths` 必填，`cached` 开关，`excludePaths` 可选                                                                       | 预演删除已跟踪文件，列出将删除的文件                           |
+| `git/write/Add`          | `paths` 必填，`excludePaths` 可选                                                                                      | 把路径的改动放入暂存区                                         |
+| `git/write/Commit`       | `message` 必填，`paths` 可选，`excludePaths` 只在给出 `paths` 时生效                                                   | 提交暂存区的改动，给 `paths` 时只提交这些路径                  |
+| `git/write/Restore`      | `paths` 必填，`staged` 开关，`excludePaths` 可选                                                                       | 丢弃改动，`staged` 为真时移出暂存区并保留工作树内容            |
+| `git/write/Remove`       | `paths` 必填，`cached` 开关，`excludePaths` 可选                                                                       | 删除已跟踪文件，总是递归，`cached` 为真时只移出索引            |
+| `git/write/Clean`        | `paths` 必填，`dryRun`、`force` 开关                                                                                   | 清理未跟踪文件与目录，`dryRun` 为真时只预演                    |
+| `git/write/Apply`        | `patch` 必填，`check`、`stat`、`reverse` 开关                                                                          | 把补丁应用到工作树，`check` 为真时只校验                       |
+| `git/branch/Switch`      | `branch` 必填，`create` 开关                                                                                           | 切到分支，`create` 为真时新建分支并切过去                      |
+| `git/branch/Merge`       | `revision` 与 `abort`、`continue` 三选一，`fastForwardOnly`、`noFastForward` 开关只在合并时用                          | 把分支或提交合并进当前分支，可中止或继续一次合并               |
+| `git/branch/Rebase`      | `upstream` 与 `abort`、`continue`、`skip` 四选一，`autostash` 开关只在变基时用                                         | 把当前分支变基到上游，可中止、继续或跳过                       |
 
 ## 行为
 
