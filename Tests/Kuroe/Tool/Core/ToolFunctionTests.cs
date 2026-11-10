@@ -192,6 +192,19 @@ public sealed class ToolFunctionTests
             () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
     }
 
+    [Fact]
+    public void Bind_rejects_leading_dash_on_path_parameter()
+    {
+        string root = Root();
+        ToolDefinition definition = new(
+            new ToolPath("Invalid"),
+            "非法",
+            [new ToolParameter(new ToolName("path"), "路径", Path: true, AllowLeadingDash: true)]);
+
+        Assert.Throws<InvalidOperationException>(
+            () => definition.Bind(_ => "结果", new ToolPathScope(root, root, "工作目录")));
+    }
+
     /// <summary>声明一个必填路径参数的定义。</summary>
     private static ToolDefinition Definition(ToolParameter parameter) =>
         new(new ToolPath("Write"), "写入", [parameter]);

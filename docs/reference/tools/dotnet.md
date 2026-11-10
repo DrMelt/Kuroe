@@ -20,7 +20,7 @@
 | `dotnet/write/Publish`     | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/AddPackage`  | `project` 可选，`package` 必填，`version` 可选 | 300  | 8000     |
 
-`project` 与 `package` 是裸位置值，以 `-` 开头的实参在启动进程前被拒绝。`configuration`、`filter`、`severity`、`version` 以及 `TestMtp` 的 `project` 与 `solution` 也是模型给出的值，同样拒绝以 `-` 开头的实参。
+`project` 与 `solution` 是路径参数，按 `root` 解析，越界时调用被拒绝且不启动进程；展开进命令行的是解析后的绝对路径，命令回显与 dotnet 输出里的项目路径也是绝对路径。`package`、`configuration`、`filter`、`severity`、`version` 是模型给出的值，以 `-` 开头的实参在启动进程前被拒绝。
 
 ## 格式整理
 

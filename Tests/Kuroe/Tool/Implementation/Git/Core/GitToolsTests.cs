@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Git.Tests;
 
-/// <summary>内置 git 工具面：九条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
+/// <summary>内置 git 工具面：十四条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class GitToolsTests
 {
     /// <summary>路径实参：一个文件的列表。</summary>
@@ -19,8 +19,9 @@ public sealed class GitToolsTests
 
     /// <summary>排除路径实参：两个目录。</summary>
     private static readonly string[] TwoExcludes = ["docs", "bin"];
-    private static readonly string[] stringArray = [":(exclude)docs"];
-    private static readonly string[] stringArray0 = ["-a.txt"];
+
+    /// <summary>路径魔法形式的实参。</summary>
+    private static readonly string[] MagicPaths = [":(exclude)docs"];
 
     [Fact]
     public void Definitions_cover_read_write_and_branch_groups()
@@ -35,7 +36,12 @@ public sealed class GitToolsTests
                 "git/write/Add",
                 "git/write/Commit",
                 "git/write/Restore",
+                "git/write/Remove",
+                "git/write/Clean",
+                "git/write/Apply",
                 "git/branch/Switch",
+                "git/branch/Merge",
+                "git/branch/Rebase",
             ],
             GitTools.Definitions.Select(definition => definition.Definition.Path.Value));
     }
@@ -150,6 +156,69 @@ public sealed class GitToolsTests
                 new(":(exclude){excludePaths}", null),
             ],
             Template("git/write/Restore"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("rm", null),
+                new("-r", null),
+                new("--cached", "cached"),
+                new("--", null),
+                new("{paths}", null),
+                new(":(exclude){excludePaths}", null),
+            ],
+            Template("git/write/Remove"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("clean", null),
+                new("-d", null),
+                new("--dry-run", "dryRun"),
+                new("--force", "force"),
+                new("--", null),
+                new("{paths}", null),
+            ],
+            Template("git/write/Clean"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("apply", null),
+                new("--check", "check"),
+                new("--stat", "stat"),
+                new("--reverse", "reverse"),
+                new("{patch}", null),
+            ],
+            Template("git/write/Apply"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("-c", null),
+                new("core.editor=:", null),
+                new("merge", null),
+                new("--ff-only", "fastForwardOnly"),
+                new("--no-ff", "noFastForward"),
+                new("{revision}", "revision"),
+                new("--abort", "abort"),
+                new("--continue", "continue"),
+            ],
+            Template("git/branch/Merge"));
+
+        Assert.Equal(
+            [
+                new("git", null),
+                new("-c", null),
+                new("core.editor=:", null),
+                new("rebase", null),
+                new("--autostash", "autostash"),
+                new("{upstream}", "upstream"),
+                new("--abort", "abort"),
+                new("--continue", "continue"),
+                new("--skip", "skip"),
+            ],
+            Template("git/branch/Rebase"));
     }
 
     [Fact]
@@ -291,6 +360,122 @@ public sealed class GitToolsTests
     }
 
     [Fact]
+    public void Remove_carries_cached_paths_and_excluded_paths()
+    {
+        Assert.Equal(["git", "rm", "-r", "--", "a.txt"], Argv("git/write/Remove", Given(("paths", OnePath))));
+        Assert.Equal(
+            ["git", "rm", "-r", "--cached", "--", "a.txt", "b.txt"],
+            Argv("git/write/Remove", Given(("cached", true), ("paths", TwoPaths))));
+        Assert.Equal(
+            ["git", "rm", "-r", "--", "a.txt", ":(exclude)docs"],
+            Argv("git/write/Remove", Given(("paths", OnePath), ("excludePaths", DocsPath))));
+        Assert.Equal("缺少参数 paths。", Rejected("git/write/Remove", Given()));
+    }
+
+    [Fact]
+    public void Clean_carries_dry_run_force_and_paths()
+    {
+        Assert.Equal(["git", "clean", "-d", "--", "a.txt"], Argv("git/write/Clean", Given(("paths", OnePath))));
+        Assert.Equal(
+            ["git", "clean", "-d", "--dry-run", "--", "a.txt"],
+            Argv("git/write/Clean", Given(("paths", OnePath), ("dryRun", true))));
+        Assert.Equal(
+            ["git", "clean", "-d", "--dry-run", "--force", "--", "a.txt", "b.txt"],
+            Argv("git/write/Clean", Given(("paths", TwoPaths), ("dryRun", true), ("force", true))));
+        Assert.Equal("缺少参数 paths。", Rejected("git/write/Clean", Given()));
+    }
+
+    [Fact]
+    public void Apply_carries_check_stat_reverse_and_patch()
+    {
+        Assert.Equal(["git", "apply", "fix.patch"], Argv("git/write/Apply", Given(("patch", "fix.patch"))));
+        Assert.Equal(
+            ["git", "apply", "--check", "fix.patch"],
+            Argv("git/write/Apply", Given(("check", true), ("patch", "fix.patch"))));
+        Assert.Equal(
+            ["git", "apply", "--stat", "--reverse", "fix.patch"],
+            Argv("git/write/Apply", Given(("stat", true), ("reverse", true), ("patch", "fix.patch"))));
+        Assert.Equal("缺少参数 patch。", Rejected("git/write/Apply", Given()));
+    }
+
+    [Fact]
+    public void Merge_carries_revision_fast_forward_flags_and_modes()
+    {
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "merge", "topic"],
+            Argv("git/branch/Merge", Given(("revision", "topic"))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "merge", "--ff-only", "topic"],
+            Argv("git/branch/Merge", Given(("revision", "topic"), ("fastForwardOnly", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "merge", "--no-ff", "topic"],
+            Argv("git/branch/Merge", Given(("revision", "topic"), ("noFastForward", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "merge", "--abort"],
+            Argv("git/branch/Merge", Given(("abort", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "merge", "--continue"],
+            Argv("git/branch/Merge", Given(("continue", true))));
+    }
+
+    [Fact]
+    public void Rebase_carries_upstream_autostash_and_modes()
+    {
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "rebase", "main"],
+            Argv("git/branch/Rebase", Given(("upstream", "main"))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "rebase", "--autostash", "main"],
+            Argv("git/branch/Rebase", Given(("upstream", "main"), ("autostash", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "rebase", "--abort"],
+            Argv("git/branch/Rebase", Given(("abort", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "rebase", "--continue"],
+            Argv("git/branch/Rebase", Given(("continue", true))));
+        Assert.Equal(
+            ["git", "-c", "core.editor=:", "rebase", "--skip"],
+            Argv("git/branch/Rebase", Given(("skip", true))));
+    }
+
+    [Fact]
+    public void Merge_and_rebase_reject_conflicting_mode_arguments()
+    {
+        CommandTool merge = new(Definition("git/branch/Merge"), Path.GetTempPath());
+        CommandTool rebase = new(Definition("git/branch/Rebase"), Path.GetTempPath());
+
+        ErrorOr<string> bothFastForward = merge.Functions[0].Invoke(
+            new ToolArguments(Given(("revision", "topic"), ("fastForwardOnly", true), ("noFastForward", true))));
+
+        Assert.True(bothFastForward.IsError);
+        Assert.Contains("只能给出一个", bothFastForward.FirstError.Description, StringComparison.Ordinal);
+
+        ErrorOr<string> revisionWithAbort = merge.Functions[0].Invoke(
+            new ToolArguments(Given(("revision", "topic"), ("abort", true))));
+
+        Assert.True(revisionWithAbort.IsError);
+        Assert.Contains("只能给出一个", revisionWithAbort.FirstError.Description, StringComparison.Ordinal);
+
+        ErrorOr<string> fastForwardWithContinue = merge.Functions[0].Invoke(
+            new ToolArguments(Given(("fastForwardOnly", true), ("continue", true))));
+
+        Assert.True(fastForwardWithContinue.IsError);
+        Assert.Contains("只能给出一个", fastForwardWithContinue.FirstError.Description, StringComparison.Ordinal);
+
+        ErrorOr<string> upstreamWithAbort = rebase.Functions[0].Invoke(
+            new ToolArguments(Given(("upstream", "main"), ("abort", true))));
+
+        Assert.True(upstreamWithAbort.IsError);
+        Assert.Contains("只能给出一个", upstreamWithAbort.FirstError.Description, StringComparison.Ordinal);
+
+        ErrorOr<string> autostashWithSkip = rebase.Functions[0].Invoke(
+            new ToolArguments(Given(("autostash", true), ("skip", true))));
+
+        Assert.True(autostashWithSkip.IsError);
+        Assert.Contains("只能给出一个", autostashWithSkip.FirstError.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Bare_values_reject_leading_dash()
     {
         Assert.Equal(
@@ -305,6 +490,12 @@ public sealed class GitToolsTests
         Assert.Equal(
             "参数 pattern 的值不能以 - 开头。",
             Rejected("git/read/Branches", Given(("pattern", "--all"))));
+        Assert.Equal(
+            "参数 revision 的值不能以 - 开头。",
+            Rejected("git/branch/Merge", Given(("revision", "--abort"))));
+        Assert.Equal(
+            "参数 upstream 的值不能以 - 开头。",
+            Rejected("git/branch/Rebase", Given(("upstream", "--force"))));
     }
 
     [Fact]
@@ -313,11 +504,12 @@ public sealed class GitToolsTests
         Assert.Equal(
             ["git", "commit", "-m", "--amend"],
             Argv("git/write/Commit", Given(("message", "--amend"))));
-        Assert.Equal(
-            ["git", "show", "HEAD", "--", "-a.txt"],
-            Argv("git/read/Show", Given(("revision", "HEAD"), ("paths", stringArray0))));
-        Assert.True(Parameter(Definition("git/write/Commit"), "paths").AllowLeadingDash);
-        Assert.True(Parameter(Definition("git/read/Log"), "excludePaths").AllowLeadingDash);
+        Assert.True(Parameter(Definition("git/write/Commit"), "message").AllowLeadingDash);
+        Assert.All(
+            GitTools.Definitions
+                .SelectMany(definition => definition.Parameters)
+                .Where(parameter => parameter.Path),
+            parameter => Assert.False(parameter.AllowLeadingDash));
         Assert.False(Parameter(Definition("git/read/Diff"), "revision").AllowLeadingDash);
         Assert.False(Parameter(Definition("git/branch/Switch"), "branch").AllowLeadingDash);
     }
@@ -328,7 +520,7 @@ public sealed class GitToolsTests
         CommandTool tool = new(Definition("git/read/Diff"), Path.GetTempPath());
 
         ErrorOr<string> result = tool.Functions[0].Invoke(
-            new ToolArguments(Given(("paths", stringArray))));
+            new ToolArguments(Given(("paths", MagicPaths))));
 
         Assert.True(result.IsError);
         Assert.Equal("路径参数 paths 不能以 : 开头。", result.FirstError.Description);
@@ -395,6 +587,39 @@ public sealed class GitToolsTests
         Assert.True(Parameter(Definition("git/write/Restore"), "excludePaths").List);
         Assert.True(Parameter(Definition("git/branch/Switch"), "create").Flag);
         Assert.True(Parameter(Definition("git/branch/Switch"), "branch").Required);
+
+        CommandToolDefinition remove = Definition("git/write/Remove");
+
+        Assert.True(Parameter(remove, "cached").Flag);
+        Assert.True(Parameter(remove, "paths").Required);
+        Assert.True(Parameter(remove, "excludePaths").List);
+
+        CommandToolDefinition clean = Definition("git/write/Clean");
+
+        Assert.True(Parameter(clean, "dryRun").Flag);
+        Assert.True(Parameter(clean, "force").Flag);
+        Assert.True(Parameter(clean, "paths").Required);
+
+        CommandToolDefinition apply = Definition("git/write/Apply");
+
+        Assert.True(Parameter(apply, "check").Flag);
+        Assert.True(Parameter(apply, "stat").Flag);
+        Assert.True(Parameter(apply, "reverse").Flag);
+        Assert.True(Parameter(apply, "patch").Required);
+
+        CommandToolDefinition merge = Definition("git/branch/Merge");
+
+        Assert.True(Parameter(merge, "fastForwardOnly").Flag);
+        Assert.True(Parameter(merge, "noFastForward").Flag);
+        Assert.True(Parameter(merge, "abort").Flag);
+        Assert.True(Parameter(merge, "continue").Flag);
+        Assert.False(Parameter(merge, "revision").Required);
+
+        CommandToolDefinition rebase = Definition("git/branch/Rebase");
+
+        Assert.True(Parameter(rebase, "autostash").Flag);
+        Assert.True(Parameter(rebase, "skip").Flag);
+        Assert.False(Parameter(rebase, "upstream").Required);
     }
 
     [Fact]
@@ -414,12 +639,18 @@ public sealed class GitToolsTests
                 ("git/write/Commit", "excludePaths"),
                 ("git/write/Restore", "paths"),
                 ("git/write/Restore", "excludePaths"),
+                ("git/write/Remove", "paths"),
+                ("git/write/Remove", "excludePaths"),
+                ("git/write/Clean", "paths"),
+                ("git/write/Apply", "patch"),
             ],
             entry => Assert.True(Parameter(Definition(entry.Item1), entry.Item2).Path));
 
         Assert.False(Parameter(Definition("git/read/Show"), "revision").Path);
         Assert.False(Parameter(Definition("git/read/Log"), "author").Path);
         Assert.False(Parameter(Definition("git/branch/Switch"), "branch").Path);
+        Assert.False(Parameter(Definition("git/branch/Merge"), "revision").Path);
+        Assert.False(Parameter(Definition("git/branch/Rebase"), "upstream").Path);
         Assert.False(Parameter(Definition("git/write/Commit"), "message").Path);
     }
 

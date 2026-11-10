@@ -9,6 +9,9 @@ namespace Kuroe.Tool.Command.Tests;
 /// <summary>命令执行编排：进程由替身给出结果，全程不起进程。</summary>
 public sealed class CommandToolRunnerTests
 {
+    /// <summary>路径实参：两个目录与一个以 - 开头的文件名。</summary>
+    private static readonly string[] PathList = ["src/a", "docs/b", "-a.txt"];
+
     [Fact]
     public void Execute_returns_merged_output_with_command_and_exit_code()
     {
@@ -141,6 +144,53 @@ public sealed class CommandToolRunnerTests
     }
 
     [Fact]
+    public void Execute_expands_path_parameters_as_absolute_paths()
+    {
+        string root = Root();
+        CommandToolDefinition definition = new(
+            new ToolPath("Execution"),
+            "说明",
+            [new ToolParameter(new ToolName("paths"), "路径", List: true, Path: true)],
+            [new("cmd", null), new("--", null), new("{paths}", null)],
+            null,
+            5,
+            200);
+        FakeProcessRunner process = new();
+
+        ErrorOr<string> result = Invoke(definition, root, Given(("paths", PathList)), process);
+
+        Assert.False(result.IsError);
+        Assert.Equal(
+            [
+                "--",
+                Path.GetFullPath("src/a", root),
+                Path.GetFullPath("docs/b", root),
+                Path.GetFullPath("-a.txt", root),
+            ],
+            process.Arguments);
+    }
+
+    [Fact]
+    public void Execute_expands_scalar_path_parameter_as_absolute_path()
+    {
+        string root = Root();
+        CommandToolDefinition definition = new(
+            new ToolPath("Execution"),
+            "说明",
+            [new ToolParameter(new ToolName("path"), "路径", Path: true)],
+            [new("cmd", null), new("{path}", null)],
+            null,
+            5,
+            200);
+        FakeProcessRunner process = new();
+
+        ErrorOr<string> result = Invoke(definition, root, Given(("path", "-a.txt")), process);
+
+        Assert.False(result.IsError);
+        Assert.Equal([Path.GetFullPath("-a.txt", root)], process.Arguments);
+    }
+
+    [Fact]
     public void Execute_rejects_path_outside_working_directory_before_starting_process()
     {
         CommandToolDefinition definition = PathDefinition(new ToolParameter(new ToolName("path"), "路径", Path: true));
@@ -157,8 +207,6 @@ public sealed class CommandToolRunnerTests
         Assert.False(process.Called);
     }
 
-    private static readonly string[] stringArray = ["src/a", "docs/b"];
-
     [Fact]
     public void Execute_rejects_path_list_item_outside_allow_before_starting_process()
     {
@@ -169,7 +217,7 @@ public sealed class CommandToolRunnerTests
         ErrorOr<string> result = Invoke(
             definition,
             Root(),
-            Given(("path", stringArray)),
+            Given(("path", PathList)),
             process);
 
         Assert.True(result.IsError);

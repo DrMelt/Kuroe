@@ -50,8 +50,8 @@ internal static class Log
             new ToolParameter(new ToolName(Until), "只查看此时间之前的提交，如 2026-12-31，缺省不限制"),
             new ToolParameter(new ToolName(Stat), "同时给出每个提交的改动统计，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName(FirstParent), "只看第一父提交，布尔，缺省为假", Flag: true),
-            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true),
         ],
         [
             new("git", null),

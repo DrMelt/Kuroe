@@ -61,7 +61,7 @@ internal sealed class CommandParameterDto
     /// <summary>该参数是路径，实参按执行目录解析并限制在工作区内。</summary>
     public bool Path { get; set; }
 
-    /// <summary>实参允许以 - 开头。</summary>
+    /// <summary>实参允许以 - 开头；只对非路径参数有效，路径参数进入命令行时解析为绝对路径。</summary>
     public bool AllowLeadingDash { get; set; }
 
     /// <summary>路径的白名单条目，为空时不限制。</summary>

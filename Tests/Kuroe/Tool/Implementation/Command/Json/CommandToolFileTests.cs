@@ -312,6 +312,7 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Directory": "{p}/src", "Parameters": [ { "Name": "p" } ] } ] }""", "路径变量 p 与参数同名")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--flag", "OmitWhenMissing": "flag" }], "Parameters": [ { "Name": "flag", "Flag": true, "AllowLeadingDash": true } ] } ] }""", "不能允许 - 开头的实参")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p", "Path": true, "AllowLeadingDash": true } ] } ] }""", "是路径参数")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "x", "OmitWhenMissing": "p", "Positional": true } ], "Parameters": [ { "Name": "p" } ] } ] }""", "未知字段")]
     [InlineData("""{ "Tools": [ { "Name": "", "Template": ["x"] } ] }""", "工具名不能为空")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p" }, { "Name": "p" } ] } ] }""", "参数名 p 重复")]

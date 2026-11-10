@@ -16,8 +16,8 @@ internal static class Add
         new ToolPath("git/write/Add"),
         "把指定路径的改动放入暂存区，供 Commit 提交；可排除部分路径。",
         [
-            new ToolParameter(new ToolName(Paths), "要暂存的文件或目录路径列表", Required: true, List: true, Path: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "要暂存的文件或目录路径列表", Required: true, List: true, Path: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true),
         ],
         [
             new("git", null),

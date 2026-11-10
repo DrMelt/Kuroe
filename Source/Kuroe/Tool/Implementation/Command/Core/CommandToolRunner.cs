@@ -5,7 +5,8 @@ using Kuroe.Tool.Command.Shared;
 
 namespace Kuroe.Tool.Command;
 
-/// <summary>命令的执行编排：读取路径变量，展开模板，经进程端口启动命令，把输出文本交回模型。路径参数由工具函数在调用前校验。</summary>
+/// <summary>命令的执行编排：读取路径变量，展开模板，经进程端口启动命令，把输出文本交回模型。
+/// 路径参数由工具函数在调用前校验，这里按同一规则取出解析后的绝对路径供模板展开。</summary>
 internal sealed class CommandToolRunner
 {
     private readonly CommandToolDefinition _definition;
@@ -59,7 +60,7 @@ internal sealed class CommandToolRunner
     /// <summary>路径参数的解析范围：实参按执行目录解析，根目录是工作区根。</summary>
     public ToolPathScope Paths { get; }
 
-    /// <summary>展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。</summary>
+    /// <summary>展开模板并执行命令，结果交回文本，错误以 ErrorOr 表达。路径参数以解析后的绝对路径进入命令行。</summary>
     public ErrorOr<string> Execute(ToolArguments arguments)
     {
         if (_bindingError is { } error)
@@ -67,7 +68,14 @@ internal sealed class CommandToolRunner
             return error;
         }
 
-        ErrorOr<IReadOnlyList<string>> argv = _definition.CommandLine(arguments, _variables);
+        ErrorOr<IReadOnlyDictionary<ToolName, object?>> resolved =
+            ToolPathArguments.Resolve(_definition.Parameters, arguments, Paths);
+        if (resolved.IsError)
+        {
+            return resolved.ErrorsOrEmptyList;
+        }
+
+        ErrorOr<IReadOnlyList<string>> argv = _definition.CommandLine(arguments.Replace(resolved.Value), _variables);
         if (argv.IsError)
         {
             return argv.ErrorsOrEmptyList;

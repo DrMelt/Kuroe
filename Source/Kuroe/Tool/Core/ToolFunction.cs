@@ -56,71 +56,8 @@ public sealed class ToolFunction
             return null;
         }
 
-        foreach (ToolParameter parameter in Definition.Parameters)
-        {
-            if (!parameter.Path)
-            {
-                continue;
-            }
-
-            if (parameter.List)
-            {
-                IReadOnlyList<string> values = arguments.List(parameter.Name) ?? [];
-                if (values.Count == 0)
-                {
-                    if (parameter.Required)
-                    {
-                        return ToolErrors.Argument($"缺少参数 {parameter.Name.Value}。");
-                    }
-
-                    continue;
-                }
-
-                foreach (string pathValue in values)
-                {
-                    if (CheckValue(paths, parameter, pathValue) is { } rejectedValue)
-                    {
-                        return rejectedValue;
-                    }
-                }
-
-                continue;
-            }
-
-            string? text = arguments.Text(parameter.Name);
-            if (text is null)
-            {
-                if (parameter.Required)
-                {
-                    return ToolErrors.Argument($"缺少参数 {parameter.Name.Value}。");
-                }
-
-                continue;
-            }
-
-            if (CheckValue(paths, parameter, text) is { } rejectedText)
-            {
-                return rejectedText;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>校验一个路径值：空值与 : 开头拒绝，其余按工具声明的路径范围解析。</summary>
-    private static Error? CheckValue(ToolPathScope paths, ToolParameter parameter, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return ToolErrors.Argument($"路径参数 {parameter.Name.Value} 不能为空。");
-        }
-
-        if (value.StartsWith(':'))
-        {
-            return ToolErrors.Argument($"路径参数 {parameter.Name.Value} 不能以 : 开头。");
-        }
-
-        ErrorOr<string> resolved = paths.Resolve(value, parameter.PathAccess);
+        ErrorOr<IReadOnlyDictionary<ToolName, object?>> resolved =
+            ToolPathArguments.Resolve(Definition.Parameters, arguments, paths);
 
         return resolved.IsError ? resolved.FirstError : null;
     }

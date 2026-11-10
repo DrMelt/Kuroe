@@ -41,8 +41,8 @@ internal static class Diff
             new ToolParameter(new ToolName(NameStatus), "给改动文件列表与状态，与 nameOnly 二选一，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName(DiffFilter), "按改动类型筛选，如 A、M、D，缺省不筛选"),
             new ToolParameter(new ToolName(Revision), "比较的修订号，如 HEAD、main、提交号，也可写 A..B，缺省与索引比较"),
-            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true),
         ],
         [
             new("git", null),

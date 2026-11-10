@@ -6,6 +6,8 @@ namespace Kuroe.Tool;
 /// <summary>一次工具调用的实参。值来自模型给的 JSON，也接受已经解析成 CLR 值的同义形式。</summary>
 public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
 {
+    private readonly IReadOnlyDictionary<string, object?> _values = values;
+
     /// <summary>按参数名取文本。标量按文本给出，缺参、JSON null 或类型不符时为空。</summary>
     public string? Text(ToolName name) => Value(name) switch
     {
@@ -47,6 +49,23 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         _ => null,
     };
 
+    /// <summary>产出替换了给定参数值的实参，未给出的参数保持原值。命令展开用它把路径参数换成解析后的绝对路径。</summary>
+    public ToolArguments Replace(IReadOnlyDictionary<ToolName, object?> replacements)
+    {
+        if (replacements.Count == 0)
+        {
+            return this;
+        }
+
+        Dictionary<string, object?> replaced = new(_values, StringComparer.Ordinal);
+        foreach ((ToolName name, object? value) in replacements)
+        {
+            replaced[name.Value] = value;
+        }
+
+        return new ToolArguments(replaced);
+    }
+
     /// <summary>数组元素按文本给出，JSON null 或 undefined 按空文本。</summary>
     private static string TextOf(JsonElement element) => element.ValueKind switch
     {
@@ -57,5 +76,5 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         _ => element.ToString(),
     };
 
-    private object? Value(ToolName name) => values.TryGetValue(name.Value, out object? value) ? value : null;
+    private object? Value(ToolName name) => _values.TryGetValue(name.Value, out object? value) ? value : null;
 }

@@ -29,6 +29,11 @@ public sealed record ToolDefinition(
             throw new InvalidOperationException($"工具 {Path.Value} 的参数不能同时是布尔与路径。");
         }
 
+        if (Parameters.Any(parameter => parameter.Path && parameter.AllowLeadingDash))
+        {
+            throw new InvalidOperationException($"工具 {Path.Value} 的路径参数不能允许以 - 开头的实参。");
+        }
+
         if (Parameters.Any(parameter => parameter.PathAccess is not null && !parameter.Path))
         {
             throw new InvalidOperationException($"工具 {Path.Value} 的非路径参数不能配置路径准入规则。");

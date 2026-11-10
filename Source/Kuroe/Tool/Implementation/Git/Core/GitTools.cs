@@ -6,10 +6,10 @@ using Kuroe.Tool.Git.Write;
 
 namespace Kuroe.Tool.Git;
 
-/// <summary>内置 git 工具面：九个函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
+/// <summary>内置 git 工具面：十四个函数都是命令工具定义，模板展开与进程执行复用命令面，命令在路径基准目录执行。</summary>
 public static class GitTools
 {
-    /// <summary>九个函数的命令定义，按只读、当前分支改动与分支操作分组，模板与参数在各函数文件里给出。</summary>
+    /// <summary>十四个函数的命令定义，按只读、当前分支改动与分支操作分组，模板与参数在各函数文件里给出。</summary>
     public static IReadOnlyList<CommandToolDefinition> Definitions { get; } = Create();
 
     /// <summary>装配定义并校验模板与参数的一致性。</summary>
@@ -25,7 +25,12 @@ public static class GitTools
             Add.Definition with { Variables = [PathVariables.RootName] },
             Commit.Definition with { Variables = [PathVariables.RootName] },
             Restore.Definition with { Variables = [PathVariables.RootName] },
+            Remove.Definition with { Variables = [PathVariables.RootName] },
+            Clean.Definition with { Variables = [PathVariables.RootName] },
+            Apply.Definition with { Variables = [PathVariables.RootName] },
             Switch.Definition with { Variables = [PathVariables.RootName] },
+            Merge.Definition with { Variables = [PathVariables.RootName] },
+            Rebase.Definition with { Variables = [PathVariables.RootName] },
         ];
 
         CommandToolValidation.EnsureValid(definitions);

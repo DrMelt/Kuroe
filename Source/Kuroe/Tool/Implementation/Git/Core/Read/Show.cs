@@ -25,7 +25,7 @@ internal static class Show
             new ToolParameter(new ToolName(Revision), "要查看的提交号或修订号", Required: true),
             new ToolParameter(new ToolName(Stat), "只给改动统计，布尔，缺省为假", Flag: true),
             new ToolParameter(new ToolName(FirstParent), "合并提交只看第一父的改动，布尔，缺省为假", Flag: true),
-            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "限定查看的文件或目录路径列表，缺省查看全部", List: true, Path: true),
         ],
         [
             new("git", null),

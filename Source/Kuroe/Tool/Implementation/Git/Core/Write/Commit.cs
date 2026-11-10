@@ -20,8 +20,8 @@ internal static class Commit
         "把暂存区的改动提交；给 paths 时只提交这些路径的改动，可再排除部分路径。",
         [
             new ToolParameter(new ToolName(Message), "提交说明", Required: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(Paths), "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true, Path: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，只在给出 paths 时生效", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "只提交这些路径的改动，缺省提交暂存区的全部改动", List: true, Path: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，只在给出 paths 时生效", List: true, Path: true),
         ],
         [
             new("git", null),

@@ -20,8 +20,8 @@ internal static class Restore
         "丢弃指定路径的改动，缺省丢弃工作树的改动；可排除部分路径。",
         [
             new ToolParameter(new ToolName(Staged), "把路径移出暂存区而不是丢弃工作树的改动，布尔，缺省为假", Flag: true),
-            new ToolParameter(new ToolName(Paths), "要还原的文件或目录路径列表", Required: true, List: true, Path: true, AllowLeadingDash: true),
-            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(Paths), "要还原的文件或目录路径列表", Required: true, List: true, Path: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true),
         ],
         [
             new("git", null),

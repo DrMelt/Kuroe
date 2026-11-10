@@ -257,7 +257,7 @@ public sealed class CommandToolFile : IToolFile
     }
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。
-    /// 路径参数不能是布尔，路径规则条目必须在工作目录内。布尔开关不取文本值，不能允许 - 开头的实参。</summary>
+    /// 路径参数不能是布尔，也不能允许 - 开头的实参，路径规则条目必须在工作目录内。布尔开关不取文本值，不能允许 - 开头的实参。</summary>
     private static ErrorOr<IReadOnlyList<ToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos, string workDirectory)
     {
         List<Error> errors = [];
@@ -311,6 +311,12 @@ public sealed class CommandToolFile : IToolFile
             if (dto.Flag && dto.AllowLeadingDash)
             {
                 errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 是布尔开关，不取文本值，不能允许 - 开头的实参。"));
+                continue;
+            }
+
+            if (dto.Path && dto.AllowLeadingDash)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 是路径参数，实参解析为绝对路径，不能允许 - 开头的实参。"));
                 continue;
             }
 
