@@ -1,6 +1,6 @@
 # 命令执行
 
-`Kind: Command` 启动执行。`From` 任一组齐备且来源有新产出时在 `Directory` 内执行一次命令，合并 stdout 与 stderr 写入 `Output`，并在同一次发布中触发 `Completed`。命令在任务推进的独立执行中运行，不占用任务状态锁；暂停与终止会终止进程树。
+`Kind: Command` 启动执行。`From` 任一组齐备且来源有新产出时在 `Directory` 内执行一次命令，合并 stdout 与 stderr 写入 `Output`，并在同一次发布中触发 `Completed`。暂停与终止会终止进程树。
 
 ## 类型参数
 
