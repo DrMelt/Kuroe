@@ -8,9 +8,6 @@ namespace Kuroe.Tool.Dotnet.Tests;
 /// <summary>内置 dotnet 工具面：十三条定义的路径、模板与参数，以及各自展开出的命令行。全程不起进程。</summary>
 public sealed class DotnetToolsTests
 {
-    /// <summary>应用参数实参：两个参数。</summary>
-    private static readonly string[] TwoArguments = ["--input", "a.txt"];
-
     [Fact]
     public void Definitions_cover_read_and_write_groups()
     {
@@ -95,7 +92,7 @@ public sealed class DotnetToolsTests
             Template("dotnet/write/TestMtp"));
 
         Assert.Equal(
-            [new("dotnet", null), new("run", null), new("{project}", null), new("--", "arguments"), new("{arguments}", null)],
+            [new("dotnet", null), new("run", null), new("{project}", null)],
             Template("dotnet/write/Run"));
 
         Assert.Equal(
@@ -232,16 +229,10 @@ public sealed class DotnetToolsTests
     }
 
     [Fact]
-    public void Run_carries_project_and_application_arguments()
+    public void Run_carries_project()
     {
         Assert.Equal(["dotnet", "run"], Argv("dotnet/write/Run", Given()));
         Assert.Equal(["dotnet", "run", "Source/Kuroe.Console"], Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Console"))));
-        Assert.Equal(
-            ["dotnet", "run", "Source/Kuroe.Console", "--", "--input", "a.txt"],
-            Argv("dotnet/write/Run", Given(("project", "Source/Kuroe.Console"), ("arguments", TwoArguments))));
-        Assert.Equal(
-            ["dotnet", "run", "--", "--input", "a.txt"],
-            Argv("dotnet/write/Run", Given(("arguments", TwoArguments))));
     }
 
     [Fact]
@@ -295,6 +286,26 @@ public sealed class DotnetToolsTests
     }
 
     [Fact]
+    public void Values_starting_with_dash_are_rejected()
+    {
+        Assert.Equal(
+            "参数 project 的值不能以 - 开头。",
+            Rejected("dotnet/write/Build", Given(("project", "-x"))));
+        Assert.Equal(
+            "参数 package 的值不能以 - 开头。",
+            Rejected("dotnet/write/AddPackage", Given(("package", "-x"))));
+        Assert.Equal(
+            "参数 configuration 的值不能以 - 开头。",
+            Rejected("dotnet/write/Build", Given(("configuration", "-x"))));
+        Assert.Equal(
+            "参数 project 的值不能以 - 开头。",
+            Rejected("dotnet/write/TestMtp", Given(("project", "-x"))));
+        Assert.All(
+            DotnetTools.Definitions.SelectMany(definition => definition.Parameters),
+            parameter => Assert.False(parameter.AllowLeadingDash));
+    }
+
+    [Fact]
     public void Parameters_declare_switches_lists_and_required_values()
     {
         CommandToolDefinition listPackages = Definition("dotnet/read/ListPackages");
@@ -309,8 +320,7 @@ public sealed class DotnetToolsTests
 
         CommandToolDefinition run = Definition("dotnet/write/Run");
 
-        Assert.True(Parameter(run, "arguments").List);
-        Assert.False(Parameter(run, "arguments").Required);
+        Assert.Equal([new ToolName("project")], run.Parameters.Select(parameter => parameter.Name));
 
         CommandToolDefinition addPackage = Definition("dotnet/write/AddPackage");
 

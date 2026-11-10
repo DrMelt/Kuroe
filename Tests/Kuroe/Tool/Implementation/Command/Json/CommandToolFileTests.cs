@@ -128,6 +128,63 @@ public sealed class CommandToolFileTests
     }
 
     [Fact]
+    public void Load_accepts_embedded_list_parameter()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "RunDiff",
+                  "Template": ["git", "diff", "--", ".", ":(exclude){excludePaths}"],
+                  "Parameters": [ { "Name": "excludePaths", "List": true, "Path": true } ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.Equal("git diff -- . :(exclude){excludePaths}", loaded.Value[0].Configuration);
+    }
+
+    [Fact]
+    public void Load_accepts_value_after_linked_option()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "RunCommit",
+                  "Template": ["git", "commit", { "Text": "-m", "OmitWhenMissing": "message" }, "{message}"],
+                  "Parameters": [ { "Name": "message", "Required": true } ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.True(loaded.Value[0].Definition.Parameters[0].Required);
+    }
+
+    [Fact]
+    public void Load_accepts_parameter_allowing_leading_dash()
+    {
+        ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
+            {
+              "Tools": [
+                {
+                  "Name": "Run",
+                  "Template": ["cmd", "{value}"],
+                  "Parameters": [ { "Name": "value", "AllowLeadingDash": true } ]
+                }
+              ]
+            }
+            """);
+
+        Assert.False(loaded.IsError);
+        Assert.True(loaded.Value[0].Definition.Parameters[0].AllowLeadingDash);
+    }
+
+    [Fact]
     public void Load_accepts_fixed_text_items_linked_to_flag_and_list_parameters()
     {
         ErrorOr<IReadOnlyList<ConfiguredTool>> loaded = Load("""
@@ -254,7 +311,8 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Variables": ["extra"] } ] }""", "没有被模板或 Directory 引用")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Directory": "{p}/src", "Parameters": [ { "Name": "p" } ] } ] }""", "路径变量 p 与参数同名")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "Parameters": [ { "Name": "p" } ] } ] }""", "没有出现在模板里")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "--flag={files}"], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--flag", "OmitWhenMissing": "flag" }], "Parameters": [ { "Name": "flag", "Flag": true, "AllowLeadingDash": true } ] } ] }""", "不能允许 - 开头的实参")]
+    [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "x", "OmitWhenMissing": "p", "Positional": true } ], "Parameters": [ { "Name": "p" } ] } ] }""", "未知字段")]
     [InlineData("""{ "Tools": [ { "Name": "", "Template": ["x"] } ] }""", "工具名不能为空")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{p}"], "Parameters": [ { "Name": "p" }, { "Name": "p" } ] } ] }""", "参数名 p 重复")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x"], "TimeoutSeconds": 0 } ] }""", "TimeoutSeconds 必须是正整数")]
@@ -275,8 +333,6 @@ public sealed class CommandToolFileTests
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", "{staged}"], "Parameters": [ { "Name": "staged", "Flag": true } ] } ] }""", "只能关联参数项")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--staged", "OmitWhenMissing": "staged" }], "Parameters": [ { "Name": "staged", "Flag": true, "List": true } ] } ] }""", "不能同时是布尔与列表")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": ["x", { "Text": "--staged", "OmitWhenMissing": "staged" }], "Parameters": [ { "Name": "staged", "Flag": true, "Required": true } ] } ] }""", "不能是必填参数")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ "x", { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
-    [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ { "Text": "--flag={files}", "OmitWhenMissing": "files" } ], "Parameters": [ { "Name": "files", "List": true } ] } ] }""", "独立的")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Template": [ 3 ] } ] }""", "必须是字符串或")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Group": "/git", "Template": ["x"] } ] }""", "不能以 / 开头或结尾")]
     [InlineData("""{ "Tools": [ { "Name": "A", "Group": "git/", "Template": ["x"] } ] }""", "段不能为空")]

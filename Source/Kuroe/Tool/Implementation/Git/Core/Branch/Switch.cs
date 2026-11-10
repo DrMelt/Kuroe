@@ -1,6 +1,6 @@
 using Kuroe.Tool.Command.Shared;
 
-namespace Kuroe.Tool.Git.Write;
+namespace Kuroe.Tool.Git.Branch;
 
 /// <summary>切换分支的命令定义。</summary>
 internal static class Switch
@@ -13,7 +13,7 @@ internal static class Switch
 
     /// <summary>函数定义与模板：git switch [-c] {branch}。</summary>
     internal static readonly CommandToolDefinition Definition = new(
-        new ToolPath("git/write/Switch"),
+        new ToolPath("git/branch/Switch"),
         "切到指定分支。",
         [
             new ToolParameter(new ToolName(Branch), "要切换到的分支名", Required: true),

@@ -120,6 +120,7 @@ public sealed class WiringTests : IDisposable
                 .Definitions.Select(definition => definition.Path.Value)];
         Assert.Contains("git/read/Status", paths);
         Assert.Contains("git/write/Restore", paths);
+        Assert.Contains("git/branch/Switch", paths);
     }
 
     [Fact]

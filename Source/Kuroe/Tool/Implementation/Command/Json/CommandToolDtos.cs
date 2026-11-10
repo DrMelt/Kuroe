@@ -61,6 +61,9 @@ internal sealed class CommandParameterDto
     /// <summary>该参数是路径，实参按执行目录解析并限制在工作区内。</summary>
     public bool Path { get; set; }
 
+    /// <summary>实参允许以 - 开头。</summary>
+    public bool AllowLeadingDash { get; set; }
+
     /// <summary>路径的白名单条目，为空时不限制。</summary>
     public List<string>? Allow { get; set; }
 
@@ -68,7 +71,7 @@ internal sealed class CommandParameterDto
     public List<string>? Deny { get; set; }
 }
 
-/// <summary>模板里带省略声明的参数项。Text 是命令行文字，OmitWhenMissing 是关联参数名。</summary>
+/// <summary>模板里的参数项。Text 是命令行文字，OmitWhenMissing 是关联参数名。</summary>
 internal sealed class CommandToolTemplateItemDto
 {
     /// <summary>命令行文字，可含 {参数名} 占位符。</summary>

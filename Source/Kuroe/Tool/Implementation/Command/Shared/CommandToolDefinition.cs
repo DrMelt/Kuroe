@@ -1,10 +1,11 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using ErrorOr;
 
 namespace Kuroe.Tool.Command.Shared;
 
 /// <summary>命令工具的配置定义：路径、说明、参数、命令模板与执行参数。模板的每一项是一个参数项，
-/// 里面的 {参数名} 是占位符，运行时由模型实参填充；函数定义按这些数据交给工具契约。</summary>
+/// 里面的 {参数名} 是占位符，列表参数按元素重复整个参数项；函数定义按这些数据交给工具契约。</summary>
 /// <param name="Path">函数在工具层级里的完整路径。</param>
 /// <param name="Description">给模型的说明。</param>
 /// <param name="Parameters">参数声明。</param>
@@ -83,20 +84,23 @@ public sealed record CommandToolDefinition(
             return null;
         }
 
-        return ExpandToken(parameters, arguments, variables, item.Text, argv);
+        return ExpandToken(parameters, arguments, variables, item, argv);
     }
 
-    /// <summary>展开一个含占位符的参数项。变量优先，其次才是参数声明。展开后追加参数项，返回非空表示中断调用。</summary>
+    /// <summary>展开一个含占位符的参数项。变量优先，其次才是参数声明。列表参数按索引配对后重复整个参数项。
+    /// 展开后追加参数项，返回非空表示中断调用。</summary>
     private static Error? ExpandToken(
         IReadOnlyList<ToolParameter> parameters,
         ToolArguments arguments,
         IReadOnlyDictionary<string, string> variables,
-        string token,
+        CommandToolTemplateItem item,
         List<string> argv)
     {
-        // 独立占位符：整个参数项就是 {name}。列表参数只允许这种写法。
+        string token = item.Text;
         MatchCollection matches = CommandToolTemplate.Matches(token);
-        if (matches.Count == 1 && token.StartsWith('{') && token.EndsWith('}'))
+
+        // 独立占位符：整个参数项就是 {name}。
+        if (matches.Count == 1 && matches[0].Index == 0 && matches[0].Length == token.Length)
         {
             string name = matches[0].Groups[1].Value;
             if (variables.TryGetValue(name, out string? variable))
@@ -120,6 +124,15 @@ public sealed record CommandToolDefinition(
                     return parameter.Required ? ToolErrors.Argument($"缺少参数 {name}。") : null;
                 }
 
+                foreach (string value in values)
+                {
+                    Error? rejectedValue = CheckLeadingDash(parameter, value);
+                    if (rejectedValue is not null)
+                    {
+                        return rejectedValue;
+                    }
+                }
+
                 argv.AddRange(values);
 
                 return null;
@@ -131,19 +144,26 @@ public sealed record CommandToolDefinition(
                 return parameter.Required ? ToolErrors.Argument($"缺少参数 {name}。") : null;
             }
 
+            Error? rejectedText = CheckLeadingDash(parameter, text);
+            if (rejectedText is not null)
+            {
+                return rejectedText;
+            }
+
             argv.Add(text);
 
             return null;
         }
 
-        // 内嵌占位符：变量直接替换，参数只允许标量；可选参数缺省时该占位符按字面量保留。
-        string expanded = token;
+        // 内嵌占位符：变量与标量按一次求值，列表参数按索引配对后重复整个参数项。
+        Dictionary<string, string> constantValues = new(variables);
+        List<(string Name, ToolParameter Parameter)> listParameters = [];
+
         foreach (Match match in matches)
         {
             string name = match.Groups[1].Value;
-            if (variables.TryGetValue(name, out string? variable))
+            if (variables.ContainsKey(name))
             {
-                expanded = expanded.Replace(match.Value, variable, StringComparison.Ordinal);
                 continue;
             }
 
@@ -155,7 +175,12 @@ public sealed record CommandToolDefinition(
 
             if (parameter.List)
             {
-                return ToolErrors.Internal($"列表参数 {name} 只能写成独立的 {{{name}}} 参数项。");
+                if (listParameters.All(candidate => candidate.Name != name))
+                {
+                    listParameters.Add((name, parameter));
+                }
+
+                continue;
             }
 
             string? value = arguments.Text(parameter.Name);
@@ -169,14 +194,121 @@ public sealed record CommandToolDefinition(
                 continue;
             }
 
-            expanded = expanded.Replace(match.Value, value, StringComparison.Ordinal);
+            Error? rejectedValue = CheckLeadingDash(parameter, value);
+            if (rejectedValue is not null)
+            {
+                return rejectedValue;
+            }
+
+            constantValues[name] = value;
         }
 
-        if (expanded.Length > 0)
+        if (listParameters.Count == 0)
         {
-            argv.Add(expanded);
+            string expanded = ExpandText(token, matches, constantValues);
+            if (expanded.Length > 0)
+            {
+                argv.Add(expanded);
+            }
+
+            return null;
+        }
+
+        foreach (Match match in matches)
+        {
+            string name = match.Groups[1].Value;
+            if (variables.ContainsKey(name) || listParameters.Any(candidate => candidate.Name == name))
+            {
+                continue;
+            }
+
+            if (!constantValues.ContainsKey(name)
+                && parameters.Any(candidate => candidate.Name.Value == name))
+            {
+                return ToolErrors.Argument(
+                    $"参数 {name} 缺失，不能与列表参数 {listParameters[0].Name} 在同一参数项展开。");
+            }
+        }
+
+        List<List<string>> listValues = [];
+        foreach ((string name, ToolParameter parameter) in listParameters)
+        {
+            List<string> values = [.. arguments.List(parameter.Name) ?? []];
+            if (values.Count == 0 && parameter.Required)
+            {
+                return ToolErrors.Argument($"缺少参数 {name}。");
+            }
+
+            foreach (string value in values)
+            {
+                Error? rejectedValue = CheckLeadingDash(parameter, value);
+                if (rejectedValue is not null)
+                {
+                    return rejectedValue;
+                }
+            }
+
+            listValues.Add(values);
+        }
+
+        int count = listValues[0].Count;
+        for (int index = 1; index < listValues.Count; index++)
+        {
+            if (listValues[index].Count != count)
+            {
+                return ToolErrors.Argument(
+                    $"列表参数 {listParameters[0].Name} 与 {listParameters[index].Name} 的元素数量必须一致。");
+            }
+        }
+
+        for (int index = 0; index < count; index++)
+        {
+            for (int position = 0; position < listParameters.Count; position++)
+            {
+                constantValues[listParameters[position].Name] = listValues[position][index];
+            }
+
+            string expanded = ExpandText(token, matches, constantValues);
+            if (expanded.Length > 0)
+            {
+                argv.Add(expanded);
+            }
         }
 
         return null;
     }
+
+    /// <summary>按原匹配位置替换一次，替换值里的占位符不再展开。</summary>
+    private static string ExpandText(string token, MatchCollection matches, Dictionary<string, string> values)
+    {
+        var expanded = new StringBuilder();
+        int position = 0;
+
+        foreach (Match match in matches)
+        {
+            expanded.Append(token, position, match.Index - position);
+
+            string name = match.Groups[1].Value;
+            if (values.TryGetValue(name, out string? value))
+            {
+                expanded.Append(value);
+            }
+            else
+            {
+                expanded.Append(match.Value);
+            }
+
+            position = match.Index + match.Length;
+        }
+
+        expanded.Append(token, position, token.Length - position);
+
+        return expanded.ToString();
+    }
+
+    /// <summary>参数值不能以 - 开头，否则会被程序当成开关；声明允许的参数除外。</summary>
+    private static Error? CheckLeadingDash(ToolParameter parameter, string value) =>
+        !parameter.AllowLeadingDash && value.StartsWith('-')
+            ? ToolErrors.Argument($"参数 {parameter.Name.Value} 的值不能以 - 开头。")
+            : null;
 }

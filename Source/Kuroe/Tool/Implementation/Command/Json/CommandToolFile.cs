@@ -97,7 +97,8 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
-            CheckTemplate(definition, errors);
+            errors.AddRange(CommandToolValidation.TemplateReasons(definition)
+                .Select(reason => CommandToolErrors.Invalid(definition.Definition.Path.Value, reason)));
             definitions.Add(definition);
         }
 
@@ -256,7 +257,7 @@ public sealed class CommandToolFile : IToolFile
     }
 
     /// <summary>装配参数声明：名字不能为空、不能含空白与花括号、不能重复，布尔与列表互斥，布尔开关不是必填参数。
-    /// 路径参数不能是布尔，路径规则条目必须在工作目录内。</summary>
+    /// 路径参数不能是布尔，路径规则条目必须在工作目录内。布尔开关不取文本值，不能允许 - 开头的实参。</summary>
     private static ErrorOr<IReadOnlyList<ToolParameter>> ToParameters(string tool, List<CommandParameterDto>? dtos, string workDirectory)
     {
         List<Error> errors = [];
@@ -307,6 +308,12 @@ public sealed class CommandToolFile : IToolFile
                 continue;
             }
 
+            if (dto.Flag && dto.AllowLeadingDash)
+            {
+                errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 是布尔开关，不取文本值，不能允许 - 开头的实参。"));
+                continue;
+            }
+
             if (!dto.Path && (dto.Allow is not null || dto.Deny is not null))
             {
                 errors.Add(CommandToolErrors.Invalid(tool, $"参数 {dto.Name} 不是路径参数，不能配置 Allow 与 Deny。"));
@@ -333,7 +340,8 @@ public sealed class CommandToolFile : IToolFile
                 Required: dto.Required,
                 List: dto.List,
                 Path: dto.Path,
-                PathAccess: access));
+                PathAccess: access,
+                AllowLeadingDash: dto.AllowLeadingDash));
         }
 
         return errors.Count > 0 ? errors : parameters;
@@ -460,65 +468,5 @@ public sealed class CommandToolFile : IToolFile
         }
 
         return errors.Count > 0 ? errors : items;
-    }
-
-    /// <summary>模板与参数声明的对应关系：占位符必须有声明，文本与列表参数必须出现在模板里，列表参数只能独立成参数项。
-    /// 布尔参数只作参数项的关联参数，不出现在命令行文字里。</summary>
-    private static void CheckTemplate(CommandToolDefinition definition, List<Error> errors)
-    {
-        IReadOnlyList<ToolParameter> parameters = definition.Definition.Parameters;
-        IReadOnlyList<string> variables = definition.PathVariables;
-        string tool = definition.Definition.Path.Value;
-        List<string> placeholders = [.. CommandToolTemplate.PlaceholdersOf(definition.Template)];
-
-        errors.AddRange(variables
-            .Where(variable => parameters.Any(parameter => parameter.Name.Value == variable))
-            .Select(variable => CommandToolErrors.Invalid(tool, $"路径变量 {variable} 与参数同名。")));
-
-        foreach (CommandToolTemplateItem item in definition.Template)
-        {
-            if (item.OmitWhenMissing is not { } linkedName)
-            {
-                continue;
-            }
-
-            ToolParameter? linked = parameters.FirstOrDefault(parameter => parameter.Name.Value == linkedName);
-            if (linked is null)
-            {
-                errors.Add(CommandToolErrors.Invalid(tool, $"模板参数项关联的参数 {linkedName} 没有对应声明。"));
-            }
-            else if (linked.Flag && item.Text.Contains($"{{{linkedName}}}", StringComparison.Ordinal))
-            {
-                errors.Add(CommandToolErrors.Invalid(tool, $"布尔参数 {linkedName} 不能出现在参数项的文字里。"));
-            }
-        }
-
-        errors.AddRange(placeholders
-            .Where(placeholder => !variables.Contains(placeholder)
-                && parameters.All(parameter => parameter.Name.Value != placeholder))
-            .Select(placeholder => CommandToolErrors.Invalid(tool, $"模板占位符 {{{placeholder}}} 没有对应的参数或路径变量声明。")));
-
-        IReadOnlyList<string> directoryVariables =
-            CommandToolTemplate.PlaceholdersOf(new CommandToolTemplateItem(definition.Directory ?? string.Empty, null));
-        errors.AddRange(variables
-            .Where(variable => !placeholders.Contains(variable) && !directoryVariables.Contains(variable))
-            .Select(variable => CommandToolErrors.Invalid(tool, $"路径变量 {variable} 没有被模板或 Directory 引用。")));
-
-        errors.AddRange(parameters
-            .Where(parameter => !parameter.Flag && !placeholders.Contains(parameter.Name.Value))
-            .Select(parameter => CommandToolErrors.Invalid(tool, $"参数 {parameter.Name.Value} 已声明但没有出现在模板里。")));
-
-        errors.AddRange(parameters
-            .Where(parameter => parameter.Flag && placeholders.Contains(parameter.Name.Value))
-            .Select(parameter => CommandToolErrors.Invalid(tool, $"布尔参数 {parameter.Name.Value} 只能关联参数项，不能写成占位符。")));
-
-        // 列表参数混在别的文字里时在 ExpandToken 会拒绝整项，装载期先给出配置错误
-        List<ToolParameter> listParameters = [.. parameters.Where(parameter => parameter.List)];
-        errors.AddRange(
-            from parameter in listParameters
-            from item in definition.Template
-            where item.Text != $"{{{parameter.Name.Value}}}"
-                && CommandToolTemplate.PlaceholdersOf([item]).Contains(parameter.Name.Value)
-            select CommandToolErrors.Invalid(tool, $"列表参数 {parameter.Name.Value} 只能写成独立的 {{{parameter.Name.Value}}} 参数项。"));
     }
 }

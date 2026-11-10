@@ -14,11 +14,13 @@
 | `dotnet/write/Build`       | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/Test`        | `project`、`filter` 可选                       | 600  | 8000     |
 | `dotnet/write/TestMtp`     | `project` 与 `solution` 二选一                 | 600  | 8000     |
-| `dotnet/write/Run`         | `project` 可选，`arguments` 列表               | 600  | 8000     |
+| `dotnet/write/Run`         | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Restore`     | `project` 可选                                 | 600  | 8000     |
 | `dotnet/write/Format`      | `project`、`severity` 可选                     | 600  | 8000     |
 | `dotnet/write/Publish`     | `project`、`configuration` 可选                | 600  | 8000     |
 | `dotnet/write/AddPackage`  | `project` 可选，`package` 必填，`version` 可选 | 300  | 8000     |
+
+`project` 与 `package` 是裸位置值，以 `-` 开头的实参在启动进程前被拒绝。`configuration`、`filter`、`severity`、`version` 以及 `TestMtp` 的 `project` 与 `solution` 也是模型给出的值，同样拒绝以 `-` 开头的实参。
 
 ## 格式整理
 

@@ -53,6 +53,26 @@ public sealed class ToolFunctionTests
     }
 
     [Fact]
+    public void Pathspec_magic_is_rejected_before_invoking()
+    {
+        string root = Root();
+        bool called = false;
+        ToolFunction function = Definition(RequiredPath())
+            .Bind(_ =>
+            {
+                called = true;
+
+                return "已写入";
+            }, new ToolPathScope(root, root, "工作目录"));
+
+        ErrorOr<string> result = function.Invoke(Given(("path", ":(top)Source")));
+
+        Assert.True(result.IsError);
+        Assert.Equal("路径参数 path 不能以 : 开头。", result.FirstError.Description);
+        Assert.False(called);
+    }
+
+    [Fact]
     public void Optional_path_absent_invokes_body()
     {
         string root = Root();

@@ -148,6 +148,260 @@ public sealed class CommandToolTemplateTests
         Assert.Equal(["D:/task/src"], argv.Value);
     }
 
+    [Fact]
+    public void Expand_repeats_embedded_list_item_per_value()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--files={files}", null));
+
+        Assert.Equal(
+            ["cmd", "--files=a", "--files=b"],
+            Argv(template, [FileParameter], Given(("files", stringArray0))));
+    }
+
+    [Fact]
+    public void Expand_repeats_prefix_and_suffix_in_order()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--file={files}:v1", null));
+
+        Assert.Equal(
+            ["cmd", "--file=a:v1", "--file=b:v1"],
+            Argv(template, [FileParameter], Given(("files", stringArray0))));
+    }
+
+    [Fact]
+    public void Expand_omits_empty_optional_embedded_list()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--files={files}", null));
+
+        Assert.Equal(["cmd"], Argv(template, [FileParameter], Given(("files", Array.Empty<string>()))));
+    }
+
+    [Fact]
+    public void Expand_rejects_required_empty_embedded_list()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--files={files}", null));
+
+        Assert.Equal(
+            "缺少参数 files。",
+            Rejected(template, [RequiredFileParameter], Given(("files", Array.Empty<string>()))));
+    }
+
+    [Fact]
+    public void Expand_pairs_multiple_lists_by_index()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("{files}:{others}", null));
+
+        Assert.Equal(
+            ["cmd", "甲:x", "乙:y"],
+            Argv(template, [FileParameter, OthersParameter], Given(("files", stringArray), ("others", stringArray2))));
+    }
+
+    [Fact]
+    public void Expand_rejects_unequal_list_lengths()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("{files}:{others}", null));
+
+        Assert.Equal(
+            "列表参数 files 与 others 的元素数量必须一致。",
+            Rejected(template, [FileParameter, OthersParameter], Given(("files", stringArray), ("others", stringArray3))));
+    }
+
+    [Fact]
+    public void Expand_omits_item_when_all_optional_lists_are_empty()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("{files}:{others}", null));
+
+        Assert.Equal(
+            ["cmd"],
+            Argv(template, [FileParameter, OthersParameter],
+                Given(("files", Array.Empty<string>()), ("others", Array.Empty<string>()))));
+    }
+
+    [Fact]
+    public void Expand_rejects_required_empty_list_among_multiple()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("{files}:{others}", null));
+
+        Assert.Equal(
+            "缺少参数 files。",
+            Rejected(template, [RequiredFileParameter, OthersParameter],
+                Given(("files", Array.Empty<string>()), ("others", stringArray3))));
+    }
+
+    [Fact]
+    public void Expand_repeats_same_list_parameter_with_one_value()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("{files}:{files}", null));
+
+        Assert.Equal(
+            ["cmd", "甲:甲", "乙:乙"],
+            Argv(template, [FileParameter], Given(("files", stringArray))));
+    }
+
+    [Fact]
+    public void Expand_rejects_missing_optional_scalar_in_list_item()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--user={files}:{role}", null));
+
+        Assert.Contains(
+            "参数 role 缺失",
+            Rejected(template, [FileParameter, RoleParameter], Given(("files", stringArray))),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Expand_applies_scalar_to_each_embedded_list_value()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--user={files}:{role}", null));
+
+        Assert.Equal(
+            ["cmd", "--user=甲:admin", "--user=乙:admin"],
+            Argv(template, [FileParameter, RoleParameter], Given(("files", stringArray), ("role", "admin"))));
+    }
+
+    [Fact]
+    public void Expand_does_not_rescan_replacement_values()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template =
+            Linked(("cmd", null), ("--x={text}:{role}", null));
+
+        Assert.Equal(
+            ["cmd", "--x={role}:v"],
+            Argv(template, [TextParameter, RoleParameter], Given(("text", "{role}"), ("role", "v"))));
+    }
+
+    [Fact]
+    public void Expand_rejects_bare_value_starting_with_dash()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("{name}", null)];
+
+        Assert.Equal(
+            "参数 name 的值不能以 - 开头。",
+            Rejected(template, [NameParameter], Given(("name", "--help"))));
+    }
+
+    [Fact]
+    public void Expand_accepts_bare_value_without_dash()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("{name}", null)];
+
+        Assert.Equal(
+            ["HEAD~1"],
+            Argv(template, [NameParameter], Given(("name", "HEAD~1"))));
+    }
+
+    [Fact]
+    public void Expand_rejects_list_values_starting_with_dash()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("{files}", null)];
+
+        Assert.Equal(
+            "参数 files 的值不能以 - 开头。",
+            Rejected(template, [FileParameter], Given(("files", stringArray1))));
+    }
+
+    [Fact]
+    public void Expand_rejects_dash_value_after_terminator()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--", null), new("{name}", null)];
+
+        Assert.Equal(
+            "参数 name 的值不能以 - 开头。",
+            Rejected(template, [NameParameter], Given(("name", "-a.txt"))));
+    }
+
+    [Fact]
+    public void Expand_accepts_dash_value_after_terminator_when_parameter_allows_it()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--", null), new("{name}", null)];
+
+        Assert.Equal(
+            ["--", "-a.txt"],
+            Argv(template, [AllowedNameParameter], Given(("name", "-a.txt"))));
+    }
+
+    [Fact]
+    public void Expand_rejects_embedded_value_starting_with_dash()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--name={name}", null)];
+
+        Assert.Equal(
+            "参数 name 的值不能以 - 开头。",
+            Rejected(template, [NameParameter], Given(("name", "--help"))));
+    }
+
+    [Fact]
+    public void Expand_accepts_embedded_dash_value_when_parameter_allows_it()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--name={name}", null)];
+
+        Assert.Equal(
+            ["--name=--help"],
+            Argv(template, [AllowedNameParameter], Given(("name", "--help"))));
+    }
+
+    [Fact]
+    public void Expand_accepts_list_dash_value_when_parameter_allows_it()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("{files}", null)];
+
+        Assert.Equal(
+            ["a", "-b"],
+            Argv(template, [AllowedFileParameter], Given(("files", stringArray1))));
+    }
+
+    [Fact]
+    public void Expand_rejects_dash_value_after_linked_option()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--name", "name"), new("{name}", null)];
+
+        Assert.Equal(
+            "参数 name 的值不能以 - 开头。",
+            Rejected(template, [NameParameter], Given(("name", "--help"))));
+    }
+
+    [Fact]
+    public void Expand_rejects_value_after_unlinked_option()
+    {
+        IReadOnlyList<CommandToolTemplateItem> template = [new("--name", null), new("{name}", null)];
+
+        Assert.Equal(
+            "参数 name 的值不能以 - 开头。",
+            Rejected(template, [NameParameter], Given(("name", "--help"))));
+    }
+
+    [Fact]
+    public void Expand_does_not_check_path_variable_values()
+    {
+        CommandToolDefinition definition = new(
+            new ToolPath("Execution"),
+            "说明",
+            [],
+            [new("{root}/src", null)],
+            null,
+            5,
+            200,
+            ["root"]);
+
+        ErrorOr<IReadOnlyList<string>> argv = definition.CommandLine(
+            new ToolArguments(Given()),
+            new Dictionary<string, string> { ["root"] = "-root" });
+
+        Assert.False(argv.IsError);
+        Assert.Equal(["-root/src"], argv.Value);
+    }
+
     /// <summary>展开得到命令行，被拒时用例失败。</summary>
     private static IReadOnlyList<string> Argv(IReadOnlyList<CommandToolTemplateItem> template, IReadOnlyList<ToolParameter> parameters, Dictionary<string, object?> values)
     {
@@ -193,8 +447,17 @@ public sealed class CommandToolTemplateTests
     private static readonly ToolParameter TextParameter = new(new ToolName("text"), "文本", Required: true);
     private static readonly ToolParameter TokenParameter = new(new ToolName("token"), "令牌");
     private static readonly ToolParameter RequiredTokenParameter = new(new ToolName("token"), "令牌", Required: true);
+    private static readonly ToolParameter RoleParameter = new(new ToolName("role"), "角色");
+    private static readonly ToolParameter OthersParameter = new(new ToolName("others"), "另一个列表", List: true);
+    private static readonly ToolParameter NameParameter = new(new ToolName("name"), "名字");
     private static readonly ToolParameter UserParameter = new(new ToolName("user"), "用户");
     private static readonly ToolParameter PasswordParameter = new(new ToolName("pass"), "口令");
     private static readonly ToolParameter StagedParameter = new(new ToolName("staged"), "开关", Flag: true);
+    private static readonly ToolParameter AllowedNameParameter = new(new ToolName("name"), "名字", AllowLeadingDash: true);
+    private static readonly ToolParameter AllowedFileParameter = new(new ToolName("files"), "文件列表", List: true, AllowLeadingDash: true);
     private static readonly string[] stringArray = ["甲", "乙"];
+    private static readonly string[] stringArray0 = ["a", "b"];
+    private static readonly string[] stringArray1 = ["a", "-b"];
+    private static readonly string[] stringArray2 = ["x", "y"];
+    private static readonly string[] stringArray3 = ["x"];
 }

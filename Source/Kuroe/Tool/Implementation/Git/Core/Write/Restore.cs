@@ -11,13 +11,24 @@ internal static class Restore
     /// <summary>参数名：要还原的路径列表。</summary>
     private const string Paths = "paths";
 
-    /// <summary>函数定义与模板：git restore [--staged] -- {paths}。</summary>
+    /// <summary>参数名：排除的路径列表。</summary>
+    private const string ExcludePaths = "excludePaths";
+
+    /// <summary>函数定义与模板：git restore [--staged] -- {paths} [:(exclude){excludePaths}]。</summary>
     internal static readonly CommandToolDefinition Definition = new(
         new ToolPath("git/write/Restore"),
-        "丢弃指定路径的改动，缺省丢弃工作树的改动。",
+        "丢弃指定路径的改动，缺省丢弃工作树的改动；可排除部分路径。",
         [
             new ToolParameter(new ToolName(Staged), "把路径移出暂存区而不是丢弃工作树的改动，布尔，缺省为假", Flag: true),
-            new ToolParameter(new ToolName(Paths), "要还原的文件或目录路径列表", Required: true, List: true, Path: true),
+            new ToolParameter(new ToolName(Paths), "要还原的文件或目录路径列表", Required: true, List: true, Path: true, AllowLeadingDash: true),
+            new ToolParameter(new ToolName(ExcludePaths), "排除的文件或目录路径列表，缺省不排除", List: true, Path: true, AllowLeadingDash: true),
         ],
-        [new("git", null), new("restore", null), new("--staged", Staged), new("--", null), new("{paths}", null)]);
+        [
+            new("git", null),
+            new("restore", null),
+            new("--staged", Staged),
+            new("--", null),
+            new("{paths}", null),
+            new(":(exclude){excludePaths}", null),
+        ]);
 }

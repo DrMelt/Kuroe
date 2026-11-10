@@ -107,12 +107,17 @@ public sealed class ToolFunction
         return null;
     }
 
-    /// <summary>校验一个路径值：空值拒绝，其余按工具声明的路径范围解析。</summary>
+    /// <summary>校验一个路径值：空值与 : 开头拒绝，其余按工具声明的路径范围解析。</summary>
     private static Error? CheckValue(ToolPathScope paths, ToolParameter parameter, string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return ToolErrors.Argument($"路径参数 {parameter.Name.Value} 不能为空。");
+        }
+
+        if (value.StartsWith(':'))
+        {
+            return ToolErrors.Argument($"路径参数 {parameter.Name.Value} 不能以 : 开头。");
         }
 
         ErrorOr<string> resolved = paths.Resolve(value, parameter.PathAccess);

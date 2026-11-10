@@ -10,20 +10,30 @@ namespace Kuroe.Tool.Dotnet;
 public static class DotnetTools
 {
     /// <summary>全部函数的命令定义，按只读与改动分组，模板与参数在各函数文件里给出。</summary>
-    public static IReadOnlyList<CommandToolDefinition> Definitions { get; } =
-    [
-        Info.Definition with { Variables = [PathVariables.RootName] },
-        ListSdks.Definition with { Variables = [PathVariables.RootName] },
-        ListPackages.Definition with { Variables = [PathVariables.RootName] },
-        NugetSources.Definition with { Variables = [PathVariables.RootName] },
-        VerifyFormat.Definition with { Variables = [PathVariables.RootName] },
-        Build.Definition with { Variables = [PathVariables.RootName] },
-        Test.Definition with { Variables = [PathVariables.RootName] },
-        TestMtp.Definition with { Variables = [PathVariables.RootName] },
-        Run.Definition with { Variables = [PathVariables.RootName] },
-        Restore.Definition with { Variables = [PathVariables.RootName] },
-        Format.Definition with { Variables = [PathVariables.RootName] },
-        Publish.Definition with { Variables = [PathVariables.RootName] },
-        AddPackage.Definition with { Variables = [PathVariables.RootName] },
-    ];
+    public static IReadOnlyList<CommandToolDefinition> Definitions { get; } = Create();
+
+    /// <summary>装配定义并校验模板与参数的一致性。</summary>
+    private static IReadOnlyList<CommandToolDefinition> Create()
+    {
+        IReadOnlyList<CommandToolDefinition> definitions =
+        [
+            Info.Definition with { Variables = [PathVariables.RootName] },
+            ListSdks.Definition with { Variables = [PathVariables.RootName] },
+            ListPackages.Definition with { Variables = [PathVariables.RootName] },
+            NugetSources.Definition with { Variables = [PathVariables.RootName] },
+            VerifyFormat.Definition with { Variables = [PathVariables.RootName] },
+            Build.Definition with { Variables = [PathVariables.RootName] },
+            Test.Definition with { Variables = [PathVariables.RootName] },
+            TestMtp.Definition with { Variables = [PathVariables.RootName] },
+            Run.Definition with { Variables = [PathVariables.RootName] },
+            Restore.Definition with { Variables = [PathVariables.RootName] },
+            Format.Definition with { Variables = [PathVariables.RootName] },
+            Publish.Definition with { Variables = [PathVariables.RootName] },
+            AddPackage.Definition with { Variables = [PathVariables.RootName] },
+        ];
+
+        CommandToolValidation.EnsureValid(definitions);
+
+        return definitions;
+    }
 }
