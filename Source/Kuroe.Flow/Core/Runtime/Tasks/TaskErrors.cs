@@ -35,6 +35,10 @@ static class TaskErrors
     public static Error HostInput(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 由宿主提供，不接受提交输入。");
 
+    /// <summary>输入落在不承载内容的开始端口上。</summary>
+    public static Error NonContentInput(PortName port) =>
+        Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 不承载内容，不接受提交输入。");
+
     /// <summary>宿主没有为绑定端口给出值。</summary>
     public static Error MissingHostValue(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 的宿主输入没有给出值。");

@@ -157,7 +157,7 @@ public sealed class KuroeInfoToolTests
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
-        Assert.Contains("模型 Start@MODEL_NAME", output);
+        Assert.Contains("模型 @MODEL_NAME", output);
     }
 
     /// <summary>开始端口的宿主输入名来自宿主开始输入表，端口名可以自定义。</summary>
@@ -170,19 +170,17 @@ public sealed class KuroeInfoToolTests
               "Flows": [
                 {
                   "Name": "默认",
-                  "Start": {
-                    "Outputs": [
+                  "Ports": [
                       { "Name": "目标", "Type": "Text" },
                       { "Name": "启动路径", "Type": "Text", "Mode": "Constant" },
                       { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-                    ]
-                  },
+                    ],
                   "Root": {
                     "Name": "实施",
                     "Kind": "Llm",
-                    "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME", "启动路径": "@启动路径" },
                     "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Mode": "Constant" } ],
-                    "From": [ { "目标": "Start@目标" } ]
+                    "From": [ { "目标": "@目标" } ]
                   }
                 }
               ]

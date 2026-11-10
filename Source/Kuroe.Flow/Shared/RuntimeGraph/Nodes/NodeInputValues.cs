@@ -101,12 +101,12 @@ public sealed class NodeInputValues : INodeInputs
             }
 
             connected.Add(input);
-            if (binding.Signal || binding.SourcePort is not { } port)
+            if (binding.Signal || binding.SourcePort is null)
             {
                 continue;
             }
 
-            foreach (ContextValue value in context.Runtime(binding.Source).OutputValues(port))
+            foreach (ContextValue value in context.OutputValues(binding.Source))
             {
                 ordered.Add(new NodeInputValue(input, binding.Type ?? PortTypes.Text, value));
             }

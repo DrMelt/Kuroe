@@ -22,7 +22,11 @@ public sealed class InputProgressRecordsTests
         original.RecordGroup(2);
         original.RequestRerun();
         original.Consume(
-            new InputGroup([new InputBinding(NodePath.Of("目标"), source, port, new PortName("目标"), PortTypes.Text)]),
+            new InputGroup([new InputBinding(
+                NodePath.Of("目标"),
+                BindingSource.ForNode(source, port),
+                new PortName("目标"),
+                PortTypes.Text)]),
             new Sources(4));
         original.Publish(new Publication(
             3,
@@ -51,7 +55,7 @@ public sealed class InputProgressRecordsTests
 
     private sealed class Sources(long revision) : IReadinessSources
     {
-        public ISourceState Source(NodePath node) => new State(revision);
+        public ISourceState Source(BindingSource source) => new State(revision);
 
         private sealed record State(long Revision) : ISourceState
         {

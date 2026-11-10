@@ -20,18 +20,16 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": {
-                "Outputs": [
+              "Ports": [
                   { "Name": "目标", "Type": "Text" },
                   { "Name": "启动", "Type": "Text", "Mode": "Constant" },
                   { "Name": "流程", "Type": "Text", "Mode": "Constant" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-                ]
-              },
+                ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "启动": "Start@启动", "流程": "Start@流程", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "启动", "Type": "Text", "Mode": "Constant" }, { "Name": "流程", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "启动": "@启动", "流程": "@流程", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "读取路径",
                     "Kind": "Llm",
@@ -190,20 +188,20 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "WORKSPACE_PATH", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "WORKSPACE_PATH": "Start@WORKSPACE_PATH" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME", "WORKSPACE_PATH": "@WORKSPACE_PATH" },
                 "Inputs": [
                   { "Name": "目标" },
                   { "Name": "WORKSPACE_PATH", "Type": "Text", "Mode": "Constant" }
                 ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]
@@ -217,20 +215,20 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "启动", "Type": "Text", "Mode": "Constant", "Default": "fallback" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动": "Start@启动" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME", "启动": "@启动" },
                 "Inputs": [
                   { "Name": "目标" },
                   { "Name": "启动", "Type": "Text", "Mode": "Constant" }
                 ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]
@@ -244,8 +242,8 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ] }
+              "Ports": [{ "Name": "目标", "Type": "Text" }],
+              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -258,11 +256,11 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "环境", "Type": "Text", "Mode": "Constant", "Value": "固定" }
-              ] },
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ] }
+              ],
+              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -275,11 +273,11 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "启动", "Type": "Text", "Mode": "Constant" }
-              ] },
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ] }
+              ],
+              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -292,11 +290,11 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "触发", "Type": "Signal", "Mode": "Plain" }
-              ] },
-              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ] }
+              ],
+              "Root": { "Name": "收话", "Kind": "Input", "Question": "请补充背景", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -309,11 +307,11 @@ public sealed class StartPathsTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -322,8 +320,8 @@ public sealed class StartPathsTests
                   { "Name": "任务目录", "Type": "Text", "Mode": "Constant" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "From": [ { "目标": "Start@目标" } ],
-                "Bindings": { "任务目录": "Start@任务目录", "MODEL_NAME": "Start@MODEL_NAME" },
+                "From": [ { "目标": "@目标" } ],
+                "Bindings": { "任务目录": "@任务目录", "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "实施",

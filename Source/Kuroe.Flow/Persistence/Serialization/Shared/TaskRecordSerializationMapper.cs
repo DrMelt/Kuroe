@@ -191,7 +191,7 @@ public static class TaskRecordSerializationMapper
             common.Executions,
             common.LastInputGroup,
             [.. common.Consumed.Select(entry => new ConsumedRevisionData(
-                ToData(entry.Source),
+                entry.Source is { } source ? ToData(source) : null,
                 entry.Port?.Value,
                 entry.Revision))],
             common.ActivePublicationRevision,
@@ -412,7 +412,7 @@ public static class TaskRecordSerializationMapper
             dto.Executions,
             dto.LastInputGroup,
             [.. (dto.Consumed ?? []).Select(entry => new ConsumedRevisionRecord(
-                ReadPath(entry.Source, "已消费来源"),
+                entry.Source is null ? null : ReadPath(entry.Source, "已消费来源"),
                 entry.Port is null ? null : new PortName(entry.Port),
                 entry.Revision))],
             dto.ActivePublicationRevision,

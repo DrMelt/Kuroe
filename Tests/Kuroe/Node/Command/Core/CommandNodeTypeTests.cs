@@ -43,7 +43,7 @@ public sealed class CommandNodeTypeTests
         OutputDeclaration.Given outputs = Assert.IsType<OutputDeclaration.Given>(shape.Outputs);
         Assert.Equal([new PortName("Output"), new PortName("Completed")], outputs.Ports.Select(port => port.Name));
         Assert.Equal([PortTypes.Text, PortTypes.Signal], outputs.Ports.Select(port => port.Type));
-        Assert.Equal([PortMode.Plain, PortMode.Trigger], outputs.Ports.Select(port => port.Mode));
+        Assert.Equal([PortMode.Plain, PortMode.Plain], outputs.Ports.Select(port => port.Mode));
         Assert.Equal([PortTypes.Text, PortTypes.Signal], shape.AllowedOutputTypes);
     }
 

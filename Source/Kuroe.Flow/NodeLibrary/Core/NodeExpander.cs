@@ -18,15 +18,18 @@ internal static class NodeExpander
         public IReadOnlyDictionary<PortName, PortRef> Bindings { get; } = bindings;
     }
 
-    /// <summary>展开流程根节点。引用类错误（定义不存在、端口无绑定）在此一次给全。</summary>
+    /// <summary>展开流程根节点。流程开始端口构成最外层绑定域，根与成员用 @端口 取用。引用类错误在此一次给全。</summary>
     public static ErrorOr<NodeSpec> Expand(
         NodeLibrary library,
         NodeSpec root,
+        IReadOnlyList<Port> startPorts,
         NodeScope scope)
     {
         List<Error> errors = [];
-        CheckRootBindings(library, root, scope, errors);
-        NodeSpec? expanded = ExpandNode(library, root, null, inInstance: false, scope, errors);
+        Env? rootEnv = new(null, startPorts.ToDictionary(
+            port => port.Name,
+            port => PortRef.Start(port.Name)));
+        NodeSpec? expanded = ExpandNode(library, root, rootEnv, inInstance: false, scope, errors);
 
         if (errors.Count > 0)
         {
@@ -34,55 +37,6 @@ internal static class NodeExpander
         }
 
         return expanded ?? throw new InvalidOperationException($"流程根节点 {root.Label} 展开失败。");
-    }
-
-    /// <summary>根容器的传入来源：流程作用域里只有开始节点，根容器的静态绑定与动态 From 只能引用开始端口。</summary>
-    private static void CheckRootBindings(
-        NodeLibrary library,
-        NodeSpec root,
-        NodeScope scope,
-        List<Error> errors)
-    {
-        bool container = root.Nodes is { Count: > 0 }
-            || (root.Use is { } use
-                && library.TryFind(use, out NodeSpec? definition)
-                && definition.Nodes is { Count: > 0 });
-        if (!container)
-        {
-            return;
-        }
-
-        if (root.Bindings is { } bindings)
-        {
-            foreach ((PortName port, PortRef reference) in bindings)
-            {
-                CheckRootReference(root, port, reference, scope, errors);
-            }
-        }
-
-        foreach (FromLink link in root.From.SelectMany(group => group.Links))
-        {
-            CheckRootReference(root, link.Input, link.Ref, scope, errors);
-        }
-    }
-
-    /// <summary>根容器的一条传入引用：来源为空或不是开始都记错误。</summary>
-    private static void CheckRootReference(
-        NodeSpec root,
-        PortName port,
-        PortRef reference,
-        NodeScope scope,
-        List<Error> errors)
-    {
-        if (reference.Source is null)
-        {
-            errors.Add(scope.Node(root.Label.Value, $"根容器的端口 {port} 不能引用更外层端口。"));
-        }
-        else if (reference.Source != StartNode.ReservedLabel)
-        {
-            errors.Add(scope.Node(root.Label.Value,
-                $"根容器的端口 {port} 引用的节点 {reference.Source.Value} 不在流程作用域里。"));
-        }
     }
 
     /// <summary>展开一个节点：引用按库定义实例化，实例根采用引用处写下的标签，库定义内成员沿用定义里的标签。</summary>
@@ -294,16 +248,16 @@ internal static class NodeExpander
     /// 绑定值沿更外层绑定域透传；成员只看自己容器的绑定域，外层容器的端口不可见。</summary>
     private static PortRef ResolveRef(PortRef reference, Env? env, NodeScope scope, List<Error> errors)
     {
-        if (reference.Source is not null)
+        if (reference.Source is not null || reference.IsStart)
         {
             return reference;
         }
 
         if (env is not null && env.Bindings.TryGetValue(reference.Port, out PortRef bound))
         {
-            return bound.Source is null
-                ? ResolveBound(bound, env.Parent, scope, errors)
-                : bound;
+            return bound.IsStart || bound.Source is not null
+                ? bound
+                : ResolveBound(bound, env.Parent, scope, errors);
         }
 
         errors.Add(scope.Node(reference.Port.Value, $"端口 @{reference.Port.Value} 没有绑定来源。"));
@@ -315,9 +269,9 @@ internal static class NodeExpander
     {
         if (env is not null && env.Bindings.TryGetValue(bound.Port, out PortRef outer))
         {
-            return outer.Source is null
-                ? ResolveBound(outer, env.Parent, scope, errors)
-                : outer;
+            return outer.IsStart || outer.Source is not null
+                ? outer
+                : ResolveBound(outer, env.Parent, scope, errors);
         }
 
         errors.Add(scope.Node(bound.Port.Value, $"端口 @{bound.Port.Value} 没有绑定来源。"));

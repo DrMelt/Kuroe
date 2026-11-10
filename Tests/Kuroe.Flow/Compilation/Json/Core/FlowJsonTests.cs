@@ -18,7 +18,7 @@ public sealed class FlowJsonTests
               "flows": [
                 {
                   "name": "默认",
-                  "start": { "outputs": [{ "name": "目标", "type": "Text" }] },
+                  "ports": [{ "name": "目标", "type": "Text" }],
                   "root": null,
                 },
               ],
@@ -29,9 +29,8 @@ public sealed class FlowJsonTests
 
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Equal("默认", flow.Name);
-        StartDto start = Assert.IsType<StartDto>(flow.Start);
-        Assert.NotNull(start.Outputs);
-        Assert.Equal(JsonValueKind.Object, Assert.Single(start.Outputs).ValueKind);
+        Assert.NotNull(flow.Ports);
+        Assert.Equal(JsonValueKind.Object, Assert.Single(flow.Ports).ValueKind);
     }
 
     /// <summary>缺键的属性取 null。</summary>
@@ -45,7 +44,7 @@ public sealed class FlowJsonTests
         FlowDto flow = Assert.Single(file.Flows);
         Assert.Null(flow.Root);
         Assert.Null(flow.Description);
-        Assert.Null(flow.Start);
+        Assert.Null(flow.Ports);
     }
 
     /// <summary>流程文件里不认宿主输入绑定，写 HostStartInputs 即不是合法流程文件。</summary>
@@ -86,7 +85,7 @@ public sealed class FlowJsonTests
         const string json = """
             {
               "Nodes": [
-                { "Name": "整体", "Kind": "Container", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
+                { "Name": "整体", "Kind": "Container", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Ref": "分析@结论" }] },
                 { "Label": "组实例", "Use": "整体", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } }
               ]
             }
@@ -96,7 +95,7 @@ public sealed class FlowJsonTests
 
         Dictionary<string, JsonElement>? startBindings = file.Nodes[0].Bindings;
         Assert.NotNull(startBindings);
-        Assert.Equal("Start@MODEL_NAME", startBindings["MODEL_NAME"].GetString());
+        Assert.Equal("@MODEL_NAME", startBindings["MODEL_NAME"].GetString());
         Dictionary<string, JsonElement>? groupBindings = file.Nodes[1].Bindings;
         Assert.NotNull(groupBindings);
         Assert.Equal("@MODEL_NAME", groupBindings["MODEL_NAME"].GetString());

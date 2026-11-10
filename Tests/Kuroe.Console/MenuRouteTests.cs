@@ -293,7 +293,7 @@ public sealed class MenuRouteTests
 
         cli.Flows.PrintDetail(new FlowName("默认"));
 
-        Assert.Contains("Start", cli.Output.Output);
+        Assert.Contains("开始端口", cli.Output.Output);
         Assert.Contains("制定计划", cli.Output.Output);
         Assert.Contains("分配执行", cli.Output.Output);
         Assert.Contains("上游", cli.Output.Output);
@@ -592,11 +592,11 @@ public sealed class MenuRouteTests
           "Flows": [
             {
               "Name": "备用",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   { "Name": "唯一步骤", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
                 ]
               }

@@ -51,12 +51,12 @@ public sealed class CommandExecutionTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }],
-                "From": [{ "目标": "Start@目标" }],
+                "From": [{ "目标": "@目标" }],
                 "Nodes": [
                   {
                     "Name": "命令",

@@ -15,7 +15,7 @@ public sealed class InputBindingTests
         InputBinding binding = InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员"));
 
         Assert.Equal(NodePath.Of("整体"), binding.Target);
-        Assert.Equal(NodePath.Of("成员"), binding.Source);
+        Assert.Equal(NodePath.Of("成员"), binding.Source.Node);
         Assert.Null(binding.SourcePort);
         Assert.True(binding.Drives);
         Assert.False(binding.CarriesTrigger);
@@ -27,8 +27,7 @@ public sealed class InputBindingTests
     {
         InputBinding binding = new(
             NodePath.Of("整体"),
-            NodePath.Of("来源"),
-            new PortName("结论"),
+            BindingSource.ForNode(NodePath.Of("来源"), new PortName("结论")),
             new PortName("把关"),
             PortTypes.Text,
             Trigger: true,
@@ -43,8 +42,7 @@ public sealed class InputBindingTests
     {
         InputBinding binding = new(
             NodePath.Of("节点"),
-            NodePath.Of("来源"),
-            new PortName("结论"),
+            BindingSource.ForNode(NodePath.Of("来源"), new PortName("结论")),
             new PortName("配置"),
             PortTypes.Text,
             Role: BindingRole.Static);
@@ -59,8 +57,7 @@ public sealed class InputBindingTests
         InputBinding member = InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员"));
         InputBinding gate = new(
             NodePath.Of("整体"),
-            NodePath.Of("把关"),
-            new PortName("信号"),
+            BindingSource.ForNode(NodePath.Of("把关"), new PortName("信号")),
             new PortName("把关"),
             PortTypes.Signal,
             Trigger: true,
@@ -77,15 +74,13 @@ public sealed class InputBindingTests
     {
         InputBinding driven = new(
             NodePath.Of("乙"),
-            NodePath.Of("甲"),
-            new PortName("结果"),
+            BindingSource.ForNode(NodePath.Of("甲"), new PortName("结果")),
             new PortName("目标"),
             PortTypes.Text,
             Group: 2);
         InputBinding gate = new(
             NodePath.Of("乙"),
-            NodePath.Of("把关"),
-            new PortName("信号"),
+            BindingSource.ForNode(NodePath.Of("把关"), new PortName("信号")),
             new PortName("把关"),
             PortTypes.Signal,
             Trigger: true,
@@ -119,8 +114,7 @@ public sealed class InputBindingTests
             {
                 [new PortName("把关")] = new(
                     NodePath.Of("整体"),
-                    NodePath.Of("来源"),
-                    new PortName("信号"),
+                    BindingSource.ForNode(NodePath.Of("来源"), new PortName("信号")),
                     new PortName("把关"),
                     PortTypes.Signal,
                     Trigger: true,

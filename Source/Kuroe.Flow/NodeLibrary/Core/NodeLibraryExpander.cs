@@ -34,14 +34,14 @@ public sealed class NodeLibraryExpander : IFlowExpander
         List<FlowDefinition> flows = [];
         foreach (FlowDefinition flow in authoringFlows)
         {
-            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, NodeScope.Flow(flow.Name.Value));
+            ErrorOr<NodeSpec> expanded = NodeExpander.Expand(library, flow.RootNode, flow.StartPorts, NodeScope.Flow(flow.Name.Value));
             if (expanded.IsError)
             {
                 errors.AddRange(expanded.ErrorsOrEmptyList);
                 continue;
             }
 
-            flows.Add(new FlowDefinition(flow.Name, flow.Description, flow.StartOutputs, expanded.Value));
+            flows.Add(new FlowDefinition(flow.Name, flow.Description, flow.StartPorts, expanded.Value));
         }
 
         return errors.Count > 0 ? errors : flows;

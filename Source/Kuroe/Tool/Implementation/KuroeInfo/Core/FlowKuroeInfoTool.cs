@@ -78,7 +78,7 @@ public sealed class FlowKuroeInfoTool : ITool
 
         var text = new StringBuilder();
         text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
-        IEnumerable<Port> startPorts = found.Value.StartOutputs;
+        IEnumerable<Port> startPorts = found.Value.StartPorts;
         IReadOnlyDictionary<PortName, string> hostInputs = _hostStartInputs.Bindings(found.Value.Name);
         text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => port.StartLabel(hostInputs)))}");
 

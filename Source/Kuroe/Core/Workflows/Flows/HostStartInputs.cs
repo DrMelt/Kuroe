@@ -8,7 +8,7 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 namespace Kuroe.Workflows.Flows;
 
 /// <summary>宿主维护的开始输入表：一条流程一项，键是开始端口名，值是宿主输入名。
-/// 表项之外的开始端口按用户输入处理，表项之内的开始端口由宿主给值，不依赖端口命名。
+/// 表项之外承载内容的开始端口按用户输入处理，不承载内容的开始端口不进入提交，表项之内的开始端口由宿主给值，不依赖端口命名。
 /// 表项与流程开始入口的一致性在任务提交时校验，流程编译不涉及这份配置。</summary>
 public sealed class HostStartInputs(
     IReadOnlyDictionary<FlowName, IReadOnlyDictionary<PortName, string>> entries,
@@ -71,7 +71,7 @@ public sealed class HostStartInputs(
         Dictionary<PortName, string> bindings = [];
         foreach ((PortName port, string input) in entry)
         {
-            if (flow.StartOutputs.Find(port) is not { } declared)
+            if (flow.StartPorts.Find(port) is not { } declared)
             {
                 errors.Add(HostStartInputsErrors.UndeclaredPort(flow.Name.Value, port.Value));
                 continue;

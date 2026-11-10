@@ -13,8 +13,6 @@ namespace Kuroe.Integration.Tests.Hosting;
 /// <summary>执行节点到可用模型的解析：静态端口绑定、模型名解析与目录可达性各分支的判定。</summary>
 public sealed class ModelResolutionTests
 {
-    private static readonly NodePath StartPath = new([StartNode.ReservedLabel]);
-
     [Fact]
     public void Node_without_static_model_is_rejected()
     {
@@ -87,12 +85,8 @@ public sealed class ModelResolutionTests
             : new Dictionary<PortName, string> { [LlmNodeTypes.ModelPort] = model });
 
     private static NodeGraph Graph(string? value, bool declare = true, bool bind = true) => new(
+    [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, mode: PortMode.Constant)],
     [
-        new StartNode
-        {
-            Path = StartPath,
-            Outputs = [new Port(LlmNodeTypes.ModelPort, PortTypes.Text, null, value, mode: PortMode.Constant)],
-        },
         new ExecutableNode
         {
             Path = NodePath.Of("干活"),
@@ -102,9 +96,8 @@ public sealed class ModelResolutionTests
             InputBindings = bind
                 ? new Dictionary<PortName, InputBinding>
                 {
-                    [LlmNodeTypes.ModelPort] = new InputBinding(
+                    [LlmNodeTypes.ModelPort] = InputBinding.Start(
                         NodePath.Of("干活"),
-                        StartPath,
                         LlmNodeTypes.ModelPort,
                         LlmNodeTypes.ModelPort,
                         PortTypes.Text,

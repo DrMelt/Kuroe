@@ -9,8 +9,8 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Root": { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
+              "Root": { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             }
           ]
         }
@@ -22,13 +22,13 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                 "Inputs": [ { "Name": "目标" }, { "Name": "风格" } ],
-                "From": [ { "目标": "Start@目标", "风格": "Start@风格" } ]
+                "From": [ { "目标": "@目标", "风格": "@风格" } ]
               }
             }
           ]
@@ -42,19 +42,17 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": {
-                "Outputs": [
+              "Ports": [
                   { "Name": "目标", "Type": "Text" },
                   { "Name": "启动路径", "Type": "Text", "Mode": "Constant" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-                ]
-              },
+                ],
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME", "启动路径": "Start@启动路径" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME", "启动路径": "@启动路径" },
                 "Inputs": [ { "Name": "目标" }, { "Name": "启动路径", "Type": "Text", "Mode": "Constant" } ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]
@@ -67,13 +65,13 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "实施",
                 "Kind": "Llm",
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                 "Outputs": [ { "Name": "结果", "Type": "Text" } ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]
@@ -86,13 +84,13 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }],
               "Root": {
                 "Name": "收话",
                 "Kind": "Input",
                 "Question": "请补充背景",
                 "Outputs": [ { "Name": "回答", "Type": "Text" } ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]
@@ -105,12 +103,12 @@ internal static class CliFlows
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }],
               "Root": {
                 "Name": "审阅",
                 "Kind": "Approval",
                 "Inputs": [ { "Name": "结论" } ],
-                "From": [ { "结论": "Start@目标" } ]
+                "From": [ { "结论": "@目标" } ]
               }
             }
           ]

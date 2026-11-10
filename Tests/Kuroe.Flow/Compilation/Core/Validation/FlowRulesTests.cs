@@ -1,7 +1,6 @@
 using Kuroe.Flow.NodeType.Container;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Compilation.Validation;
@@ -79,11 +78,9 @@ public sealed class FlowRulesTests
                 Container("容器", Plan("规划")) with { From = [Ref("规划", "结论")] })));
 
     [Fact]
-    public void Start_without_output_port_is_rejected() =>
-        Assert.Equal(
-            ["流程 默认：流程必须声明开始入口，至少一个 Text 输出端口。"],
-            Errors(new FlowDefinition(new FlowName("默认"), null,
-                [], Container("整体", Exec("干活", new ExecutableSpec()) with { From = [] }))));
+    public void Start_without_output_port_is_accepted() =>
+        Assert.Empty(Errors(new FlowDefinition(new FlowName("默认"), null,
+            [], Exec("干活", new ExecutableSpec()) with { From = [] })));
 
     [Fact]
     public void Start_with_non_data_port_is_rejected() =>
@@ -105,10 +102,8 @@ public sealed class FlowRulesTests
         Assert.Empty(Errors(StartFlow([StartOutput, P("背景") with { Value = "固定背景" }])));
 
     [Fact]
-    public void Start_without_an_input_port_is_rejected() =>
-        Assert.Equal(
-            ["流程 默认：开始入口必须至少有一个不带 Value 的端口承接开始输入。"],
-            Errors(StartFlow([P("目标") with { Value = "固定" }])));
+    public void Start_without_an_input_port_is_accepted() =>
+        Assert.Empty(Errors(StartFlow([P("目标") with { Value = "固定" }])));
 
     [Fact]
     public void Start_with_two_goal_ports_is_accepted() =>
@@ -137,23 +132,19 @@ public sealed class FlowRulesTests
         Assert.Empty(Errors(StartFlow([StartOutput, P("分支") with { Default = "main" }])));
 
     [Fact]
-    public void Node_named_start_is_rejected() =>
-        Assert.Equal(
-            [NodeError("Start", "节点名 Start 是流程起点的保留名。")],
-            Errors(Flow(Container("整体", Text("Start")))));
+    public void Node_named_start_is_accepted() =>
+        Assert.Empty(Errors(Flow(Container("整体", Text("Start")))));
 
     [Fact]
-    public void Node_with_start_label_is_rejected() =>
-        Assert.Equal(
-            [NodeError("Start", "节点标签 Start 是流程起点的保留标签。")],
-            Errors(Flow(Container("整体", Reference("Start", "干活")))));
+    public void Node_with_start_label_is_accepted() =>
+        Assert.Empty(Errors(Flow(Container("整体", Reference("Start", "干活")))));
 
     [Fact]
     public void Node_unreachable_from_start_is_rejected() =>
         Assert.Equal(
             [
-                MemberError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
-                MemberError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("干活", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
+                MemberError("收尾", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -218,7 +209,7 @@ public sealed class FlowRulesTests
     [Fact]
     public void Context_input_from_text_output_is_rejected() =>
         Assert.Equal(
-            [MemberError("实施", "Context 输入来源 整体/箱子 必须产出 Context 端口，实际来源端口 结论 是 Text。")],
+            [MemberError("实施", "Context 输入来源 整体/箱子@结论 必须产出 Context 端口，实际来源端口 结论 是 Text。")],
             Errors(Flow(
                 Container("整体",
                     Container("箱子", Text("干活") with { Outputs = [P("结论")] }) with
@@ -231,7 +222,7 @@ public sealed class FlowRulesTests
     public void Context_input_from_bound_port_is_rejected() =>
         Assert.Equal(
             [
-                MemberError("实施", "From 连接 @输入 是对绑定端口的引用，请写明来源节点。"),
+                MemberError("实施", "From 引用 @输入 没有绑定来源。"),
             ],
             Errors(Flow(Container("整体", Text("实施") with { Inputs = [In("输入", PortTypes.Context)], From = [BoundContext("输入")] }))));
 
@@ -390,8 +381,8 @@ public sealed class FlowRulesTests
         Assert.Equal(
             [
                 MemberError("乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                MemberError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
-                MemberError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
+                MemberError("乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -404,7 +395,7 @@ public sealed class FlowRulesTests
             [
                 MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
                 MemberError("交付/撰写", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -418,7 +409,7 @@ public sealed class FlowRulesTests
         Assert.Equal(
             [
                 MemberError("交付/撰写", "执行节点不能从自身所在容器取输入，容器会永远等不到齐备。"),
-                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                MemberError("交付/撰写", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -434,8 +425,8 @@ public sealed class FlowRulesTests
         Assert.Equal(
             [
                 NodeError("整体/容器乙/乙", "引用环没有环外来源且环内没有输入节点，任务无法启动。"),
-                NodeError("整体/容器甲/甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
-                NodeError("整体/容器乙/乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 Start@目标。"),
+                NodeError("整体/容器甲/甲", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
+                NodeError("整体/容器乙/乙", "从开始不可达，不会被触发，请用 From 接到来源节点或把静态输入绑定到常量来源与 @目标。"),
             ],
             Errors(Flow(
                 Container("整体",
@@ -561,7 +552,7 @@ public sealed class FlowRulesTests
                 Container("整体", Text("干活")) with
                 {
                     Inputs = [new InputPort(PN("计划"), PortTypes.Text, null, "固定计划")],
-                    From = [new FromGroup([new FromLink(PN("计划"), PortRef.Named(StartNode.ReservedLabel, StartPort))])],
+                    From = [new FromGroup([new FromLink(PN("计划"), PortRef.Start(StartPort))])],
                 })));
 
     /// <summary>输入端口名在同一节点内唯一，与输出端口同一份规则。</summary>
@@ -656,22 +647,23 @@ public sealed class FlowRulesTests
             new PortName(link.Source),
             PortRef.Named(new NodeLabel(link.Source), new PortName(link.Port))))]);
 
-    /// <summary>开始入口的输出端口名。</summary>
+    /// <summary>开始端口名。</summary>
     private static PortName StartPort => new("目标");
 
-    /// <summary>开始入口的输出端口声明。</summary>
+    /// <summary>开始端口声明。</summary>
     private static Port StartOutput => new(StartPort, PortTypes.Text);
 
-    /// <summary>由开始入口触发的启动组。</summary>
-    private static FromGroup StartRef() => One("目标", StartNode.ReservedLabel.Value, "目标");
+    /// <summary>由开始端口触发的启动组。</summary>
+    private static FromGroup StartRef() =>
+        new([new FromLink(StartPort, PortRef.Start(StartPort))]);
 
     /// <summary>一条名为默认的流程。</summary>
     private static FlowDefinition Flow(NodeSpec root) =>
         new(new FlowName("默认"), null, [StartOutput], root);
 
     /// <summary>一条名为默认的流程，开始端口按给定条目声明，根容器内一个执行节点取开始的目标端口。</summary>
-    private static FlowDefinition StartFlow(IReadOnlyList<Port> startOutputs) =>
-        new(new FlowName("默认"), null, startOutputs,
+    private static FlowDefinition StartFlow(IReadOnlyList<Port> ports) =>
+        new(new FlowName("默认"), null, ports,
             Container("整体", Exec("干活", new ExecutableSpec())));
 
     /// <summary>流程内某个节点的错误说明。</summary>

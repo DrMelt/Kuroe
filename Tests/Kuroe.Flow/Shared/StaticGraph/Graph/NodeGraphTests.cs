@@ -14,12 +14,8 @@ public sealed class NodeGraphTests
     public void NodeGraph_locates_executables_by_path()
     {
         var graph = new NodeGraph(
+        [new Port(new PortName("目标"), PortTypes.Text)],
         [
-            new StartNode
-            {
-                Path = new NodePath([StartNode.ReservedLabel]),
-                Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
-            },
             new ExecutableNode
             {
                 Path = NodePath.Of("规划"),
@@ -40,7 +36,7 @@ public sealed class NodeGraphTests
             },
         ], []);
 
-        Assert.Equal(3, graph.Count);
+        Assert.Equal(2, graph.Count);
         Assert.Equal(2, graph.TotalExecutables);
         Assert.Equal(NodePath.Of("规划"), graph[NodePath.Of("规划")].Path);
         Assert.Equal(NodePath.Of("实施"), graph[NodePath.Of("实施")].Path);

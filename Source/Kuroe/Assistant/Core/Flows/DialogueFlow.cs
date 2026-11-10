@@ -1,7 +1,6 @@
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
@@ -16,7 +15,7 @@ internal static class DialogueFlow
     /// <summary>流程名。</summary>
     internal static FlowName Name { get; } = new("对话");
 
-    /// <summary>开始入口的输出端口名：任务的初始输入由此进入流程。</summary>
+    /// <summary>开始端口名：任务的初始输入由此进入流程。</summary>
     internal static PortName StartPort { get; } = new("目标");
 
     /// <summary>收话节点的节点名，环的挂点。</summary>
@@ -96,8 +95,8 @@ internal static class DialogueFlow
                     ],
                     Bindings = new Dictionary<string, string>
                     {
-                        [WorkspacePort.Value] = $"{StartNode.ReservedLabel.Value}@{WorkspacePort.Value}",
-                        [LlmNodeTypes.ModelPort.Value] = $"{StartNode.ReservedLabel.Value}@{LlmNodeTypes.ModelPort.Value}",
+                        [WorkspacePort.Value] = $"@{WorkspacePort.Value}",
+                        [LlmNodeTypes.ModelPort.Value] = $"@{LlmNodeTypes.ModelPort.Value}",
                     },
                     From =
                     [
@@ -105,7 +104,7 @@ internal static class DialogueFlow
                         [
                             new FromLinkDocument(
                                 StartPort.Value,
-                                $"{StartNode.ReservedLabel.Value}@{StartPort.Value}"),
+                                $"@{StartPort.Value}"),
                         ]),
                     ],
                     Nodes =

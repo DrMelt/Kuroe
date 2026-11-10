@@ -41,12 +41,12 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准" }, "Nodes": [
                   {
                     "Name": "版本",
                     "Kind": "Command",
@@ -95,12 +95,12 @@ public sealed class CommandNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准" }, "Nodes": [
                   {
                     "Name": "缺失",
                     "Kind": "Command",

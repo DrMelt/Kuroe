@@ -5,23 +5,23 @@ using Xunit;
 
 namespace Kuroe.Flow.Compilation.Shared.Tests.Validation;
 
-/// <summary>节点标识规则：保留名、路径分隔符与定义标签。</summary>
+/// <summary>节点标识规则：路径分隔符与定义标签。</summary>
 public sealed class NodeSpecRulesIdentityTests
 {
     [Fact]
-    public void Reserved_start_name_is_rejected()
+    public void Start_name_is_allowed_as_a_definition_name()
     {
         NodeSpec node = NodeSpec.Define(new NodeName("Start"));
 
-        Assert.Contains("保留名", Errors(node, NodeRuleContext.LibraryDefinition).Single());
+        Assert.Empty(Errors(node, NodeRuleContext.LibraryDefinition));
     }
 
     [Fact]
-    public void Reserved_start_label_on_a_reference_is_rejected()
+    public void Start_label_is_allowed_on_a_reference()
     {
         NodeSpec node = NodeSpec.Reference(new NodeLabel("Start"), new NodeName("定义"));
 
-        Assert.Contains("保留标签", Errors(node, NodeRuleContext.Reference).Single());
+        Assert.Empty(Errors(node, NodeRuleContext.Reference));
     }
 
     [Fact]

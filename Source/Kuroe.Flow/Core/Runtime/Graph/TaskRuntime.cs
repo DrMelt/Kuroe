@@ -40,6 +40,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly WorkTask _task;
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
+    private readonly RuntimeStartSource _startSource;
     private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
@@ -49,10 +50,9 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     internal TaskRuntime(WorkTask task)
     {
         _task = task;
-        _materializer = new NodeMaterializer(task.Graph, task.StartPorts, this);
+        _materializer = new NodeMaterializer(task.Graph, this);
         _staticPorts = new StaticPortValues(task.Graph, task.StartPorts, this);
-        // 开始是流程的唯一来源，任务启动即已放行，下游就绪判定按它读数，先建出它的运行时对象
-        _ = _materializer.Get(Graph.Start.Path);
+        _startSource = new RuntimeStartSource(task.Graph.StartPorts, task.StartPorts);
     }
 
     /// <summary>任务锁定的流程执行视图。</summary>
@@ -76,7 +76,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
     public NodeRuntime? Materialized(NodePath node) => _materializer.Find(node);
 
-    /// <summary>某节点的输入侧方案，开始为空。</summary>
+    /// <summary>某节点的输入侧方案，没有方案时为空。</summary>
     public NodeInputPlan? Plan(NodePath node) => Graph.PlanOf(node);
 
     /// <summary>按存档恢复节点状态。先装载端口历史，再按路径深度升序恢复节点。</summary>
@@ -100,10 +100,34 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
     public NodeRuntime Runtime(NodePath node) => this[node];
 
-    ISourceState IReadinessSources.Source(NodePath node) => State(node);
+    ISourceState IReadinessSources.Source(BindingSource source) => State(source);
 
-    /// <summary>按节点路径取来源状态，未实例化时给未放行的默认状态。</summary>
-    private ISourceState State(NodePath node) => Materialized(node) ?? IdleSource;
+    /// <summary>按来源取状态。开始来源由任务持有，节点来源未实例化时给未放行的默认状态。</summary>
+    private ISourceState State(BindingSource source)
+    {
+        if (source.IsStart)
+        {
+            return _startSource;
+        }
+
+        return source.Node is { } node ? Materialized(node) ?? IdleSource : IdleSource;
+    }
+
+    /// <summary>来源端口的内容产出。</summary>
+    public IReadOnlyList<ContextValue> OutputValues(BindingSource source)
+    {
+        if (source.IsStart)
+        {
+            return source.Port is { } startPort ? _startSource.OutputValues(startPort) : [];
+        }
+
+        if (source.Node is { } node && source.Port is { } port)
+        {
+            return this[node].OutputValues(port);
+        }
+
+        return [];
+    }
 
     /// <summary>已实例化的执行节点，按执行节点表顺序。判定与展示按它读数，不创建节点。</summary>
     private IEnumerable<RuntimeExecutable> MaterializedExecutables() => _materializer.Executables();
@@ -597,7 +621,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         bool fires = binding.SourcePort is { } port && source.Triggers(port);
         string condition = binding.Condition == TriggerCondition.Negative ? "，翻转条件要求 false" : string.Empty;
 
-        return $"{binding.Source}@{binding.SourcePort} 的产出为 {(fires ? "true" : "false")}{condition}";
+        return $"{binding.Source.Display} 的产出为 {(fires ? "true" : "false")}{condition}";
     }
 
     /// <summary>一次评估的结果：要通知的下游执行节点路径、激活方式，以及派发执行要用的输入。</summary>
@@ -622,7 +646,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>任务启动的第一批：开始已放行，由它的直连下游、静态输入就绪后的执行节点与可评估的容器起步。
     /// 执行节点返回前全部实例化，容器只给路径由推进循环评估时实例化。恢复时已发布的运行期常量会让等待它的节点一并入队，动态来源未就绪的节点由启动判定挡住。</summary>
     public IReadOnlyList<NodePath> Roots() =>
-        [.. Graph.Outgoing(Graph.Start.Path).Select(binding => _materializer.Get(binding.Target).Path),
+        [.. Graph.StartOutgoing.Select(binding => _materializer.Get(binding.Target).Path),
             .. Graph.ExecutableNodes
                 .Where(node => Graph.PlanOf(node.Path) is { StaticOnly: true })
                 .Where(Startable)
@@ -820,7 +844,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     }
 
     /// <summary>节点是否已经产出过内容。</summary>
-    private bool HasPublished(NodePath node) => State(node).Revision > 0;
+    private bool HasPublished(NodePath node) => Materialized(node) is { Revision: > 0 };
 
     /// <summary>已发布的 Once 节点冻结，不再重新执行或作废。</summary>
     private bool Frozen(NodePath node) =>

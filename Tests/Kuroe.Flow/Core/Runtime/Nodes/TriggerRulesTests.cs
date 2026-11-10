@@ -32,9 +32,18 @@ public sealed class TriggerRulesTests
     }
 
     [Fact]
-    public void Signal_port_carries_trigger_by_default()
+    public void Signal_port_is_plain_by_default()
     {
-        Assert.False(TriggerRules.Output(new Port(Conclusion, PortTypes.Signal), new PortValue(null, false)));
+        Assert.True(TriggerRules.Output(new Port(Conclusion, PortTypes.Signal), new PortValue(null, false)));
+    }
+
+    [Fact]
+    public void Trigger_signal_port_uses_the_submitted_value()
+    {
+        Port signal = new(Conclusion, PortTypes.Signal, mode: PortMode.Trigger);
+
+        Assert.False(TriggerRules.Output(signal, new PortValue(null, false)));
+        Assert.True(TriggerRules.Output(signal, new PortValue(null, true)));
     }
 
     [Fact]

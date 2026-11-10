@@ -59,10 +59,10 @@ static class FlowFileReader
         string name = dto.Name?.Trim() ?? string.Empty;
         NodeScope scope = NodeScope.Flow(name);
 
-        ErrorOr<IReadOnlyList<PortDocument>> startOutputs = ReadPorts(dto.Start?.Outputs, scope, name, allowDefault: true);
-        if (startOutputs.IsError)
+        ErrorOr<IReadOnlyList<PortDocument>> ports = ReadPorts(dto.Ports, scope, name, allowDefault: true);
+        if (ports.IsError)
         {
-            errors.AddRange(startOutputs.ErrorsOrEmptyList);
+            errors.AddRange(ports.ErrorsOrEmptyList);
             return errors;
         }
 
@@ -78,7 +78,7 @@ static class FlowFileReader
 
         return errors.Count > 0
             ? errors
-            : new FlowDocumentFlow(name, dto.Description, startOutputs.Value, root);
+            : new FlowDocumentFlow(name, dto.Description, ports.Value, root);
     }
 
     private static ErrorOr<NodeDocument> ReadNode(NodeDto dto, NodeScope scope, List<Error> errors)

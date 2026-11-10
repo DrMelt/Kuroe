@@ -21,8 +21,8 @@ public sealed class NodeInputPlanTests
     [Fact]
     public void Group_is_driven_by_signals_only_when_a_binding_signals()
     {
-        InputBinding value = new(NodePath.Of("乙"), NodePath.Of("甲"), new PortName("结论"), new PortName("目标"), PortTypes.Text);
-        InputBinding signal = new(NodePath.Of("乙"), NodePath.Of("甲"), new PortName("信号"), new PortName("目标"), PortTypes.Signal);
+        InputBinding value = new(NodePath.Of("乙"), BindingSource.ForNode(NodePath.Of("甲"), new PortName("结论")), new PortName("目标"), PortTypes.Text);
+        InputBinding signal = new(NodePath.Of("乙"), BindingSource.ForNode(NodePath.Of("甲"), new PortName("信号")), new PortName("目标"), PortTypes.Signal);
 
         InputGroup plain = new([value]);
         InputGroup driven = new([value, signal]);
@@ -38,13 +38,12 @@ public sealed class NodeInputPlanTests
     {
         InputBinding binding = new(
             NodePath.Of("乙"),
-            NodePath.Of("甲"),
-            new PortName("任务"),
+            BindingSource.ForNode(NodePath.Of("甲"), new PortName("任务")),
             new PortName("目标"),
             PortTypes.Text,
             Group: 3);
 
-        Assert.Equal(NodePath.Of("甲"), binding.Source);
+        Assert.Equal(NodePath.Of("甲"), binding.Source.Node);
         Assert.Equal(NodePath.Of("乙"), binding.Target);
         Assert.Equal(new PortName("任务"), binding.SourcePort);
         Assert.Equal(new PortName("目标"), binding.TargetInput);
@@ -57,8 +56,7 @@ public sealed class NodeInputPlanTests
     {
         InputBinding binding = new(
             NodePath.Of("乙"),
-            NodePath.Of("甲"),
-            new PortName("结果"),
+            BindingSource.ForNode(NodePath.Of("甲"), new PortName("结果")),
             new PortName("目标"),
             PortTypes.Text);
         NodeInputPlan plan = NodeInputPlan.Of(new ExecutableSpec(), [binding], [], []);
@@ -112,16 +110,20 @@ public sealed class NodeInputPlanTests
         {
             Path = containerPath,
             Type = new TestNodeType(),
-            Children = [new StartNode { Path = first }, new StartNode { Path = second }],
+            Children =
+            [
+                new ExecutableNode { Path = first, Type = new TestNodeType(), Spec = new ExecutableSpec() },
+                new ExecutableNode { Path = second, Type = new TestNodeType(), Spec = new ExecutableSpec() },
+            ],
             InputBindings = new Dictionary<PortName, InputBinding>
             {
-                [gate] = new(containerPath, NodePath.Of("来源"), new PortName("信号"), gate, PortTypes.Signal, Role: BindingRole.Gate),
+                [gate] = new(containerPath, BindingSource.ForNode(NodePath.Of("来源"), new PortName("信号")), gate, PortTypes.Signal, Role: BindingRole.Gate),
             },
         };
 
         NodeInputPlan plan = NodeInputPlan.Of(container);
 
-        Assert.Equal([first, second], plan.ContentBindings.Select(binding => binding.Source));
+        Assert.Equal([first, second], plan.ContentBindings.Select(binding => binding.Source.Node));
         Assert.Equal(
             [BindingRole.Dynamic, BindingRole.Dynamic, BindingRole.Gate],
             Assert.Single(plan.Groups).Bindings.Select(binding => binding.Role));

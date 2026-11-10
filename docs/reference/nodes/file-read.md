@@ -35,7 +35,7 @@
     { "Name": "任务路径", "Type": "Text", "Mode": "Constant" },
     { "Name": "触发", "Type": "Signal" }
   ],
-  "Bindings": { "任务路径": "Start@任务路径" },
+  "Bindings": { "任务路径": "@任务路径" },
   "From": [{ "触发": "计划@结论" }],
   "Outputs": [{ "Name": "说明", "Type": "Text" }]
 }

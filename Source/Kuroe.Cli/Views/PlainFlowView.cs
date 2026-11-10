@@ -61,6 +61,7 @@ internal static class PlainFlowView
         output.Line($"容器\t{compiled.Graph.Containers.Count}");
         output.Line($"说明\t{compiled.Model.Description ?? "—"}");
         output.Line();
+        Start(output, compiled.Model.StartPorts, hostInputs);
         Walk(output, compiled.Graph.ChildrenOf(null), 0, hostInputs);
     }
 
@@ -79,22 +80,23 @@ internal static class PlainFlowView
 
     private static string Describe(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
     {
-        StartNode start => Start(start, hostInputs),
         ContainerNode container => Container(container),
         ExecutableNode executable => Executable(executable, hostInputs),
         _ => node.Label.Value,
     };
 
-    private static string Start(StartNode start, IReadOnlyDictionary<PortName, string> hostInputs)
+    private static void Start(
+        CliOutput output,
+        IReadOnlyList<Port> ports,
+        IReadOnlyDictionary<PortName, string> hostInputs)
     {
-        List<string> parts = ["Start", "开始"];
-        IReadOnlyList<Port> ports = start.Outputs;
+        List<string> parts = ["开始端口"];
         if (ports.Count > 0)
         {
-            parts.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel(hostInputs)))}");
+            parts.Add(string.Join('、', ports.Select(port => port.StartLabel(hostInputs))));
         }
 
-        return string.Join('\t', parts);
+        output.Line(string.Join('\t', parts));
     }
 
     private static string Container(ContainerNode container)
@@ -152,7 +154,7 @@ internal static class PlainFlowView
             .GroupBy(binding => binding.Group)
             .OrderBy(group => group.Key)
             .Select(group => string.Join('、', group.Select(binding =>
-                $"{binding.TargetInput}←{binding.Source}@{binding.SourcePort}"))));
+                $"{binding.TargetInput}←{binding.Source.Display}"))));
 
     /// <summary>流程里的执行节点与容器数量。</summary>
     private static (int Executables, int Containers) Count(NodeSpec root)

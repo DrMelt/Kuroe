@@ -69,6 +69,36 @@ public sealed class ContextTests
         Assert.Equal(new PortName("风格"), Assert.IsType<StartSource>(execution.Input.Inputs[1].Origin).Port);
     }
 
+    /// <summary>Signal 开始端口不承载内容，任务启动时自动放行，不需要提交输入。</summary>
+    [Fact]
+    public void Signal_start_port_releases_without_input()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(SignalStartFlow);
+
+        TaskId id = environment.Submit("补齐 README");
+        TaskSnapshot done = environment.Settle(id);
+
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Single(done.Executables[0].Executions);
+        Assert.Null(done.Inputs.Text(new PortName("启动")));
+    }
+
+    /// <summary>Signal 开始端口不接受提交输入。</summary>
+    [Fact]
+    public void Signal_start_port_rejects_submitted_input()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(SignalStartFlow);
+
+        var submitted = environment.Tasks.Submit(new StartInputs(
+        [
+            new StartInput(new PortName("目标"), "补齐 README"),
+            new StartInput(new PortName("启动"), "开始"),
+        ]), new FlowName("默认"), null);
+
+        Assert.Contains(submitted.ErrorsOrEmptyList,
+            error => error.Description.Contains("开始端口 启动 不承载内容，不接受提交输入。"));
+    }
+
     /// <summary>提交按开始端口校验：缺少输入、重复输入与覆盖固定值都被拒绝。</summary>
     [Theory]
     [InlineData("missing")]
@@ -232,11 +262,11 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   {
                     "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
@@ -256,11 +286,11 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   {
                     "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
@@ -280,11 +310,11 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   { "Name": "准备甲", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   { "Name": "准备乙", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   {
@@ -306,19 +336,56 @@ public sealed class ContextTests
         }
         """;
 
+    /// <summary>开始声明一个 Signal Plain 端口，任务启动即放行，下游用 Signal 输入接收。</summary>
+    private const string SignalStartFlow = """
+        {
+          "Flows": [
+            {
+              "Name": "默认",
+              "Ports": [
+                  { "Name": "目标", "Type": "Text" },
+                  { "Name": "启动", "Type": "Signal" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
+                ],
+              "Root": {
+                "Name": "整体",
+                "Kind": "Container",
+                "Inputs": [
+                  { "Name": "目标" },
+                  { "Name": "启动", "Type": "Signal" },
+                  { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
+                ],
+                "From": [ { "目标": "@目标", "启动": "@启动" } ],
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                "Nodes": [
+                  {
+                    "Name": "实施",
+                    "Kind": "Llm",
+                    "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
+                    "Inputs": [
+                      { "Name": "目标" },
+                      { "Name": "触发", "Type": "Signal" }
+                    ],
+                    "From": [ { "目标": "@目标", "触发": "@启动" } ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+
     /// <summary>开始声明一个带默认值的提交端口，下游读取默认值。</summary>
     private const string StartDefaultFlow = """
         {
           "Flows": [
             {
               "Name": "默认",
-              "Start": {
-                "Outputs": [
+              "Ports": [
                   { "Name": "目标", "Type": "Text" },
                   { "Name": "分支", "Type": "Text", "Default": "main" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-                ]
-              },
+                ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -327,8 +394,8 @@ public sealed class ContextTests
                   { "Name": "分支" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "From": [ { "目标": "Start@目标", "分支": "Start@分支" } ],
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "From": [ { "目标": "@目标", "分支": "@分支" } ],
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标", "分支": "@分支" } ] }
                 ]
@@ -344,11 +411,11 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "风格", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标", "风格": "Start@风格" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "目标" }, { "Name": "风格" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标", "风格": "@风格" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "干活",
                     "Kind": "Llm",
@@ -369,8 +436,8 @@ public sealed class ContextTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "背景": "Start@背景" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "背景", "Type": "Text", "Value": "固定背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
+              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "背景" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "背景": "@背景" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                 { "Name": "干活", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "背景": "@背景" } ] }
               ] }
             }

@@ -20,13 +20,13 @@ public sealed class LazyRuntimeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant", "Value": "目标" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant", "Value": "目标" }],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
-                "From": [{ "目标": "Start@目标" }],
-                "Bindings": { "基准": "Start@基准" },
+                "From": [{ "目标": "@目标" }],
+                "Bindings": { "基准": "@基准" },
                 "Nodes": [
                   {
                     "Name": "审阅",
@@ -45,7 +45,7 @@ public sealed class LazyRuntimeTests
     /// <summary>计划完成后停在审批节点等待批准，实施与下游收尾永不触达。</summary>
     private const string ReviewQueueFlow = """
         {
-          "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+          "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
             { "Name": "制定计划", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
             { "Name": "审阅", "Kind": "Approval", "Inputs": [{ "Name": "计划", "Type": "Signal" }], "From": [ { "计划": "制定计划@计划" } ] },
             { "Name": "分配执行", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "Inputs": [{ "Name": "任务" }, { "Name": "批准", "Type": "Signal" }], "From": [ { "任务": "制定计划@计划", "批准": "审阅@计划" } ] },
@@ -95,8 +95,8 @@ public sealed class LazyRuntimeTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
-        // 已实例化的是开始、根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
-        Assert.Equal(5, MaterializedCount(task));
+        // 已实例化的是根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
+        Assert.Equal(4, MaterializedCount(task));
         Assert.Equal(NodeState.Pending, environment.Snapshot(id).ExecutableStates[2].State);
     }
 

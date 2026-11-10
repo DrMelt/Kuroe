@@ -34,7 +34,7 @@
     { "Name": "正文", "Type": "Text", "Mode": "Constant", "Role": "Content" },
     { "Name": "任务路径", "Type": "Text", "Mode": "Constant" }
   ],
-  "Bindings": { "正文": "校对@定稿", "任务路径": "Start@任务路径" },
+  "Bindings": { "正文": "校对@定稿", "任务路径": "@任务路径" },
   "Outputs": [{ "Name": "完成", "Type": "Signal" }]
 }
 ```

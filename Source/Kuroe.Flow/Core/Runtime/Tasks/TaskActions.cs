@@ -57,12 +57,12 @@ public sealed class TaskActions(
 
         IReadOnlyDictionary<PortName, string> hostInputs = resolved.Value;
 
-        if (CheckInputs(graph.Start, hostInputs, inputs) is { Count: > 0 } inputErrors)
+        if (CheckInputs(graph.StartPorts, hostInputs, inputs) is { Count: > 0 } inputErrors)
         {
             return inputErrors;
         }
 
-        StartInputs effectiveInputs = FillDefaults(inputs, graph.Start, hostInputs);
+        StartInputs effectiveInputs = FillDefaults(inputs, graph.StartPorts, hostInputs);
         string taskTitle = TaskTitle.Compose(effectiveInputs, flow.Model.Name, title);
 
         TaskId id = _ids.Next();
@@ -91,8 +91,8 @@ public sealed class TaskActions(
         }
 
         // 等待型节点不进入派发路径；派发节点在静态值全部就绪后再要求执行目标可解析，无模型端口的类型由解析器给空声明
-        StaticPortValues staticPorts = new(graph, new StartPortValues(graph.Start, startTexts.Value, effectiveInputs));
-        foreach (InputBinding binding in graph.Outgoing(graph.Start.Path))
+        StaticPortValues staticPorts = new(graph, new StartPortValues(graph.StartPorts, startTexts.Value, effectiveInputs));
+        foreach (InputBinding binding in graph.StartOutgoing)
         {
             if (graph[binding.Target] is not ExecutableNode target
                 || graph.ShapeOf(target.Path) is { DispatchesExecutions: false }
@@ -137,17 +137,17 @@ public sealed class TaskActions(
         return task.Snapshot();
     }
 
-    /// <summary>开始输入必须覆盖不带固定值、不带默认值且未绑定宿主输入的开始端口，且只落在用户端口上。
+    /// <summary>开始输入必须覆盖承载内容、不带固定值、不带默认值且未绑定宿主输入的开始端口，且只落在用户端口上。
     /// 带默认值的端口可以省略，提交了空白值仍报错。</summary>
     private static List<Error> CheckInputs(
-        StartNode start,
+        IReadOnlyList<Port> ports,
         IReadOnlyDictionary<PortName, string> hostInputs,
         StartInputs inputs)
     {
         List<PortName> required =
         [
-            .. start.Outputs
-                .Where(port => port.Value is null && port.Default is null && !hostInputs.ContainsKey(port.Name))
+            .. ports
+                .Where(port => StartInputRules.RequiresInput(port, hostInputs.ContainsKey(port.Name)))
                 .Select(port => port.Name),
         ];
 
@@ -156,9 +156,8 @@ public sealed class TaskActions(
         return
         [
             .. required.Where(port => inputs.Text(port) is null).Select(TaskErrors.MissingInput),
-            .. start.Outputs
-                .Where(port => port.Value is null
-                    && !hostInputs.ContainsKey(port.Name)
+            .. ports
+                .Where(port => StartInputRules.AcceptsInput(port, hostInputs.ContainsKey(port.Name))
                     && inputs.Text(port.Name) is { } text
                     && string.IsNullOrWhiteSpace(text))
                 .Select(port => TaskErrors.BlankInput(port.Name)),
@@ -167,29 +166,35 @@ public sealed class TaskActions(
                 .Where(group => group.Count() > 1)
                 .Select(group => TaskErrors.DuplicateInput(group.Key)),
             .. supplied
-                .Where(input => start.FindPort(input.Port) is null)
+                .Where(input => ports.Find(input.Port) is null)
                 .Select(input => TaskErrors.UnknownInput(input.Port)),
             .. supplied
-                .Where(input => hostInputs.ContainsKey(input.Port))
+                .Where(input => KindOf(input.Port) == StartInputKind.Host)
                 .Select(input => TaskErrors.HostInput(input.Port)),
             .. supplied
-                .Where(input => start.FindPort(input.Port) is { Value: not null })
+                .Where(input => KindOf(input.Port) == StartInputKind.Fixed)
                 .Select(input => TaskErrors.ConstantInput(input.Port)),
+            .. supplied
+                .Where(input => KindOf(input.Port) == StartInputKind.Automatic)
+                .Select(input => TaskErrors.NonContentInput(input.Port)),
         ];
+
+        StartInputKind? KindOf(PortName port) => ports.Find(port) is { } declared
+            ? StartInputRules.Kind(declared, hostInputs.ContainsKey(port))
+            : null;
     }
 
     /// <summary>把省略的默认值端口补进开始输入，已提交的值保持不变。</summary>
     private static StartInputs FillDefaults(
         StartInputs inputs,
-        StartNode start,
+        IReadOnlyList<Port> ports,
         IReadOnlyDictionary<PortName, string> hostInputs)
     {
         List<StartInput> values = [.. inputs.Values];
-        foreach (Port port in start.Outputs)
+        foreach (Port port in ports)
         {
-            if (port.Value is null
+            if (StartInputRules.AcceptsInput(port, hostInputs.ContainsKey(port.Name))
                 && port.Default is { Length: > 0 } defaultValue
-                && !hostInputs.ContainsKey(port.Name)
                 && inputs.Text(port.Name) is null)
             {
                 values.Add(new StartInput(port.Name, defaultValue));

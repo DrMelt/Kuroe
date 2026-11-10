@@ -83,12 +83,8 @@ public sealed class TaskSnapshotTests
         });
 
     private static readonly NodeGraph Graph = new(
+        [],
         [
-            new StartNode
-            {
-                Path = new NodePath([StartNode.ReservedLabel]),
-                Outputs = [],
-            },
             new ExecutableNode
             {
                 Path = NodePath.Of("制定计划"),

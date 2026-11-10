@@ -23,7 +23,7 @@ static class FlowFileWriter
     {
         Name = flow.Name,
         Description = flow.Description,
-        Start = new StartDto { Outputs = WritePorts(flow.StartOutputs) },
+        Ports = WritePorts(flow.StartPorts),
         Root = flow.Root is null ? null : WriteNode(flow.Root),
     };
 

@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -141,6 +142,8 @@ public sealed class InputRegistryTests
 
         public NodeRuntime? Materialized(NodePath node) => throw new NotSupportedException();
 
-        public ISourceState Source(NodePath node) => throw new NotSupportedException();
+        public IReadOnlyList<ContextValue> OutputValues(BindingSource source) => throw new NotSupportedException();
+
+        public ISourceState Source(BindingSource source) => throw new NotSupportedException();
     }
 }

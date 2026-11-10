@@ -99,7 +99,7 @@ public sealed class FlowRulesLimitTests
             [
                 new FromGroup(
                 [
-                    new FromLink(StartPort, source ?? PortRef.Named(StartNode.ReservedLabel, StartPort)),
+                    new FromLink(StartPort, source ?? PortRef.Start(StartPort)),
                 ]),
             ],
             Nodes = [.. members],

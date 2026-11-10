@@ -1,8 +1,10 @@
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Xunit;
 
@@ -21,13 +23,12 @@ public sealed class RuntimeContainerTests
         {
             Path = containerPath,
             Type = TestNodeTypes.Container,
-            Children = [new StartNode { Path = member }],
+            Children = [new ExecutableNode { Path = member, Type = TestNodeTypes.Executable, Spec = new ExecutableSpec() }],
             InputBindings = new Dictionary<PortName, InputBinding>
             {
                 [new PortName("把关")] = new(
                     containerPath,
-                    gate,
-                    new PortName("信号"),
+                    BindingSource.ForNode(gate, new PortName("信号")),
                     new PortName("把关"),
                     PortTypes.Signal,
                     Role: BindingRole.Gate),
@@ -62,8 +63,10 @@ public sealed class RuntimeContainerTests
 
         public NodeRuntime? Materialized(NodePath node) => null;
 
-        public ISourceState Source(NodePath node) =>
-            new State(node == member || node == gate && GateReleased);
+        public IReadOnlyList<ContextValue> OutputValues(BindingSource source) => [];
+
+        public ISourceState Source(BindingSource source) =>
+            new State(source.Node == member || source.Node == gate && GateReleased);
     }
 
     private sealed record State(bool Released) : ISourceState

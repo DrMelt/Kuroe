@@ -92,7 +92,7 @@ public sealed class PortSubmissionRulesTests
 
     private static Port Text(PortName name) => new(name, PortTypes.Text);
 
-    private static Port SignalPort() => new(Signal, PortTypes.Signal);
+    private static Port SignalPort() => new(Signal, PortTypes.Signal, mode: PortMode.Trigger);
 
     private static Dictionary<PortName, PortValue> Values(params (PortName Name, PortValue Value)[] values) =>
         values.ToDictionary(value => value.Name, value => value.Value);

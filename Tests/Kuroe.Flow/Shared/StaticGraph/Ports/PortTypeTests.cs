@@ -26,7 +26,7 @@ public sealed class PortTypeTests
 
         Assert.Equal("Signal", PortTypes.Signal.Name);
         Assert.Equal(PortSemantics.Signal, PortTypes.Signal.Semantics);
-        Assert.Equal(PortMode.Trigger, PortTypes.DefaultMode(PortTypes.Signal));
+        Assert.Equal(PortMode.Plain, PortTypes.DefaultMode(PortTypes.Signal));
         Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Plain));
         Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Trigger));
         Assert.True(PortTypes.Supports(PortTypes.Signal, PortMode.Constant));

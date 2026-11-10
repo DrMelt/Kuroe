@@ -4,9 +4,9 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
-/// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，开始是固定来源，执行节点与容器在同一棵树上。
+/// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，执行节点与容器在同一棵树上。
 /// 依赖由 From 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达，绑定的角色与取值域固化在绑定上。执行按“组齐备且有驱动则激活”推进。
-/// 树与绑定在编译期落定，与节点相关的绑定在构造时挂到节点上，静态来源与输入侧方案由执行视图在构造期解析。</summary>
+/// 流程开始端口作为独立来源表保存在图上，不进入节点树。树与绑定在编译期落定，与节点相关的绑定在构造时挂到节点上。</summary>
 public sealed class NodeGraph
 {
     private readonly IReadOnlyList<GraphNode> _roots;
@@ -15,18 +15,21 @@ public sealed class NodeGraph
     private readonly Dictionary<NodePath, IReadOnlyList<NodePath>> _dependents = [];
     private readonly Dictionary<NodePath, NodeInputPlan> _plans = [];
 
-    /// <summary>构造执行视图：节点表非空且首个节点必须是开始，节点按路径落在同一棵树上，同层节点标签必须唯一，绑定两端必须落在节点表里。
+    /// <summary>构造执行视图：节点按路径落在同一棵树上，同层节点标签必须唯一，节点来源的绑定两端必须落在节点表里。
     /// 与节点相关的绑定在构造时挂到节点上：来源侧落在来源，驱动绑定落在执行节点。树检查通过后解析静态来源并生成输入侧方案。</summary>
-    public NodeGraph(IReadOnlyList<GraphNode> nodes, IReadOnlyList<InputBinding> bindings)
+    public NodeGraph(
+        IReadOnlyList<Port> startPorts,
+        IReadOnlyList<GraphNode> nodes,
+        IReadOnlyList<InputBinding> bindings)
     {
         if (nodes.Count == 0)
         {
-            throw new ArgumentException("节点表不能为空，至少要有开始节点。");
+            throw new ArgumentException("节点表不能为空，流程必须有一个根节点。");
         }
 
-        Start = nodes[0] as StartNode
-            ?? throw new ArgumentException($"节点表的首个节点必须是开始节点，收到 {nodes[0].GetType().Name}。");
+        StartPorts = startPorts;
         Bindings = [.. bindings];
+        StartOutgoing = [.. Bindings.Where(binding => binding.Drives && binding.Source.IsStart)];
         _roots = [.. nodes.Where(node => node.Path.Parent is null).Select(root => Finalize(root, Bindings))];
         Nodes = [.. _roots.SelectMany(Flattened)];
         ExecutableNodes = [.. Nodes.OfType<ExecutableNode>()];
@@ -38,11 +41,14 @@ public sealed class NodeGraph
         BuildDependents();
     }
 
-    /// <summary>全部节点：开始、执行节点与容器，按先根序。</summary>
+    /// <summary>流程开始端口的声明表。</summary>
+    public IReadOnlyList<Port> StartPorts { get; }
+
+    /// <summary>全部节点：执行节点与容器，按先根序。</summary>
     public IReadOnlyList<GraphNode> Nodes { get; }
 
-    /// <summary>流程的唯一来源节点。</summary>
-    public StartNode Start { get; }
+    /// <summary>从流程开始端口出发的驱动绑定。</summary>
+    public IReadOnlyList<InputBinding> StartOutgoing { get; }
 
     /// <summary>执行节点，按先根序。</summary>
     public IReadOnlyList<ExecutableNode> ExecutableNodes { get; }
@@ -107,10 +113,10 @@ public sealed class NodeGraph
             ? resolution
             : null;
 
-    /// <summary>节点的输入侧方案，开始为空。</summary>
+    /// <summary>节点的输入侧方案，没有方案时为空。</summary>
     public NodeInputPlan? PlanOf(NodePath path) => _plans.GetValueOrDefault(path);
 
-    /// <summary>节点类型的形状，开始为空。</summary>
+    /// <summary>节点类型的形状，没有类型时为空。</summary>
     public NodeTypeShape? ShapeOf(NodePath path) => this[path] switch
     {
         ExecutableNode executable => executable.Type.Shape,
@@ -126,19 +132,15 @@ public sealed class NodeGraph
     /// 容器与执行节点带上自己的出入绑定，输入侧方案由执行视图在静态解析后生成。</summary>
     private static GraphNode Finalize(GraphNode node, IReadOnlyList<InputBinding> bindings) => node switch
     {
-        StartNode start => start with
-        {
-            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == start.Path)],
-        },
         ContainerNode container => container with
         {
             Children = [.. container.Children.Select(child => Finalize(child, bindings))],
-            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == container.Path)],
+            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source.Node == container.Path)],
         },
         ExecutableNode executable => executable with
         {
             Incoming = [.. bindings.Where(binding => binding.Drives && binding.Target == executable.Path)],
-            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source == executable.Path)],
+            Outgoing = [.. bindings.Where(binding => binding.Drives && binding.Source.Node == executable.Path)],
         },
         _ => node,
     };
@@ -157,8 +159,7 @@ public sealed class NodeGraph
                 .Where(pair => pair.Value.Kind == StaticSourceKind.RuntimeConstant)
                 .Select(pair => new InputBinding(
                     executable.Path,
-                    pair.Value.Node,
-                    pair.Value.Port,
+                    pair.Value.Source,
                     pair.Key,
                     executable.FindInput(pair.Key)?.Type,
                     Role: BindingRole.Static)));
@@ -190,14 +191,20 @@ public sealed class NodeGraph
         Dictionary<NodePath, List<NodePath>> dependents = [];
         foreach (InputBinding binding in StaticBindings)
         {
-            Add(binding.Source, binding.Target);
+            if (binding.Source.Node is { } source)
+            {
+                Add(source, binding.Target);
+            }
         }
 
         foreach (ContainerNode container in Containers)
         {
             foreach (InputBinding binding in container.InputBindings?.Values.Where(binding => binding.Role == BindingRole.Gate) ?? [])
             {
-                Add(binding.Source, container.Path);
+                if (binding.Source.Node is { } source)
+                {
+                    Add(source, container.Path);
+                }
             }
         }
 
@@ -266,7 +273,11 @@ public sealed class NodeGraph
 
         foreach (InputBinding binding in Bindings)
         {
-            _ = this[binding.Source];
+            if (binding.Source.Node is { } source)
+            {
+                _ = this[source];
+            }
+
             _ = this[binding.Target];
         }
     }
@@ -297,7 +308,7 @@ public sealed class NodeGraph
     /// <summary>容器及它的全部子容器里的执行节点路径，递归展开。容器下游的激活消息沿成员到目标的路由投递。</summary>
     public IReadOnlyList<NodePath> ExecutablesIn(NodePath source) => [.. SourcesIn(source).Distinct()];
 
-    /// <summary>来源节点展开出的执行节点路径集合：执行节点给自身，容器递归给全部成员，开始没有执行节点。</summary>
+    /// <summary>来源节点展开出的执行节点路径集合：执行节点给自身，容器递归给全部成员。</summary>
     private IEnumerable<NodePath> SourcesIn(NodePath source) =>
         this[source] switch
         {

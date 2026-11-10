@@ -22,7 +22,7 @@ public sealed class JsonFlowFormatTests
         Assert.Equal("副本", reference.Label);
         Assert.Equal("计划", reference.Use);
         Assert.NotNull(reference.Bindings);
-        Assert.Equal("Start@MODEL_NAME", reference.Bindings["MODEL_NAME"]);
+        Assert.Equal("@MODEL_NAME", reference.Bindings["MODEL_NAME"]);
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public sealed class JsonFlowFormatTests
 
         Assert.Contains("\"Prompt\": \"写出计划\"", text);
         Assert.Contains("\"Mode\": \"Constant\"", text);
-        Assert.Contains("\"MODEL_NAME\": \"Start@MODEL_NAME\"", text);
+        Assert.Contains("\"MODEL_NAME\": \"@MODEL_NAME\"", text);
         Assert.Contains("\"Label\": \"副本\"", text);
         Assert.DoesNotContain("\": null", text);
 
@@ -45,7 +45,7 @@ public sealed class JsonFlowFormatTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
                 { "Name": "来源", "Kind": "Llm", "Outputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }, { "Name": "信号", "Type": "Signal", "Mode": "Trigger" }] },
                 { "Name": "下游", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "Text", "Mode": "Trigger" }, { "Name": "信号", "Type": "Signal", "Mode": "Trigger" }] }
               ] } } ]
@@ -66,13 +66,13 @@ public sealed class JsonFlowFormatTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [
                 { "Name": "来源", "Kind": "Llm",
                   "Inputs": [
                     { "Name": "配置", "Type": "Text", "Mode": "Constant", "Role": "Configuration" },
                     { "Name": "信号", "Type": "Signal", "Mode": "Plain" }
                   ],
-                  "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                  "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                   "Outputs": [
                     { "Name": "结论", "Type": "Text", "Mode": "Trigger" },
                     { "Name": "完成", "Type": "Signal" }
@@ -106,10 +106,10 @@ public sealed class JsonFlowFormatTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Outputs": [
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Outputs": [
                 { "Name": "配置", "Type": "Text", "Mode": "Constant", "Value": "固定" }
               ], "Nodes": [
-                { "Name": "配置节点", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                { "Name": "配置节点", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                   "Outputs": [{ "Name": "资料", "Type": "Text", "Mode": "Constant", "Ref": "@MODEL_NAME" }] }
               ] } } ]
             }
@@ -144,7 +144,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "配置", "Type": "Text", "Constant": true }] } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Outputs": [{ "Name": "配置", "Type": "Text", "Constant": true }] } } ]
             }
             """);
 
@@ -157,7 +157,7 @@ public sealed class JsonFlowFormatTests
     public void Read_rejects_a_reference_with_name_and_without_label()
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
-            { "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "副本", "Use": "计划" } ] } } ] }
+            { "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Nodes": [ { "Name": "副本", "Use": "计划" } ] } } ] }
             """);
 
         Assert.True(document.IsError);
@@ -170,8 +170,8 @@ public sealed class JsonFlowFormatTests
     {
         const string flow = """
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": "Negative" } } ], "Nodes": [
-                { "Name": "实施", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": { "Ref": "Start@目标", "Condition": "Negative" } } ] }
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "@目标", "Condition": "Negative" } } ], "Nodes": [
+                { "Name": "实施", "Kind": "Llm", "Inputs": [{ "Name": "结论", "Type": "Signal" }], "From": [ { "结论": { "Ref": "@目标", "Condition": "Negative" } } ] }
               ] } } ]
             }
             """;
@@ -179,11 +179,11 @@ public sealed class JsonFlowFormatTests
         IReadOnlyList<FlowDocumentFlow> flows = Ok(Format.Read(flow));
         NodeDefinitionDocument root = Assert.IsType<NodeDefinitionDocument>(Assert.Single(flows).Root);
         FromLinkDocument rootLink = Assert.Single(Assert.Single(root.From).Links);
-        Assert.Equal("Start@目标", rootLink.Ref);
+        Assert.Equal("@目标", rootLink.Ref);
         Assert.Equal(TriggerCondition.Negative, rootLink.Condition);
         NodeDefinitionDocument implement = Assert.IsType<NodeDefinitionDocument>(Assert.Single(root.Nodes ?? []));
         FromLinkDocument link = Assert.Single(Assert.Single(implement.From).Links);
-        Assert.Equal("Start@目标", link.Ref);
+        Assert.Equal("@目标", link.Ref);
         Assert.Equal(TriggerCondition.Negative, link.Condition);
 
         string text = Ok(Format.Write(flows));
@@ -199,7 +199,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read($$"""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": "{{condition}}" } } ] } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "@目标", "Condition": "{{condition}}" } } ] } } ]
             }
             """);
 
@@ -213,7 +213,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": { "Ref": "Start@目标", "Condition": "Negative" } } } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标", "Type": "Text", "Mode": "Constant" }], "Bindings": { "目标": { "Ref": "@目标", "Condition": "Negative" } } } } ]
             }
             """);
 
@@ -227,7 +227,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Condition": "Negative" } } ] } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Condition": "Negative" } } ] } } ]
             }
             """);
 
@@ -241,7 +241,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Other": "值" } } ] } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "@目标", "Other": "值" } } ] } } ]
             }
             """);
 
@@ -255,7 +255,7 @@ public sealed class JsonFlowFormatTests
     {
         ErrorOr<IReadOnlyList<FlowDocumentFlow>> document = Format.Read("""
             {
-              "Flows": [ { "Name": "默认", "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] }, "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "Start@目标", "Condition": true } } ] } } ]
+              "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": { "Ref": "@目标", "Condition": true } } ] } } ]
             }
             """);
 
@@ -276,10 +276,10 @@ public sealed class JsonFlowFormatTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ] },
-              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Nodes": [
-                { "Name": "配置", "Kind": "Llm", "Prompt": "写出计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" } },
-                { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
+              "Ports": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ],
+              "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
+                { "Name": "配置", "Kind": "Llm", "Prompt": "写出计划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } },
+                { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
               ] }
             }
           ]

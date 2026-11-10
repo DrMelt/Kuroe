@@ -56,13 +56,18 @@ internal static class PortValues
         return result;
     }
 
-    /// <summary>按端口配置读取一个取值。不承载触发的端口只接受内容形态；承载触发的端口按数据语义读取。</summary>
+    /// <summary>按端口配置读取一个取值。不承载触发的端口只接受内容形态，Signal 不承载内容；承载触发的端口按数据语义读取。</summary>
     private static ErrorOr<PortValue> Read(Port port, JsonElement element)
     {
         if (!port.Trigger)
         {
             if (element.ValueKind is JsonValueKind.String or JsonValueKind.Null)
             {
+                if (port.Type.Semantics == PortSemantics.Signal)
+                {
+                    return new PortValue(null);
+                }
+
                 return new PortValue(element.ValueKind == JsonValueKind.String ? element.GetString() : null);
             }
 

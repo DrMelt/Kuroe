@@ -38,7 +38,7 @@ public sealed class WorkTask
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
-        StartPorts = new StartPortValues(graph.Start, startTexts, inputs);
+        StartPorts = new StartPortValues(graph.StartPorts, startTexts, inputs);
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);
@@ -64,7 +64,7 @@ public sealed class WorkTask
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
-        StartPorts = new StartPortValues(graph.Start, startTexts, inputs);
+        StartPorts = new StartPortValues(graph.StartPorts, startTexts, inputs);
         Flow = flow;
         Graph = graph;
         Runtime = new TaskRuntime(this);

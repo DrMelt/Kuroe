@@ -74,17 +74,22 @@ public sealed class WorkTaskTests
     /// <summary>构造没有可启动工作的任务，快照为 Done，但推进循环尚未标记完成。</summary>
     private static WorkTask CreateTask()
     {
-        NodePath startPath = new([StartNode.ReservedLabel]);
-        StartNode start = new()
-        {
-            Path = startPath,
-            Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
-        };
-        NodeGraph graph = new([start], []);
+        IReadOnlyList<Port> ports = [new Port(new PortName("目标"), PortTypes.Text)];
+        NodeGraph graph = new(
+            ports,
+            [
+                new ContainerNode
+                {
+                    Path = NodePath.Of("整体"),
+                    Type = TestNodeTypes.Container,
+                    Children = [],
+                },
+            ],
+            []);
         FlowDefinition flow = new(
             new FlowName("默认"),
             null,
-            start.Outputs,
+            ports,
             NodeSpec.Define(new NodeName("整体")) with { Type = TestNodeTypes.Container });
 
         return new WorkTask(

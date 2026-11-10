@@ -91,18 +91,18 @@ public sealed class FlowCommandsTests
           "Flows": [
             {
               "Name": "可运行",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
-              "Root": { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" }, "From": [ { "目标": "Start@目标" } ] }
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
+              "Root": { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
             },
             {
               "Name": "待输入",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }],
               "Root": {
                 "Name": "收话",
                 "Kind": "Input",
                 "Question": "请补充背景",
                 "Outputs": [ { "Name": "回答", "Type": "Text" } ],
-                "From": [ { "目标": "Start@目标" } ]
+                "From": [ { "目标": "@目标" } ]
               }
             }
           ]

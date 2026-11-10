@@ -13,7 +13,7 @@ public abstract record GraphNode
     /// <summary>节点标签，路径的最后一段。</summary>
     public NodeLabel Label => Path.Label;
 
-    /// <summary>输入端口表：所有节点共用。开始没有输入。</summary>
+    /// <summary>输入端口表：所有节点共用。</summary>
     public virtual IReadOnlyList<InputPort> Inputs { get; init; } = [];
 
     /// <summary>输出端口表：所有节点共用。</summary>

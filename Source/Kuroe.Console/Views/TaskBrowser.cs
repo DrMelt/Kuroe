@@ -154,17 +154,21 @@ internal sealed class TaskBrowser(
     private StartInputs? AskInputs(FlowDefinition flow)
     {
         IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(flow.Name);
-        List<Port> ports = [.. flow.StartOutputs.Where(port =>
-            port.Value is null && !hostInputs.ContainsKey(port.Name))];
+        StartInputKind KindOf(Port port) => StartInputRules.Kind(port, hostInputs.ContainsKey(port.Name));
+
+        List<Port> ports = [.. flow.StartPorts.Where(port => KindOf(port) == StartInputKind.Input)];
         List<FormInfo> info =
         [
             new("流程", flow.Name.Value),
-            .. flow.StartOutputs
-                .Select(port => port.Value is { } value ? new FormInfo(port.Name.Value, value) : null)
-                .OfType<FormInfo>(),
-            .. flow.StartOutputs
-                .Where(port => hostInputs.ContainsKey(port.Name))
+            .. flow.StartPorts
+                .Where(port => KindOf(port) == StartInputKind.Fixed)
+                .Select(port => new FormInfo(port.Name.Value, port.Value ?? string.Empty)),
+            .. flow.StartPorts
+                .Where(port => KindOf(port) == StartInputKind.Host)
                 .Select(port => new FormInfo(port.Name.Value, $"宿主 {hostInputs[port.Name]}")),
+            .. flow.StartPorts
+                .Where(port => KindOf(port) == StartInputKind.Automatic)
+                .Select(port => new FormInfo(port.Name.Value, "自动放行")),
         ];
         InputForm form = new(
             terminal,

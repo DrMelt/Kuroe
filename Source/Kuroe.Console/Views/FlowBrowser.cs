@@ -92,6 +92,7 @@ internal sealed class FlowBrowser(
 
         terminal.NewLine();
         IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(compiled.Model.Name);
+        terminal.Write(StartLine(compiled.Model.StartPorts, hostInputs));
         terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(),
             node => Line(node, hostInputs)));
     }
@@ -172,19 +173,19 @@ internal sealed class FlowBrowser(
 
     private static Paragraph Line(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
     {
-        StartNode start => StartLine(start, hostInputs),
         ContainerNode container => ContainerLine(container),
         ExecutableNode executable => ExecutableLine(executable, hostInputs),
         _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
     };
 
-    private static Paragraph StartLine(StartNode start, IReadOnlyDictionary<PortName, string> hostInputs)
+    private static Paragraph StartLine(
+        IReadOnlyList<Port> ports,
+        IReadOnlyDictionary<PortName, string> hostInputs)
     {
-        ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
-        IReadOnlyList<Port> ports = start.Outputs;
+        ViewLine line = new ViewLine().Add("开始端口", Styles.Key);
         if (ports.Count > 0)
         {
-            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel(hostInputs)))}", Styles.Hint);
+            line.Add(string.Join('、', ports.Select(port => port.StartLabel(hostInputs))), Styles.Hint);
         }
 
         return line.Build();
@@ -263,7 +264,7 @@ internal sealed class FlowBrowser(
             .GroupBy(binding => binding.Group)
             .OrderBy(group => group.Key)
             .Select(group => string.Join('、', group.Select(binding =>
-                $"{binding.TargetInput}←{binding.Source}@{binding.SourcePort}"))));
+                $"{binding.TargetInput}←{binding.Source.Display}"))));
 
     /// <summary>流程里的执行节点与容器数量。</summary>
     private static (int Executables, int Containers) Count(NodeSpec root)

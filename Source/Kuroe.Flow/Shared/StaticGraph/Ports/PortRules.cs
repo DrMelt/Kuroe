@@ -19,6 +19,10 @@ public static class PortRules
     /// <summary>端口是否承载文本内容。</summary>
     public static bool CarriesText(PortType type) => type.Semantics == PortSemantics.Text;
 
+    /// <summary>端口是否承载内容。Text 与 Context 承载内容，Signal 不承载内容。</summary>
+    public static bool CarriesContent(PortType type) =>
+        type.Semantics is PortSemantics.Text or PortSemantics.Context;
+
     /// <summary>常量端口是否由执行产出：常量端口没有固定值与来源引用，且节点产出模式为首次发布后冻结。</summary>
     public static bool IsRuntimeConstant(Port port, NodeEmission emission) =>
         port.Mode == PortMode.Constant && port.Value is null && port.Ref is null && emission == NodeEmission.Once;

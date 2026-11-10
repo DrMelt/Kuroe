@@ -35,7 +35,7 @@ public sealed class StaticPortValues(NodeGraph graph, IPortTexts startTexts, IRu
     private bool Resolved(StaticResolution? resolution) =>
         resolution is { Error: null } found
         && (found.Kind != StaticSourceKind.RuntimeConstant
-            || _runtime is not null && _runtime.Available(found.Node, found.Port));
+            || _runtime is not null && found.Source.Node is { } node && _runtime.Available(node, found.Port));
 
     /// <summary>按节点与端口表解析文本，空值不进入结果。</summary>
     private Dictionary<PortName, string> Resolve(NodePath node, IEnumerable<PortName> ports, bool input)
@@ -62,7 +62,7 @@ public sealed class StaticPortValues(NodeGraph graph, IPortTexts startTexts, IRu
         { Kind: StaticSourceKind.StartFixed } found => found.Text,
         { Kind: StaticSourceKind.StartInjected } found => _startTexts.Text(found.Port),
         { Kind: StaticSourceKind.Literal } found => found.Text,
-        { Kind: StaticSourceKind.RuntimeConstant } found => _runtime?.Text(found.Node, found.Port),
+        { Kind: StaticSourceKind.RuntimeConstant } found when found.Source.Node is { } node => _runtime?.Text(node, found.Port),
         { Kind: StaticSourceKind.Default } found => found.Text,
         _ => null,
     };

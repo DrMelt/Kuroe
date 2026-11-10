@@ -22,6 +22,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     public void Print(TaskSnapshot task)
     {
         Facts facts = new(task, _pendings);
+        _terminal.Write(StartLine(task.Graph.StartPorts));
         _terminal.Write(NodeTree.Build(
             task.Graph,
             Header(),
@@ -33,19 +34,17 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
     private static Paragraph Line(Facts facts, GraphNode node) => node switch
     {
-        StartNode start => StartLine(start),
         ContainerNode container => ContainerLine(facts, container),
         ExecutableNode executable => ExecutableLine(facts, executable),
         _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
     };
 
-    private static Paragraph StartLine(StartNode start)
+    private static Paragraph StartLine(IReadOnlyList<Port> ports)
     {
-        ViewLine line = new ViewLine().Add("Start", Styles.Key).Add("开始", Styles.Hint);
-        IReadOnlyList<Port> ports = start.Outputs;
+        ViewLine line = new ViewLine().Add("开始端口", Styles.Key);
         if (ports.Count > 0)
         {
-            line.Add($"端口 {string.Join('、', ports.Select(port => port.StartLabel()))}", Styles.Hint);
+            line.Add(string.Join('、', ports.Select(port => port.StartLabel())), Styles.Hint);
         }
 
         return line.Build();

@@ -254,12 +254,15 @@ public sealed class FileExecutionRunnerTests
         [
             new InputBinding(
                 TargetPath,
-                TargetPath,
-                new PortName("结果"),
+                BindingSource.ForNode(TargetPath, new PortName("结果")),
                 new PortName("触发"),
                 PortTypes.Signal,
                 Trigger: true),
-            new InputBinding(TargetPath, TargetPath, new PortName("结果"), new PortName("任务路径"), PortTypes.Text),
+            new InputBinding(
+                TargetPath,
+                BindingSource.ForNode(TargetPath, new PortName("结果")),
+                new PortName("任务路径"),
+                PortTypes.Text),
         ],
         };
 
@@ -280,11 +283,14 @@ public sealed class FileExecutionRunnerTests
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
             Incoming =
             [
-                new InputBinding(TargetPath, TargetPath, new PortName("结果"), ContentPort, PortTypes.Text),
+                new InputBinding(
+                TargetPath,
+                BindingSource.ForNode(TargetPath, new PortName("结果")),
+                ContentPort,
+                PortTypes.Text),
                 new InputBinding(
                     TargetPath,
-                    TargetPath,
-                    new PortName("结果"),
+                    BindingSource.ForNode(TargetPath, new PortName("结果")),
                     new PortName("任务路径"),
                     PortTypes.Text),
             ],

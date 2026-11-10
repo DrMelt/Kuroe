@@ -16,6 +16,9 @@ public sealed class PortRulesTests
         Assert.False(PortRules.RequiresSubmission(PortTypes.Context));
         Assert.True(PortRules.CarriesText(PortTypes.Text));
         Assert.False(PortRules.CarriesText(PortTypes.Signal));
+        Assert.True(PortRules.CarriesContent(PortTypes.Text));
+        Assert.True(PortRules.CarriesContent(PortTypes.Context));
+        Assert.False(PortRules.CarriesContent(PortTypes.Signal));
     }
 
     [Fact]

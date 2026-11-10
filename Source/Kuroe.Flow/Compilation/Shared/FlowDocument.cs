@@ -9,11 +9,11 @@ public sealed record FlowDocument(
     IReadOnlyList<NodeDefinitionDocument> Nodes,
     IReadOnlyList<FlowDocumentFlow> Flows);
 
-/// <summary>描述文档里的一条流程：开始端口与装配树。宿主输入绑定不进入流程文档，由宿主单独维护。</summary>
+/// <summary>描述文档里的一条流程：流程级开始端口与装配树。宿主输入绑定不进入流程文档，由宿主单独维护。</summary>
 public sealed record FlowDocumentFlow(
     string Name,
     string? Description,
-    IReadOnlyList<PortDocument> StartOutputs,
+    IReadOnlyList<PortDocument> StartPorts,
     NodeDocument? Root);
 
 /// <summary>输出端口条目：所有节点共用。Type 省略时按 Text，Mode 省略时按类型默认模式。Value 是固定值，Ref 是同一节点内部作用域中的来源端口，两者互斥。

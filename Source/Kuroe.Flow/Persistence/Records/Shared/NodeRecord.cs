@@ -29,9 +29,9 @@ public sealed record PublicationValueRecord(
     ContextSourceRecord Origin,
     string Text);
 
-/// <summary>一条已消费版本：来源节点、来源端口与消费到的版本。</summary>
+/// <summary>一条已消费版本：来源节点、来源端口与消费到的版本。来源节点为空表示流程开始端口。</summary>
 public sealed record ConsumedRevisionRecord(
-    NodePath Source,
+    NodePath? Source,
     PortName? Port,
     long Revision);
 

@@ -6,7 +6,6 @@ using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 
@@ -71,11 +70,11 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
     {
         NodeScope scope = NodeScope.Flow(name.Value);
 
-        ErrorOr<IReadOnlyList<Port>> startOutputs = ToPorts(flow.StartOutputs, scope, StartNode.ReservedLabel.Value);
-        if (startOutputs.IsError)
+        ErrorOr<IReadOnlyList<Port>> ports = ToPorts(flow.StartPorts, scope, "开始");
+        if (ports.IsError)
         {
-            errors.AddRange(startOutputs.ErrorsOrEmptyList);
-            return startOutputs.ErrorsOrEmptyList;
+            errors.AddRange(ports.ErrorsOrEmptyList);
+            return ports.ErrorsOrEmptyList;
         }
 
         if (flow.Root is null)
@@ -91,7 +90,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             return root.ErrorsOrEmptyList;
         }
 
-        return new FlowDefinition(name, flow.Description, startOutputs.Value, root.Value);
+        return new FlowDefinition(name, flow.Description, ports.Value, root.Value);
     }
 
     private ErrorOr<NodeSpec> ToNode(NodeDocument document, NodeScope scope, List<Error> errors) => document switch

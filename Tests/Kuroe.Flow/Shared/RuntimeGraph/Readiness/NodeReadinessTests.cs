@@ -242,8 +242,7 @@ public sealed class NodeReadinessTests
                 InputBinding.Member(NodePath.Of("整体"), NodePath.Of("成员")),
                 new InputBinding(
                     NodePath.Of("整体"),
-                    NodePath.Of("把关"),
-                    new PortName("信号"),
+                    BindingSource.ForNode(NodePath.Of("把关"), new PortName("信号")),
                     new PortName("把关"),
                     gateType,
                     Trigger: true,
@@ -263,7 +262,7 @@ public sealed class NodeReadinessTests
         NodeInputPlan.Of(new ExecutableSpec { MaxExecutions = maxExecutions }, incoming, [], []);
 
     private static InputBinding Value(string from, string to, PortType type, PortName? input = null, int group = 0) =>
-        new(NodePath.Of(to), NodePath.Of(from), OutputPort, input ?? OutputPort, type, Group: group);
+        new(NodePath.Of(to), BindingSource.ForNode(NodePath.Of(from), OutputPort), input ?? OutputPort, type, Group: group);
 
     /// <summary>判定要读的目标自身状态替身：已消费版本、执行次数、发布与重跑意图。</summary>
     private sealed class FakeProgress : IInputProgress
@@ -303,8 +302,10 @@ public sealed class NodeReadinessTests
     private sealed class FakeSources : IReadinessSources
     {
         private readonly Dictionary<NodePath, SourceState> _sources = [];
+        private readonly SourceState _start = new();
 
-        public ISourceState Source(NodePath node) => Of(node.Value);
+        public ISourceState Source(BindingSource source) =>
+            source.Node is { } node ? Of(node.Value) : _start;
 
         /// <summary>取一个来源的状态，未登记时建一个未放行的。</summary>
         public SourceState Of(string node)

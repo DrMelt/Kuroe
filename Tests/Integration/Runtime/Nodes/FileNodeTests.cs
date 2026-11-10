@@ -85,12 +85,12 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -124,12 +124,12 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准", "MODEL_NAME": "Start@MODEL_NAME" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准", "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -161,12 +161,12 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
@@ -201,12 +201,12 @@ public sealed class FileNodeTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }] },
+              "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
               
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
-                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "Start@目标" } ], "Bindings": { "基准": "Start@基准" }, "Nodes": [
+                "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Bindings": { "基准": "@基准" }, "Nodes": [
                   {
                     "Name": "读入",
                     "Kind": "FileRead",

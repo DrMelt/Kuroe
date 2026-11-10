@@ -5,7 +5,6 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Node.Llm;
@@ -87,7 +86,7 @@ public sealed class DialogueTests
         NodeSpec reply = Members(DefaultLanguage)[1];
         IReadOnlyDictionary<PortName, PortRef> bindings = reply.Bindings ?? new Dictionary<PortName, PortRef>();
 
-        Assert.Contains(new PortRef(StartNode.ReservedLabel, DialogueFlow.WorkspacePort), bindings.Values);
+        Assert.Contains(PortRef.Start(DialogueFlow.WorkspacePort), bindings.Values);
         Assert.True(reply.FindInput(DialogueFlow.WorkspacePort) is { IsStatic: true });
     }
 
@@ -125,7 +124,7 @@ public sealed class DialogueTests
         FlowDefinition flow = Build(DefaultLanguage);
         PortName model = LlmNodeTypes.ModelPort;
 
-        Assert.Null(Assert.NotNull(flow.StartOutputs.Find(model)).Value);
+        Assert.Null(Assert.NotNull(flow.StartPorts.Find(model)).Value);
         Assert.Equal("MODEL", DialogueFlow.HostInputs[model]);
     }
 

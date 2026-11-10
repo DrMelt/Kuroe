@@ -1,4 +1,5 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -19,8 +20,7 @@ internal sealed class StubNodeContext : INodeContext
             [
                 new InputBinding(
                     NodePath.Of("整体", "输入"),
-                    SourcePath,
-                    new PortName("目标"),
+                    BindingSource.ForNode(SourcePath, new PortName("目标")),
                     new PortName("目标"),
                     PortTypes.Text),
             ]),
@@ -31,7 +31,9 @@ internal sealed class StubNodeContext : INodeContext
 
     public NodeRuntime? Materialized(NodePath node) => null;
 
-    public ISourceState Source(NodePath node) => new ReleasedSource();
+    public IReadOnlyList<ContextValue> OutputValues(BindingSource source) => [];
+
+    public ISourceState Source(BindingSource source) => new ReleasedSource();
 
     /// <summary>测试用的来源状态：已放行，版本固定为 1。</summary>
     private sealed class ReleasedSource : ISourceState

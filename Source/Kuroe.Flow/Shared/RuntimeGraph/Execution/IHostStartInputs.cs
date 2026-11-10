@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 /// <summary>宿主开始输入表：按流程名给出开始端口到宿主输入名的绑定。表由宿主维护，不进入流程定义与流程编译。
-/// 表项里的开始端口由宿主在任务启动时给值，不接受提交输入；表项之外的开始端口按用户输入处理，没有表项的流程不获得宿主输入。</summary>
+/// 表项里的开始端口由宿主在任务启动时给值，不接受提交输入；表项之外承载内容的开始端口按用户输入处理，不承载内容的开始端口不进入提交，没有表项的流程不获得宿主输入。</summary>
 public interface IHostStartInputs
 {
     /// <summary>该流程的表项，没有表项时为空表。展示用它读取配置原样，不做与开始入口的一致性判断。</summary>

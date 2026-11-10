@@ -87,7 +87,7 @@ public sealed class StaticPortTests
                     {
                         Type = TestNodeTypes.Executable,
                         Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Named(StartNode.ReservedLabel, Model) },
+                        Bindings = new Dictionary<PortName, PortRef> { [Model] = PortRef.Start(Model) },
                         Spec = new ExecutableSpec(),
                         From =
                         [
@@ -113,7 +113,7 @@ public sealed class StaticPortTests
             Inputs = [new InputPort(Goal)],
             Outputs = [new Port(Result, PortTypes.Text)],
             Spec = new ExecutableSpec(),
-            From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
+            From = [new FromGroup([new FromLink(Goal, PortRef.Start(Goal))])],
         };
 
         FlowDefinition flow = new(new FlowName("默认"), null,
@@ -136,7 +136,7 @@ public sealed class StaticPortTests
                             [Model] = PortRef.Named(new NodeLabel("来源"), Result),
                         },
                         Spec = new ExecutableSpec(),
-                        From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
+                        From = [new FromGroup([new FromLink(Goal, PortRef.Start(Goal))])],
                     },
                 ],
             });
@@ -180,7 +180,8 @@ public sealed class StaticPortTests
         ExecutableNode check = compiled.Value.ExecutableNodes.Single(node => node.Label.Value == "检查");
         Assert.NotNull(check.InputBindings);
         InputBinding binding = check.InputBindings[Model];
-        Assert.Equal(new NodePath([StartNode.ReservedLabel]), binding.Source);
+        Assert.True(binding.Source.IsStart);
+        Assert.Equal(Model, binding.Source.Port);
         Assert.Equal(Model, binding.SourcePort);
         Assert.Equal("提交值", StaticText(
             compiled.Value,
@@ -205,10 +206,10 @@ public sealed class StaticPortTests
                 Type = TestNodeTypes.Executable,
                 Inputs = [new InputPort(Goal)],
                 Spec = new ExecutableSpec(),
-                From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Model))])],
+                From = [new FromGroup([new FromLink(Goal, PortRef.Start(Model))])],
             });
 
-        Assert.Contains(Errors(flow), error => error.Contains($"常量输出端口 Start@{Model} 不进入 From"));
+        Assert.Contains(Errors(flow), error => error.Contains($"常量输出端口 @{Model} 不进入 From"));
     }
 
     /// <summary>开始端口只写 Value 不写 Mode 时仍不是静态端口，静态绑定读取时报错。</summary>
@@ -224,8 +225,8 @@ public sealed class StaticPortTests
                 From =
                 [
                     new FromGroup([
-                        new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal)),
-                        new FromLink(Model, PortRef.Named(StartNode.ReservedLabel, Model)),
+                        new FromLink(Goal, PortRef.Start(Goal)),
+                        new FromLink(Model, PortRef.Start(Model)),
                     ]),
                 ],
                 Nodes =
@@ -283,7 +284,7 @@ public sealed class StaticPortTests
                                 From =
                                 [
                                     new FromGroup([
-                                        new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal)),
+                                        new FromLink(Goal, PortRef.Start(Goal)),
                                     ]),
                                 ],
                             },
@@ -321,7 +322,7 @@ public sealed class StaticPortTests
                         From =
                         [
                             new FromGroup([
-                                new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal)),
+                                new FromLink(Goal, PortRef.Start(Goal)),
                             ]),
                         ],
                     },
@@ -341,7 +342,7 @@ public sealed class StaticPortTests
             {
                 Type = new StaticContainerType(),
                 Inputs = [new InputPort(Goal), new InputPort(Model, PortTypes.Text, mode: PortMode.Constant)],
-                From = [new FromGroup([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))])],
+                From = [new FromGroup([new FromLink(Goal, PortRef.Start(Goal))])],
                 Nodes =
                 [
                     NodeSpec.Define(new NodeName("检查")) with
@@ -379,7 +380,7 @@ public sealed class StaticPortTests
                 From =
                 [
                     new FromGroup([
-                        new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal)),
+                        new FromLink(Goal, PortRef.Start(Goal)),
                     ]),
                 ],
             });
@@ -755,11 +756,11 @@ public sealed class StaticPortTests
 
     private static Dictionary<PortName, PortRef> RootBindings() => new()
     {
-        [Model] = PortRef.Named(StartNode.ReservedLabel, Model),
+        [Model] = PortRef.Start(Model),
     };
 
     private static FromGroup RootFrom() =>
-        new([new FromLink(Goal, PortRef.Named(StartNode.ReservedLabel, Goal))]);
+        new([new FromLink(Goal, PortRef.Start(Goal))]);
 
     private static IReadOnlyList<string> Errors(FlowDefinition flow) =>
         [.. FlowRules.ValidateAndCompile(flow).ErrorsOrEmptyList.Select(error => error.Description)];

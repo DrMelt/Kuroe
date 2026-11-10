@@ -77,17 +77,12 @@ public sealed class PortDeclarationTests
     }
 
     [Fact]
-    public void Start_node_reserves_its_label_and_exposes_outputs()
+    public void Start_ports_expose_outputs()
     {
-        StartNode start = new()
-        {
-            Path = new NodePath([StartNode.ReservedLabel]),
-            Outputs = [new Port(new PortName("目标"), PortTypes.Text)],
-        };
+        IReadOnlyList<Port> ports = [new Port(new PortName("目标"), PortTypes.Text)];
 
-        Assert.Equal("Start", StartNode.ReservedLabel.Value);
-        Assert.Equal(PortTypes.Text, Assert.NotNull(start.FindPort(new PortName("目标"))).Type);
-        Assert.Null(start.FindPort(new PortName("任务")));
+        Assert.Equal(PortTypes.Text, Assert.NotNull(ports.Find(new PortName("目标"))).Type);
+        Assert.Null(ports.Find(new PortName("任务")));
     }
 
     private static ExecutableNode Executable(IReadOnlyList<Port> outputs) => new()

@@ -10,7 +10,7 @@ public sealed class FlowFileDto
     public List<FlowDto> Flows { get; set; } = [];
 }
 
-/// <summary>文件里的一条流程：开始入口的输出端口与装配树。</summary>
+/// <summary>文件里的一条流程：流程级开始端口与装配树。</summary>
 public sealed class FlowDto
 {
     /// <summary>流程名。</summary>
@@ -19,16 +19,9 @@ public sealed class FlowDto
     /// <summary>流程说明。</summary>
     public string? Description { get; set; }
 
-    /// <summary>开始入口的输出端口，条目形状与节点输出端口一致。</summary>
-    public StartDto? Start { get; set; }
+    /// <summary>流程级开始端口，条目形状与节点输出端口一致。</summary>
+    public List<JsonElement>? Ports { get; set; }
 
     /// <summary>装配树的根节点，唯一。</summary>
     public NodeDto? Root { get; set; }
-}
-
-/// <summary>文件里一条流程的开始入口：流程的唯一来源，输出端口即提交时给的初始输入。</summary>
-public sealed class StartDto
-{
-    /// <summary>开始端口的条目，按声明序。</summary>
-    public List<JsonElement>? Outputs { get; set; }
 }

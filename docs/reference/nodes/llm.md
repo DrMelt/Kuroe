@@ -5,7 +5,7 @@
 ## 端口
 
 - 必须声明静态输入端口 `MODEL_NAME`，类型 `Text`，模式 `Constant`，角色 `Configuration`。标准写法是由开始端口取模型，并在宿主开始输入表里把该端口绑定到 `MODEL`，见[模型接入](../../usage/模型接入.md)。
-- 输入与输出端口取 `Text`、`Context` 与 `Signal`。`Signal` 未写 `Mode` 时默认 `Trigger`，其他类型默认 `Plain`。
+- 输入与输出端口取 `Text`、`Context` 与 `Signal`。所有类型未写 `Mode` 时默认 `Plain`，需要门控时显式写 `Trigger`。
 - `Context` 输入置于目标输入最前。`Context` 输出由来源透传，不需要交回。
 - `Llm` 接受 `From` 引入的未声明 `Text` 输入。
 
@@ -68,7 +68,7 @@
 
 ```json
 "Inputs": [{ "Name": "任务路径", "Type": "Text", "Mode": "Constant" }],
-"Bindings": { "任务路径": "Start@任务路径" },
+"Bindings": { "任务路径": "@任务路径" },
 "Tools": ["file/read", "GetLocalTime"],
 "ToolPorts": { "file/read": { "root": "任务路径" } }
 ```
@@ -86,7 +86,7 @@
     { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
     { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
   ],
-  "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+  "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
   "Outputs": [{ "Name": "正文", "Type": "Text", "Mode": "Constant" }]
 }
 ```

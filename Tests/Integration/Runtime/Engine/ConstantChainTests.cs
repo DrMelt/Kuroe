@@ -94,10 +94,10 @@ public sealed class ConstantChainTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -105,7 +105,7 @@ public sealed class ConstantChainTests
                   { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "制定大纲",
@@ -171,11 +171,11 @@ public sealed class ConstantChainTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "触发", "Type": "Text" },
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -184,8 +184,8 @@ public sealed class ConstantChainTests
                   { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "From": [ { "触发": "Start@触发" } ],
-                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "From": [ { "触发": "@触发" } ],
+                "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "第一步",
@@ -220,10 +220,10 @@ public sealed class ConstantChainTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -231,7 +231,7 @@ public sealed class ConstantChainTests
                   { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "Bindings": { "目标": "Start@目标", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "目标": "@目标", "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "第一步",
@@ -285,15 +285,15 @@ public sealed class ConstantChainTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }],
-                "Bindings": { "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "重试",
@@ -317,11 +317,11 @@ public sealed class ConstantChainTests
           "Flows": [
             {
               "Name": "默认",
-              "Start": { "Outputs": [
+              "Ports": [
                 { "Name": "目标", "Type": "Text" },
                 { "Name": "上下文", "Type": "Context", "Mode": "Constant" },
                 { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }
-              ] },
+              ],
               "Root": {
                 "Name": "整体",
                 "Kind": "Container",
@@ -329,7 +329,7 @@ public sealed class ConstantChainTests
                   { "Name": "上下文", "Type": "Context", "Mode": "Constant" },
                   { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }
                 ],
-                "Bindings": { "上下文": "Start@上下文", "MODEL_NAME": "Start@MODEL_NAME" },
+                "Bindings": { "上下文": "@上下文", "MODEL_NAME": "@MODEL_NAME" },
                 "Nodes": [
                   {
                     "Name": "读取",

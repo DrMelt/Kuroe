@@ -25,8 +25,7 @@ public sealed class InputProgressTests
                 [
                     new InputBinding(
                         NodePath.Of("目标"),
-                        source,
-                        port,
+                        BindingSource.ForNode(source, port),
                         new PortName("目标"),
                         PortTypes.Text),
                 ]),
@@ -111,7 +110,7 @@ public sealed class InputProgressTests
     {
         public long Revision { get; set; }
 
-        public ISourceState Source(NodePath node) => new State(Revision);
+        public ISourceState Source(BindingSource source) => new State(Revision);
 
         private sealed record State(long Revision) : ISourceState
         {

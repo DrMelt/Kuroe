@@ -15,7 +15,7 @@ public static class PortTypes
             PortMode.Plain, PortMode.Trigger, PortMode.Constant);
         Context = Register("Context", PortSemantics.Context, PortMode.Plain,
             PortMode.Plain, PortMode.Constant);
-        Signal = Register("Signal", PortSemantics.Signal, PortMode.Trigger,
+        Signal = Register("Signal", PortSemantics.Signal, PortMode.Plain,
             PortMode.Plain, PortMode.Trigger, PortMode.Constant);
     }
 

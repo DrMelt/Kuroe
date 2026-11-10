@@ -187,7 +187,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 Context 端口转发来源输入内容，
-    /// 常量与 Text 端口取交回文本，其余端口不承载内容。</summary>
+    /// 承载内容的端口取交回文本，其余端口不承载内容。</summary>
     private Publication CreatePublication(Execution execution, long revision)
     {
         Dictionary<PortName, bool> triggers = [];
@@ -202,7 +202,8 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
                 continue;
             }
 
-            if (submitted is { Text: { Length: > 0 } text })
+            if (PortRules.CarriesContent(port.Type)
+                && submitted is { Text: { Length: > 0 } text })
             {
                 content[port.Name] = [new ContextValue(new ExecutionSource(execution.Id, Path, port.Name), text)];
             }

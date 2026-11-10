@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Shared.StaticGraph.Graph;
 
@@ -10,34 +11,43 @@ public static class StaticSources
 {
     /// <summary>解析一个静态输入端口的来源终点，无法解析时给出错误说明。</summary>
     public static StaticResolution ResolveInput(NodeGraph graph, NodePath node, PortName port) =>
-        ResolvePort(graph, node, port, StaticPortSide.Input, []);
+        ResolvePort(graph, BindingSource.ForNode(node), port, StaticPortSide.Input, []);
 
     /// <summary>解析一个常量输出端口的来源终点，无法解析时给出错误说明。</summary>
     public static StaticResolution ResolveOutput(NodeGraph graph, NodePath node, PortName port) =>
-        ResolvePort(graph, node, port, StaticPortSide.Output, []);
+        ResolvePort(graph, BindingSource.ForNode(node), port, StaticPortSide.Output, []);
 
     private static StaticResolution ResolvePort(
         NodeGraph graph,
-        NodePath node,
+        BindingSource source,
         PortName port,
         StaticPortSide side,
         HashSet<StaticPortKey> visiting)
     {
-        var key = new StaticPortKey(node, port, side);
+        var key = new StaticPortKey(source, port, side);
         if (!visiting.Add(key))
         {
-            return StaticResolution.Missing(node, port, $"端口 {port} 的来源形成环。");
+            return StaticResolution.Missing(source, port, $"端口 {port} 的来源形成环。");
         }
 
         try
         {
+            if (source.IsStart)
+            {
+                return ResolveStart(graph, port);
+            }
+
+            if (source.Node is not { } node)
+            {
+                return StaticResolution.Missing(source, port, $"静态来源 {source.Display} 不在流程里。");
+            }
+
             return Find(graph, node) switch
             {
-                StartNode start when side == StaticPortSide.Output => ResolveStart(start, port),
                 GraphNode inputNode when side == StaticPortSide.Input => ResolveInput(graph, inputNode, port, visiting),
                 ContainerNode container => ResolveOutput(graph, container, port, visiting),
                 ExecutableNode executable => ResolveOutput(graph, executable, port, visiting),
-                _ => StaticResolution.Missing(node, port, $"静态来源 {node} 不在流程里。"),
+                _ => StaticResolution.Missing(source, port, $"静态来源 {source.Display} 不在流程里。"),
             };
         }
         finally
@@ -47,21 +57,22 @@ public static class StaticSources
     }
 
     /// <summary>开始端口的来源：常量端口给固定值或注入绑定。</summary>
-    private static StaticResolution ResolveStart(StartNode start, PortName port)
+    private static StaticResolution ResolveStart(NodeGraph graph, PortName port)
     {
-        if (start.FindPort(port) is not { } declared)
+        BindingSource source = BindingSource.ForStart(port);
+        if (graph.StartPorts.Find(port) is not { } declared)
         {
-            return StaticResolution.Missing(start.Path, port, $"开始没有输出端口 {port}。");
+            return StaticResolution.Missing(source, port, $"开始没有输出端口 {port}。");
         }
 
         if (!declared.IsConstant)
         {
-            return StaticResolution.Missing(start.Path, port, $"开始端口 {port} 不是常量端口。");
+            return StaticResolution.Missing(source, port, $"开始端口 {port} 不是常量端口。");
         }
 
         return declared.Value is { Length: > 0 } text
-            ? StaticResolution.StartFixed(start.Path, port, text)
-            : StaticResolution.StartInjected(start.Path, port);
+            ? StaticResolution.StartFixed(port, text)
+            : StaticResolution.StartInjected(port);
     }
 
     /// <summary>节点的常量输出：固定值、内部来源端口或 Once 节点唯一一次执行的产出。</summary>
@@ -91,7 +102,7 @@ public static class StaticSources
 
         StaticPortSide side = source.Source == node.Path ? StaticPortSide.Input : StaticPortSide.Output;
 
-        return ResolvePort(graph, source.Source, source.Port, side, visiting);
+        return ResolvePort(graph, BindingSource.ForNode(source.Source, source.Port), source.Port, side, visiting);
     }
 
     /// <summary>节点的静态输入：绑定来源优先，其次默认值。执行节点与容器共用这一条链。</summary>
@@ -127,40 +138,44 @@ public static class StaticSources
         Output,
     }
 
-    private readonly record struct StaticPortKey(NodePath Node, PortName Port, StaticPortSide Side);
+    private readonly record struct StaticPortKey(BindingSource Source, PortName Port, StaticPortSide Side);
 }
 
 /// <summary>静态输入与常量输出解析的终点。Missing 带错误说明，其余带固定值、默认值、开始端口或运行期常量来源。</summary>
 public readonly record struct StaticResolution(
     StaticSourceKind Kind,
-    NodePath Node,
+    BindingSource Source,
     PortName Port,
     string? Text,
     string? Error)
 {
     /// <summary>开始端口的固定值。</summary>
-    public static StaticResolution StartFixed(NodePath node, PortName port, string text) =>
-        new(StaticSourceKind.StartFixed, node, port, text, null);
+    public static StaticResolution StartFixed(PortName port, string text) =>
+        new(StaticSourceKind.StartFixed, BindingSource.ForStart(port), port, text, null);
 
     /// <summary>开始端口的非固定值：宿主给值或提交输入。</summary>
-    public static StaticResolution StartInjected(NodePath node, PortName port) =>
-        new(StaticSourceKind.StartInjected, node, port, null, null);
+    public static StaticResolution StartInjected(PortName port) =>
+        new(StaticSourceKind.StartInjected, BindingSource.ForStart(port), port, null, null);
 
     /// <summary>常量输出的字面量。</summary>
     public static StaticResolution Literal(NodePath node, PortName port, string text) =>
-        new(StaticSourceKind.Literal, node, port, text, null);
+        new(StaticSourceKind.Literal, BindingSource.ForNode(node), port, text, null);
 
     /// <summary>Once 节点唯一一次执行产出的常量。</summary>
     public static StaticResolution RuntimeConstant(NodePath node, PortName port) =>
-        new(StaticSourceKind.RuntimeConstant, node, port, null, null);
+        new(StaticSourceKind.RuntimeConstant, BindingSource.ForNode(node), port, null, null);
 
     /// <summary>静态输入的默认值。</summary>
     public static StaticResolution Default(NodePath node, PortName port, string text) =>
-        new(StaticSourceKind.Default, node, port, text, null);
+        new(StaticSourceKind.Default, BindingSource.ForNode(node), port, text, null);
 
     /// <summary>无法解析，给出错误说明。</summary>
     public static StaticResolution Missing(NodePath node, PortName port, string error) =>
-        new(StaticSourceKind.Missing, node, port, null, error);
+        Missing(BindingSource.ForNode(node), port, error);
+
+    /// <summary>无法解析，给出错误说明。</summary>
+    public static StaticResolution Missing(BindingSource source, PortName port, string error) =>
+        new(StaticSourceKind.Missing, source, port, null, error);
 }
 
 /// <summary>静态输入与常量输出解析终点的种类。</summary>
