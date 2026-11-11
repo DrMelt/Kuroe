@@ -61,6 +61,53 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Execution_shared_project_stays_free_of_graph_and_control_references()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Execution",
+            "Shared",
+            "Kuroe.Flow.Execution.Shared.csproj");
+
+        Assert.Empty(ProjectReferences(project));
+    }
+
+    [Fact]
+    public void Presentation_shared_project_stays_free_of_graph_and_control_references()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Presentation",
+            "Shared",
+            "Kuroe.Flow.Presentation.Shared.csproj");
+
+        Assert.Empty(ProjectReferences(project));
+    }
+
+    [Fact]
+    public void Execution_core_references_only_execution_shared()
+    {
+        string shared = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Execution",
+            "Shared",
+            "Kuroe.Flow.Execution.Shared.csproj");
+        string core = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Execution",
+            "Core",
+            "Kuroe.Flow.Execution.csproj");
+        IReadOnlyList<string> references = ProjectReferences(core);
+
+        Assert.Single(references);
+        Assert.Contains(shared, references);
+    }
+
+    [Fact]
     public void Persistence_projects_reference_only_shared_boundaries()
     {
         string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
