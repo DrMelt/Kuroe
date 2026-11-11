@@ -58,8 +58,10 @@
 ```json
 "Inputs": [{ "Name": "任务路径", "Type": "Text", "Mode": "Constant" }],
 "Bindings": { "任务路径": "@任务路径" },
-"Tools": ["file/read", "GetLocalTime"],
-"ToolPorts": { "file/read": { "root": "任务路径" } }
+"Parameters": {
+  "Tools": ["file/read", "GetLocalTime"],
+  "ToolPorts": { "file/read": { "root": "任务路径" } }
+}
 ```
 
 ## 示例
@@ -69,8 +71,10 @@
   "Name": "撰写",
   "Kind": "Llm",
   "Emission": "Once",
-  "Prompt": "按目标撰写正文。",
-  "SystemPrompt": ["回答使用简体中文。"],
+  "Parameters": {
+    "Prompt": "按目标撰写正文。",
+    "SystemPrompt": ["回答使用简体中文。"]
+  },
   "Inputs": [
     { "Name": "目标", "Type": "Text", "Mode": "Constant", "Role": "Content" },
     { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }

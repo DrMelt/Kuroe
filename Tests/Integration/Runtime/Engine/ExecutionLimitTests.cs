@@ -139,7 +139,7 @@ public sealed class ExecutionLimitTests
     private const string LibraryLimitFlow = """
         {
           "Nodes": [
-            { "Name": "干活库", "Kind": "Llm", "Tools": [], "MaxExecutions": 3 }
+            { "Name": "干活库", "Kind": "Llm", "Parameters": { "Tools": [] }, "MaxExecutions": 3 }
           ],
           "Flows": [ { "Name": "默认", "Ports": [{ "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" }], "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "From": [ { "目标": "@目标" } ], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Nodes": [
             { "Label": "覆盖干活", "Use": "干活库", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "MaxExecutions": 5, "From": [ { "目标": "@目标" } ] },

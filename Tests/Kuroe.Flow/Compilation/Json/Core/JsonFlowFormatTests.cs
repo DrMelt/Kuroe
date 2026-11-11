@@ -278,7 +278,7 @@ public sealed class JsonFlowFormatTests
               "Name": "默认",
               "Ports": [ { "Name": "目标", "Type": "Text" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant", "Value": "fake" } ],
               "Root": { "Name": "整体", "Kind": "Container", "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
-                { "Name": "配置", "Kind": "Llm", "Prompt": "写出计划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" } },
+                { "Name": "配置", "Kind": "Llm", "Parameters": { "Prompt": "写出计划" }, "Bindings": { "MODEL_NAME": "@MODEL_NAME" } },
                 { "Label": "副本", "Use": "计划", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ] }
               ] }
             }

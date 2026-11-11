@@ -25,7 +25,7 @@
 {
   "Name": "批准发布",
   "Kind": "Approval",
-  "Question": "确认发布这一版草稿。",
+  "Parameters": { "Question": "确认发布这一版草稿。" },
   "Inputs": [
     { "Name": "草稿", "Type": "Text", "Role": "Content" },
     { "Name": "完成", "Type": "Signal" }

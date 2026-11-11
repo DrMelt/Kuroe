@@ -88,7 +88,7 @@ public sealed class ParameterDocumentReaderTests
     private static INodeType? ReadParameters((string Name, FlowValue Value)[] entries, List<string> errors) =>
         ParameterDocumentReader.Read(
             Description,
-            entries.ToDictionary(entry => entry.Name, entry => entry.Value),
+            new NodeParameters(entries.ToDictionary(entry => entry.Name, entry => entry.Value)),
             NodeScope.Flow("测试"),
             new NodeLabel("干活"),
             error => errors.Add(error.Description));

@@ -17,7 +17,7 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "用户输入", "Kind": "Input", "Question": "请补充需要的背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "用户输入", "Kind": "Input", "Parameters": { "Question": "请补充需要的背景" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "用户输入@回答" } ] }
                 ]
               }
@@ -45,7 +45,7 @@ public static class TestFlows
                     "Kind": "Container",
                     "Outputs": [{ "Name": "回答", "Ref": "用户输入@回答" }],
                     "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
-                      { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
+                      { "Name": "用户输入", "Kind": "Input", "Parameters": { "Question": "补充背景" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标" } ] }
                     ]
                   },
                   {
@@ -76,8 +76,8 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }], "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "输入一", "Kind": "Input", "Question": "问题一", "From": [ { "目标": "@目标" } ] },
-                  { "Name": "输入二", "Kind": "Input", "Question": "问题二", "From": [ { "目标": "@目标" } ] }
+                  { "Name": "输入一", "Kind": "Input", "Parameters": { "Question": "问题一" }, "From": [ { "目标": "@目标" } ] },
+                  { "Name": "输入二", "Kind": "Input", "Parameters": { "Question": "问题二" }, "From": [ { "目标": "@目标" } ] }
                 ]
               }
             }
@@ -100,7 +100,7 @@ public static class TestFlows
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
                   { "Name": "准备", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
-                  { "Name": "用户输入", "Kind": "Input", "Question": "补充背景", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "结论": "准备@结论" } ] },
+                  { "Name": "用户输入", "Kind": "Input", "Parameters": { "Question": "补充背景" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "结论": "准备@结论" } ] },
                   { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "回答": "用户输入@回答" } ] }
                 ]
               }
@@ -123,7 +123,7 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "收话", "Kind": "Input", "Question": "请说", "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
+                  { "Name": "收话", "Kind": "Input", "Parameters": { "Question": "请说" }, "Outputs": [{ "Name": "回答", "Type": "Text" }], "From": [ { "目标": "@目标", "回复": "回话@回复" } ] },
                   { "Name": "回话", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "回复", "Type": "Text" }], "From": [ { "回答": "收话@回答" } ] }
                 ]
               }
@@ -195,7 +195,7 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "分析", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }], "Prompt": "给出结论与理由", "From": [ { "目标": "@目标" } ] },
+                  { "Name": "分析", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }], "Parameters": { "Prompt": "给出结论与理由" }, "From": [ { "目标": "@目标" } ] },
                   { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "结论": "分析@结论" } ] },
                   { "Name": "复盘", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "理由": "分析@理由" } ] }
                 ]
@@ -265,7 +265,7 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "制定", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
+                  { "Name": "制定", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Parameters": { "Prompt": "写出计划" }, "Outputs": [{ "Name": "计划", "Type": "Text" }], "From": [ { "目标": "@目标" } ] },
                   { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Outputs": [{ "Name": "上下文", "Type": "Context" }], "From": [ { "计划": "制定@计划" } ] },
                   { "Name": "汇报", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "上下文": "实施@上下文" } ] }
                 ]
@@ -289,7 +289,7 @@ public static class TestFlows
                 "Name": "整体",
                 "Kind": "Container",
                 "Inputs": [{ "Name": "目标" }, { "Name": "MODEL_NAME", "Type": "Text", "Mode": "Constant" }], "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "From": [ { "目标": "@目标" } ], "Nodes": [
-                  { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "SystemPrompt": ["固定背景一", "固定背景二"], "From": [ { "目标": "@目标" } ] }
+                  { "Name": "实施", "Kind": "Llm", "Bindings": { "MODEL_NAME": "@MODEL_NAME" }, "Parameters": { "SystemPrompt": ["固定背景一", "固定背景二"] }, "From": [ { "目标": "@目标" } ] }
                 ]
               }
             }
@@ -301,7 +301,7 @@ public static class TestFlows
     public const string ContainerOutputsFlow = """
         {
           "Nodes": [
-            { "Name": "允许工具", "Kind": "Llm", "Tools": ["GetLocalTime"], "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }] },
+            { "Name": "允许工具", "Kind": "Llm", "Parameters": { "Tools": ["GetLocalTime"] }, "Outputs": [{ "Name": "结论", "Type": "Text" }, { "Name": "理由", "Type": "Text" }] },
             {
               "Name": "交付",
               "Kind": "Container",
