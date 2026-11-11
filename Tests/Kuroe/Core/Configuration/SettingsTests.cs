@@ -1,4 +1,6 @@
+using System.Net;
 using System.Reflection;
+using System.Text.Json.Nodes;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Shared.Configuration;
@@ -25,9 +27,10 @@ public sealed class SettingsTests : IDisposable
     {
         IReadOnlyList<SettingSection> sections = _settings.Sections;
 
-        Assert.Equal(["Runtime", "Assistant"], sections.Select(section => section.Name));
+        Assert.Equal(["Runtime", "Assistant", "Network"], sections.Select(section => section.Name));
         Assert.Contains(Entries(sections, "Runtime"), entry => entry.Path == "Runtime:LogLevel");
         Assert.Contains(Entries(sections, "Assistant"), entry => entry.Path == "Assistant:Language");
+        Assert.Contains(Entries(sections, "Network"), entry => entry.Path == "Network:Proxy");
         Assert.All(sections, section =>
             Assert.All(section.Entries, entry => Assert.Equal(section.Name, entry.Path.Split(':')[0])));
     }
@@ -55,9 +58,11 @@ public sealed class SettingsTests : IDisposable
     {
         IReadOnlyList<SettingEntry> runtime = Entries(_settings.Sections, "Runtime");
         IReadOnlyList<SettingEntry> assistant = Entries(_settings.Sections, "Assistant");
+        IReadOnlyList<SettingEntry> network = Entries(_settings.Sections, "Network");
 
         Assert.Equal("Warning", Value(runtime, "LogLevel"));
         Assert.Equal("中文", Value(assistant, "Language"));
+        Assert.Equal("未设置", Value(network, "Proxy"));
     }
 
     private static IReadOnlyList<SettingEntry> Entries(IReadOnlyList<SettingSection> sections, string name) =>
@@ -83,6 +88,7 @@ public sealed class SettingsTests : IDisposable
     {
         Assert.Equal("Runtime:LogLevel", SettingsProvider.ResolvePath("runtime:loglevel").ThrowIfError());
         Assert.Equal("Assistant:Language", SettingsProvider.ResolvePath("assistant:language").ThrowIfError());
+        Assert.Equal("Network:Proxy", SettingsProvider.ResolvePath("network:proxy").ThrowIfError());
         Assert.Contains("不是已定义的设置项", SettingsProvider.ResolvePath("Runtime:Nope").FirstError.Description);
     }
 
@@ -94,6 +100,45 @@ public sealed class SettingsTests : IDisposable
         Assert.True(language.RequiresDialogueRebuild);
         Assert.False(language.RequiresRestart);
         Assert.False(language.InvalidatesHistory);
+    }
+
+    [Fact]
+    public void Network_change_requires_restart()
+    {
+        SettingsEffect proxy = _settings.Set("Network:Proxy", "http://127.0.0.1:7890").ThrowIfError();
+
+        Assert.True(proxy.RequiresRestart);
+        Assert.False(proxy.InvalidatesHistory);
+        Assert.False(proxy.RequiresDialogueRebuild);
+    }
+
+    [Fact]
+    public void Provider_creation_applies_the_configured_proxy()
+    {
+        File.WriteAllText(_settings.UserSettingsFile, """{"Network":{"Proxy":"http://127.0.0.1:7890"}}""");
+        IWebProxy original = HttpClient.DefaultProxy;
+        try
+        {
+            SettingsProvider.Create(KuroePaths.At(_root)).ThrowIfError();
+
+            WebProxy applied = Assert.IsType<WebProxy>(HttpClient.DefaultProxy);
+
+            Assert.Equal(new Uri("http://127.0.0.1:7890"), applied.Address);
+        }
+        finally
+        {
+            HttpClient.DefaultProxy = original;
+        }
+    }
+
+    [Fact]
+    public void Writing_settings_does_not_add_a_version()
+    {
+        _settings.Set("Runtime:LogLevel", "Warning").ThrowIfError();
+
+        JsonObject root = Assert.IsType<JsonObject>(JsonNode.Parse(File.ReadAllText(_settings.UserSettingsFile)));
+
+        Assert.False(root.ContainsKey("Version"));
     }
 
     public void Dispose()

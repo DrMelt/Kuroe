@@ -27,6 +27,10 @@ static class SettingsErrors
     /// <summary>内置助手的回复语言为空。</summary>
     public static Error Language() => Error.Validation("Settings.Language", "Assistant:Language 不能为空。");
 
+    /// <summary>代理值不是 system、direct 或受支持的绝对地址。</summary>
+    public static Error Proxy(string value) =>
+        Error.Validation("Settings.Proxy", $"Network:Proxy 需要 system、direct 或 http、https、socks 的绝对地址，当前为 {value}。");
+
     /// <summary>路径不对应已定义的设置项。</summary>
     public static Error Undefined(string path) =>
         Error.Validation("Settings.Undefined", $"{path} 不是已定义的设置项。");

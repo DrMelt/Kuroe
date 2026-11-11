@@ -9,6 +9,7 @@ internal static class SettingDefinitions
         Runtime(nameof(RuntimeSettings.Model), settings => settings.Runtime.Model),
         Runtime(nameof(RuntimeSettings.LogLevel), settings => settings.Runtime.LogLevel),
         Assistant(nameof(AssistantSettings.Language), settings => settings.Assistant.Language),
+        Network(nameof(NetworkSettings.Proxy), settings => settings.Network.Proxy),
     ];
 
     /// <summary>按输入取规范节名，大小写不敏感，未定义的节返回 null。</summary>
@@ -26,4 +27,7 @@ internal static class SettingDefinitions
 
     private static SettingDefinition Assistant(string name, Func<KuroeSettings, object?> value) =>
         new(AssistantSettings.SectionName, name, value);
+
+    private static SettingDefinition Network(string name, Func<KuroeSettings, object?> value) =>
+        new(NetworkSettings.SectionName, name, value);
 }

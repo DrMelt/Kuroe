@@ -16,6 +16,8 @@ internal sealed record KuroeSettings
 
     public required AssistantSettings Assistant { get; init; }
 
+    public required NetworkSettings Network { get; init; }
+
     /// <summary>按当前生效值列出各节与各设置项，路径与 <see cref="ResolvePath"/> 同源。</summary>
     public IReadOnlyList<SettingSection> Sections(UserSettingsStore store) =>
     [
@@ -97,6 +99,12 @@ internal sealed record KuroeSettings
             return [SettingsErrors.Bind($"{AssistantSettings.SectionName} 节必须是对象。")];
         }
 
+        JsonNode? networkNode = Section(root, NetworkSettings.SectionName);
+        if (networkNode is not null and not JsonObject)
+        {
+            return [SettingsErrors.Bind($"{NetworkSettings.SectionName} 节必须是对象。")];
+        }
+
         ErrorOr<RuntimeSettings> runtime = RuntimeSettings.From(runtimeNode as JsonObject);
         if (runtime.IsError)
         {
@@ -104,10 +112,21 @@ internal sealed record KuroeSettings
         }
 
         ErrorOr<AssistantSettings> assistant = AssistantSettings.From(assistantNode as JsonObject);
+        if (assistant.IsError)
+        {
+            return assistant.ErrorsOrEmptyList;
+        }
 
-        return assistant.IsError
-            ? assistant.ErrorsOrEmptyList
-            : new KuroeSettings { Runtime = runtime.Value, Assistant = assistant.Value };
+        ErrorOr<NetworkSettings> network = NetworkSettings.From(networkNode as JsonObject);
+
+        return network.IsError
+            ? network.ErrorsOrEmptyList
+            : new KuroeSettings
+            {
+                Runtime = runtime.Value,
+                Assistant = assistant.Value,
+                Network = network.Value,
+            };
     }
 
     /// <summary>取该节的节点，不存在时返回 null，节名不区分大小写。</summary>
