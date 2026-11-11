@@ -10,7 +10,7 @@ namespace Kuroe.Console.Views;
 /// <summary>执行详情：头部字段、输入取值及其出处、契约端口与过程记录。</summary>
 internal sealed class ExecutionDetailView(Terminal terminal)
 {
-    /// <summary>取值一行能看到的文本长度。</summary>
+    /// <summary>取值内容保留的字符数。</summary>
     private const int ValueLimit = 70;
 
     private readonly Terminal _terminal = terminal;
@@ -72,17 +72,25 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 : JournalView.Build(execution.Journal)));
     }
 
-    /// <summary>输入取值按出处分组，内容一行内截断。</summary>
+    /// <summary>输入取值按出处分组，来源与目标输入端口分列，内容一行内截断。</summary>
     private static Table InputTable(ExecutionInput input)
     {
-        Table table = Blocks.Table(("来源 · 端口", false), ("内容", true));
+        Table table = Blocks.Table(("来源", false), ("端口", false), ("内容", true));
         foreach (IGrouping<ContextSource, InputValue> group in input.Inputs.GroupBy(value => value.Origin))
         {
             foreach (InputValue value in group)
             {
+                (string text, bool truncated) = ViewLabels.Truncate(value.Text, ValueLimit);
+                Paragraph content = new(text);
+                if (truncated)
+                {
+                    content.Append("（已截断）", Styles.Hint);
+                }
+
                 table.AddRow(
-                    new Text($"{group.Key.Label} · {value.Port}", Styles.Key),
-                    new Text(ViewLabels.OneLine(value.Text, ValueLimit)));
+                    new Text(group.Key.Label, Styles.Key),
+                    new Text(value.Port.Value, Styles.Key),
+                    content);
             }
         }
 

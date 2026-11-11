@@ -30,7 +30,7 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
                         $"存档执行节点 {saved.Node} 不在流程图中。")];
                 }
 
-                restored.Add(Execution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
+                restored.Add(Execution.Restore(saved, BuildInput(record.Identity.Id, node, saved, flow.Graph)));
             }
 
             WorkTask task = WorkTask.Restore(_registry, record, flow, startTexts, restored);
@@ -47,7 +47,7 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
         }
     }
 
-    private ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
+    private ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved, NodeGraph graph)
     {
         ExecutionInput input = new()
         {
@@ -59,7 +59,9 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
             [
                 .. saved.Inputs.Select(value => new InputValue(
                     value.Port,
-                    new ContextValue(RecordSources.Read(value.Origin), value.Text))),
+                    new ContextValue(
+                        StaticInputSources.Of(graph, node.Path, value.Port) ?? RecordSources.Read(value.Origin),
+                        value.Text))),
             ],
             Texts = saved.Texts,
             OutputPorts = node.SubmittablePorts,

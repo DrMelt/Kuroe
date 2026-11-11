@@ -518,7 +518,7 @@ internal sealed class TaskDriver(
                 return;
             }
 
-            ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
+            ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value, task.Runtime.Graph);
             Execution execution = task.Registry.NewExecution(task, input);
             task.Attach(execution);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);

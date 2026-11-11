@@ -13,7 +13,7 @@ public sealed class ContextSourceTests
         ExecutionId execution = new(7);
         ExecutionSource source = new(execution, NodePath.Of("实施"), new PortName("结论"));
 
-        Assert.Equal("执行 #7 · 实施 产出", source.Label);
+        Assert.Equal("执行 #7 · 节点「实施」端口「结论」", source.Label);
         Assert.Equal(execution, source.FromExecution);
         Assert.Equal(new PortName("结论"), source.Port);
     }
@@ -24,7 +24,7 @@ public sealed class ContextSourceTests
         InputSource input = new(NodePath.Of("取舍"), new PortName("回答"));
         StartSource start = new(new PortName("目标"));
 
-        Assert.Equal("节点「取舍」的输入", input.Label);
+        Assert.Equal("节点「取舍」输入「回答」", input.Label);
         Assert.Equal("流程起点端口「目标」", start.Label);
         Assert.Null(input.FromExecution);
         Assert.Null(start.FromExecution);
@@ -46,5 +46,16 @@ public sealed class ContextSourceTests
 
         Assert.Equal("容器「文档组」端口「结论」", container.Label);
         Assert.Null(container.FromExecution);
+    }
+
+    [Fact]
+    public void Static_sources_name_the_value_origin()
+    {
+        DefaultSource fallback = new(NodePath.Of("实施"), new PortName("格式"));
+        ConstantSource source = new(NodePath.Of("整体", "制定大纲"), new PortName("大纲"));
+
+        Assert.Equal("节点「实施」默认值", fallback.Label);
+        Assert.Equal("节点「整体/制定大纲」常量端口「大纲」", source.Label);
+        Assert.Null(source.FromExecution);
     }
 }

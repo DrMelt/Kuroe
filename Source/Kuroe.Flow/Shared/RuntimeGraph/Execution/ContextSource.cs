@@ -16,7 +16,7 @@ public abstract record ContextSource
 public sealed record ExecutionSource(ExecutionId Execution, NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"{Execution} · {Node} 产出";
+    public override string Label => $"{Execution} · 节点「{Node}」端口「{Port}」";
 
     /// <inheritdoc/>
     public override ExecutionId? FromExecution => Execution;
@@ -26,7 +26,7 @@ public sealed record ExecutionSource(ExecutionId Execution, NodePath Node, PortN
 public sealed record InputSource(NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"节点「{Node}」的输入";
+    public override string Label => $"节点「{Node}」输入「{Port}」";
 }
 
 /// <summary>流程起点的初始输入。</summary>
@@ -43,18 +43,18 @@ public sealed record ContainerPortSource(NodePath Container, PortName Port) : Co
     public override string Label => $"容器「{Container}」端口「{Port}」";
 }
 
-/// <summary>执行节点输入端口声明的默认值。</summary>
+/// <summary>某个节点输入端口声明的默认值。</summary>
 public sealed record DefaultSource(NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"节点「{Node}」的端口「{Port}」默认值";
+    public override string Label => $"节点「{Node}」默认值";
 }
 
-/// <summary>执行节点输入端口从常量绑定或常量输出取得的值。</summary>
+/// <summary>执行节点输入端口从某个节点的常量端口取得的值。</summary>
 public sealed record ConstantSource(NodePath Node, PortName Port) : ContextSource
 {
     /// <inheritdoc/>
-    public override string Label => $"节点「{Node}」的常量端口「{Port}」";
+    public override string Label => $"节点「{Node}」常量端口「{Port}」";
 }
 
 /// <summary>旧存档中节点自身在某个输出端口上的产出。当前执行产出使用 <see cref="ExecutionSource"/>，读取旧存档时仍还原为此出处。</summary>

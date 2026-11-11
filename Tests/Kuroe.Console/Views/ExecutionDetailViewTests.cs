@@ -87,6 +87,51 @@ public sealed class ExecutionDetailViewTests
         Assert.DoesNotContain("契约端口", output.Output);
     }
 
+    [Fact]
+    public void Input_values_show_source_port_and_truncation_hint()
+    {
+        using ConsoleSession cli = new();
+        Terminal terminal = NewAnsiTerminal(out TestConsole output);
+        (TaskSnapshot task, ExecutionSnapshot execution) = Snapshot(cli);
+        NodePath node = execution.Input.Node;
+        string longText = new('字', 71);
+        ExecutionInput input = execution.Input with
+        {
+            Inputs =
+            [
+                new InputValue(
+                    new PortName("实施要求"),
+                    new ContextValue(new ConstantSource(NodePath.Of("上游"), new PortName("实施要求")), longText)),
+                new InputValue(
+                    new PortName("检查报告"),
+                    new ContextValue(new DefaultSource(node, new PortName("检查报告")), "无")),
+            ],
+        };
+
+        new ExecutionDetailView(terminal).Print(task, execution with { Input = input });
+
+        Assert.Contains("来源", output.Output);
+        Assert.Contains("端口", output.Output);
+        Assert.Contains("节点「上游」常量端口「实施要求」", output.Output);
+        Assert.Contains($"节点「{node}」默认值", output.Output);
+        Assert.DoesNotContain("节点「上游」常量端口「实施要求」 · 实施要求", output.Output);
+        Assert.Equal(70, output.Output.Count(character => character == '字'));
+        Assert.Contains("\u001b[38;5;8m（已截断）", output.Output);
+        Assert.DoesNotContain("…", output.Output);
+    }
+
+    /// <summary>建一套写 ANSI 序列的测试终端，用于断言提示颜色。</summary>
+    private static Terminal NewAnsiTerminal(out TestConsole output)
+    {
+        TestConsole stdout = new();
+        stdout.EmitAnsiSequences();
+        TestConsole stderr = new();
+        stderr.EmitAnsiSequences();
+        output = stdout;
+
+        return new Terminal(stdout, stderr);
+    }
+
     /// <summary>不是 Llm 的宿主声明，用于固定契约端口区只对 Llm 执行显示。</summary>
     private sealed record OtherDeclaration : INodeDeclaration;
 

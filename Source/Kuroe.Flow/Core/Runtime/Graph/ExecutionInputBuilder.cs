@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Nodes;
 
@@ -17,7 +18,8 @@ internal static class ExecutionInputBuilder
         TaskId id,
         RuntimeExecutable node,
         NodeInputValues inputs,
-        INodeDeclaration? declaration)
+        INodeDeclaration? declaration,
+        NodeGraph graph)
     {
         List<InputValue> contextInput = [];
         List<InputValue> values = [];
@@ -54,9 +56,11 @@ internal static class ExecutionInputBuilder
                 texts[port.Name] = constant;
                 if (port.Role == InputRole.Content)
                 {
+                    ContextSource origin = StaticInputSources.Of(graph, node.Path, port.Name)
+                        ?? new ConstantSource(node.Path, port.Name);
                     InputValue constantValue = new(
                         port.Name,
-                        new ContextValue(new ConstantSource(node.Path, port.Name), constant));
+                        new ContextValue(origin, constant));
                     List<InputValue> target = port.Type.Semantics == PortSemantics.Context ? contextInput : values;
                     target.Add(constantValue);
                 }

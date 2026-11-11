@@ -121,6 +121,13 @@ public sealed class ViewLabelsTests
     }
 
     [Fact]
+    public void Truncate_reports_the_clipped_text_without_a_marker()
+    {
+        Assert.Equal(("甲 乙", false), ViewLabels.Truncate("甲\n乙", 10));
+        Assert.Equal(("甲乙丙", true), ViewLabels.Truncate("甲乙丙丁", 3));
+    }
+
+    [Fact]
     public void Start_port_label_includes_its_fixed_value()
     {
         Port port = new(new PortName("风格"), PortTypes.Text, value: "技术文档风格");
