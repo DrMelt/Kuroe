@@ -94,8 +94,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
-                    "Path": "{root}/in.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/in.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "触发": "@目标" }],
@@ -104,8 +103,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "写出",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/result.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/out/result.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "正文": "读入@正文" }]
@@ -133,8 +131,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
-                    "Path": "{root}/in.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/in.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "触发": "@目标" }],
@@ -170,9 +167,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
-                    "Path": "{root}/in.txt",
-                    "Variables": { "root": "基准" },
-                    "MaxChars": 2,
+                    "Parameters": { "Path": "{root}/in.txt", "Variables": { "root": "基准" }, "MaxChars": 2 },
                     "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "触发": "@目标" }],
@@ -181,8 +176,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "写出",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/result.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/out/result.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "正文": "读入@正文" }]
@@ -210,8 +204,7 @@ public sealed class FileNodeTests
                   {
                     "Name": "读入",
                     "Kind": "FileRead",
-                    "Path": "{root}/../escape.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/../escape.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }, { "Name": "触发", "Type": "Signal" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "触发": "@目标" }],

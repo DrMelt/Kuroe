@@ -17,7 +17,7 @@ public sealed class JsonNodeFormatTests
         NodeDefinitionDocument definition = Assert.Single(nodes);
         Assert.Equal("计划", definition.Name);
         Assert.Equal("Llm", definition.Kind);
-        Assert.Equal("写出计划", Assert.IsType<FlowValue.Text>(definition.Parameters["Prompt"]).Value);
+        Assert.Equal("写出计划", Assert.IsType<FlowValue.Text>(definition.Parameters.Values["Prompt"]).Value);
 
         ErrorOr<IReadOnlyList<NodeDefinitionDocument>> reference =
             Format.Read("""{ "Nodes": [ { "Label": "副本", "Use": "计划" } ] }""");
@@ -56,13 +56,13 @@ public sealed class JsonNodeFormatTests
         IReadOnlyList<NodeDefinitionDocument> nodes = Ok(Format.Read("""
             {
               "Nodes": [
-                { "Name": "构建", "Kind": "Command", "Program": "dotnet", "FailOnNonZeroExitCode": true }
+                { "Name": "构建", "Kind": "Command", "Parameters": { "Program": "dotnet", "FailOnNonZeroExitCode": true } }
               ]
             }
             """));
 
         NodeDefinitionDocument definition = Assert.Single(nodes);
-        Assert.True(Assert.IsType<FlowValue.Boolean>(definition.Parameters["FailOnNonZeroExitCode"]).Value);
+        Assert.True(Assert.IsType<FlowValue.Boolean>(definition.Parameters.Values["FailOnNonZeroExitCode"]).Value);
         Assert.Contains("\"FailOnNonZeroExitCode\": true", Ok(Format.Write(nodes)));
     }
 
@@ -76,7 +76,7 @@ public sealed class JsonNodeFormatTests
     private const string Nodes = """
         {
           "Nodes": [
-            { "Name": "计划", "Kind": "Llm", "Prompt": "写出计划", "Outputs": [{ "Name": "计划", "Type": "Text" }] }
+            { "Name": "计划", "Kind": "Llm", "Parameters": { "Prompt": "写出计划" }, "Outputs": [{ "Name": "计划", "Type": "Text" }] }
           ]
         }
         """;

@@ -50,24 +50,21 @@ public sealed class CommandNodeTests
                   {
                     "Name": "版本",
                     "Kind": "Command",
-                    "Program": "dotnet",
-                    "Arguments": ["--version"],
+                    "Parameters": { "Program": "dotnet", "Arguments": ["--version"] },
                     "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                     "From": [{ "触发": "@目标" }]
                   },
                   {
                     "Name": "再次",
                     "Kind": "Command",
-                    "Program": "dotnet",
-                    "Arguments": ["--version"],
+                    "Parameters": { "Program": "dotnet", "Arguments": ["--version"] },
                     "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                     "From": [{ "触发": "版本@Completed" }]
                   },
                   {
                     "Name": "写出",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/version.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/out/version.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "正文": "版本@Output" }]
@@ -75,8 +72,7 @@ public sealed class CommandNodeTests
                   {
                     "Name": "写出完成",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/completed.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/out/completed.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "正文": "再次@Output" }]
@@ -104,23 +100,21 @@ public sealed class CommandNodeTests
                   {
                     "Name": "缺失",
                     "Kind": "Command",
-                    "Program": "kuroe-command-does-not-exist",
+                    "Parameters": { "Program": "kuroe-command-does-not-exist" },
                     "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                     "From": [{ "触发": "@目标" }]
                   },
                   {
                     "Name": "再次",
                     "Kind": "Command",
-                    "Program": "dotnet",
-                    "Arguments": ["--version"],
+                    "Parameters": { "Program": "dotnet", "Arguments": ["--version"] },
                     "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                     "From": [{ "触发": "缺失@Completed" }]
                   },
                   {
                     "Name": "写出完成",
                     "Kind": "FileWrite",
-                    "Path": "{root}/out/completed.txt",
-                    "Variables": { "root": "基准" },
+                    "Parameters": { "Path": "{root}/out/completed.txt", "Variables": { "root": "基准" } },
                     "Inputs": [{ "Name": "正文" }, { "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" },
                     "From": [{ "正文": "再次@Output" }]

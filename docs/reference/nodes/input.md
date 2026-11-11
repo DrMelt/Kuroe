@@ -24,7 +24,7 @@
 {
   "Name": "补充目标",
   "Kind": "Input",
-  "Question": "补充这次任务的目标。",
+  "Parameters": { "Question": "补充这次任务的目标。" },
   "Outputs": [{ "Name": "回答", "Type": "Text" }]
 }
 ```

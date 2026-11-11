@@ -83,8 +83,8 @@ public sealed record NodeDefinitionDocument : NodeDocument
     /// <summary>子节点，非空即容器。</summary>
     public IReadOnlyList<NodeDocument>? Nodes { get; init; }
 
-    /// <summary>类型参数段。</summary>
-    public IReadOnlyDictionary<string, FlowValue> Parameters { get; init; } = new Dictionary<string, FlowValue>();
+    /// <summary>类型参数段：类型专属字段只在这里出现，容器与引擎结构字段都不进入。</summary>
+    public NodeParameters Parameters { get; init; } = NodeParameters.Empty;
 }
 
 /// <summary>引用节点：使用节点库定义，只写标签与使用处可覆盖的字段。</summary>

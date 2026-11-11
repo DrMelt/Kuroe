@@ -6,7 +6,7 @@ using Kuroe.Flow.Json.Files;
 namespace Kuroe.Flow.Json;
 
 /// <summary>流程与节点库文件的 JSON 绑定。字段形状与 null 省略由源生成选项声明，写侧选项是独立实例，在同口径下只改缩进与转义。
-/// 节点之外的未定义字段被拒绝，节点对象里类型不承认的字段由文件层按类型的字段表报出。</summary>
+/// 节点对象只接受结构字段与参数段，其余键由文件层报出；参数段里的键与取值由节点类型解释。</summary>
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip,

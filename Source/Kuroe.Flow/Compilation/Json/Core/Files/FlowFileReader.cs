@@ -7,7 +7,8 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Json.Files;
 
-/// <summary>文件形状到描述文档的绑定：只判断格式与字段归属，不构造模型。</summary>
+/// <summary>文件形状到描述文档的绑定：只判断格式与字段归属，不构造模型。
+/// 文件层只认结构字段与参数段的对象形状，参数段里的键与取值由节点类型解释。</summary>
 static class FlowFileReader
 {
     /// <summary>把节点库文件形状转成节点定义，错误逐条收集。</summary>
@@ -115,6 +116,8 @@ static class FlowFileReader
             return nodeErrors;
         }
 
+        ReportUnrecognized(dto, scope, label, nodeErrors);
+
         ErrorOr<IReadOnlyList<InputPortDocument>> inputs = ReadInputs(dto.Inputs, scope, label);
         if (inputs.IsError)
         {
@@ -140,6 +143,7 @@ static class FlowFileReader
         }
 
         NodeEmission? emission = ReadEmission(dto, scope, label, nodeErrors);
+        IReadOnlyDictionary<string, FlowValue>? parameters = ReadParameters(dto.Parameters, scope, label, nodeErrors);
 
         List<NodeDocument>? children = null;
         if (dto.Nodes is { Count: > 0 } childDtos)
@@ -170,7 +174,7 @@ static class FlowFileReader
             Outputs = outputs.Value,
             Bindings = bindings.Value,
             Nodes = children,
-            Parameters = ReadParameters(dto.Parameters),
+            Parameters = parameters is null ? NodeParameters.Empty : new NodeParameters(parameters),
             From = from.Value,
             Emission = emission,
             MaxExecutions = dto.MaxExecutions,
@@ -207,10 +211,12 @@ static class FlowFileReader
             referenceErrors.Add(scope.Node(label, "引用成员不能同时声明子节点。"));
         }
 
-        if (dto.Parameters is { Count: > 0 } parameters)
+        if (dto.Parameters is { } parameters && parameters.ValueKind != JsonValueKind.Null)
         {
-            referenceErrors.Add(scope.Node(label, $"引用节点不能声明类型参数 {string.Join("、", parameters.Keys)}。"));
+            referenceErrors.Add(scope.Node(label, "引用节点的类型参数由被引用的库定义决定，不写 Parameters。"));
         }
+
+        ReportUnrecognized(dto, scope, label, referenceErrors);
 
         if (dto.Inputs is { Count: > 0 })
         {
@@ -252,6 +258,20 @@ static class FlowFileReader
             Emission = emission,
             MaxExecutions = dto.MaxExecutions,
         };
+    }
+
+    /// <summary>节点对象上不属于结构字段的键：类型专属字段只能写在参数段里，写在节点对象上是位置错误。</summary>
+    private static void ReportUnrecognized(NodeDto dto, NodeScope scope, string label, List<Error> errors)
+    {
+        if (dto.Unrecognized is not { Count: > 0 } unrecognized)
+        {
+            return;
+        }
+
+        foreach (string key in unrecognized.Keys)
+        {
+            errors.Add(scope.Node(label, $"字段 {key} 不是节点结构字段，类型专属字段写在 Parameters 对象里。"));
+        }
     }
 
     private static NodeEmission? ReadEmission(NodeDto dto, NodeScope scope, string label, List<Error> errors)
@@ -716,11 +736,39 @@ static class FlowFileReader
         return errors.Count > 0 ? errors : result;
     }
 
-    private static Dictionary<string, FlowValue> ReadParameters(
-        IReadOnlyDictionary<string, JsonElement>? parameters) =>
-        parameters is not { Count: > 0 }
-            ? []
-            : parameters.ToDictionary(entry => entry.Key, entry => ToFlowValue(entry.Value));
+    /// <summary>读参数段：文件层只要求它是对象且键非空，键与取值属于节点类型。</summary>
+    private static Dictionary<string, FlowValue>? ReadParameters(
+        JsonElement? parameters,
+        NodeScope scope,
+        string label,
+        List<Error> errors)
+    {
+        if (parameters is not { } element || element.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add(scope.Node(label, "Parameters 必须是对象，键是节点类型声明的字段名。"));
+
+            return null;
+        }
+
+        Dictionary<string, FlowValue> values = [];
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            if (string.IsNullOrWhiteSpace(property.Name))
+            {
+                errors.Add(scope.Node(label, "Parameters 的字段名不能为空。"));
+                continue;
+            }
+
+            values[property.Name] = ToFlowValue(property.Value);
+        }
+
+        return values;
+    }
 
     private static FlowValue ToFlowValue(JsonElement element) => element.ValueKind switch
     {

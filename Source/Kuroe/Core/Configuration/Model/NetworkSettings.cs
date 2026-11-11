@@ -79,7 +79,7 @@ internal sealed record NetworkSettings
         }
     }
 
-    private static WebProxy CustomProxy(string address) => new WebProxy(new Uri(address));
+    private static WebProxy CustomProxy(string address) => new(new Uri(address));
 
     private static bool IsProxyAddress(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out Uri? address)

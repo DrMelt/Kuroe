@@ -120,10 +120,10 @@ internal static class DialogueFlow
                                 new InputPortDocument(ReplyPort.Value, PortTypes.Signal),
                             ],
                             Outputs = [new PortDocument(InputPort.Value, PortTypes.Text)],
-                            Parameters = new Dictionary<string, FlowValue>
+                            Parameters = new NodeParameters(new Dictionary<string, FlowValue>
                             {
                                 ["Question"] = new FlowValue.Text("请输入"),
-                            },
+                            }),
                             From =
                             [
                                 new FromGroupDocument(
@@ -152,12 +152,12 @@ internal static class DialogueFlow
                             },
                             // 回复端口只作回边驱动，不承载内容，回复内容随回话执行的过程播发写出
                             Outputs = [new PortDocument(ReplyPort.Value, PortTypes.Signal)],
-                            Parameters = new Dictionary<string, FlowValue>
+                            Parameters = new NodeParameters(new Dictionary<string, FlowValue>
                             {
                                 ["Tools"] = new FlowValue.Array([.. Tools.Select(tool => new FlowValue.Text(tool.Value))]),
                                 ["ToolPorts"] = ToolPorts(),
                                 ["SystemPrompt"] = new FlowValue.Array([.. SystemPrompt(language).Select(text => new FlowValue.Text(text))]),
-                            },
+                            }),
                             From =
                             [
                                 new FromGroupDocument(

@@ -61,7 +61,7 @@ public sealed class CommandExecutionTests
                   {
                     "Name": "命令",
                     "Kind": "Command",
-                    "Program": "blocked",
+                    "Parameters": { "Program": "blocked" },
                     "Inputs": [{ "Name": "触发", "Type": "Signal" }],
                     "From": [{ "触发": "@目标" }]
                   }

@@ -100,7 +100,7 @@ public sealed class FlowCommandsTests
               "Root": {
                 "Name": "收话",
                 "Kind": "Input",
-                "Question": "请补充背景",
+                "Parameters": { "Question": "请补充背景" },
                 "Outputs": [ { "Name": "回答", "Type": "Text" } ],
                 "From": [ { "目标": "@目标" } ]
               }

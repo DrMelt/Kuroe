@@ -28,8 +28,7 @@
 {
   "Name": "保存定稿",
   "Kind": "FileWrite",
-  "Path": "{root}/定稿.md",
-  "Variables": { "root": "任务路径" },
+  "Parameters": { "Path": "{root}/定稿.md", "Variables": { "root": "任务路径" } },
   "Inputs": [
     { "Name": "正文", "Type": "Text", "Mode": "Constant", "Role": "Content" },
     { "Name": "任务路径", "Type": "Text", "Mode": "Constant" }

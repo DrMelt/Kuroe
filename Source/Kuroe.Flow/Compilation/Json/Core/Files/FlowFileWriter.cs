@@ -45,7 +45,7 @@ static class FlowFileWriter
         Bindings = WriteBindings(node.Bindings),
         Emission = node.Emission?.ToString(),
         Nodes = node.Nodes is { Count: > 0 } children ? [.. children.Select(WriteNode)] : null,
-        Parameters = WriteParameters(node.Parameters),
+        Parameters = WriteParameters(node.Parameters.Values),
     };
 
     private static NodeDto WriteReference(NodeReferenceDocument node) => new()
@@ -137,14 +137,15 @@ static class FlowFileWriter
                 entry => JsonSerializer.SerializeToElement(entry.Value, FlowJson.Default.String))
             : null;
 
-    private static Dictionary<string, JsonElement>? WriteParameters(IReadOnlyDictionary<string, FlowValue> parameters)
+    /// <summary>写参数段：只按值形态拼出 JSON 对象，字段名与含义保持原样。</summary>
+    private static JsonElement? WriteParameters(IReadOnlyDictionary<string, FlowValue> parameters)
     {
         if (parameters.Count == 0)
         {
             return null;
         }
 
-        return parameters.ToDictionary(entry => entry.Key, entry => ToElement(entry.Value));
+        return ToElement(new FlowValue.Object(parameters));
     }
 
     private static JsonElement ToElement(FlowValue value)

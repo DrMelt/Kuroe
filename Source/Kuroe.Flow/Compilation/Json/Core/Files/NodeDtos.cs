@@ -12,7 +12,7 @@ public sealed class NodeFileDto
 }
 
 /// <summary>文件里的一个节点，省略的字段在装配时取安全默认值，合法性交校验。
-/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义，结构字段在此固定，类型专属字段落在参数段。</summary>
+/// 写有 <c>Use</c> 即引用节点库定义；否则即节点本身的定义。文件层只认结构字段，类型专属字段只能写在 <see cref="Parameters"/> 对象里。</summary>
 public sealed class NodeDto
 {
     /// <summary>节点名：定义条目的名字，节点库定义的名字或流程与容器内内联定义的名字。被使用的节点不写。</summary>
@@ -49,12 +49,15 @@ public sealed class NodeDto
     /// 动态输入写在 From，输入绑定的值不能写对象与 Condition。</summary>
     public Dictionary<string, JsonElement>? Bindings { get; set; }
 
-    /// <summary>节点类型的参数段：键为类型声明的字段名，未知字段与形状不符由文件层报出，字段的语义由类型报出。</summary>
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? Parameters { get; set; }
+    /// <summary>类型参数段：类型专属字段的唯一位置，取值与字段名由节点类型解释，文件层只要求它是对象。</summary>
+    public JsonElement? Parameters { get; set; }
 
     /// <summary>子节点，非空即容器。</summary>
     public List<NodeDto>? Nodes { get; set; }
+
+    /// <summary>节点对象上不属于结构字段的键，文件层据此报出类型专属字段写错了位置。</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Unrecognized { get; set; }
 }
 
 /// <summary>端口的对象形状：输出端口与输入端口共用条目。Type 写类型名，Mode 写 Plain、Trigger 或 Constant。</summary>

@@ -31,7 +31,7 @@ public sealed class LazyRuntimeTests
                   {
                     "Name": "审阅",
                     "Kind": "Approval",
-                    "Question": "确认目标",
+                    "Parameters": { "Question": "确认目标" },
                     "Inputs": [{ "Name": "基准", "Type": "Text", "Mode": "Constant" }],
                     "Bindings": { "基准": "@基准" }
                   }
