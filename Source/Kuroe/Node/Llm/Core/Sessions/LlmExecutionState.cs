@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Tool;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
@@ -205,7 +206,7 @@ internal static class LlmExecutionStateCodec
         foreach ((string key, object? value) in values)
         {
             writer.WritePropertyName(key);
-            WriteValue(writer, value);
+            ToolJsonText.WriteValue(writer, value);
         }
 
         writer.WriteEndObject();
@@ -232,90 +233,6 @@ internal static class LlmExecutionStateCodec
         JsonValueKind.Array => element.EnumerateArray().Select(ToValue).ToList(),
         _ => element.Clone(),
     };
-
-    private static void WriteValue(Utf8JsonWriter writer, object? value)
-    {
-        switch (value)
-        {
-            case null:
-                writer.WriteNullValue();
-                break;
-
-            case string text:
-                writer.WriteStringValue(text);
-                break;
-
-            case bool flag:
-                writer.WriteBooleanValue(flag);
-                break;
-
-            case byte number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case sbyte number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case short number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case ushort number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case int number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case uint number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case long number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case ulong number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case float number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case double number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case decimal number:
-                writer.WriteNumberValue(number);
-                break;
-
-            case JsonElement element:
-                element.WriteTo(writer);
-                break;
-
-            case IDictionary<string, object?> map:
-                WriteObject(writer, map);
-                break;
-
-            case IEnumerable<object?> list:
-                writer.WriteStartArray();
-                foreach (object? item in list)
-                {
-                    WriteValue(writer, item);
-                }
-
-                writer.WriteEndArray();
-                break;
-
-            default:
-                writer.WriteStringValue(value.ToString());
-                break;
-        }
-    }
 }
 
 /// <summary>会话恢复数据的 JSON 绑定。</summary>

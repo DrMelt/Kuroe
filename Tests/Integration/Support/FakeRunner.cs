@@ -23,7 +23,7 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
     /// <summary>按执行创建契约工具的工厂。</summary>
     public Func<ExecutionId, ExecutionInput, IReadOnlyList<ITool>>? ContractToolFactory { get; set; }
 
-    /// <summary>声明需交回输出端口的执行节点交回的命名段。空时按执行声明的端口逐个生成：Text 端口给同名校验文本，Signal 端口只给端口名。</summary>
+    /// <summary>声明需交回输出端口的执行节点交回的命名段。空时按执行声明的端口逐个生成，形状见 <see cref="PortValuesFor"/>。</summary>
     public string PortValuesJson { get; set; } = string.Empty;
 
     /// <summary>按执行生成端口值 JSON，设置后优先于 <see cref="PortValuesJson"/> 与默认逐端口名生成；返回 null 时回退。用于按执行轮次区分端口内容的装配。</summary>
@@ -44,12 +44,22 @@ public sealed class FakeRunner : IExecutionRunnerFactory, IExecutionRestorerSour
     /// <summary>持有期间忽略执行的取消，用于构造暂停与收口之间的竞态。</summary>
     public bool IgnoreCancellationWhileHeld { get; set; }
 
-    /// <summary>按声明的端口生成提交文本：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
-    private static string PortValuesFor(IReadOnlyList<Port> ports)
+    /// <summary>按声明的端口生成提交文本：普通 Text 语义端口给同名校验文本，普通 Signal 端口只给端口名；
+    /// 触发端口写成带触发位的对象。</summary>
+    private static string PortValuesFor(IReadOnlyList<Port> ports) =>
+        "{ " + string.Join(", ", ports.Select(PortValueJson)) + " }";
+
+    private static string PortValueJson(Port port)
     {
-        string body = string.Join(", ", ports.Select(port =>
-            $"\"{port.Name.Value}\": \"{(PortRules.CarriesText(port.Type) ? $"{port.Name.Value}产出" : string.Empty)}\""));
-        return "{ " + body + " }";
+        string name = port.Name.Value;
+        if (port.Trigger)
+        {
+            return port.Type.Semantics == PortSemantics.Text
+                ? $"\"{name}\": {{ \"text\": \"{name}产出\", \"trigger\": true }}"
+                : $"\"{name}\": {{ \"trigger\": true }}";
+        }
+
+        return $"\"{name}\": \"{(PortRules.CarriesText(port.Type) ? $"{name}产出" : string.Empty)}\"";
     }
 
     /// <summary>命中条件的执行返回模拟失败，用于验证失败后的重新执行。</summary>

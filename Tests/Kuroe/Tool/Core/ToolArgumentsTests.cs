@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Kuroe.Tool.Tests;
 
-/// <summary>工具实参读取：标量按文本给出，真假值单独认取。</summary>
+/// <summary>工具实参读取：标量按文本给出，真假值单独认取，对象按 JSON 文本给出。</summary>
 public sealed class ToolArgumentsTests
 {
     [Fact]
@@ -15,6 +15,59 @@ public sealed class ToolArgumentsTests
         Assert.Equal("True", arguments.Text(new ToolName("passed")));
         Assert.Equal("3", arguments.Text(new ToolName("count")));
         Assert.Null(arguments.Text(new ToolName("missing")));
+    }
+
+    [Fact]
+    public void Json_reads_objects_strings_and_missing_values()
+    {
+        ToolArguments arguments = Arguments("""{"payload":{"text":"完成","trigger":true},"note":"空"}""");
+
+        Assert.Equal("""{"text":"完成","trigger":true}""", arguments.Json(new ToolName("payload")));
+        Assert.Equal("空", arguments.Json(new ToolName("note")));
+        Assert.Null(arguments.Json(new ToolName("missing")));
+    }
+
+    [Fact]
+    public void Json_writes_clr_dictionaries_as_objects()
+    {
+        ToolArguments arguments = new(new Dictionary<string, object?>
+        {
+            ["payload"] = new Dictionary<string, object?>
+            {
+                ["text"] = "完成",
+                ["trigger"] = true,
+            },
+        });
+
+        string json = Assert.IsType<string>(arguments.Json(new ToolName("payload")));
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal("完成", document.RootElement.GetProperty("text").GetString());
+        Assert.True(document.RootElement.GetProperty("trigger").GetBoolean());
+    }
+
+    [Fact]
+    public void Json_reads_numbers_and_arrays_verbatim()
+    {
+        ToolArguments arguments = Arguments("""{"count":3,"files":["甲","乙"]}""");
+
+        Assert.Equal("3", arguments.Json(new ToolName("count")));
+        Assert.Equal("""["甲","乙"]""", arguments.Json(new ToolName("files")));
+    }
+
+    [Fact]
+    public void Json_writes_clr_lists_as_arrays()
+    {
+        ToolArguments arguments = new(new Dictionary<string, object?>
+        {
+            ["files"] = new List<object?> { "甲", 2 },
+        });
+
+        string json = Assert.IsType<string>(arguments.Json(new ToolName("files")));
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal("甲", document.RootElement[0].GetString());
+        Assert.Equal(2, document.RootElement[1].GetInt32());
     }
 
     [Fact]

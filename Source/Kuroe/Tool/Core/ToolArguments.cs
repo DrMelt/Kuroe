@@ -22,6 +22,17 @@ public sealed class ToolArguments(IReadOnlyDictionary<string, object?> values)
         object other => other.ToString(),
     };
 
+    /// <summary>按参数名取 JSON 文本。JSON 对象与数组给原文，字符串给内容，其余值写成 JSON，缺参或 JSON null 时为空。</summary>
+    public string? Json(ToolName name) => Value(name) switch
+    {
+        JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
+        JsonElement { ValueKind: JsonValueKind.Null or JsonValueKind.Undefined } => null,
+        JsonElement element => element.GetRawText(),
+        string text => text,
+        null => null,
+        object value => ToolJsonText.Write(value),
+    };
+
     /// <summary>按参数名取必填文本。必填路径参数在调用前已由 <see cref="ToolFunction"/> 校验，取不到说明声明与调用体不一致。</summary>
     public string RequiredText(ToolName name) =>
         Text(name) ?? throw new InvalidOperationException($"必填参数 {name.Value} 缺失。");

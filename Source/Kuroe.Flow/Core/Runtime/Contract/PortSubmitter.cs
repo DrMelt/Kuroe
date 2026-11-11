@@ -12,7 +12,7 @@ namespace Kuroe.Flow.Runtime.Contract;
 public sealed class PortSubmitter(ExecutionIndex executions) : IPortSubmitter
 {
     /// <summary>需交回输出端口的执行节点交回端口产出，端口必须与需交回的端口一一对应。成功时给出提交后的本轮契约状态，错误以 ErrorOr 表达。</summary>
-    public ErrorOr<ExecutionStatus> SubmitValues(ExecutionId id, IReadOnlyDictionary<string, PortValue> values)
+    public ErrorOr<ExecutionStatus> SubmitValues(ExecutionId id, IReadOnlyDictionary<PortName, PortValue> values)
     {
         ErrorOr<(Execution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(executions, id, "提交端口产出");
         if (owner.IsError)
@@ -25,18 +25,6 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IPortSubmitter
             return [ContractErrors.Ports("端口产出为空")];
         }
 
-        Dictionary<PortName, PortValue> parsed = [];
-        foreach ((string port, PortValue value) in values)
-        {
-            ErrorOr<PortName> name = PortName.Create(port);
-            if (name.IsError)
-            {
-                return name.ErrorsOrEmptyList;
-            }
-
-            parsed[name.Value] = value;
-        }
-
         (Execution execution, WorkTask task) = owner.Value;
         lock (task.Gate)
         {
@@ -46,13 +34,13 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IPortSubmitter
                 return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
             }
 
-            ErrorOr<Success> valid = PortSubmissionRules.Validate(declared, parsed);
+            ErrorOr<Success> valid = PortSubmissionRules.Validate(declared, values);
             if (valid.IsError)
             {
                 return valid.ErrorsOrEmptyList;
             }
 
-            execution.SubmitPorts(parsed);
+            execution.SubmitPorts(values);
 
             return ExecutionStatusReader.Of(task, execution);
         }

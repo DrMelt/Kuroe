@@ -12,14 +12,15 @@
 
 声明 `Text`、`Signal` 输出端口或由执行产出常量端口的执行节点自动附上 `SubmitPortValues`。动态 `Context` 输出由来源透传，不附这个工具。
 
-`valuesJson` 是端口名到值的 JSON 对象，端口必须与需交回的端口一一对应：
+`valuesJson` 是端口名到值的 JSON 对象，端口必须与需交回的端口一一对应。顶层键是端口名，按原文精确匹配并区分大小写，首尾空白按端口名规则去掉；未声明与缺失的端口都拒绝。工具说明只写用途，端口、形状与必填关系全部由参数 schema 给出。schema 按本轮端口声明生成，模型的唯一依据是它；下面列出形状供人阅读：
 
 - `Text` 端口交回文本。
 - `Signal` 端口交回空文本或端口名。
-- 承载触发的 `Text` 端口交回文本，或带 `text` 与 `trigger` 的对象。
-- 承载触发的 `Signal` 端口交回 `true` 或 `false`，或带 `trigger` 的对象。
+- 承载触发的 `Text` 端口只交回带 `text` 与 `trigger` 的对象，如 `{ "结论": { "text": "完成", "trigger": false } }`。
+- 承载触发的 `Signal` 端口只交回带 `trigger` 的对象，如 `{ "信号": { "trigger": true } }`。
+- 由执行产出的常量 `Context` 端口交回文本。
 
-`trigger` 省略时按 `true`，`false` 表示本次产出只被下游启动组消耗、不触发下游节点。
+`trigger` 必须写出，`false` 表示本次产出只被下游启动组消耗、不触发下游节点。`text` 与 `trigger` 也按原文匹配，`trigger` 只写在端口对象内，不是顶层端口名。
 
 ## 其他工具
 

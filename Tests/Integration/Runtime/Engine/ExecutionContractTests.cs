@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Tool;
@@ -5,10 +6,10 @@ using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
-/// <summary>执行的接口契约：需交回的产出由交回工具的说明给出，查看工具报出本轮状态，上报无法完成使本轮停驻待重新执行。</summary>
+/// <summary>执行的接口契约：需交回的产出由交回工具的参数 schema 给出，查看工具报出本轮状态，上报无法完成使本轮停驻待重新执行。</summary>
 public sealed class ExecutionContractTests
 {
-    /// <summary>契约工具各自声明路径：交回工具的说明带端口清单，上报与查看工具不带。</summary>
+    /// <summary>契约工具各自声明路径：交回工具的参数 schema 带端口，上报与查看工具不带。</summary>
     [Fact]
     public void Contract_tools_declare_their_own_paths()
     {
@@ -28,8 +29,10 @@ public sealed class ExecutionContractTests
             [ContractTools.Port, ContractTools.CannotComplete, ContractTools.Status],
             tools.Select(tool => Assert.Single(tool.Functions).Definition.Path.Value));
 
-        Assert.Contains("本节点需要交回的端口：结论、理由",
-            Assert.Single(port.Functions).Definition.Description, StringComparison.Ordinal);
+        ToolParameter parameter = Assert.Single(Assert.Single(port.Functions).Definition.Parameters);
+        JsonElement properties = parameter.Schema.GetValueOrDefault().GetProperty("properties");
+        Assert.True(properties.TryGetProperty("结论", out _));
+        Assert.True(properties.TryGetProperty("理由", out _));
         Assert.Contains("本轮执行契约状态", Assert.Single(status.Functions).Definition.Description, StringComparison.Ordinal);
     }
 

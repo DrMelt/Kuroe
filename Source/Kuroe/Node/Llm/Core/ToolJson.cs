@@ -27,7 +27,14 @@ public sealed class ToolJson : IToolJson
             writer.WriteStartObject("properties");
             foreach (ToolParameter parameter in parameters)
             {
-                writer.WriteStartObject(parameter.Name.Value);
+                writer.WritePropertyName(parameter.Name.Value);
+                if (parameter.Schema is { } declared)
+                {
+                    declared.WriteTo(writer);
+                    continue;
+                }
+
+                writer.WriteStartObject();
                 if (parameter.List)
                 {
                     writer.WriteString("type", "array");
@@ -59,7 +66,9 @@ public sealed class ToolJson : IToolJson
             writer.WriteEndObject();
         }
 
-        return JsonDocument.Parse(buffer.ToArray()).RootElement.Clone();
+        using JsonDocument document = JsonDocument.Parse(buffer.ToArray());
+
+        return document.RootElement.Clone();
     }
 
     /// <summary>实参写成 JSON 文本。</summary>
@@ -72,39 +81,12 @@ public sealed class ToolJson : IToolJson
             foreach ((string name, object? value) in arguments)
             {
                 writer.WritePropertyName(name);
-                WriteValue(writer, value);
+                ToolJsonText.WriteValue(writer, value);
             }
 
             writer.WriteEndObject();
         }
 
         return Encoding.UTF8.GetString(buffer.ToArray());
-    }
-
-    /// <summary>JSON 值原样写出，其余值按文本写出。</summary>
-    private static void WriteValue(Utf8JsonWriter writer, object? value)
-    {
-        switch (value)
-        {
-            case null:
-                writer.WriteNullValue();
-                break;
-
-            case JsonElement element:
-                element.WriteTo(writer);
-                break;
-
-            case string text:
-                writer.WriteStringValue(text);
-                break;
-
-            case bool flag:
-                writer.WriteBooleanValue(flag);
-                break;
-
-            default:
-                writer.WriteStringValue(value.ToString());
-                break;
-        }
     }
 }

@@ -6,6 +6,5 @@ namespace Kuroe.Flow.Runtime.Contract;
 static class ContractErrors
 {
     /// <summary>端口产出的形状或内容不合法，原因要能直接回给模型改正。</summary>
-    public static Error Ports(string reason) => Error.Validation(
-        "Task.Ports", $"{reason}。要提交端口名到值的 JSON 对象。");
+    public static Error Ports(string reason) => Error.Validation("Task.Ports", $"{reason}。");
 }

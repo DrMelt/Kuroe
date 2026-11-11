@@ -24,7 +24,7 @@ public sealed class ContractToolSourceTests
     {
         public ErrorOr<ExecutionStatus> SubmitValues(
             ExecutionId id,
-            IReadOnlyDictionary<string, PortValue> values) =>
+            IReadOnlyDictionary<PortName, PortValue> values) =>
             new ExecutionStatus(NodePath.Of("节点"), 1, 1, NodeState.Running, [], null);
     }
 

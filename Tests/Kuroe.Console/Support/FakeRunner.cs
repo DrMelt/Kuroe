@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
@@ -20,13 +21,13 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     /// <summary>是否交回声明端口，关闭用于制造未收口阻塞。</summary>
     public bool SubmitsPorts { get; set; } = true;
 
-    /// <summary>按声明的端口生成提交取值：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
-    private static Dictionary<string, PortValue> PortValuesFor(IReadOnlyList<Port> ports) =>
+    /// <summary>按声明的端口生成提交取值：Text 语义端口给同名校验文本，Signal 端口只给端口名；触发端口给出触发位。</summary>
+    private static Dictionary<PortName, PortValue> PortValuesFor(IReadOnlyList<Port> ports) =>
         ports.ToDictionary(
-            port => port.Name.Value,
-            port => port.Type.Semantics == PortSemantics.Text
-                ? new PortValue($"{port.Name.Value}产出")
-                : new PortValue(null));
+            port => port.Name,
+            port => new PortValue(
+                port.Type.Semantics == PortSemantics.Text ? $"{port.Name.Value}产出" : null,
+                port.Trigger ? true : null));
 
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new Run(this, execution);

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -7,5 +8,5 @@ namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
 public interface IPortSubmitter
 {
     /// <summary>交回命名端口产出，成功时给出提交后的本轮契约状态。</summary>
-    ErrorOr<ExecutionStatus> SubmitValues(ExecutionId id, IReadOnlyDictionary<string, PortValue> values);
+    ErrorOr<ExecutionStatus> SubmitValues(ExecutionId id, IReadOnlyDictionary<PortName, PortValue> values);
 }
