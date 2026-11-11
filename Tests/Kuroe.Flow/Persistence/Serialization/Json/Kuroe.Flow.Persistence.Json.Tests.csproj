@@ -13,7 +13,10 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Persistence\Serialization\Shared\Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Persistence\Records\Shared\Kuroe.Flow.Persistence.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Execution\Records\Shared\Kuroe.Flow.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Support\Kuroe.Flow.TestSupport.csproj" />
     </ItemGroup>

@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
-namespace Kuroe.Flow.Persistence.Records.Shared;
+namespace Kuroe.Flow.Graph.Records;
 
 /// <summary>节点自身的持久记录契约。节点只捕获与恢复自己的状态。</summary>
 public interface INodeRecordSource

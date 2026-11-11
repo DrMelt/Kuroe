@@ -1,6 +1,8 @@
 using ErrorOr;
 using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -113,7 +115,7 @@ public sealed class TaskRestoreServiceTests
     /// <summary>这些场景不编译流程快照。</summary>
     private sealed class UnusedCompiler : IFlowSnapshotCompiler
     {
-        public ErrorOr<CompiledFlow> Compile(FlowSnapshot snapshot) =>
+        public ErrorOr<CompiledFlow> Compile(GraphFlowDefinitionRecord snapshot) =>
             throw new InvalidOperationException("这些场景不应编译流程快照。");
     }
 
@@ -133,7 +135,7 @@ public sealed class TaskRestoreServiceTests
     /// <summary>编译一定失败，用于验证失败来源。</summary>
     private sealed class FailingCompiler : IFlowSnapshotCompiler
     {
-        public ErrorOr<CompiledFlow> Compile(FlowSnapshot snapshot) =>
+        public ErrorOr<CompiledFlow> Compile(GraphFlowDefinitionRecord snapshot) =>
             [Error.Failure("Test.Compile", "编译失败。")];
     }
 

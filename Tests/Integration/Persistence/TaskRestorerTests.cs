@@ -4,7 +4,9 @@ using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -36,11 +38,11 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             : flow.Value;
     }
 
-    protected override TaskRecord DoneRecord => Create(TaskLifecycle.Active, ExecutionState.Succeeded, published: true, blocked: false) with { Completed = true };
+    protected override TaskRecord DoneRecord => Create(TaskLifecycle.Active, Kuroe.Flow.Execution.ExecutionState.Succeeded, published: true, blocked: false) with { Completed = true };
 
-    protected override TaskRecord UnfinishedRecord => Create(TaskLifecycle.Paused, ExecutionState.Succeeded, published: false, blocked: false);
+    protected override TaskRecord UnfinishedRecord => Create(TaskLifecycle.Paused, Kuroe.Flow.Execution.ExecutionState.Succeeded, published: false, blocked: false);
 
-    protected override TaskRecord InterruptedRecord => Create(TaskLifecycle.Paused, ExecutionState.Interrupted, published: false, blocked: true);
+    protected override TaskRecord InterruptedRecord => Create(TaskLifecycle.Paused, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
 
     [Fact]
     public void Restore_does_not_block_an_execution_that_never_started()
@@ -62,7 +64,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     public void Restore_preserves_restore_data()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        ExecutionRestorePayload data = new("test", "state");
+        ExecutionRestoreRecord data = new("test", "state");
         TaskRecord record = InterruptedRecord with
         {
             Executions =
@@ -70,7 +72,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
                 InterruptedRecord.Executions[0] with
                 {
                     RestoreData = data,
-                    ContinuedFrom = new ExecutionId(9),
+                    ContinuedFrom = new Kuroe.Flow.Execution.ExecutionId(9),
                 },
             ],
         };
@@ -90,19 +92,19 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     public void Restore_does_not_plan_a_block_without_a_resumable_execution()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        ExecutableNodeRecord blocked = Assert.IsType<ExecutableNodeRecord>(InterruptedRecord.Nodes[0]);
-        TaskRecord record = InterruptedRecord with
-        {
-            Executions =
-            [
-                InterruptedRecord.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
-            ],
-            Nodes =
+        ExecutableNodeRecord blocked = Assert.IsType<ExecutableNodeRecord>(State(InterruptedRecord).Nodes[0]);
+        TaskRecord record = WithNodes(
+            InterruptedRecord with
+            {
+                Executions =
+                [
+                    InterruptedRecord.Executions[0] with { RestoreData = new ExecutionRestoreRecord("test", "state") },
+                ],
+            },
             [
                 blocked with { Block = blocked.Block is { } block ? block with { Execution = null } : null },
-                .. InterruptedRecord.Nodes.Skip(1),
-            ],
-        };
+                .. State(InterruptedRecord).Nodes.Skip(1),
+            ]);
 
         ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
@@ -114,7 +116,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_keeps_restore_data_of_a_finished_execution()
     {
-        ExecutionRestorePayload data = new("test", "state");
+        ExecutionRestoreRecord data = new("test", "state");
         TaskRecord record = DoneRecord with
         {
             Executions = [DoneRecord.Executions[0] with { RestoreData = data }],
@@ -131,12 +133,12 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     public void Restore_terminated_record_cancels_nodes_and_clears_blocks()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        TaskRecord template = Create(TaskLifecycle.Terminated, ExecutionState.Interrupted, published: false, blocked: true);
+        TaskRecord template = Create(TaskLifecycle.Terminated, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
         TaskRecord record = template with
         {
             Executions =
             [
-                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+                template.Executions[0] with { RestoreData = new ExecutionRestoreRecord("test", "state") },
             ],
         };
 
@@ -155,12 +157,12 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     public void Restore_does_not_plan_a_block_associated_with_a_succeeded_execution()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        TaskRecord template = Create(TaskLifecycle.Paused, ExecutionState.Succeeded, published: false, blocked: true);
+        TaskRecord template = Create(TaskLifecycle.Paused, Kuroe.Flow.Execution.ExecutionState.Succeeded, published: false, blocked: true);
         TaskRecord record = template with
         {
             Executions =
             [
-                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+                template.Executions[0] with { RestoreData = new ExecutionRestoreRecord("test", "state") },
             ],
         };
 
@@ -177,13 +179,13 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     public void Restore_does_not_plan_a_block_of_a_completed_task()
     {
         _registry.RestorerSource = new AcceptAllRestorer();
-        TaskRecord template = Create(TaskLifecycle.Active, ExecutionState.Failed, published: true, blocked: true);
+        TaskRecord template = Create(TaskLifecycle.Active, Kuroe.Flow.Execution.ExecutionState.Failed, published: true, blocked: true);
         TaskRecord record = template with
         {
             Completed = true,
             Executions =
             [
-                template.Executions[0] with { RestoreData = new ExecutionRestorePayload("test", "state") },
+                template.Executions[0] with { RestoreData = new ExecutionRestoreRecord("test", "state") },
             ],
         };
 
@@ -198,7 +200,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_runtime_does_not_resume_a_terminated_task()
     {
-        TaskRecord record = Create(TaskLifecycle.Terminated, ExecutionState.Interrupted, published: false, blocked: true);
+        TaskRecord record = Create(TaskLifecycle.Terminated, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
         RecordingRunner runner = new();
         TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, new AcceptAllRestorer());
 
@@ -212,7 +214,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_runtime_resumes_a_paused_task()
     {
-        TaskRecord template = Create(TaskLifecycle.Paused, ExecutionState.Interrupted, published: false, blocked: true);
+        TaskRecord template = Create(TaskLifecycle.Paused, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
         TaskRecord record = template with
         {
             Executions = [template.Executions[0] with { StartedAt = null }],
@@ -246,12 +248,12 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
         Assert.False(restored.IsError);
-        Assert.False(_registry.FindExecution(record.Executions[0].Id).IsError);
+        Assert.False(_registry.FindExecution(new ExecutionId(record.Executions[0].Id.Value)).IsError);
     }
 
     private static TaskRecord Create(
         TaskLifecycle lifecycle,
-        ExecutionState state,
+        Kuroe.Flow.Execution.ExecutionState state,
         bool published,
         bool blocked)
     {
@@ -259,6 +261,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         NodePath plan = NodePath.Of("整体", "制定计划");
         NodePath container = NodePath.Of("整体");
         ExecutionId execution = new(1);
+        Kuroe.Flow.Execution.ExecutionId recordExecution = new(1);
         DateTimeOffset at = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
         PortName target = new("目标");
         PortName result = new("计划");
@@ -266,40 +269,51 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         return new TaskRecord(
             new TaskIdentity(id, "恢复任务", at, at),
             at,
-            new FlowSnapshot(new FlowName("默认"), """{"Nodes":[]}""", """{"Flows":[]}"""),
-            new TaskStartSnapshot(
-                StartInputs.Single(target, "目标内容"),
-                new Dictionary<PortName, string> { [target] = "目标内容" }),
             lifecycle,
             Completed: false,
-            new TaskJournalSnapshot([], 0),
+            new TaskJournalRecord([], 0),
+            new FlowRecord(
+                FlowRecordKinds.Graph,
+                new GraphFlowDefinitionRecord(new FlowName("默认"), """{"Nodes":[]}""", """{"Flows":[]}"""),
+                new GraphFlowStateRecord(
+                    new TaskStartSnapshot(
+                        StartInputs.Single(target, "目标内容"),
+                        new Dictionary<PortName, string> { [target] = "目标内容" }),
+                    [
+                        new ExecutableNodeRecord(
+                            plan,
+                            Common(
+                                published ? 1 : 0,
+                                published ? 1 : null),
+                            blocked ? [plan] : [],
+                            blocked ? new NodeBlock("任务已暂停。", execution, at) : null),
+                        new ContainerNodeRecord(container, Common(published ? 1 : 0)),
+                    ],
+                    published ? [PublishedRecord(execution, plan, result)] : [],
+                    new SchedulerSeed([]))),
             [
                 new ExecutionRecord(
-                    execution,
-                    plan,
+                    recordExecution,
+                    GraphRecordTargets.Format(plan),
                     1,
                     state,
                     string.Empty,
                     at,
                     at,
                     at,
-                    state == ExecutionState.Interrupted ? ["任务已暂停。"] : [],
-                    ExecutionUsage.None,
-                    [new InputValueRecord(target, new ContextSourceRecord(ContextSourceKind.Start, null, null, target), "目标内容")],
-                    new Dictionary<PortName, string> { [target] = "目标内容" }),
-            ],
-            [
-                new ExecutableNodeRecord(
-                    plan,
-                    Common(
-                        published ? 1 : 0,
-                        published ? 1 : null),
-                    blocked ? [plan] : [],
-                    blocked ? new NodeBlock("任务已暂停。", execution, at) : null),
-                new ContainerNodeRecord(container, Common(published ? 1 : 0)),
-            ],
-            published ? [PublishedRecord(execution, plan, result)] : [],
-            new SchedulerSeed([]));
+                    state == Kuroe.Flow.Execution.ExecutionState.Interrupted ? ["任务已暂停。"] : [],
+                    new ExecutionUsageRecord(0, 0, new TokenUsageRecord(null, null, null, null, null), null),
+                    [
+                        new ExecutionInputRecord(
+                            new Kuroe.Flow.Execution.ExecutionPortName(target.Value),
+                            GraphRecordSources.Write(new StartSource(target)),
+                            "目标内容"),
+                    ],
+                    new Dictionary<Kuroe.Flow.Execution.ExecutionPortName, string>
+                    {
+                        [new Kuroe.Flow.Execution.ExecutionPortName(target.Value)] = "目标内容",
+                    }),
+            ]);
     }
 
     private static NodeCommonRecord Common(long revision, long? activePublicationRevision = null) =>
@@ -330,7 +344,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_rejects_active_publication_without_port_history()
     {
-        TaskRecord record = DoneRecord with { Ports = [DoneRecord.Ports[0] with { Revision = 2 }] };
+        TaskRecord record = WithPorts(DoneRecord, [State(DoneRecord).Ports[0] with { Revision = 2 }]);
         ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
         Assert.True(restored.IsError);
@@ -347,6 +361,18 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 
         Assert.Equal("计划结果", task.Context.Runtime(plan).PortText(port));
     }
+
+    private static GraphFlowStateRecord State(TaskRecord record) =>
+        Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
+
+    private static TaskRecord WithState(TaskRecord record, GraphFlowStateRecord state) =>
+        record with { Flow = record.Flow with { State = state } };
+
+    private static TaskRecord WithNodes(TaskRecord record, IReadOnlyList<NodeRecord> nodes) =>
+        WithState(record, State(record) with { Nodes = nodes });
+
+    private static TaskRecord WithPorts(TaskRecord record, IReadOnlyList<PortPublicationRecord> ports) =>
+        WithState(record, State(record) with { Ports = ports });
 
     private sealed class RecordingRunner : IFlowRunner
     {

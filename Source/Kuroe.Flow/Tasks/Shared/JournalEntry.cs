@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>过程记录的严重程度。</summary>
 public enum JournalLevel

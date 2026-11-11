@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
-namespace Kuroe.Flow.Persistence.Records.Shared;
+namespace Kuroe.Flow.Graph.Records;
 
 /// <summary>输入取值出处的持久形态转换。</summary>
 public static class RecordSources

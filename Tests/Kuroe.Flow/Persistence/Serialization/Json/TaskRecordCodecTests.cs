@@ -1,4 +1,6 @@
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -96,8 +98,8 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
         ExecutionRecord first = record.Executions[0] with
         {
-            RestoreData = new ExecutionRestorePayload("test", """{"payload":true}"""),
-            ContinuedFrom = new ExecutionId(6),
+            RestoreData = new ExecutionRestoreRecord("test", """{"payload":true}"""),
+            ContinuedFrom = new Kuroe.Flow.Execution.ExecutionId(6),
         };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
         TaskRecordCodec codec = new();
@@ -130,10 +132,10 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
     public void Write_and_read_preserve_execution_contract()
     {
         TaskRecord record = TaskRecordFixture.Create();
-        PortName port = new("结论");
-        PortValue value = new("内容", false);
+        Kuroe.Flow.Execution.ExecutionPortName port = new("结论");
+        Kuroe.Flow.Execution.ExecutionOutputValue value = new(port, "内容", false);
         ExecutionContractRecord contract = new(
-            new Dictionary<PortName, PortValue> { [port] = value },
+            new Dictionary<Kuroe.Flow.Execution.ExecutionPortName, Kuroe.Flow.Execution.ExecutionOutputValue> { [port] = value },
             "缺少资料");
         ExecutionRecord first = record.Executions[0] with { Contract = contract };
         TaskRecord changed = record with { Executions = [first, .. record.Executions.Skip(1)] };
@@ -146,7 +148,7 @@ public sealed class TaskRecordCodecTests : TaskRecordCodecContractTests
         Assert.Contains("\"Contract\":", json);
         Assert.NotNull(restored);
         Assert.Equal("缺少资料", restored.CannotCompleteReason);
-        Assert.Equal(value, Assert.Single(restored.Ports!).Value);
+        Assert.Equal(value, Assert.Single(restored.Outputs!).Value);
     }
 
     [Fact]

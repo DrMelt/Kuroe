@@ -3,7 +3,7 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Workflows.Flows.Files;
@@ -121,7 +121,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
         }
     }
 
-    ErrorOr<FlowSnapshot> IFlowSnapshotSource.Capture(FlowName name)
+    ErrorOr<GraphFlowDefinitionRecord> IFlowSnapshotSource.Capture(FlowName name)
     {
         lock (_gate)
         {
@@ -139,11 +139,11 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
 
             ErrorOr<string> text = _store.RenderFlows([flow]);
 
-            return text.IsError ? text.ErrorsOrEmptyList : new FlowSnapshot(name, nodes.Value, text.Value);
+            return text.IsError ? text.ErrorsOrEmptyList : new GraphFlowDefinitionRecord(name, nodes.Value, text.Value);
         }
     }
 
-    ErrorOr<CompiledFlow> IFlowSnapshotCompiler.Compile(FlowSnapshot snapshot)
+    ErrorOr<CompiledFlow> IFlowSnapshotCompiler.Compile(GraphFlowDefinitionRecord snapshot)
     {
         ErrorOr<IReadOnlyList<NodeDefinitionDocument>> nodes = _store.ReadNodesText(snapshot.Nodes);
         if (nodes.IsError)

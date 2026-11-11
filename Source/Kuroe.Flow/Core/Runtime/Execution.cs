@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -54,7 +55,7 @@ public sealed class Execution : IExecution
     /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
     internal static Execution Restore(ExecutionRecord record, ExecutionInput input)
     {
-        Execution execution = new(record.Id, input, record.CreatedAt);
+        Execution execution = new(new ExecutionId(record.Id.Value), input, record.CreatedAt);
         execution.RestoreFromRecord(record);
 
         return execution;
@@ -63,8 +64,8 @@ public sealed class Execution : IExecution
     /// <summary>恢复数据与历史，未收口的执行记为已中断。</summary>
     private void RestoreFromRecord(ExecutionRecord record)
     {
-        bool live = record.State.IsLive();
-        _state = live ? ExecutionState.Interrupted : record.State;
+        bool live = ((ExecutionState)record.State).IsLive();
+        _state = live ? ExecutionState.Interrupted : (ExecutionState)record.State;
         _progress = record.Progress;
         _startedAt = record.StartedAt;
         _finishedAt = live ? DateTimeOffset.UtcNow : record.FinishedAt;
@@ -74,12 +75,29 @@ public sealed class Execution : IExecution
             _failures.Add("进程退出前未收口。");
         }
 
-        _usage = record.Usage;
-        _restoreData = record.RestoreData;
+        _usage = new ExecutionUsage(
+            record.Usage.RequestCount,
+            record.Usage.RequestsWithoutUsage,
+            new TokenUsage(
+                record.Usage.Tokens.Input,
+                record.Usage.Tokens.Output,
+                record.Usage.Tokens.Total,
+                record.Usage.Tokens.CachedInput,
+                record.Usage.Tokens.Reasoning))
+        {
+            ContextTokens = record.Usage.ContextTokens,
+        };
+        _restoreData = record.RestoreData is { } data
+            ? new ExecutionRestorePayload(data.Format, data.Payload)
+            : null;
         _contract = record.Contract is { } contract
-            ? new ExecutionContract(contract.Ports, contract.CannotCompleteReason)
+            ? new ExecutionContract(
+                contract.Outputs?.ToDictionary(
+                    pair => new PortName(pair.Key.Value),
+                    pair => new PortValue(pair.Value.Text, pair.Value.Fires)),
+                contract.CannotCompleteReason)
             : ExecutionContract.Empty;
-        _continuedFrom = record.ContinuedFrom;
+        _continuedFrom = record.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null;
         _cancellation.Dispose();
     }
 
@@ -494,28 +512,50 @@ public sealed class Execution : IExecution
         ExecutionContract contract = Contract;
 
         return new ExecutionRecord(
-            snapshot.Id,
-            snapshot.Input.Node,
+            new Kuroe.Flow.Execution.ExecutionId(snapshot.Id.Value),
+            GraphRecordTargets.Format(snapshot.Input.Node),
             snapshot.Input.ExecutionCount,
-            snapshot.State,
+            (Kuroe.Flow.Execution.ExecutionState)snapshot.State,
             snapshot.Progress,
             snapshot.CreatedAt,
             snapshot.StartedAt,
             snapshot.FinishedAt,
             snapshot.Failures,
-            snapshot.Usage,
+            new ExecutionUsageRecord(
+                snapshot.Usage.RequestCount,
+                snapshot.Usage.RequestsWithoutUsage,
+                new TokenUsageRecord(
+                    snapshot.Usage.Tokens.Input,
+                    snapshot.Usage.Tokens.Output,
+                    snapshot.Usage.Tokens.Total,
+                    snapshot.Usage.Tokens.CachedInput,
+                    snapshot.Usage.Tokens.Reasoning),
+                snapshot.Usage.ContextTokens),
             [
-                .. snapshot.Input.Inputs.Select(value => new InputValueRecord(
-                    value.Port,
-                    RecordSources.Write(value.Origin),
+                .. snapshot.Input.Inputs.Select(value => new ExecutionInputRecord(
+                    new Kuroe.Flow.Execution.ExecutionPortName(value.Port.Value),
+                    GraphRecordSources.Write(value.Origin),
                     value.Text)),
             ],
-            snapshot.Input.Texts,
-            snapshot.HasRestoreData ? RestoreData : null,
-            ContinuedFrom,
+            snapshot.Input.Texts.ToDictionary(
+                pair => new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                pair => pair.Value),
+            snapshot.HasRestoreData && RestoreData is { } restore
+                ? new ExecutionRestoreRecord(restore.Format, restore.Payload)
+                : null,
+            ContinuedFrom is { } continued
+                ? new Kuroe.Flow.Execution.ExecutionId(continued.Value)
+                : null,
             contract is { Ports: null, CannotCompleteReason: null }
                 ? null
-                : new ExecutionContractRecord(contract.Ports, contract.CannotCompleteReason));
+                : new ExecutionContractRecord(
+                    contract.Ports?.ToDictionary(
+                        pair => new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                        pair => new Kuroe.Flow.Execution.ExecutionOutputValue(
+                            new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                            pair.Value.Text,
+                            pair.Value.Fires)),
+                    contract.CannotCompleteReason));
     }
 
     /// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>

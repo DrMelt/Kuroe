@@ -3,7 +3,9 @@ using Kuroe.Cli.Tests.Support;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Persistence.Files;
 using Kuroe.Flow.Persistence.Json;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
 
@@ -54,6 +56,9 @@ public sealed class RunArchiveTests
         TaskRecord record = new TaskRecordCodec().Read(await File.ReadAllTextAsync(recordFile, TestContext.Current.CancellationToken)).ThrowIfError();
 
         Assert.False(record.Completed);
-        Assert.Contains(record.Nodes, node => node is ExecutableNodeRecord { Block: not null });
+        Assert.Contains(State(record).Nodes, node => node is ExecutableNodeRecord { Block: not null });
     }
+
+    private static GraphFlowStateRecord State(TaskRecord record) =>
+        Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
 }

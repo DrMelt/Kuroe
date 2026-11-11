@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -67,10 +67,10 @@ public sealed class TaskActions(
 
         TaskId id = _ids.Next();
 
-        FlowSnapshot? flowSnapshot = null;
+        GraphFlowDefinitionRecord? flowSnapshot = null;
         if (_snapshots is { } snapshotSource)
         {
-            ErrorOr<FlowSnapshot> captured = snapshotSource.Capture(flow.Model.Name);
+            ErrorOr<GraphFlowDefinitionRecord> captured = snapshotSource.Capture(flow.Model.Name);
             if (captured.IsError)
             {
                 return captured.ErrorsOrEmptyList;

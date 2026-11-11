@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
-namespace Kuroe.Flow.Persistence.Records.Shared;
+namespace Kuroe.Flow.Graph.Records;
 
 /// <summary>一个节点在任务内的持久状态。公共部分与节点类型专属状态分开。</summary>
 public abstract record NodeRecord(NodePath Path, NodeCommonRecord Common);

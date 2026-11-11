@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -7,6 +8,11 @@ using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Records;
+using RecordExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using RecordExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
+using RecordExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
 
 namespace Kuroe.Flow.Persistence.Serialization.Shared;
 
@@ -63,20 +69,28 @@ public static class TaskRecordSerializationMapper
                     record.Identity.CreatedAt,
                     record.Identity.LastActivityAt),
                 record.SavedAt,
-                new FlowSnapshotData(
-                    record.Flow.Name.Value,
-                    record.Flow.Nodes,
-                    record.Flow.Flow),
-                new TaskStartData(
-                    [.. record.Start.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
-                    ToData(record.Start.StartTexts)),
                 record.Lifecycle,
                 record.Completed,
                 new TaskJournalData([.. record.Journal.Entries.Select(ToData)], record.Journal.DroppedEntries),
-                [.. record.Executions.Select(ToData)],
-                [.. record.Nodes.Select(ToData)],
-                [.. record.Ports.Select(ToData)],
-                new SchedulerSeedData([.. record.Pending.Targets.Select(ToData)])));
+                ToData(record.Flow),
+                [.. record.Executions.Select(ToData)]));
+
+    private static FlowData ToData(FlowRecord flow) =>
+        flow switch
+        {
+            { Kind: FlowRecordKinds.Graph, Definition: GraphFlowDefinitionRecord definition, State: GraphFlowStateRecord state } =>
+                new FlowData(
+                    FlowRecordKinds.Graph,
+                    new GraphFlowDefinitionData(definition.Name.Value, definition.Nodes, definition.Flow),
+                    new GraphFlowStateData(
+                        new TaskStartData(
+                            [.. state.Start.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
+                            ToData(state.Start.StartTexts)),
+                        [.. state.Nodes.Select(ToData)],
+                        [.. state.Ports.Select(ToData)],
+                        new SchedulerSeedData([.. state.Pending.Targets.Select(ToData)]))),
+            _ => throw new NotSupportedException($"未知的流程记录 {flow.Kind}。"),
+        };
 
     private static JournalEntryData ToData(JournalEntry entry) =>
         new(entry.At, entry.Level, entry.Label, entry.Text);
@@ -84,8 +98,8 @@ public static class TaskRecordSerializationMapper
     private static ExecutionData ToData(ExecutionRecord execution) =>
         new(
             execution.Id.Value,
-            ToData(execution.Node),
-            execution.ExecutionCount,
+            execution.Target.Value,
+            execution.Attempt,
             execution.State,
             execution.Progress,
             execution.CreatedAt,
@@ -94,12 +108,15 @@ public static class TaskRecordSerializationMapper
             [.. execution.Failures],
             ToData(execution.Usage),
             [.. execution.Inputs.Select(ToData)],
-            ToData(execution.Texts),
+            execution.Texts.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
             ToData(execution.RestoreData),
             execution.ContinuedFrom?.Value,
             ToData(execution.Contract));
 
-    private static RestorePayloadData? ToData(ExecutionRestorePayload? data) =>
+    private static ExecutionInputData ToData(ExecutionInputRecord input) =>
+        new(input.Port.Value, input.Source, input.Text);
+
+    private static RestorePayloadData? ToData(ExecutionRestoreRecord? data) =>
         data is null
             ? null
             : new RestorePayloadData(data.Format, data.Payload);
@@ -111,25 +128,25 @@ public static class TaskRecordSerializationMapper
             return null;
         }
 
-        List<PortValueData>? ports = null;
-        if (contract.Ports is { } values)
+        List<PortValueData>? outputs = null;
+        if (contract.Outputs is { } values)
         {
-            ports =
+            outputs =
             [
                 .. values.Select(pair => new PortValueData(
                     pair.Key.Value,
                     pair.Value.Text,
-                    pair.Value.Trigger)),
+                    pair.Value.Fires)),
             ];
         }
 
-        return new ExecutionContractData(ports, contract.CannotCompleteReason);
+        return new ExecutionContractData(outputs, contract.CannotCompleteReason);
     }
 
-    private static ExecutionUsageData ToData(ExecutionUsage usage) =>
+    private static ExecutionUsageData ToData(ExecutionUsageRecord usage) =>
         new(usage.RequestCount, usage.RequestsWithoutUsage, ToData(usage.Tokens), usage.ContextTokens);
 
-    private static TokenUsageData ToData(TokenUsage tokens) =>
+    private static TokenUsageData ToData(TokenUsageRecord tokens) =>
         new(tokens.Input, tokens.Output, tokens.Total, tokens.CachedInput, tokens.Reasoning);
 
     private static InputValueData ToData(InputValueRecord value) =>
@@ -232,14 +249,9 @@ public static class TaskRecordSerializationMapper
         }
 
         TaskIdentityData identity = dto.Identity ?? throw new FormatException("存档缺少任务身份。");
-        FlowSnapshotData flow = dto.Flow ?? throw new FormatException("存档缺少流程快照。");
-        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+        FlowData flow = dto.Flow ?? throw new FormatException("存档缺少流程记录。");
         TaskJournalData journal = dto.Journal ?? throw new FormatException("存档缺少任务过程记录。");
-        SchedulerSeedData pending = dto.Pending ?? throw new FormatException("存档缺少调度种子。");
         DateTimeOffset savedAt = dto.SavedAt ?? identity.LastActivityAt;
-
-        List<NodeRecord> nodes = [.. (dto.Nodes ?? []).Select(ReadNode)];
-        List<PortPublicationRecord> ports = [.. (dto.Ports ?? []).Select(ReadPortPublication)];
 
         return new TaskRecord(
             new TaskIdentity(
@@ -248,10 +260,51 @@ public static class TaskRecordSerializationMapper
                 identity.CreatedAt,
                 identity.LastActivityAt),
             savedAt,
-            new FlowSnapshot(
-                new FlowName(RequiredText(flow.Name, "流程名")),
-                RequiredText(flow.Nodes, "节点库文档"),
-                RequiredText(flow.Flow, "流程文档")),
+            dto.Lifecycle,
+            dto.Completed,
+            new TaskJournalRecord(ReadJournal(journal.Entries), journal.DroppedEntries),
+            ReadFlow(flow),
+            [.. (dto.Executions ?? []).Select(ReadExecution)]);
+    }
+
+    private static FlowRecord ReadFlow(FlowData dto)
+    {
+        string kind = RequiredText(dto.Kind, "流程种类");
+
+        return kind switch
+        {
+            FlowRecordKinds.Graph => new FlowRecord(
+                kind,
+                ReadGraphDefinition(dto.GraphDefinition),
+                ReadGraphState(dto.GraphState)),
+            _ => throw new FormatException($"未知的流程种类 {kind}。"),
+        };
+    }
+
+    private static GraphFlowDefinitionRecord ReadGraphDefinition(GraphFlowDefinitionData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("存档缺少图流程定义。");
+        }
+
+        return new GraphFlowDefinitionRecord(
+            new FlowName(RequiredText(dto.Name, "流程名")),
+            RequiredText(dto.Nodes, "节点库文档"),
+            RequiredText(dto.Flow, "流程文档"));
+    }
+
+    private static GraphFlowStateRecord ReadGraphState(GraphFlowStateData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("存档缺少图流程状态。");
+        }
+
+        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+        SchedulerSeedData pending = dto.Pending ?? throw new FormatException("存档缺少调度种子。");
+
+        return new GraphFlowStateRecord(
             new TaskStartSnapshot(
                 new StartInputs(
                 [
@@ -260,20 +313,16 @@ public static class TaskRecordSerializationMapper
                         RequiredText(input.Text, "开始输入文本"))),
                 ]),
                 ReadTexts(start.StartTexts)),
-            dto.Lifecycle,
-            dto.Completed,
-            new TaskJournalSnapshot(ReadJournal(journal.Entries), journal.DroppedEntries),
-            [.. (dto.Executions ?? []).Select(ReadExecution)],
-            nodes,
-            ports,
+            [.. (dto.Nodes ?? []).Select(ReadNode)],
+            [.. (dto.Ports ?? []).Select(ReadPortPublication)],
             new SchedulerSeed([.. (pending.Targets ?? []).Select(path => ReadPath(path, "调度目标"))]));
     }
 
     private static ExecutionRecord ReadExecution(ExecutionData dto) =>
         new(
-            new ExecutionId(dto.Id),
-            ReadPath(dto.Node, "执行节点"),
-            dto.ExecutionCount,
+            new RecordExecutionId(dto.Id),
+            new Kuroe.Flow.Execution.ExecutionTargetId(RequiredText(dto.Target, "执行目标")),
+            dto.Attempt,
             dto.State,
             dto.Progress ?? string.Empty,
             dto.CreatedAt,
@@ -281,11 +330,23 @@ public static class TaskRecordSerializationMapper
             dto.FinishedAt,
             dto.Failures ?? [],
             ReadUsage(dto.Usage),
-            [.. (dto.Inputs ?? []).Select(ReadInputValue)],
-            ReadTexts(dto.Texts),
+            [.. (dto.Inputs ?? []).Select(ReadExecutionInput)],
+            ReadExecutionTexts(dto.Texts),
             ReadRestoreData(dto.RestoreData),
-            dto.ContinuedFrom is { } continuedFrom ? new ExecutionId(continuedFrom) : null,
+            dto.ContinuedFrom is { } continuedFrom ? new RecordExecutionId(continuedFrom) : null,
             ReadContract(dto.Contract));
+
+    private static ExecutionInputRecord ReadExecutionInput(ExecutionInputData dto) =>
+        new(
+            new RecordExecutionPortName(RequiredText(dto.Port, "输入端口")),
+            RequiredText(dto.Source, "输入来源"),
+            dto.Text ?? string.Empty);
+
+    private static Dictionary<RecordExecutionPortName, string> ReadExecutionTexts(
+        Dictionary<string, string>? values) =>
+        values is null
+            ? []
+            : values.ToDictionary(pair => new RecordExecutionPortName(pair.Key), pair => pair.Value);
 
     private static ExecutionContractRecord? ReadContract(ExecutionContractData? dto)
     {
@@ -294,21 +355,24 @@ public static class TaskRecordSerializationMapper
             return null;
         }
 
-        Dictionary<PortName, PortValue>? ports = dto.Ports?.ToDictionary(
-                value => ReadPort(value.Port, "契约端口"),
-                value => new PortValue(value.Text, value.Trigger));
+        Dictionary<RecordExecutionPortName, RecordExecutionOutputValue>? outputs = dto.Outputs?.ToDictionary(
+            value => new RecordExecutionPortName(RequiredText(value.Port, "契约端口")),
+            value => new RecordExecutionOutputValue(
+                new RecordExecutionPortName(RequiredText(value.Port, "契约端口")),
+                value.Text,
+                value.Trigger ?? true));
 
-        return new ExecutionContractRecord(ports, dto.CannotCompleteReason);
+        return new ExecutionContractRecord(outputs, dto.CannotCompleteReason);
     }
 
-    private static ExecutionRestorePayload? ReadRestoreData(RestorePayloadData? dto) =>
+    private static ExecutionRestoreRecord? ReadRestoreData(RestorePayloadData? dto) =>
         dto is null
             ? null
-            : new ExecutionRestorePayload(
+            : new ExecutionRestoreRecord(
                 dto.Format ?? throw new FormatException("恢复数据缺少格式。"),
                 dto.Payload ?? throw new FormatException("恢复数据缺少负载。"));
 
-    private static ExecutionUsage ReadUsage(ExecutionUsageData? dto)
+    private static ExecutionUsageRecord ReadUsage(ExecutionUsageData? dto)
     {
         if (dto is null)
         {
@@ -320,13 +384,14 @@ public static class TaskRecordSerializationMapper
             throw new FormatException("执行记录缺少 token 用量。");
         }
 
-        return new ExecutionUsage(dto.RequestCount, dto.RequestsWithoutUsage, ReadTokenUsage(dto.Tokens))
-        {
-            ContextTokens = dto.ContextTokens,
-        };
+        return new ExecutionUsageRecord(
+            dto.RequestCount,
+            dto.RequestsWithoutUsage,
+            ReadTokenUsage(dto.Tokens),
+            dto.ContextTokens);
     }
 
-    private static TokenUsage ReadTokenUsage(TokenUsageData dto) =>
+    private static TokenUsageRecord ReadTokenUsage(TokenUsageData dto) =>
         new(dto.Input, dto.Output, dto.Total, dto.CachedInput, dto.Reasoning);
 
     private static InputValueRecord ReadInputValue(InputValueData dto) =>

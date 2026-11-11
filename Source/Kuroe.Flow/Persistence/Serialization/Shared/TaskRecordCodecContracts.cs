@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Persistence.Serialization.Shared;
 

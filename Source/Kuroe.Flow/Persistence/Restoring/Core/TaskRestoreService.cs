@@ -1,10 +1,12 @@
 using ErrorOr;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Persistence.Records.Shared;
 using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Persistence.Restoring;
 
@@ -64,7 +66,22 @@ public sealed class TaskRestoreService(
             return;
         }
 
-        ErrorOr<CompiledFlow> flow = compiler.Compile(record.Flow);
+        ErrorOr<CompiledFlow> flow;
+        IReadOnlyList<Kuroe.Flow.Shared.Model.NodePath> pending;
+        if (record.Flow.Definition is not GraphFlowDefinitionRecord definition
+            || record.Flow.State is not GraphFlowStateRecord state)
+        {
+            failures.Add(new TaskLoadFailure(
+                record.Identity.Id,
+                source,
+                [Error.Failure(FlowErrorCodes.RecordFormat, "存档的流程记录不是图流程。")]));
+            leases.Release(record.Identity.Id);
+
+            return;
+        }
+
+        flow = compiler.Compile(definition);
+        pending = state.Pending.Targets;
         if (flow.IsError)
         {
             failures.Add(new TaskLoadFailure(record.Identity.Id, source, flow.ErrorsOrEmptyList));
@@ -72,7 +89,7 @@ public sealed class TaskRestoreService(
             return;
         }
 
-        ErrorOr<TaskSnapshot> task = runtime.Restore(record, flow.Value, record.Pending.Targets);
+        ErrorOr<TaskSnapshot> task = runtime.Restore(record, flow.Value, pending);
         if (task.IsError)
         {
             failures.Add(new TaskLoadFailure(record.Identity.Id, source, task.ErrorsOrEmptyList));

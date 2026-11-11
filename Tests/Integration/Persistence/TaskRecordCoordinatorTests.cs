@@ -2,7 +2,9 @@ using ErrorOr;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -62,10 +64,10 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
 
         TaskRecordWrite write = await _store.NextWrite(saved =>
             saved.Identity.Id == id
-            && saved.Nodes.OfType<ExecutableNodeRecord>().Any(node => node.Block is not null));
+            && State(saved).Nodes.OfType<ExecutableNodeRecord>().Any(node => node.Block is not null));
 
         ExecutableNodeRecord blocked = Assert.Single(
-            write.Record.Nodes.OfType<ExecutableNodeRecord>(),
+            State(write.Record).Nodes.OfType<ExecutableNodeRecord>(),
             node => node.Block is not null);
         NodeBlock block = Assert.IsType<NodeBlock>(blocked.Block);
         Assert.Contains("未交回", block.Summary);
@@ -196,6 +198,9 @@ public sealed class TaskRecordCoordinatorTests : IDisposable
 
         public ErrorOr<Success> Delete(TaskId id) => inner.Delete(id);
     }
+
+    private static GraphFlowStateRecord State(TaskRecord record) =>
+        Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
 
     public void Dispose() => _environment.Dispose();
 }

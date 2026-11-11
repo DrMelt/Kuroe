@@ -1,5 +1,7 @@
 using Kuroe.Flow.Persistence.Serialization.Shared;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
@@ -18,16 +20,19 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
+        GraphFlowStateRecord state = State(record);
+        GraphFlowStateRecord loadedState = State(loaded);
 
         Assert.Equal(record.Identity, loaded.Identity);
         Assert.Equal(record.SavedAt, loaded.SavedAt);
-        Assert.Equal(record.Flow, loaded.Flow);
+        GraphFlowDefinitionRecord definition = Assert.IsType<GraphFlowDefinitionRecord>(record.Flow.Definition);
+        Assert.Equal(definition, Assert.IsType<GraphFlowDefinitionRecord>(loaded.Flow.Definition));
         Assert.Equal(record.Lifecycle, loaded.Lifecycle);
         Assert.Equal(record.Completed, loaded.Completed);
         Assert.Equal(record.Executions.Count, loaded.Executions.Count);
-        Assert.Equal(record.Nodes.Count, loaded.Nodes.Count);
-        Assert.Equal(record.Ports.Count, loaded.Ports.Count);
-        Assert.Equal(record.Pending.Targets, loaded.Pending.Targets);
+        Assert.Equal(state.Nodes.Count, loadedState.Nodes.Count);
+        Assert.Equal(state.Ports.Count, loadedState.Ports.Count);
+        Assert.Equal(state.Pending.Targets, loadedState.Pending.Targets);
     }
 
     [Fact]
@@ -37,11 +42,12 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
+        IReadOnlyList<NodeRecord> nodes = State(loaded).Nodes;
 
-        Assert.Equal(2, loaded.Nodes.OfType<ExecutableNodeRecord>().Count());
-        Assert.Single(loaded.Nodes.OfType<InputNodeRecord>());
-        Assert.Single(loaded.Nodes.OfType<ApprovalNodeRecord>());
-        Assert.Single(loaded.Nodes.OfType<ContainerNodeRecord>());
+        Assert.Equal(2, nodes.OfType<ExecutableNodeRecord>().Count());
+        Assert.Single(nodes.OfType<InputNodeRecord>());
+        Assert.Single(nodes.OfType<ApprovalNodeRecord>());
+        Assert.Single(nodes.OfType<ContainerNodeRecord>());
     }
 
     [Fact]
@@ -51,26 +57,28 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
+        IReadOnlyList<NodeRecord> nodes = State(record).Nodes;
+        IReadOnlyList<NodeRecord> loadedNodes = State(loaded).Nodes;
 
         Assert.Equal(record.Executions[1].StartedAt, loaded.Executions[1].StartedAt);
-        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Common.ActivePublicationRevision);
-        Assert.Null(loaded.Nodes[1].Common.LastInputGroup);
+        Assert.Null(Assert.IsType<ExecutableNodeRecord>(loadedNodes[1]).Common.ActivePublicationRevision);
+        Assert.Null(loadedNodes[1].Common.LastInputGroup);
         Assert.Equal(
-            Assert.IsType<ExecutableNodeRecord>(record.Nodes[1]).Block,
-            Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[1]).Block);
+            Assert.IsType<ExecutableNodeRecord>(nodes[1]).Block,
+            Assert.IsType<ExecutableNodeRecord>(loadedNodes[1]).Block);
     }
 
     [Fact]
-    public void Round_trip_preserves_context_source_kinds()
+    public void Round_trip_preserves_execution_input_sources()
     {
         ITaskRecordCodec codec = CreateCodec();
-        TaskRecord record = WithAllContextSources(TaskRecordFixture.Create());
+        TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
 
         Assert.Equal(
-            Enum.GetValues<ContextSourceKind>(),
-            [.. loaded.Executions[0].Inputs.Select(value => value.Origin.Kind)]);
+            [.. record.Executions[0].Inputs.Select(value => value.Source)],
+            [.. loaded.Executions[0].Inputs.Select(value => value.Source)]);
     }
 
     [Fact]
@@ -80,14 +88,14 @@ public abstract class TaskRecordCodecContractTests
         TaskRecord record = TaskRecordFixture.Create();
 
         TaskRecord loaded = codec.Read(codec.Write(record).ThrowIfError()).ThrowIfError();
-        PortPublicationRecord[] ports = [.. loaded.Ports.Where(port => port.Node == NodePath.Of("整体", "计划"))];
+        PortPublicationRecord[] ports = [.. State(loaded).Ports.Where(port => port.Node == NodePath.Of("整体", "计划"))];
 
         Assert.Equal([1L, 2L], ports.Select(port => port.Revision));
         Assert.True(ports[0].Trigger);
         Assert.Equal("旧计划结果", Assert.Single(ports[0].Values).Text);
         Assert.False(ports[1].Trigger);
         Assert.Equal("计划结果", Assert.Single(ports[1].Values).Text);
-        Assert.Equal(2, Assert.IsType<ExecutableNodeRecord>(loaded.Nodes[0]).Common.ActivePublicationRevision);
+        Assert.Equal(2, Assert.IsType<ExecutableNodeRecord>(State(loaded).Nodes[0]).Common.ActivePublicationRevision);
     }
 
     [Fact]
@@ -99,25 +107,6 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(codec.Write(record).ThrowIfError(), codec.Write(record).ThrowIfError());
     }
 
-    private static TaskRecord WithAllContextSources(TaskRecord record)
-    {
-        NodePath node = NodePath.Of("整体", "计划");
-        PortName port = new("结论");
-        ExecutionId execution = new(11);
-        ExecutionRecord first = record.Executions[0] with
-        {
-            Inputs =
-            [
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Execution, execution, node, port), "执行"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Input, null, node, port), "输入"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Start, null, null, port), "开始"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.ContainerPort, null, NodePath.Of("整体"), port), "容器"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Default, null, node, port), "默认"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Constant, null, node, port), "常量"),
-                new InputValueRecord(port, new ContextSourceRecord(ContextSourceKind.Node, null, node, port), "节点"),
-            ],
-        };
-
-        return record with { Executions = [first, .. record.Executions.Skip(1)] };
-    }
+    private static GraphFlowStateRecord State(TaskRecord record) =>
+        Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
 }

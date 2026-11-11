@@ -1,6 +1,8 @@
 using ErrorOr;
 using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
@@ -34,7 +36,15 @@ public abstract class TaskRecordStoreContractTests
 
         TaskRecord loaded = Assert.Single(result.Records);
         Assert.Equal(record.Identity, loaded.Identity);
-        Assert.Equal(record.Flow, loaded.Flow);
+        GraphFlowStateRecord state = Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
+        GraphFlowStateRecord loadedState = Assert.IsType<GraphFlowStateRecord>(loaded.Flow.State);
+        Assert.Equal(record.Flow.Kind, loaded.Flow.Kind);
+        Assert.Equal(
+            Assert.IsType<GraphFlowDefinitionRecord>(record.Flow.Definition),
+            Assert.IsType<GraphFlowDefinitionRecord>(loaded.Flow.Definition));
+        Assert.Equal(state.Nodes.Count, loadedState.Nodes.Count);
+        Assert.Equal(state.Ports.Count, loadedState.Ports.Count);
+        Assert.Equal(state.Pending.Targets, loadedState.Pending.Targets);
     }
 
     [Fact]

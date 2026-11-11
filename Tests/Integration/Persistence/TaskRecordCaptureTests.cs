@@ -1,7 +1,9 @@
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
 
@@ -25,9 +27,9 @@ public sealed class TaskRecordCaptureTests : IDisposable
             .ThrowIfError();
 
         Assert.Equal(id, record.Identity.Id);
-        Assert.Equal([target], record.Pending.Targets);
+        Assert.Equal([target], State(record).Pending.Targets);
         Assert.False(record.Completed);
-        Assert.NotEmpty(record.Nodes);
+        Assert.NotEmpty(State(record).Nodes);
     }
 
     [Fact]
@@ -42,11 +44,11 @@ public sealed class TaskRecordCaptureTests : IDisposable
             .CaptureRecord(new SchedulerSeed([]))
             .ThrowIfError();
 
-        Assert.NotEmpty(record.Ports);
+        Assert.NotEmpty(State(record).Ports);
         Assert.Contains(
-            record.Nodes.OfType<ExecutableNodeRecord>(),
+            State(record).Nodes.OfType<ExecutableNodeRecord>(),
             node => node.Common.ActivePublicationRevision is not null);
-        Assert.All(record.Ports, port => Assert.NotEqual(default, port.At));
+        Assert.All(State(record).Ports, port => Assert.NotEqual(default, port.At));
     }
 
     [Fact]
@@ -64,8 +66,11 @@ public sealed class TaskRecordCaptureTests : IDisposable
 
         Assert.Contains(
             record.Executions,
-            execution => execution.State == ExecutionState.Succeeded && execution.RestoreData is not null);
+            execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded && execution.RestoreData is not null);
     }
+
+    private static GraphFlowStateRecord State(TaskRecord record) =>
+        Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
 
     public void Dispose() => _environment.Dispose();
 }

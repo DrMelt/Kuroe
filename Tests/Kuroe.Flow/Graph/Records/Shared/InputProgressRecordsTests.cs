@@ -1,3 +1,4 @@
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
@@ -6,7 +7,7 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Xunit;
 
-namespace Kuroe.Flow.Persistence.Records.Shared.Tests;
+namespace Kuroe.Flow.Graph.Records.Shared.Tests;
 
 /// <summary>输入侧进展的公共存档转换：版本、次数、启动组、消费、重跑与发布一次往返。</summary>
 public sealed class InputProgressRecordsTests

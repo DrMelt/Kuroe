@@ -1,10 +1,13 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Execution.Records;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
@@ -19,21 +22,27 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
     {
         try
         {
-            PortTexts startTexts = new(record.Start.StartTexts);
+            if (record.Flow.State is not GraphFlowStateRecord state)
+            {
+                return [Error.Failure(FlowErrorCodes.RecordFormat, "存档的流程状态不是图流程。")];
+            }
+
+            PortTexts startTexts = new(state.Start.StartTexts);
             List<Execution> restored = [];
             foreach (ExecutionRecord saved in record.Executions)
             {
-                if (flow.Graph[saved.Node] is not ExecutableNode node)
+                NodePath path = GraphRecordTargets.Parse(saved.Target);
+                if (flow.Graph[path] is not ExecutableNode node)
                 {
                     return [Error.Failure(
                         FlowErrorCodes.RecordGraphMismatch,
-                        $"存档执行节点 {saved.Node} 不在流程图中。")];
+                        $"存档执行节点 {path} 不在流程图中。")];
                 }
 
                 restored.Add(Execution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
             }
 
-            WorkTask task = WorkTask.Restore(_registry, record, flow, startTexts, restored);
+            WorkTask task = WorkTask.Restore(_registry, record, state, flow, startTexts, restored);
             foreach (Execution execution in task.Executions)
             {
                 _registry.RestoreExecution(task, execution);
@@ -41,7 +50,7 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
 
             return task;
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or FormatException)
         {
             return [Error.Failure(FlowErrorCodes.RecordNodeMismatch, ex.Message)];
         }
@@ -54,14 +63,14 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
             Task = task,
             Node = node.Path,
             Type = node.Type,
-            ExecutionCount = saved.ExecutionCount,
+            ExecutionCount = saved.Attempt,
             Inputs =
             [
                 .. saved.Inputs.Select(value => new InputValue(
-                    value.Port,
-                    new ContextValue(RecordSources.Read(value.Origin), value.Text))),
+                    new PortName(value.Port.Value),
+                    new ContextValue(GraphRecordSources.Read(value.Source), value.Text))),
             ],
-            Texts = saved.Texts,
+            Texts = saved.Texts.ToDictionary(pair => new PortName(pair.Key.Value), pair => pair.Value),
             OutputPorts = node.SubmittablePorts,
         };
 

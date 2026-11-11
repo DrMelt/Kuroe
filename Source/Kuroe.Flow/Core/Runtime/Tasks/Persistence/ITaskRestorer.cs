@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;

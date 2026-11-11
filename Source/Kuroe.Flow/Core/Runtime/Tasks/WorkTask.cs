@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Runtime.Process;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -78,6 +79,7 @@ public sealed class WorkTask
     internal static WorkTask Restore(
         TaskRegistry registry,
         TaskRecord record,
+        GraphFlowStateRecord state,
         CompiledFlow flow,
         IPortTexts startTexts,
         IReadOnlyList<Execution> executions,
@@ -86,7 +88,7 @@ public sealed class WorkTask
         WorkTask task = new(
             registry,
             record.Identity.Id,
-            record.Start.Inputs,
+            state.Start.Inputs,
             startTexts,
             flow.Model,
             flow.Graph,
@@ -96,9 +98,10 @@ public sealed class WorkTask
             observer);
 
         task.Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
-        task.FlowSnapshot = record.Flow;
+        task.FlowSnapshot = record.Flow.Definition as GraphFlowDefinitionRecord
+            ?? throw new ArgumentException("存档的流程定义不是图流程。");
         task._executions.AddRange(executions);
-        task.Runtime.Restore(record.Nodes, record.Ports);
+        task.Runtime.Restore(state.Nodes, state.Ports);
         task._lifecycle = task.DetermineRestoredLifecycle(record);
         if (task._lifecycle == TaskLifecycle.Terminated)
         {
@@ -164,7 +167,7 @@ public sealed class WorkTask
     internal DateTimeOffset LastActivityAt => _lastActivityAt;
 
     /// <summary>提交时锁定的流程快照，写存档时使用。</summary>
-    internal FlowSnapshot? FlowSnapshot { get; set; }
+    internal GraphFlowDefinitionRecord? FlowSnapshot { get; set; }
 
     /// <summary>推进循环给出的待处理目标，写存档时使用。</summary>
     internal Func<SchedulerSeed>? SeedSource { get; set; }

@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Persistence.Records.Shared;
+using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
@@ -20,18 +21,21 @@ public sealed class TaskRecordCapture(WorkTask task) : ITaskRecordCapture
             return new TaskRecord(
                 new TaskIdentity(task.Id, task.Title, task.CreatedAt, task.LastActivityAt),
                 DateTimeOffset.UtcNow,
-                flow,
-                new TaskStartSnapshot(task.Inputs, task.StartTexts.Texts),
                 task.Lifecycle,
                 task.Completed,
-                new TaskJournalSnapshot(task.Journal.Entries, task.Journal.DroppedEntries),
-                [.. task.Executions.Select(execution => execution.CaptureRecord())],
-                [.. task.Runtime.Materializer.Materialized
-                    .Select(node => ((INodeRecordSource)node).CaptureRecord())
-                    .OfType<NodeRecord>()],
-                [.. task.Runtime.Materializer.Materialized
-                    .SelectMany(node => ((IPortRecordSource)node).CapturePorts())],
-                seed);
+                new TaskJournalRecord(task.Journal.Entries, task.Journal.DroppedEntries),
+                new FlowRecord(
+                    FlowRecordKinds.Graph,
+                    flow,
+                    new GraphFlowStateRecord(
+                        new TaskStartSnapshot(task.Inputs, task.StartTexts.Texts),
+                        [.. task.Runtime.Materializer.Materialized
+                            .Select(node => ((INodeRecordSource)node).CaptureRecord())
+                            .OfType<NodeRecord>()],
+                        [.. task.Runtime.Materializer.Materialized
+                            .SelectMany(node => ((IPortRecordSource)node).CapturePorts())],
+                        seed)),
+                [.. task.Executions.Select(execution => execution.CaptureRecord())]);
         }
     }
 }

@@ -1,31 +1,7 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 
-namespace Kuroe.Flow.Persistence.Records.Shared;
-
-/// <summary>一次执行的持久状态。恢复数据作为执行历史保留。</summary>
-public sealed record ExecutionRecord(
-    ExecutionId Id,
-    NodePath Node,
-    int ExecutionCount,
-    ExecutionState State,
-    string Progress,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? StartedAt,
-    DateTimeOffset? FinishedAt,
-    IReadOnlyList<string> Failures,
-    ExecutionUsage Usage,
-    IReadOnlyList<InputValueRecord> Inputs,
-    IReadOnlyDictionary<PortName, string> Texts,
-    ExecutionRestorePayload? RestoreData = null,
-    ExecutionId? ContinuedFrom = null,
-    ExecutionContractRecord? Contract = null);
-
-/// <summary>一次执行的本轮契约状态。</summary>
-public sealed record ExecutionContractRecord(
-    IReadOnlyDictionary<PortName, PortValue>? Ports = null,
-    string? CannotCompleteReason = null);
+namespace Kuroe.Flow.Graph.Records;
 
 /// <summary>一次执行进入某个输入端口的取值与出处。</summary>
 public sealed record InputValueRecord(
