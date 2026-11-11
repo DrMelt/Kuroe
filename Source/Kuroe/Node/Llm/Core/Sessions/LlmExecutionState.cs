@@ -27,7 +27,7 @@ internal sealed record LlmContentState(
     string? Arguments = null,
     string? Result = null);
 
-/// <summary>会话恢复数据的编解码。工具参数保存为 JSON 文本，恢复为普通值供工具绑定使用。</summary>
+/// <summary>会话恢复数据的编解码。工具参数保存为 JSON 文本，恢复为与会话实时参数相同的 JSON 值。</summary>
 internal static class LlmExecutionStateCodec
 {
     /// <summary>当前恢复数据的格式名。</summary>
@@ -185,7 +185,7 @@ internal static class LlmExecutionStateCodec
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    /// <summary>工具参数从 JSON 文本恢复为普通值。</summary>
+    /// <summary>工具参数从 JSON 文本恢复为 JSON 值，保持与模型客户端实时参数的表示一致。</summary>
     private static Dictionary<string, object?>? DecodeArguments(string? arguments)
     {
         if (string.IsNullOrEmpty(arguments))
@@ -196,7 +196,8 @@ internal static class LlmExecutionStateCodec
         using JsonDocument document = JsonDocument.Parse(arguments);
 
         return document.RootElement.ValueKind == JsonValueKind.Object
-            ? document.RootElement.EnumerateObject().ToDictionary(pair => pair.Name, pair => ToValue(pair.Value))
+            ? document.RootElement.EnumerateObject()
+                .ToDictionary(pair => pair.Name, pair => (object?)pair.Value.Clone())
             : null;
     }
 
@@ -211,28 +212,6 @@ internal static class LlmExecutionStateCodec
 
         writer.WriteEndObject();
     }
-
-    private static object ToNumber(JsonElement element)
-    {
-        if (element.TryGetInt32(out int count))
-        {
-            return count;
-        }
-
-        return element.TryGetInt64(out long integer) ? integer : element.GetDouble();
-    }
-
-    private static object? ToValue(JsonElement element) => element.ValueKind switch
-    {
-        JsonValueKind.String => element.GetString(),
-        JsonValueKind.Number => ToNumber(element),
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        JsonValueKind.Null => null,
-        JsonValueKind.Object => element.EnumerateObject().ToDictionary(pair => pair.Name, pair => ToValue(pair.Value)),
-        JsonValueKind.Array => element.EnumerateArray().Select(ToValue).ToList(),
-        _ => element.Clone(),
-    };
 }
 
 /// <summary>会话恢复数据的 JSON 绑定。</summary>

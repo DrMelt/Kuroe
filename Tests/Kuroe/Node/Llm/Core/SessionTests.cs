@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -231,6 +232,30 @@ public sealed class SessionTests
 
         Assert.Contains(contents, content => content.Kind == "call" && content.Name == "GetLocalTime");
         Assert.Contains(contents, content => content.Kind == "result" && content.Result == "十二点");
+    }
+
+    [Fact]
+    public void A_restore_data_keeps_tool_arguments_as_json_values()
+    {
+        const string arguments = "{\"pattern\":\"Parameters\",\"paths\":[\"Tests\"],\"nested\":{\"a\":true}}";
+        LlmMessageState message = new(
+            "assistant",
+            [new LlmContentState("call", CallId: "call-1", Name: "file_read_SearchText", Arguments: arguments)]);
+
+        ChatMessage restored = LlmExecutionStateCodec.ToMessage(message);
+        FunctionCallContent call = Assert.IsType<FunctionCallContent>(Assert.Single(restored.Contents));
+        IDictionary<string, object?> decoded = Assert.IsType<IDictionary<string, object?>>(call.Arguments, exactMatch: false);
+
+        Assert.All(decoded.Values, value => Assert.IsType<JsonElement>(value));
+        Assert.Equal(JsonValueKind.Array, Assert.IsType<JsonElement>(decoded["paths"]).ValueKind);
+        Assert.Equal(JsonValueKind.Object, Assert.IsType<JsonElement>(decoded["nested"]).ValueKind);
+
+        LlmContentState encoded = Assert.Single(LlmExecutionStateCodec.ToState(restored).Contents);
+        string reencoded = Assert.IsType<string>(encoded.Arguments);
+
+        using JsonDocument expected = JsonDocument.Parse(arguments);
+        using JsonDocument actual = JsonDocument.Parse(reencoded);
+        Assert.True(JsonElement.DeepEquals(expected.RootElement, actual.RootElement));
     }
 
     [Fact]
