@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Tasks.Shared.Tests;
 
 /// <summary>任务状态的判定与展示名。</summary>
 public sealed class TaskStatesTests

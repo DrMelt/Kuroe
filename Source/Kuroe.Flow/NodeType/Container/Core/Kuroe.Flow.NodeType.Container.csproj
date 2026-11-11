@@ -13,4 +13,8 @@
         <ProjectReference Include="..\..\..\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
     </ItemGroup>
 
+<ItemGroup>
+        <ProjectReference Include="..\..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

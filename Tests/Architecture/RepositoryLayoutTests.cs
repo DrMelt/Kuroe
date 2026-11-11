@@ -108,10 +108,30 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Tasks_shared_project_stays_free_of_graph_references()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Tasks",
+            "Shared",
+            "Kuroe.Flow.Tasks.Shared.csproj");
+        IReadOnlyList<string> references = ProjectReferences(project);
+
+        Assert.DoesNotContain(references, reference =>
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Shared")));
+        Assert.DoesNotContain(references, reference =>
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Core")));
+        Assert.DoesNotContain(references, reference =>
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Execution")));
+    }
+
+    [Fact]
     public void Persistence_projects_reference_only_shared_boundaries()
     {
         string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
         string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+        string taskContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
         {
@@ -120,7 +140,9 @@ public sealed class RepositoryLayoutTests
 
             Assert.All(references, reference =>
                 Assert.True(
-                    IsPersistenceBoundary(reference, persistence) || IsUnder(reference, flowContracts),
+                    IsPersistenceBoundary(reference, persistence)
+                        || IsUnder(reference, flowContracts)
+                        || IsUnder(reference, taskContracts),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }

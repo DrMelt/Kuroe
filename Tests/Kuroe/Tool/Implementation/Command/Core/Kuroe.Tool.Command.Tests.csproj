@@ -18,4 +18,8 @@
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe\Process\Core\Kuroe.Process.csproj" />
     </ItemGroup>
 
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

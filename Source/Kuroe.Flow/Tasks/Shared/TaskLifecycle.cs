@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>任务的控制状态。对外展示的任务状态由控制状态、执行与节点状态汇总得出。</summary>
 public enum TaskLifecycle

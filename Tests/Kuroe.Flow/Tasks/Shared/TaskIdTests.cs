@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Tasks.Shared.Tests;
 
 /// <summary>任务键的生成、显示与引用匹配。</summary>
 public sealed class TaskIdTests

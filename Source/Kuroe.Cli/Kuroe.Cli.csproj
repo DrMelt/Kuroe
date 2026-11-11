@@ -23,4 +23,8 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Cli.Tests" />
     </ItemGroup>
+<ItemGroup>
+        <ProjectReference Include="..\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

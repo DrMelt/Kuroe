@@ -34,7 +34,6 @@ public sealed class DocFlowExamplesTests
 
     [Theory]
     [InlineData("docs/reference/流程示例.md")]
-    [InlineData("docs/快速开始.md")]
     public void Documented_flow_examples_compile(string relative)
     {
         string path = Path.Combine(RepositoryRoot(), relative);

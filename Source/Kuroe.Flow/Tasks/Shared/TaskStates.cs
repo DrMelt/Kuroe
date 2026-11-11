@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>任务状态的判定与展示名。</summary>
 public static class TaskStates

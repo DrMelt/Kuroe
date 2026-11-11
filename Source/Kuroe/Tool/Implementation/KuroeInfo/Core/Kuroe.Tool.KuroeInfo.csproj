@@ -15,4 +15,8 @@
         <ProjectReference Include="..\..\..\Json\Kuroe.Tool.Json.csproj" />
     </ItemGroup>
 
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+    </ItemGroup>
+
 </Project>
