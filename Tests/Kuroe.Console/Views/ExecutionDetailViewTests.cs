@@ -32,13 +32,26 @@ public sealed class ExecutionDetailViewTests
                 OutputPorts =
                 [
                     new Port(new PortName("结论"), PortTypes.Text, "是否通过", mode: PortMode.Trigger),
-                    new Port(new PortName("信号"), PortTypes.Signal, mode: PortMode.Trigger),
+                    new Port(new PortName("信号"), PortTypes.Signal, "放行信号", mode: PortMode.Trigger),
+                    new Port(new PortName("报告"), PortTypes.Text, "返工问题清单"),
                 ],
             },
         });
 
-        Assert.Contains("契约端口 2 个", output.Output);
-        Assert.Contains("结论·触发：是否通过、信号·Signal·触发", output.Output);
+        Assert.Contains("契约端口 3 个", output.Output);
+        Assert.Contains("类型", output.Output);
+        Assert.Contains("模式", output.Output);
+        Assert.Contains("说明", output.Output);
+        Assert.Contains("结论", output.Output);
+        Assert.Contains("Text", output.Output);
+        Assert.Contains("Signal", output.Output);
+        Assert.Contains("Trigger", output.Output);
+        Assert.Contains("是否通过", output.Output);
+        Assert.Contains("信号", output.Output);
+        Assert.Contains("报告", output.Output);
+        Assert.Contains("Plain", output.Output);
+        Assert.Contains("返工问题清单", output.Output);
+        Assert.DoesNotContain("结论·触发：是否通过", output.Output);
     }
 
     [Fact]

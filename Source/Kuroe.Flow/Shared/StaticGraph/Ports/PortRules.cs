@@ -39,9 +39,6 @@ public static class PortRules
     public static IReadOnlyList<Port> RequiredFromSubmittable(IReadOnlyList<Port> ports) =>
         [.. ports.Where(port => port.Mode == PortMode.Constant || RequiresSubmission(port.Type))];
 
-    /// <summary>端口声明的清单，按声明序，写端口展示名，非 Text 标出类型，常量与触发标出模式，有说明时附后。</summary>
-    public static string List(IEnumerable<Port> ports) => string.Join('、', ports.Select(port => port.Label()));
-
     /// <summary>端口的原始名清单，按声明序，用于模型侧提示。</summary>
     public static string Names(IEnumerable<Port> ports) => string.Join('、', ports.Select(port => port.Name.Value));
 

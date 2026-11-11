@@ -60,7 +60,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                 $"契约端口 {ports.Count} 个",
                 ports.Count == 0
                     ? new Text("本次执行没有需要交回的端口。", Styles.Hint)
-                    : new Text(PortRules.List(ports))));
+                    : PortTable(ports)));
         }
 
         _terminal.NewLine();
@@ -92,6 +92,22 @@ internal sealed class ExecutionDetailView(Terminal terminal)
                     new Text(value.Port.Value, Styles.Key),
                     content);
             }
+        }
+
+        return table;
+    }
+
+    /// <summary>契约端口按端口、类型、模式与说明分列，说明列换行。</summary>
+    private static Table PortTable(IReadOnlyList<Port> ports)
+    {
+        Table table = Blocks.Table(("端口", false), ("类型", false), ("模式", false), ("说明", true));
+        foreach (Port port in ports)
+        {
+            table.AddRow(
+                new Text(port.Name.Value, Styles.Key),
+                new Text(port.Type.Name, Styles.Hint),
+                new Text(port.Mode.ToString(), Styles.Hint),
+                new Text(port.Description ?? string.Empty, Styles.Hint));
         }
 
         return table;
