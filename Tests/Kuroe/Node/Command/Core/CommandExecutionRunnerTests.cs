@@ -1,6 +1,6 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Process;
 using Xunit;
 
@@ -20,7 +20,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.False(result.IsError);
@@ -36,7 +36,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.False(result.IsError);
@@ -51,7 +51,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -67,7 +67,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.False(result.IsError);
@@ -82,7 +82,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -97,7 +97,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -111,7 +111,7 @@ public sealed class CommandExecutionRunnerTests
         CommandParameters parameters = Parameters();
         CommandExecutionRunner runner = new(parameters, process);
 
-        await runner.ExecuteAsync(Input(parameters, process), CancellationToken.None);
+        await runner.ExecuteAsync(Input(), CancellationToken.None);
 
         Assert.Equal("dotnet", process.Program);
         Assert.Equal(["--version"], process.Arguments);
@@ -134,7 +134,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process,
+            Input(
                 ("任务路径", Root),
                 ("仓库地址", @"D:\outside\repo.git"),
                 ("分支名", "feature/x")),
@@ -152,7 +152,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -168,7 +168,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", Path.Combine(Root, "sub"))),
+            Input(("任务路径", Path.Combine(Root, "sub"))),
             CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
@@ -182,7 +182,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", Root)),
+            Input(("任务路径", Root)),
             CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
@@ -196,7 +196,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", Root)),
+            Input(("任务路径", Root)),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -212,7 +212,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", "sub")),
+            Input(("任务路径", "sub")),
             CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub"), process.WorkingDirectory);
@@ -226,7 +226,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", "sub")),
+            Input(("任务路径", "sub")),
             CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "sub", "src"), process.WorkingDirectory);
@@ -246,7 +246,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", "task"), ("子目录", "src")),
+            Input(("任务路径", "task"), ("子目录", "src")),
             CancellationToken.None);
 
         Assert.Equal(Path.Combine(Root, "task", "src"), process.WorkingDirectory);
@@ -260,7 +260,7 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process, ("任务路径", Path.GetFullPath("..", Root))),
+            Input(("任务路径", Path.GetFullPath("..", Root))),
             CancellationToken.None);
 
         Assert.True(result.IsError);
@@ -276,32 +276,31 @@ public sealed class CommandExecutionRunnerTests
         CommandExecutionRunner runner = new(parameters, process);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
-            Input(parameters, process),
+            Input(),
             CancellationToken.None);
 
         Assert.False(result.IsError);
         Assert.Equal("abc…输出已截断", result.Value.Content);
     }
 
-    private static ExecutionInput Input(
-        CommandParameters parameters,
-        FakeProcessRunner process,
+    private static ExecutionRequest Input(
         params (string Port, string Text)[] texts)
     {
-        Dictionary<PortName, string> values = new() { [new PortName("任务路径")] = Root };
+        Dictionary<ExecutionPortName, string> values = new() { [new ExecutionPortName("任务路径")] = Root };
         foreach ((string port, string text) in texts)
         {
-            values[new PortName(port)] = text;
+            values[new ExecutionPortName(port)] = text;
         }
 
-        return new ExecutionInput
-        {
-            Task = new TaskId(1),
-            Node = TargetPath,
-            Type = CommandNodeTypes.Create(parameters, process),
-            ExecutionCount = 1,
-            Texts = values,
-        };
+        return new ExecutionRequest(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId(TargetPath.Value),
+            CommandNodeTypes.Name.Value,
+            1,
+            [],
+            [],
+            values,
+            []);
     }
 
     private static CommandParameters Parameters(

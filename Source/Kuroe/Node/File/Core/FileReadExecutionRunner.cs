@@ -1,25 +1,23 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Files.Shared;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件读取节点的一次执行：按路径变量解析路径并读取文件，内容作为产出。</summary>
 internal sealed class FileReadExecutionRunner(
-    ExecutableNode node,
     FileParameters parameters,
     IWorkspaceFiles files)
-    : FileExecutionRunner(node, parameters, files)
+    : FileExecutionRunner(parameters, files)
 {
     /// <inheritdoc/>
     public override Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionInput input,
+        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (ResolveTarget(input, out string fullPath) is { } failure)
+        if (ResolveTarget(request, out string fullPath) is { } failure)
         {
             return Task.FromResult(Failure(failure));
         }

@@ -37,6 +37,9 @@ public sealed record ExecutionInput : IPortTexts
     /// <summary>节点声明的输出端口，未声明时为空。</summary>
     public IReadOnlyList<Port> OutputPorts { get; init; } = [];
 
+    /// <summary>节点声明的输入端口，未声明时为空。</summary>
+    public IReadOnlyList<InputPort> InputPorts { get; init; } = [];
+
     /// <summary>本轮需交回的命名端口：动态 Text 与 Signal 端口，以及全部运行期常量端口，未声明时为空。</summary>
     public IReadOnlyList<Port> RequiredPorts => PortRules.RequiredFromSubmittable(OutputPorts);
 }

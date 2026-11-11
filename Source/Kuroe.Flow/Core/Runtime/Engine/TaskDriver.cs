@@ -579,10 +579,12 @@ internal sealed class TaskDriver(
     {
         try
         {
-            IExecutionRunner runner = restore is null
-                ? runners.Create(node.Executable, execution.Id)
-                : restorers?.CreateRestored(node.Executable, execution.Id, restore)
-                    ?? throw new InvalidOperationException("任务域没有配置恢复能力。");
+            var runner = restore is null
+                ? runners.Create(node.Executable, execution.Target, execution.Id)
+                : ExecutionRunnerAdapter.Adapt(
+                    restore.Input,
+                    restorers?.CreateRestored(node.Executable, execution.Id, restore)
+                        ?? throw new InvalidOperationException("任务域没有配置恢复能力。"));
             await dispatcher.DispatchAsync(execution, runner, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)

@@ -1,6 +1,6 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -24,7 +24,7 @@ public sealed class FileExecutionRunnerTests
     {
         _files.AddFile(Path.Combine(_root, "in.txt"), "文件内容");
         ExecutableNode node = ReadNode("in.txt");
-        FileReadExecutionRunner runner = new(node, Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars), _files);
+        FileReadExecutionRunner runner = new(Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars), _files);
 
         ErrorOr<ExecutionOutput> result = await runner.ExecuteAsync(
             Input(node, ("任务路径", _root)),
@@ -42,7 +42,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("in.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -58,7 +57,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("missing.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -76,7 +74,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("in.txt", maxChars: 3);
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("in.txt", 3),
                 _files)
             .ExecuteAsync(
@@ -94,7 +91,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("in.txt", maxChars: 0);
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("in.txt", 0),
                 _files)
             .ExecuteAsync(
@@ -110,7 +106,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("../escape.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("../escape.txt", FileReadNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -127,7 +122,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = ReadNode("in.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileReadExecutionRunner(
-                node,
                 Parameters("in.txt", FileReadNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -146,7 +140,6 @@ public sealed class FileExecutionRunnerTests
         await cancellation.CancelAsync();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => new FileReadExecutionRunner(
-                node,
                 Parameters("missing.txt", FileReadNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -160,7 +153,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = WriteNode("out/nested/result.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                node,
                 Parameters("out/nested/result.txt", FileWriteNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -178,7 +170,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = WriteNode("out.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                node,
                 Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -195,7 +186,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = WriteNode("out.txt", maxChars: 100);
 
         ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                node,
                 Parameters("out.txt", 100),
                 _files)
             .ExecuteAsync(
@@ -214,7 +204,6 @@ public sealed class FileExecutionRunnerTests
         ExecutableNode node = WriteNode("out.txt");
 
         ErrorOr<ExecutionOutput> result = await new FileWriteExecutionRunner(
-                node,
                 Parameters("out.txt", FileWriteNodeTypes.DefaultMaxChars),
                 _files)
             .ExecuteAsync(
@@ -225,16 +214,25 @@ public sealed class FileExecutionRunnerTests
         Assert.Equal(content, _files.ReadText(Path.Combine(_root, "out.txt")));
     }
 
-    private static ExecutionInput Input(
+    private static ExecutionRequest Input(
         ExecutableNode node,
-        params (string Port, string Text)[] texts) => new()
-        {
-            Task = new TaskId(1),
-            Node = node.Path,
-            Type = node.Type,
-            ExecutionCount = 1,
-            Texts = texts.ToDictionary(item => new PortName(item.Port), item => item.Text),
-        };
+        params (string Port, string Text)[] texts) =>
+        new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId(node.Path.Value),
+            node.Type.Kind.Value,
+            1,
+            [
+                .. node.Inputs.Select(port => new ExecutionInputPort(
+                    new ExecutionPortName(port.Name.Value),
+                    port.Type.Semantics == PortSemantics.Signal ? ExecutionPortKind.Signal : ExecutionPortKind.Text,
+                    port.Role == InputRole.Control ? ExecutionPortRole.Control : ExecutionPortRole.Content,
+                    port.Role == InputRole.Content,
+                    port.Default)),
+            ],
+            [],
+            texts.ToDictionary(item => new ExecutionPortName(item.Port), item => item.Text),
+            []);
 
     private ExecutableNode ReadNode(
         string relative,

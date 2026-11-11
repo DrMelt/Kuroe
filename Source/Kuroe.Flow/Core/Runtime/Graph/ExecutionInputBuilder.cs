@@ -104,6 +104,7 @@ internal static class ExecutionInputBuilder
             Inputs = values,
             Texts = texts,
             OutputPorts = node.Executable.SubmittablePorts,
+            InputPorts = node.Executable.Inputs,
         };
     }
 

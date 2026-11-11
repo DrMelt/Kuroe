@@ -4,6 +4,12 @@ using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
+using IExecutionRestoreDataSource = Kuroe.Flow.Execution.IExecutionRestoreDataSource;
+using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
+using ExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
+using ExecutionUsageSnapshot = Kuroe.Flow.Execution.ExecutionUsageSnapshot;
+using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
+using TokenUsageSnapshot = Kuroe.Flow.Execution.TokenUsageSnapshot;
 
 namespace Kuroe.Flow.Runtime.Tests;
 
@@ -26,23 +32,23 @@ public sealed class ExecutionTests
     public void Successful_settle_keeps_restore_data()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestRestoreReader reader = new() { RestoreData = new ExecutionRestorePayload("test", "data") };
+        TestRestoreReader reader = new() { RestoreData = new ExecutionRestoreState("test", "data") };
 
         execution.AttachRestoreDataReader(reader);
         execution.MarkRunning();
-        execution.MarkSucceeded(ExecutionOutput.Ports);
+        execution.MarkSucceeded(NeutralExecutionOutput.FromPorts([]));
         execution.SettleRestoreData(reader);
 
         ExecutionSnapshot snapshot = execution.Snapshot();
         Assert.True(snapshot.HasRestoreData);
-        Assert.Equal(reader.RestoreData, execution.RestoreData);
+        Assert.Equal(new ExecutionRestorePayload("test", "data"), execution.RestoreData);
     }
 
     [Fact]
     public void Settling_without_data_clears_restore_data()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestRestoreReader reader = new() { RestoreData = new ExecutionRestorePayload("test", "data") };
+        TestRestoreReader reader = new() { RestoreData = new ExecutionRestoreState("test", "data") };
 
         execution.AttachRestoreDataReader(reader);
         reader.RestoreData = null;
@@ -70,27 +76,27 @@ public sealed class ExecutionTests
     public void Attached_usage_reader_appears_in_snapshot()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
+        TestUsageReader reader = new() { Usage = new ExecutionUsageSnapshot(1, 0, new TokenUsageSnapshot(10, 2, 12, null, null), null) };
 
         execution.AttachUsageReader(reader);
 
-        Assert.Equal(reader.Usage, execution.Snapshot().Usage);
+        Assert.Equal(new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)), execution.Snapshot().Usage);
 
-        reader.Usage = new ExecutionUsage(2, 0, new TokenUsage(30, 4, 34, null, null));
+        reader.Usage = new ExecutionUsageSnapshot(2, 0, new TokenUsageSnapshot(30, 4, 34, null, null), null);
 
-        Assert.Equal(reader.Usage, execution.Snapshot().Usage);
+        Assert.Equal(new ExecutionUsage(2, 0, new TokenUsage(30, 4, 34, null, null)), execution.Snapshot().Usage);
     }
 
     [Fact]
     public void Settled_usage_stops_following_the_reader()
     {
         Execution execution = new(new ExecutionId(1), Input());
-        TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
+        TestUsageReader reader = new() { Usage = new ExecutionUsageSnapshot(1, 0, new TokenUsageSnapshot(10, 2, 12, null, null), null) };
         ExecutionUsage settled = new(2, 0, new TokenUsage(30, 4, 34, null, null));
 
         execution.AttachUsageReader(reader);
-        execution.SettleUsage(settled);
-        reader.Usage = new ExecutionUsage(3, 0, new TokenUsage(50, 6, 56, null, null));
+        execution.SettleUsage(new ExecutionUsageSnapshot(2, 0, new TokenUsageSnapshot(30, 4, 34, null, null), null));
+        reader.Usage = new ExecutionUsageSnapshot(3, 0, new TokenUsageSnapshot(50, 6, 56, null, null), null);
 
         Assert.Equal(settled, execution.Snapshot().Usage);
     }
@@ -152,7 +158,7 @@ public sealed class ExecutionTests
         execution.ContentEmitted += _ => contents++;
         execution.EntryEmitted += _ => entries++;
         execution.MarkRunning();
-        execution.MarkSucceeded(ExecutionOutput.Ports);
+        execution.MarkSucceeded(NeutralExecutionOutput.FromPorts([]));
 
         journal.EmitContent(ProcessContentKind.Reply, "后");
         journal.EmitContent(ProcessContentKind.Reasoning, "后想");
@@ -198,7 +204,7 @@ public sealed class ExecutionTests
         TestJournal journal = new([]);
         execution.AttachJournal(journal);
         execution.MarkRunning();
-        execution.MarkSucceeded(ExecutionOutput.Ports);
+        execution.MarkSucceeded(NeutralExecutionOutput.FromPorts([]));
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
         execution.ContentEmitted += contents.Add;
@@ -257,14 +263,14 @@ public sealed class ExecutionTests
         Type = TestNodeTypes.Executable,
     };
 
-    private sealed class TestUsageReader : IExecutionUsageReader
+    private sealed class TestUsageReader : IExecutionUsageSource
     {
-        public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+        public ExecutionUsageSnapshot Usage { get; set; } = ExecutionUsageSnapshot.None;
     }
 
-    private sealed class TestRestoreReader : IExecutionRestoreDataReader
+    private sealed class TestRestoreReader : IExecutionRestoreDataSource
     {
-        public ExecutionRestorePayload? RestoreData { get; set; }
+        public ExecutionRestoreState? RestoreData { get; set; }
 
         public event Action? RestoreDataChanged
         {

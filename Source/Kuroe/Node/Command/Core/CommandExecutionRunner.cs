@@ -1,6 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Process;
 
 namespace Kuroe.Node.Command;
@@ -15,12 +14,12 @@ internal sealed class CommandExecutionRunner(CommandParameters parameters, IProc
 
     /// <summary>执行一次命令，成功时给出合并输出。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionInput input,
+        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
         ErrorOr<CommandVariableValues> variables = CommandVariables.Resolve(
             parameters.Variables,
-            port => input.Text(new PortName(port)),
+            port => request.Texts.GetValueOrDefault(new ExecutionPortName(port)),
             parameters.RootDirectory);
         if (variables.IsError)
         {

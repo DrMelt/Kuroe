@@ -1,16 +1,15 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Process;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点类型：派发执行，按命令变量展开执行目录与参数并执行一次命令，把合并输出按内容产出发布到文本端口。</summary>
 public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunner process)
-    : INodeType, INodeTypeValidation, INodeExecutionRunnerFactory
+    : INodeType, INodeTypeValidation, IExecutionRunnerFactory, IExecutionParameterProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public CommandParameters? Parameters { get; } = parameters;
@@ -47,7 +46,12 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
     }
 
     /// <summary>为一次执行建立命令运行器。</summary>
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
-        new CommandExecutionRunner(Parameters
-            ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立执行器。"), Process);
+    public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
+        target.Parameters is CommandParameters declared
+            ? new CommandExecutionRunner(declared, Process)
+            : throw new InvalidOperationException("命令执行节点的参数类型不匹配。");
+
+    /// <summary>按本次执行建立命令参数。</summary>
+    public IExecutionParameters Create(ExecutionParameterContext context) =>
+        Parameters ?? throw new InvalidOperationException("命令执行节点缺少 Program 声明，无法建立执行器。");
 }

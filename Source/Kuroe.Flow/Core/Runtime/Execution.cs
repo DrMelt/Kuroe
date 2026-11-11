@@ -21,6 +21,10 @@ using ExecutionPortRole = Kuroe.Flow.Execution.ExecutionPortRole;
 using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using ExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
 using ExecutionUsageSnapshot = Kuroe.Flow.Execution.ExecutionUsageSnapshot;
+using IExecutionRestoreDataSource = Kuroe.Flow.Execution.IExecutionRestoreDataSource;
+using IExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
+using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
+using ExecutionParameterContext = Kuroe.Flow.Execution.ExecutionParameterContext;
 using TokenUsageSnapshot = Kuroe.Flow.Execution.TokenUsageSnapshot;
 
 namespace Kuroe.Flow.Runtime;
@@ -29,9 +33,9 @@ namespace Kuroe.Flow.Runtime;
 public sealed class Execution : IExecution
 {
     private readonly ExecutionUnit _unit;
-    private IExecutionUsageReader? _usageReader;
+    private IExecutionUsageSource? _usageReader;
     private ExecutionUsage _usage = ExecutionUsage.None;
-    private IExecutionRestoreDataReader? _restoreReader;
+    private IExecutionRestoreDataSource? _restoreReader;
 
     /// <summary>快照可见的状态或过程变化。</summary>
     internal event Action? Changed
@@ -49,15 +53,19 @@ public sealed class Execution : IExecution
     {
         Input = input;
         ControlVersion = controlVersion;
-        _unit = new ExecutionUnit(new NeutralExecutionId(id.Value), Request(input));
+        Request = BuildRequest(input);
+        Target = BuildTarget(input, Request);
+        _unit = new ExecutionUnit(new NeutralExecutionId(id.Value), Request);
     }
 
     private Execution(ExecutionRecord record, ExecutionInput input)
     {
         Input = input;
+        Request = BuildRequest(input);
+        Target = BuildTarget(input, Request);
         _unit = ExecutionUnit.Restore(
             new NeutralExecutionId(record.Id.Value),
-            Request(input),
+            Request,
             record.CreatedAt,
             record.State,
             record.Progress,
@@ -79,6 +87,12 @@ public sealed class Execution : IExecution
 
     /// <summary>本次执行的输入。</summary>
     public ExecutionInput Input { get; }
+
+    /// <summary>本次执行的中性请求。</summary>
+    internal ExecutionRequest Request { get; }
+
+    /// <summary>本次执行的图侧目标。</summary>
+    internal IExecutionTarget Target { get; }
 
     /// <summary>执行创建时刻。</summary>
     public DateTimeOffset CreatedAt => _unit.CreatedAt;
@@ -121,12 +135,12 @@ public sealed class Execution : IExecution
     internal void AttachJournal(IProcessJournal journal) => _unit.AttachJournal(journal);
 
     /// <summary>附加本次执行的用量来源，快照读取其当前累计。</summary>
-    internal void AttachUsageReader(IExecutionUsageReader reader) => _usageReader = reader;
+    internal void AttachUsageReader(IExecutionUsageSource reader) => _usageReader = reader;
 
     /// <summary>记下本次执行的最终用量并解除用量来源。</summary>
-    internal void SettleUsage(ExecutionUsage usage)
+    internal void SettleUsage(ExecutionUsageSnapshot usage)
     {
-        _usage = usage;
+        _usage = Usage(usage);
         _usageReader = null;
     }
 
@@ -162,27 +176,33 @@ public sealed class Execution : IExecution
     internal void ReportCannotComplete(string reason) => _unit.ReportCannotComplete(reason);
 
     /// <summary>附加运行器的恢复数据读取面。</summary>
-    internal void AttachRestoreDataReader(IExecutionRestoreDataReader reader)
+    internal void AttachRestoreDataReader(IExecutionRestoreDataSource reader)
     {
         _restoreReader = reader;
-        _unit.SetRestoreData(ToState(reader.RestoreData));
+        _unit.SetRestoreData(reader.RestoreData);
         reader.RestoreDataChanged += OnRestoreDataChanged;
     }
 
     /// <summary>记下运行器的最终恢复数据并解除读取面。</summary>
-    internal void SettleRestoreData(IExecutionRestoreDataReader? reader)
+    internal void SettleRestoreData(IExecutionRestoreDataSource? reader)
     {
         reader?.RestoreDataChanged -= OnRestoreDataChanged;
         _restoreReader = null;
-        _unit.SetRestoreData(ToState(reader?.RestoreData));
+        _unit.SetRestoreData(reader?.RestoreData);
     }
 
-    private void OnRestoreDataChanged() => _unit.SetRestoreData(ToState(_restoreReader?.RestoreData));
+    private void OnRestoreDataChanged() => _unit.SetRestoreData(_restoreReader?.RestoreData);
 
     /// <summary>本次执行的产出。</summary>
     internal ExecutionOutput? Output => _unit.Output is { } output ? ToOutput(output) : null;
 
-    internal void MarkSucceeded(ExecutionOutput output) => _unit.MarkSucceeded(ToNeutral(output));
+    internal void MarkSucceeded(NeutralExecutionOutput output)
+    {
+        NeutralExecutionOutput settled = output.Kind == NeutralExecutionOutputKind.Ports && output.Values.Count == 0
+            ? NeutralExecutionOutput.FromPorts(_unit.Contract.Outputs?.Values.ToArray() ?? [])
+            : output;
+        _unit.MarkSucceeded(settled);
+    }
 
     internal void MarkFailed(IEnumerable<Error> errors) => _unit.MarkFailed(errors);
 
@@ -199,7 +219,7 @@ public sealed class Execution : IExecution
     public ExecutionSnapshot Snapshot()
     {
         Kuroe.Flow.Execution.ExecutionUnitSnapshot unit = _unit.Snapshot();
-        ExecutionUsage usage = _usageReader?.Usage ?? _usage;
+        ExecutionUsage usage = _usageReader is { } reader ? Usage(reader.Usage) : _usage;
 
         return new ExecutionSnapshot(
             Id,
@@ -267,27 +287,25 @@ public sealed class Execution : IExecution
                             pair.Value.Fires)),
                     contract.CannotCompleteReason));
     }
-private static ExecutionRequest Request(ExecutionInput input) =>
+private static ExecutionRequest BuildRequest(ExecutionInput input) =>
         new(
             new ExecutionOwnerId(input.Task.Value),
             GraphRecordTargets.Format(input.Node),
             input.Type.Kind.Value,
             input.ExecutionCount,
             [
-                .. input.Inputs
-                    .Select(value => new ExecutionInputPort(
-                        new ExecutionPortName(value.Port.Value),
-                        ExecutionPortKind.Text,
-                        ExecutionPortRole.Content,
-                        false,
-                        null))
-                    .DistinctBy(port => port.Name),
+                .. input.InputPorts.Select(port => new ExecutionInputPort(
+                    new ExecutionPortName(port.Name.Value),
+                    KindOf(port.Type),
+                    RoleOf(port.Role),
+                    port.Role == InputRole.Content,
+                    port.Default)),
             ],
             [
                 .. input.Inputs.Select(value => new ExecutionInputValue(
                     new ExecutionPortName(value.Port.Value),
                     value.Text,
-                    GraphRecordSources.Write(value.Value.Origin))),
+                    SourceOf(value.Value.Origin))),
             ],
             input.Texts.ToDictionary(
                 pair => new ExecutionPortName(pair.Key.Value),
@@ -299,6 +317,34 @@ private static ExecutionRequest Request(ExecutionInput input) =>
                     input.RequiredPorts.Any(required => required.Name == port.Name),
                     port.Trigger)),
             ]);
+
+    private static IExecutionTarget BuildTarget(ExecutionInput input, ExecutionRequest request) =>
+        new GraphExecutionTarget(input, new ExecutionParameterContext(
+            request.Owner,
+            request.Target,
+            request.Kind,
+            request.Attempt,
+            request.InputPorts,
+            request.Inputs,
+            request.Texts,
+            request.OutputPorts,
+            input.Declaration?.Model));
+
+    private static ExecutionPortRole RoleOf(InputRole role) => role switch
+    {
+        InputRole.Configuration => ExecutionPortRole.Configuration,
+        InputRole.Control => ExecutionPortRole.Control,
+        _ => ExecutionPortRole.Content,
+    };
+
+    private static string? SourceOf(ContextSource source) => source switch
+    {
+        ExecutionSource execution => $"节点「{execution.Node}」的端口「{execution.Port}」产出",
+        ContainerPortSource container => $"节点「{container.Container}」的端口「{container.Port}」产出",
+        InputSource input => $"节点「{input.Node}」的输入",
+        DefaultSource value => $"节点「{value.Node}」的端口「{value.Port}」默认值",
+        _ => null,
+    };
 
     private static ExecutionPortKind KindOf(PortType type)
     {
@@ -355,25 +401,8 @@ private static ExecutionRequest Request(ExecutionInput input) =>
                 pair => new PortValue(pair.Value.Text, pair.Value.Fires)),
             contract.CannotCompleteReason);
 
-    private static ExecutionRestoreState? ToState(ExecutionRestorePayload? payload) =>
-        payload is null ? null : new ExecutionRestoreState(payload.Format, payload.Payload);
-
     private static ExecutionRestorePayload? ToRestorePayload(ExecutionRestoreState? state) =>
         state is null ? null : new ExecutionRestorePayload(state.Format, state.Payload);
-
-    private NeutralExecutionOutput ToNeutral(ExecutionOutput output)
-    {
-        if (output.Kind == ExecutionOutputKind.Content)
-        {
-            return NeutralExecutionOutput.FromContent(output.Content);
-        }
-
-        IReadOnlyList<ExecutionOutputValue> values = _unit.Contract.Outputs is { } outputs
-            ? [.. outputs.Values]
-            : [];
-
-        return NeutralExecutionOutput.FromPorts(values);
-    }
 
     private static ExecutionOutput ToOutput(NeutralExecutionOutput output) =>
         output.Kind == NeutralExecutionOutputKind.Content

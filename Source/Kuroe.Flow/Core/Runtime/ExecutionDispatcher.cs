@@ -1,5 +1,11 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using ExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
+using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
+using IExecutionRestoreDataSource = Kuroe.Flow.Execution.IExecutionRestoreDataSource;
+using IExecutionRunner = Kuroe.Flow.Execution.IExecutionRunner;
+using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
 
 namespace Kuroe.Flow.Runtime;
 
@@ -99,19 +105,19 @@ public sealed class ExecutionDispatcher
         try
         {
             execution.AttachJournal(runner.Journal);
-            if (runner is IExecutionUsageReader usageReader)
+            if (runner is IExecutionUsageSource usageReader)
             {
                 execution.AttachUsageReader(usageReader);
             }
 
-            if (runner is IExecutionRestoreDataReader restoreDataReader)
+            if (runner is IExecutionRestoreDataSource restoreDataReader)
             {
                 execution.AttachRestoreDataReader(restoreDataReader);
             }
 
             execution.MarkRunning();
             ErrorOr<ExecutionOutput> outcome = await runner.ExecuteAsync(
-                execution.Input,
+                execution.Request,
                 execution.CancellationToken);
             if (outcome.IsError)
             {
@@ -136,12 +142,12 @@ public sealed class ExecutionDispatcher
         }
         finally
         {
-            if (runner is IExecutionRestoreDataReader restoreDataReader)
+            if (runner is IExecutionRestoreDataSource restoreDataReader)
             {
                 execution.SettleRestoreData(restoreDataReader);
             }
 
-            if (runner is IExecutionUsageReader reader)
+            if (runner is IExecutionUsageSource reader)
             {
                 execution.SettleUsage(reader.Usage);
             }

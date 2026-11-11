@@ -1,22 +1,16 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.File;
 
 /// <summary>文件节点的一次执行：保存文件声明，路径解析与失败说明由具体节点复用。</summary>
 internal abstract class FileExecutionRunner(
-    ExecutableNode node,
     FileParameters parameters,
     IWorkspaceFiles files) : IExecutionRunner
 {
     private readonly ExecutionJournal _journal = new();
-
-    /// <summary>本次执行所属的执行节点定义。</summary>
-    protected ExecutableNode Node { get; } = node;
 
     /// <summary>本节点的类型专属声明。</summary>
     protected FileParameters Parameters { get; } = parameters;
@@ -29,17 +23,17 @@ internal abstract class FileExecutionRunner(
 
     /// <summary>执行一次文件读写，成功时给出内容。</summary>
     public abstract Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionInput input,
+        ExecutionRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>按路径变量解析文件路径，成功时给出工作区内的绝对路径。</summary>
-    protected string? ResolveTarget(ExecutionInput input, out string fullPath)
+    protected string? ResolveTarget(ExecutionRequest request, out string fullPath)
     {
         fullPath = string.Empty;
 
         ErrorOr<PathResolution> resolved = PathVariables.Resolve(
             Parameters.Variables,
-            port => input.Text(new PortName(port)),
+            port => request.Texts.GetValueOrDefault(new ExecutionPortName(port)),
             Parameters.RootDirectory);
         if (resolved.IsError)
         {
