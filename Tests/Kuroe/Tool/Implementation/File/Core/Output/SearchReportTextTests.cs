@@ -58,7 +58,7 @@ public sealed class SearchReportTextTests
 
     private static TextQuery Query(string pattern)
     {
-        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null, ignoreCase: false);
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null);
         Assert.False(query.IsError);
 
         return query.Value;

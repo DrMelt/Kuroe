@@ -156,7 +156,7 @@ public sealed class TextFileContentTests
     }
 
     [Fact]
-    public void Replace_honors_case_comparison()
+    public void Replace_is_case_sensitive_and_honors_inline_regex_case()
     {
         string file = Path.Combine(_root, "case.txt");
         _files.AddFile(file, "Needle");
@@ -164,7 +164,7 @@ public sealed class TextFileContentTests
         TextFileContent content = Read(file);
 
         Assert.Equal(0, content.Replace(Replacement("needle", "x")).Replacements);
-        Assert.Equal(1, content.Replace(Replacement("needle", "x", ignoreCase: true)).Replacements);
+        Assert.Equal(1, content.Replace(Replacement("(?i)needle", "x", regex: true)).Replacements);
     }
 
     [Fact]
@@ -190,6 +190,75 @@ public sealed class TextFileContentTests
 
         Assert.Equal(2, change.Replacements);
         Assert.Equal([1], change.Lines);
+    }
+
+    [Fact]
+    public void Replace_expands_regex_group_references()
+    {
+        string file = Path.Combine(_root, "regex.txt");
+        _files.AddFile(file, "abc123");
+
+        TextFileContent content = Read(file);
+        TextFileReplacement change = content.Replace(Replacement("([a-z]+)(\\d+)", "$2-$1", regex: true));
+
+        Assert.Equal("123-abc", change.Text);
+        Assert.Equal(1, change.Replacements);
+        Assert.Equal([1], change.Lines);
+    }
+
+    [Fact]
+    public void Replace_converts_newlines_in_expanded_match_text()
+    {
+        string file = Path.Combine(_root, "crlf-regex.txt");
+        _files.AddFile(file, "one a\r\nb two");
+
+        TextFileContent content = Read(file);
+        TextFileReplacement change = content.Replace(Replacement("a(\n)b", "X$1Y", regex: true));
+
+        Assert.Equal("one X\r\nY two", change.Text);
+        Assert.Equal(1, change.Replacements);
+        Assert.Equal([1], change.Lines);
+    }
+
+    [Fact]
+    public void Replace_inserts_on_a_zero_width_regex_match()
+    {
+        string file = Path.Combine(_root, "anchor.txt");
+        _files.AddFile(file, "ab");
+
+        TextFileContent content = Read(file);
+        TextFileReplacement change = content.Replace(Replacement("$", "X", regex: true));
+
+        Assert.Equal("abX", change.Text);
+        Assert.Equal(1, change.Replacements);
+        Assert.Equal([1], change.Lines);
+    }
+
+    [Fact]
+    public void Replace_inserts_at_both_dollar_positions_of_a_trailing_newline()
+    {
+        string file = Path.Combine(_root, "trailing.txt");
+        _files.AddFile(file, "a\r\n");
+
+        TextFileContent content = Read(file);
+        TextFileReplacement change = content.Replace(Replacement("$", "X", regex: true));
+
+        Assert.Equal("aX\r\nX", change.Text);
+        Assert.Equal(2, change.Replacements);
+        Assert.Equal([1, 2], change.Lines);
+    }
+
+    [Fact]
+    public void Replace_returns_non_overlapping_regex_replacements()
+    {
+        string file = Path.Combine(_root, "overlap-regex.txt");
+        _files.AddFile(file, "aaaa");
+
+        TextFileContent content = Read(file);
+        TextFileReplacement change = content.Replace(Replacement("aa", "b", regex: true));
+
+        Assert.Equal("bb", change.Text);
+        Assert.Equal(2, change.Replacements);
     }
 
     [Fact]
@@ -233,10 +302,13 @@ public sealed class TextFileContentTests
         return result.Value;
     }
 
-    /// <summary>按字面文本建立替换条件。</summary>
-    private static TextReplacement Replacement(string pattern, string replacement, bool ignoreCase = false)
+    /// <summary>按替换条件建立替换，regex 为真时按正则解释 pattern。</summary>
+    private static TextReplacement Replacement(
+        string pattern,
+        string replacement,
+        bool regex = false)
     {
-        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null, ignoreCase);
+        ErrorOr<TextQuery> query = TextQuery.Create(pattern, null, regex);
         Assert.False(query.IsError);
         ErrorOr<TextReplacement> result = TextReplacement.Create(query.Value, replacement);
         Assert.False(result.IsError);
