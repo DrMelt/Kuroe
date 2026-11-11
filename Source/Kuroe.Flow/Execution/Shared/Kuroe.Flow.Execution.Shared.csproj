@@ -8,4 +8,8 @@
         <PackageReference Include="ErrorOr" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

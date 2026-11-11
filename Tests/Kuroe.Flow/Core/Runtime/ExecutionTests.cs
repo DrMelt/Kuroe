@@ -5,7 +5,7 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime;
+namespace Kuroe.Flow.Runtime.Tests;
 
 /// <summary>执行的过程记录与过程事件：附加读取视图、播发、进度与收口后停止。</summary>
 public sealed class ExecutionTests

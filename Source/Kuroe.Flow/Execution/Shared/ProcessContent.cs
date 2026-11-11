@@ -1,4 +1,6 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks;
+
+namespace Kuroe.Flow.Execution;
 
 /// <summary>流式过程内容的种类。</summary>
 public enum ProcessContentKind

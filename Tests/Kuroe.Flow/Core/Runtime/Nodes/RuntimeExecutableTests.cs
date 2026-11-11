@@ -1,4 +1,5 @@
 using Kuroe.Flow.Runtime;
+using RuntimeExecution = Kuroe.Flow.Runtime.Execution;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -18,7 +19,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Published_false_trigger_silences_the_port()
     {
-        (RuntimeExecutable node, Execution execution) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution) = Node();
         execution.SubmitPorts(Values(new PortValue("内容", false)));
 
         Assert.True(node.Triggers(Conclusion));
@@ -31,7 +32,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Published_true_trigger_fires_the_port()
     {
-        (RuntimeExecutable node, Execution execution) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution) = Node();
         execution.SubmitPorts(Values(new PortValue("内容", true)));
         node.Publish(execution);
 
@@ -41,7 +42,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Missing_submission_is_reported_as_outstanding_ports()
     {
-        (RuntimeExecutable node, Execution execution) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution) = Node();
 
         Assert.Equal([Conclusion], node.OutstandingPorts(execution));
 
@@ -53,7 +54,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Invalidate_removes_the_published_trigger_value()
     {
-        (RuntimeExecutable node, Execution execution) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution) = Node();
         execution.SubmitPorts(Values(new PortValue("内容", false)));
         node.Publish(execution);
         Assert.False(node.Triggers(Conclusion));
@@ -63,7 +64,7 @@ public sealed class RuntimeExecutableTests
         Assert.True(node.Triggers(Conclusion));
     }
 
-    private static (RuntimeExecutable Node, Execution Execution) Node()
+    private static (RuntimeExecutable Node, RuntimeExecution Exec) Node()
     {
         ExecutableNode executable = new()
         {
@@ -74,7 +75,7 @@ public sealed class RuntimeExecutableTests
             Outputs = [new Port(Conclusion, PortTypes.Text, mode: PortMode.Trigger)],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
         };
-        Execution execution = new(new ExecutionId(1), new ExecutionInput
+        RuntimeExecution execution = new(new ExecutionId(1), new ExecutionInput
         {
             Task = new TaskId(1),
             Node = executable.Path,

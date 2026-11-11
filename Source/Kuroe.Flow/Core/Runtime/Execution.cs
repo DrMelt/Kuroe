@@ -4,33 +4,41 @@ using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Shared.StaticGraph.Ports;
+using ExecutionUnit = Kuroe.Flow.Execution.ExecutionUnit;
+using NeutralExecutionContract = Kuroe.Flow.Execution.ExecutionContract;
+using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
+using NeutralExecutionOutputKind = Kuroe.Flow.Execution.ExecutionOutputKind;
+using ExecutionInputPort = Kuroe.Flow.Execution.ExecutionInputPort;
+using ExecutionInputValue = Kuroe.Flow.Execution.ExecutionInputValue;
+using ExecutionOutputPort = Kuroe.Flow.Execution.ExecutionOutputPort;
+using ExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
+using ExecutionOwnerId = Kuroe.Flow.Execution.ExecutionOwnerId;
+using ExecutionPortKind = Kuroe.Flow.Execution.ExecutionPortKind;
+using ExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
+using ExecutionPortRole = Kuroe.Flow.Execution.ExecutionPortRole;
+using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using ExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
+using ExecutionUsageSnapshot = Kuroe.Flow.Execution.ExecutionUsageSnapshot;
+using TokenUsageSnapshot = Kuroe.Flow.Execution.TokenUsageSnapshot;
 
 namespace Kuroe.Flow.Runtime;
 
-/// <summary>一次执行。状态由调度侧改动，过程记录来自附加的记录，宿主读快照与过程事件。</summary>
+/// <summary>一次执行。状态机由执行单元承担，这里装配图侧输入并转换执行单元的中性产出与契约。</summary>
 public sealed class Execution : IExecution
 {
-    private readonly Lock _gate = new();
-    private readonly CancellationTokenSource _cancellation = new();
-    private readonly ProcessBroadcast _process = new();
-    private IProcessJournal? _journal;
-    private ExecutionState _state = ExecutionState.Queued;
-    private string _progress = string.Empty;
-    private DateTimeOffset? _startedAt;
-    private DateTimeOffset? _finishedAt;
-    private readonly List<string> _failures = [];
-    private ExecutionOutput? _output;
-    private ExecutionUsage _usage = ExecutionUsage.None;
+    private readonly ExecutionUnit _unit;
     private IExecutionUsageReader? _usageReader;
-    private IExecutionRestoreDataReader? _restoreDataReader;
-    private ExecutionRestorePayload? _restoreData;
-    private ExecutionContract _contract = ExecutionContract.Empty;
-    private ExecutionId? _continuedFrom;
-    private string _interruptReason = "已中断。";
-    private bool _startedNotified;
+    private ExecutionUsage _usage = ExecutionUsage.None;
+    private IExecutionRestoreDataReader? _restoreReader;
 
-    /// <summary>快照可见的状态或过程变化，宿主据此重新读取。可能在执行锁外触发，处理者只做唤醒。</summary>
-    internal event Action? Changed;
+    /// <summary>快照可见的状态或过程变化。</summary>
+    internal event Action? Changed
+    {
+        add => _unit.Changed += value;
+        remove => _unit.Changed -= value;
+    }
 
     internal Execution(ExecutionId id, ExecutionInput input)
         : this(id, input, 0)
@@ -39,292 +47,125 @@ public sealed class Execution : IExecution
 
     internal Execution(ExecutionId id, ExecutionInput input, int controlVersion)
     {
-        Id = id;
         Input = input;
         ControlVersion = controlVersion;
-        CreatedAt = DateTimeOffset.UtcNow;
+        _unit = new ExecutionUnit(new NeutralExecutionId(id.Value), Request(input));
     }
 
-    private Execution(ExecutionId id, ExecutionInput input, DateTimeOffset createdAt)
+    private Execution(ExecutionRecord record, ExecutionInput input)
     {
-        Id = id;
         Input = input;
-        CreatedAt = createdAt;
+        _unit = ExecutionUnit.Restore(
+            new NeutralExecutionId(record.Id.Value),
+            Request(input),
+            record.CreatedAt,
+            record.State,
+            record.Progress,
+            record.StartedAt,
+            record.FinishedAt,
+            record.Failures,
+            FromRecord(record.Usage),
+            record.RestoreData is { } data ? new ExecutionRestoreState(data.Format, data.Payload) : null,
+            NeutralContract(record.Contract),
+            record.ContinuedFrom is { } continued ? new NeutralExecutionId(continued.Value) : null);
+        _usage = Usage(FromRecord(record.Usage));
     }
 
     /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
-    internal static Execution Restore(ExecutionRecord record, ExecutionInput input)
-    {
-        Execution execution = new(new ExecutionId(record.Id.Value), input, record.CreatedAt);
-        execution.RestoreFromRecord(record);
-
-        return execution;
-    }
-
-    /// <summary>恢复数据与历史，未收口的执行记为已中断。</summary>
-    private void RestoreFromRecord(ExecutionRecord record)
-    {
-        bool live = ((ExecutionState)record.State).IsLive();
-        _state = live ? ExecutionState.Interrupted : (ExecutionState)record.State;
-        _progress = record.Progress;
-        _startedAt = record.StartedAt;
-        _finishedAt = live ? DateTimeOffset.UtcNow : record.FinishedAt;
-        _failures.AddRange(record.Failures);
-        if (live)
-        {
-            _failures.Add("进程退出前未收口。");
-        }
-
-        _usage = new ExecutionUsage(
-            record.Usage.RequestCount,
-            record.Usage.RequestsWithoutUsage,
-            new TokenUsage(
-                record.Usage.Tokens.Input,
-                record.Usage.Tokens.Output,
-                record.Usage.Tokens.Total,
-                record.Usage.Tokens.CachedInput,
-                record.Usage.Tokens.Reasoning))
-        {
-            ContextTokens = record.Usage.ContextTokens,
-        };
-        _restoreData = record.RestoreData is { } data
-            ? new ExecutionRestorePayload(data.Format, data.Payload)
-            : null;
-        _contract = record.Contract is { } contract
-            ? new ExecutionContract(
-                contract.Outputs?.ToDictionary(
-                    pair => new PortName(pair.Key.Value),
-                    pair => new PortValue(pair.Value.Text, pair.Value.Fires)),
-                contract.CannotCompleteReason)
-            : ExecutionContract.Empty;
-        _continuedFrom = record.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null;
-        _cancellation.Dispose();
-    }
+    internal static Execution Restore(ExecutionRecord record, ExecutionInput input) => new(record, input);
 
     /// <summary>执行标识。</summary>
-    public ExecutionId Id { get; }
+    public ExecutionId Id => new(_unit.Id.Value);
 
     /// <summary>本次执行的输入。</summary>
     public ExecutionInput Input { get; }
 
     /// <summary>执行创建时刻。</summary>
-    public DateTimeOffset CreatedAt { get; }
+    public DateTimeOffset CreatedAt => _unit.CreatedAt;
 
     /// <summary>创建时的任务控制代次，用于收口时判断控制动作是否已经发生。</summary>
     internal int ControlVersion { get; }
 
     /// <summary>当前执行状态。</summary>
-    public ExecutionState State
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _state;
-            }
-        }
-    }
+    public ExecutionState State => (ExecutionState)_unit.State;
 
     /// <summary>还在排队或正在执行。</summary>
-    public bool IsLive => State.IsLive();
+    public bool IsLive => _unit.IsLive;
 
-    internal CancellationToken CancellationToken => _cancellation.Token;
+    internal CancellationToken CancellationToken => _unit.CancellationToken;
 
     /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
     public event ProcessContentHandler? ContentEmitted
     {
-        add => _process.Content += value;
-        remove => _process.Content -= value;
+        add => _unit.ContentEmitted += value;
+        remove => _unit.ContentEmitted -= value;
     }
 
     /// <summary>一条需要即时呈现的过程记录。</summary>
     public event JournalEntryHandler? EntryEmitted
     {
-        add => _process.Entry += value;
-        remove => _process.Entry -= value;
+        add => _unit.EntryEmitted += value;
+        remove => _unit.EntryEmitted -= value;
     }
 
-    internal void MarkRunning()
-    {
-        bool started;
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-
-            _state = ExecutionState.Running;
-            _startedAt ??= DateTimeOffset.UtcNow;
-            started = !_startedNotified;
-            _startedNotified = true;
-        }
-
-        if (started)
-        {
-            Started?.Invoke();
-        }
-
-        Changed?.Invoke();
-    }
+    internal void MarkRunning() => _unit.MarkRunning();
 
     /// <summary>执行进入运行态后触发一次，任务侧据此记录一次执行尝试。</summary>
-    internal event Action? Started;
-
-    /// <summary>记下本次执行的过程记录，快照随之可见，过程通知转给订阅者。</summary>
-    internal void AttachJournal(IProcessJournal journal)
+    internal event Action? Started
     {
-        lock (_gate)
-        {
-            _journal = journal;
-        }
-
-        journal.ContentAppended += PublishContent;
-        journal.EntryAppended += PublishEntry;
-        journal.ProgressReported += UpdateProgress;
+        add => _unit.Started += value;
+        remove => _unit.Started -= value;
     }
+
+    /// <summary>记下本次执行的过程记录。</summary>
+    internal void AttachJournal(IProcessJournal journal) => _unit.AttachJournal(journal);
 
     /// <summary>附加本次执行的用量来源，快照读取其当前累计。</summary>
-    internal void AttachUsageReader(IExecutionUsageReader reader)
-    {
-        lock (_gate)
-        {
-            _usageReader = reader;
-        }
-    }
+    internal void AttachUsageReader(IExecutionUsageReader reader) => _usageReader = reader;
 
-    /// <summary>记下本次执行的最终用量并解除用量来源，快照不再随运行器变化。</summary>
+    /// <summary>记下本次执行的最终用量并解除用量来源。</summary>
     internal void SettleUsage(ExecutionUsage usage)
     {
-        lock (_gate)
-        {
-            _usage = usage;
-            _usageReader = null;
-        }
-    }
-
-    /// <summary>转给订阅者一段流式内容。</summary>
-    private void PublishContent(ProcessContent content)
-    {
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-        }
-
-        _process.PublishContent(content);
-    }
-
-    /// <summary>更新进度。</summary>
-    private void UpdateProgress(string text)
-    {
-        lock (_gate)
-        {
-            if (_state.IsSettled() || _progress == text)
-            {
-                return;
-            }
-
-            _progress = text;
-        }
-
-        Changed?.Invoke();
-    }
-
-    /// <summary>转给订阅者一条需要即时呈现的过程记录。</summary>
-    private void PublishEntry(JournalEntry entry)
-    {
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-        }
-
-        _process.PublishEntry(entry);
-        Changed?.Invoke();
+        _usage = usage;
+        _usageReader = null;
     }
 
     /// <summary>本次执行保留的恢复数据，作为执行历史，成功与完成后仍在。</summary>
-    internal ExecutionRestorePayload? RestoreData
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _restoreData;
-            }
-        }
-    }
+    internal ExecutionRestorePayload? RestoreData => ToRestorePayload(_unit.RestoreData);
 
     /// <summary>恢复数据变化后触发，存档捕获据此写盘。</summary>
-    internal event Action? RestoreDataChanged;
+    internal event Action? RestoreDataChanged
+    {
+        add => _unit.RestoreDataChanged += value;
+        remove => _unit.RestoreDataChanged -= value;
+    }
 
     /// <summary>本次执行从哪次执行恢复，独立执行时为空。</summary>
-    internal ExecutionId? ContinuedFrom
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _continuedFrom;
-            }
-        }
-    }
+    internal ExecutionId? ContinuedFrom =>
+        _unit.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null;
 
     /// <summary>本次执行的本轮契约状态。</summary>
-    internal ExecutionContract Contract
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _contract;
-            }
-        }
-    }
-
-    /// <summary>记下本次执行从哪次执行恢复，并继承来源执行的契约状态。</summary>
-    internal void ContinueFrom(Execution source)
-    {
-        ExecutionContract contract = source.Contract;
-        lock (_gate)
-        {
-            _continuedFrom = source.Id;
-            _contract = contract;
-        }
-    }
+    internal ExecutionContract Contract => ToContract(_unit.Contract);
+/// <summary>记下本次执行从哪次执行恢复，并继承来源执行的契约状态。</summary>
+    internal void ContinueFrom(Execution source) => _unit.ContinueFrom(source._unit);
 
     /// <summary>记下本次执行交回的端口值。</summary>
-    internal void SubmitPorts(IReadOnlyDictionary<PortName, PortValue> ports)
-    {
-        lock (_gate)
-        {
-            _contract = _contract with { Ports = ports };
-        }
-    }
+    internal void SubmitPorts(IReadOnlyDictionary<PortName, PortValue> ports) =>
+        _unit.SubmitOutputs(ports.ToDictionary(
+            pair => new ExecutionPortName(pair.Key.Value),
+            pair => new ExecutionOutputValue(
+                new ExecutionPortName(pair.Key.Value),
+                pair.Value.Text,
+                pair.Value.Fires)));
 
-    /// <summary>记下本次执行上报的无法完成原因，同一执行重复上报覆盖。</summary>
-    internal void ReportCannotComplete(string reason)
-    {
-        lock (_gate)
-        {
-            _contract = _contract with { CannotCompleteReason = reason };
-        }
-    }
+    /// <summary>记下本次执行上报的无法完成原因。</summary>
+    internal void ReportCannotComplete(string reason) => _unit.ReportCannotComplete(reason);
 
-    /// <summary>附加运行器的恢复数据读取面，运行中的更新随快照可见。</summary>
+    /// <summary>附加运行器的恢复数据读取面。</summary>
     internal void AttachRestoreDataReader(IExecutionRestoreDataReader reader)
     {
-        lock (_gate)
-        {
-            _restoreDataReader = reader;
-            _restoreData = reader.RestoreData;
-        }
-
+        _restoreReader = reader;
+        _unit.SetRestoreData(ToState(reader.RestoreData));
         reader.RestoreDataChanged += OnRestoreDataChanged;
     }
 
@@ -332,187 +173,56 @@ public sealed class Execution : IExecution
     internal void SettleRestoreData(IExecutionRestoreDataReader? reader)
     {
         reader?.RestoreDataChanged -= OnRestoreDataChanged;
-
-        bool changed;
-        lock (_gate)
-        {
-            _restoreDataReader = null;
-            ExecutionRestorePayload? final = reader?.RestoreData;
-            changed = !Equals(final, _restoreData);
-            _restoreData = final;
-        }
-
-        if (changed)
-        {
-            RestoreDataChanged?.Invoke();
-        }
+        _restoreReader = null;
+        _unit.SetRestoreData(ToState(reader?.RestoreData));
     }
 
-    private void OnRestoreDataChanged()
-    {
-        ExecutionRestorePayload? data;
-        lock (_gate)
-        {
-            if (_restoreDataReader is null)
-            {
-                return;
-            }
+    private void OnRestoreDataChanged() => _unit.SetRestoreData(ToState(_restoreReader?.RestoreData));
 
-            data = _restoreDataReader.RestoreData;
-            if (Equals(data, _restoreData))
-            {
-                return;
-            }
+    /// <summary>本次执行的产出。</summary>
+    internal ExecutionOutput? Output => _unit.Output is { } output ? ToOutput(output) : null;
 
-            _restoreData = data;
-        }
+    internal void MarkSucceeded(ExecutionOutput output) => _unit.MarkSucceeded(ToNeutral(output));
 
-        RestoreDataChanged?.Invoke();
-    }
-
-    /// <summary>本次执行的产出，端口产出的执行交回端口后只给空内容。</summary>
-    internal ExecutionOutput? Output
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _output;
-            }
-        }
-    }
-
-    internal void MarkSucceeded(ExecutionOutput output)
-    {
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-
-            _output = output;
-        }
-
-        Settle(ExecutionState.Succeeded, []);
-    }
-
-    internal void MarkFailed(IEnumerable<Error> errors) =>
-        Settle(ExecutionState.Failed, [.. errors.Select(error => error.Description)]);
+    internal void MarkFailed(IEnumerable<Error> errors) => _unit.MarkFailed(errors);
 
     /// <summary>请求中断本次执行，进行中的一轮请求随之结束。要求持有任务 Gate。</summary>
-    internal void Interrupt(string reason = "已中断。")
-    {
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-
-            _interruptReason = reason;
-            _cancellation.Cancel();
-        }
-    }
+    internal void Interrupt(string reason = "已中断。") => _unit.Interrupt(reason);
 
     /// <summary>按中断请求收口，直接记为已中断，用于未进入执行的排队项与退出时的丢弃项。</summary>
-    internal void MarkInterrupted(string? reason = null)
-    {
-        string text;
-        lock (_gate)
-        {
-            text = reason ?? _interruptReason;
-            _interruptReason = text;
-        }
+    internal void MarkInterrupted(string? reason = null) => _unit.MarkInterrupted(reason);
 
-        Settle(ExecutionState.Interrupted, [text]);
-    }
-
-    /// <summary>进入终态并记下失败原因，只认第一次。</summary>
-    private void Settle(ExecutionState state, string[] failures)
-    {
-        IProcessJournal? journal;
-        lock (_gate)
-        {
-            if (_state.IsSettled())
-            {
-                return;
-            }
-
-            _state = state;
-            _failures.AddRange(failures);
-            _finishedAt = DateTimeOffset.UtcNow;
-            journal = _journal;
-        }
-
-        _process.Close();
-
-        if (journal is not null)
-        {
-            journal.ContentAppended -= PublishContent;
-            journal.EntryAppended -= PublishEntry;
-            journal.ProgressReported -= UpdateProgress;
-        }
-
-        _cancellation.Dispose();
-        Changed?.Invoke();
-    }
-
-    /// <summary>本次请求正常结束但没交回本执行节点要求的东西，从已完成降级为失败。要求持有任务 Gate。</summary>
-    internal void MarkUncollected(string reason)
-    {
-        lock (_gate)
-        {
-            if (_state != ExecutionState.Succeeded)
-            {
-                return;
-            }
-
-            _state = ExecutionState.Failed;
-            _failures.Add(reason);
-        }
-    }
+    /// <summary>本次请求正常结束但没交回本执行节点要求的东西，从已完成降级为失败。</summary>
+    internal void MarkUncollected(string reason) => _unit.MarkUncollected(reason);
 
     /// <summary>当前状态的只读快照。</summary>
     public ExecutionSnapshot Snapshot()
     {
-        ExecutionState state;
-        string progress;
-        DateTimeOffset? startedAt;
-        DateTimeOffset? finishedAt;
-        string[] failures;
-        IProcessJournal? journal;
-        ExecutionUsage usage;
-        IExecutionUsageReader? usageReader;
-        ExecutionRestorePayload? restoreData;
-        ExecutionId? continuedFrom;
-        lock (_gate)
-        {
-            state = _state;
-            progress = _progress;
-            startedAt = _startedAt;
-            finishedAt = _finishedAt;
-            failures = [.. _failures];
-            journal = _journal;
-            usage = _usage;
-            usageReader = _usageReader;
-            restoreData = _restoreData;
-            continuedFrom = _continuedFrom;
-        }
+        Kuroe.Flow.Execution.ExecutionUnitSnapshot unit = _unit.Snapshot();
+        ExecutionUsage usage = _usageReader?.Usage ?? _usage;
 
-        return new ExecutionSnapshot(Id, Input, state, progress, CreatedAt, startedAt, finishedAt,
-            failures, journal?.Entries ?? [], usageReader?.Usage ?? usage,
-            restoreData is not null, continuedFrom);
+        return new ExecutionSnapshot(
+            Id,
+            Input,
+            (ExecutionState)unit.State,
+            unit.Progress,
+            unit.CreatedAt,
+            unit.StartedAt,
+            unit.FinishedAt,
+            unit.Failures,
+            unit.Journal,
+            usage,
+            unit.RestoreData is not null,
+            unit.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null);
     }
-
-    /// <summary>捕获本次执行的状态与恢复数据。</summary>
+/// <summary>捕获本次执行的状态与恢复数据。</summary>
     internal ExecutionRecord CaptureRecord()
     {
         ExecutionSnapshot snapshot = Snapshot();
         ExecutionContract contract = Contract;
 
         return new ExecutionRecord(
-            new Kuroe.Flow.Execution.ExecutionId(snapshot.Id.Value),
+            new NeutralExecutionId(snapshot.Id.Value),
             GraphRecordTargets.Format(snapshot.Input.Node),
             snapshot.Input.ExecutionCount,
             (Kuroe.Flow.Execution.ExecutionState)snapshot.State,
@@ -533,112 +243,140 @@ public sealed class Execution : IExecution
                 snapshot.Usage.ContextTokens),
             [
                 .. snapshot.Input.Inputs.Select(value => new ExecutionInputRecord(
-                    new Kuroe.Flow.Execution.ExecutionPortName(value.Port.Value),
-                    GraphRecordSources.Write(value.Origin),
+                    new ExecutionPortName(value.Port.Value),
+                    GraphRecordSources.Write(value.Value.Origin),
                     value.Text)),
             ],
             snapshot.Input.Texts.ToDictionary(
-                pair => new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                pair => new ExecutionPortName(pair.Key.Value),
                 pair => pair.Value),
             snapshot.HasRestoreData && RestoreData is { } restore
                 ? new ExecutionRestoreRecord(restore.Format, restore.Payload)
                 : null,
-            ContinuedFrom is { } continued
-                ? new Kuroe.Flow.Execution.ExecutionId(continued.Value)
+            snapshot.ContinuedFrom is { } continued
+                ? new NeutralExecutionId(continued.Value)
                 : null,
             contract is { Ports: null, CannotCompleteReason: null }
                 ? null
                 : new ExecutionContractRecord(
                     contract.Ports?.ToDictionary(
-                        pair => new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
-                        pair => new Kuroe.Flow.Execution.ExecutionOutputValue(
-                            new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                        pair => new ExecutionPortName(pair.Key.Value),
+                        pair => new ExecutionOutputValue(
+                            new ExecutionPortName(pair.Key.Value),
                             pair.Value.Text,
                             pair.Value.Fires)),
                     contract.CannotCompleteReason));
     }
+private static ExecutionRequest Request(ExecutionInput input) =>
+        new(
+            new ExecutionOwnerId(input.Task.Value),
+            GraphRecordTargets.Format(input.Node),
+            input.Type.Kind.Value,
+            input.ExecutionCount,
+            [
+                .. input.Inputs
+                    .Select(value => new ExecutionInputPort(
+                        new ExecutionPortName(value.Port.Value),
+                        ExecutionPortKind.Text,
+                        ExecutionPortRole.Content,
+                        false,
+                        null))
+                    .DistinctBy(port => port.Name),
+            ],
+            [
+                .. input.Inputs.Select(value => new ExecutionInputValue(
+                    new ExecutionPortName(value.Port.Value),
+                    value.Text,
+                    GraphRecordSources.Write(value.Value.Origin))),
+            ],
+            input.Texts.ToDictionary(
+                pair => new ExecutionPortName(pair.Key.Value),
+                pair => pair.Value),
+            [
+                .. input.OutputPorts.Select(port => new ExecutionOutputPort(
+                    new ExecutionPortName(port.Name.Value),
+                    KindOf(port.Type),
+                    input.RequiredPorts.Any(required => required.Name == port.Name),
+                    port.Trigger)),
+            ]);
 
-    /// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>
-    private sealed class ProcessBroadcast
+    private static ExecutionPortKind KindOf(PortType type)
     {
-        private readonly Lock _gate = new();
-        private ProcessContentHandler? _content;
-        private JournalEntryHandler? _entry;
-        private bool _closed;
-
-        public event ProcessContentHandler? Content
+        if (type == PortTypes.Context)
         {
-            add
-            {
-                lock (_gate)
-                {
-                    if (!_closed)
-                    {
-                        _content += value;
-                    }
-                }
-            }
-            remove
-            {
-                lock (_gate)
-                {
-                    _content -= value;
-                }
-            }
+            return ExecutionPortKind.Context;
         }
 
-        public event JournalEntryHandler? Entry
-        {
-            add
-            {
-                lock (_gate)
-                {
-                    if (!_closed)
-                    {
-                        _entry += value;
-                    }
-                }
-            }
-            remove
-            {
-                lock (_gate)
-                {
-                    _entry -= value;
-                }
-            }
-        }
-
-        public void PublishContent(ProcessContent content)
-        {
-            ProcessContentHandler? handler;
-            lock (_gate)
-            {
-                handler = _content;
-            }
-
-            handler?.Invoke(content);
-        }
-
-        public void PublishEntry(JournalEntry entry)
-        {
-            JournalEntryHandler? handler;
-            lock (_gate)
-            {
-                handler = _entry;
-            }
-
-            handler?.Invoke(entry);
-        }
-
-        /// <summary>清空订阅者并拒绝之后的订阅。</summary>
-        public void Close()
-        {
-            lock (_gate)
-            {
-                _closed = true;
-                _content = null;
-                _entry = null;
-            }
-        }
+        return type == PortTypes.Signal ? ExecutionPortKind.Signal : ExecutionPortKind.Text;
     }
+
+    private static ExecutionUsageSnapshot FromRecord(ExecutionUsageRecord usage) =>
+        new(
+            usage.RequestCount,
+            usage.RequestsWithoutUsage,
+            new TokenUsageSnapshot(
+                usage.Tokens.Input,
+                usage.Tokens.Output,
+                usage.Tokens.Total,
+                usage.Tokens.CachedInput,
+                usage.Tokens.Reasoning),
+            usage.ContextTokens);
+
+    private static ExecutionUsage Usage(ExecutionUsageSnapshot usage) =>
+        new(
+            usage.RequestCount,
+            usage.RequestsWithoutUsage,
+            new TokenUsage(
+                usage.Tokens.Input,
+                usage.Tokens.Output,
+                usage.Tokens.Total,
+                usage.Tokens.CachedInput,
+                usage.Tokens.Reasoning))
+        {
+            ContextTokens = usage.ContextTokens,
+        };
+
+    private static NeutralExecutionContract NeutralContract(ExecutionContractRecord? contract) =>
+        contract is null
+            ? NeutralExecutionContract.Empty
+            : new NeutralExecutionContract(
+                contract.Outputs?.ToDictionary(
+                    pair => new ExecutionPortName(pair.Key.Value),
+                    pair => new ExecutionOutputValue(
+                        new ExecutionPortName(pair.Key.Value),
+                        pair.Value.Text,
+                        pair.Value.Fires)),
+                contract.CannotCompleteReason);
+
+    private static ExecutionContract ToContract(NeutralExecutionContract contract) =>
+        new(
+            contract.Outputs?.ToDictionary(
+                pair => new PortName(pair.Key.Value),
+                pair => new PortValue(pair.Value.Text, pair.Value.Fires)),
+            contract.CannotCompleteReason);
+
+    private static ExecutionRestoreState? ToState(ExecutionRestorePayload? payload) =>
+        payload is null ? null : new ExecutionRestoreState(payload.Format, payload.Payload);
+
+    private static ExecutionRestorePayload? ToRestorePayload(ExecutionRestoreState? state) =>
+        state is null ? null : new ExecutionRestorePayload(state.Format, state.Payload);
+
+    private NeutralExecutionOutput ToNeutral(ExecutionOutput output)
+    {
+        if (output.Kind == ExecutionOutputKind.Content)
+        {
+            return NeutralExecutionOutput.FromContent(output.Content);
+        }
+
+        IReadOnlyList<ExecutionOutputValue> values = _unit.Contract.Outputs is { } outputs
+            ? [.. outputs.Values]
+            : [];
+
+        return NeutralExecutionOutput.FromPorts(values);
+    }
+
+    private static ExecutionOutput ToOutput(NeutralExecutionOutput output) =>
+        output.Kind == NeutralExecutionOutputKind.Content
+            ? ExecutionOutput.FromContent(output.Content)
+            : ExecutionOutput.Ports;
 }

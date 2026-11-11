@@ -1,7 +1,8 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Execution.Tests;
 
 /// <summary>过程记录存储：默认保留全部记录。</summary>
 public sealed class ProcessJournalStoreTests

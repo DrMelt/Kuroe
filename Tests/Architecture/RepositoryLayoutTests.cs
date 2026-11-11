@@ -61,7 +61,7 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Execution_shared_project_stays_free_of_graph_and_control_references()
+    public void Execution_shared_project_references_only_tasks_shared()
     {
         string project = Path.Combine(
             SourceRoot,
@@ -69,8 +69,9 @@ public sealed class RepositoryLayoutTests
             "Execution",
             "Shared",
             "Kuroe.Flow.Execution.Shared.csproj");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared", "Kuroe.Flow.Tasks.Shared.csproj");
 
-        Assert.Empty(ProjectReferences(project));
+        Assert.Equal([tasks], ProjectReferences(project));
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Execution_core_references_only_execution_shared()
+    public void Execution_core_references_only_execution_shared_and_tasks_shared()
     {
         string shared = Path.Combine(
             SourceRoot,
@@ -95,6 +96,12 @@ public sealed class RepositoryLayoutTests
             "Execution",
             "Shared",
             "Kuroe.Flow.Execution.Shared.csproj");
+        string tasks = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Tasks",
+            "Shared",
+            "Kuroe.Flow.Tasks.Shared.csproj");
         string core = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -103,8 +110,9 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Execution.csproj");
         IReadOnlyList<string> references = ProjectReferences(core);
 
-        Assert.Single(references);
+        Assert.Equal(2, references.Count);
         Assert.Contains(shared, references);
+        Assert.Contains(tasks, references);
     }
 
     [Fact]

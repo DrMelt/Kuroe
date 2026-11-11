@@ -1,4 +1,6 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks;
+
+namespace Kuroe.Flow.Execution;
 
 /// <summary>收到一段流式内容。</summary>
 /// <param name="content">本次增量的内容与种类。</param>

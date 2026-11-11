@@ -1,4 +1,6 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks;
+
+namespace Kuroe.Flow.Execution;
 
 /// <summary>一次执行的过程记录：内容写入共享存储，条目按时间保留，变更后向外播发。</summary>
 public sealed class ExecutionJournal : IProcessJournal
