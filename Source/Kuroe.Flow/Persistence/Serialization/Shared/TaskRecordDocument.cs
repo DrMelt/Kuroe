@@ -35,7 +35,19 @@ public sealed record JournalEntryData(DateTimeOffset At, JournalLevel Level, str
 public sealed record FlowData(
     string? Kind,
     GraphFlowDefinitionData? GraphDefinition,
-    GraphFlowStateData? GraphState);
+    GraphFlowStateData? GraphState,
+    CodeFlowDefinitionData? CodeDefinition = null,
+    CodeFlowStateData? CodeState = null);
+
+/// <summary>代码流程定义的形状。</summary>
+public sealed record CodeFlowDefinitionData(
+    string? Implementation,
+    Dictionary<string, string>? Values);
+
+/// <summary>代码流程状态的形状。</summary>
+public sealed record CodeFlowStateData(
+    TaskStartData? Start,
+    Dictionary<string, string>? Values);
 
 /// <summary>图流程定义的形状。</summary>
 public sealed record GraphFlowDefinitionData(string? Name, string? Nodes, string? Flow);

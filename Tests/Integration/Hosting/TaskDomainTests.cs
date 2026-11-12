@@ -1,7 +1,9 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
+using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -12,21 +14,21 @@ public sealed class TaskDomainTests
     public async Task A_dialogue_round_does_not_create_a_user_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = _ => "回复你好";
+        environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
 
         Assert.False(reply.IsError);
         Assert.Empty(environment.TaskReader.Snapshots());
         Assert.Empty(environment.TaskReader.LiveExecutions());
-        Assert.Single(environment.Runner.Started);
+        Assert.Single(environment.Runner.StartedCode);
     }
 
     [Fact]
     public async Task The_first_user_task_keeps_number_one_after_dialogue()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = _ => "回复你好";
+        environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
         TaskId id = environment.Submit("修复登录超时");
@@ -42,22 +44,22 @@ public sealed class TaskDomainTests
     public async Task The_user_task_domain_cannot_find_the_dialogue_task_or_its_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = _ => "回复你好";
+        environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
-        IExecution round = Assert.Single(environment.Runner.Started);
+        LoopExecution round = Assert.Single(environment.Runner.StartedCode);
 
         Assert.False(reply.IsError);
-        Assert.True(environment.TaskReader.Find(round.Input.Task).IsError);
-        Assert.True(environment.TaskReader.FindExecution(new Kuroe.Flow.Execution.ExecutionId(round.Id.Value)).IsError);
-        Assert.False(environment.Executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(round.Id.Value)).IsError);
+        Assert.True(environment.TaskReader.Find(new TaskId(round.Request.Owner.Value)).IsError);
+        Assert.True(environment.TaskReader.FindExecution(round.Id).IsError);
+        Assert.False(environment.Executions.FindOwned(round.Id).IsError);
     }
 
     [Fact]
     public async Task Clearing_settled_user_tasks_does_not_touch_the_dialogue_task()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
+        environment.Runner.CodeReply = _ => "回复";
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("第一问", null);
         IReadOnlyList<TaskId> cleared = environment.Registry.ClearSettled();
@@ -66,17 +68,17 @@ public sealed class TaskDomainTests
         Assert.False(first.IsError);
         Assert.False(second.IsError);
         Assert.Empty(cleared);
-        Assert.Equal(2, environment.Runner.Started.Count);
+        Assert.Equal(2, environment.Runner.StartedCode.Count);
     }
 
     [Fact]
     public async Task Dialogue_executions_share_the_global_execution_number_sequence()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = _ => "回复你好";
+        environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
-        IExecution dialogue = Assert.Single(environment.Runner.Started);
+        LoopExecution dialogue = Assert.Single(environment.Runner.StartedCode);
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = await environment.SettleAsync(id);
 
@@ -94,7 +96,7 @@ public sealed class TaskDomainTests
     public async Task A_user_task_and_the_dialogue_task_advance_independently()
     {
         using TestEnvironment environment = TestEnvironment.Create();
-        environment.Runner.Reply = execution => $"回复{execution.Input.ExecutionCount}";
+        environment.Runner.CodeReply = _ => "回复";
 
         ErrorOr<Success> first = await environment.Dialogue.ReplyAsync("你好", null);
         TaskId id = environment.Submit("目标");
@@ -105,6 +107,6 @@ public sealed class TaskDomainTests
         Assert.False(second.IsError);
         Assert.Equal(new TaskId(1), id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, environment.Runner.Started.Count(execution => execution.Input.Node.Label.Value == "回话"));
+        Assert.Equal(2, environment.Runner.StartedCode.Count(execution => execution.Request.Target.Value == "回话"));
     }
 }

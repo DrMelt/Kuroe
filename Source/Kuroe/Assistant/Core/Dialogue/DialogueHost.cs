@@ -2,13 +2,11 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
-using Kuroe.Configuration;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Compilation.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
@@ -16,12 +14,10 @@ namespace Kuroe.Assistant.Dialogue;
 /// 模型在任务启动时写入流程，模型变化后下一次输入重建任务。</summary>
 public sealed class DialogueHost(
     TaskActions actions,
-    GraphFlowFramework graph,
+    DialogueFlowFramework flow,
     DialogueRound rounds,
     ModelService models,
-    SettingsProvider settings,
-    TaskRegistry registry,
-    IFlowDescriptionCompiler compiler)
+    TaskRegistry registry)
 {
     private readonly Lock _gate = new();
     private TaskId? _dialogue;
@@ -88,22 +84,10 @@ public sealed class DialogueHost(
 
         registry.ClearSettled();
 
-        var document = DialogueFlow.Build(settings.AssistantLanguage);
-        ErrorOr<CompiledDocument> compiled = compiler.Compile(document, []);
-        if (compiled.IsError)
-        {
-            throw new InvalidOperationException(string.Join("；", compiled.ErrorsOrEmptyList.Select(error => error.Description)));
-        }
-
-        if (compiled.Value.Flows.Count != 1)
-        {
-            throw new InvalidOperationException("提交的文档必须恰好包含一条流程。");
-        }
-
         StartInputs inputs = StartInputs.Single(DialogueFlow.StartPort, "对话");
         ErrorOr<TaskSnapshot> created = actions.Submit(
-            graph,
-            id => graph.PrepareCompiled(id, compiled.Value.Flows[0], inputs, "对话"),
+            flow,
+            id => flow.Prepare(id, DialogueFlow.Name, inputs, "对话"),
             inputs,
             "对话");
         if (created.IsError)

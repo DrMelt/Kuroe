@@ -1,0 +1,95 @@
+using Kuroe.Assistant.Flows;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Records;
+using Kuroe.Node.Llm;
+
+namespace Kuroe.Assistant.Dialogue;
+
+/// <summary>对话流程状态：开始输入、工作区、模型与语言。</summary>
+internal sealed class DialogueFlowState(
+    StartInputs inputs,
+    string workspace,
+    string model,
+    string language) : IFlowState
+{
+    /// <inheritdoc/>
+    public StartInputs Inputs { get; } = inputs;
+
+    /// <summary>工作区根目录。</summary>
+    internal string Workspace { get; } = workspace;
+
+    /// <summary>执行使用的模型名。</summary>
+    internal string Model { get; } = model;
+
+    /// <summary>回复语言。</summary>
+    internal string Language { get; } = language;
+
+    /// <summary>开始端口文本。</summary>
+    internal FlowTexts StartTexts { get; } = new(
+        inputs.Values.ToDictionary(input => input.Port, input => input.Text));
+
+    /// <summary>等待输入的恢复种子。</summary>
+    internal static FlowSeed AwaitingSeed => new([DialogueFlowControl.ReplyStep]);
+
+    /// <summary>回话执行参数。</summary>
+    internal LlmParameters Parameters => DialogueFlow.Parameters(Language);
+}
+
+/// <summary>对话流程的视图投影。</summary>
+internal static class DialogueView
+{
+    internal static FlowView Build(
+        DialogueFlowState state,
+        IFlowControl? control,
+        WorkTask task,
+        TaskState? taskState = null)
+    {
+        IReadOnlyList<FlowExecutionView> executions =
+        [
+            .. task.Executions.Select(execution => execution.Snapshot())
+                .Select(snapshot => new FlowExecutionView(
+                    snapshot.Id.Value,
+                    snapshot.State.ToString(),
+                    snapshot.Progress,
+                    [])),
+        ];
+
+        string stepState;
+        if (taskState is TaskState.Terminated or TaskState.Done)
+        {
+            stepState = "Canceled";
+        }
+        else if (control?.Pending().Count > 0)
+        {
+            stepState = "Pending";
+        }
+        else
+        {
+            stepState = task.Executions.Any(execution => execution.IsLive) ? "Running" : "Done";
+        }
+
+        return new FlowView(
+            DialogueFlow.Name.Value,
+            FlowRecordKinds.Code,
+            "内置对话：回答用户的每轮输入",
+            [new FlowPortView(DialogueFlow.StartPort.Value, "Text", null)],
+            [
+                new FlowStepView(
+                    DialogueFlow.ReplyNodeLabel.Value,
+                    DialogueFlow.ReplyNodeLabel.Value,
+                    LlmNodeTypes.Name.Value,
+                    stepState,
+                    [new FlowPortView(DialogueFlow.InputPort.Value, "Text", null)],
+                    [new FlowPortView("完成", "Signal", null, Fires: false)],
+                    executions,
+                    int.MaxValue),
+            ],
+            []);
+    }
+}

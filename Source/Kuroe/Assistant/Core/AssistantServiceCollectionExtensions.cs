@@ -4,21 +4,12 @@ using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Pending;
-using Kuroe.Workflows.Flows;
 using Kuroe.Tool.Source;
-using Kuroe.Workflows.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kuroe.Assistant;
@@ -53,45 +44,25 @@ public static class AssistantServiceCollectionExtensions
                 registry,
                 sp.GetRequiredService<IFlowRuntime>()));
 
-            IExecutionTargetResolver targets = sp.GetRequiredService<IExecutionTargetResolver>();
             ModelService models = sp.GetRequiredService<ModelService>();
 
-            // 对话任务只有内置流程一张表单，不与用户流程的宿主输入表混用
-            HostStartInputs hostInputs = new(
-                new Dictionary<FlowName, IReadOnlyDictionary<PortName, string>>
-                {
-                    [DialogueFlow.Name] = DialogueFlow.HostInputs,
-                },
-                StartSources.Supported);
-
-            KuroeTaskStart start = new(sp.GetRequiredService<KuroePaths>().WorkingDirectory, null, models);
-            // 对话任务自有任务域，任务键不占用用户任务域的序列
-            GuidTaskIdSource ids = new();
-
-            GraphFlowFramework graph = new(
-                sp.GetRequiredService<IFlowRuntimeCatalog>(),
-                sp.GetRequiredService<IFlowSnapshotCompiler>(),
-                hostInputs,
-                start,
-                targets,
+            // 对话流程由代码定义，不进入图流程库与宿主开始输入表
+            DialogueFlowFramework flow = new(
                 sp.GetRequiredService<ExecutionRuntime>(),
-                sp.GetRequiredService<IInputDelivery>(),
                 sp.GetRequiredService<ExecutionIndex>(),
-                snapshots: null,
-                sp.GetRequiredService<Kuroe.Flow.Execution.ExecutionRestorerRegistry>());
-
-            return new DialogueHost(
-                new TaskActions(
-                    registry,
-                    sp.GetRequiredService<IFlowRuntime>(),
-                    new FlowFrameworkSource([graph]),
-                    ids),
-                graph,
-                round,
                 models,
                 sp.GetRequiredService<SettingsProvider>(),
+                sp.GetRequiredService<KuroePaths>());
+
+            // 对话任务自有任务域，任务键不占用用户任务域的序列
+            GuidTaskIdSource ids = new();
+            TaskActions actions = new(
                 registry,
-                sp.GetRequiredService<IFlowDescriptionCompiler>());
+                sp.GetRequiredService<IFlowRuntime>(),
+                new FlowFrameworkSource([flow]),
+                ids);
+
+            return new DialogueHost(actions, flow, round, models, registry);
         });
 
         return Result.Success;

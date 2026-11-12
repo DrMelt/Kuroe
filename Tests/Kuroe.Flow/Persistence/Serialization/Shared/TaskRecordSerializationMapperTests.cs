@@ -1,8 +1,10 @@
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
@@ -108,6 +110,36 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal(
             FlowErrorCodes.RecordWrite,
             TaskRecordSerializationMapper.ToDocument(WithNodes(record, [unknown])).FirstError.Code);
+    }
+
+    [Fact]
+    public void Round_trip_preserves_code_flow_records()
+    {
+        Dictionary<string, string> values = new() { ["language"] = "中文" };
+        TaskRecord record = new(
+            new TaskIdentity(new TaskId(1), "对话", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch),
+            DateTimeOffset.UnixEpoch,
+            Kuroe.Flow.Tasks.TaskLifecycle.Active,
+            false,
+            new TaskJournalRecord([], 0),
+            new FlowRecord(
+                FlowRecordKinds.Code,
+                new CodeFlowDefinitionRecord("dialogue", values),
+                new CodeFlowStateRecord(
+                    StartInputs.Single(new PortName("目标"), "对话"),
+                    FlowTexts.Empty,
+                    values)),
+            []);
+
+        TaskRecord loaded = RoundTrip(record);
+
+        CodeFlowDefinitionRecord definition = Assert.IsType<CodeFlowDefinitionRecord>(loaded.Flow.Definition);
+        CodeFlowStateRecord state = Assert.IsType<CodeFlowStateRecord>(loaded.Flow.State);
+
+        Assert.Equal("dialogue", definition.Implementation);
+        Assert.Equal("中文", definition.Values["language"]);
+        Assert.Equal("中文", state.Values["language"]);
+        Assert.Equal("对话", state.Inputs.Text(new PortName("目标")));
     }
 
     private static TaskRecord RoundTrip(TaskRecord record) =>

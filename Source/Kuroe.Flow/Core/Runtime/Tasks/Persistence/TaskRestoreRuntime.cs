@@ -42,7 +42,7 @@ public sealed class TaskRestoreRuntime(
             registry.RestoreExecution(task, execution);
         }
 
-        if (task.State is not (TaskState.Done or TaskState.Terminated))
+        if (!record.Completed && record.Lifecycle != TaskLifecycle.Terminated)
         {
             runner.Restore(task, restored.Value.Seed);
         }

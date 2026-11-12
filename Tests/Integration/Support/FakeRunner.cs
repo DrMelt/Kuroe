@@ -20,6 +20,7 @@ using NeutralExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
 using NeutralExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
 using NeutralPortKind = Kuroe.Flow.Execution.ExecutionPortKind;
+using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -78,6 +79,26 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>本轮回复文本，经过程记录与过程播发送出，缺省为节点路径加产出。</summary>
     public Func<IExecution, string>? Reply { get; set; }
 
+    /// <summary>代码流程执行的回复文本，按中性执行给出。</summary>
+    public Func<LoopExecution, string>? CodeReply { get; set; }
+
+    /// <summary>代码流程执行期间写进过程记录的内容。</summary>
+    internal Action<LoopExecution, RecordingJournal>? CodeEmits { get; set; }
+
+    /// <summary>代码流程的执行观察点，按进入顺序。</summary>
+    public IReadOnlyList<LoopExecution> StartedCode
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _startedCode];
+            }
+        }
+    }
+
+    private readonly List<LoopExecution> _startedCode = [];
+
     /// <summary>本次执行期间写进过程记录的内容，用于断言记录与过程事件。</summary>
     internal Action<IExecution, RecordingJournal>? Emits { get; set; }
 
@@ -117,12 +138,26 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     }
 
     private readonly List<ExecutionRestorePayload?> _starts = [];
+    private readonly List<NeutralExecutionTarget> _targets = [];
+
+    /// <summary>各次执行收到的执行目标，按建立顺序。</summary>
+    public IReadOnlyList<NeutralExecutionTarget> StartedTargets
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _targets];
+            }
+        }
+    }
 
     public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution)
     {
         lock (_gate)
         {
             _starts.Add(null);
+            _targets.Add(target);
         }
 
         return new Run(this, execution);
@@ -174,7 +209,12 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        IExecution started = (IExecution)executions.FindPayload(new Kuroe.Flow.Execution.ExecutionId(execution.Value))!;
+        object? payload = executions.FindPayload(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
+        if (payload is not IExecution started)
+        {
+            return await ExecuteCodeAsync(execution, journal, cancellationToken).ConfigureAwait(false);
+        }
+
         NodePath node = GraphRecordTargets.Parse(request.Target);
 
         lock (_gate)
@@ -226,6 +266,35 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         {
             Gate.Leave(handle);
         }
+    }
+
+    /// <summary>代码流程执行：不依赖图侧执行对象，直接按中性执行记录收口。</summary>
+    private async Task<ErrorOr<ExecutionOutput>> ExecuteCodeAsync(
+        ExecutionId execution,
+        RecordingJournal journal,
+        CancellationToken cancellationToken)
+    {
+        ExecutionIndex executions = Executions
+            ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
+        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Runtime.Tasks.WorkTask Owner)> found =
+            executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        LoopExecution started = found.Value.Execution;
+        lock (_gate)
+        {
+            _startedCode.Add(started);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        CodeEmits?.Invoke(started, journal);
+        string reply = CodeReply?.Invoke(started) ?? "回复";
+        journal.AppendContent(ProcessContentKind.Reply, reply);
+
+        return await Task.FromResult(ExecutionOutput.Ports).ConfigureAwait(false);
     }
 
     /// <summary>按模型调用工具的方式取回执文本，实参按参数名给出。</summary>

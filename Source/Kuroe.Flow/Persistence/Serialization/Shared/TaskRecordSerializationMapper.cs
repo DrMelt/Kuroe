@@ -90,6 +90,17 @@ public static class TaskRecordSerializationMapper
                         [.. state.Nodes.Select(ToData)],
                         [.. state.Ports.Select(ToData)],
                         new SchedulerSeedData([.. state.Pending.Steps.Select(step => ToData(NodePath.Of([.. step.Levels])))]))),
+            { Kind: FlowRecordKinds.Code, Definition: CodeFlowDefinitionRecord definition, State: CodeFlowStateRecord state } =>
+                new FlowData(
+                    FlowRecordKinds.Code,
+                    null,
+                    null,
+                    new CodeFlowDefinitionData(definition.Implementation, ToData(definition.Values)),
+                    new CodeFlowStateData(
+                        new TaskStartData(
+                            [.. state.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
+                            ToData(state.StartTexts.Texts)),
+                        ToData(state.Values))),
             _ => throw new NotSupportedException($"未知的流程记录 {flow.Kind}。"),
         };
 
@@ -242,6 +253,9 @@ public static class TaskRecordSerializationMapper
     private static Dictionary<string, string> ToData(IReadOnlyDictionary<PortName, string> values) =>
         values.ToDictionary(pair => pair.Key.Value, pair => pair.Value);
 
+    private static Dictionary<string, string> ToData(IReadOnlyDictionary<string, string> values) =>
+        values.ToDictionary(pair => pair.Key, pair => pair.Value);
+
     private static TaskRecord ReadTask(TaskRecordData? dto)
     {
         if (dto is null)
@@ -278,6 +292,10 @@ public static class TaskRecordSerializationMapper
                 kind,
                 ReadGraphDefinition(dto.GraphDefinition),
                 ReadGraphState(dto.GraphState)),
+            FlowRecordKinds.Code => new FlowRecord(
+                kind,
+                ReadCodeDefinition(dto.CodeDefinition),
+                ReadCodeState(dto.CodeState)),
             _ => throw new FormatException($"未知的流程种类 {kind}。"),
         };
     }
@@ -317,6 +335,38 @@ public static class TaskRecordSerializationMapper
             [.. (dto.Nodes ?? []).Select(ReadNode)],
             [.. (dto.Ports ?? []).Select(ReadPortPublication)],
             new FlowSeed([.. (pending.Targets ?? []).Select(path => new FlowStepPath([.. ReadPath(path, "调度目标").Levels.Select(level => level.Value)]))]));
+    }
+
+    private static CodeFlowDefinitionRecord ReadCodeDefinition(CodeFlowDefinitionData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("存档缺少代码流程定义。");
+        }
+
+        return new CodeFlowDefinitionRecord(
+            RequiredText(dto.Implementation, "代码流程实现"),
+            dto.Values ?? []);
+    }
+
+    private static CodeFlowStateRecord ReadCodeState(CodeFlowStateData? dto)
+    {
+        if (dto is null)
+        {
+            throw new FormatException("存档缺少代码流程状态。");
+        }
+
+        TaskStartData start = dto.Start ?? throw new FormatException("存档缺少开始状态。");
+
+        return new CodeFlowStateRecord(
+            new StartInputs(
+            [
+                .. (start.Inputs ?? []).Select(input => new StartInput(
+                    ReadPort(input.Port, "开始输入端口"),
+                    RequiredText(input.Text, "开始输入文本"))),
+            ]),
+            new FlowTexts(ReadTexts(start.StartTexts)),
+            dto.Values ?? []);
     }
 
     private static ExecutionRecord ReadExecution(ExecutionData dto) =>
