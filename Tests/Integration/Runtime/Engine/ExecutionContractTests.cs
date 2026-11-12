@@ -17,7 +17,7 @@ public sealed class ExecutionContractTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        IExecution ported = Ported(environment);
+        IGraphExecution ported = Ported(environment);
         ITool port = environment.PortToolFor(ported.Id);
         ITool cannotComplete = environment.CannotCompleteToolFor(ported.Id);
         ITool status = environment.StatusToolFor(ported.Id);
@@ -59,7 +59,7 @@ public sealed class ExecutionContractTests
 
         Assert.Equal(TaskState.Blocked, blocked.State);
 
-        IExecution execution = Ported(environment);
+        IGraphExecution execution = Ported(environment);
         Assert.Contains("模型报告无法完成：缺少输入资料", string.Join('；', execution.Snapshot().Failures), StringComparison.Ordinal);
         Assert.Contains(environment.Runner.Submissions, text =>
             text.Contains("已记录本轮无法完成：缺少输入资料", StringComparison.Ordinal)
@@ -115,6 +115,6 @@ public sealed class ExecutionContractTests
     }
 
     /// <summary>声明了输出端口的那个执行，端口相关的系统指令与工具描述都在它身上。</summary>
-    private static IExecution Ported(TestEnvironment environment) =>
+    private static IGraphExecution Ported(TestEnvironment environment) =>
         environment.Runner.Started.First(execution => execution.Input.OutputPorts.Count > 0);
 }

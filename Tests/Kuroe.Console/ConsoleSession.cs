@@ -45,12 +45,12 @@ internal sealed class ConsoleSession : IDisposable
             ExecutionDetailView execution = new(Terminal);
 
             return new TaskBrowser(
-                Environment.Registry, Environment.Tasks, Environment.Pendings, Environment.Flows,
-                Environment.HostStartInputs, list, overview, tree, execution, Terminal, Results);
+                Environment.Registry, Environment.Tasks, Environment.Pendings, Environment.Templates,
+                list, overview, tree, execution, Terminal, Results);
         }
     }
 
-    public FlowBrowser Flows => new(Environment.Flows, Environment.HostStartInputs, Terminal, Results);
+    public FlowBrowser Flows => new(Environment.Library, Environment.Templates, Terminal, Results);
 
     public CatalogBrowser Catalogs =>
         new(Environment.Catalog, Environment.Models, Printer, Terminal, Results, Errors);
@@ -66,7 +66,7 @@ internal sealed class ConsoleSession : IDisposable
         Environment.Tasks,
         Assistant,
         new ExecutionNotifier(Environment.Registry, Terminal),
-        new StartupView(Environment.Catalog, Environment.Models, Environment.Tools, Environment.Flows, Terminal),
+        new StartupView(Environment.Catalog, Environment.Models, Environment.Tools, Environment.Templates, Terminal),
         Tasks,
         Flows,
         Catalogs,

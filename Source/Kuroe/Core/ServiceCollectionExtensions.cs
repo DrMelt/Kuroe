@@ -179,11 +179,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IModelAccess>(catalog.Value);
         services.AddSingleton(flows.Value);
         services.AddSingleton<IFlowCatalog>(flows.Value);
+        services.AddSingleton<IFlowLibrary>(flows.Value);
         services.AddSingleton<IFlowRuntimeCatalog>(flows.Value);
         services.AddSingleton<IFlowSnapshotSource>(flows.Value);
         services.AddSingleton<IFlowSnapshotCompiler>(flows.Value);
         services.AddSingleton(hostStartInputs.Value);
         services.AddSingleton<IHostStartInputs>(hostStartInputs.Value);
+        services.AddSingleton<IFlowTemplateCatalog>(sp => new FlowTemplateCatalog(
+            sp.GetRequiredService<IFlowCatalog>(),
+            sp.GetRequiredService<IHostStartInputs>()));
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
@@ -240,27 +244,24 @@ public static class ServiceCollectionExtensions
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        services.AddSingleton(sp => new GraphFlowFramework(
-            flows.Value,
-            flows.Value,
-            hostStartInputs.Value,
-            sp.GetRequiredService<IHostTaskStart>(),
-            sp.GetRequiredService<IExecutionTargetResolver>(),
-            sp.GetRequiredService<IExecutionRuntime>(),
-            inputs,
-            executions,
-            coreOptions.PersistTasks ? flows.Value : null));
-        services.AddSingleton<IFlowFramework>(sp => sp.GetRequiredService<GraphFlowFramework>());
-        services.AddSingleton<IFlowSubmission>(sp => sp.GetRequiredService<GraphFlowFramework>());
-        services.AddSingleton<IFlowControlFactory>(sp => sp.GetRequiredService<GraphFlowFramework>());
-        services.AddSingleton<IFlowPresentation>(sp => sp.GetRequiredService<GraphFlowFramework>());
-        services.AddSingleton<IFlowRecordSource>(sp => sp.GetRequiredService<GraphFlowFramework>());
-        services.AddSingleton(sp =>
-        {
-            GraphFlowFramework provider = sp.GetRequiredService<GraphFlowFramework>();
-
-            return new FlowProvider(provider, provider, provider, provider, provider);
-        });
+        services.AddSingleton(sp => new FlowProvider(
+            new GraphFlowIdentity(flows.Value),
+            new GraphFlowSubmission(
+                flows.Value,
+                flows.Value,
+                hostStartInputs.Value,
+                sp.GetRequiredService<IHostTaskStart>(),
+                sp.GetRequiredService<IExecutionTargetResolver>(),
+                sp.GetRequiredService<IExecutionRuntime>(),
+                coreOptions.PersistTasks ? flows.Value : null),
+            new GraphFlowStateBinder(),
+            new GraphFlowControlFactory(
+                sp.GetRequiredService<IExecutionRuntime>(),
+                sp.GetRequiredService<IExecutionTargetResolver>(),
+                inputs,
+                executions),
+            new GraphFlowPresentation(),
+            new GraphFlowRecordSource()));
         services.AddSingleton(sp => new FlowFrameworkSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowFrameworkSource>(sp => sp.GetRequiredService<FlowFrameworkSource>());
         services.AddSingleton(sp => new FlowRuntime(
@@ -327,7 +328,10 @@ public static class ServiceCollectionExtensions
         List<IToolSource> sources =
         [
             new KuroeInfoToolSource(
-                taskReader, new ToolCatalogView(catalog, models), flows, hostStartInputs, settings),
+                taskReader,
+                new ToolCatalogView(catalog, models),
+                new FlowTemplateCatalog(flows, hostStartInputs),
+                settings),
             new ContractToolSource(portSubmitter, cannotCompleteSubmitter, statusReader),
         ];
 

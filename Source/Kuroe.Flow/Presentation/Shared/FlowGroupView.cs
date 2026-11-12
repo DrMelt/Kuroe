@@ -12,7 +12,13 @@ public sealed record FlowGroupView(
     /// <summary>分组状态。</summary>
     public FlowNodeState State { get; init; } = FlowNodeState.Pending;
 
-    /// <summary>分组输出端口。</summary>
+    /// <summary>分组节点类型名，模板视图使用。</summary>
+    public string? Kind { get; init; }
+
+/// <summary>分组输入端口，模板视图使用。</summary>
+    public IReadOnlyList<FlowPortView> Inputs { get; init; } = [];
+
+/// <summary>分组输出端口。</summary>
     public IReadOnlyList<FlowPortView> Outputs { get; init; } = [];
 
     /// <summary>分组的发布次数上限。</summary>

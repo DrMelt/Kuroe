@@ -53,12 +53,8 @@ public sealed class FlowRuntime(
     public void Pause(ITaskFlowContext task) => Find(task)?.Pause();
 
     /// <summary>要求持有任务 Gate：停止一个已启动的执行。</summary>
-    public ErrorOr<Success> StopExecution(ITaskFlowContext task, ExecutionId id)
-    {
-        return Find(task) is { } control
-            ? control.StopExecution(id)
-            : gateway.Stop(task, id);
-    }
+    public ErrorOr<Success> StopExecution(ITaskFlowContext task, ExecutionId id) =>
+        gateway.Stop(task, id);
 
     /// <summary>要求持有任务 Gate：恢复任务的推进循环，并把可恢复的阻塞排入恢复队列。</summary>
     public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>

@@ -86,7 +86,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     public RuntimeExecutable Executable(NodePath path) => (RuntimeExecutable)_materializer.Get(path);
 
     /// <summary>执行所属的运行时执行节点。要求持有 Gate。</summary>
-    public RuntimeExecutable Node(IExecution execution) => Executable(execution.Input.Node);
+    public RuntimeExecutable Node(IGraphExecution execution) => Executable(execution.Input.Node);
 
     /// <summary>已实例化的运行时节点，未实例化时为空。判定与展示按它读数，不创建节点。</summary>
     public NodeRuntime? Materialized(NodePath node) => _materializer.Find(node);
@@ -109,7 +109,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     }
 
     /// <summary>按执行号取已恢复的执行，节点恢复已发布产出时使用。</summary>
-    IExecution? INodeRestoreContext.Execution(ExecutionId id) =>
+    IGraphExecution? INodeRestoreContext.Execution(ExecutionId id) =>
         _state.Executions.FirstOrDefault(execution => execution.Id == id);
 
     /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>

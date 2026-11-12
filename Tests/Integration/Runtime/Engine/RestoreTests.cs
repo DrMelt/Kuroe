@@ -156,9 +156,12 @@ public sealed class RestoreTests
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot running = environment.Wait(id, snapshot =>
-            snapshot.View.Steps.Sum(step => step.Executions.Count) == 5
-            && environment.Runner.Started.Count == 4);
+        TaskSnapshot running = environment.Wait(
+            id,
+            snapshot => snapshot.View.Steps.Sum(step => step.Executions.Count) == 5);
+        Assert.True(
+            SpinWait.SpinUntil(() => environment.Runner.Started.Count == 4, TimeSpan.FromSeconds(5)),
+            $"已启动执行 {environment.Runner.Started.Count} 个。");
         Assert.Equal(5, running.LiveExecutions);
 
         environment.Tasks.Pause(id).ThrowIfError();

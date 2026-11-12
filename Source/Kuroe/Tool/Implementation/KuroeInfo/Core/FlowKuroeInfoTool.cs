@@ -1,40 +1,33 @@
 using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Tool.KuroeInfo;
 
 /// <summary>流程模板的状态查询工具。只读，不产生状态改动。</summary>
 public sealed class FlowKuroeInfoTool : ITool
 {
-    private readonly IFlowCatalog _flows;
-    private readonly IHostStartInputs _hostStartInputs;
+    private readonly IFlowTemplateCatalog _flows;
 
     /// <summary>本载体的函数声明。</summary>
     public IReadOnlyList<ToolFunction> Functions { get; }
 
-    /// <summary>列出流程模板的函数定义。</summary>
     private static readonly ToolDefinition ListFlows = new(
         new ToolPath("KuroeInfo/ListFlows"),
         "列出流程模板：流程名、执行节点路径与说明。",
         []);
 
-    /// <summary>查看指定流程的函数定义。</summary>
     private static readonly ToolDefinition GetFlow = new(
         new ToolPath("KuroeInfo/GetFlow"),
         "查看指定流程的展开节点表：模型、节点类型名与要求。",
         [new ToolParameter(new ToolName("flowName"), "要查看的流程名", Required: true)]);
 
-    /// <summary>用流程模板查询与宿主开始输入表建立载体。</summary>
-    public FlowKuroeInfoTool(IFlowCatalog flows, IHostStartInputs hostStartInputs)
+    /// <summary>用流程模板目录建立载体。</summary>
+    public FlowKuroeInfoTool(IFlowTemplateCatalog flows)
     {
         _flows = flows;
-        _hostStartInputs = hostStartInputs;
         Functions =
         [
             ListFlows.Bind(_ => List()),
@@ -42,20 +35,18 @@ public sealed class FlowKuroeInfoTool : ITool
         ];
     }
 
-    /// <summary>流程列表。</summary>
     private ErrorOr<string> List()
     {
         var text = new StringBuilder();
-        foreach (FlowDefinition flow in _flows.All())
+        foreach (FlowTemplateView flow in _flows.All())
         {
-            text.AppendLine($"{flow.Name} · {string.Join(" → ", Flatten(flow.RootNode))}"
-                + $" · {flow.Description ?? string.Empty}");
+            string nodes = string.Join(" → ", flow.Steps.Select(step => step.Label));
+            text.AppendLine($"{flow.Name} · {nodes} · {flow.Description ?? string.Empty}");
         }
 
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>按流程名查看展开节点表，流程不存在时返回拒绝错误。</summary>
     private ErrorOr<string> Show(ToolArguments arguments)
     {
         string? name = arguments.Text(new ToolName("flowName"));
@@ -70,138 +61,84 @@ public sealed class FlowKuroeInfoTool : ITool
             return flowName.ErrorsOrEmptyList;
         }
 
-        ErrorOr<FlowDefinition> found = _flows.Find(flowName.Value);
+        ErrorOr<FlowTemplateView> found = _flows.Find(flowName.Value);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
+        FlowTemplateView flow = found.Value;
         var text = new StringBuilder();
-        text.AppendLine($"流程「{found.Value.Name}」· {found.Value.Description ?? string.Empty}");
-        IEnumerable<Port> startPorts = found.Value.StartPorts;
-        IReadOnlyDictionary<PortName, string> hostInputs = _hostStartInputs.Bindings(found.Value.Name);
-        text.AppendLine($"开始 {string.Join("、", startPorts.Select(port => port.StartLabel(hostInputs)))}");
-
-        foreach ((NodeSpec node, int depth) in Walk(found.Value.RootNode))
-        {
-            if (node.Spec is not null)
-            {
-                NodeKind kind = node.EffectiveKind;
-                text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{kind.Value}节点）");
-
-                List<string> attributes = [];
-                if (node.Type is { Shape.DispatchesExecutions: true })
-                {
-                    attributes.Add($"模型 {NodeModel(node)}");
-                }
-
-                if (attributes.Count > 0)
-                {
-                    text.AppendLine($"    {string.Join(" · ", attributes)}");
-                }
-
-                string requirement = Requirement(node);
-                if (requirement.Length > 0)
-                {
-                    text.AppendLine($"    {requirement}");
-                }
-            }
-            else if (node.Nodes is { Count: > 0 })
-            {
-                text.AppendLine($"  {Indent(depth)}{node.Label.Value}（{node.EffectiveKind.Value}节点）");
-                IReadOnlyList<InputPort> ports = node.EffectiveInputs;
-                if (ports.Count > 0)
-                {
-                    text.AppendLine($"    传入端口 {string.Join("、", ports.Select(port => port.Label()))}");
-                }
-
-                if (node.Outputs.Count > 0)
-                {
-                    text.AppendLine($"    输出端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
-                }
-            }
-        }
+        text.AppendLine($"流程「{flow.Name}」· {flow.Description ?? string.Empty}");
+        text.AppendLine($"开始 {string.Join("、", flow.StartPorts.Select(port => port.Label))}");
+        Walk(text, flow, null, 0);
 
         return text.ToString().TrimEnd();
     }
 
-    /// <summary>展开节点上的模型静态端口绑定，未绑定时给未绑定。</summary>
-    private static string NodeModel(NodeSpec node)
+    private static void Walk(StringBuilder text, FlowTemplateView flow, string? parent, int depth)
     {
-        if (node.Type?.ModelPort is not { } modelPort)
+        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parent))
         {
-            return "未绑定";
+            text.AppendLine($"  {Indent(depth)}{group.Label}（{group.Kind ?? "容器"}节点）");
+            AppendPorts(text, depth + 1, "传入端口", group.Inputs);
+            AppendPorts(text, depth + 1, "输出端口", group.Outputs);
+            Walk(text, flow, group.Path, depth + 1);
         }
 
-        if (node.Bindings is { } bindings && bindings.TryGetValue(modelPort, out PortRef reference))
+        foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parent))
         {
-            return reference.Display;
+            text.AppendLine($"  {Indent(depth)}{step.Label}（{step.Kind}节点）");
+            string requirement = Requirement(step);
+            if (requirement.Length > 0)
+            {
+                text.AppendLine($"    {Indent(depth)}{requirement}");
+            }
         }
-
-        return node.FindInput(modelPort)?.Default is { Length: > 0 } value ? value : "未绑定";
     }
 
-    /// <summary>节点要求：类型属性、输入端口、From 连接与输出端口。</summary>
-    private static string Requirement(NodeSpec node)
+    private static void AppendPorts(
+        StringBuilder text,
+        int depth,
+        string label,
+        IReadOnlyList<FlowPortView> ports)
+    {
+        if (ports.Count > 0)
+        {
+            text.AppendLine($"    {Indent(depth)}{label} {string.Join("、", ports.Select(port => port.Name))}");
+        }
+    }
+
+    private static string Requirement(FlowStepView step)
     {
         List<string> parts = [];
-        foreach (NodeAttribute attribute in node.Type?.Attributes ?? [])
+        foreach (FlowAttributeView attribute in step.Attributes)
         {
             parts.Add($"{attribute.Name} {attribute.Value}");
         }
 
-        IReadOnlyList<InputPort> inputs = [.. node.EffectiveInputs.Where(port => !port.IsStatic)];
+        if (step.Model is { Length: > 0 } model)
+        {
+            parts.Add($"模型 {model}");
+        }
+
+        IReadOnlyList<FlowPortView> inputs = [.. step.Inputs.Where(port => !port.Static)];
         if (inputs.Count > 0)
         {
-            parts.Add($"输入 {string.Join("、", inputs.Select(port => port.Label()))}");
+            parts.Add($"输入 {string.Join("、", inputs.Select(port => port.Name))}");
         }
 
-        if (node.From.Count > 0)
+        if (step.Upstream.Count > 0)
         {
-            parts.Add($"取自 {string.Join("；", node.From.Select(group => group.Label()))}");
+            parts.Add($"取自 {string.Join("；", step.Upstream)}");
         }
 
-        if (node.Outputs.Count > 0)
+        if (step.Outputs.Count > 0)
         {
-            parts.Add($"端口 {string.Join("、", node.Outputs.Select(port => port.Label()))}");
+            parts.Add($"端口 {string.Join("、", step.Outputs.Select(port => port.Name))}");
         }
 
         return parts.Count == 0 ? string.Empty : $"要求：{string.Join("；", parts)}";
-    }
-
-    /// <summary>递归收集流程里的全部执行节点标签。</summary>
-    private static IEnumerable<NodeLabel> Flatten(NodeSpec node)
-    {
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                foreach (NodeLabel descendant in Flatten(child))
-                {
-                    yield return descendant;
-                }
-            }
-        }
-        else
-        {
-            yield return node.Label;
-        }
-    }
-
-    /// <summary>先根序遍历节点树，附带层级深度供缩进。</summary>
-    private static IEnumerable<(NodeSpec Node, int Depth)> Walk(NodeSpec node, int depth = 0)
-    {
-        yield return (node, depth);
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                foreach ((NodeSpec descendant, int childDepth) in Walk(child, depth + 1))
-                {
-                    yield return (descendant, childDepth);
-                }
-            }
-        }
     }
 
     private static string Indent(int depth) => new(' ', depth * 2);

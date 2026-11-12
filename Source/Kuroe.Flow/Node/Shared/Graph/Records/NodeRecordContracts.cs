@@ -26,5 +26,5 @@ public interface IPortRecordSource
 public interface INodeRestoreContext
 {
     /// <summary>按执行号取已恢复的执行，不存在时为空。</summary>
-    IExecution? Execution(ExecutionId id);
+    IGraphExecution? Execution(ExecutionId id);
 }

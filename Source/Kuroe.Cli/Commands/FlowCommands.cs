@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Commands;
@@ -10,7 +11,7 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
 {
     public int List()
     {
-        PlainFlowView.List(output, session.Flows.All(), session.Flows.Failures);
+        PlainFlowView.List(output, session.Templates.All(), session.Library.Failures);
 
         return ExitCodes.Success;
     }
@@ -25,7 +26,7 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        ErrorOr<CompiledFlow> found = session.Flows.FindCompiled(parsed.Value);
+        ErrorOr<FlowTemplateView> found = session.Templates.Find(parsed.Value);
         if (found.IsError)
         {
             output.Report(found.ErrorsOrEmptyList);
@@ -33,14 +34,14 @@ internal sealed class FlowCommands(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        PlainFlowView.Show(output, found.Value, session.HostStartInputs.Bindings(found.Value.Model.Name));
+        PlainFlowView.Show(output, found.Value);
 
         return ExitCodes.Success;
     }
 
     public int Add(string file)
     {
-        ErrorOr<FlowImport> imported = session.Flows.Import(file);
+        ErrorOr<FlowImport> imported = session.Library.Import(file);
         if (imported.IsError)
         {
             output.Report(imported.ErrorsOrEmptyList);

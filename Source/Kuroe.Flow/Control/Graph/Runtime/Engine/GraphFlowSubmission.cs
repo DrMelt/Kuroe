@@ -3,10 +3,7 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -16,43 +13,21 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Tasks.Records;
-using Kuroe.Flow.Runtime.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
-using ExecutionState = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionState;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
-/// <summary>图驱动流程：按流程名编译出执行视图，用节点图推进，状态与存档按图记录。</summary>
-public sealed class GraphFlowFramework(
+/// <summary>图流程的提交与恢复：校验开始输入，建立图状态，从存档重建执行上下文。</summary>
+public sealed class GraphFlowSubmission(
     IFlowRuntimeCatalog flows,
     IFlowSnapshotCompiler compiler,
     IHostStartInputs hostStartInputs,
     IHostTaskStart host,
     IExecutionTargetResolver targets,
     IExecutionRuntime executions,
-    IInputDelivery inputs,
-    IFlowExecutionGateway gateway,
-    IFlowSnapshotSource? snapshots = null) : IFlowFramework,
-    IFlowSubmission,
-    IFlowControlFactory,
-    IFlowPresentation,
-    IFlowRecordSource
+    IFlowSnapshotSource? snapshots = null) : IFlowSubmission
 {
-    /// <inheritdoc/>
-    public string Kind => FlowRecordKinds.Graph;
-
-    /// <inheritdoc/>
-    public string Name => "图流程";
-
-    /// <inheritdoc/>
-    public bool Handles(FlowName name) => flows.FindCompiled(name).IsSuccess;
-
-    /// <inheritdoc/>
-    public bool Handles(FlowRecord record) =>
-        record.Kind == Kind && record.Definition is GraphFlowDefinitionRecord;
-
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
     {
@@ -62,8 +37,7 @@ public sealed class GraphFlowFramework(
             return compiled.ErrorsOrEmptyList;
         }
 
-        CompiledFlow flow = compiled.Value;
-        return PrepareCompiled(id, flow, inputs, title);
+        return PrepareCompiled(id, compiled.Value, inputs, title);
     }
 
     /// <summary>按已编译流程准备提交。</summary>
@@ -143,148 +117,6 @@ public sealed class GraphFlowFramework(
             definition);
     }
 /// <inheritdoc/>
-    public void Attach(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state)
-        {
-            throw new InvalidOperationException("图流程框架收到非图流程状态。");
-        }
-
-        state.Attach(task);
-        TaskRuntime runtime = state.Runtime;
-
-        if (state.RestoreNodes.Count > 0 || state.RestorePorts.Count > 0)
-        {
-            runtime.Restore(state.RestoreNodes, state.RestorePorts);
-        }
-
-        if (task.Lifecycle == TaskLifecycle.Terminated)
-        {
-            runtime.Cancel();
-            return;
-        }
-
-        foreach (GraphExecution execution in state.Executions
-            .Where(execution => execution.State == ExecutionState.Interrupted))
-        {
-            GraphExecutionSnapshot snapshot = execution.Snapshot();
-            RuntimeExecutable node = runtime.Executable(execution.Input.Node);
-            if (snapshot.StartedAt is null)
-            {
-                if (node.Block?.Execution == execution.Id)
-                {
-                    node.ClearBlock();
-                }
-
-                node.RequestRerun();
-                continue;
-            }
-
-            if (node.Block is null)
-            {
-                node.EnterBlocked(
-                    [node.Path],
-                    new NodeBlock("进程退出前未收口。", execution.Id, state.SavedAt));
-            }
-        }
-
-        runtime.RefreshRestorePlans();
-    }
-
-    /// <inheritdoc/>
-    public IFlowControl CreateControl(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state)
-        {
-            throw new InvalidOperationException("图流程框架收到非图流程状态。");
-        }
-
-        return new GraphFlowControl(task, state, executions, targets, inputs, gateway);
-    }
-
-    /// <inheritdoc/>
-    public IFlowView CaptureView(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state || !state.Attached)
-        {
-            throw new InvalidOperationException("图流程状态还没有运行期。");
-        }
-
-        TaskRuntime runtime = state.Runtime;
-
-        TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
-        IReadOnlyList<GraphExecutionSnapshot> executionSnapshots =
-            [.. state.Executions.Select(execution => execution.Snapshot())];
-
-        return projection.View(state.Flow.Model, executionSnapshots);
-    }
-
-    /// <inheritdoc/>
-    public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state || !state.Attached)
-        {
-            throw new InvalidOperationException("图流程状态还没有运行期。");
-        }
-
-        TaskRuntime runtime = state.Runtime;
-        TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
-        IReadOnlyList<GraphExecutionSnapshot> executionSnapshots =
-            [.. state.Executions.Select(execution => execution.Snapshot())];
-
-        return new TaskSnapshot(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            projection.View(state.Flow.Model, executionSnapshots),
-            task.State,
-            task.Executions.Count(execution => execution.IsLive),
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            task.LastActivityAt)
-        {
-            Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = task.Control?.Pending() ?? [],
-            StartTexts = state.StartTexts,
-        };
-    }
-
-    /// <inheritdoc/>
-    public FlowRecord CaptureRecord(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state || state.Definition is not { } definition)
-        {
-            throw new InvalidOperationException("图流程任务没有流程快照，不能写存档。");
-        }
-
-        TaskRuntime runtime = state.Runtime;
-        FlowSeed seed = task.Control?.CaptureSeed() ?? FlowSeed.Empty;
-
-        return new FlowRecord(
-            FlowRecordKinds.Graph,
-            definition,
-            new GraphFlowStateRecord(
-                new TaskStartSnapshot(state.Inputs, state.StartTexts.Texts),
-                [.. runtime.Materializer.Materialized
-                    .Select(node => ((INodeRecordSource)node).CaptureRecord())
-                    .OfType<NodeRecord>()],
-                [.. runtime.Materializer.Materialized
-                    .SelectMany(node => ((IPortRecordSource)node).CapturePorts())],
-                seed));
-    }
-/// <inheritdoc/>
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state)
-        {
-            throw new InvalidOperationException("图流程框架收到非图流程状态。");
-        }
-
-        return [.. state.Executions.Select(execution => execution.CaptureRecord())];
-    }
-
-    /// <inheritdoc/>
     public ErrorOr<FlowRestore> Restore(TaskRecord record)
     {
         if (record.Flow.Definition is not GraphFlowDefinitionRecord definition
@@ -325,7 +157,7 @@ public sealed class GraphFlowFramework(
 
                 ExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord);
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input);
-                state.Executions.Add(execution);
+                state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
             }
         }
@@ -453,8 +285,7 @@ public sealed class GraphFlowFramework(
 
         return errors;
     }
-
-    private static Error MissingInput(PortName port) =>
+private static Error MissingInput(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 没有输入。");
 
     private static Error BlankInput(PortName port) =>

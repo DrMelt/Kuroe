@@ -5,8 +5,6 @@ using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Runtime.Process;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
@@ -20,6 +18,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 public sealed class WorkTask : ITaskFlowHost
 {
     private readonly List<LoopExecution> _executions = [];
+    private LoopExecution[] _executionsSnapshot = [];
     private readonly DateTimeOffset _createdAt;
     private readonly ProcessObserver? _observer;
     private readonly FlowProvider _provider;
@@ -54,7 +53,7 @@ public sealed class WorkTask : ITaskFlowHost
         _lastActivityAt = _createdAt;
         _observer = observer;
         _title = title;
-        provider.Controls.Attach(this);
+        provider.StateBinder.Bind(this);
     }
 
     private WorkTask(
@@ -80,13 +79,13 @@ public sealed class WorkTask : ITaskFlowHost
         _lifecycle = record.Lifecycle;
         _completed = record.Completed;
         Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
-        provider.Controls.Attach(this);
 
         foreach (LoopExecution execution in executions)
         {
             AttachExecution(execution);
         }
 
+        provider.StateBinder.Bind(this);
         Journal.AppendInfo("从存档恢复。");
     }
 
@@ -186,8 +185,8 @@ public sealed class WorkTask : ITaskFlowHost
         return () => ExecutionSettled -= handler;
     }
 
-    /// <summary>任务的全部执行，按提交顺序。</summary>
-    public IReadOnlyList<LoopExecution> Executions => _executions;
+    /// <summary>任务的全部执行，按提交顺序。对外给出不可变快照，读取不需要任务 Gate。</summary>
+    public IReadOnlyList<LoopExecution> Executions => _executionsSnapshot;
 
     /// <summary>任务标题，创建时按输入与流程名推导，可由宿主改写。</summary>
     public string Title
@@ -403,6 +402,7 @@ public sealed class WorkTask : ITaskFlowHost
     public void AttachExecution(LoopExecution execution)
     {
         _executions.Add(execution);
+        _executionsSnapshot = [.. _executions];
         _lastActivityAt = DateTimeOffset.UtcNow;
         execution.Started += () => OnExecutionStarted(execution);
         Journal.AppendInfo($"执行 {execution.Id.Value} 创建。");

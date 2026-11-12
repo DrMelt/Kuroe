@@ -69,6 +69,7 @@ public sealed class FlowFrameworkSourceTests
         return new FlowProvider(
             framework,
             new TestSubmission(),
+            NoFlowStateBinder.Instance,
             new TestControls(),
             new TestPresentation(implementation),
             new TestRecords());
@@ -130,10 +131,6 @@ public sealed class FlowFrameworkSourceTests
 
     private sealed class TestControls : IFlowControlFactory
     {
-        public void Attach(ITaskFlowContext task)
-        {
-        }
-
         public IFlowControl CreateControl(ITaskFlowContext task) => throw new NotSupportedException();
     }
 

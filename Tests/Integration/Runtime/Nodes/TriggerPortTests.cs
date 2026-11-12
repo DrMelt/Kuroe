@@ -327,7 +327,7 @@ public sealed class TriggerPortTests
             && entry.Text.Contains("未满足触发条件", StringComparison.Ordinal));
 
     /// <summary>是否为来源节点，用于区分交回值。</summary>
-    private static bool SourceValues(IExecution execution) =>
+    private static bool SourceValues(IGraphExecution execution) =>
         execution.Input.Node.Label.Value is "来源" or "成员";
 
     /// <summary>一条带翻转门控的流程：下游输入端口声明 Trigger，绑定条件为 Negative。</summary>

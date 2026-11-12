@@ -71,6 +71,26 @@ public sealed class WorkTaskTests
         Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
     }
 
+    [Fact]
+    public void Construction_binds_state_once()
+    {
+        StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
+        TestProvider provider = new();
+
+        _ = new WorkTask(
+            new TaskRegistry(new ExecutionIndex()),
+            new TaskId(1),
+            inputs,
+            FlowTexts.Empty,
+            "测试任务",
+            provider.Provider,
+            new TestState(inputs),
+            null,
+            observer: null);
+
+        Assert.Equal(1, provider.Binder.Binds);
+    }
+
     private static WorkTask CreateTask()
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
@@ -106,9 +126,11 @@ public sealed class WorkTaskTests
         {
             Framework = new TestFramework();
             Presentation = new TestPresentation();
+            Binder = new TestBinder();
             Provider = new FlowProvider(
                 Framework,
                 new TestSubmission(),
+                Binder,
                 new TestControls(),
                 Presentation,
                 new TestRecords());
@@ -117,6 +139,8 @@ public sealed class WorkTaskTests
         public IFlowFramework Framework { get; }
 
         public IFlowPresentation Presentation { get; }
+
+        public TestBinder Binder { get; }
 
         public FlowProvider Provider { get; }
     }
@@ -140,12 +164,15 @@ public sealed class WorkTaskTests
         public ErrorOr<FlowRestore> Restore(TaskRecord record) => throw new NotSupportedException();
     }
 
+    private sealed class TestBinder : IFlowStateBinder
+    {
+        public int Binds { get; private set; }
+
+        public void Bind(ITaskFlowContext task) => Binds++;
+    }
+
     private sealed class TestControls : IFlowControlFactory
     {
-        public void Attach(ITaskFlowContext task)
-        {
-        }
-
         public IFlowControl CreateControl(ITaskFlowContext task) => throw new NotSupportedException();
     }
 

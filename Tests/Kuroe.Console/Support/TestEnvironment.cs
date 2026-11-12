@@ -4,6 +4,7 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Persistence.Restoring.Shared;
@@ -79,6 +80,12 @@ public sealed class TestEnvironment : IDisposable
     public SettingsProvider Settings => _provider.GetRequiredService<SettingsProvider>();
 
     public FlowService Flows => _provider.GetRequiredService<FlowService>();
+
+    /// <summary>流程库操作。</summary>
+    public IFlowLibrary Library => _provider.GetRequiredService<IFlowLibrary>();
+
+    /// <summary>流程模板目录。</summary>
+    public IFlowTemplateCatalog Templates => _provider.GetRequiredService<IFlowTemplateCatalog>();
 
     /// <summary>宿主开始输入表，流程展示与任务提交共用。</summary>
     public IHostStartInputs HostStartInputs => _provider.GetRequiredService<IHostStartInputs>();

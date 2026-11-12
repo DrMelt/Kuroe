@@ -36,8 +36,8 @@ public sealed class FlowCommandsTests
         Assert.Contains("导入 1 条流程", output.ToString());
         Assert.Contains("未导入", error.ToString());
         Assert.Contains("待输入", error.ToString());
-        Assert.Contains(environment.Session.Flows.All(), flow => flow.Name.Value == "可运行");
-        Assert.DoesNotContain(environment.Session.Flows.All(), flow => flow.Name.Value == "待输入");
+        Assert.Contains(environment.Session.Templates.All(), flow => flow.Name == "可运行");
+        Assert.DoesNotContain(environment.Session.Templates.All(), flow => flow.Name == "待输入");
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class FlowCommandsTests
         Assert.Equal(ExitCodes.Success, code);
         Assert.Contains("导入 0 条流程", output.ToString());
         Assert.Contains("未导入", error.ToString());
-        Assert.DoesNotContain(environment.Session.Flows.All(), flow => flow.Name.Value == "待输入");
+        Assert.DoesNotContain(environment.Session.Templates.All(), flow => flow.Name == "待输入");
     }
 
     [Fact]

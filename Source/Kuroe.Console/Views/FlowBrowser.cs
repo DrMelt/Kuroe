@@ -1,27 +1,19 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Node.Llm;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>流程菜单：列表、编译结果查看与文件导入。</summary>
+/// <summary>流程菜单：列表、模板查看与文件导入。</summary>
 internal sealed class FlowBrowser(
-    FlowService flows,
-    IHostStartInputs hostStartInputs,
+    IFlowLibrary library,
+    IFlowTemplateCatalog templates,
     Terminal terminal,
     ResultView results)
 {
-    /// <summary>提问一行能看到的文本长度。</summary>
-    private const int QuestionLimit = 40;
-
-    /// <summary>一个菜单项。</summary>
     private sealed record Item(string Label, string Action);
 
     private static readonly Item Back = new("← 返回", "back");
@@ -33,7 +25,7 @@ internal sealed class FlowBrowser(
         {
             while (true)
             {
-                IReadOnlyList<FlowDefinition> all = flows.All();
+                IReadOnlyList<FlowTemplateView> all = templates.All();
 
                 terminal.Page("主菜单", "流程");
                 Print(all);
@@ -68,39 +60,47 @@ internal sealed class FlowBrowser(
         }
     }
 
-    /// <summary>打印流程、端口与接线。</summary>
+    /// <summary>打印流程、开始端口与节点树。</summary>
     public void PrintDetail(FlowName name)
     {
-        ErrorOr<CompiledFlow> found = flows.FindCompiled(name);
+        ErrorOr<FlowTemplateView> found = templates.Find(name);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
             return;
         }
 
-        CompiledFlow compiled = found.Value;
-        terminal.Page("主菜单", "流程", compiled.Model.Name.Value);
+        FlowTemplateView flow = found.Value;
+        terminal.Page("主菜单", "流程", flow.Name);
         terminal.Write(Blocks.Section(
             BoxKind.View,
-            $"流程 {compiled.Model.Name.Value}",
+            $"流程 {flow.Name}",
             Blocks.Fields(
-                ("执行节点", new Text(compiled.Graph.TotalExecutables.ToString())),
-                ("容器", new Text(compiled.Graph.Containers.Count.ToString())),
+                ("执行节点", new Text(flow.Steps.Count.ToString())),
+                ("容器", new Text(flow.Groups.Count.ToString())),
                 ("说明", new Text(
-                    compiled.Model.Description is { Length: > 0 } description ? description : "—",
+                    flow.Description is { Length: > 0 } description ? description : "—",
                     Styles.Hint)))));
 
         terminal.NewLine();
-        IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(compiled.Model.Name);
-        terminal.Write(StartLine(compiled.Model.StartPorts, hostInputs));
-        terminal.Write(NodeTree.Build(compiled.Graph, new ViewLine().Add("节点", Styles.Hint).Build(),
-            node => Line(node, hostInputs)));
+        ViewLine start = new ViewLine().Add("开始端口", Styles.Key);
+        if (flow.StartPorts.Count > 0)
+        {
+            start.Add(string.Join('、', flow.StartPorts.Select(port => port.Label)), Styles.Hint);
+        }
+
+        terminal.Write(start.Build());
+        terminal.Write(NodeTree.Build(
+            flow,
+            new ViewLine().Add("节点", Styles.Hint).Build(),
+            group => GroupLine(group),
+            step => StepLine(step)));
     }
 
     /// <summary>从文件导入节点库或流程，同名覆盖。</summary>
     public void Import(string file)
     {
-        ErrorOr<FlowImport> imported = flows.Import(file);
+        ErrorOr<FlowImport> imported = library.Import(file);
         if (imported.IsError)
         {
             results.Reject(imported.ErrorsOrEmptyList);
@@ -114,7 +114,6 @@ internal sealed class FlowBrowser(
         }
     }
 
-    /// <summary>导入结果的条数说明，节点库与流程分开计数。</summary>
     private static string Summary(FlowImport imported)
     {
         if (imported.Nodes.Count == 0)
@@ -127,11 +126,11 @@ internal sealed class FlowBrowser(
             : $"{imported.Flows.Count} 条流程、{imported.Nodes.Count} 个节点定义";
     }
 
-    private void Show(IReadOnlyList<FlowDefinition> all)
+    private void Show(IReadOnlyList<FlowTemplateView> all)
     {
-        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name.Value)]) is { } index)
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name)]) is { } index)
         {
-            ViewPage.Browse(terminal, "流程详情", () => PrintDetail(all[index].Name));
+            ViewPage.Browse(terminal, "流程详情", () => PrintDetail(new FlowName(all[index].Name)));
         }
     }
 
@@ -143,8 +142,7 @@ internal sealed class FlowBrowser(
             Import(values[0]);
         }
     }
-
-    private void Print(IReadOnlyList<FlowDefinition> all)
+private void Print(IReadOnlyList<FlowTemplateView> all)
     {
         if (all.Count == 0)
         {
@@ -158,147 +156,63 @@ internal sealed class FlowBrowser(
             ("容器", false),
             ("说明", true));
 
-        foreach (FlowDefinition flow in all)
+        foreach (FlowTemplateView flow in all)
         {
-            (int executables, int containers) = Count(flow.RootNode);
             table.AddRow(
-                new Text(flow.Name.Value, Styles.Key),
-                new Text(executables.ToString()),
-                new Text(containers.ToString()),
+                new Text(flow.Name, Styles.Key),
+                new Text(flow.Steps.Count.ToString()),
+                new Text(flow.Groups.Count.ToString()),
                 new Text(flow.Description ?? string.Empty, Styles.Hint));
         }
 
         terminal.Write(Blocks.Section(BoxKind.View, $"流程 {all.Count} 条", table));
     }
 
-    private static Paragraph Line(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
+    private static Paragraph GroupLine(FlowGroupView group)
     {
-        ContainerNode container => ContainerLine(container),
-        ExecutableNode executable => ExecutableLine(executable, hostInputs),
-        _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
-    };
-
-    private static Paragraph StartLine(
-        IReadOnlyList<Port> ports,
-        IReadOnlyDictionary<PortName, string> hostInputs)
-    {
-        ViewLine line = new ViewLine().Add("开始端口", Styles.Key);
-        if (ports.Count > 0)
+        ViewLine line = new ViewLine().Add(group.Label, Styles.Key).Add(group.Kind ?? "容器", Styles.Hint);
+        if (group.Outputs.Count > 0)
         {
-            line.Add(string.Join('、', ports.Select(port => port.StartLabel(hostInputs))), Styles.Hint);
+            line.Add($"输出 {string.Join('、', group.Outputs.Select(port => port.Name))}", Styles.Hint);
+        }
+
+        if (group.MaxExecutions != int.MaxValue)
+        {
+            line.Add($"上限 {group.MaxExecutions}", Styles.Hint);
         }
 
         return line.Build();
     }
 
-    private static Paragraph ContainerLine(ContainerNode container)
+    private static Paragraph StepLine(FlowStepView step)
     {
-        ViewLine line = new ViewLine().Add(container.Label.Value, Styles.Key).Add("容器", Styles.Hint);
-        if (container.Outputs.Count > 0)
-        {
-            line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
-        }
-
-        if (container.MaxExecutions != int.MaxValue)
-        {
-            line.Add($"上限 {container.MaxExecutions}", Styles.Hint);
-        }
-
-        return line.Build();
-    }
-
-    private static Paragraph ExecutableLine(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
-    {
-        ViewLine line = new ViewLine().Add(executable.Label.Value, Styles.Key).Add(executable.Kind.Value, Styles.Hint);
-        if (executable.StaticLabel(LlmNodeTypes.ModelPort, hostInputs) is { } model)
+        ViewLine line = new ViewLine().Add(step.Label, Styles.Key).Add(step.Kind, Styles.Hint);
+        if (step.Model is { Length: > 0 } model)
         {
             line.Add($"模型 {model}", Styles.Hint);
         }
 
-        IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];
+        IReadOnlyList<FlowPortView> inputs = [.. step.Inputs.Where(port => !port.Static)];
         if (inputs.Count > 0)
         {
-            line.Add($"输入 {string.Join('、', inputs.Select(port => port.Label()))}", Styles.Hint);
+            line.Add($"输入 {string.Join('、', inputs.Select(port => port.Name))}", Styles.Hint);
         }
 
-        if (executable.Outputs.Count > 0)
+        if (step.Outputs.Count > 0)
         {
-            line.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', step.Outputs.Select(port => port.Name))}", Styles.Hint);
         }
 
-        if (NodeParameterView.Llm(executable.Type) is { } parameters)
+        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions)
         {
-            if (parameters.Tools is { Count: > 0 } tools)
-            {
-                line.Add($"工具 {string.Join('、', tools.Select(tool => tool.Value))}", Styles.Hint);
-            }
-
-            if (parameters.SystemPrompt is { Count: > 0 } blocks)
-            {
-                line.Add($"系统指令 {blocks.Count} 块", Styles.Hint);
-            }
+            line.Add($"上限 {step.MaxExecutions}", Styles.Hint);
         }
 
-        if (NodeParameterView.Question(executable.Type) is { Length: > 0 } question)
+        if (step.Upstream.Count > 0)
         {
-            line.Add($"提问 {ViewLabels.OneLine(question, QuestionLimit)}", Styles.Hint);
-        }
-
-        if (executable.MaxExecutions != ExecutableNode.DefaultMaxExecutions)
-        {
-            line.Add($"上限 {executable.MaxExecutions}", Styles.Hint);
-        }
-
-        string upstream = Upstream(executable.Incoming);
-        if (upstream.Length > 0)
-        {
-            line.Add($"上游 {upstream}", Styles.Hint);
+            line.Add($"上游 {string.Join(" 或 ", step.Upstream)}", Styles.Hint);
         }
 
         return line.Build();
-    }
-
-    /// <summary>上游绑定按启动组展开，组内以顿号连接，组间表示任一齐备。</summary>
-    private static string Upstream(IReadOnlyList<InputBinding> bindings) =>
-        string.Join(" 或 ", bindings
-            .GroupBy(binding => binding.Group)
-            .OrderBy(group => group.Key)
-            .Select(group => string.Join('、', group.Select(binding =>
-                $"{binding.TargetInput}←{binding.Source.Display}"))));
-
-    /// <summary>流程里的执行节点与容器数量。</summary>
-    private static (int Executables, int Containers) Count(NodeSpec root)
-    {
-        int executables = 0;
-        int containers = 0;
-        foreach (NodeSpec node in Walk(root))
-        {
-            if (node.IsContainer)
-            {
-                containers++;
-            }
-            else if (node.Spec is not null)
-            {
-                executables++;
-            }
-        }
-
-        return (executables, containers);
-    }
-
-    /// <summary>先根序遍历节点树。</summary>
-    private static IEnumerable<NodeSpec> Walk(NodeSpec node)
-    {
-        yield return node;
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                foreach (NodeSpec descendant in Walk(child))
-                {
-                    yield return descendant;
-                }
-            }
-        }
     }
 }

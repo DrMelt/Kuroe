@@ -4,6 +4,7 @@ namespace Kuroe.Flow.Control;
 public sealed record FlowProvider(
     IFlowFramework Framework,
     IFlowSubmission Submission,
+    IFlowStateBinder StateBinder,
     IFlowControlFactory Controls,
     IFlowPresentation Presentation,
     IFlowRecordSource Records);

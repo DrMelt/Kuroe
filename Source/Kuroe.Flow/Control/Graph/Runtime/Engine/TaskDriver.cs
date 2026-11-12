@@ -21,7 +21,7 @@ using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
-/// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止、等待交付与视图。</summary>
+/// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止与等待交付。</summary>
 internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
@@ -145,10 +145,6 @@ internal sealed class GraphFlowControl(
         return targets.Count;
     }
 
-    /// <summary>停止一个已启动的执行。要求持有任务 Gate。</summary>
-    public ErrorOr<Success> StopExecution(Kuroe.Flow.Execution.ExecutionId id) =>
-        gateway.Stop(task, id);
-
     /// <summary>一次执行的契约状态，供契约工具回执。</summary>
     internal ExecutionStatus Status(LoopExecution execution)
     {
@@ -250,23 +246,10 @@ internal sealed class GraphFlowControl(
         }
     }
 
-    /// <summary>当前流程视图。</summary>
-    public IFlowView CaptureView()
-    {
-        lock (task.Gate)
-        {
-            TaskProjection projection = new(state.Flow.Graph, state.Runtime.Materializer, state.Runtime.StaticPorts);
-            IReadOnlyList<GraphExecutionSnapshot> executions = [.. state.Executions.Select(execution => execution.Snapshot())];
-
-            return projection.View(state.Flow.Model, executions);
-        }
-    }
-
     /// <summary>登记一次新执行到任务与流程状态。</summary>
     private GraphExecution Attach(LoopExecution unit, ExecutionInput input)
     {
-        GraphExecution execution = new(input, unit, task.ControlVersion);
-        state.Executions.Add(execution);
+        state.Bind(unit.Id, input, task.ControlVersion);
         task.AttachExecution(unit);
         unit.Started += () => task.UnderLock(() =>
         {
@@ -274,36 +257,16 @@ internal sealed class GraphFlowControl(
             return true;
         });
 
-        return execution;
+        return new GraphExecution(input, unit, task.ControlVersion);
     }
-    
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
     {
-        foreach (GraphExecution execution in state.Executions.Where(execution => execution.IsLive).ToArray())
+        foreach (LoopExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
         {
             execution.Interrupt("任务已暂停。");
         }
-    }
-
-    /// <summary>停止一个已启动的执行。未启动的执行不构成一次尝试，不能停止。</summary>
-    public static ErrorOr<Success> StopExecution(GraphExecution execution)
-    {
-        GraphExecutionSnapshot snapshot = execution.Snapshot();
-        if (!execution.IsLive)
-        {
-            return [ExecutionErrors.ExecutionSettled(new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value), "停止")];
-        }
-
-        if (snapshot.StartedAt is null)
-        {
-            return [ExecutionErrors.ExecutionNotStarted(new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value))];
-        }
-
-        execution.Interrupt("已停止执行。");
-
-        return Result.Success;
     }
 
     /// <summary>恢复推进：唤醒推进循环重新取待处理目标，并把恢复计划按节点去重后排入队列。clearPendingRestores 为真时丢弃此前排队的计划。要求持有任务 Gate。</summary>

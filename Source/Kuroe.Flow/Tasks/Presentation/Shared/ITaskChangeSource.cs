@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>任务状态变化的播发面。观察方据此重新读取快照。
 /// 事件可能在任务锁内触发，处理者只做唤醒，不读快照。</summary>

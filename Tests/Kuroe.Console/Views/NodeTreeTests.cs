@@ -1,6 +1,6 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 using Spectre.Console;
 using Spectre.Console.Testing;
 using Xunit;
@@ -28,13 +28,14 @@ public sealed class NodeTreeTests
     public void Node_tree_renders_hierarchy_and_details()
     {
         using ConsoleSession cli = new();
-        CompiledFlow flow = cli.Environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError();
+        FlowTemplateView flow = cli.Environment.Templates.Find(new FlowName("默认")).ThrowIfError();
 
         cli.Terminal.Write(NodeTree.Build(
-            flow.Graph,
+            flow,
             new ViewLine().Add("节点", Styles.Hint).Build(),
-            node => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
-            node => node is ExecutableNode ? [new Text("详情")] : []));
+            group => new ViewLine().Add(group.Label, Styles.Key).Build(),
+            step => new ViewLine().Add(step.Label, Styles.Key).Build(),
+            group => [new Text("详情")]));
 
         string[] lines = cli.Output.Output.Replace("\r", string.Empty).Split('\n');
         int container = Array.FindIndex(lines, line => line.Contains("整体"));

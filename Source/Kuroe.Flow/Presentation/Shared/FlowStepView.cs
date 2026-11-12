@@ -24,4 +24,16 @@ public sealed record FlowStepView(
 
     /// <summary>当前阻塞的原因，未阻塞时为空。</summary>
     public string? Block { get; init; }
+
+    /// <summary>模板中的节点类型名，任务运行期视图为空。</summary>
+    public string? NodeType { get; init; }
+
+    /// <summary>模板中的模型名，未绑定时为空。</summary>
+    public string? Model { get; init; }
+
+    /// <summary>模板中的节点类型属性。</summary>
+    public IReadOnlyList<FlowAttributeView> Attributes { get; init; } = [];
+
+    /// <summary>模板中的上游绑定，按启动组给出展示文本。</summary>
+    public IReadOnlyList<string> Upstream { get; init; } = [];
 }

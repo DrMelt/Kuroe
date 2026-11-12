@@ -9,4 +9,7 @@ public sealed record FlowPortView(
 {
     /// <summary>端口是否为运行期常量，文本即常量值。</summary>
     public bool Constant { get; init; }
+
+    /// <summary>输入端口是否为静态配置，模板视图使用。</summary>
+    public bool Static { get; init; }
 }

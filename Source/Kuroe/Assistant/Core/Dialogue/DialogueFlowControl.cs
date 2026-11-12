@@ -68,9 +68,6 @@ internal sealed class DialogueFlowControl(
     public int Rerun() => 0;
 
     /// <inheritdoc/>
-    public ErrorOr<Success> StopExecution(ExecutionId id) => gateway.Stop(task, id);
-
-    /// <inheritdoc/>
     public ErrorOr<Success> Terminate()
     {
         _awaiting = false;
@@ -112,9 +109,6 @@ internal sealed class DialogueFlowControl(
 
         return Result.Success;
     }
-
-    /// <inheritdoc/>
-    public IFlowView CaptureView() => DialogueView.Build(state, this, task, task.State);
 
     private ExecutionRequest Request(string text) =>
         new(

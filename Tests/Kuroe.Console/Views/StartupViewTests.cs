@@ -1,6 +1,5 @@
 using Kuroe.Console.Views;
 using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Xunit;
 
 namespace Kuroe.Console.Tests.Views;
@@ -12,7 +11,7 @@ public sealed class StartupViewTests
     public void Startup_banner_reports_scale_and_next_steps()
     {
         using ConsoleSession cli = new();
-        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Flows, cli.Terminal);
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
 
         startup.Print();
 
@@ -28,7 +27,7 @@ public sealed class StartupViewTests
     public void Startup_banner_points_to_provider_setup_when_the_catalog_is_empty()
     {
         using ConsoleSession cli = new(seedCatalog: false);
-        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Flows, cli.Terminal);
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
 
         startup.Print();
 
@@ -40,7 +39,7 @@ public sealed class StartupViewTests
     public void Startup_banner_reports_tasks_held_by_other_processes()
     {
         using ConsoleSession cli = new();
-        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Flows, cli.Terminal);
+        StartupView startup = new(cli.Environment.Catalog, cli.Environment.Models, cli.Environment.Tools, cli.Environment.Templates, cli.Terminal);
         TaskLoadReport report = new([], [new TaskId(1), new TaskId(2)], []);
 
         startup.Print(report);

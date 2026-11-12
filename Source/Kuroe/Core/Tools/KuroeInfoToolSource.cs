@@ -1,6 +1,5 @@
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Shared.Configuration;
 using Kuroe.Tool;
@@ -12,8 +11,7 @@ namespace Kuroe.Tools;
 internal sealed class KuroeInfoToolSource(
     ITaskReader tasks,
     ICatalogView catalog,
-    IFlowCatalog flows,
-    IHostStartInputs hostStartInputs,
+    IFlowTemplateCatalog flows,
     ISettingsView settings) : IToolSource
 {
     /// <inheritdoc/>
@@ -21,7 +19,7 @@ internal sealed class KuroeInfoToolSource(
     [
         .. new TaskKuroeInfoTool(tasks).Functions.Select(function => function.Definition),
         .. new CatalogKuroeInfoTool(catalog).Functions.Select(function => function.Definition),
-        .. new FlowKuroeInfoTool(flows, hostStartInputs).Functions.Select(function => function.Definition),
+        .. new FlowKuroeInfoTool(flows).Functions.Select(function => function.Definition),
         .. new SettingsKuroeInfoTool(settings).Functions.Select(function => function.Definition),
     ];
 
@@ -31,7 +29,7 @@ internal sealed class KuroeInfoToolSource(
         List<ITool> tools = [];
         Add(new TaskKuroeInfoTool(tasks));
         Add(new CatalogKuroeInfoTool(catalog));
-        Add(new FlowKuroeInfoTool(flows, hostStartInputs));
+        Add(new FlowKuroeInfoTool(flows));
         Add(new SettingsKuroeInfoTool(settings));
 
         return tools;

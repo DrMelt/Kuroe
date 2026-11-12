@@ -1,9 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Node.Llm;
+using Kuroe.Flow.Presentation;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;
@@ -14,7 +9,7 @@ internal static class PlainFlowView
     /// <summary>按文件顺序列出流程与规模，随后列出不可用流程。</summary>
     public static void List(
         CliOutput output,
-        IReadOnlyList<FlowDefinition> flows,
+        IReadOnlyList<FlowTemplateView> flows,
         IReadOnlyList<FlowFailure> failures)
     {
         if (flows.Count == 0 && failures.Count == 0)
@@ -27,10 +22,9 @@ internal static class PlainFlowView
         if (flows.Count > 0)
         {
             output.Line("流程\t执行节点\t容器\t说明");
-            foreach (FlowDefinition flow in flows)
+            foreach (FlowTemplateView flow in flows)
             {
-                (int executables, int containers) = Count(flow.RootNode);
-                output.Line($"{flow.Name.Value}\t{executables}\t{containers}\t{flow.Description ?? string.Empty}");
+                output.Line($"{flow.Name}\t{flow.Steps.Count}\t{flow.Groups.Count}\t{flow.Description ?? string.Empty}");
             }
         }
 
@@ -50,145 +44,78 @@ internal static class PlainFlowView
         }
     }
 
-    /// <summary>打印流程字段与按层级缩进的节点树。开始端口的宿主输入名取自宿主开始输入表。</summary>
-    public static void Show(
-        CliOutput output,
-        CompiledFlow compiled,
-        IReadOnlyDictionary<PortName, string> hostInputs)
+    /// <summary>打印流程字段与按层级缩进的节点树。</summary>
+    public static void Show(CliOutput output, FlowTemplateView flow)
     {
-        output.Line($"流程\t{compiled.Model.Name.Value}");
-        output.Line($"执行节点\t{compiled.Graph.TotalExecutables}");
-        output.Line($"容器\t{compiled.Graph.Containers.Count}");
-        output.Line($"说明\t{compiled.Model.Description ?? "—"}");
+        output.Line($"流程\t{flow.Name}");
+        output.Line($"执行节点\t{flow.Steps.Count}");
+        output.Line($"容器\t{flow.Groups.Count}");
+        output.Line($"说明\t{flow.Description ?? "—"}");
         output.Line();
-        Start(output, compiled.Model.StartPorts, hostInputs);
-        Walk(output, compiled.Graph.ChildrenOf(null), 0, hostInputs);
+        output.Line($"开始端口\t{string.Join('、', flow.StartPorts.Select(port => port.Label))}");
+        Walk(output, flow, null, 0);
     }
 
-    private static void Walk(CliOutput output, IReadOnlyList<GraphNode> nodes, int depth, IReadOnlyDictionary<PortName, string> hostInputs)
+    private static void Walk(CliOutput output, FlowTemplateView flow, string? parent, int depth)
     {
         string indent = new(' ', depth * 2);
-        foreach (GraphNode node in nodes)
+        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parent))
         {
-            output.Line($"{indent}{Describe(node, hostInputs)}");
-            if (node is ContainerNode container)
-            {
-                Walk(output, container.Children, depth + 1, hostInputs);
-            }
+            output.Line($"{indent}{Container(group)}");
+            Walk(output, flow, group.Path, depth + 1);
+        }
+
+        foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parent))
+        {
+            output.Line($"{indent}{Executable(step)}");
         }
     }
 
-    private static string Describe(GraphNode node, IReadOnlyDictionary<PortName, string> hostInputs) => node switch
+    private static string Container(FlowGroupView group)
     {
-        ContainerNode container => Container(container),
-        ExecutableNode executable => Executable(executable, hostInputs),
-        _ => node.Label.Value,
-    };
-
-    private static void Start(
-        CliOutput output,
-        IReadOnlyList<Port> ports,
-        IReadOnlyDictionary<PortName, string> hostInputs)
-    {
-        List<string> parts = ["开始端口"];
-        if (ports.Count > 0)
+        List<string> parts = [group.Label, group.Kind ?? "容器"];
+        if (group.Outputs.Count > 0)
         {
-            parts.Add(string.Join('、', ports.Select(port => port.StartLabel(hostInputs))));
+            parts.Add($"输出 {string.Join('、', group.Outputs.Select(port => port.Name))}");
         }
 
-        output.Line(string.Join('\t', parts));
-    }
-
-    private static string Container(ContainerNode container)
-    {
-        List<string> parts = [container.Label.Value, "容器"];
-        if (container.Outputs.Count > 0)
+        if (group.MaxExecutions != int.MaxValue)
         {
-            parts.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}");
-        }
-
-        if (container.MaxExecutions != int.MaxValue)
-        {
-            parts.Add($"上限 {container.MaxExecutions}");
+            parts.Add($"上限 {group.MaxExecutions}");
         }
 
         return string.Join('\t', parts);
     }
 
-    private static string Executable(ExecutableNode executable, IReadOnlyDictionary<PortName, string> hostInputs)
+    private static string Executable(FlowStepView step)
     {
-        List<string> parts = [executable.Label.Value, executable.Kind.Value];
-        if (executable.StaticLabel(LlmNodeTypes.ModelPort, hostInputs) is { } model)
+        List<string> parts = [step.Label, step.Kind];
+        if (step.Model is { Length: > 0 } model)
         {
             parts.Add($"模型 {model}");
         }
 
-        IReadOnlyList<InputPort> inputs = [.. executable.Inputs.Where(port => !port.IsStatic)];
+        IReadOnlyList<FlowPortView> inputs = [.. step.Inputs.Where(port => !port.Static)];
         if (inputs.Count > 0)
         {
-            parts.Add($"输入 {string.Join('、', inputs.Select(port => port.Name.Value))}");
+            parts.Add($"输入 {string.Join('、', inputs.Select(port => port.Name))}");
         }
 
-        if (executable.Outputs.Count > 0)
+        if (step.Outputs.Count > 0)
         {
-            parts.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}");
+            parts.Add($"输出 {string.Join('、', step.Outputs.Select(port => port.Name))}");
         }
 
-        if (executable.MaxExecutions != ExecutableNode.DefaultMaxExecutions)
+        if (step.MaxExecutions != FlowStepView.DefaultMaxExecutions)
         {
-            parts.Add($"上限 {executable.MaxExecutions}");
+            parts.Add($"上限 {step.MaxExecutions}");
         }
 
-        string upstream = Upstream(executable.Incoming);
-        if (upstream.Length > 0)
+        if (step.Upstream.Count > 0)
         {
-            parts.Add($"上游 {upstream}");
+            parts.Add($"上游 {string.Join(" 或 ", step.Upstream)}");
         }
 
         return string.Join('\t', parts);
-    }
-
-    /// <summary>上游绑定按启动组展开，组内以顿号连接，组间表示任一齐备。</summary>
-    private static string Upstream(IReadOnlyList<InputBinding> bindings) =>
-        string.Join(" 或 ", bindings
-            .GroupBy(binding => binding.Group)
-            .OrderBy(group => group.Key)
-            .Select(group => string.Join('、', group.Select(binding =>
-                $"{binding.TargetInput}←{binding.Source.Display}"))));
-
-    /// <summary>流程里的执行节点与容器数量。</summary>
-    private static (int Executables, int Containers) Count(NodeSpec root)
-    {
-        int executables = 0;
-        int containers = 0;
-        foreach (NodeSpec node in WalkSpec(root))
-        {
-            if (node.IsContainer)
-            {
-                containers++;
-            }
-            else if (node.Spec is not null)
-            {
-                executables++;
-            }
-        }
-
-        return (executables, containers);
-    }
-
-    /// <summary>先根序遍历节点树。</summary>
-    private static IEnumerable<NodeSpec> WalkSpec(NodeSpec node)
-    {
-        yield return node;
-        if (node.Nodes is { Count: > 0 } children)
-        {
-            foreach (NodeSpec child in children)
-            {
-                foreach (NodeSpec descendant in WalkSpec(child))
-                {
-                    yield return descendant;
-                }
-            }
-        }
     }
 }

@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>任务索引的只读查询面。信息查询工具依赖此契约，任务域实现提供快照。</summary>
 public interface ITaskReader

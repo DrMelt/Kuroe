@@ -30,7 +30,7 @@ using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 namespace Kuroe.Flow.Runtime;
 
 /// <summary>一次执行。状态机由执行单元承担，这里装配图侧输入并转换执行单元的中性产出与契约。</summary>
-public sealed class GraphExecution : IExecution
+public sealed class GraphExecution : IGraphExecution
 {
     private readonly NeutralExecution _unit;
 

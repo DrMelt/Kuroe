@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Source\Kuroe\Assistant\Core\Kuroe.Assistant.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Execution\Core\Kuroe.Flow.Execution.csproj" />

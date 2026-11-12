@@ -17,7 +17,7 @@ public sealed class ConstantChainTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        IReadOnlyList<IExecution> executions = environment.Runner.Started;
+        IReadOnlyList<IGraphExecution> executions = environment.Runner.Started;
         Assert.Equal(2, executions.Count);
         Assert.Equal("第一步", executions[0].Input.Node.Label.Value);
         Assert.Equal("第二步", executions[1].Input.Node.Label.Value);
@@ -39,7 +39,7 @@ public sealed class ConstantChainTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(6, environment.Runner.Started.Count);
         Assert.All(done.View.Steps, step => Assert.Single(step.Executions));
-        IExecution compare = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "比选");
+        IGraphExecution compare = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "比选");
         Assert.Equal(2, compare.Input.Inputs.Count(value => value.Port.Value is "甲稿" or "乙稿"));
     }
 
@@ -160,7 +160,7 @@ public sealed class ConstantChainTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        IExecution second = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "第二步");
+        IGraphExecution second = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "第二步");
         Assert.Contains(second.Input.Inputs, value => value.Port.Value == "触发" && value.Text == "触发内容");
         Assert.Contains(second.Input.Inputs, value => value.Port.Value == "结果" && value.Text == "结果产出");
     }
@@ -273,7 +273,7 @@ public sealed class ConstantChainTests
         ]));
         environment.Settle(id);
 
-        IExecution execution = environment.Runner.Started.Single(candidate => candidate.Input.Node.Label.Value == "读取");
+        IGraphExecution execution = environment.Runner.Started.Single(candidate => candidate.Input.Node.Label.Value == "读取");
         InputValue first = execution.Input.Inputs[0];
         Assert.Equal(new PortName("上下文"), first.Port);
         Assert.Equal("上下文值", first.Text);

@@ -4,9 +4,7 @@ using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Commands;
 
@@ -34,14 +32,6 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
             return ExitCodes.Failure;
         }
 
-        ErrorOr<CompiledFlow> compiled = session.Flows.FindCompiled(flow.Value);
-        if (compiled.IsError)
-        {
-            output.Report(compiled.ErrorsOrEmptyList);
-
-            return ExitCodes.Failure;
-        }
-
         void report(ExecutionNotice notice) => output.Hint(notice.Text);
         session.Registry.Notified += report;
         try
@@ -49,7 +39,8 @@ internal sealed class RunCommand(CliSession session, CliOutput output)
             ErrorOr<TaskSnapshot> submitted = session.Tasks.Submit(parsed.Value, flow.Value, title, new ProcessObserver(output.Content, output.Entry));
             if (submitted.IsError)
             {
-                output.Report(submitted.ErrorsOrEmptyList);
+                FlowFailure? failure = session.Library.Failures.FirstOrDefault(candidate => candidate.Name == flow.Value);
+                output.Report(failure is null ? submitted.ErrorsOrEmptyList : failure.Errors);
 
                 return ExitCodes.Failure;
             }

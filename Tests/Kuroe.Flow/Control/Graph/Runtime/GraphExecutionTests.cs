@@ -232,30 +232,6 @@ public sealed class GraphExecutionTests
         Assert.NotNull(execution.Snapshot().StartedAt);
     }
 
-    [Fact]
-    public void StopExecution_rejects_an_execution_that_never_started()
-    {
-        GraphExecution execution = new(new ExecutionId(1), Input());
-
-        ErrorOr<Success> stopped = GraphFlowControl.StopExecution(execution);
-
-        Assert.True(stopped.IsError);
-        Assert.Equal("Execution.NotStarted", stopped.FirstError.Code);
-    }
-
-    [Fact]
-    public void StopExecution_interrupts_a_started_execution()
-    {
-        GraphExecution execution = new(new ExecutionId(1), Input());
-        execution.MarkRunning();
-
-        ErrorOr<Success> stopped = GraphFlowControl.StopExecution(execution);
-
-        Assert.False(stopped.IsError);
-        execution.MarkInterrupted();
-        Assert.Equal(ExecutionState.Interrupted, execution.Snapshot().State);
-    }
-
     private static ExecutionInput Input() => new()
     {
         Task = new TaskId(1),

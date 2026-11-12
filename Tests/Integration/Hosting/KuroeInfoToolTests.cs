@@ -138,7 +138,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
+        FlowKuroeInfoTool tool = new(environment.Templates);
         string output = Call(tool, "ListFlows");
 
         Assert.Contains("默认", output);
@@ -149,7 +149,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
+        FlowKuroeInfoTool tool = new(environment.Templates);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("制定计划（Llm节点）", output);
@@ -183,7 +183,7 @@ public sealed class KuroeInfoToolTests
             }
             """);
 
-        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
+        FlowKuroeInfoTool tool = new(environment.Templates);
         string output = Call(tool, "GetFlow", ("flowName", "默认"));
 
         Assert.Contains("启动路径←WORKSPACE_PATH", output);
@@ -194,7 +194,7 @@ public sealed class KuroeInfoToolTests
     {
         using TestEnvironment environment = TestEnvironment.Create();
 
-        FlowKuroeInfoTool tool = new(environment.Flows, environment.HostStartInputs);
+        FlowKuroeInfoTool tool = new(environment.Templates);
 
         Assert.Contains("没有名为 missing 的流程", Call(tool, "GetFlow", ("flowName", "missing")));
     }

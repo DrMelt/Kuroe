@@ -34,7 +34,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <inheritdoc/>
     string NeutralExecutionRestorer.Kind => "*";
     private readonly Lock _gate = new();
-    private readonly List<IExecution> _started = [];
+    private readonly List<IGraphExecution> _started = [];
 
     /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
     public IExecutionGate Gate { get; } = new ExecutionGate();
@@ -49,7 +49,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     public string PortValuesJson { get; set; } = string.Empty;
 
     /// <summary>按执行生成端口值 JSON，设置后优先于 <see cref="PortValuesJson"/> 与默认逐端口名生成；返回 null 时回退。用于按执行轮次区分端口内容的装配。</summary>
-    public Func<IExecution, string?>? PortValuesJsonFor { get; set; }
+    public Func<IGraphExecution, string?>? PortValuesJsonFor { get; set; }
 
     /// <summary>输出端口节点是否交回命名段，关掉用于验证未收口。</summary>
     public bool SubmitsPorts { get; set; } = true;
@@ -75,10 +75,10 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     }
 
     /// <summary>命中条件的执行返回模拟失败，用于验证失败后的重新执行。</summary>
-    public Func<IExecution, bool>? FailsWhen { get; set; }
+    public Func<IGraphExecution, bool>? FailsWhen { get; set; }
 
     /// <summary>本轮回复文本，经过程记录与过程播发送出，缺省为节点路径加产出。</summary>
-    public Func<IExecution, string>? Reply { get; set; }
+    public Func<IGraphExecution, string>? Reply { get; set; }
 
     /// <summary>代码流程执行的回复文本，按中性执行给出。</summary>
     public Func<LoopExecution, string>? CodeReply { get; set; }
@@ -101,7 +101,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     private readonly List<LoopExecution> _startedCode = [];
 
     /// <summary>本次执行期间写进过程记录的内容，用于断言记录与过程事件。</summary>
-    internal Action<IExecution, RecordingJournal>? Emits { get; set; }
+    internal Action<IGraphExecution, RecordingJournal>? Emits { get; set; }
 
     /// <summary>提交类工具的返回文本，用于断言校验结果。</summary>
     public List<string> Submissions => [.. _submissions];
@@ -109,7 +109,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _submissions = new();
 
     /// <summary>每个执行的观察点，用于断言上下文与执行顺序。</summary>
-    public IReadOnlyList<IExecution> Started
+    public IReadOnlyList<IGraphExecution> Started
     {
         get
         {
@@ -210,7 +210,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        IExecution? started = FindGraphExecution(executions, execution);
+        IGraphExecution? started = FindGraphExecution(executions, execution);
         if (started is null)
         {
             return await ExecuteCodeAsync(execution, journal, cancellationToken).ConfigureAwait(false);
@@ -270,7 +270,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     }
 
     /// <summary>按执行号取图侧执行；不是图流程执行时为空。</summary>
-    private static IExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
+    private static IGraphExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
     {
         ErrorOr<(LoopExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));

@@ -23,7 +23,6 @@
         <ProjectReference Include="..\Kuroe\Tool\Core\Kuroe.Tool.csproj" />
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
-        <ProjectReference Include="..\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Persistence\Restoring\Shared\Kuroe.Flow.Persistence.Restoring.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
@@ -41,7 +40,6 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />

@@ -1,41 +1,41 @@
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Presentation;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>流程节点树的构建：根级节点与容器成员按图递归，节点内容由调用方给出。</summary>
+/// <summary>流程模板节点树的构建：分组与步骤按父路径递归，节点内容由调用方给出。</summary>
 internal static class NodeTree
 {
-    /// <summary>建树。根节点之外的分支来自图，容器子节点先加子行再加成员。</summary>
+    /// <summary>建树。根节点之外的分支来自模板分组，步骤按父路径归入所属分支。</summary>
     public static Tree Build(
-        NodeGraph graph,
+        FlowTemplateView flow,
         IRenderable root,
-        Func<GraphNode, IRenderable> line,
-        Func<GraphNode, IEnumerable<IRenderable>>? details = null)
+        Func<FlowGroupView, IRenderable> groupLine,
+        Func<FlowStepView, IRenderable> stepLine,
+        Func<FlowGroupView, IEnumerable<IRenderable>>? details = null)
     {
         Tree tree = new(root) { Guide = TreeGuide.Line, Style = Styles.Border };
-        foreach (GraphNode node in graph.ChildrenOf(null))
-        {
-            Add(tree, node);
-        }
+        Add(tree, null);
 
         return tree;
 
-        void Add(IHasTreeNodes parent, GraphNode node)
+        void Add(IHasTreeNodes parent, string? parentPath)
         {
-            TreeNode branch = parent.AddNode(line(node));
-            foreach (IRenderable detail in details?.Invoke(node) ?? [])
+            foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parentPath))
             {
-                branch.AddNode(detail);
+                TreeNode branch = parent.AddNode(groupLine(group));
+                foreach (IRenderable detail in details?.Invoke(group) ?? [])
+                {
+                    branch.AddNode(detail);
+                }
+
+                Add(branch, group.Path);
             }
 
-            if (node is ContainerNode container)
+            foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parentPath))
             {
-                foreach (GraphNode child in container.Children)
-                {
-                    Add(branch, child);
-                }
+                parent.AddNode(stepLine(step));
             }
         }
     }

@@ -133,7 +133,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        IExecution ported = environment.Runner.Started.Single(execution => execution.Input.OutputPorts.Count > 0);
+        IGraphExecution ported = environment.Runner.Started.Single(execution => execution.Input.OutputPorts.Count > 0);
         ToolFunction declared = Assert.Single(environment.PortToolFor(ported.Id).Functions);
         Assert.Contains("本节点需要交回的端口：结论、理由", declared.Definition.Description, StringComparison.Ordinal);
     }
@@ -215,7 +215,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         environment.Settle(id);
 
-        IExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
+        IGraphExecution moved = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "动手");
         ToolFunction declared = Assert.Single(environment.PortToolFor(moved.Id).Functions);
 
         Assert.Contains("本节点需要交回的端口：完成", declared.Definition.Description, StringComparison.Ordinal);

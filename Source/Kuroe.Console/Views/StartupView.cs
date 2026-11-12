@@ -1,8 +1,8 @@
 using ApiHub.Shared.Models;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Catalogs;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Workflows.Flows;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -13,7 +13,7 @@ internal sealed class StartupView(
     CatalogService catalog,
     ModelService models,
     ToolCollection tools,
-    FlowService flows,
+    IFlowTemplateCatalog flows,
     Terminal terminal)
 {
     public void Print(TaskLoadReport? report = null)

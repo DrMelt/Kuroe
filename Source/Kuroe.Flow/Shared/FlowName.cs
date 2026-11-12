@@ -1,6 +1,7 @@
 using ErrorOr;
+using Kuroe.Flow.Shared;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Flow;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>流程名。流程集合内唯一，展示即原文。</summary>
 public readonly record struct FlowName(string Value)

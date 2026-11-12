@@ -1,10 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
 
 namespace Kuroe.Flow.Control;
 
-/// <summary>一个任务的流程控制实例：推进循环、恢复、重新执行、终止、执行停止与等待交付。任务聚合只持有它，命令经运行期引擎转发。</summary>
+/// <summary>一个任务的流程控制实例：推进循环、恢复、重新执行、终止与等待交付。任务聚合只持有它，命令经运行期引擎转发。</summary>
 public interface IFlowControl
 {
     /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
@@ -37,9 +35,6 @@ public interface IFlowControl
     /// <summary>对阻塞的步骤重新执行，返回实际发出的重新执行目标数。要求持有任务 Gate。</summary>
     int Rerun();
 
-    /// <summary>停止一个已启动的执行。要求持有任务 Gate。</summary>
-    ErrorOr<Success> StopExecution(ExecutionId id);
-
     /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
     ErrorOr<Success> Terminate();
 
@@ -54,7 +49,4 @@ public interface IFlowControl
 
     /// <summary>向等待中的步骤交付一次外部输入。</summary>
     ErrorOr<Success> Deliver(FlowStepPath step, string text);
-
-    /// <summary>当前流程视图。</summary>
-    IFlowView CaptureView();
 }

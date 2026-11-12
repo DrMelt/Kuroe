@@ -59,7 +59,7 @@ public sealed class StartPathsTests
 
         TaskId id = environment.Submit("整理目录");
         TaskSnapshot task = environment.Settle(id);
-        IExecution execution = Assert.Single(environment.Runner.Started);
+        IGraphExecution execution = Assert.Single(environment.Runner.Started);
         string taskDirectory = Assert.Single(
             Directory.GetDirectories(Path.Combine(environment.Root, ".kuroe_tasks")),
             path => Path.GetFileName(path) != ".records");

@@ -3,14 +3,9 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
-using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Console.Views;
 
@@ -19,8 +14,7 @@ internal sealed class TaskBrowser(
     TaskRegistry registry,
     ITaskControl tasks,
     PendingService pendings,
-    FlowService flows,
-    IHostStartInputs hostStartInputs,
+    IFlowTemplateCatalog templates,
     TaskListView list,
     TaskOverviewView overview,
     TaskTreeView tree,
@@ -135,49 +129,47 @@ internal sealed class TaskBrowser(
 
     private void Submit()
     {
-        IReadOnlyList<FlowDefinition> all = flows.All();
+        IReadOnlyList<FlowTemplateView> all = templates.All();
         if (all.Count == 0)
         {
             terminal.Hint("流程库为空，先在「流程」菜单导入流程。");
             return;
         }
 
-        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name.Value)]) is not { } index)
+        if (Choices.Pick(terminal, "选择流程", [.. all.Select(flow => flow.Name)]) is not { } index)
         {
             return;
         }
 
         if (AskInputs(all[index]) is { } inputs)
         {
-            Submit(all[index].Name, inputs);
+            Submit(new FlowName(all[index].Name), inputs);
         }
     }
 
-    /// <summary>按开始端口询问不带固定值且不由宿主给值的项目，默认值作为初始内容预填。
+    /// <summary>按开始端口询问内容输入，默认值作为初始内容预填。
     /// 每次重印全部项目，任一回答取消即放弃提交，最后确认整个输入。</summary>
-    private StartInputs? AskInputs(FlowDefinition flow)
+    private StartInputs? AskInputs(FlowTemplateView flow)
     {
-        IReadOnlyDictionary<PortName, string> hostInputs = hostStartInputs.Bindings(flow.Name);
-        StartInputKind KindOf(Port port) => StartInputRules.Kind(port, hostInputs.ContainsKey(port.Name));
-
-        List<Port> ports = [.. flow.StartPorts.Where(port => KindOf(port) == StartInputKind.Input)];
+        List<FlowStartPortView> ports =
+            [.. flow.StartPorts.Where(port => port.InputKind == FlowStartKind.Content)];
         List<FormInfo> info =
         [
-            new("流程", flow.Name.Value),
+            new("流程", flow.Name),
             .. flow.StartPorts
-                .Where(port => KindOf(port) == StartInputKind.Fixed)
-                .Select(port => new FormInfo(port.Name.Value, port.Value ?? string.Empty)),
+                .Where(port => port.InputKind == FlowStartKind.Fixed)
+                .Select(port => new FormInfo(port.Name, port.Value ?? string.Empty)),
             .. flow.StartPorts
-                .Where(port => KindOf(port) == StartInputKind.Host)
-                .Select(port => new FormInfo(port.Name.Value, $"宿主 {hostInputs[port.Name]}")),
+                .Where(port => port.InputKind == FlowStartKind.Host)
+                .Select(port => new FormInfo(port.Name, $"宿主 {port.HostInput}")),
             .. flow.StartPorts
-                .Where(port => KindOf(port) == StartInputKind.Automatic)
-                .Select(port => new FormInfo(port.Name.Value, "自动放行")),
+                .Where(port => port.InputKind == FlowStartKind.Automatic)
+                .Select(port => new FormInfo(port.Name, "自动放行")),
         ];
         InputForm form = new(
             terminal,
             "开始输入",
-            [.. ports.Select(port => new FormField(port.Name.Value, port.Description, FieldKind.Multiline, port.Default))],
+            [.. ports.Select(port => new FormField(port.Name, port.Description, FieldKind.Multiline, port.Default))],
             info);
 
         if (form.Run() is not { } values)
@@ -191,7 +183,7 @@ internal sealed class TaskBrowser(
         }
 
         return new StartInputs(
-            [.. ports.Select((port, index) => new StartInput(port.Name, values[index]))]);
+            [.. ports.Select((port, index) => new StartInput(new PortName(port.Name), values[index]))]);
     }
 
     private void PromptRename(TaskId id, string currentTitle)

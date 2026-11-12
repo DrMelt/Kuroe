@@ -51,7 +51,7 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit(goal);
         environment.Settle(id);
 
-        IExecution plan = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "制定计划");
+        IGraphExecution plan = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "制定计划");
         InputValue target = plan.Input.Inputs.Single(value => value.Port == new PortName("目标"));
 
         Assert.Equal(goal, target.Text);
@@ -69,7 +69,7 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
 
-        IExecution implement = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "分配执行");
+        IGraphExecution implement = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "分配执行");
         InputValue value = implement.Input.Inputs.Single(input => input.Port == new PortName("计划"));
 
         Assert.Equal(plan, value.Text);
