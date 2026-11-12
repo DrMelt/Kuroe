@@ -1,7 +1,7 @@
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -17,14 +17,14 @@ internal sealed class GraphFlowState : IFlowState
         IPortTexts startTexts,
         StartPortValues startPorts,
         GraphFlowDefinitionRecord? definition,
-        Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null)
+        IExecutionRuntime? executions = null)
     {
         Flow = flow;
         Inputs = inputs;
         StartTexts = startTexts;
         StartPorts = startPorts;
         Definition = definition;
-        Restorers = restorers;
+        ExecutionsRuntime = executions;
     }
 
     /// <summary>锁定的编译流程。</summary>
@@ -42,8 +42,8 @@ internal sealed class GraphFlowState : IFlowState
     /// <summary>提交时锁定的流程定义记录。</summary>
     public GraphFlowDefinitionRecord? Definition { get; set; }
 
-    /// <summary>执行恢复器表。</summary>
-    public Kuroe.Flow.Execution.ExecutionRestorerRegistry? Restorers { get; }
+    /// <summary>执行运行期，恢复计划在此准备。</summary>
+    public IExecutionRuntime? ExecutionsRuntime { get; }
 
     /// <summary>图运行期的执行，按提交顺序。</summary>
     public List<GraphExecution> Executions { get; } = [];
@@ -67,7 +67,7 @@ internal sealed class GraphFlowState : IFlowState
     public DateTimeOffset SavedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>把任务上下文接到图运行期。</summary>
-    public void Attach(ITaskFlowContext task) => _runtime = new TaskRuntime(task, this, Restorers);
+    public void Attach(ITaskFlowContext task) => _runtime = new TaskRuntime(task, this, ExecutionsRuntime);
 
     private TaskRuntime? _runtime;
 }

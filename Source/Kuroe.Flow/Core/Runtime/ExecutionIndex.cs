@@ -15,7 +15,7 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     private int _nextExecution = 1;
 
     /// <summary>为一个任务建立执行并登记归属。</summary>
-    public LoopExecution Open(WorkTask owner, ExecutionRequest request)
+    public LoopExecution Open(ITaskFlowContext owner, ExecutionRequest request)
     {
         lock (_gate)
         {
@@ -27,7 +27,7 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     }
 
     /// <summary>登记一个从存档恢复的执行，推进下一次执行号。</summary>
-    public void Restore(WorkTask owner, LoopExecution execution)
+    public void Restore(ITaskFlowContext owner, LoopExecution execution)
     {
         lock (_gate)
         {
@@ -67,7 +67,7 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     }
 
     /// <summary>按执行号取执行与它的归属任务，不存在时返回错误。</summary>
-    public ErrorOr<(LoopExecution Execution, WorkTask Owner)> FindOwned(ExecutionId id)
+    public ErrorOr<(LoopExecution Execution, ITaskFlowContext Owner)> FindOwned(ExecutionId id)
     {
         lock (_gate)
         {
@@ -78,7 +78,7 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     }
 
     /// <summary>停止一个已启动的执行。未启动的执行不构成一次尝试，不能停止。</summary>
-    public ErrorOr<Success> Stop(WorkTask owner, ExecutionId id)
+    public ErrorOr<Success> Stop(ITaskFlowContext owner, ExecutionId id)
     {
         LoopExecution? execution = owner.UnderLock(() =>
             owner.Executions.FirstOrDefault(candidate => candidate.Id == id));
@@ -111,5 +111,5 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
         }
     }
 
-    private readonly record struct Entry(LoopExecution Execution, WorkTask Owner, object? Payload);
+    private readonly record struct Entry(LoopExecution Execution, ITaskFlowContext Owner, object? Payload);
 }

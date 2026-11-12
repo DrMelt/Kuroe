@@ -1,4 +1,5 @@
 using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
@@ -113,7 +114,8 @@ internal sealed class TaskProjection(
         IReadOnlyList<ExecutableStateSnapshot> states,
         IReadOnlyList<ContainerSnapshot> containers)
     {
-        Dictionary<NodePath, NodeState> stateByPath = states.ToDictionary(state => state.Node, state => state.State);
+        Dictionary<NodePath, ExecutableStateSnapshot> stateByPath =
+            states.ToDictionary(state => state.Node);
 
         return new FlowView(
             flow.Name.Value,
@@ -122,30 +124,44 @@ internal sealed class TaskProjection(
             [.. graph.StartPorts.Select(Output)],
             [.. executables.Select(executable => Step(
                 executable,
-                stateByPath.GetValueOrDefault(executable.Executable.Path, NodeState.Pending)))],
+                stateByPath.GetValueOrDefault(executable.Executable.Path)
+                    ?? new ExecutableStateSnapshot(executable.Executable.Path, NodeState.Pending)))],
             [.. containers.Select(container => new FlowGroupView(
                 container.Path.Value,
                 container.Path.Label.Value,
                 [.. container.Children.Select(child => child.Value)])
             {
                 ParentPath = container.Path.Parent?.Value,
-                State = container.State.ToString(),
+                State = StateOf(container.State),
                 Outputs = container.Outputs,
                 MaxExecutions = container.MaxExecutions,
+                PublicationCount = container.PublicationCount,
             })]);
     }
 
-    private static FlowStepView Step(ExecutableSnapshot executable, NodeState state) => new(
+    private static FlowStepView Step(ExecutableSnapshot executable, ExecutableStateSnapshot state) => new(
         executable.Executable.Path.Value,
         executable.Executable.Label.Value,
         executable.Executable.Kind.Value,
-        state.ToString(),
-        [.. executable.Executable.Inputs.Select(Input)],
-        [.. executable.Executable.Outputs.Select(Output)],
+        StateOf(state.State),
+        [.. executable.Executable.Inputs.Select(port => Input(port, executable.StaticTexts))],
+        [.. executable.Executable.Outputs.Select(port => Output(port, executable.ConstantTexts))],
         [.. executable.Executions.Select(Execution)],
         executable.MaxExecutions)
     {
         ParentPath = executable.Executable.Path.Parent?.Value,
+        ExecutionCount = executable.ExecutionCount,
+        CanRestore = state.CanRestore,
+        Block = state.Block?.Summary,
+    };
+
+    private static FlowNodeState StateOf(NodeState state) => state switch
+    {
+        NodeState.Running => FlowNodeState.Running,
+        NodeState.Blocked => FlowNodeState.Blocked,
+        NodeState.Done => FlowNodeState.Done,
+        NodeState.Canceled => FlowNodeState.Canceled,
+        _ => FlowNodeState.Pending,
     };
 
     private static FlowExecutableView Executable(ExecutableNode node) => new(
@@ -160,10 +176,10 @@ internal sealed class TaskProjection(
         node.Incoming,
         node.MaxExecutions);
 
-    private static FlowPortView Input(InputPort port) => new(
+    private static FlowPortView Input(InputPort port, IPortTexts staticTexts) => new(
         port.Name.Value,
         port.Type.Name,
-        port.Description ?? port.Default,
+        staticTexts.Text(port.Name) ?? port.Description ?? port.Default,
         port.Trigger);
 
     private static FlowPortView Output(Port port) => new(
@@ -172,11 +188,29 @@ internal sealed class TaskProjection(
         port.Description ?? port.Value,
         port.Trigger);
 
+    private static FlowPortView Output(Port port, IPortTexts constantTexts) => new(
+        port.Name.Value,
+        port.Type.Name,
+        constantTexts.Text(port.Name) ?? port.Description ?? port.Value,
+        port.Trigger)
+    {
+        Constant = constantTexts.Text(port.Name) is not null,
+    };
+
     private static FlowExecutionView Execution(GraphExecutionSnapshot execution) => new(
         execution.Id.Value,
-        execution.State.ToString(),
+        (Kuroe.Flow.Execution.ExecutionState)execution.State,
         execution.Progress,
-        []);
+        [])
+    {
+        Round = execution.Input.ExecutionCount,
+        CreatedAt = execution.CreatedAt,
+        StartedAt = execution.StartedAt,
+        FinishedAt = execution.FinishedAt,
+        Failures = execution.Failures,
+        HasRestoreData = execution.HasRestoreData,
+        ContinuedFrom = execution.ContinuedFrom?.Value,
+    };
 
     /// <summary>方案给出的执行或发布次数上限，没有方案时为空。</summary>
     private int? LimitOf(NodePath path) => graph.PlanOf(path)?.MaxExecutions;

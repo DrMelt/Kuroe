@@ -5,4 +5,8 @@ public sealed record FlowPortView(
     string Name,
     string Kind,
     string? Text,
-    bool Fires = true);
+    bool Fires = true)
+{
+    /// <summary>端口是否为运行期常量，文本即常量值。</summary>
+    public bool Constant { get; init; }
+}

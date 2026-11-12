@@ -1,9 +1,6 @@
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Tasks;
@@ -17,15 +14,15 @@ public sealed class TaskSnapshotTests
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
         Assert.Equal(2, Snap([
-            State(NodePath.Of("制定计划"), NodeState.Done),
-            State(NodePath.Of("实施"), NodeState.Done)]).FrontierNodes);
+            State("制定计划", FlowNodeState.Done),
+            State("实施", FlowNodeState.Done)]).FrontierNodes);
         Assert.Equal(2, Snap([]).TotalExecutableNodes);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, Snap([State(NodePath.Of("制定计划"), NodeState.Running)]).FrontierNodes);
+        Assert.Equal(0, Snap([State("制定计划", FlowNodeState.Running)]).FrontierNodes);
         Assert.Equal(2, Snap([]).TotalExecutableNodes);
     }
 
@@ -34,21 +31,23 @@ public sealed class TaskSnapshotTests
     {
         TaskSnapshot snapshot = Snap([]);
 
-        Assert.Equal(1, snapshot.OrdinalOf(NodePath.Of("制定计划")));
-        Assert.Equal(2, snapshot.OrdinalOf(NodePath.Of("实施")));
-        Assert.Equal(3, snapshot.OrdinalOf(NodePath.Of("Start")));
+        Assert.Equal(1, snapshot.OrdinalOf("制定计划"));
+        Assert.Equal(2, snapshot.OrdinalOf("实施"));
+        Assert.Equal(3, snapshot.OrdinalOf("Start"));
     }
 
-    private static ExecutableStateSnapshot State(NodePath node, NodeState state) => new(node, state);
+    private static (string Label, FlowNodeState State) State(string label, FlowNodeState state) =>
+        (label, state);
 
-    private static string StateOf(string label, IReadOnlyList<ExecutableStateSnapshot> states) =>
-        states.FirstOrDefault(state => state.Node.Label.Value == label)?.State.ToString() ?? "Pending";
+    private static FlowNodeState StateOf(
+        string label,
+        IReadOnlyList<(string Label, FlowNodeState State)> states) =>
+        states.FirstOrDefault(state => state.Label == label).State;
 
-    private static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
+    private static TaskSnapshot Snap(IReadOnlyList<(string Label, FlowNodeState State)> states) => new(
         new TaskId(1),
         "标题",
         StartInputs.Single(new PortName("目标"), "目标"),
-        PortTexts.Empty,
         new FlowView(
             "默认",
             "graph",
@@ -61,9 +60,6 @@ public sealed class TaskSnapshotTests
             []),
         TaskState.Running,
         0,
-        [],
-        states,
-        [],
         [],
         0,
         At,

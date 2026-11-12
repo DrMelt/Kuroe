@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Execution;
 
 /// <summary>值得宿主单独提示一句的执行事件。成功进展由发起方当场呈现，这里承载需要当场说明的推进与问题。</summary>
 public enum NoticeLevel

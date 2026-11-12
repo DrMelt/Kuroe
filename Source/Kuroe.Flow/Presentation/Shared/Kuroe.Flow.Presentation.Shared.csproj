@@ -4,4 +4,8 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\..\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

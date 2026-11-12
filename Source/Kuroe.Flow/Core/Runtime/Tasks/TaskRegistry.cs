@@ -1,9 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using ExecutionNotice = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionNotice;
 using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 
 namespace Kuroe.Flow.Runtime.Tasks;
@@ -36,7 +37,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>把恢复的执行登记进共享执行索引，并推进下一次执行号。</summary>
-    public void RestoreExecution(WorkTask owner, LoopExecution execution) => executions.Restore(owner, execution);
+    public void RestoreExecution(ITaskFlowContext owner, LoopExecution execution) => executions.Restore(owner, execution);
 
     /// <summary>按任务键取任务，不存在时返回错误。</summary>
     public ErrorOr<WorkTask> Find(TaskId id)
@@ -73,10 +74,18 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     /// <summary>按执行号取本域的执行，不存在或属于其它任务域时返回错误。</summary>
     public ErrorOr<LoopExecution> FindExecution(ExecutionId id)
     {
-        if (executions.FindOwned(id) is not { IsError: false } found
-            || !ReferenceEquals(found.Value.Owner.Registry, this))
+        if (executions.FindOwned(id) is not { IsError: false } found)
         {
             return [ExecutionErrors.ExecutionNotFound(id.Value)];
+        }
+
+        lock (_gate)
+        {
+            if (!_tasks.TryGetValue(found.Value.Owner.Id.Value, out WorkTask? task)
+                || !ReferenceEquals(task, found.Value.Owner))
+            {
+                return [ExecutionErrors.ExecutionNotFound(id.Value)];
+            }
         }
 
         return found.Value.Execution;

@@ -5,8 +5,8 @@ using Kuroe.Flow.Shared.Model;
 
 namespace Kuroe.Pending;
 
-/// <summary>一个待处理节点：节点路径、等待种类与等待时的提问。</summary>
-public readonly record struct PendingNode(NodePath Node, PendingKind Kind, string? Question);
+/// <summary>一个待处理节点：步骤路径、等待种类与等待时的提问。</summary>
+public readonly record struct PendingNode(FlowStepPath Step, PendingKind Kind, string? Question);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并唤醒推进。</summary>
 public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Engine.IFlowRuntime runner)
@@ -33,7 +33,7 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
             : Take(id, PendingKind.Answer, nodePath, input, null);
 
     /// <summary>批准待批准的节点：nodes 为空时批准全部待批准节点，给出节点路径时只批准其中的节点。</summary>
-    public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<NodePath>? nodes = null) =>
+    public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<FlowStepPath>? nodes = null) =>
         Take(id, PendingKind.Approve, null, string.Empty, nodes);
 
     /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付由控制实例唤醒推进。</summary>
@@ -42,7 +42,7 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
         PendingKind kind,
         string? nodePath,
         string input,
-        IReadOnlyList<NodePath>? nodes)
+        IReadOnlyList<FlowStepPath>? nodes)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
         if (found.IsError)
@@ -71,12 +71,12 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
             List<PendingNode> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind)];
             if (nodes is { Count: > 0 })
             {
-                awaiting = [.. awaiting.Where(entry => nodes.Contains(entry.Node))];
+                awaiting = [.. awaiting.Where(entry => nodes.Contains(entry.Step))];
             }
 
             if (nodePath is { } path)
             {
-                int index = awaiting.FindIndex(entry => entry.Node.Value == path);
+                int index = awaiting.FindIndex(entry => entry.Step.Value == path);
                 if (index < 0)
                 {
                     return [PendingErrors.NoAwaitingNode(path)];
@@ -95,9 +95,7 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
 
             foreach (PendingNode entry in awaiting)
             {
-                ErrorOr<Success> delivered = control.Deliver(
-                    new FlowStepPath([.. entry.Node.Levels.Select(level => level.Value)]),
-                    input);
+                ErrorOr<Success> delivered = control.Deliver(entry.Step, input);
                 if (delivered.IsError)
                 {
                     return delivered.ErrorsOrEmptyList;
@@ -112,8 +110,7 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
             return accepted.ErrorsOrEmptyList;
         }
 
-        _runner.Advance(task, [.. accepted.Value.Select(node => new FlowStepPath(
-            [.. node.Node.Levels.Select(level => level.Value)]))]);
+        _runner.Advance(task, [.. accepted.Value.Select(node => node.Step)]);
 
         return Result.Success;
     }
@@ -129,7 +126,7 @@ public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Eng
         return
         [
             .. control.Pending().Select(step => new PendingNode(
-                NodePath.Of([.. step.Step.Levels]),
+                step.Step,
                 step.Kind == FlowPendingKind.Approve ? PendingKind.Approve : PendingKind.Answer,
                 step.Question)),
         ];

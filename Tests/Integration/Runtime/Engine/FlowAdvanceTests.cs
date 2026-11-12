@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
@@ -292,7 +293,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Equal(2, environment.Awaiting(id, PendingKind.Approve).Count);
 
-        NodePath review = NodePath.Of("整体", "审阅甲");
+        FlowStepPath review = FlowStepPath.Of("整体", "审阅甲");
         environment.Pendings.Approve(id, [review]).ThrowIfError();
 
         // 只放行甲分支的审批节点，乙分支仍停在待批准

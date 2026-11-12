@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Flow.Tasks.Records;
 

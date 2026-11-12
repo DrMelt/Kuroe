@@ -3,9 +3,9 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Flow.Runtime.Engine;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
@@ -28,32 +28,32 @@ public sealed class TaskActions(
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
 
-    /// <summary>按流程名提交：取负责的框架准备状态、分配任务号、占用任务键，再建任务并启动推进。observer 收到该任务全部执行的过程事件。</summary>
+    /// <summary>按流程名提交：取负责的流程实现准备状态、分配任务号、占用任务键，再建任务并启动推进。observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         FlowName flowName,
         StartInputs inputs,
         string? title,
         ProcessObserver? observer = null)
     {
-        ErrorOr<IFlowFramework> resolved = _frameworks.Resolve(flowName);
+        ErrorOr<FlowProvider> resolved = _frameworks.Resolve(flowName);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;
         }
 
-        IFlowFramework framework = resolved.Value;
+        FlowProvider provider = resolved.Value;
 
         return Submit(
-            framework,
-            id => framework.Prepare(id, flowName, inputs, title),
+            provider,
+            id => provider.Submission.Prepare(id, flowName, inputs, title),
             inputs,
             title,
             observer);
     }
 
-    /// <summary>按已选定的框架提交：分配任务号、准备状态、占用任务键，再建任务并启动推进。</summary>
+    /// <summary>按已选定的流程实现提交：分配任务号、准备状态、占用任务键，再建任务并启动推进。</summary>
     public ErrorOr<TaskSnapshot> Submit(
-        IFlowFramework framework,
+        FlowProvider provider,
         Func<TaskId, ErrorOr<FlowSubmission>> prepare,
         StartInputs inputs,
         string? title,
@@ -83,7 +83,7 @@ public sealed class TaskActions(
             submission.State.Inputs,
             submission.StartTexts,
             submission.Title,
-            framework,
+            provider,
             submission.State,
             submission.Definition,
             observer);

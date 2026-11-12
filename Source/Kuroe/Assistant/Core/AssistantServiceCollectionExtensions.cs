@@ -4,6 +4,7 @@ using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
@@ -48,21 +49,22 @@ public static class AssistantServiceCollectionExtensions
 
             // 对话流程由代码定义，不进入图流程库与宿主开始输入表
             DialogueFlowFramework flow = new(
-                sp.GetRequiredService<ExecutionRuntime>(),
+                sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<ExecutionIndex>(),
                 models,
                 sp.GetRequiredService<SettingsProvider>(),
                 sp.GetRequiredService<KuroePaths>());
+            FlowProvider provider = new(flow, flow, flow, flow, flow);
 
             // 对话任务自有任务域，任务键不占用用户任务域的序列
             GuidTaskIdSource ids = new();
             TaskActions actions = new(
                 registry,
                 sp.GetRequiredService<IFlowRuntime>(),
-                new FlowFrameworkSource([flow]),
+                new FlowFrameworkSource([provider]),
                 ids);
 
-            return new DialogueHost(actions, flow, round, models, registry);
+            return new DialogueHost(actions, provider, round, models, registry);
         });
 
         return Result.Success;

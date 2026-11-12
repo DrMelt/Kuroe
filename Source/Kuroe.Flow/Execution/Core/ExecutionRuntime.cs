@@ -1,10 +1,12 @@
+using ErrorOr;
+
 namespace Kuroe.Flow.Execution;
 
 /// <summary>执行层的统一入口：运行器选择、派发、恢复建立与收口等待。</summary>
 public sealed class ExecutionRuntime(
     ExecutionDispatcher dispatcher,
     ExecutionRunnerRegistry runners,
-    ExecutionRestorerRegistry restorers)
+    ExecutionRestorerRegistry restorers) : IExecutionRuntime
 {
     /// <summary>为一次执行建立运行器。</summary>
     public IExecutionRunner CreateRunner(
@@ -19,6 +21,10 @@ public sealed class ExecutionRuntime(
         IExecutionRunner runner,
         CancellationToken cancellationToken = default) =>
         dispatcher.DispatchAsync(execution, runner, cancellationToken);
+
+    /// <summary>校验恢复负载并准备一次恢复。</summary>
+    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context) =>
+        restorers.Prepare(context);
 
     /// <summary>按恢复结果建立运行器。</summary>
     public IExecutionRunner CreateRestored(

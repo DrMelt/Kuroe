@@ -276,7 +276,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Runtime.Tasks.WorkTask Owner)> found =
+        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
         if (found.IsError)
         {

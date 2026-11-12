@@ -5,6 +5,7 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -251,7 +252,7 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>任务里停在给定等待种类的节点路径。</summary>
     public IReadOnlyList<NodePath> Awaiting(TaskId id, PendingKind kind) =>
         Pendings.Pending(id) is { IsError: false } pending
-            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => node.Node)]
+            ? [.. pending.Value.Where(node => node.Kind == kind).Select(node => FlowStepPaths.ToNodePath(node.Step))]
             : [];
 
     public void Dispose()

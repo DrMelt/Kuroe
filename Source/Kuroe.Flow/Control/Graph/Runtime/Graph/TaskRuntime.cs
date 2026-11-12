@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -14,6 +15,10 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
+using ExecutionOutput = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionOutput;
+using ExecutionOutputKind = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionOutputKind;
+using ExecutionState = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionState;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using NeutralExecutionRestoreContext = Kuroe.Flow.Execution.ExecutionRestoreContext;
@@ -48,14 +53,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
     private readonly RuntimeStartSource _startSource;
-    private readonly Kuroe.Flow.Execution.ExecutionRestorerRegistry? _restorers;
+    private readonly IExecutionRuntime? _restorers;
     private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
     private static readonly IInputProgress IdleProgress = new UnmaterializedProgress();
 
-    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null)
+    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, IExecutionRuntime? restorers = null)
     {
         _task = task;
         _state = state;
@@ -809,7 +814,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ErrorOr<PreparedExecutionRestore> prepared;
                 try
                 {
-                    prepared = restorers.Prepare(context);
+                    prepared = restorers.PrepareRestore(context);
                 }
                 catch (Exception)
                 {

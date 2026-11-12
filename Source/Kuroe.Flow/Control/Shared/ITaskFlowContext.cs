@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
@@ -19,14 +18,29 @@ public interface ITaskFlowContext
     /// <summary>任务创建时刻。</summary>
     DateTimeOffset CreatedAt { get; }
 
+    /// <summary>最近活动时刻。</summary>
+    DateTimeOffset LastActivityAt { get; }
+
     /// <summary>提交时的开始输入。</summary>
     StartInputs Inputs { get; }
+
+    /// <summary>流程运行状态，由具体流程实现解释。</summary>
+    IFlowState FlowState { get; }
 
     /// <summary>任务标题。</summary>
     string Title { get; }
 
+    /// <summary>任务的整体状态。</summary>
+    TaskState State { get; }
+
     /// <summary>任务控制状态。</summary>
     TaskLifecycle Lifecycle { get; }
+
+    /// <summary>任务启动后的流程控制实例。</summary>
+    IFlowControl? Control { get; }
+
+    /// <summary>记下一个执行。要求持有 <see cref="Gate"/>。</summary>
+    void AttachExecution(LoopExecution execution);
 
     /// <summary>任务推进循环已退出且任务真正走完。</summary>
     bool Completed { get; }

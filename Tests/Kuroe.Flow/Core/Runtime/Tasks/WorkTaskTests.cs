@@ -8,6 +8,7 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Xunit;
 
@@ -73,6 +74,7 @@ public sealed class WorkTaskTests
     private static WorkTask CreateTask()
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
+        TestProvider provider = new();
 
         return new WorkTask(
             new TaskRegistry(new ExecutionIndex()),
@@ -80,7 +82,7 @@ public sealed class WorkTaskTests
             inputs,
             FlowTexts.Empty,
             "测试任务",
-            new TestFramework(),
+            provider.Provider,
             new TestState(inputs),
             null,
             observer: null);
@@ -98,45 +100,75 @@ public sealed class WorkTaskTests
         public StartInputs Inputs { get; } = inputs;
     }
 
+    private sealed class TestProvider
+    {
+        public TestProvider()
+        {
+            Framework = new TestFramework();
+            Presentation = new TestPresentation();
+            Provider = new FlowProvider(
+                Framework,
+                new TestSubmission(),
+                new TestControls(),
+                Presentation,
+                new TestRecords());
+        }
+
+        public IFlowFramework Framework { get; }
+
+        public IFlowPresentation Presentation { get; }
+
+        public FlowProvider Provider { get; }
+    }
+
     private sealed class TestFramework : IFlowFramework
     {
         public string Kind => "test";
 
         public string Name => "测试";
 
+        public bool Handles(FlowName name) => false;
+    }
+
+    private sealed class TestSubmission : IFlowSubmission
+    {
         public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title) =>
             throw new NotSupportedException();
 
-        public bool Handles(FlowName name) => false;
+        public ErrorOr<FlowRestore> Restore(TaskRecord record) => throw new NotSupportedException();
+    }
 
-        public void Activate(WorkTask task)
+    private sealed class TestControls : IFlowControlFactory
+    {
+        public void Attach(ITaskFlowContext task)
         {
         }
 
-        public IFlowControl CreateControl(WorkTask task) => throw new NotSupportedException();
+        public IFlowControl CreateControl(ITaskFlowContext task) => throw new NotSupportedException();
+    }
 
-        public IFlowView CaptureView(WorkTask task) => new FlowView("测试", "test", null, [], [], []);
+    private sealed class TestPresentation : IFlowPresentation
+    {
+        public IFlowView CaptureView(ITaskFlowContext task) => new FlowView("测试", "test", null, [], [], []);
 
-        public TaskSnapshot CreateSnapshot(WorkTask task) => new(
+        public TaskSnapshot CreateSnapshot(ITaskFlowContext task) => new(
             task.Id,
             task.Title,
             task.Inputs,
-            PortTexts.Empty,
             CaptureView(task),
             task.State,
             0,
-            [],
-            [],
-            [],
             task.JournalEntries,
             task.DroppedJournal,
             task.CreatedAt,
             DateTimeOffset.UtcNow);
+    }
 
-        public FlowRecord CaptureRecord(WorkTask task) => throw new NotSupportedException();
+    private sealed class TestRecords : IFlowRecordSource
+    {
+        public FlowRecord CaptureRecord(ITaskFlowContext task) => throw new NotSupportedException();
 
-        public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(WorkTask task) => [];
-
-        public ErrorOr<FlowRestore> Restore(TaskRecord record) => throw new NotSupportedException();
+        public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(
+            ITaskFlowContext task) => [];
     }
 }

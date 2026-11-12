@@ -1,7 +1,7 @@
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Display;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using Kuroe.Pending;
 using Spectre.Console;
@@ -13,7 +13,15 @@ internal static class ViewLabels
 {
     public static string Of(TaskState state) => InfoLabels.Of(state);
 
-    public static string Of(NodeState state) => GraphInfoLabels.Of(state);
+    public static string Of(FlowNodeState state) => state switch
+    {
+        FlowNodeState.Pending => "待执行",
+        FlowNodeState.Running => "执行中",
+        FlowNodeState.Blocked => "已阻塞",
+        FlowNodeState.Done => "已完成",
+        FlowNodeState.Canceled => "已取消",
+        _ => state.ToString(),
+    };
 
     /// <summary>等待种类的展示名。</summary>
     public static string Of(PendingKind kind) => kind == PendingKind.Approve ? "待批准" : "待输入";
@@ -31,7 +39,10 @@ internal static class ViewLabels
             : Of(waiting.Kind);
 
     /// <summary>执行的状态，未收口时带上过程摘要。</summary>
-    public static string State(GraphExecutionSnapshot execution) => GraphInfoLabels.State(execution);
+    public static string State(FlowExecutionView execution) =>
+        execution.State.IsSettled() || execution.Progress is not { Length: > 0 }
+            ? execution.State.Label()
+            : $"{execution.State.Label()}（{execution.Progress}）";
 
     public static Style StyleOf(TaskState state) => state switch
     {
@@ -41,11 +52,11 @@ internal static class ViewLabels
         _ => Styles.Hint,
     };
 
-    public static Style StyleOf(NodeState state) => state switch
+    public static Style StyleOf(FlowNodeState state) => state switch
     {
-        NodeState.Done => Styles.Success,
-        NodeState.Running => Styles.Key,
-        NodeState.Blocked => Styles.Warning,
+        FlowNodeState.Done => Styles.Success,
+        FlowNodeState.Running => Styles.Key,
+        FlowNodeState.Blocked => Styles.Warning,
         _ => Styles.Hint,
     };
 
@@ -67,15 +78,15 @@ internal static class ViewLabels
 
     /// <summary>执行在一行里的字段与顺序，树行、菜单项与执行清单共用。</summary>
     public static (string Id, string Round, string State, string Elapsed, string? Failures) ExecutionParts(
-        GraphExecutionSnapshot execution) => (
-        execution.Id.ToString(),
-        $"第 {execution.Input.ExecutionCount} 轮",
+        FlowExecutionView execution) => (
+        $"执行 #{execution.Id}",
+        $"第 {execution.Round} 轮",
         State(execution),
         Elapsed(execution.Elapsed),
         execution.Failures.Count > 0 ? $"失败 {execution.Failures.Count} 条" : null);
 
     /// <summary>执行概况一行，供菜单与清单使用。</summary>
-    public static string ExecutionLabel(GraphExecutionSnapshot execution)
+    public static string ExecutionLabel(FlowExecutionView execution)
     {
         (string id, string round, string state, string elapsed, string? failures) = ExecutionParts(execution);
         List<string> parts = [id, round, state, elapsed];

@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Runtime.Process;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
@@ -16,12 +16,13 @@ using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>任务 = 一条长期执行线程：控制状态、开始输入、过程记录与全部执行。
-/// 流程语义由 <see cref="IFlowFramework"/> 提供，可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
-public sealed class WorkTask : ITaskFlowContext
+/// 流程语义由 <see cref="FlowProvider"/> 的端口提供，宿主读 <see cref="Snapshot"/>。</summary>
+public sealed class WorkTask : ITaskFlowHost
 {
     private readonly List<LoopExecution> _executions = [];
     private readonly DateTimeOffset _createdAt;
     private readonly ProcessObserver? _observer;
+    private readonly FlowProvider _provider;
     private readonly IFlowState _state;
     private string _title;
     private DateTimeOffset _lastActivityAt;
@@ -37,7 +38,7 @@ public sealed class WorkTask : ITaskFlowContext
         StartInputs inputs,
         FlowTexts startTexts,
         string title,
-        IFlowFramework framework,
+        FlowProvider provider,
         IFlowState state,
         IFlowDefinitionRecord? definition,
         ProcessObserver? observer)
@@ -46,20 +47,20 @@ public sealed class WorkTask : ITaskFlowContext
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
-        Framework = framework;
+        _provider = provider;
         _state = state;
         _flowSnapshot = definition;
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
         _observer = observer;
         _title = title;
-        framework.Activate(this);
+        provider.Controls.Attach(this);
     }
 
     private WorkTask(
         TaskRegistry registry,
         TaskRecord record,
-        IFlowFramework framework,
+        FlowProvider provider,
         IFlowState state,
         FlowTexts startTexts,
         IReadOnlyList<LoopExecution> executions,
@@ -69,7 +70,7 @@ public sealed class WorkTask : ITaskFlowContext
         Id = record.Identity.Id;
         Inputs = state.Inputs;
         StartTexts = startTexts;
-        Framework = framework;
+        _provider = provider;
         _state = state;
         _flowSnapshot = record.Flow.Definition;
         _createdAt = record.Identity.CreatedAt;
@@ -79,7 +80,7 @@ public sealed class WorkTask : ITaskFlowContext
         _lifecycle = record.Lifecycle;
         _completed = record.Completed;
         Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
-        framework.Activate(this);
+        provider.Controls.Attach(this);
 
         foreach (LoopExecution execution in executions)
         {
@@ -93,12 +94,12 @@ public sealed class WorkTask : ITaskFlowContext
     public static WorkTask Restore(
         TaskRegistry registry,
         TaskRecord record,
-        IFlowFramework framework,
+        FlowProvider provider,
         IFlowState state,
         FlowTexts startTexts,
         IReadOnlyList<LoopExecution> executions,
         ProcessObserver? observer = null) =>
-        new(registry, record, framework, state, startTexts, executions, observer);
+        new(registry, record, provider, state, startTexts, executions, observer);
 
     /// <summary>任务标识。</summary>
     public TaskId Id { get; }
@@ -107,19 +108,25 @@ public sealed class WorkTask : ITaskFlowContext
     public DateTimeOffset CreatedAt => _createdAt;
 
     /// <summary>最近活动时刻。</summary>
-    internal DateTimeOffset LastActivityAt => _lastActivityAt;
+    public DateTimeOffset LastActivityAt => _lastActivityAt;
 
     /// <summary>提交时锁定的流程定义，写存档时使用。</summary>
     internal IFlowDefinitionRecord? FlowSnapshot => _flowSnapshot;
 
     /// <summary>流程运行状态，由具体流程实现解释。</summary>
-    internal IFlowState FlowState => _state;
+    public IFlowState FlowState => _state;
 
-    /// <summary>任务所属的流程框架。</summary>
-    internal IFlowFramework Framework { get; }
+    /// <summary>任务所属的流程实现端口集合。</summary>
+    internal FlowProvider Provider => _provider;
+
+    /// <summary>任务的流程控制工厂。</summary>
+    public IFlowControlFactory Controls => _provider.Controls;
 
     /// <summary>任务启动后的流程控制实例，命令由运行期引擎转发给它。</summary>
-    public IFlowControl? Control { get; internal set; }
+    public IFlowControl? Control { get; private set; }
+
+    /// <summary>接上控制实例。</summary>
+    public void AttachControl(IFlowControl control) => Control = control;
 
     /// <summary>任务推进循环已退出，任务真正走完。瞬态的 Done 快照不代表此值为真。</summary>
     public bool Completed
@@ -442,14 +449,14 @@ public sealed class WorkTask : ITaskFlowContext
     {
         lock (Gate)
         {
-            return Framework.CreateSnapshot(this);
+            return _provider.Presentation.CreateSnapshot(this);
         }
     }
 
     /// <summary>捕获任务存档。要求持有 <see cref="Gate"/>。</summary>
     internal TaskRecord CaptureRecord()
     {
-        FlowRecord flow = Framework.CaptureRecord(this);
+        FlowRecord flow = _provider.Records.CaptureRecord(this);
 
         return new TaskRecord(
             new TaskIdentity(Id, Title, _createdAt, _lastActivityAt),
@@ -458,93 +465,6 @@ public sealed class WorkTask : ITaskFlowContext
             _completed,
             new TaskJournalRecord(Journal.Entries, Journal.DroppedEntries),
             flow,
-            Framework.CaptureExecutions(this));
+            _provider.Records.CaptureExecutions(this));
     }
-}
-
-/// <summary>流程框架：一个流程种类的提交、恢复、控制与存档实现。</summary>
-public interface IFlowFramework
-{
-    /// <summary>流程记录种类。</summary>
-    string Kind { get; }
-
-    /// <summary>流程展示名。</summary>
-    string Name { get; }
-
-    /// <summary>校验提交输入并给出初始状态、标题与流程定义记录。</summary>
-    ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title);
-
-    /// <summary>把任务上下文接到流程状态。</summary>
-    void Activate(WorkTask task);
-
-    /// <summary>是否负责该流程名。</summary>
-    bool Handles(FlowName name);
-
-    /// <summary>为任务建立控制实例。</summary>
-    IFlowControl CreateControl(WorkTask task);
-
-    /// <summary>当前流程视图，控制实例不存在时使用。</summary>
-    IFlowView CaptureView(WorkTask task);
-
-    /// <summary>任务快照，含流程视图、流程投影与中性执行列表。</summary>
-    TaskSnapshot CreateSnapshot(WorkTask task);
-
-    /// <summary>捕获流程记录。要求持有任务 Gate。</summary>
-    FlowRecord CaptureRecord(WorkTask task);
-
-    /// <summary>捕获流程执行记录。要求持有任务 Gate。</summary>
-    IReadOnlyList<ExecutionRecord> CaptureExecutions(WorkTask task);
-
-    /// <summary>从存档恢复流程状态与执行。</summary>
-    ErrorOr<FlowRestore> Restore(TaskRecord record);
-}
-
-/// <summary>一次提交准备好的流程状态。</summary>
-public sealed record FlowSubmission(
-    IFlowState State,
-    string Title,
-    FlowTexts StartTexts,
-    IFlowDefinitionRecord? Definition);
-
-/// <summary>从存档恢复的流程状态。</summary>
-public sealed record FlowRestore(
-    IFlowState State,
-    FlowTexts StartTexts,
-    IReadOnlyList<LoopExecution> Executions,
-    FlowSeed Seed);
-
-/// <summary>流程运行状态的标记。由具体流程实现解释。</summary>
-public interface IFlowState
-{
-    /// <summary>提交时的开始输入。</summary>
-    StartInputs Inputs { get; }
-}
-
-/// <summary>按种类查流程框架。</summary>
-public interface IFlowFrameworkSource
-{
-    /// <summary>全部已注册的流程框架。</summary>
-    IReadOnlyList<IFlowFramework> All();
-
-    /// <summary>按种类取流程框架，不存在时返回错误。</summary>
-    ErrorOr<IFlowFramework> Find(string kind);
-
-    /// <summary>按流程名取负责的框架，不存在时返回错误。</summary>
-    ErrorOr<IFlowFramework> Resolve(FlowName name);
-}
-
-/// <summary>流程控制建立与登记执行的中性端口。</summary>
-public interface IFlowExecutionGateway
-{
-    /// <summary>为任务建立一个排队中的执行并分配执行号。</summary>
-    LoopExecution Open(WorkTask owner, ExecutionRequest request);
-
-    /// <summary>按执行号取执行，不存在时返回错误。</summary>
-    ErrorOr<LoopExecution> Find(ExecutionId id);
-
-    /// <summary>为一次执行附加流程实现自己的执行对象。</summary>
-    void Attach(LoopExecution execution, object payload);
-
-    /// <summary>按执行号停止一个已启动的执行。</summary>
-    ErrorOr<Success> Stop(WorkTask owner, ExecutionId id);
 }

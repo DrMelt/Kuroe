@@ -31,11 +31,14 @@ public sealed class GraphFlowFramework(
     IHostStartInputs hostStartInputs,
     IHostTaskStart host,
     IExecutionTargetResolver targets,
-    ExecutionRuntime executions,
+    IExecutionRuntime executions,
     IInputDelivery inputs,
     IFlowExecutionGateway gateway,
-    IFlowSnapshotSource? snapshots = null,
-    ExecutionRestorerRegistry? restorers = null) : IFlowFramework
+    IFlowSnapshotSource? snapshots = null) : IFlowFramework,
+    IFlowSubmission,
+    IFlowControlFactory,
+    IFlowPresentation,
+    IFlowRecordSource
 {
     /// <inheritdoc/>
     public string Kind => FlowRecordKinds.Graph;
@@ -127,7 +130,7 @@ public sealed class GraphFlowFramework(
             }
         }
 
-        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, restorers);
+        GraphFlowState state = new(flow, effectiveInputs, start.Value, startPorts, definition, executions);
 
         return new FlowSubmission(
             state,
@@ -136,7 +139,7 @@ public sealed class GraphFlowFramework(
             definition);
     }
 /// <inheritdoc/>
-    public void Activate(WorkTask task)
+    public void Attach(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state)
         {
@@ -181,14 +184,11 @@ public sealed class GraphFlowFramework(
             }
         }
 
-        if (restorers is not null)
-        {
-            runtime.RefreshRestorePlans();
-        }
+        runtime.RefreshRestorePlans();
     }
 
     /// <inheritdoc/>
-    public IFlowControl CreateControl(WorkTask task)
+    public IFlowControl CreateControl(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state)
         {
@@ -199,7 +199,7 @@ public sealed class GraphFlowFramework(
     }
 
     /// <inheritdoc/>
-    public IFlowView CaptureView(WorkTask task)
+    public IFlowView CaptureView(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state || !state.Attached)
         {
@@ -220,7 +220,7 @@ public sealed class GraphFlowFramework(
     }
 
     /// <inheritdoc/>
-    public TaskSnapshot CreateSnapshot(WorkTask task)
+    public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state || !state.Attached)
         {
@@ -239,13 +239,9 @@ public sealed class GraphFlowFramework(
             task.Id,
             task.Title,
             task.Inputs,
-            state.StartTexts,
             projection.View(state.Flow.Model, executables, states, containers),
             task.State,
             task.Executions.Count(execution => execution.IsLive),
-            executables,
-            states,
-            containers,
             task.JournalEntries,
             task.DroppedJournal,
             task.CreatedAt,
@@ -253,11 +249,15 @@ public sealed class GraphFlowFramework(
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
             Pending = task.Control?.Pending() ?? [],
+            StartTexts = state.StartTexts,
+            Executables = executables,
+            ExecutableStates = states,
+            Containers = containers,
         };
     }
 
     /// <inheritdoc/>
-    public FlowRecord CaptureRecord(WorkTask task)
+    public FlowRecord CaptureRecord(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state || state.Definition is not { } definition)
         {
@@ -280,7 +280,7 @@ public sealed class GraphFlowFramework(
                 seed));
     }
 /// <inheritdoc/>
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(WorkTask task)
+    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task)
     {
         if (task.FlowState is not GraphFlowState state)
         {
@@ -308,7 +308,7 @@ public sealed class GraphFlowFramework(
         CompiledFlow flow = compiled.Value;
         PortTexts startTexts = new(saved.Start.StartTexts);
         StartPortValues startPorts = new(flow.Graph.StartPorts, startTexts, saved.Start.Inputs);
-        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, restorers)
+        GraphFlowState state = new(flow, saved.Start.Inputs, startTexts, startPorts, definition, executions)
         {
             RestoreNodes = saved.Nodes,
             RestorePorts = saved.Ports,

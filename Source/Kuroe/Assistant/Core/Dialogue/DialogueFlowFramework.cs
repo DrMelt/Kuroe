@@ -7,7 +7,7 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -21,11 +21,15 @@ namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>代码定义对话流程：提交、控制、快照与存档都按对话状态实现，不使用节点图。</summary>
 public sealed class DialogueFlowFramework(
-    ExecutionRuntime executions,
+    IExecutionRuntime executions,
     IFlowExecutionGateway gateway,
     ModelService models,
     SettingsProvider settings,
-    KuroePaths paths) : IFlowFramework
+    KuroePaths paths) : IFlowFramework,
+    IFlowSubmission,
+    IFlowControlFactory,
+    IFlowPresentation,
+    IFlowRecordSource
 {
     private const string WorkspaceKey = "workspace";
     private const string ModelKey = "model";
@@ -64,20 +68,20 @@ public sealed class DialogueFlowFramework(
     }
 
     /// <inheritdoc/>
-    public void Activate(WorkTask task)
+    public void Attach(ITaskFlowContext task)
     {
     }
 
     /// <inheritdoc/>
-    public IFlowControl CreateControl(WorkTask task) =>
+    public IFlowControl CreateControl(ITaskFlowContext task) =>
         new DialogueFlowControl(task, executions, gateway, State(task));
 
     /// <inheritdoc/>
-    public IFlowView CaptureView(WorkTask task) =>
+    public IFlowView CaptureView(ITaskFlowContext task) =>
         DialogueView.Build(State(task), task.Control, task);
 
     /// <inheritdoc/>
-    public TaskSnapshot CreateSnapshot(WorkTask task)
+    public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
     {
         DialogueFlowState state = State(task);
         IFlowControl? control = task.Control;
@@ -86,13 +90,9 @@ public sealed class DialogueFlowFramework(
             task.Id,
             task.Title,
             task.Inputs,
-            new PortTexts(state.StartTexts.Texts),
             DialogueView.Build(state, control, task, task.State),
             task.State,
             task.Executions.Count(execution => execution.IsLive),
-            [],
-            [],
-            [],
             task.JournalEntries,
             task.DroppedJournal,
             task.CreatedAt,
@@ -100,11 +100,12 @@ public sealed class DialogueFlowFramework(
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
             Pending = control?.Pending() ?? [],
+            StartTexts = new PortTexts(state.StartTexts.Texts),
         };
     }
 
     /// <inheritdoc/>
-    public FlowRecord CaptureRecord(WorkTask task)
+    public FlowRecord CaptureRecord(ITaskFlowContext task)
     {
         DialogueFlowState state = State(task);
 
@@ -115,10 +116,10 @@ public sealed class DialogueFlowFramework(
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(WorkTask task) =>
+    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task) =>
         [.. task.Executions.Select(execution => execution.Snapshot().CaptureRecord())];
 
-    private static DialogueFlowState State(WorkTask task) =>
+    private static DialogueFlowState State(ITaskFlowContext task) =>
         task.FlowState as DialogueFlowState
         ?? throw new InvalidOperationException("任务不是对话流程。");
 

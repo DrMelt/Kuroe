@@ -26,5 +26,5 @@ public sealed class FlowViewTests
     }
 
     private static FlowStepView Step(string path) =>
-        new(path, path, "test", "pending", [], [], [], 1);
+        new(path, path, "test", FlowNodeState.Pending, [], [], [], 1);
 }

@@ -1,10 +1,11 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 
-namespace Kuroe.Flow.Runtime.Tasks;
+namespace Kuroe.Flow.Control;
 
 /// <summary>任务标题的推导与截断：未给出标题时取第一个开始输入的首行，标题过长时截断。</summary>
-internal static class TaskTitle
+public static class TaskTitle
 {
     /// <summary>标题的字符上限。</summary>
     private const int Limit = 40;

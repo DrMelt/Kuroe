@@ -1,10 +1,11 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
@@ -33,7 +34,7 @@ internal sealed class TaskBrowser(
         string Action,
         TaskId? Task = null,
         int? Execution = null,
-        NodePath? Node = null);
+        string? Node = null);
 
     private static readonly Item Back = new("← 返回上一级", "back");
     private static readonly Item Exit = new("× 退出浏览", "exit");
@@ -253,9 +254,9 @@ internal sealed class TaskBrowser(
             overview.Print(task);
             terminal.NewLine();
 
-            List<Item> items = [Refresh, .. task.Executables.SelectMany(node => node.Executions)
-                .OrderBy(execution => execution.Id.Value)
-                .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id.Value))];
+            List<Item> items = [Refresh, .. task.View.Steps.SelectMany(step => step.Executions)
+                .OrderBy(execution => execution.Id)
+                .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id))];
             AddTaskActions(items, task);
             items.Add(new Item("* 改任务标题", "rename", Task: id));
             items.Add(new Item("≡ 查看节点树", "tree", Task: id));
@@ -331,15 +332,15 @@ internal sealed class TaskBrowser(
         }
 
         List<Item> items = [.. waiting.Select(node => new Item(
-            AnswerItemLabel(node), "answer", Node: node.Node))];
+            AnswerItemLabel(node), "answer", Node: node.Step.Value))];
 
         if (Choose("选择要回答的节点", items).Node is not { } nodePath)
         {
             return;
         }
 
-        PendingNode selected = waiting.First(node => node.Node.Value == nodePath.Value);
-        List<FormInfo> info = [new("节点", nodePath.Value)];
+        PendingNode selected = waiting.First(node => node.Step.Value == nodePath);
+        List<FormInfo> info = [new("节点", nodePath)];
         if (selected.Question is { Length: > 0 } question)
         {
             info.Add(new("提问", question));
@@ -348,12 +349,12 @@ internal sealed class TaskBrowser(
         InputForm form = new(terminal, "回答等待输入", [new FormField("回答", Kind: FieldKind.Multiline)], info);
         if (form.Run() is { } values)
         {
-            Answer(id, nodePath.Value, values[0]);
+            Answer(id, nodePath, values[0]);
         }
     }
 
     private static string AnswerItemLabel(PendingNode node) =>
-        $"{node.Node.Value} · {ViewLabels.WaitingLabel(node)}";
+        $"{node.Step.Value} · {ViewLabels.WaitingLabel(node)}";
 
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(int executionId)
@@ -467,7 +468,7 @@ internal sealed class TaskBrowser(
         {
             items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
 
-            if (task.ExecutableStates.Any(state => state.State == NodeState.Blocked))
+            if (task.View.Steps.Any(step => step.State == FlowNodeState.Blocked))
             {
                 items.Add(new Item("* 重新执行被阻塞的节点，放弃恢复，保留恢复数据", "rerun", Task: task.Id));
             }
@@ -479,7 +480,7 @@ internal sealed class TaskBrowser(
 
         // 等待与阻塞可以并存，任务级状态只表达阻塞，入口按节点的实际停留各自给出
         List<PendingNode> waiting = pendings.Pending(task.Id) is { IsError: false } found ? found.Value : [];
-        bool blocked = task.ExecutableStates.Any(state => state.State == NodeState.Blocked);
+        bool blocked = task.View.Steps.Any(step => step.State == FlowNodeState.Blocked);
 
         if (waiting.Any(node => node.Kind == PendingKind.Approve))
         {
@@ -493,7 +494,7 @@ internal sealed class TaskBrowser(
 
         if (blocked)
         {
-            if (task.ExecutableStates.Any(state => state.CanRestore))
+            if (task.View.Steps.Any(step => step.CanRestore))
             {
                 items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
             }
@@ -508,7 +509,7 @@ internal sealed class TaskBrowser(
     private Item Choose(string title, IReadOnlyList<Item> items) =>
         terminal.Prompt(new MenuPrompt<Item>(title, items, item => item.Label, Back));
 
-    private static string ExecutionItemLabel(GraphExecutionSnapshot execution) =>
+    private static string ExecutionItemLabel(FlowExecutionView execution) =>
         $"› {ViewLabels.ExecutionLabel(execution)}";
 
     private static string TaskLabel(TaskSnapshot task) =>

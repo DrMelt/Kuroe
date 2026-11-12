@@ -23,9 +23,9 @@ namespace Kuroe.Flow.Runtime.Engine;
 
 /// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止、等待交付与视图。</summary>
 internal sealed class GraphFlowControl(
-    WorkTask task,
+    ITaskFlowContext task,
     GraphFlowState state,
-    ExecutionRuntime runtime,
+    IExecutionRuntime runtime,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
     IFlowExecutionGateway gateway) : IFlowControl

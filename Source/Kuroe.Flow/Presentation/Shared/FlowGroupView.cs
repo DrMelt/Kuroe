@@ -10,11 +10,14 @@ public sealed record FlowGroupView(
     public string? ParentPath { get; init; }
 
     /// <summary>分组状态。</summary>
-    public string State { get; init; } = "Pending";
+    public FlowNodeState State { get; init; } = FlowNodeState.Pending;
 
     /// <summary>分组输出端口。</summary>
     public IReadOnlyList<FlowPortView> Outputs { get; init; } = [];
 
     /// <summary>分组的发布次数上限。</summary>
     public int MaxExecutions { get; init; } = int.MaxValue;
+
+    /// <summary>分组已发布的次数。</summary>
+    public int PublicationCount { get; init; }
 }

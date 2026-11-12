@@ -10,8 +10,8 @@ namespace Kuroe.Assistant.Dialogue;
 
 /// <summary>对话流程控制：等待输入与每一轮回话执行。</summary>
 internal sealed class DialogueFlowControl(
-    WorkTask task,
-    ExecutionRuntime executions,
+    ITaskFlowContext task,
+    IExecutionRuntime executions,
     IFlowExecutionGateway gateway,
     DialogueFlowState state) : IFlowControl
 {

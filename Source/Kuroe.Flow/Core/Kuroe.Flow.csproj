@@ -24,8 +24,5 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Kuroe.Flow.Tests" />
-        <InternalsVisibleTo Include="Kuroe.Flow.Control.Graph" />
-        <InternalsVisibleTo Include="Kuroe.Assistant" />
-        <InternalsVisibleTo Include="Kuroe.Flow.Control.Graph.Tests" />
     </ItemGroup>
 </Project>

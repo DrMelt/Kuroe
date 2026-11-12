@@ -1,7 +1,7 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Engine;
-using Kuroe.Flow.Runtime.Tasks;
 using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
 using LoopExecution = Kuroe.Flow.Execution.Execution;
 using LoopExecutionId = Kuroe.Flow.Execution.ExecutionId;
@@ -19,13 +19,13 @@ public sealed class ExecutionStatusReader(ExecutionIndex executions) : IExecutio
             return Error.Validation("Tool.Argument", $"没有执行 {id}。");
         }
 
-        WorkTask task = found.Value.Owner;
+        ITaskFlowContext task = found.Value.Owner;
 
         return task.UnderLock(() => Of(task, found.Value.Execution));
     }
 
     /// <summary>在已持有任务锁时读出本轮契约状态。要求持有任务 Gate。</summary>
-    public static ExecutionStatus Of(WorkTask task, LoopExecution execution)
+    public static ExecutionStatus Of(ITaskFlowContext task, LoopExecution execution)
     {
         GraphFlowControl control = task.Control as GraphFlowControl
             ?? throw new InvalidOperationException($"任务 {task.Id} 没有图流程控制。");

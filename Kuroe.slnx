@@ -24,6 +24,7 @@
     <Project Path="Source/Kuroe.Flow/Compilation/Shared/Kuroe.Flow.Compilation.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/Core/Kuroe.Flow.csproj" />
+    <Project Path="Source/Kuroe.Flow/Runtime/Core/Kuroe.Flow.Runtime.csproj" />
     <Project Path="Source/Kuroe.Flow/Execution/Core/Kuroe.Flow.Execution.csproj" />
     <Project Path="Source/Kuroe.Flow/Execution/Shared/Kuroe.Flow.Execution.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Execution/Records/Shared/Kuroe.Flow.Execution.Records.Shared.csproj" />

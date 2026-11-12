@@ -12,6 +12,7 @@
         <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\Execution\Records\Shared\Kuroe.Flow.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />

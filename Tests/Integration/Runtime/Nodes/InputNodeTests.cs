@@ -73,7 +73,7 @@ public sealed class InputNodeTests
         WaitForInputs(environment, id, 2);
 
         List<PendingNode> pending = environment.Pendings.Pending(id).ThrowIfError();
-        Assert.Equal(["整体/输入一", "整体/输入二"], [.. pending.Select(node => node.Node.Value)]);
+        Assert.Equal(["整体/输入一", "整体/输入二"], [.. pending.Select(node => node.Step.Value)]);
         Assert.All(pending, node => Assert.Equal(PendingKind.Answer, node.Kind));
 
         ErrorOr<Success> ambiguous = environment.Pendings.Answer(id, null, "x");

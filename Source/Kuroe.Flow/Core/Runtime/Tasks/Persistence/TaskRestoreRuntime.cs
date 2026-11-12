@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -16,14 +17,14 @@ public sealed class TaskRestoreRuntime(
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(TaskRecord record)
     {
-        ErrorOr<IFlowFramework> resolved = frameworks.Find(record.Flow.Kind);
+        ErrorOr<FlowProvider> resolved = frameworks.Find(record.Flow.Kind);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;
         }
 
-        IFlowFramework framework = resolved.Value;
-        ErrorOr<FlowRestore> restored = framework.Restore(record);
+        FlowProvider provider = resolved.Value;
+        ErrorOr<FlowRestore> restored = provider.Submission.Restore(record);
         if (restored.IsError)
         {
             return restored.ErrorsOrEmptyList;
@@ -32,7 +33,7 @@ public sealed class TaskRestoreRuntime(
         WorkTask task = WorkTask.Restore(
             registry,
             record,
-            framework,
+            provider,
             restored.Value.State,
             restored.Value.StartTexts,
             restored.Value.Executions);

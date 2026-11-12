@@ -65,6 +65,7 @@ public sealed class StartPathsTests
             path => Path.GetFileName(path) != ".records");
 
         Assert.Equal(TaskState.Done, task.State);
+        Assert.NotNull(task.StartTexts);
         Assert.NotNull(task.StartTexts.Text(new PortName("启动")));
         Assert.Equal(environment.Root, execution.Input.Text(new PortName("启动")));
         Assert.Equal(taskDirectory, execution.Input.Text(new PortName("流程")));
@@ -111,7 +112,7 @@ public sealed class StartPathsTests
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal("用户给的路径", done.Inputs.Text(new PortName("WORKSPACE_PATH")));
-        Assert.Null(done.StartTexts.Text(new PortName("WORKSPACE_PATH")));
+        Assert.Null(done.StartTexts!.Text(new PortName("WORKSPACE_PATH")));
     }
 
     /// <summary>带默认值的开始端口进表后由宿主给值，默认值不生效。</summary>
@@ -123,7 +124,7 @@ public sealed class StartPathsTests
         TaskSnapshot done = environment.Settle(environment.Submit("整理目录"));
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(environment.Root, done.StartTexts.Text(new PortName("启动")));
+        Assert.Equal(environment.Root, done.StartTexts!.Text(new PortName("启动")));
         Assert.DoesNotContain(done.Inputs.Values, value => value.Text == "fallback");
     }
 

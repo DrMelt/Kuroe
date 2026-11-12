@@ -24,6 +24,7 @@ using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
 using Kuroe.Tool.Contract;
@@ -224,6 +225,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ExecutionDispatcher>(),
             sp.GetRequiredService<ExecutionRunnerRegistry>(),
             sp.GetRequiredService<ExecutionRestorerRegistry>()));
+        services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
@@ -238,21 +240,31 @@ public static class ServiceCollectionExtensions
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        services.AddSingleton<IFlowFramework>(sp => new GraphFlowFramework(
+        services.AddSingleton(sp => new GraphFlowFramework(
             flows.Value,
             flows.Value,
             hostStartInputs.Value,
             sp.GetRequiredService<IHostTaskStart>(),
             sp.GetRequiredService<IExecutionTargetResolver>(),
-            sp.GetRequiredService<ExecutionRuntime>(),
+            sp.GetRequiredService<IExecutionRuntime>(),
             inputs,
             executions,
-            coreOptions.PersistTasks ? flows.Value : null,
-            sp.GetRequiredService<ExecutionRestorerRegistry>()));
-        services.AddSingleton(sp => new FlowFrameworkSource(sp.GetServices<IFlowFramework>()));
+            coreOptions.PersistTasks ? flows.Value : null));
+        services.AddSingleton<IFlowFramework>(sp => sp.GetRequiredService<GraphFlowFramework>());
+        services.AddSingleton<IFlowSubmission>(sp => sp.GetRequiredService<GraphFlowFramework>());
+        services.AddSingleton<IFlowControlFactory>(sp => sp.GetRequiredService<GraphFlowFramework>());
+        services.AddSingleton<IFlowPresentation>(sp => sp.GetRequiredService<GraphFlowFramework>());
+        services.AddSingleton<IFlowRecordSource>(sp => sp.GetRequiredService<GraphFlowFramework>());
+        services.AddSingleton(sp =>
+        {
+            GraphFlowFramework provider = sp.GetRequiredService<GraphFlowFramework>();
+
+            return new FlowProvider(provider, provider, provider, provider, provider);
+        });
+        services.AddSingleton(sp => new FlowFrameworkSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowFrameworkSource>(sp => sp.GetRequiredService<FlowFrameworkSource>());
         services.AddSingleton(sp => new FlowRuntime(
-            sp.GetRequiredService<ExecutionRuntime>(),
+            sp.GetRequiredService<IExecutionRuntime>(),
             executions));
         services.AddSingleton<IFlowRuntime>(sp => sp.GetRequiredService<FlowRuntime>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(

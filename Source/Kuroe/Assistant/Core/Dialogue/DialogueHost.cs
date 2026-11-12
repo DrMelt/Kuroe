@@ -2,6 +2,7 @@ using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
+using Kuroe.Flow.Control;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -14,7 +15,7 @@ namespace Kuroe.Assistant.Dialogue;
 /// 模型在任务启动时写入流程，模型变化后下一次输入重建任务。</summary>
 public sealed class DialogueHost(
     TaskActions actions,
-    DialogueFlowFramework flow,
+    FlowProvider flow,
     DialogueRound rounds,
     ModelService models,
     TaskRegistry registry)
@@ -87,7 +88,7 @@ public sealed class DialogueHost(
         StartInputs inputs = StartInputs.Single(DialogueFlow.StartPort, "对话");
         ErrorOr<TaskSnapshot> created = actions.Submit(
             flow,
-            id => flow.Prepare(id, DialogueFlow.Name, inputs, "对话"),
+            id => flow.Submission.Prepare(id, DialogueFlow.Name, inputs, "对话"),
             inputs,
             "对话");
         if (created.IsError)

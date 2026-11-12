@@ -1,10 +1,10 @@
 using Kuroe.Console.Views;
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.TestSupport;
 using Spectre.Console;
@@ -36,9 +36,9 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Node_state_labels_cover_the_scope()
     {
-        Assert.Equal("执行中", ViewLabels.Of(NodeState.Running));
-        Assert.Equal("待执行", ViewLabels.Of(NodeState.Pending));
-        Assert.Equal("已完成", ViewLabels.Of(NodeState.Done));
+        Assert.Equal("执行中", ViewLabels.Of(FlowNodeState.Running));
+        Assert.Equal("待执行", ViewLabels.Of(FlowNodeState.Pending));
+        Assert.Equal("已完成", ViewLabels.Of(FlowNodeState.Done));
     }
 
     [Fact]
@@ -92,10 +92,10 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Style_of_node_state_picks_the_host_style()
     {
-        Assert.Equal(Styles.Success, ViewLabels.StyleOf(NodeState.Done));
-        Assert.Equal(Styles.Key, ViewLabels.StyleOf(NodeState.Running));
-        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(NodeState.Blocked));
-        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(NodeState.Pending));
+        Assert.Equal(Styles.Success, ViewLabels.StyleOf(FlowNodeState.Done));
+        Assert.Equal(Styles.Key, ViewLabels.StyleOf(FlowNodeState.Running));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(FlowNodeState.Blocked));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(FlowNodeState.Pending));
     }
 
     [Fact]
@@ -130,14 +130,11 @@ public sealed class ViewLabelsTests
         Assert.Equal("风格=技术文档风格", port.StartLabel());
     }
 
-    private static GraphExecutionSnapshot Execution(string progress) => new(
-        new ExecutionId(1), Input(), ExecutionState.Running, progress,
-        TestTime.At, TestTime.At, null, [], [], ExecutionUsage.None);
-
-    private static ExecutionInput Input() => new()
+    private static FlowExecutionView Execution(string progress) => new(
+        1, ExecutionState.Running, progress, [])
     {
-        Task = new TaskId(1),
-        Node = NodePath.Of("制定计划"),
-        Type = new StubNodeType(new NodeKind("Executable")),
+        Round = 1,
+        CreatedAt = TestTime.At,
+        StartedAt = TestTime.At,
     };
 }

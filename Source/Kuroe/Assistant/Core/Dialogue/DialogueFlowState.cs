@@ -47,7 +47,7 @@ internal static class DialogueView
     internal static FlowView Build(
         DialogueFlowState state,
         IFlowControl? control,
-        WorkTask task,
+        ITaskFlowContext task,
         TaskState? taskState = null)
     {
         IReadOnlyList<FlowExecutionView> executions =
@@ -55,23 +55,34 @@ internal static class DialogueView
             .. task.Executions.Select(execution => execution.Snapshot())
                 .Select(snapshot => new FlowExecutionView(
                     snapshot.Id.Value,
-                    snapshot.State.ToString(),
+                    snapshot.State,
                     snapshot.Progress,
-                    [])),
+                    [])
+                {
+                    Round = snapshot.Request.Attempt,
+                    CreatedAt = snapshot.CreatedAt,
+                    StartedAt = snapshot.StartedAt,
+                    FinishedAt = snapshot.FinishedAt,
+                    Failures = snapshot.Failures,
+                    HasRestoreData = snapshot.RestoreData is not null,
+                    ContinuedFrom = snapshot.ContinuedFrom?.Value,
+                }),
         ];
 
-        string stepState;
+        FlowNodeState stepState;
         if (taskState is TaskState.Terminated or TaskState.Done)
         {
-            stepState = "Canceled";
+            stepState = FlowNodeState.Canceled;
         }
         else if (control?.Pending().Count > 0)
         {
-            stepState = "Pending";
+            stepState = FlowNodeState.Pending;
         }
         else
         {
-            stepState = task.Executions.Any(execution => execution.IsLive) ? "Running" : "Done";
+            stepState = task.Executions.Any(execution => execution.IsLive)
+                ? FlowNodeState.Running
+                : FlowNodeState.Done;
         }
 
         return new FlowView(

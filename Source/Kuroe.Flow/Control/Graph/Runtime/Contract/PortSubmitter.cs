@@ -1,7 +1,7 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Engine;
-using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
@@ -20,7 +20,7 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IExecutionPortSub
         LoopExecutionId id,
         IReadOnlyList<ExecutionOutputValue> values)
     {
-        ErrorOr<(LoopExecution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(
+        ErrorOr<(LoopExecution Execution, ITaskFlowContext Task)> owner = SubmitterContext.Resolve(
             executions,
             id,
             "提交端口产出");
@@ -46,7 +46,7 @@ public sealed class PortSubmitter(ExecutionIndex executions) : IExecutionPortSub
             parsed[name.Value] = new PortValue(value.Text, value.Fires);
         }
 
-        (LoopExecution execution, WorkTask task) = owner.Value;
+        (LoopExecution execution, ITaskFlowContext task) = owner.Value;
         lock (task.Gate)
         {
             GraphFlowControl control = task.Control as GraphFlowControl

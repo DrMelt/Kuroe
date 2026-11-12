@@ -1,6 +1,5 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Tasks;
 using Kuroe.Pending;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -47,7 +46,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
                 ? ViewLabels.OneLine(text, ViewLabels.QuestionLimit)
                 : "—";
             table.AddRow(
-                new Text(node.Node.Value, Styles.Key),
+                new Text(node.Step.Value, Styles.Key),
                 new Text(ViewLabels.Of(node.Kind), Styles.Warning),
                 new Text(question));
         }
@@ -59,8 +58,8 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
     /// <summary>阻塞节点给出路径与原因，不需要先看节点树。</summary>
     private void PrintBlocked(TaskSnapshot task)
     {
-        IReadOnlyList<ExecutableStateSnapshot> blocked =
-            [.. task.ExecutableStates.Where(state => state.Block is not null)];
+        IReadOnlyList<FlowStepView> blocked =
+            [.. task.View.Steps.Where(step => step.Block is not null)];
 
         if (blocked.Count == 0)
         {
@@ -68,7 +67,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
         }
 
         Table table = Blocks.Table(("节点", false), ("恢复", false), ("原因", true));
-        foreach (ExecutableStateSnapshot state in blocked)
+        foreach (FlowStepView state in blocked)
         {
             if (state.Block is not { } block)
             {
@@ -76,9 +75,9 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
             }
 
             table.AddRow(
-                new Text(state.Node.Value, Styles.Key),
+                new Text(state.Path, Styles.Key),
                 new Text(state.CanRestore ? "可恢复" : "—", state.CanRestore ? Styles.Success : Styles.Hint),
-                new Text(ViewLabels.OneLine(block.Summary, ViewLabels.BlockLimit), Styles.Warning));
+                new Text(ViewLabels.OneLine(block, ViewLabels.BlockLimit), Styles.Warning));
         }
 
         _terminal.NewLine();
@@ -88,10 +87,10 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
     /// <summary>按执行节点列出执行，执行号是进入执行详情的入口。</summary>
     private void PrintExecutions(TaskSnapshot task)
     {
-        IReadOnlyList<ExecutableSnapshot> executed = [.. task.Executables.Where(node => node.Executions.Count > 0)];
+        IReadOnlyList<FlowStepView> executed = [.. task.View.Steps.Where(step => step.Executions.Count > 0)];
         if (executed.Count == 0)
         {
-            if (task.Executables.Count > 0)
+            if (task.View.Steps.Count > 0)
             {
                 _terminal.NewLine();
                 _terminal.Hint("还没有执行。");
@@ -100,7 +99,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
             return;
         }
 
-        int total = executed.Sum(node => node.Executions.Count);
+        int total = executed.Sum(step => step.Executions.Count);
         Table table = Blocks.Table(
             ("执行", false),
             ("节点", false),
@@ -109,14 +108,14 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
             ("耗时", false),
             ("失败", false));
 
-        foreach (ExecutableSnapshot node in executed)
+        foreach (FlowStepView node in executed)
         {
-            foreach (GraphExecutionSnapshot execution in node.Executions.OrderBy(execution => execution.Id.Value))
+            foreach (FlowExecutionView execution in node.Executions.OrderBy(execution => execution.Id))
             {
                 (string id, string round, string state, string elapsed, string? failures) = ViewLabels.ExecutionParts(execution);
                 table.AddRow(
                     new Text(id, Styles.Key),
-                    new Text(node.Executable.Path.Value),
+                    new Text(node.Path),
                     new Text(round, Styles.Hint),
                     new Text(state, ViewLabels.StyleOf(execution.State)),
                     new Text(elapsed, Styles.Hint),
