@@ -10,7 +10,7 @@ internal sealed class CliOutput(TextWriter output, TextWriter error)
     private readonly Lock _gate = new();
     private bool _lineOpen;
 
-    /// <summary>写出一段流式内容，回复写 stdout，思考不呈现。</summary>
+    /// <summary>写出一段产出内容，回复写 stdout，思考不呈现。</summary>
     public void Content(ProcessContent content)
     {
         if (content.Kind == ProcessContentKind.Reply)
@@ -19,7 +19,7 @@ internal sealed class CliOutput(TextWriter output, TextWriter error)
         }
     }
 
-    /// <summary>写出文本，不补换行，用于流式增量。</summary>
+    /// <summary>写出文本，不补换行。</summary>
     public void Text(string text)
     {
         if (text.Length == 0)

@@ -4,11 +4,11 @@ using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
 
-/// <summary>单回合模型请求的边界：给定完整消息与请求选项，流式取回本轮回复。</summary>
+/// <summary>单回合模型请求的边界：给定完整消息与请求选项，取回本轮完整回复。</summary>
 internal interface ITurnClient
 {
-    /// <summary>发起一次请求，流式取回本轮更新。</summary>
-    IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+    /// <summary>发起一次请求，取回本轮完整回复。</summary>
+    Task<ChatResponse> RespondAsync(
         IReadOnlyList<ChatMessage> messages,
         ChatOptions options,
         CancellationToken cancellationToken);
@@ -27,9 +27,9 @@ internal sealed class ChatTurnClient(IChatClient client) : ITurnClient
     /// <summary>承载请求的模型客户端。</summary>
     internal IChatClient Client => client;
 
-    public IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+    public Task<ChatResponse> RespondAsync(
         IReadOnlyList<ChatMessage> messages,
         ChatOptions options,
         CancellationToken cancellationToken) =>
-        client.GetStreamingResponseAsync(messages, options, cancellationToken);
+        client.GetResponseAsync(messages, options, cancellationToken);
 }

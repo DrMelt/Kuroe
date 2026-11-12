@@ -4,7 +4,7 @@ using Kuroe.Flow.TestSupport;
 namespace Kuroe.Integration.Tests.Support;
 
 /// <summary>测试用的过程记录：保存条目并按内容种类追加，用于断言执行期间写入的内容。
-/// 流式内容与需要即时呈现的条目写入后、进度变化后经事件播发。</summary>
+/// 产出内容与需要即时呈现的条目写入后、进度变化后经事件播发。</summary>
 internal sealed class RecordingJournal : IProcessJournal
 {
     private const string ReplyLabel = "回复";
@@ -15,7 +15,7 @@ internal sealed class RecordingJournal : IProcessJournal
     private readonly List<JournalEntry> _entries = [];
     private string _progress = string.Empty;
 
-    /// <summary>流式内容追加后给出该增量与种类。</summary>
+    /// <summary>产出内容追加后给出该内容与种类。</summary>
     public event ProcessContentHandler? ContentAppended;
 
     /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
@@ -70,7 +70,7 @@ internal sealed class RecordingJournal : IProcessJournal
         ProgressReported?.Invoke(text);
     }
 
-    /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
+    /// <summary>追加一段产出内容，与末尾同类记录合并，随后播发该内容。</summary>
     public void AppendContent(ProcessContentKind kind, string delta)
     {
         if (delta.Length == 0)

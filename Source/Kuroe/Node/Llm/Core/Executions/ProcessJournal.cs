@@ -4,10 +4,10 @@ using Kuroe.Tool;
 namespace Kuroe.Node.Llm.Executions;
 
 /// <summary>一次执行的过程记录：条目由共享存储保留且不按条数丢弃，同标签文本增量与末尾同类条目合并。
-/// 流式内容、需要即时呈现的条目与进度变化经事件播发。</summary>
+/// 产出内容、需要即时呈现的条目与进度变化经事件播发。</summary>
 internal sealed class ProcessJournal : IProcessJournal
 {
-    /// <summary>同标签流式内容的合并上限，超出后另起一条，避免逐字增量反复拷贝整段。</summary>
+    /// <summary>同标签内容的合并上限，超出后另起一条。</summary>
     private const int SegmentLimit = 4096;
 
     private const string PromptLabel = "输入";
@@ -22,7 +22,7 @@ internal sealed class ProcessJournal : IProcessJournal
     private readonly Lock _progressGate = new();
     private string _progress = string.Empty;
 
-    /// <summary>流式内容追加后给出该增量与种类。</summary>
+    /// <summary>产出内容追加后给出该内容与种类。</summary>
     public event ProcessContentHandler? ContentAppended;
 
     /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
@@ -38,7 +38,7 @@ internal sealed class ProcessJournal : IProcessJournal
         ReportProgress(string.Empty);
     }
 
-    /// <summary>追加一段流式内容，与末尾同类记录合并，随后播发该增量。</summary>
+    /// <summary>追加一段产出内容，与末尾同类记录合并，随后播发该内容。</summary>
     public void AppendContent(ProcessContentKind kind, string delta)
     {
         if (_store.AppendDelta(LabelOf(kind), delta))

@@ -465,7 +465,7 @@ public sealed class WorkTask
 
     private event Action<Execution>? ExecutionAttached;
 
-    /// <summary>订阅新执行启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
+    /// <summary>订阅新执行启动的通知，回答等待方借此挂上过程观察。要求持有 Gate 触发。</summary>
     public Action SubscribeExecutionAttached(Action<Execution> handler)
     {
         ExecutionAttached += handler;

@@ -89,29 +89,21 @@ internal sealed class Session : IConversation
             Instructions = _source.SystemPrompt,
         };
 
-        List<ChatResponseUpdate> updates = [];
+        ChatResponse response;
         TokenUsage? usage = null;
         _usage = _usage.BeginRequest();
         try
         {
-            await foreach (ChatResponseUpdate update in client.Value.StreamAsync([.. _messages], options, cancellationToken))
-            {
-                updates.Add(update);
-                RecordContent(update, _journal);
-                usage = UsageOf(update) ?? usage;
-            }
-        }
-        catch
-        {
-            CommitPartial(updates);
-            throw;
+            response = await client.Value.RespondAsync([.. _messages], options, cancellationToken);
+            usage = response.Usage is { } details ? TokenUsageOf(details) : null;
+            RecordContent(response, _journal);
         }
         finally
         {
             _usage = _usage.CompleteRequest(usage);
         }
 
-        return CompleteRound(updates);
+        return CompleteRound(response);
     }
 
     /// <summary>把本轮工具结果写回历史，作为下一次请求的工具消息。</summary>
@@ -174,9 +166,9 @@ internal sealed class Session : IConversation
         && message.Contents.Any(content => content is TextContent or TextReasoningContent);
 
     /// <summary>收下本轮：正常回复并入历史，已被中断过的助手消息与后续内容合并。</summary>
-    private TurnReply CompleteRound(List<ChatResponseUpdate> updates)
+    private TurnReply CompleteRound(ChatResponse response)
     {
-        ChatMessage? reply = Reply(updates);
+        ChatMessage? reply = Reply(response);
         if (reply is null)
         {
             if (_restoredIndex < 0)
@@ -209,41 +201,6 @@ internal sealed class Session : IConversation
         return new TurnReply([.. reply.Contents.OfType<FunctionCallContent>()]);
     }
 
-    /// <summary>把中断前已收到的文本并入历史末尾的助手消息，没有文本时不动作。</summary>
-    private void CommitPartial(List<ChatResponseUpdate> updates)
-    {
-        List<AIContent> contents =
-        [
-            .. updates
-                .SelectMany(update => update.Contents)
-                .Where(content => content is TextContent or TextReasoningContent),
-        ];
-
-        if (contents.Count == 0)
-        {
-            return;
-        }
-
-        if (_restoredIndex >= 0
-            && _restoredIndex == _messages.Count - 1
-            && IsRestorableReply(_messages[^1]))
-        {
-            ChatMessage last = _messages[^1];
-            _messages[^1] = new ChatMessage(ChatRole.Assistant, [.. last.Contents, .. contents]);
-
-            return;
-        }
-
-        _messages.Add(new ChatMessage(ChatRole.Assistant, contents));
-        _restoredIndex = _messages.Count - 1;
-    }
-
-    /// <summary>从一条流式更新里取本次请求的用量，没有时为空。同一请求以最后一次为准。</summary>
-    private static TokenUsage? UsageOf(ChatResponseUpdate update) =>
-        update.Contents.OfType<UsageContent>().LastOrDefault() is { Details: { } details }
-            ? TokenUsageOf(details)
-            : null;
-
     /// <summary>把模型侧用量转成执行侧用量，合计缺失时由输入与输出补齐。</summary>
     private static TokenUsage TokenUsageOf(UsageDetails details)
     {
@@ -260,10 +217,10 @@ internal sealed class Session : IConversation
             details.ReasoningTokenCount);
     }
 
-    /// <summary>把一条流式更新中的思考与回复内容按种类写进过程记录，其余内容由会话历史承载。</summary>
-    internal static void RecordContent(ChatResponseUpdate update, ProcessJournal journal)
+    /// <summary>把本轮回复中的思考与回复内容按种类写进过程记录，其余内容由会话历史承载。</summary>
+    internal static void RecordContent(ChatResponse response, ProcessJournal journal)
     {
-        foreach (AIContent content in update.Contents)
+        foreach (AIContent content in response.Messages.SelectMany(message => message.Contents))
         {
             switch (content)
             {
@@ -278,21 +235,28 @@ internal sealed class Session : IConversation
         }
     }
 
-    /// <summary>聚合本轮更新，没有内容时为空。</summary>
-    private static ChatMessage? Reply(List<ChatResponseUpdate> updates)
+    /// <summary>把本轮回复写成一条消息，用量内容不进入历史，没有回复内容时为空。</summary>
+    private static ChatMessage? Reply(ChatResponse response)
     {
-        if (updates.Count == 0)
+        IList<ChatMessage> messages = response.Messages;
+        if (messages.Count == 0)
         {
             return null;
         }
 
-        IList<ChatMessage> messages = updates.ToChatResponse().Messages;
         if (messages.Count == 1)
         {
-            return messages[0].Contents.Count == 0 ? null : messages[0];
+            List<AIContent> single = [.. messages[0].Contents.Where(content => content is not UsageContent)];
+
+            return single.Count == 0 ? null : new ChatMessage(messages[0].Role, single);
         }
 
-        List<AIContent> contents = [.. messages.SelectMany(message => message.Contents)];
+        List<AIContent> contents =
+        [
+            .. messages
+                .SelectMany(message => message.Contents)
+                .Where(content => content is not UsageContent),
+        ];
 
         return contents.Count == 0 ? null : new ChatMessage(ChatRole.Assistant, contents);
     }

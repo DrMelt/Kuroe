@@ -151,7 +151,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
         private JournalEntryHandler? _entryAppended;
         private ProgressTextHandler? _progressReported;
 
-        /// <summary>流式内容追加后给出该增量与种类。</summary>
+        /// <summary>产出内容追加后给出该内容与种类。</summary>
         public event ProcessContentHandler? ContentAppended;
 
         /// <summary>需要即时呈现的条目写入后给出该条目。</summary>
@@ -177,7 +177,7 @@ internal sealed class StubRunner : IExecutionRunnerFactory
             }
         }
 
-        /// <summary>追加一段流式内容，随后播发该增量。</summary>
+        /// <summary>追加一段产出内容，随后播发该内容。</summary>
         public void AppendContent(ProcessContentKind kind, string delta)
         {
             if (delta.Length == 0)

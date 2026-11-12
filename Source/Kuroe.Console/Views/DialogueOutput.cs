@@ -21,7 +21,7 @@ internal sealed class DialogueOutput(Terminal terminal)
         }
     }
 
-    /// <summary>写出一段流式内容。内容种类切换时结束当前行，思考块以“思考”开头。</summary>
+    /// <summary>写出一段产出内容。内容种类切换时结束当前行，思考块以“思考”开头。</summary>
     public void Content(ProcessContent content)
     {
         if (content.Delta.Length == 0)

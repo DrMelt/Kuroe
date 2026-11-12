@@ -112,7 +112,7 @@ public sealed class Execution : IExecution
 
     internal CancellationToken CancellationToken => _cancellation.Token;
 
-    /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
+    /// <summary>执行输出的一段内容，按到达顺序给出。</summary>
     public event ProcessContentHandler? ContentEmitted
     {
         add => _process.Content += value;
@@ -185,7 +185,7 @@ public sealed class Execution : IExecution
         }
     }
 
-    /// <summary>转给订阅者一段流式内容。</summary>
+    /// <summary>转给订阅者一段内容。</summary>
     private void PublishContent(ProcessContent content)
     {
         lock (_gate)

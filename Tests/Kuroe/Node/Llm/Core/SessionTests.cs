@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
@@ -21,15 +20,16 @@ public sealed class SessionTests
         ProcessJournal journal = new();
         List<ProcessContent> contents = [];
         journal.ContentAppended += contents.Add;
-        ChatResponseUpdate update = new(
-            ChatRole.Assistant,
-            [
-                new TextReasoningContent("先想"),
-                new TextContent("再答"),
-                new FunctionCallContent("call-1", "ReadFile"),
-            ]);
+        ChatResponse response = new(
+            new ChatMessage(
+                ChatRole.Assistant,
+                [
+                    new TextReasoningContent("先想"),
+                    new TextContent("再答"),
+                    new FunctionCallContent("call-1", "ReadFile"),
+                ]));
 
-        Session.RecordContent(update, journal);
+        Session.RecordContent(response, journal);
 
         Assert.Equal(
             [
@@ -60,7 +60,7 @@ public sealed class SessionTests
     public async Task Tool_calls_are_returned_and_results_join_the_history()
     {
         RecordingTurnClient client = new(
-            [new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("call-1", "GetLocalTime")])],
+            Reply(new FunctionCallContent("call-1", "GetLocalTime")),
             Reply("完成"));
         Session session = Create(client);
 
@@ -81,7 +81,7 @@ public sealed class SessionTests
     [Fact]
     public async Task An_empty_reply_discards_the_round()
     {
-        RecordingTurnClient client = new([], Reply("第二答"));
+        RecordingTurnClient client = new(new ChatResponse(), Reply("第二答"));
         ProcessJournal journal = new();
         Session session = Create(client, journal);
 
@@ -137,31 +137,12 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task The_last_usage_in_a_request_wins()
-    {
-        RecordingTurnClient client = new(
-            [
-                .. Reply("答复"),
-                .. UsageReply(string.Empty, new UsageDetails { InputTokenCount = 10, OutputTokenCount = 2, TotalTokenCount = 12 }),
-                .. UsageReply(string.Empty, new UsageDetails { InputTokenCount = 30, OutputTokenCount = 4, TotalTokenCount = 34 }),
-            ]);
-        Session session = Create(client);
-
-        await session.AskAsync("问题", CancellationToken.None);
-
-        Assert.Equal(1, session.Usage.RequestCount);
-        Assert.Equal(0, session.Usage.RequestsWithoutUsage);
-        Assert.Equal(30, session.Usage.Tokens.Input);
-        Assert.Equal(4, session.Usage.Tokens.Output);
-        Assert.Equal(34, session.Usage.Tokens.Total);
-        Assert.Equal(30, session.Usage.ContextTokens);
-    }
-
-    [Fact]
     public async Task Usage_is_not_carried_into_the_history()
     {
         RecordingTurnClient client = new(
-            UsageReply("第一答", new UsageDetails { InputTokenCount = 10, OutputTokenCount = 2, TotalTokenCount = 12 }),
+            ReplyWithUsageContent(
+                "第一答",
+                new UsageDetails { InputTokenCount = 10, OutputTokenCount = 2, TotalTokenCount = 12 }),
             Reply("第二答"));
         Session session = Create(client);
 
@@ -174,9 +155,9 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task A_failed_stream_still_counts_the_request()
+    public async Task A_failed_request_still_counts_the_request()
     {
-        Session session = Create(new FailingTurnClient());
+        Session session = Create(new ThrowingTurnClient());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => session.AskAsync("问题", CancellationToken.None));
 
@@ -186,24 +167,27 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task An_interrupted_stream_keeps_the_partial_reply_in_the_restore_data()
+    public async Task A_failed_request_keeps_the_input_in_the_restore_data()
     {
-        Session session = Create(new FailingTurnClient());
+        Session session = Create(new ThrowingTurnClient());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => session.AskAsync("问题", CancellationToken.None));
 
         LlmExecutionState? state = session.CreateRestoreData();
         Assert.NotNull(state);
-        Assert.Equal(ChatRole.Assistant.Value, state.Messages[^1].Role);
-        Assert.Equal("半句", Assert.Single(state.Messages[^1].Contents).Text);
+        Assert.Equal(ChatRole.User.Value, state.Messages[^1].Role);
+        Assert.Equal("问题", Assert.Single(state.Messages[^1].Contents).Text);
     }
 
     [Fact]
     public async Task A_restored_session_continues_from_the_partial_reply_and_merges_it()
     {
-        Session original = Create(new FailingTurnClient());
-        await Assert.ThrowsAsync<InvalidOperationException>(() => original.AskAsync("问题", CancellationToken.None));
-        LlmExecutionState state = original.CreateRestoreData()!;
+        LlmExecutionState state = new(
+            "fake",
+            [
+                new LlmMessageState("user", [new LlmContentState("text", Text: "问题")]),
+                new LlmMessageState("assistant", [new LlmContentState("text", Text: "半句")]),
+            ]);
 
         RecordingTurnClient client = new(Reply("续写"));
         Session restored = CreateRestored(state, client);
@@ -221,7 +205,7 @@ public sealed class SessionTests
     public async Task A_restore_data_round_trips_tool_calls_and_results()
     {
         RecordingTurnClient client = new(
-            [new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("call-1", "GetLocalTime")])]);
+            Reply(new FunctionCallContent("call-1", "GetLocalTime")));
         Session session = Create(client);
 
         await session.AskAsync("现在几点", CancellationToken.None);
@@ -262,7 +246,7 @@ public sealed class SessionTests
     public async Task A_pending_tool_call_cannot_continue()
     {
         RecordingTurnClient client = new(
-            [new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("call-1", "GetLocalTime")])]);
+            Reply(new FunctionCallContent("call-1", "GetLocalTime")));
         Session session = Create(client);
 
         await session.AskAsync("现在几点", CancellationToken.None);
@@ -328,14 +312,20 @@ public sealed class SessionTests
             new ProcessJournal(),
             [.. state.Messages.Select(LlmExecutionStateCodec.ToMessage)]);
 
-    private static ChatResponseUpdate[] Reply(string text) =>
-        [new ChatResponseUpdate(ChatRole.Assistant, text)];
+    private static ChatResponse Reply(string text) =>
+        new(new ChatMessage(ChatRole.Assistant, text));
 
-    private static ChatResponseUpdate[] UsageReply(string text, UsageDetails details)
+    private static ChatResponse Reply(params AIContent[] contents) =>
+        new(new ChatMessage(ChatRole.Assistant, contents));
+
+    private static ChatResponse UsageReply(string text, UsageDetails details) =>
+        new(new ChatMessage(ChatRole.Assistant, text)) { Usage = details };
+
+    private static ChatResponse ReplyWithUsageContent(string text, UsageDetails details)
     {
         List<AIContent> contents = [new TextContent(text), new UsageContent(details)];
 
-        return [new ChatResponseUpdate(ChatRole.Assistant, contents)];
+        return new ChatResponse(new ChatMessage(ChatRole.Assistant, contents)) { Usage = details };
     }
 
     private sealed class Source(ITurnClient client) : ITurnClientSource
@@ -345,11 +335,11 @@ public sealed class SessionTests
 
     private sealed class DelegatingTurnClient(ITurnClient client) : ITurnClient
     {
-        public IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+        public Task<ChatResponse> RespondAsync(
             IReadOnlyList<ChatMessage> messages,
             ChatOptions options,
             CancellationToken cancellationToken) =>
-            client.StreamAsync(messages, options, cancellationToken);
+            client.RespondAsync(messages, options, cancellationToken);
     }
 
     private sealed class History : ISessionHistory
@@ -367,62 +357,30 @@ public sealed class SessionTests
 
     private sealed record Request(IReadOnlyList<ChatMessage> Messages, ChatOptions Options);
 
-    private sealed class RecordingTurnClient(params ChatResponseUpdate[][] replies) : ITurnClient
+    private sealed class RecordingTurnClient(params ChatResponse[] replies) : ITurnClient
     {
-        private readonly Queue<ChatResponseUpdate[]> _replies = new(replies);
+        private readonly Queue<ChatResponse> _replies = new(replies);
 
         public List<Request> Requests { get; } = [];
 
-        public async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+        public Task<ChatResponse> RespondAsync(
             IReadOnlyList<ChatMessage> messages,
             ChatOptions options,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+            CancellationToken cancellationToken)
         {
             Requests.Add(new Request([.. messages], options));
 
-            foreach (ChatResponseUpdate update in _replies.Count > 0 ? _replies.Dequeue() : [])
-            {
-                await Task.Yield();
-                yield return update;
-            }
-        }
-    }
-
-    private sealed class FailingTurnClient : ITurnClient
-    {
-        public async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
-            IReadOnlyList<ChatMessage> messages,
-            ChatOptions options,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            await Task.Yield();
-            yield return new ChatResponseUpdate(ChatRole.Assistant, "半句");
-            throw new InvalidOperationException("流中断。");
+            return Task.FromResult(_replies.Count > 0 ? _replies.Dequeue() : new ChatResponse());
         }
     }
 
     private sealed class ThrowingTurnClient : ITurnClient
     {
-        public IAsyncEnumerable<ChatResponseUpdate> StreamAsync(
+        public Task<ChatResponse> RespondAsync(
             IReadOnlyList<ChatMessage> messages,
             ChatOptions options,
             CancellationToken cancellationToken) =>
-            new ThrowingEnumerable();
-
-        private sealed class ThrowingEnumerable : IAsyncEnumerable<ChatResponseUpdate>
-        {
-            public IAsyncEnumerator<ChatResponseUpdate> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
-                new ThrowingEnumerator();
-        }
-
-        private sealed class ThrowingEnumerator : IAsyncEnumerator<ChatResponseUpdate>
-        {
-            public ChatResponseUpdate Current => throw new InvalidOperationException("请求失败。");
-
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-            public ValueTask<bool> MoveNextAsync() => throw new InvalidOperationException("请求失败。");
-        }
+            throw new InvalidOperationException("请求失败。");
     }
 
     private sealed class FakeTool(params string[] paths) : ITool
