@@ -53,7 +53,6 @@ public sealed class TaskRestoreServiceTests
         SingleLeaseStore leases = new();
         TaskRestoreService service = new(
             store,
-            new FailingCompiler(),
             leases,
             new UnusedRuntime());
 
@@ -73,7 +72,6 @@ public sealed class TaskRestoreServiceTests
         store.Write(record).ThrowIfError();
         TaskRestoreService service = new(
             store,
-            new UnusedCompiler(),
             new BusyLeaseStore(),
             new UnusedRuntime());
 
@@ -92,7 +90,6 @@ public sealed class TaskRestoreServiceTests
         store.Write(record).ThrowIfError();
         TaskRestoreService service = new(
             store,
-            new UnusedCompiler(),
             new BrokenLeaseStore(),
             new UnusedRuntime());
 
@@ -108,16 +105,8 @@ public sealed class TaskRestoreServiceTests
     private static TaskRestoreService CreateService(ITaskRecordStore store) =>
         new(
             store,
-            new UnusedCompiler(),
             new UnusedLeaseStore(),
             new UnusedRuntime());
-
-    /// <summary>这些场景不编译流程快照。</summary>
-    private sealed class UnusedCompiler : IFlowSnapshotCompiler
-    {
-        public ErrorOr<CompiledFlow> Compile(GraphFlowDefinitionRecord snapshot) =>
-            throw new InvalidOperationException("这些场景不应编译流程快照。");
-    }
 
     /// <summary>这些场景不获取租约。</summary>
     private sealed class UnusedLeaseStore : ITaskLeaseStore
@@ -130,13 +119,6 @@ public sealed class TaskRestoreServiceTests
 
         public void ReleaseAll() =>
             throw new InvalidOperationException("这些场景不应释放租约。");
-    }
-
-    /// <summary>编译一定失败，用于验证失败来源。</summary>
-    private sealed class FailingCompiler : IFlowSnapshotCompiler
-    {
-        public ErrorOr<CompiledFlow> Compile(GraphFlowDefinitionRecord snapshot) =>
-            [Error.Failure("Test.Compile", "编译失败。")];
     }
 
     /// <summary>发放租约并记录注销，用于验证恢复失败后的清理。</summary>
@@ -184,10 +166,7 @@ public sealed class TaskRestoreServiceTests
     /// <summary>这些场景不恢复任务。</summary>
     private sealed class UnusedRuntime : ITaskRestoreRuntime
     {
-        public ErrorOr<TaskSnapshot> Restore(
-            TaskRecord record,
-            CompiledFlow flow,
-            IReadOnlyList<NodePath> seed) =>
+        public ErrorOr<TaskSnapshot> Restore(TaskRecord record) =>
             throw new InvalidOperationException("这些场景不应恢复任务。");
     }
 }

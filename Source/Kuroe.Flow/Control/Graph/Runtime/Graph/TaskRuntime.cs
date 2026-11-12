@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -42,7 +43,8 @@ public enum ExecutionInterruption
 /// 所有方法都要求调用者持有所属任务的 Gate。</summary>
 internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeConstantSource
 {
-    private readonly WorkTask _task;
+    private readonly ITaskFlowContext _task;
+    private readonly GraphFlowState _state;
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
     private readonly RuntimeStartSource _startSource;
@@ -53,17 +55,18 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     private static readonly IInputProgress IdleProgress = new UnmaterializedProgress();
 
-    internal TaskRuntime(WorkTask task, Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null)
+    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null)
     {
         _task = task;
+        _state = state;
         _restorers = restorers;
-        _materializer = new NodeMaterializer(task.Graph, this);
-        _staticPorts = new StaticPortValues(task.Graph, task.StartPorts, this);
-        _startSource = new RuntimeStartSource(task.Graph.StartPorts, task.StartPorts);
+        _materializer = new NodeMaterializer(state.Flow.Graph, this);
+        _staticPorts = new StaticPortValues(state.Flow.Graph, state.StartPorts, this);
+        _startSource = new RuntimeStartSource(state.Flow.Graph.StartPorts, state.StartPorts);
     }
 
     /// <summary>任务锁定的流程执行视图。</summary>
-    public NodeGraph Graph => _task.Graph;
+    public NodeGraph Graph => _state.Flow.Graph;
 
     /// <summary>运行期节点物化器，快照投影按它读已实例化节点。</summary>
     internal NodeMaterializer Materializer => _materializer;
@@ -102,7 +105,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     /// <summary>按执行号取已恢复的执行，节点恢复已发布产出时使用。</summary>
     IExecution? INodeRestoreContext.Execution(ExecutionId id) =>
-        _task.Executions.FirstOrDefault(execution => execution.Id == id);
+        _state.Executions.FirstOrDefault(execution => execution.Id == id);
 
     /// <summary>某节点的运行期节点，未实例化时按图定义建出，任务已取消时落在取消态。</summary>
     public NodeRuntime Runtime(NodePath node) => this[node];
@@ -353,7 +356,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     {
         if (_task.Lifecycle == TaskLifecycle.Terminated)
         {
-            _task.NotifyExecutionSettled(execution);
+            _task.NotifyExecutionSettled(execution.Unit);
 
             return new SettlePlan([]);
         }
@@ -368,7 +371,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         if (output.Kind == ExecutionOutputKind.Content)
         {
             node.Publish(execution, output);
-            _task.NotifyExecutionSettled(execution);
+            _task.NotifyExecutionSettled(execution.Unit);
 
             return Settled(node, Downstream(node));
         }
@@ -388,7 +391,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
 
         node.Publish(execution, output);
-        _task.NotifyExecutionSettled(execution);
+        _task.NotifyExecutionSettled(execution.Unit);
 
         return Settled(node, Downstream(node));
     }
@@ -396,12 +399,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>执行停驻阻塞：判定先交回等待方，再把这个执行节点记为阻塞并检查执行上限。</summary>
     private SettlePlan Block(RuntimeExecutable node, GraphExecution execution)
     {
-        _task.NotifyExecutionSettled(execution);
+        _task.NotifyExecutionSettled(execution.Unit);
         GraphExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.StartedAt is null
             && snapshot.State == ExecutionState.Interrupted)
         {
-            _task.Journal.AppendInfo($"{node.Path}：执行未启动即中断。");
+            _task.AppendInfo($"{node.Path}：执行未启动即中断。");
 
             return new SettlePlan([], ExecutionInterruption.NotStarted);
         }
@@ -412,14 +415,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ExecutionState.Interrupted => "执行已中断。",
                 _ => "执行未成功收口。",
             };
-        _task.Journal.AppendError($"{node.Path}：{summary}");
+        _task.AppendError($"{node.Path}：{summary}");
         node.EnterBlocked([node.Path], new NodeBlock(summary, execution.Id, DateTimeOffset.UtcNow));
         NoteLimitReached(node);
 
         RestorePlan? restore = CreateRestorePlan(node);
         if (restore is not null)
         {
-            _task.Journal.AppendInfo($"{node.Path} 的阻塞可恢复。");
+            _task.AppendInfo($"{node.Path} 的阻塞可恢复。");
         }
 
         return new SettlePlan(
@@ -436,7 +439,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return;
         }
 
-        _task.Journal.AppendError($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。");
+        _task.AppendError($"节点 {node.Path} 的执行次数已达上限 {limit} 次，不再重跑。");
     }
 
     /// <summary>产出发布后的共同收口：把待评估的祖先容器与依赖该节点的目标并入通知。</summary>
@@ -446,7 +449,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         List<NodePath> notify = [.. downstream, .. containers, .. Graph.Dependents(node.Path)];
         InvalidateRestore(node.Path);
         InvalidateRestores(notify);
-        _task.Journal.AppendInfo($"{node.Path} 执行成功。");
+        _task.AppendInfo($"{node.Path} 执行成功。");
 
         return new SettlePlan(notify);
     }
@@ -531,8 +534,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
             if (node.TakeFailure() is { Length: > 0 } failure)
             {
-                _task.Journal.AppendError($"{node.Path}：{failure}");
-                _task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{_task.Id} 停在节点 {node.Path.Label}，{failure}"));
+                _task.AppendError($"{node.Path}：{failure}");
+                _task.Report(new ExecutionNotice(NoticeLevel.Warning, $"{_task.Id} 停在节点 {node.Path.Label}，{failure}"));
                 _task.Touch();
             }
 
@@ -616,8 +619,8 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             .Select(SuppressedBinding));
         string message = $"{_task.Id} 的节点 {node.Path.Label} 有启动组未满足触发条件：{ports}，本组已消耗，不再等待。";
 
-        _task.Journal.AppendInfo(message);
-        _task.Registry.Report(new ExecutionNotice(NoticeLevel.Information, message));
+        _task.AppendInfo(message);
+        _task.Report(new ExecutionNotice(NoticeLevel.Information, message));
         _task.Touch();
     }
 
@@ -780,7 +783,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             return null;
         }
 
-        GraphExecution? candidate = _task.Executions.FirstOrDefault(execution => execution.Id == blocked);
+        GraphExecution? candidate = _state.Executions.FirstOrDefault(execution => execution.Id == blocked);
         while (candidate is not null)
         {
             if (!Resumable(candidate))
@@ -831,7 +834,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             }
 
             candidate = candidate.ContinuedFrom is { } previous
-                ? _task.Executions.FirstOrDefault(execution => execution.Id == previous)
+                ? _state.Executions.FirstOrDefault(execution => execution.Id == previous)
                 : null;
         }
 

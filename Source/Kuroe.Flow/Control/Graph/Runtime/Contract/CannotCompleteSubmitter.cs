@@ -1,35 +1,36 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
+using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using NeutralExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
+using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
+using LoopExecution = Kuroe.Flow.Execution.Execution;
+using LoopExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Contract;
 
-/// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待重新执行。
-/// 提交者身份在此认定，结果以上报后的本轮契约状态交回，回执措辞由工具实现层给出。</summary>
+/// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待重新执行。</summary>
 public sealed class CannotCompleteSubmitter(ExecutionIndex executions) : IExecutionCannotCompleteSubmitter
 {
-    /// <summary>上报本轮无法完成并给出原因，原因必填。成功时给出上报后的本轮契约状态，错误以 ErrorOr 表达。</summary>
-    public ErrorOr<NeutralExecutionStatus> Report(NeutralExecutionId id, string reason)
+    /// <summary>上报本轮无法完成并给出原因，原因必填。</summary>
+    public ErrorOr<ExecutionStatus> Report(LoopExecutionId id, string reason)
     {
-        ErrorOr<(GraphExecution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(
+        ErrorOr<(LoopExecution Execution, WorkTask Task)> owner = SubmitterContext.Resolve(
             executions,
-            new Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId(id.Value),
+            id,
             "上报无法完成");
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;
         }
 
-        (GraphExecution execution, WorkTask task) = owner.Value;
+        (LoopExecution execution, WorkTask task) = owner.Value;
         string recorded = reason.Trim();
         lock (task.Gate)
         {
-            execution.ReportCannotComplete(recorded);
+            GraphFlowControl control = task.Control as GraphFlowControl
+                ?? throw new InvalidOperationException($"任务 {task.Id} 没有图流程控制。");
 
-            return ExecutionStatusReader.Of(task, execution);
+            return control.ReportCannotComplete(execution, recorded);
         }
     }
 }

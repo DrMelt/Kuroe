@@ -58,6 +58,15 @@ public sealed class GraphExecution : IExecution
         _unit = new NeutralExecution(new NeutralExecutionId(id.Value), Request);
     }
 
+    internal GraphExecution(ExecutionInput input, NeutralExecution unit, int controlVersion)
+    {
+        Input = input;
+        ControlVersion = controlVersion;
+        Request = unit.Request;
+        Target = BuildTarget(input, Request);
+        _unit = unit;
+    }
+
     private GraphExecution(ExecutionRecord record, ExecutionInput input)
     {
         Input = input;
@@ -334,6 +343,7 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
         ExecutionSource execution => $"节点「{execution.Node}」的端口「{execution.Port}」产出",
         ContainerPortSource container => $"节点「{container.Container}」的端口「{container.Port}」产出",
         InputSource input => $"节点「{input.Node}」的输入",
+        StartSource start => $"流程起点端口「{start.Port}」",
         DefaultSource value => $"节点「{value.Node}」的端口「{value.Port}」默认值",
         _ => null,
     };

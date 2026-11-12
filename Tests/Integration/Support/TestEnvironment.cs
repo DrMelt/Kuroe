@@ -53,7 +53,8 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<CannotCompleteSubmitter>(),
             new ExecutionStatusReader(Executions));
         runner.ContractToolFactory = execution =>
-            CreateContractTools(Executions.Find(execution).ThrowIfError());
+            CreateContractTools((GraphExecution)Executions.FindPayload(
+                new Kuroe.Flow.Execution.ExecutionId(execution.Value))!);
     }
 
     /// <summary>临时工作目录。</summary>
@@ -115,7 +116,8 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>取指定路径的契约工具。</summary>
     private ITool ContractTool(ExecutionId execution, string path)
     {
-        GraphExecution found = Executions.Find(execution).ThrowIfError();
+        GraphExecution found = (GraphExecution)Executions.FindPayload(
+            new Kuroe.Flow.Execution.ExecutionId(execution.Value))!;
         IReadOnlyList<ITool> tools = CreateContractTools(found);
 
         return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));

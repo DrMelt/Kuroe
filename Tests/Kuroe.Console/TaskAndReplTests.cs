@@ -423,8 +423,9 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        GraphExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(new ExecutionId(1)).ThrowIfError();
-        cli.Tasks.ShowExecution(execution.Id);
+        Kuroe.Flow.Execution.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
+            new Kuroe.Flow.Execution.ExecutionId(1)).ThrowIfError();
+        cli.Tasks.ShowExecution(execution.Id.Value);
 
         Assert.Contains("执行 #1", cli.Output.Output);
         Assert.Contains("输入取值", cli.Output.Output);
@@ -620,7 +621,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "长任务");
         cli.Environment.Wait(new TaskId(1), snapshot => snapshot.LiveExecutions > 0);
 
-        cli.Tasks.StopExecution(new ExecutionId(1));
+        cli.Tasks.StopExecution(1);
 
         Assert.Contains("执行 #1 已停止。", cli.Output.Output);
     }

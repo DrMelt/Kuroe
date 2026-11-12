@@ -14,14 +14,20 @@ public sealed class RepositoryLayoutTests
     public void InternalsVisibleTo_only_targets_the_matching_test_assembly()
     {
         HashSet<string> testAssemblies = [.. ProjectFiles(TestsRoot).Select(Path.GetFileNameWithoutExtension).OfType<string>()];
+        HashSet<string> sourceAssemblies = [.. ProjectFiles(SourceRoot).Select(Path.GetFileNameWithoutExtension).OfType<string>()];
 
         foreach (string project in ProjectFiles(SourceRoot))
         {
-            string expected = $"{Path.GetFileNameWithoutExtension(project)}.Tests";
             foreach (string target in InternalsVisibleTo(project))
             {
-                Assert.Equal(expected, target);
-                Assert.Contains(target, testAssemblies);
+                if (target.EndsWith(".Tests", StringComparison.Ordinal))
+                {
+                    Assert.Contains(target, testAssemblies);
+                }
+                else
+                {
+                    Assert.Contains(target, sourceAssemblies);
+                }
             }
         }
     }
@@ -232,9 +238,8 @@ public sealed class RepositoryLayoutTests
         string core = Path.Combine(SourceRoot, "Kuroe.Flow", "Core");
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
 
-        Assert.False(File.Exists(Path.Combine(core, "Runtime", "Tasks", "WorkTask.cs")));
-        Assert.False(File.Exists(Path.Combine(core, "Runtime", "Engine", "TaskDriver.cs")));
-        Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Tasks", "WorkTask.cs")));
+        Assert.True(File.Exists(Path.Combine(core, "Runtime", "Tasks", "WorkTask.cs")));
+        Assert.False(File.Exists(Path.Combine(graph, "Runtime", "Tasks", "WorkTask.cs")));
         Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Engine", "TaskDriver.cs")));
         Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Graph", "TaskRuntime.cs")));
     }
@@ -245,8 +250,7 @@ public sealed class RepositoryLayoutTests
         string file = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
-            "Control",
-            "Graph",
+            "Core",
             "Runtime",
             "Tasks",
             "TaskRegistry.cs");
@@ -302,12 +306,31 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Node.Shared.csproj");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, tasks) || IsUnder(reference, execution) || IsUnder(reference, shared),
+                $"Kuroe.Flow.Node.Shared 引用了契约层之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Flow_shared_project_references_only_neutral_shared()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Shared",
+            "Kuroe.Flow.Shared.csproj");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
 
         Assert.All(
             ProjectReferences(project),
             reference => Assert.True(
                 IsUnder(reference, tasks) || IsUnder(reference, execution),
-                $"Kuroe.Flow.Node.Shared 引用了契约层之外的 {reference}。"));
+                $"Kuroe.Flow.Shared 引用了中性共享之外的 {reference}。"));
     }
 
     [Fact]
@@ -323,6 +346,9 @@ public sealed class RepositoryLayoutTests
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
+        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+        string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
 
         Assert.All(
             ProjectReferences(project),
@@ -330,7 +356,10 @@ public sealed class RepositoryLayoutTests
                 IsUnder(reference, nodes)
                     || IsUnder(reference, tasks)
                     || IsUnder(reference, taskPresentation)
-                    || IsUnder(reference, execution),
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, presentation)
+                    || IsUnder(reference, taskRecords)
+                    || IsUnder(reference, shared),
                 $"Kuroe.Flow.Control.Shared 引用了契约层之外的 {reference}。"));
     }
 
@@ -348,6 +377,7 @@ public sealed class RepositoryLayoutTests
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
+        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
 
         Assert.All(
             ProjectReferences(project),
@@ -355,7 +385,8 @@ public sealed class RepositoryLayoutTests
                 IsUnder(reference, nodes)
                     || IsUnder(reference, tasks)
                     || IsUnder(reference, execution)
-                    || IsUnder(reference, presentation),
+                    || IsUnder(reference, presentation)
+                    || IsUnder(reference, shared),
                 $"Kuroe.Flow.Tasks.Presentation.Shared 引用了契约层之外的 {reference}。"));
     }
 

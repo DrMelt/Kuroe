@@ -1,9 +1,12 @@
 using System.Text;
 using ErrorOr;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Display;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks;
+using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 
 namespace Kuroe.Tool.KuroeInfo;
 
@@ -63,10 +66,9 @@ public sealed class TaskKuroeInfoTool : ITool
         var text = new StringBuilder();
         foreach (TaskSnapshot task in tasks)
         {
-            int total = task.Executables.Sum(node => node.Executions.Count);
-            text.AppendLine($"#{task.Id.Short} · {task.Title} · {InfoLabels.Of(task.State)}"
-                + $" · 节点 {task.FrontierNodes}/{task.TotalExecutableNodes}"
-                + $" · {task.LiveExecutions} 个执行在跑 / {total} 已派"
+            text.AppendLine($"#{task.Id.Short} · {task.Title} · {StateLabel(task)}"
+                + $" · 步骤 {task.FrontierNodes}/{task.TotalExecutableNodes}"
+                + $" · {task.LiveExecutions} 个执行在跑 / {task.Executions.Count} 已派"
                 + $" · 最近 {InfoLabels.Clock(task.LastActivityAt)}");
         }
 
@@ -100,82 +102,96 @@ public sealed class TaskKuroeInfoTool : ITool
             return ToolErrors.Argument($"执行号要写成数字，收到 {text ?? "空"}。");
         }
 
-        ErrorOr<GraphExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
+        ErrorOr<ExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        GraphExecutionSnapshot execution = found.Value;
-        ErrorOr<TaskSnapshot> owner = _registry.Find(execution.Input.Task);
+        ErrorOr<TaskSnapshot> owner = _registry.Find(new TaskId(found.Value.Request.Owner.Value));
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;
         }
 
-        return DescribeExecution(owner.Value, execution);
+        return DescribeExecution(owner.Value, found.Value);
+    }
+/// <summary>任务状态展示名，执行中带上当前执行的进展。</summary>
+    private static string StateLabel(TaskSnapshot task)
+    {
+        string? progress = task.Executions
+            .FirstOrDefault(execution => execution.State.IsLive() && execution.Progress.Length > 0)?.Progress;
+
+        return progress is { Length: > 0 }
+            ? $"{InfoLabels.Of(task.State)}（{progress}）"
+            : InfoLabels.Of(task.State);
     }
 
-    /// <summary>任务的完整详情文本。</summary>
+    /// <summary>任务详情：目标、流程、步骤状态与执行列表。</summary>
     private static string DescribeTask(TaskSnapshot task)
     {
         var text = new StringBuilder();
-        text.AppendLine($"#{task.Id.Short} · {task.Title} · 状态：{InfoLabels.Of(task.State)}");
+        text.AppendLine($"#{task.Id.Short} · {task.Title} · {StateLabel(task)}");
+        text.AppendLine($"流程 {task.View.Name} · {task.View.Kind} · 步骤 {task.TotalExecutableNodes}");
         foreach (StartInput input in task.Inputs.Values)
         {
             text.AppendLine($"输入 {input.Port}：{input.Text}");
         }
-        text.AppendLine($"流程：{task.View.Name}"
-            + $"（{string.Join(" → ", task.View.Steps.Select(step => step.Path))}）"
-            + $" · 节点进度 {task.FrontierNodes}/{task.TotalExecutableNodes}");
 
-        if (task.ExecutableStates.Count > 0)
+        if (task.Pending.Count > 0)
         {
-            text.AppendLine("执行节点状态：");
-            foreach (ExecutableStateSnapshot node in task.ExecutableStates)
+            text.AppendLine("等待：");
+            foreach (FlowPendingStep pending in task.Pending)
             {
-                text.AppendLine($"  {node.Node} · {InfoLabels.Of(node)}");
+                text.AppendLine($"  {pending.Step} · {pending.Kind} · {pending.Question ?? "无提问"}");
             }
         }
 
-        text.AppendLine("execution：");
-        foreach (ExecutableSnapshot node in task.Executables)
+        text.AppendLine("步骤：");
+        foreach (FlowStepView step in task.View.Steps)
         {
-            if (node.Executions.Count == 0)
-            {
-                continue;
-            }
-
-            text.AppendLine($"  {task.OrdinalOf(node.Executable.Path)}. {node.Executable.Path}"
-                + $"（{node.Executable.Kind.Value}）");
-            foreach (GraphExecutionSnapshot execution in node.Executions)
-            {
-                text.AppendLine($"    {ExecutionLine(execution)}");
-            }
+            text.AppendLine($"  {step.Path} · {step.Label} · {step.State}"
+                + $" · 执行 {step.Executions.Count}/{step.MaxExecutions}");
         }
 
-        foreach (ContainerSnapshot container in task.Containers)
+        foreach (FlowGroupView group in task.View.Groups)
         {
-            text.AppendLine($"容器 {container.Path} · {InfoLabels.Of(container.State)}");
+            text.AppendLine($"分组 {group.Path} · {group.Label} · {group.State}");
+        }
+
+        text.AppendLine("执行：");
+        if (task.Executions.Count == 0)
+        {
+            text.AppendLine("  还没有执行。");
+        }
+        else
+        {
+            foreach (ExecutionSnapshot execution in task.Executions)
+            {
+                text.AppendLine($"  {ExecutionLine(execution)}");
+            }
         }
 
         AppendJournal(text, task.Journal, task.DroppedJournal);
 
         return text.ToString().TrimEnd();
     }
-    /// <summary>执行的完整详情文本。</summary>
-    private static string DescribeExecution(TaskSnapshot task, GraphExecutionSnapshot execution)
+
+    /// <summary>执行详情。</summary>
+    private static string DescribeExecution(TaskSnapshot task, ExecutionSnapshot execution)
     {
-        ExecutionInput input = execution.Input;
         var text = new StringBuilder();
-        text.AppendLine($"{execution.Id} · {input.Node} · 第 {input.ExecutionCount} 轮");
-        text.AppendLine($"{task.Id} {task.Title} · 节点 {task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}"
-            + $" · 模型 {input.Declaration?.Model ?? "(未声明)"}");
-        text.AppendLine($"状态 {InfoLabels.State(execution)}"
+        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
+        text.AppendLine($"{execution.Id} · {execution.Request.Kind} · 第 {execution.Request.Attempt} 轮");
+        text.AppendLine($"{task.Id} {task.Title} · 目标 {execution.Request.Target}");
+        string stateLabel = execution.State.IsLive() && execution.Progress.Length > 0
+            ? $"{execution.State.Label()}（{execution.Progress}）"
+            : execution.State.Label();
+        text.AppendLine($"状态 {stateLabel}"
             + $" · {InfoLabels.Clock(execution.StartedAt)} → {InfoLabels.Clock(execution.FinishedAt)}"
-            + $" · 耗时 {InfoLabels.Elapsed(execution.Elapsed)}");
-        text.AppendLine($"恢复数据 {InfoLabels.RestoreData(execution)}"
-            + $" · 继续自 {InfoLabels.ContinuedFrom(execution)}");
+            + $" · 耗时 {InfoLabels.Elapsed(elapsed)}");
+        text.AppendLine($"恢复数据 {(execution.RestoreData is null ? "无" : "有")}"
+            + $" · 继续自 {execution.ContinuedFrom?.ToString() ?? "—"}");
         text.AppendLine($"请求 {InfoLabels.Requests(execution.Usage)}"
             + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
         foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
@@ -188,15 +204,15 @@ public sealed class TaskKuroeInfoTool : ITool
             text.AppendLine($"失败：{failure}");
         }
 
-        text.AppendLine($"输入取值（{input.Inputs.Count} 条）：");
-        if (input.Inputs.Count == 0)
+        text.AppendLine($"输入取值（{execution.Request.Inputs.Count} 条）：");
+        if (execution.Request.Inputs.Count == 0)
         {
             text.AppendLine("  没有取到任何来源内容。");
         }
 
-        foreach (InputValue value in input.Inputs)
+        foreach (ExecutionInputValue value in execution.Request.Inputs)
         {
-            text.AppendLine($"  {value.Port} · {value.Origin.Label}");
+            text.AppendLine($"  {value.Port} · {value.Source ?? "—"}");
             text.AppendLine($"    {OneLine(value.Text)}");
         }
 
@@ -207,14 +223,14 @@ public sealed class TaskKuroeInfoTool : ITool
         }
         else
         {
-            AppendJournal(text, execution.Journal);
+            AppendJournal(text, execution.Journal, 0);
         }
 
         return text.ToString().TrimEnd();
     }
 
     /// <summary>过程记录的最近条目。<paramref name="dropped"/> 是更早已丢弃的条数。</summary>
-    private static void AppendJournal(StringBuilder text, IReadOnlyList<JournalEntry> entries, int dropped = 0)
+    private static void AppendJournal(StringBuilder text, IReadOnlyList<JournalEntry> entries, int dropped)
     {
         text.AppendLine("过程记录：");
         if (dropped > 0)
@@ -238,15 +254,16 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>列表里一行的执行概况。</summary>
-    private static string ExecutionLine(GraphExecutionSnapshot execution)
+    private static string ExecutionLine(ExecutionSnapshot execution)
     {
+        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
         List<string> parts =
         [
             execution.Id.ToString(),
-            $"第 {execution.Input.ExecutionCount} 轮",
+            $"第 {execution.Request.Attempt} 轮",
             $"请求 {InfoLabels.Requests(execution.Usage)}",
-            InfoLabels.State(execution),
-            InfoLabels.Elapsed(execution.Elapsed),
+            execution.State.ToString(),
+            InfoLabels.Elapsed(elapsed),
         ];
 
         return string.Join(" · ", parts);

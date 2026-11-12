@@ -1,26 +1,34 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
+using LoopExecution = Kuroe.Flow.Execution.Execution;
+using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using Kuroe.Flow.InputChannel.Shared;
+using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Runtime.Contract;
+using Kuroe.Flow.Runtime.Graph;
+using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
 using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
-/// <summary>一个任务的推进循环：激活目标去重入队后逐个评估，执行异步派发不阻塞循环，
-/// 收口回调入队下游或重派目标并唤醒挂起。等待型节点的外部输入与重新执行意图经 Advance 与 Rerun 从这里入队重新评估，
-/// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
-internal sealed class TaskDriver(
+/// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止、等待交付与视图。</summary>
+internal sealed class GraphFlowControl(
     WorkTask task,
+    GraphFlowState state,
     ExecutionRuntime runtime,
-    IExecutionTargetResolver targetResolver) : IFlowControl
+    IExecutionTargetResolver targetResolver,
+    IInputDelivery inputDelivery,
+    IFlowExecutionGateway gateway) : IFlowControl
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -39,13 +47,22 @@ internal sealed class TaskDriver(
     /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
     public Task Loop { get; private set; } = Task.CompletedTask;
 
+    /// <summary>是否有步骤停在阻塞。</summary>
+    public bool HasBlocked => state.Runtime.HasBlocked;
+
+    /// <summary>是否还有未走完的推进工作。</summary>
+    public bool HasWork => state.Runtime.HasWork;
+
+    /// <summary>是否有可恢复的阻塞。</summary>
+    public bool HasRestores => state.Runtime.HasRestorePlans;
+
     /// <summary>启动推进循环。要求持有任务 Gate：全部根执行节点入队。</summary>
     public void Start()
     {
         List<NodePath> roots;
         lock (task.Gate)
         {
-            roots = [.. task.Runtime.Roots()];
+            roots = [.. state.Runtime.Roots()];
         }
 
         Enqueue(roots);
@@ -53,29 +70,29 @@ internal sealed class TaskDriver(
     }
 
     /// <summary>从存档启动推进循环：调度种子与当前已就绪的根节点一并入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
-    public void Restore(IReadOnlyList<FlowStepPath> seed)
+    public void Restore(FlowSeed seed)
     {
         List<NodePath> roots;
         lock (task.Gate)
         {
-            roots = [.. task.Runtime.Roots()];
+            roots = [.. state.Runtime.Roots()];
         }
 
-        Enqueue([.. seed.Select(FlowStepPaths.ToNodePath), .. roots]);
+        Enqueue([.. seed.Steps.Select(FlowStepPaths.ToNodePath), .. roots]);
         Loop = Task.Run(RunAsync);
     }
 
     /// <summary>产出已变的目标入队，由推进循环重新评估。要求持有任务 Gate 之外的调用。</summary>
-    public void Advance(IReadOnlyList<FlowStepPath> nodes)
+    public void Advance(IReadOnlyList<FlowStepPath> steps)
     {
         List<NodePath> targets;
         lock (task.Gate)
         {
-            targets = [.. task.Runtime.Notify([.. nodes.Select(FlowStepPaths.ToNodePath)])];
-            task.Runtime.InvalidateRestores(targets);
+            targets = [.. state.Runtime.Notify([.. steps.Select(FlowStepPaths.ToNodePath)])];
+            state.Runtime.InvalidateRestores(targets);
             if (targets.Count > 0)
             {
-                task.Journal.AppendInfo("上游产出变化，下游放弃恢复。");
+                task.AppendInfo("上游产出变化，下游放弃恢复。");
             }
 
             task.Touch();
@@ -89,7 +106,7 @@ internal sealed class TaskDriver(
     public void Resume(bool continueRestores = true)
     {
         IReadOnlyList<TaskRuntime.RestorePlan> restores = continueRestores
-            ? task.Runtime.PlanRestores()
+            ? state.Runtime.PlanRestores()
             : [];
         ResumeTask(restores, clearPendingRestores: !continueRestores);
     }
@@ -100,17 +117,17 @@ internal sealed class TaskDriver(
         IReadOnlyList<TaskRuntime.RerunTarget> targets;
         lock (task.Gate)
         {
-            targets = task.Runtime.PlanReruns();
+            targets = state.Runtime.PlanReruns();
             foreach (IGrouping<NodePath, TaskRuntime.RerunTarget> group in targets.GroupBy(target => target.Blocked))
             {
-                task.Runtime.InvalidateRestore(group.Key);
-                task.Runtime.Unblock(group.Key, [.. group.Select(target => target.Node)]);
-                task.Journal.AppendInfo($"重新执行节点 {group.Key}，放弃恢复。");
+                state.Runtime.InvalidateRestore(group.Key);
+                state.Runtime.Unblock(group.Key, [.. group.Select(target => target.Node)]);
+                task.AppendInfo($"重新执行节点 {group.Key}，放弃恢复。");
             }
 
             foreach (TaskRuntime.RerunTarget target in targets)
             {
-                task.Runtime.Invalidate(target.Node);
+                state.Runtime.Invalidate(target.Node);
             }
 
             if (targets.Count > 0)
@@ -129,28 +146,147 @@ internal sealed class TaskDriver(
     }
 
     /// <summary>停止一个已启动的执行。要求持有任务 Gate。</summary>
-    public ErrorOr<Success> StopExecution(ExecutionId id) => ExecutionStop.Stop(task, id);
+    public ErrorOr<Success> StopExecution(Kuroe.Flow.Execution.ExecutionId id) =>
+        gateway.Stop(task, id);
+
+    /// <summary>一次执行的契约状态，供契约工具回执。</summary>
+    internal ExecutionStatus Status(LoopExecution execution)
+    {
+        GraphExecution graph = Find(execution);
+        RuntimeExecutable node = state.Runtime.Executable(graph.Input.Node);
+        Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionContract contract = graph.Contract;
+
+        return new ExecutionStatus(
+            graph.Request.Target,
+            graph.Request.Attempt,
+            state.Runtime.Plan(graph.Input.Node)?.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
+            (Kuroe.Flow.Execution.ExecutionState)graph.State,
+            [.. node.OutstandingPorts(graph).Select(name => new Kuroe.Flow.Execution.ExecutionPortName(name.Value))],
+            contract.CannotCompleteReason);
+    }
+
+    /// <summary>交回一次执行的端口产出。</summary>
+    internal ErrorOr<ExecutionStatus> SubmitPorts(
+        LoopExecution execution,
+        IReadOnlyDictionary<PortName, PortValue> ports)
+    {
+        GraphExecution graph = Find(execution);
+        if (graph.Contract.Ports is not null)
+        {
+            return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
+        }
+
+        ErrorOr<Success> valid = PortSubmissionRules.Validate(
+            state.Runtime.Executable(graph.Input.Node).Executable.RequiredPorts,
+            ports);
+        if (valid.IsError)
+        {
+            return valid.ErrorsOrEmptyList;
+        }
+
+        graph.SubmitPorts(ports);
+
+        return Status(execution);
+    }
+
+    /// <summary>上报一次执行无法完成。</summary>
+    internal ErrorOr<ExecutionStatus> ReportCannotComplete(LoopExecution execution, string reason)
+    {
+        GraphExecution graph = Find(execution);
+        graph.ReportCannotComplete(reason);
+
+        return Status(execution);
+    }
+
+    private GraphExecution Find(LoopExecution execution) =>
+        state.Executions.FirstOrDefault(candidate => candidate.Id.Value == execution.Id.Value)
+        ?? throw new InvalidOperationException($"任务 {task.Id} 没有执行 {execution.Id.Value}。");
 
     /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
     public ErrorOr<Success> Terminate() => Stop();
 
     /// <summary>此刻尚未处理的目标：排队中、已入队未取批与正在评估的节点，按首次出现顺序去重。</summary>
-    public SchedulerSeed CaptureSeed()
+    public FlowSeed CaptureSeed()
     {
         lock (_gate)
         {
             List<NodePath> targets = [.. _pending, .. _queued, .. _processing, .. _restart];
 
-            return new SchedulerSeed([.. targets.Distinct()]);
+            return new FlowSeed([.. targets.Distinct().Select(FlowStepPaths.From)]);
         }
     }
 
+/// <summary>此刻等待外部输入的步骤，按流程图顺序。</summary>
+    public IReadOnlyList<FlowPendingStep> Pending()
+    {
+        lock (task.Gate)
+        {
+            return
+            [
+                .. inputDelivery.Accepting(state.Runtime).Select(request => new FlowPendingStep(
+                    FlowStepPaths.From(request.Node),
+                    state.Flow.Graph[request.Node] is ExecutableNode node && node.Type.Shape.AwaitsApproval
+                        ? FlowPendingKind.Approve
+                        : FlowPendingKind.Input,
+                    request.Question)),
+            ];
+        }
+    }
+
+    /// <summary>向等待中的步骤交付一次外部输入。要求持有任务 Gate。</summary>
+    public ErrorOr<Success> Deliver(FlowStepPath step, string text)
+    {
+        lock (task.Gate)
+        {
+            NodePath node = FlowStepPaths.ToNodePath(step);
+            if (inputDelivery.Accepting(state.Runtime).All(request => request.Node != node))
+            {
+                return [Error.Validation(FlowErrorCodes.TaskInput, $"节点 {node} 未等待外部输入。")];
+            }
+
+            inputDelivery.Deliver(state.Runtime, node, text);
+
+            return Result.Success;
+        }
+    }
+
+    /// <summary>当前流程视图。</summary>
+    public IFlowView CaptureView()
+    {
+        lock (task.Gate)
+        {
+            TaskProjection projection = new(state.Flow.Graph, state.Runtime.Materializer, state.Runtime.StaticPorts);
+            IReadOnlyList<GraphExecutionSnapshot> executions = [.. state.Executions.Select(execution => execution.Snapshot())];
+
+            return projection.View(
+                state.Flow.Model,
+                projection.Executables(executions),
+                projection.ExecutableStates(),
+                projection.Containers());
+        }
+    }
+
+    /// <summary>登记一次新执行到任务与流程状态。</summary>
+    private GraphExecution Attach(LoopExecution unit, ExecutionInput input)
+    {
+        GraphExecution execution = new(input, unit, task.ControlVersion);
+        state.Executions.Add(execution);
+        task.AttachExecution(unit);
+        gateway.Attach(unit, execution);
+        unit.Started += () => task.UnderLock(() =>
+        {
+            state.Runtime.Executable(input.Node).RecordExecution();
+            return true;
+        });
+
+        return execution;
+    }
     
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
     {
-        foreach (GraphExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
+        foreach (GraphExecution execution in state.Executions.Where(execution => execution.IsLive).ToArray())
         {
             execution.Interrupt("任务已暂停。");
         }
@@ -162,12 +298,12 @@ internal sealed class TaskDriver(
         GraphExecutionSnapshot snapshot = execution.Snapshot();
         if (!execution.IsLive)
         {
-            return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
+            return [ExecutionErrors.ExecutionSettled(new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value), "停止")];
         }
 
         if (snapshot.StartedAt is null)
         {
-            return [ExecutionErrors.ExecutionNotStarted(execution.Id)];
+            return [ExecutionErrors.ExecutionNotStarted(new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value))];
         }
 
         execution.Interrupt("已停止执行。");
@@ -244,6 +380,8 @@ internal sealed class TaskDriver(
             return result;
         }
 
+        state.Runtime.Cancel();
+
         lock (_gate)
         {
             _stop = true;
@@ -276,7 +414,7 @@ internal sealed class TaskDriver(
                 _signal?.TrySetResult();
             }
 
-            live = [.. task.Executions.Where(execution => execution.IsLive)];
+            live = [.. state.Executions.Where(execution => execution.IsLive)];
         }
 
         foreach (GraphExecution execution in live)
@@ -411,10 +549,10 @@ internal sealed class TaskDriver(
             string message = $"{task.Id} 的推进异常：{ex.Message}";
             lock (task.Gate)
             {
-                task.Journal.AppendError(message);
+                task.AppendError(message);
             }
 
-            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, message));
+            task.Report(new ExecutionNotice(NoticeLevel.Warning, message));
             task.NotifyChanged();
         }
     }
@@ -479,8 +617,8 @@ internal sealed class TaskDriver(
         NodeInputValues? inputs;
         lock (task.Gate)
         {
-            node = task.Runtime[name];
-            TaskRuntime.EvaluateResult result = task.Runtime.Evaluate(node);
+            node = state.Runtime[name];
+            TaskRuntime.EvaluateResult result = state.Runtime.Evaluate(node);
             notify.AddRange(result.Notify);
             activation = result.Activation;
             inputs = result.Inputs;
@@ -515,7 +653,7 @@ internal sealed class TaskDriver(
         }
         catch (Exception ex)
         {
-            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
+            task.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
         }
         finally
         {
@@ -532,7 +670,7 @@ internal sealed class TaskDriver(
         }
         catch (Exception ex)
         {
-            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
+            task.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 的执行收口异常：{ex.Message}"));
         }
         finally
         {
@@ -573,14 +711,13 @@ internal sealed class TaskDriver(
                     ? "执行目标解析失败。"
                     : declaration.FirstError.Description;
                 node.EnterBlocked([node.Path], new NodeBlock(reason, null, DateTimeOffset.UtcNow));
-                task.Journal.AppendError(reason);
-                task.Registry.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
+                task.AppendError(reason);
+                task.Report(ExecutionNotice.From(declaration.ErrorsOrEmptyList, $"{task.Id} 停在节点 {executable.Label}"));
                 return;
             }
 
             ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
-            GraphExecution execution = task.Registry.NewExecution(task, input);
-            task.Attach(execution);
+            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input)), input);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }
 
@@ -603,22 +740,21 @@ internal sealed class TaskDriver(
         (RuntimeExecutable Node, GraphExecution Execution, TaskRuntime.RestorePlan Restore)? prepared;
         lock (task.Gate)
         {
-            RuntimeExecutable node = task.Runtime.Executable(target.Blocked);
+            RuntimeExecutable node = state.Runtime.Executable(target.Blocked);
             if (task.Lifecycle is TaskLifecycle.Terminated or TaskLifecycle.Paused
                 || node.Block is null
-                || !task.Runtime.IsCurrentRestorePlan(target))
+                || !state.Runtime.IsCurrentRestorePlan(target))
             {
                 return;
             }
 
-            task.Runtime.RemoveRestorePlan(target);
-            GraphExecution execution = task.Registry.NewExecution(task, target.Input);
+            state.Runtime.RemoveRestorePlan(target);
+            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(target.Input)), target.Input);
             execution.ContinueFrom(target.Source);
             node.ClearRerun();
             node.ClearBlock();
-            task.Attach(execution);
             node.AddActive();
-            task.Journal.AppendInfo(
+            task.AppendInfo(
                 $"从执行 {target.Source.Id.Value} 恢复为执行 {execution.Id.Value}，节点 {node.Path}。");
             prepared = (node, execution, target);
         }
@@ -656,10 +792,10 @@ internal sealed class TaskDriver(
             execution.MarkFailed([Error.Failure("Task.Dispatch", message)]);
             lock (task.Gate)
             {
-                task.Journal.AppendError(message);
+                task.AppendError(message);
             }
 
-            task.Registry.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
+            task.Report(new ExecutionNotice(NoticeLevel.Warning, $"{task.Id} 停在节点 {node.Executable.Label}，{message}"));
         }
 
         TaskRuntime.SettlePlan plan;
@@ -668,7 +804,7 @@ internal sealed class TaskDriver(
         lock (task.Gate)
         {
             node.ReleaseActive();
-            plan = task.Runtime.Settle(node, execution);
+            plan = state.Runtime.Settle(node, execution);
             if (plan.Interruption == ExecutionInterruption.Restorable && plan.Restore is { } restorable)
             {
                 if (task.Lifecycle == TaskLifecycle.Paused)
@@ -698,7 +834,7 @@ internal sealed class TaskDriver(
 
             // 活跃屏障可能丢失一次来源新版本的通知：活跃释放后这里补一次评估，
             // 否则该节点停在可启动状态而无人再激活，任务会一直等待
-            selfActivate = task.Runtime.CanStart(node);
+            selfActivate = state.Runtime.CanStart(node);
         }
 
         if (autoRestore is { } restorePlan)

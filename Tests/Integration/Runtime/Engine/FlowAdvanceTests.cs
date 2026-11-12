@@ -277,7 +277,7 @@ public sealed class FlowAdvanceTests
         await environment.Tasks.ShutdownAsync();
 
         Assert.Equal(TaskLifecycle.Active, task.Lifecycle);
-        Assert.Contains(task.Executions, execution => execution.State == ExecutionState.Interrupted);
+        Assert.Contains(task.Executions, execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Interrupted);
     }
 
 

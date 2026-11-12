@@ -1,15 +1,14 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Records;
 using Xunit;
 
 namespace Kuroe.Flow.Tests.Runtime.Tasks;
@@ -71,36 +70,19 @@ public sealed class WorkTaskTests
         Assert.Equal(FlowErrorCodes.TaskDoneCannotTerminate, terminated.FirstError.Code);
     }
 
-    /// <summary>构造没有可启动工作的任务，快照为 Done，但推进循环尚未标记完成。</summary>
     private static WorkTask CreateTask()
     {
-        IReadOnlyList<Port> ports = [new Port(new PortName("目标"), PortTypes.Text)];
-        NodeGraph graph = new(
-            ports,
-            [
-                new ContainerNode
-                {
-                    Path = NodePath.Of("整体"),
-                    Type = TestNodeTypes.Container,
-                    Children = [],
-                },
-            ],
-            []);
-        FlowDefinition flow = new(
-            new FlowName("默认"),
-            null,
-            ports,
-            NodeSpec.Define(new NodeName("整体")) with { Type = TestNodeTypes.Container });
+        StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
 
         return new WorkTask(
             new TaskRegistry(new ExecutionIndex()),
             new TaskId(1),
-            StartInputs.Single(new PortName("目标"), "目标"),
-            PortTexts.Empty,
-            flow,
-            graph,
-            restorers: null,
+            inputs,
+            FlowTexts.Empty,
             "测试任务",
+            new TestFramework(),
+            new TestState(inputs),
+            null,
             observer: null);
     }
 
@@ -110,4 +92,51 @@ public sealed class WorkTaskTests
             task.MarkCompleted();
             return true;
         });
+
+    private sealed class TestState(StartInputs inputs) : IFlowState
+    {
+        public StartInputs Inputs { get; } = inputs;
+    }
+
+    private sealed class TestFramework : IFlowFramework
+    {
+        public string Kind => "test";
+
+        public string Name => "测试";
+
+        public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title) =>
+            throw new NotSupportedException();
+
+        public bool Handles(FlowName name) => false;
+
+        public void Activate(WorkTask task)
+        {
+        }
+
+        public IFlowControl CreateControl(WorkTask task) => throw new NotSupportedException();
+
+        public IFlowView CaptureView(WorkTask task) => new FlowView("测试", "test", null, [], [], []);
+
+        public TaskSnapshot CreateSnapshot(WorkTask task) => new(
+            task.Id,
+            task.Title,
+            task.Inputs,
+            PortTexts.Empty,
+            CaptureView(task),
+            task.State,
+            0,
+            [],
+            [],
+            [],
+            task.JournalEntries,
+            task.DroppedJournal,
+            task.CreatedAt,
+            DateTimeOffset.UtcNow);
+
+        public FlowRecord CaptureRecord(WorkTask task) => throw new NotSupportedException();
+
+        public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(WorkTask task) => [];
+
+        public ErrorOr<FlowRestore> Restore(TaskRecord record) => throw new NotSupportedException();
+    }
 }

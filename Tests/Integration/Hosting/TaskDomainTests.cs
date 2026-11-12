@@ -49,8 +49,8 @@ public sealed class TaskDomainTests
 
         Assert.False(reply.IsError);
         Assert.True(environment.TaskReader.Find(round.Input.Task).IsError);
-        Assert.True(environment.TaskReader.FindExecution(round.Id).IsError);
-        Assert.False(environment.Executions.FindOwned(round.Id).IsError);
+        Assert.True(environment.TaskReader.FindExecution(new Kuroe.Flow.Execution.ExecutionId(round.Id.Value)).IsError);
+        Assert.False(environment.Executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(round.Id.Value)).IsError);
     }
 
     [Fact]
@@ -86,7 +86,8 @@ public sealed class TaskDomainTests
         Assert.NotEmpty(executions);
         Assert.All(executions, execution => Assert.True(execution.Id.Value > dialogue.Id.Value));
         Assert.All(executions, execution =>
-            Assert.Equal(id, environment.Executions.FindOwned(execution.Id).ThrowIfError().Owner.Id));
+            Assert.Equal(id, environment.Executions.FindOwned(
+                new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
     }
 
     [Fact]

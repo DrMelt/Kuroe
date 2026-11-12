@@ -1,9 +1,5 @@
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Flow.Shared.Display;
 
@@ -12,37 +8,6 @@ public static class InfoLabels
 {
     /// <summary>任务状态的展示名。</summary>
     public static string Of(TaskState state) => state.Label();
-
-    /// <summary>执行节点状态的展示名。</summary>
-    public static string Of(NodeState state) => state switch
-    {
-        NodeState.Pending => "待执行",
-        NodeState.Running => "执行中",
-        NodeState.Blocked => "已阻塞",
-        NodeState.Done => "已完成",
-        NodeState.Canceled => "已取消",
-        _ => state.ToString(),
-    };
-
-    /// <summary>执行节点状态的展示名，阻塞且可恢复时补充可恢复。</summary>
-    public static string Of(ExecutableStateSnapshot state) =>
-        state.State == NodeState.Blocked && state.CanRestore
-            ? "已阻塞，可恢复"
-            : Of(state.State);
-
-    /// <summary>执行恢复数据的展示名。</summary>
-    public static string RestoreData(GraphExecutionSnapshot execution) =>
-        execution.HasRestoreData ? "有" : "无";
-
-    /// <summary>执行恢复来源的展示名。</summary>
-    public static string ContinuedFrom(GraphExecutionSnapshot execution) =>
-        execution.ContinuedFrom?.Value.ToString() ?? "—";
-
-    /// <summary>执行状态的展示名，未收口时附当前活动。</summary>
-    public static string State(GraphExecutionSnapshot execution) =>
-        execution.State.IsSettled() || execution.Progress.Length == 0
-            ? execution.State.Label()
-            : $"{execution.State.Label()}（{execution.Progress}）";
 
     /// <summary>耗时的展示名。</summary>
     public static string Elapsed(TimeSpan span) => span.TotalMinutes < 1

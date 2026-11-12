@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -14,7 +15,7 @@ public sealed record GraphFlowStateRecord(
     TaskStartSnapshot Start,
     IReadOnlyList<NodeRecord> Nodes,
     IReadOnlyList<PortPublicationRecord> Ports,
-    SchedulerSeed Pending) : IFlowStateRecord;
+    FlowSeed Pending) : IFlowStateRecord;
 
 /// <summary>任务开始时锁定的输入：提交的开始输入与宿主开始端口文本。</summary>
 public sealed record TaskStartSnapshot(

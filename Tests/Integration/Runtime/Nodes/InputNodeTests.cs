@@ -4,6 +4,7 @@ using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Pending;
 using Xunit;
@@ -158,7 +159,7 @@ public sealed class InputNodeTests
 
         TaskId id = environment.Submit("补齐 README");
         WaitForInputs(environment, id, 1);
-        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
+        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
 
         ExecutableNode input = graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
         ExecutableNode implement = graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
@@ -269,22 +270,27 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Running, parked.State);
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
-        TaskSnapshot first = WaitForInputs(environment, id, 1);
+        TaskSnapshot first = environment.Wait(id, snapshot =>
+            snapshot.Executables.Single(node => node.Executable.Label.Value == "回话").Executions
+                .Any(execution => execution.Journal.Any(entry => entry.Text == "回复第1轮")));
         Assert.Equal(TaskState.Running, first.State);
         ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
-        ExecutionSnapshot firstExecution = Assert.Single(replyNode.Executions);
-        Assert.Contains(firstExecution.Input.Inputs, value => value.Text.Contains("第一问"));
+        ExecutionSnapshot firstExecution = replyNode.Executions[^1];
+        Assert.Contains(firstExecution.Input.Texts.Values, text => text.Contains("第一问"));
         Assert.Contains(firstExecution.Journal, entry => entry.Text == "回复第1轮");
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
+        environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Answer).Count == 1);
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
 
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
-        TaskSnapshot second = WaitForInputs(environment, id, 1);
+        TaskSnapshot second = environment.Wait(id, snapshot =>
+            snapshot.Executables.Single(node => node.Executable.Label.Value == "回话").Executions
+                .Any(execution => execution.Journal.Any(entry => entry.Text == "回复第2轮")));
         Assert.Equal(TaskState.Running, second.State);
         ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Label.Value == "回话");
         Assert.Equal(2, replyNodeSecond.Executions.Count);
         ExecutionSnapshot secondExecution = replyNodeSecond.Executions[^1];
-        Assert.Contains(secondExecution.Input.Inputs, value => value.Text.Contains("第二问"));
+        Assert.Contains(secondExecution.Input.Texts.Values, text => text.Contains("第二问"));
         Assert.Contains(secondExecution.Journal, entry => entry.Text == "回复第2轮");
     }
 

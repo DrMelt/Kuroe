@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
 
@@ -49,11 +49,11 @@ public sealed class TaskKuroeInfoToolTests
         public ErrorOr<TaskSnapshot> FindByReference(string reference) =>
             Error.NotFound("Task.NotFound", $"没有任务 {reference}。");
 
-        public ErrorOr<GraphExecutionSnapshot> FindExecution(ExecutionId id) =>
+        public ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id) =>
             Error.NotFound("Execution.NotFound", $"没有执行 {id}。");
 
         public IReadOnlyList<TaskSnapshot> Snapshots() => [];
 
-        public IReadOnlyList<GraphExecutionSnapshot> LiveExecutions() => [];
+        public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => [];
     }
 }

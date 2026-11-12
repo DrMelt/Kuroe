@@ -13,7 +13,7 @@ internal static class ViewLabels
 {
     public static string Of(TaskState state) => InfoLabels.Of(state);
 
-    public static string Of(NodeState state) => InfoLabels.Of(state);
+    public static string Of(NodeState state) => GraphInfoLabels.Of(state);
 
     /// <summary>等待种类的展示名。</summary>
     public static string Of(PendingKind kind) => kind == PendingKind.Approve ? "待批准" : "待输入";
@@ -31,7 +31,7 @@ internal static class ViewLabels
             : Of(waiting.Kind);
 
     /// <summary>执行的状态，未收口时带上过程摘要。</summary>
-    public static string State(GraphExecutionSnapshot execution) => InfoLabels.State(execution);
+    public static string State(GraphExecutionSnapshot execution) => GraphInfoLabels.State(execution);
 
     public static Style StyleOf(TaskState state) => state switch
     {

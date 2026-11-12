@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Runtime.Tasks;
 using Xunit;
@@ -69,12 +70,12 @@ public sealed class ExecutionLimitTests
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
 
-        WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.Containers
+        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
+        Assert.Equal(5, graph.Containers
             .Single(node => node.Path.Value == "整体/较重").MaxExecutions);
-        Assert.Equal(3, task.Graph.Containers
+        Assert.Equal(3, graph.Containers
             .Single(node => node.Path.Value == "整体/较轻").MaxExecutions);
-        Assert.Equal(ExecutableNode.DefaultMaxExecutions, task.Graph.ExecutableNodes
+        Assert.Equal(ExecutableNode.DefaultMaxExecutions, graph.ExecutableNodes
             .Single(node => node.Path.Value == "整体/较重/干活").MaxExecutions);
     }
 
@@ -86,10 +87,10 @@ public sealed class ExecutionLimitTests
         TaskId id = environment.Submit("补齐 README");
         environment.Settle(id);
 
-        WorkTask task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Equal(5, task.Graph.ExecutableNodes
+        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
+        Assert.Equal(5, graph.ExecutableNodes
             .Single(node => node.Label.Value == "覆盖干活").MaxExecutions);
-        Assert.Equal(3, task.Graph.ExecutableNodes
+        Assert.Equal(3, graph.ExecutableNodes
             .Single(node => node.Label.Value == "继承干活").MaxExecutions);
     }
 
@@ -151,6 +152,6 @@ public sealed class ExecutionLimitTests
     /// <summary>执行节点按启动的执行记录计数。</summary>
     private static int Executions(WorkTask task, string label) =>
         task.Snapshot().Executables
-            .Single(executable => executable.Executable.Path == task.Graph.PathOf(label))
+            .Single(executable => executable.Executable.Label.Value == label)
             .Executions.Count;
 }

@@ -5,6 +5,9 @@ using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Compilation.Shared;
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
+using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
@@ -46,11 +49,9 @@ public static class AssistantServiceCollectionExtensions
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
             TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
-            IFlowRuntime engine = sp.GetRequiredService<IFlowRuntime>();
             DialogueRound round = new(registry, new PendingService(
                 registry,
-                engine,
-                sp.GetRequiredService<IInputDelivery>()));
+                sp.GetRequiredService<IFlowRuntime>()));
 
             IExecutionTargetResolver targets = sp.GetRequiredService<IExecutionTargetResolver>();
             ModelService models = sp.GetRequiredService<ModelService>();
@@ -67,15 +68,25 @@ public static class AssistantServiceCollectionExtensions
             // 对话任务自有任务域，任务键不占用用户任务域的序列
             GuidTaskIdSource ids = new();
 
+            GraphFlowFramework graph = new(
+                sp.GetRequiredService<IFlowRuntimeCatalog>(),
+                sp.GetRequiredService<IFlowSnapshotCompiler>(),
+                hostInputs,
+                start,
+                targets,
+                sp.GetRequiredService<ExecutionRuntime>(),
+                sp.GetRequiredService<IInputDelivery>(),
+                sp.GetRequiredService<ExecutionIndex>(),
+                snapshots: null,
+                sp.GetRequiredService<Kuroe.Flow.Execution.ExecutionRestorerRegistry>());
+
             return new DialogueHost(
                 new TaskActions(
                     registry,
-                    engine,
-                    targets,
-                    hostInputs,
-                    start,
-                    ids,
-                    sp.GetRequiredService<Kuroe.Flow.Execution.ExecutionRestorerRegistry>()),
+                    sp.GetRequiredService<IFlowRuntime>(),
+                    new FlowFrameworkSource([graph]),
+                    ids),
+                graph,
                 round,
                 models,
                 sp.GetRequiredService<SettingsProvider>(),

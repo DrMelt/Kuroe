@@ -42,4 +42,7 @@ public static class FlowRecordKinds
 {
     /// <summary>图驱动流程。</summary>
     public const string Graph = "graph";
+
+    /// <summary>代码定义流程。</summary>
+    public const string Code = "code";
 }

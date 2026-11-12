@@ -137,7 +137,7 @@ public sealed class DialogueHostTests
 
         Assert.True(blocked.IsError);
         Assert.False(reply.IsError, ErrorText(reply));
-        Assert.True(environment.Executions.FindOwned(stale.Id).IsError);
+        Assert.True(environment.Executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(stale.Id.Value)).IsError);
     }
 
     /// <summary>回话节点每轮各自交回自己的「完成」，轮次之间不重复提交。</summary>

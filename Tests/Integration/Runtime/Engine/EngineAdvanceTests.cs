@@ -23,7 +23,8 @@ public sealed class EngineAdvanceTests
             await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
                 node.Executable.Label.Value == "收官" && node.Executions.Count > 0));
 
-            Assert.Contains(environment.TaskReader.LiveExecutions(), execution => execution.Input.Node.Label.Value == "慢工");
+            Assert.Contains(environment.TaskReader.LiveExecutions(), execution =>
+            Uri.UnescapeDataString(execution.Request.Target.Value).EndsWith("慢工"));
         }
         finally
         {

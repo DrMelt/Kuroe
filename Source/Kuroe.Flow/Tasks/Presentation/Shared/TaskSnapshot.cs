@@ -1,8 +1,11 @@
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
@@ -23,14 +26,21 @@ public sealed record TaskSnapshot(
     DateTimeOffset CreatedAt,
     DateTimeOffset LastActivityAt)
 {
+    /// <summary>中性执行快照，按提交顺序。</summary>
+    public IReadOnlyList<ExecutionSnapshot> Executions { get; init; } = [];
+
+    /// <summary>此刻等待外部输入的步骤。</summary>
+    public IReadOnlyList<FlowPendingStep> Pending { get; init; } = [];
+
     /// <summary>流程的执行节点数。</summary>
-    public int TotalExecutableNodes => Executables.Count;
+    public int TotalExecutableNodes => View.Steps.Count;
 
     /// <summary>已发布产出的最远执行节点在执行节点表里的位置，用于列表里的进度。</summary>
     public int FrontierNodes =>
-        ExecutableStates
-            .Where(state => state.State == NodeState.Done)
-            .Select(state => OrdinalOf(state.Node))
+        View.Steps
+            .Select((step, index) => (step, index))
+            .Where(entry => entry.step.State == "Done")
+            .Select(entry => entry.index + 1)
             .DefaultIfEmpty(0)
             .Max();
 

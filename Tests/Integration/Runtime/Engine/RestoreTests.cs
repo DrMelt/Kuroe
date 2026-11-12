@@ -1,3 +1,4 @@
+using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -56,7 +57,9 @@ public sealed class RestoreTests
         Assert.True(environment.Runner.Starts.Count >= 2);
         Assert.Null(environment.Runner.Starts[1]);
         Assert.Null(environment.Runner.Started[1].Snapshot().ContinuedFrom);
-        ExecutionSnapshot first = environment.Registry.Find(id).ThrowIfError().Executions[0].Snapshot();
+        ExecutionSnapshot first = ((GraphExecution)environment.Executions.FindPayload(
+            new Kuroe.Flow.Execution.ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))!)
+            .Snapshot();
         Assert.True(first.HasRestoreData);
     }
 
@@ -70,7 +73,9 @@ public sealed class RestoreTests
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot execution = environment.Registry.Find(id).ThrowIfError().Executions[0].Snapshot();
+        ExecutionSnapshot execution = ((GraphExecution)environment.Executions.FindPayload(
+            new Kuroe.Flow.Execution.ExecutionId(environment.Registry.Find(id).ThrowIfError().Executions[0].Id.Value))!)
+            .Snapshot();
         Assert.Equal(ExecutionState.Succeeded, execution.State);
         Assert.True(execution.HasRestoreData);
     }
@@ -123,8 +128,8 @@ public sealed class RestoreTests
         environment.Wait(id, snapshot => snapshot.Executables
             .SelectMany(node => node.Executions)
             .Any(entry => entry.State == ExecutionState.Running));
-        ExecutionId execution = environment.Registry.LiveExecutions()
-            .Single(entry => entry.State == ExecutionState.Running).Id;
+        Kuroe.Flow.Execution.ExecutionId execution = environment.Registry.LiveExecutions()
+            .Single(entry => entry.State == Kuroe.Flow.Execution.ExecutionState.Running).Id;
 
         environment.Tasks.StopExecution(execution).ThrowIfError();
         TaskSnapshot paused = environment.Wait(id, snapshot =>
@@ -134,9 +139,9 @@ public sealed class RestoreTests
                 .All(entry => entry.State == ExecutionState.Interrupted));
 
         var task = environment.Registry.Find(id).ThrowIfError();
-        ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
-        Assert.Equal(ExecutionState.Interrupted, stopped.State);
-        Assert.True(stopped.HasRestoreData);
+        Kuroe.Flow.Execution.ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
+        Assert.Equal(Kuroe.Flow.Execution.ExecutionState.Interrupted, stopped.State);
+        Assert.NotNull(stopped.RestoreData);
         Assert.True(Assert.Single(paused.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
 
         environment.Runner.Gate.ClearHolds();
@@ -196,11 +201,11 @@ public sealed class RestoreTests
 
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
         Assert.Equal(2, task.Executions.Count);
-        ExecutionSnapshot second = task.Executions[^1].Snapshot();
+        Kuroe.Flow.Execution.ExecutionSnapshot second = task.Executions[^1].Snapshot();
         Assert.NotNull(second.ContinuedFrom);
         Assert.Equal(1, environment.Runner.Usage.RequestCount);
         Assert.Equal(1, second.Usage.RequestCount);
-        Assert.False(second.HasRestoreData);
+        Assert.Null(second.RestoreData);
         Assert.False(Assert.Single(blocked.ExecutableStates, state => state.State == NodeState.Blocked).CanRestore);
         Assert.Equal(2, environment.Runner.Starts.Count);
         Assert.True(environment.Tasks.Resume(id).IsError);
@@ -262,10 +267,10 @@ public sealed class RestoreTests
                 .All(entry => entry.State != ExecutionState.Running));
 
         var task = environment.Registry.Find(id).ThrowIfError();
-        Assert.Contains(task.Executions, execution => execution.Snapshot().HasRestoreData);
-        ExecutionSnapshot terminatedExecution = task.Executions[^1].Snapshot();
-        Assert.Equal(ExecutionState.Interrupted, terminatedExecution.State);
-        Assert.True(terminatedExecution.HasRestoreData);
+        Assert.Contains(task.Executions, execution => execution.Snapshot().RestoreData is not null);
+        Kuroe.Flow.Execution.ExecutionSnapshot terminatedExecution = task.Executions[^1].Snapshot();
+        Assert.Equal(Kuroe.Flow.Execution.ExecutionState.Interrupted, terminatedExecution.State);
+        Assert.NotNull(terminatedExecution.RestoreData);
         Assert.DoesNotContain(terminated.ExecutableStates, state => state.State == NodeState.Blocked);
         Assert.True(environment.Tasks.Resume(id).IsError);
 
@@ -331,12 +336,12 @@ public sealed class RestoreTests
 
         TaskId id = environment.Submit("目标");
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
-        ExecutionId first = environment.Registry.LiveExecutions().Single().Id;
+        Kuroe.Flow.Execution.ExecutionId first = environment.Registry.LiveExecutions().Single().Id;
 
         environment.Tasks.Pause(id).ThrowIfError();
         environment.Tasks.Resume(id).ThrowIfError();
         environment.Runner.IgnoreCancellationWhileHeld = false;
-        environment.Runner.FailsWhen = execution => execution.Id == first;
+        environment.Runner.FailsWhen = execution => execution.Id.Value == first.Value;
 
         environment.Runner.Gate.ClearHolds();
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);

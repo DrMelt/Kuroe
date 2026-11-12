@@ -1,19 +1,15 @@
 using ErrorOr;
-using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Persistence.Restoring;
 
-/// <summary>启动加载：逐文件读取存档，获取租约、编译流程快照并恢复任务。</summary>
+/// <summary>启动加载：逐文件读取存档，获取租约并交给运行时恢复任务。</summary>
 public sealed class TaskRestoreService(
     ITaskRecordStore store,
-    IFlowSnapshotCompiler compiler,
     ITaskLeaseStore leases,
     ITaskRestoreRuntime runtime) : ITaskRestoreService
 {
@@ -66,30 +62,21 @@ public sealed class TaskRestoreService(
             return;
         }
 
-        ErrorOr<CompiledFlow> flow;
-        IReadOnlyList<Kuroe.Flow.Shared.Model.NodePath> pending;
-        if (record.Flow.Definition is not GraphFlowDefinitionRecord definition
-            || record.Flow.State is not GraphFlowStateRecord state)
+        ErrorOr<TaskSnapshot> task;
+        try
+        {
+            task = runtime.Restore(record);
+        }
+        catch (Exception ex)
         {
             failures.Add(new TaskLoadFailure(
                 record.Identity.Id,
                 source,
-                [Error.Failure(FlowErrorCodes.RecordFormat, "存档的流程记录不是图流程。")]));
-            leases.Release(record.Identity.Id);
-
-            return;
-        }
-
-        flow = compiler.Compile(definition);
-        pending = state.Pending.Targets;
-        if (flow.IsError)
-        {
-            failures.Add(new TaskLoadFailure(record.Identity.Id, source, flow.ErrorsOrEmptyList));
+                [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)]));
             leases.Release(record.Identity.Id);
             return;
         }
 
-        ErrorOr<TaskSnapshot> task = runtime.Restore(record, flow.Value, pending);
         if (task.IsError)
         {
             failures.Add(new TaskLoadFailure(record.Identity.Id, source, task.ErrorsOrEmptyList));

@@ -1,8 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Runtime;
+using Kuroe.Assistant.Flows;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Pending;
 
@@ -26,11 +25,9 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         }
 
         WorkTask task = found.Value;
-        NodePath? output = task.UnderLock(() =>
-            task.Graph.ExecutableNodes
-                .Where(node => task.Graph.ShapeOf(node.Path) is { DispatchesExecutions: true })
-                .Select(node => node.Path)
-                .FirstOrDefault());
+        string? output = task.UnderLock(() =>
+            task.Snapshot().View.Steps
+                .FirstOrDefault(step => step.Label == DialogueFlow.ReplyNodeLabel.Value)?.Path);
 
         if (output is not { } target)
         {
@@ -44,7 +41,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         }
 
         var outcome = new TaskCompletionSource<ErrorOr<Success>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        GraphExecution? round = null;
+        Execution? round = null;
         int boundary = 0;
         Action unsubscribeAttached = () => { };
         Action unsubscribeSettled = () => { };
@@ -59,7 +56,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
 
             unsubscribeAttached = task.SubscribeExecutionAttached(execution =>
             {
-                if (execution.Id.Value <= boundary || execution.Input.Node != target)
+                if (execution.Id.Value <= boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
                 {
                     return;
                 }
@@ -93,7 +90,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
 
             unsubscribeSettled = task.SubscribeExecutionSettled(execution =>
             {
-                if (execution.Id.Value <= boundary || execution.Input.Node != target)
+                if (execution.Id.Value <= boundary || Uri.UnescapeDataString(execution.Request.Target.Value) != target)
                 {
                     return;
                 }

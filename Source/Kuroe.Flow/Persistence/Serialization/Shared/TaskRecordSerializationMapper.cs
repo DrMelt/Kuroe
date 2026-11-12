@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared;
@@ -88,7 +89,7 @@ public static class TaskRecordSerializationMapper
                             ToData(state.Start.StartTexts)),
                         [.. state.Nodes.Select(ToData)],
                         [.. state.Ports.Select(ToData)],
-                        new SchedulerSeedData([.. state.Pending.Targets.Select(ToData)]))),
+                        new SchedulerSeedData([.. state.Pending.Steps.Select(step => ToData(NodePath.Of([.. step.Levels])))]))),
             _ => throw new NotSupportedException($"未知的流程记录 {flow.Kind}。"),
         };
 
@@ -315,7 +316,7 @@ public static class TaskRecordSerializationMapper
                 ReadTexts(start.StartTexts)),
             [.. (dto.Nodes ?? []).Select(ReadNode)],
             [.. (dto.Ports ?? []).Select(ReadPortPublication)],
-            new SchedulerSeed([.. (pending.Targets ?? []).Select(path => ReadPath(path, "调度目标"))]));
+            new FlowSeed([.. (pending.Targets ?? []).Select(path => new FlowStepPath([.. ReadPath(path, "调度目标").Levels.Select(level => level.Value)]))]));
     }
 
     private static ExecutionRecord ReadExecution(ExecutionData dto) =>

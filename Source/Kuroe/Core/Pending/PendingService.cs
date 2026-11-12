@@ -1,21 +1,18 @@
 using ErrorOr;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Pending;
 
 /// <summary>一个待处理节点：节点路径、等待种类与等待时的提问。</summary>
 public readonly record struct PendingNode(NodePath Node, PendingKind Kind, string? Question);
 
-/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进下游。
-/// 外部输入经协议交到节点上，登记即代表收下。</summary>
-public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, IInputDelivery inputs)
+/// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并唤醒推进。</summary>
+public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Engine.IFlowRuntime runner)
 {
-    /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。</summary>
+    private readonly Kuroe.Flow.Runtime.Engine.IFlowRuntime _runner = runner;
+    /// <summary>任务里此刻待处理的节点，按流程视图顺序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
         ErrorOr<WorkTask> found = registry.Find(id);
@@ -39,7 +36,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, I
     public ErrorOr<Success> Approve(TaskId id, IReadOnlyList<NodePath>? nodes = null) =>
         Take(id, PendingKind.Approve, null, string.Empty, nodes);
 
-    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，随后推进受影响的节点。取消的任务不再交付。</summary>
+    /// <summary>交付一次外部输入：取给定等待种类的节点，点名与歧义在此判定，交付由控制实例唤醒推进。</summary>
     private ErrorOr<Success> Take(
         TaskId id,
         PendingKind kind,
@@ -54,7 +51,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, I
         }
 
         WorkTask task = found.Value;
-        ErrorOr<List<NodePath>> accepted = task.UnderLock<ErrorOr<List<NodePath>>>(() =>
+        ErrorOr<List<PendingNode>> accepted = task.UnderLock<ErrorOr<List<PendingNode>>>(() =>
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
             {
@@ -66,15 +63,20 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, I
                 return [PendingErrors.Paused(id, kind)];
             }
 
-            List<NodePath> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind).Select(entry => entry.Node)];
+            if (task.Control is not { } control)
+            {
+                return [PendingErrors.NoAwaiting(id, kind)];
+            }
+
+            List<PendingNode> awaiting = [.. Pending(task).Where(entry => entry.Kind == kind)];
             if (nodes is { Count: > 0 })
             {
-                awaiting = [.. awaiting.Where(node => nodes.Contains(node))];
+                awaiting = [.. awaiting.Where(entry => nodes.Contains(entry.Node))];
             }
 
             if (nodePath is { } path)
             {
-                int index = awaiting.FindIndex(node => node.Value == path);
+                int index = awaiting.FindIndex(entry => entry.Node.Value == path);
                 if (index < 0)
                 {
                     return [PendingErrors.NoAwaitingNode(path)];
@@ -91,7 +93,16 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, I
                 return [PendingErrors.AmbiguousInput(id, awaiting.Count)];
             }
 
-            Deliver(task, awaiting, input);
+            foreach (PendingNode entry in awaiting)
+            {
+                ErrorOr<Success> delivered = control.Deliver(
+                    new FlowStepPath([.. entry.Node.Levels.Select(level => level.Value)]),
+                    input);
+                if (delivered.IsError)
+                {
+                    return delivered.ErrorsOrEmptyList;
+                }
+            }
 
             return awaiting;
         });
@@ -101,34 +112,26 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, I
             return accepted.ErrorsOrEmptyList;
         }
 
-        runner.Advance(task, [.. accepted.Value.Select(FlowStepPaths.From)]);
+        _runner.Advance(task, [.. accepted.Value.Select(node => new FlowStepPath(
+            [.. node.Node.Levels.Select(level => level.Value)]))]);
 
         return Result.Success;
     }
 
-    /// <summary>把一次外部输入交给这些节点。交付不表达接受与否，逐个收下。要求持有 Gate。</summary>
-    private void Deliver(WorkTask task, IReadOnlyList<NodePath> nodes, string input)
+    /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 Gate。</summary>
+    private static List<PendingNode> Pending(WorkTask task)
     {
-        foreach (NodePath node in nodes)
+        if (task.Control is not { } control)
         {
-            inputs.Deliver(task.Context, node, input);
+            return [];
         }
-    }
-
-    /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。要求持有 Gate。</summary>
-    private List<PendingNode> Pending(WorkTask task)
-    {
-        Dictionary<NodePath, string?> accepting = inputs.Accepting(task.Context)
-            .ToDictionary(request => request.Node, request => request.Question);
 
         return
         [
-            .. task.Graph.ExecutableNodes
-                .Where(node => accepting.ContainsKey(node.Path))
-                .Select(node => new PendingNode(
-                    node.Path,
-                    node.Type.Shape.AwaitsApproval ? PendingKind.Approve : PendingKind.Answer,
-                    accepting[node.Path])),
+            .. control.Pending().Select(step => new PendingNode(
+                NodePath.Of([.. step.Step.Levels]),
+                step.Kind == FlowPendingKind.Approve ? PendingKind.Approve : PendingKind.Answer,
+                step.Question)),
         ];
     }
 }

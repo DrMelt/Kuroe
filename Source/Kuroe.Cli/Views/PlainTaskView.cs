@@ -1,6 +1,5 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Display;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
 namespace Kuroe.Cli.Views;
@@ -16,14 +15,11 @@ internal static class PlainTaskView
             output.ErrorLine($"任务记录：{JournalText.Normalize(entry.Text)}");
         }
 
-        foreach (ExecutableSnapshot executable in task.Executables)
+        foreach (ExecutionSnapshot execution in task.Executions)
         {
-            foreach (GraphExecutionSnapshot execution in executable.Executions)
+            foreach (string failure in execution.Failures)
             {
-                foreach (string failure in execution.Failures)
-                {
-                    output.ErrorLine($"节点 {executable.Executable.Path.Value}：{failure}");
-                }
+                output.ErrorLine($"节点 {execution.Request.Target}：{failure}");
             }
         }
     }
@@ -31,22 +27,19 @@ internal static class PlainTaskView
     /// <summary>按执行给出请求次数、上下文与 token 条目，没有模型请求的执行不输出。</summary>
     public static void Usage(CliOutput output, TaskSnapshot task)
     {
-        foreach (ExecutableSnapshot executable in task.Executables)
+        foreach (ExecutionSnapshot execution in task.Executions)
         {
-            foreach (GraphExecutionSnapshot execution in executable.Executions)
+            if (execution.Usage.RequestCount == 0)
             {
-                if (execution.Usage.RequestCount == 0)
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                output.Hint($"节点 {executable.Executable.Path.Value} 第 {execution.Input.ExecutionCount} 轮"
-                    + $" · 请求 {InfoLabels.Requests(execution.Usage)}"
-                    + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
-                foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
-                {
-                    output.Hint($"  {label} {value}");
-                }
+            output.Hint($"节点 {execution.Request.Target} 第 {execution.Request.Attempt} 轮"
+                + $" · 请求 {InfoLabels.Requests(execution.Usage)}"
+                + $" · 上下文 {InfoLabels.Context(execution.Usage)}");
+            foreach ((string label, string value) in InfoLabels.TokenEntries(execution.Usage))
+            {
+                output.Hint($"  {label} {value}");
             }
         }
     }

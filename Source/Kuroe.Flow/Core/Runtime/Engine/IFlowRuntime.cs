@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Tasks;
-using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
@@ -11,8 +11,8 @@ public interface IFlowRuntime
     /// <summary>要求持有任务 Gate：启动该任务的流程运行。</summary>
     void Start(WorkTask task);
 
-    /// <summary>要求持有任务 Gate：按调度种子恢复推进循环，任务保持暂停不自动推进。</summary>
-    void Restore(WorkTask task, IReadOnlyList<FlowStepPath> seed);
+    /// <summary>要求持有任务 Gate：按恢复种子启动推进循环，任务保持暂停不自动推进。</summary>
+    void Restore(WorkTask task, FlowSeed seed);
 
     /// <summary>要求持有任务 Gate：暂停推进并中断在跑执行。</summary>
     void Pause(WorkTask task);
@@ -23,10 +23,10 @@ public interface IFlowRuntime
     /// <summary>要求持有任务 Gate：恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。</summary>
     void ResumeTask(WorkTask task, bool continueRestores = true);
 
-    /// <summary>要求持有任务 Gate 之外的调用：给定节点的产出已变，推进它的下游与祖先容器。</summary>
-    void Advance(WorkTask task, IReadOnlyList<FlowStepPath> nodes);
+    /// <summary>要求持有任务 Gate 之外的调用：给定步骤的产出已变，推进它的下游与祖先容器。</summary>
+    void Advance(WorkTask task, IReadOnlyList<FlowStepPath> steps);
 
-    /// <summary>要求持有任务 Gate：对阻塞的执行节点重新执行，返回实际发出的重新执行目标数。</summary>
+    /// <summary>要求持有任务 Gate：对阻塞的步骤重新执行，返回实际发出的重新执行目标数。</summary>
     int Rerun(WorkTask task);
 
     /// <summary>要求持有任务 Gate：终止任务并结束流程运行。</summary>

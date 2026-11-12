@@ -50,8 +50,8 @@ public sealed class NodePathTests
     {
         using TestEnvironment environment = TestEnvironment.Create(ChainFlow);
 
-        TaskId id = environment.Submit("补齐 README");
-        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
+        environment.Submit("补齐 README");
+        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
 
         Assert.Equal(["整体"],
             graph[NodePath.Of("整体")].Path.Levels.Select(level => level.Value));
@@ -70,8 +70,8 @@ public sealed class NodePathTests
     {
         using TestEnvironment environment = TestEnvironment.Create(RootExecutableFlow);
 
-        TaskId id = environment.Submit("补齐 README");
-        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
+        environment.Submit("补齐 README");
+        NodeGraph graph = environment.Flows.FindCompiled(new FlowName("默认")).ThrowIfError().Graph;
 
         Assert.Equal(["直接执行"],
             graph[NodePath.Of("直接执行")].Path.Levels.Select(level => level.Value));
@@ -93,8 +93,8 @@ public sealed class NodePathTests
 
         // 同一节点组的两次引用各自拥有同名成员，路径由树位置区分
         using TestEnvironment repeated = TestEnvironment.Create(RepeatedInstanceFlow);
-        TaskId repeatedId = repeated.Submit("补齐 README", new FlowName("双线"));
-        NodeGraph repeatedGraph = repeated.Registry.Find(repeatedId).ThrowIfError().Graph;
+        repeated.Submit("补齐 README", new FlowName("双线"));
+        NodeGraph repeatedGraph = repeated.Flows.FindCompiled(new FlowName("双线")).ThrowIfError().Graph;
 
         Assert.Equal("整体/甲/实施", repeatedGraph.ExecutableNodes[0].Path.Value);
         Assert.Equal("整体/乙/实施", repeatedGraph.ExecutableNodes[1].Path.Value);

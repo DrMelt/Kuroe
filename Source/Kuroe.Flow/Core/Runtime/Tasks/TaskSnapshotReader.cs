@@ -1,6 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -24,15 +25,15 @@ public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader
     }
 
     /// <inheritdoc/>
-    public ErrorOr<GraphExecutionSnapshot> FindExecution(ExecutionId id)
+    public ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id)
     {
-        ErrorOr<GraphExecution> found = registry.FindExecution(id);
+        ErrorOr<LoopExecution> found = registry.FindExecution(id);
 
         return found.IsError ? found.ErrorsOrEmptyList : found.Value.Snapshot();
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<GraphExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
+    public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
 
     /// <inheritdoc/>
     public IReadOnlyList<TaskSnapshot> Snapshots() => registry.Snapshots();

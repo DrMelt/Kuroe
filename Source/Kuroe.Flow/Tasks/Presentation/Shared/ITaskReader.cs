@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
@@ -13,10 +13,10 @@ public interface ITaskReader
     ErrorOr<TaskSnapshot> FindByReference(string reference);
 
     /// <summary>按执行号取执行快照，不存在或不属于本任务域时返回错误。</summary>
-    ErrorOr<GraphExecutionSnapshot> FindExecution(ExecutionId id);
+    ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id);
 
     /// <summary>本域在跑的执行，含排队中的，按启动先后。</summary>
-    IReadOnlyList<GraphExecutionSnapshot> LiveExecutions();
+    IReadOnlyList<ExecutionSnapshot> LiveExecutions();
 
     /// <summary>本域全部任务的快照，按创建时间。</summary>
     IReadOnlyList<TaskSnapshot> Snapshots();

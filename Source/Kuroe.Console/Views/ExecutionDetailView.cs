@@ -1,6 +1,5 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Node.Llm;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -14,25 +13,30 @@ internal sealed class ExecutionDetailView(Terminal terminal)
 
     private readonly Terminal _terminal = terminal;
 
-    public void Print(TaskSnapshot task, GraphExecutionSnapshot execution)
+    public void Print(TaskSnapshot task, ExecutionSnapshot execution)
     {
-        ExecutionInput input = execution.Input;
+        TimeSpan elapsed = (execution.FinishedAt ?? DateTimeOffset.UtcNow) - (execution.StartedAt ?? execution.CreatedAt);
         List<(string Label, IRenderable Value)> fields =
         [
             ("任务", new Text($"{task.Id} {task.Title}")),
-            ("节点", new Text($"{task.OrdinalOf(input.Node)}/{task.TotalExecutableNodes}")),
-            ("轮次", new Text($"第 {input.ExecutionCount} 轮")),
+            ("节点", new Text(execution.Request.Target.Value)),
+            ("轮次", new Text($"第 {execution.Request.Attempt} 轮")),
             ("请求", new Text(ViewLabels.Requests(execution.Usage), Styles.Hint)),
-            ("模型", new Text((input.Declaration as KuroeNodeDeclaration)?.Model.Value ?? "(未声明)")),
             .. ViewLabels.TokenEntries(execution.Usage)
                 .Select(entry => (entry.Label, (IRenderable)new Text(entry.Value, Styles.Hint))),
             ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
-            ("状态", new Text(ViewLabels.State(execution), ViewLabels.StyleOf(execution.State))),
-            ("恢复数据", new Text(execution.HasRestoreData ? "有" : "无", Styles.Hint)),
+            ("状态", new Text(execution.State.ToString(), execution.State switch
+            {
+                Kuroe.Flow.Execution.ExecutionState.Succeeded => Styles.Success,
+                Kuroe.Flow.Execution.ExecutionState.Failed => Styles.Error,
+                Kuroe.Flow.Execution.ExecutionState.Running or Kuroe.Flow.Execution.ExecutionState.Queued => Styles.Key,
+                _ => Styles.Hint,
+            })),
+            ("恢复数据", new Text(execution.RestoreData is null ? "无" : "有", Styles.Hint)),
             ("继续自", new Text(execution.ContinuedFrom?.Value.ToString() ?? "—", Styles.Hint)),
             ("开始", new Text(ViewLabels.Clock(execution.StartedAt), Styles.Hint)),
             ("结束", new Text(ViewLabels.Clock(execution.FinishedAt), Styles.Hint)),
-            ("耗时", new Text(ViewLabels.Elapsed(execution.Elapsed), Styles.Hint)),
+            ("耗时", new Text(ViewLabels.Elapsed(elapsed), Styles.Hint)),
         ];
 
         _terminal.Write(Blocks.Section(BoxKind.View, "概要", Blocks.Fields([.. fields])));
@@ -45,10 +49,10 @@ internal sealed class ExecutionDetailView(Terminal terminal)
         _terminal.NewLine();
         _terminal.Write(Blocks.Section(
             BoxKind.View,
-            $"输入取值 {input.Inputs.Count} 条",
-            input.Inputs.Count == 0
+            $"输入取值 {execution.Request.Inputs.Count} 条",
+            execution.Request.Inputs.Count == 0
                 ? new Text("没有取到任何来源内容。", Styles.Hint)
-                : InputTable(input)));
+                : InputTable(execution.Request.Inputs)));
 
         _terminal.NewLine();
         _terminal.Write(Blocks.Section(
@@ -60,15 +64,15 @@ internal sealed class ExecutionDetailView(Terminal terminal)
     }
 
     /// <summary>输入取值按出处分组，内容一行内截断。</summary>
-    private static Table InputTable(ExecutionInput input)
+    private static Table InputTable(IReadOnlyList<ExecutionInputValue> inputs)
     {
         Table table = Blocks.Table(("来源 · 端口", false), ("内容", true));
-        foreach (IGrouping<ContextSource, InputValue> group in input.Inputs.GroupBy(value => value.Origin))
+        foreach (IGrouping<string?, ExecutionInputValue> group in inputs.GroupBy(value => value.Source))
         {
-            foreach (InputValue value in group)
+            foreach (ExecutionInputValue value in group)
             {
                 table.AddRow(
-                    new Text($"{group.Key.Label} · {value.Port}", Styles.Key),
+                    new Text($"{group.Key ?? "—"} · {value.Port}", Styles.Key),
                     new Text(ViewLabels.OneLine(value.Text, ValueLimit)));
             }
         }

@@ -174,7 +174,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        IExecution started = executions.Find(execution).ThrowIfError();
+        IExecution started = (IExecution)executions.FindPayload(new Kuroe.Flow.Execution.ExecutionId(execution.Value))!;
         NodePath node = GraphRecordTargets.Parse(request.Target);
 
         lock (_gate)

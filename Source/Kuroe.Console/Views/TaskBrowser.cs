@@ -32,7 +32,7 @@ internal sealed class TaskBrowser(
         string Label,
         string Action,
         TaskId? Task = null,
-        ExecutionId? Execution = null,
+        int? Execution = null,
         NodePath? Node = null);
 
     private static readonly Item Back = new("← 返回上一级", "back");
@@ -94,7 +94,9 @@ internal sealed class TaskBrowser(
     public void StopTask(TaskId id) => results.Report(tasks.StopTask(id), $"{id} 已终止。");
 
     /// <summary>停止单个执行。</summary>
-    public void StopExecution(ExecutionId id) => results.Report(tasks.StopExecution(id), $"{id} 已停止。");
+    public void StopExecution(int id) => results.Report(
+        tasks.StopExecution(new Kuroe.Flow.Execution.ExecutionId(id)),
+        $"执行 #{id} 已停止。");
 
     /// <summary>打开任务节点树页。</summary>
     public void ShowTree(TaskId id) => ViewPage.Browse(terminal, "节点树", () => PrintTree(id));
@@ -253,7 +255,7 @@ internal sealed class TaskBrowser(
 
             List<Item> items = [Refresh, .. task.Executables.SelectMany(node => node.Executions)
                 .OrderBy(execution => execution.Id.Value)
-                .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id))];
+                .Select(execution => new Item(ExecutionItemLabel(execution), "execution", Task: id, Execution: execution.Id.Value))];
             AddTaskActions(items, task);
             items.Add(new Item("* 改任务标题", "rename", Task: id));
             items.Add(new Item("≡ 查看节点树", "tree", Task: id));
@@ -354,9 +356,9 @@ internal sealed class TaskBrowser(
         $"{node.Node.Value} · {ViewLabels.WaitingLabel(node)}";
 
     /// <summary>打印执行详情。</summary>
-    public void ShowExecution(ExecutionId executionId)
+    public void ShowExecution(int executionId)
     {
-        ErrorOr<(TaskSnapshot Task, GraphExecutionSnapshot Execution)> found = FindExecution(executionId);
+        ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> found = FindExecution(executionId);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -367,11 +369,13 @@ internal sealed class TaskBrowser(
             "主菜单",
             "任务",
             $"{found.Value.Task.Id} {found.Value.Task.Title}",
-            $"{found.Value.Execution.Id} {found.Value.Execution.Input.Node}");
+            $"{found.Value.Execution.Id} {found.Value.Execution.Request.Target}");
         executionView.Print(found.Value.Task, found.Value.Execution);
+        terminal.Hint($"› {found.Value.Execution.Id} · 第 {found.Value.Execution.Request.Attempt} 轮"
+            + $" · {found.Value.Execution.State}");
     }
 
-    private void BrowseExecution(ExecutionId executionId)
+    private void BrowseExecution(int executionId)
     {
         while (true)
         {
@@ -381,18 +385,22 @@ internal sealed class TaskBrowser(
             }
 
             TaskSnapshot task = found.Value.Task;
-            GraphExecutionSnapshot snapshot = found.Value.Execution;
+            Kuroe.Flow.Execution.ExecutionSnapshot snapshot = found.Value.Execution;
 
-            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Input.Node}");
+            terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Target}");
             executionView.Print(task, snapshot);
             terminal.NewLine();
 
-            List<Item> items = [Refresh, .. snapshot.Input.Inputs
-                .Where(value => value.Origin.FromExecution is not null)
-                .Select(value => new Item($"↑ {value.Origin.Label}", "execution", Execution: value.Origin.FromExecution))
-                .DistinctBy(item => item.Execution)];
+            List<Item> items = [Refresh];
+            if (snapshot.ContinuedFrom is { } upstream)
+            {
+                items.Add(new Item($"↑ 执行 #{upstream.Value}", "execution", Execution: upstream.Value));
+            }
 
-            if (!snapshot.State.IsSettled() && snapshot.StartedAt is not null)
+            if (snapshot.State is not (Kuroe.Flow.Execution.ExecutionState.Succeeded
+                or Kuroe.Flow.Execution.ExecutionState.Failed
+                or Kuroe.Flow.Execution.ExecutionState.Interrupted)
+                && snapshot.StartedAt is not null)
             {
                 items.Add(new Item("× 停止该执行", "stopExecution", Execution: executionId));
             }
@@ -405,8 +413,8 @@ internal sealed class TaskBrowser(
                 case "back":
                     return;
 
-                case "execution" when picked.Execution is { } upstream:
-                    executionId = upstream;
+                case "execution" when picked.Execution is { } previous:
+                    executionId = previous;
                     break;
 
                 case "stopExecution":
@@ -417,20 +425,26 @@ internal sealed class TaskBrowser(
     }
 
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
-    private ErrorOr<(TaskSnapshot Task, GraphExecutionSnapshot Execution)> FindExecution(ExecutionId id)
+    private ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        ErrorOr<GraphExecution> execution = registry.FindExecution(id);
+        ErrorOr<Kuroe.Flow.Execution.Execution> execution = registry.FindExecution(
+            new Kuroe.Flow.Execution.ExecutionId(id));
         if (execution.IsError)
         {
             return execution.ErrorsOrEmptyList;
         }
 
-        GraphExecutionSnapshot snapshot = execution.Value.Snapshot();
-        ErrorOr<WorkTask> owner = registry.Find(snapshot.Input.Task);
+        ErrorOr<WorkTask> owner = registry.Find(new TaskId(execution.Value.Request.Owner.Value));
+        if (owner.IsError)
+        {
+            return owner.ErrorsOrEmptyList;
+        }
 
-        return owner.IsError
-            ? owner.ErrorsOrEmptyList
-            : (owner.Value.Snapshot(), snapshot);
+        Kuroe.Flow.Execution.ExecutionSnapshot snapshot = owner.Value.Executions
+            .Single(candidate => candidate.Id.Value == id)
+            .Snapshot();
+
+        return (owner.Value.Snapshot(), snapshot);
     }
 
     /// <summary>终止整个任务不可恢复，选择后要求再次确认，默认停在保留任务的选项。</summary>
@@ -495,7 +509,7 @@ internal sealed class TaskBrowser(
         terminal.Prompt(new MenuPrompt<Item>(title, items, item => item.Label, Back));
 
     private static string ExecutionItemLabel(GraphExecutionSnapshot execution) =>
-        $"{execution.Input.Node} · {ViewLabels.ExecutionLabel(execution)}";
+        $"› {ViewLabels.ExecutionLabel(execution)}";
 
     private static string TaskLabel(TaskSnapshot task) =>
         $"#{task.Id.Short} {task.Title} · {ViewLabels.Of(task.State)}";

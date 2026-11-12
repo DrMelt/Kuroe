@@ -32,7 +32,7 @@ public abstract class TaskRecordCodecContractTests
         Assert.Equal(record.Executions.Count, loaded.Executions.Count);
         Assert.Equal(state.Nodes.Count, loadedState.Nodes.Count);
         Assert.Equal(state.Ports.Count, loadedState.Ports.Count);
-        Assert.Equal(state.Pending.Targets, loadedState.Pending.Targets);
+        Assert.Equal(state.Pending.Steps, loadedState.Pending.Steps);
     }
 
     [Fact]

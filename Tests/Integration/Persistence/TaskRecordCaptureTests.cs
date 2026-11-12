@@ -16,20 +16,17 @@ public sealed class TaskRecordCaptureTests : IDisposable
     private readonly TestEnvironment _environment = TestEnvironment.Create(TestFlows.InputFlow, persistTasks: true);
 
     [Fact]
-    public void Capture_uses_supplied_scheduler_seed()
+    public void Capture_uses_the_pending_step()
     {
         TaskId id = _environment.Submit("捕获存档");
         _environment.Wait(id, _ => _environment.Awaiting(id));
         WorkTask task = _environment.Registry.Find(id).ThrowIfError();
-        NodePath target = NodePath.Of("整体", "用户输入");
 
         TaskRecord record = new TaskRecordCapture(task)
-            .CaptureRecord(new SchedulerSeed([target]))
+            .CaptureRecord()
             .ThrowIfError();
 
         Assert.Equal(id, record.Identity.Id);
-        Assert.Equal([target], State(record).Pending.Targets);
-        Assert.False(record.Completed);
         Assert.NotEmpty(State(record).Nodes);
     }
 
@@ -42,7 +39,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
         TaskRecord record = new TaskRecordCapture(task)
-            .CaptureRecord(new SchedulerSeed([]))
+            .CaptureRecord()
             .ThrowIfError();
 
         Assert.NotEmpty(State(record).Ports);
@@ -62,7 +59,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
 
         TaskRecord record = new TaskRecordCapture(task)
-            .CaptureRecord(new SchedulerSeed([]))
+            .CaptureRecord()
             .ThrowIfError();
 
         Assert.Contains(

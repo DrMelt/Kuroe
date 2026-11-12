@@ -1,5 +1,4 @@
 using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
@@ -31,7 +30,7 @@ public sealed class TaskRecordSource : ITaskRecordSource
         {
             TaskRecordCapture capture = new(task);
 
-            return new TaskRecordCaptureResult(true, capture.CaptureRecord(task.CaptureSeed()));
+            return new TaskRecordCaptureResult(true, capture.CaptureRecord());
         }
     }
 

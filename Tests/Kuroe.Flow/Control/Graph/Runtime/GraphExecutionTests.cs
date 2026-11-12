@@ -237,7 +237,7 @@ public sealed class GraphExecutionTests
     {
         GraphExecution execution = new(new ExecutionId(1), Input());
 
-        ErrorOr<Success> stopped = TaskDriver.StopExecution(execution);
+        ErrorOr<Success> stopped = GraphFlowControl.StopExecution(execution);
 
         Assert.True(stopped.IsError);
         Assert.Equal("Execution.NotStarted", stopped.FirstError.Code);
@@ -249,7 +249,7 @@ public sealed class GraphExecutionTests
         GraphExecution execution = new(new ExecutionId(1), Input());
         execution.MarkRunning();
 
-        ErrorOr<Success> stopped = TaskDriver.StopExecution(execution);
+        ErrorOr<Success> stopped = GraphFlowControl.StopExecution(execution);
 
         Assert.False(stopped.IsError);
         execution.MarkInterrupted();
