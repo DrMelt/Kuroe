@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
@@ -9,6 +10,7 @@ using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
@@ -18,7 +20,7 @@ namespace Kuroe.Flow.Runtime.Engine;
 internal sealed class TaskDriver(
     WorkTask task,
     ExecutionRuntime runtime,
-    IExecutionTargetResolver targetResolver)
+    IExecutionTargetResolver targetResolver) : IFlowControl
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -51,7 +53,7 @@ internal sealed class TaskDriver(
     }
 
     /// <summary>从存档启动推进循环：调度种子与当前已就绪的根节点一并入队，任务保持暂停，恢复后由宿主决定何时推进。要求持有任务 Gate。</summary>
-    public void Restore(IReadOnlyList<NodePath> seed)
+    public void Restore(IReadOnlyList<FlowStepPath> seed)
     {
         List<NodePath> roots;
         lock (task.Gate)
@@ -59,15 +61,78 @@ internal sealed class TaskDriver(
             roots = [.. task.Runtime.Roots()];
         }
 
-        Enqueue([.. seed, .. roots]);
+        Enqueue([.. seed.Select(FlowStepPaths.ToNodePath), .. roots]);
         Loop = Task.Run(RunAsync);
     }
 
-    /// <summary>产出已变的目标入队，由推进循环重新评估。</summary>
-    public void Advance(IReadOnlyList<NodePath> targets)
+    /// <summary>产出已变的目标入队，由推进循环重新评估。要求持有任务 Gate 之外的调用。</summary>
+    public void Advance(IReadOnlyList<FlowStepPath> nodes)
     {
+        List<NodePath> targets;
+        lock (task.Gate)
+        {
+            targets = [.. task.Runtime.Notify([.. nodes.Select(FlowStepPaths.ToNodePath)])];
+            task.Runtime.InvalidateRestores(targets);
+            if (targets.Count > 0)
+            {
+                task.Journal.AppendInfo("上游产出变化，下游放弃恢复。");
+            }
+
+            task.Touch();
+        }
+
         Enqueue(targets);
+        task.NotifyChanged();
     }
+
+    /// <summary>恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。要求持有任务 Gate。</summary>
+    public void Resume(bool continueRestores = true)
+    {
+        IReadOnlyList<TaskRuntime.RestorePlan> restores = continueRestores
+            ? task.Runtime.PlanRestores()
+            : [];
+        ResumeTask(restores, clearPendingRestores: !continueRestores);
+    }
+
+    /// <summary>对阻塞的执行节点重新执行，返回实际发出的重新执行目标数。要求持有任务 Gate。</summary>
+    public int Rerun()
+    {
+        IReadOnlyList<TaskRuntime.RerunTarget> targets;
+        lock (task.Gate)
+        {
+            targets = task.Runtime.PlanReruns();
+            foreach (IGrouping<NodePath, TaskRuntime.RerunTarget> group in targets.GroupBy(target => target.Blocked))
+            {
+                task.Runtime.InvalidateRestore(group.Key);
+                task.Runtime.Unblock(group.Key, [.. group.Select(target => target.Node)]);
+                task.Journal.AppendInfo($"重新执行节点 {group.Key}，放弃恢复。");
+            }
+
+            foreach (TaskRuntime.RerunTarget target in targets)
+            {
+                task.Runtime.Invalidate(target.Node);
+            }
+
+            if (targets.Count > 0)
+            {
+                task.Touch();
+            }
+        }
+
+        if (targets.Count > 0)
+        {
+            Enqueue(targets.Select(target => target.Node));
+            task.NotifyChanged();
+        }
+
+        return targets.Count;
+    }
+
+    /// <summary>停止一个已启动的执行。要求持有任务 Gate。</summary>
+    public ErrorOr<Success> StopExecution(ExecutionId id) => ExecutionStop.Stop(task, id);
+
+    /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
+    public ErrorOr<Success> Terminate() => Stop();
 
     /// <summary>此刻尚未处理的目标：排队中、已入队未取批与正在评估的节点，按首次出现顺序去重。</summary>
     public SchedulerSeed CaptureSeed()
@@ -80,11 +145,7 @@ internal sealed class TaskDriver(
         }
     }
 
-    /// <summary>重新执行语义：作废后的重派目标入队，由推进循环重新评估，重派时越过就绪判定直接重启。</summary>
-    public void Rerun(IReadOnlyList<TaskRuntime.RerunTarget> targets)
-    {
-        Enqueue(targets.Select(target => target.Node));
-    }
+    
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
@@ -581,8 +642,6 @@ internal sealed class TaskDriver(
             var runner = restore is null
                 ? runtime.CreateRunner(
                     node.Executable.Type as IExecutionRunnerFactory,
-                    node.Executable.Type.Kind.Value,
-                    node.Executable.Type.ModelPort is not null,
                     execution.Target,
                     new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value))
                 : runtime.CreateRestored(

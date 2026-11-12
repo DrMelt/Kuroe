@@ -12,6 +12,7 @@ internal sealed class GraphExecutionTarget : IExecutionTarget
         Input = input;
         Id = GraphRecordTargets.Format(input.Node);
         Kind = input.Type.Kind.Value;
+        UsesDefaultRunner = input.Type.ModelPort is not null;
         Parameters = input.Type is IExecutionParameterProvider provider
             ? provider.Create(context)
             : EmptyExecutionParameters.Instance;
@@ -22,6 +23,9 @@ internal sealed class GraphExecutionTarget : IExecutionTarget
 
     /// <summary>执行种类，取节点类型名。</summary>
     public string Kind { get; }
+
+    /// <summary>没有自带运行器时是否使用默认运行器。</summary>
+    public bool UsesDefaultRunner { get; }
 
     /// <summary>节点类型给出的参数。</summary>
     public IExecutionParameters Parameters { get; }

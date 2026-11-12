@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Graph.Records;

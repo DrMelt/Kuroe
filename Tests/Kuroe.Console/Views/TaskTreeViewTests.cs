@@ -1,10 +1,12 @@
 using Kuroe.Console.Views;
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Spectre.Console.Testing;
 using Xunit;
 
@@ -72,7 +74,7 @@ public sealed class TaskTreeViewTests
         IReadOnlyList<ExecutableSnapshot> executables =
         [
             .. compiled.Graph.ExecutableNodes.Select(node =>
-                new ExecutableSnapshot(node, PortTexts.Empty, PortTexts.Empty, [], 0, node.MaxExecutions)),
+                new ExecutableSnapshot(Executable(node), PortTexts.Empty, PortTexts.Empty, [], 0, node.MaxExecutions)),
         ];
         IReadOnlyList<ExecutableStateSnapshot> states =
         [
@@ -94,8 +96,7 @@ public sealed class TaskTreeViewTests
             "目标",
             new StartInputs([]),
             PortTexts.Empty,
-            compiled.Model,
-            compiled.Graph,
+            View(compiled),
             TaskState.Running,
             0,
             executables,
@@ -106,6 +107,45 @@ public sealed class TaskTreeViewTests
             At,
             At);
     }
+
+    private static FlowExecutableView Executable(ExecutableNode node) => new(
+        node.Path,
+        node.Label,
+        node.Kind,
+        node.Type,
+        node.Spec,
+        node.Inputs,
+        node.Outputs,
+        node.OutputBindings,
+        node.Incoming,
+        node.MaxExecutions);
+
+    private static FlowView View(CompiledFlow compiled) => new(
+        compiled.Model.Name.Value,
+        "graph",
+        compiled.Model.Description,
+        [],
+        [.. compiled.Graph.ExecutableNodes.Select(node => new FlowStepView(
+            node.Path.Value,
+            node.Label.Value,
+            node.Kind.Value,
+            NodeState.Pending.ToString(),
+            [],
+            [],
+            [],
+            node.MaxExecutions)
+        {
+            ParentPath = node.Path.Parent?.Value,
+        })],
+        [.. compiled.Graph.Containers.Select(container => new FlowGroupView(
+            container.Path.Value,
+            container.Label.Value,
+            [.. container.Children.Select(child => child.Path.Value)])
+        {
+            ParentPath = container.Path.Parent?.Value,
+            State = NodeState.Pending.ToString(),
+            MaxExecutions = container.MaxExecutions,
+        })]);
 
     /// <summary>固定的快照时间。</summary>
     private static readonly DateTimeOffset At = new(2026, 1, 2, 15, 4, 5, TimeSpan.FromHours(8));

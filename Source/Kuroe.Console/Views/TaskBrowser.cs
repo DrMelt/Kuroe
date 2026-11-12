@@ -60,7 +60,7 @@ internal sealed class TaskBrowser(
         }
 
         TaskSnapshot task = submitted.Value;
-        terminal.Ok($"已提交 {task.Id}（流程 {task.Flow.Name}），{task.LiveExecutions} 个执行已启动。");
+        terminal.Ok($"已提交 {task.Id}（流程 {task.View.Name}），{task.LiveExecutions} 个执行已启动。");
         list.Print([task]);
     }
 

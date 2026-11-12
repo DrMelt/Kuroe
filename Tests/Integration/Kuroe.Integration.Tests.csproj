@@ -54,6 +54,7 @@
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\NodeType\Container\Core\Kuroe.Flow.NodeType.Container.csproj" />
         <ProjectReference Include="..\Kuroe\Support\Kuroe.TestSupport.csproj" />
@@ -67,5 +68,7 @@
 <ItemGroup>
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

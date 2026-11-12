@@ -1,3 +1,4 @@
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -50,15 +51,51 @@ public sealed class TaskSnapshotTests
     {
         public static TaskSnapshot Snap(IReadOnlyList<ExecutableStateSnapshot> states) => new(
             new TaskId(1), "标题", StartInputs.Single(new PortName("目标"), "目标"),
-            PortTexts.Empty, Flow, Graph, TaskState.Running, 0,
+            PortTexts.Empty, View(states), TaskState.Running, 0,
             [.. Graph.ExecutableNodes.Select(executable => new ExecutableSnapshot(
-                executable,
+                Executable(executable),
                 PortTexts.Empty,
                 PortTexts.Empty,
                 [],
                 0,
                 executable.MaxExecutions))],
             states, [], [], 0, At, At);
+
+        private static FlowExecutableView Executable(ExecutableNode executable) => new(
+            executable.Path,
+            executable.Label,
+            executable.Kind,
+            executable.Type,
+            executable.Spec,
+            executable.Inputs,
+            executable.Outputs,
+            executable.OutputBindings,
+            executable.Incoming,
+            executable.MaxExecutions);
+
+        private static FlowView View(IReadOnlyList<ExecutableStateSnapshot> states)
+        {
+            Dictionary<NodePath, NodeState> stateByPath = states.ToDictionary(state => state.Node, state => state.State);
+
+            return new FlowView(
+                Flow.Name.Value,
+                "graph",
+                Flow.Description,
+                [],
+                [.. Graph.ExecutableNodes.Select(executable => new FlowStepView(
+                    executable.Path.Value,
+                    executable.Label.Value,
+                    executable.Kind.Value,
+                    stateByPath.GetValueOrDefault(executable.Path, NodeState.Pending).ToString(),
+                    [],
+                    [],
+                    [],
+                    executable.MaxExecutions)
+                {
+                    ParentPath = executable.Path.Parent?.Value,
+                })],
+                []);
+        }
     }
 
     private static readonly INodeType ContainerType = new TestNodeType(

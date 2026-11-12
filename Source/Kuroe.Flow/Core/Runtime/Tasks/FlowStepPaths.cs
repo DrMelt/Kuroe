@@ -1,0 +1,14 @@
+using Kuroe.Flow.Control;
+using Kuroe.Flow.Shared.Model;
+
+namespace Kuroe.Flow.Runtime.Tasks;
+
+/// <summary>流程步骤路径与节点路径之间的转换。</summary>
+public static class FlowStepPaths
+{
+    /// <summary>把节点路径转为流程步骤路径。</summary>
+    public static FlowStepPath From(NodePath path) => new([.. path.Levels.Select(level => level.Value)]);
+
+    /// <summary>把流程步骤路径转为节点路径。</summary>
+    public static NodePath ToNodePath(FlowStepPath path) => NodePath.Of([.. path.Levels]);
+}

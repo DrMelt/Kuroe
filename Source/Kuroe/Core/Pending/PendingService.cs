@@ -13,7 +13,7 @@ public readonly record struct PendingNode(NodePath Node, PendingKind Kind, strin
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并推进下游。
 /// 外部输入经协议交到节点上，登记即代表收下。</summary>
-public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, IInputDelivery inputs)
+public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner, IInputDelivery inputs)
 {
     /// <summary>任务里此刻待处理的节点，按图先根序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
@@ -101,7 +101,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRunner runner, II
             return accepted.ErrorsOrEmptyList;
         }
 
-        runner.Advance(task, accepted.Value);
+        runner.Advance(task, [.. accepted.Value.Select(FlowStepPaths.From)]);
 
         return Result.Success;
     }

@@ -1,3 +1,4 @@
+using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -13,7 +14,7 @@ using Spectre.Console.Rendering;
 
 namespace Kuroe.Console.Views;
 
-/// <summary>任务节点树：按流程树列出容器、执行节点与执行，执行作为执行节点的子行。</summary>
+/// <summary>任务节点树：按流程视图列出分组、步骤与执行，执行作为步骤的子行。</summary>
 internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 {
     private readonly Terminal _terminal = terminal;
@@ -22,73 +23,103 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
     public void Print(TaskSnapshot task)
     {
         Facts facts = new(task, _pendings);
-        _terminal.Write(StartLine(task.Graph.StartPorts));
-        _terminal.Write(NodeTree.Build(
-            task.Graph,
-            Header(),
-            node => Line(facts, node),
-            node => Details(facts, node)));
+        _terminal.Write(StartLine(task.View.StartPorts));
+        _terminal.Write(Build(task, facts));
     }
 
     private static Paragraph Header() => new ViewLine().Add("节点", Styles.Hint).Build();
 
-    private static Paragraph Line(Facts facts, GraphNode node) => node switch
+    private static Tree Build(TaskSnapshot task, Facts facts)
     {
-        ContainerNode container => ContainerLine(facts, container),
-        ExecutableNode executable => ExecutableLine(facts, executable),
-        _ => new ViewLine().Add(node.Label.Value, Styles.Key).Build(),
-    };
+        List<TreeNodeData> nodes =
+        [
+            .. task.Containers.Select(container => new TreeNodeData(
+                container.Path.Value,
+                container.Path.Parent?.Value,
+                GroupLine(facts, container),
+                [.. Details(facts, container)])),
+            .. task.Executables.Select(executable => new TreeNodeData(
+                executable.Executable.Path.Value,
+                executable.Executable.Path.Parent?.Value,
+                StepLine(facts, executable),
+                [.. Details(facts, executable)])),
+        ];
 
-    private static Paragraph StartLine(IReadOnlyList<Port> ports)
+        Dictionary<string, List<TreeNodeData>> byParent = nodes
+            .GroupBy(node => node.ParentPath ?? string.Empty)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        Tree tree = new(Header()) { Guide = TreeGuide.Line, Style = Styles.Border };
+        foreach (TreeNodeData node in byParent.GetValueOrDefault(string.Empty) ?? [])
+        {
+            Add(tree, node);
+        }
+
+        return tree;
+
+        void Add(IHasTreeNodes parent, TreeNodeData node)
+        {
+            TreeNode branch = parent.AddNode(node.Line);
+            foreach (IRenderable detail in node.DetailLines)
+            {
+                branch.AddNode(detail);
+            }
+
+            foreach (TreeNodeData child in byParent.GetValueOrDefault(node.Path) ?? [])
+            {
+                Add(branch, child);
+            }
+        }
+    }
+
+    private static Paragraph StartLine(IReadOnlyList<FlowPortView> ports)
     {
         ViewLine line = new ViewLine().Add("开始端口", Styles.Key);
         if (ports.Count > 0)
         {
-            line.Add(string.Join('、', ports.Select(port => port.StartLabel())), Styles.Hint);
+            line.Add(string.Join('、', ports.Select(port => port.Text ?? port.Name)), Styles.Hint);
         }
 
         return line.Build();
     }
 
-    private static Paragraph ContainerLine(Facts facts, ContainerNode container)
+    private static Paragraph GroupLine(Facts facts, ContainerSnapshot container)
     {
-        ContainerSnapshot? snapshot = facts.Container(container.Path);
-        NodeState state = snapshot?.State ?? NodeState.Pending;
+        NodeState state = container.State;
         (int done, int total) = facts.Progress(container.Path);
 
         ViewLine line = new ViewLine()
-            .Add(container.Label.Value, Styles.Key)
+            .Add(container.Path.Label.Value, Styles.Key)
             .Add("容器", Styles.Hint)
             .Add(ViewLabels.Of(state), ViewLabels.StyleOf(state))
             .Add($"成员 {done}/{total} 完成", Styles.Hint);
 
-        if (snapshot is { } current
-            && (current.PublicationCount > 0 || current.MaxExecutions != ExecutableNode.DefaultMaxExecutions))
+        if (container.PublicationCount > 0 || container.MaxExecutions != ExecutableNode.DefaultMaxExecutions)
         {
-            bool unlimited = current.MaxExecutions == int.MaxValue;
-            bool capped = !unlimited && current.PublicationCount >= current.MaxExecutions;
+            bool unlimited = container.MaxExecutions == int.MaxValue;
+            bool capped = !unlimited && container.PublicationCount >= container.MaxExecutions;
             string publishes = unlimited
-                ? $"发布 {current.PublicationCount} 次"
-                : $"发布 {current.PublicationCount}/{current.MaxExecutions} 次";
+                ? $"发布 {container.PublicationCount} 次"
+                : $"发布 {container.PublicationCount}/{container.MaxExecutions} 次";
             line.Add(capped ? $"{publishes}，已达上限" : publishes, capped ? Styles.Warning : Styles.Hint);
         }
 
         if (container.Outputs.Count > 0)
         {
-            line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Label()))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', container.Outputs.Select(port => port.Text ?? port.Name))}", Styles.Hint);
         }
 
         return line.Build();
     }
 
-    private static Paragraph ExecutableLine(Facts facts, ExecutableNode executable)
+    private static Paragraph StepLine(Facts facts, ExecutableSnapshot step)
     {
-        NodeState state = facts.State(executable.Path);
+        NodePath path = step.Executable.Path;
+        NodeState state = facts.State(path);
         ViewLine line = new ViewLine()
-            .Add(executable.Label.Value, Styles.Key)
-            .Add(executable.Kind.Value, Styles.Hint);
+            .Add(step.Executable.Label.Value, Styles.Key)
+            .Add(step.Executable.Kind.Value, Styles.Hint);
 
-        if (facts.Waiting(executable.Path) is { } waiting)
+        if (facts.Waiting(path) is { } waiting)
         {
             line.Add(ViewLabels.WaitingLabel(waiting), Styles.Warning);
         }
@@ -97,33 +128,33 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             line.Add(ViewLabels.Of(state), ViewLabels.StyleOf(state));
         }
 
-        if (facts.Block(executable.Path) is { } block)
+        if (facts.Block(path) is { } block)
         {
             line.Add(
                 $"阻塞原因 {ViewLabels.OneLine(block.Summary, ViewLabels.BlockLimit)}",
                 Styles.Warning);
         }
 
-        if (facts.CanRestore(executable.Path))
+        if (facts.CanRestore(path))
         {
             line.Add("可恢复", Styles.Success);
         }
 
-        if ((facts.StaticText(executable.Path, LlmNodeTypes.ModelPort) ?? executable.StaticLabel(LlmNodeTypes.ModelPort)) is { } model)
+        if (facts.StaticText(path, LlmNodeTypes.ModelPort) is { } model)
         {
             line.Add($"模型 {model}", Styles.Hint);
         }
 
-        if (executable.Outputs.Count > 0)
+        if (step.Executable.Outputs.Count > 0)
         {
-            line.Add($"输出 {string.Join('、', executable.Outputs.Select(port => port.Label()))}", Styles.Hint);
+            line.Add($"输出 {string.Join('、', step.Executable.Outputs.Select(port => port.Label()))}", Styles.Hint);
         }
 
-        if (executable.Type.Shape.DispatchesExecutions)
+        if (step.Executable.Type.Shape.DispatchesExecutions)
         {
-            ExecutableSnapshot? snapshot = facts.Executable(executable.Path);
-            int count = snapshot?.ExecutionCount ?? facts.Executions(executable.Path).Count;
-            int limit = snapshot?.MaxExecutions ?? executable.MaxExecutions;
+            ExecutableSnapshot? snapshot = facts.Executable(path);
+            int count = snapshot?.ExecutionCount ?? facts.Executions(path).Count;
+            int limit = snapshot?.MaxExecutions ?? step.MaxExecutions;
             bool configured = limit != ExecutableNode.DefaultMaxExecutions;
             bool capped = count >= limit;
             if (count > 0 || configured)
@@ -140,40 +171,34 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         return line.Build();
     }
-
-    private static IEnumerable<IRenderable> Details(Facts facts, GraphNode node)
+private static IEnumerable<IRenderable> Details(Facts facts, ContainerSnapshot group)
     {
-        if (node is ContainerNode container)
+        NodePath path = group.Path;
+
+        foreach (string name in group.Outputs.Select(port => port.Name))
         {
-            foreach (PortName name in container.Outputs
-                .Where(port => port.IsConstant)
-                .Select(port => port.Name))
+            if (facts.ContainerConstantText(path, new PortName(name)) is { Length: > 0 } text)
             {
-                if (facts.ContainerConstantText(container.Path, name) is { Length: > 0 } text)
-                {
-                    yield return new ViewLine().Add($"{name.Value}={text}", Styles.Hint).Build();
-                }
+                yield return new ViewLine().Add($"{name}={text}", Styles.Hint).Build();
             }
-
-            yield break;
         }
+    }
 
-        if (node is not ExecutableNode executable)
-        {
-            yield break;
-        }
+    private static IEnumerable<IRenderable> Details(Facts facts, ExecutableSnapshot step)
+    {
+        NodePath path = step.Executable.Path;
 
-        foreach (PortName name in executable.Outputs
+        foreach (PortName name in step.Executable.Outputs
             .Where(port => port.IsConstant)
             .Select(port => port.Name))
         {
-            if (facts.ConstantText(executable.Path, name) is { Length: > 0 } text)
+            if (facts.ConstantText(path, name) is { Length: > 0 } text)
             {
                 yield return new ViewLine().Add($"{name.Value}={text}", Styles.Hint).Build();
             }
         }
 
-        foreach (GraphExecutionSnapshot execution in facts.Executions(executable.Path).OrderBy(execution => execution.Id.Value))
+        foreach (GraphExecutionSnapshot execution in facts.Executions(path).OrderBy(execution => execution.Id.Value))
         {
             yield return ExecutionLine(execution);
         }
@@ -196,7 +221,12 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         return line.Build();
     }
 
-    /// <summary>一棵任务树里各节点的一刻读数，渲染时一次建好。</summary>
+    private sealed record TreeNodeData(
+        string Path,
+        string? ParentPath,
+        Paragraph Line,
+        IReadOnlyList<IRenderable> DetailLines);
+/// <summary>一棵任务树里各节点的一刻读数，渲染时一次建好。</summary>
     private sealed class Facts
     {
         private readonly Dictionary<NodePath, NodeState> _states;
@@ -208,11 +238,9 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         private readonly Dictionary<NodePath, PendingNode> _waiting;
         private readonly Dictionary<NodePath, IPortTexts> _staticTexts;
         private readonly Dictionary<NodePath, IPortTexts> _constantTexts;
-        private readonly TaskSnapshot _task;
 
         public Facts(TaskSnapshot task, PendingService pendings)
         {
-            _task = task;
             _states = task.ExecutableStates.ToDictionary(state => state.Node, state => state.State);
             _blocks = [];
             foreach (ExecutableStateSnapshot state in task.ExecutableStates)
@@ -222,6 +250,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
                     _blocks[state.Node] = block;
                 }
             }
+
             _canRestore = [.. task.ExecutableStates.Where(state => state.CanRestore).Select(state => state.Node)];
             _snapshots = task.Executables.ToDictionary(node => node.Executable.Path);
             _executions = task.Executables.ToDictionary(node => node.Executable.Path, node => node.Executions);
@@ -233,44 +262,53 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
                 : [];
         }
 
-        public NodeState State(NodePath path) =>
-            _states.TryGetValue(path, out NodeState state) ? state : NodeState.Pending;
+        public NodeState State(NodePath? path) =>
+            path is { } node && _states.TryGetValue(node, out NodeState state) ? state : NodeState.Pending;
 
-        public NodeBlock? Block(NodePath path) =>
-            _blocks.GetValueOrDefault(path);
+        public NodeBlock? Block(NodePath? path) =>
+            path is { } node ? _blocks.GetValueOrDefault(node) : null;
 
-        public bool CanRestore(NodePath path) => _canRestore.Contains(path);
+        public bool CanRestore(NodePath? path) =>
+            path is { } node && _canRestore.Contains(node);
 
-        public PendingNode? Waiting(NodePath path) =>
-            _waiting.TryGetValue(path, out PendingNode node) ? node : null;
+        public PendingNode? Waiting(NodePath? path) =>
+            path is { } node && _waiting.TryGetValue(node, out PendingNode pending) ? pending : null;
 
-        public IReadOnlyList<GraphExecutionSnapshot> Executions(NodePath path) =>
-            _executions.TryGetValue(path, out IReadOnlyList<GraphExecutionSnapshot>? executions) ? executions : [];
+        public IReadOnlyList<GraphExecutionSnapshot> Executions(NodePath? path) =>
+            path is { } node && _executions.TryGetValue(node, out IReadOnlyList<GraphExecutionSnapshot>? values)
+                ? values
+                : [];
 
-        public ExecutableSnapshot? Executable(NodePath path) =>
-            _snapshots.GetValueOrDefault(path);
+        public ExecutableSnapshot? Executable(NodePath? path) =>
+            path is { } node ? _snapshots.GetValueOrDefault(node) : null;
 
-        public ContainerSnapshot? Container(NodePath path) =>
-            _containers.TryGetValue(path, out ContainerSnapshot? container) ? container : null;
+        public ContainerSnapshot? Container(NodePath? path) =>
+            path is { } node && _containers.TryGetValue(node, out ContainerSnapshot? container) ? container : null;
 
-        public string? StaticText(NodePath node, PortName port) =>
-            _staticTexts.TryGetValue(node, out IPortTexts? texts)
-                ? texts.Text(port)
-                : null;
+        public string? StaticText(NodePath? node, PortName port) =>
+            node is { } path && _staticTexts.TryGetValue(path, out IPortTexts? texts) ? texts.Text(port) : null;
 
-        public string? ConstantText(NodePath node, PortName port) =>
-            _constantTexts.TryGetValue(node, out IPortTexts? texts)
-                ? texts.Text(port)
-                : null;
+        public string? ConstantText(NodePath? node, PortName port) =>
+            node is { } path && _constantTexts.TryGetValue(path, out IPortTexts? texts) ? texts.Text(port) : null;
 
-        public string? ContainerConstantText(NodePath container, PortName port) =>
+        public string? ContainerConstantText(NodePath? container, PortName port) =>
             Container(container)?.ConstantTexts.Text(port);
 
-        public (int Done, int Total) Progress(NodePath container)
+        public (int Done, int Total) Progress(NodePath? container)
         {
-            IReadOnlyList<NodePath> members = _task.Graph.ExecutablesIn(container);
+            if (container is not { } path || !_containers.TryGetValue(path, out ContainerSnapshot? snapshot))
+            {
+                return (0, 0);
+            }
+
+            IReadOnlyList<NodePath> members = [.. snapshot.Children.SelectMany(Expand)];
 
             return (members.Count(member => State(member) == NodeState.Done), members.Count);
+
+            IEnumerable<NodePath> Expand(NodePath child) =>
+                _containers.TryGetValue(child, out ContainerSnapshot? nested)
+                    ? nested.Children.SelectMany(Expand)
+                    : [child];
         }
     }
 }

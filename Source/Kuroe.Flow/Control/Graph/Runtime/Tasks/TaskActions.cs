@@ -19,18 +19,20 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// 任务号与任务列表的可见范围由注册表所在的任务域决定。</remarks>
 public sealed class TaskActions(
     TaskRegistry registry,
-    IFlowRunner driver,
+    IFlowRuntime driver,
     IExecutionTargetResolver targets,
     IHostStartInputs hostStartInputs,
     IHostTaskStart host,
     ITaskIdSource ids,
+    Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null,
     IFlowSnapshotSource? snapshots = null,
     ITaskRecordCoordinator? records = null,
     ITaskLeaseStore? leases = null)
 {
     private readonly TaskRegistry _registry = registry;
-    private readonly IFlowRunner _driver = driver;
+    private readonly IFlowRuntime _driver = driver;
     private readonly IExecutionTargetResolver _targets = targets;
+    private readonly Kuroe.Flow.Execution.ExecutionRestorerRegistry? _restorers = restorers;
     private readonly IHostStartInputs _hostStartInputs = hostStartInputs;
     private readonly IHostTaskStart _host = host;
     private readonly ITaskIdSource _ids = ids;
@@ -122,6 +124,7 @@ public sealed class TaskActions(
             effectiveInputs,
             startTexts.Value,
             flow,
+            _restorers,
             taskTitle,
             observer);
         task.FlowSnapshot = flowSnapshot;
@@ -372,7 +375,7 @@ public sealed class TaskActions(
 
         lock (owner.Value.Gate)
         {
-            return _driver.StopExecution(owner.Value, execution);
+            return _driver.StopExecution(owner.Value, execution.Id);
         }
     }
 

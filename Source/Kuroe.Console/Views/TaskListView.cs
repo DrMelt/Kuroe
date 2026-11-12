@@ -35,7 +35,7 @@ internal sealed class TaskListView(Terminal terminal, PendingService pendings)
             table.AddRow(
                 new Text($"#{task.Id.Short}", Styles.Key),
                 new Text(ViewLabels.OneLine(task.Title, TitleLimit)),
-                new Text(task.Flow.Name.Value),
+                new Text(task.View.Name),
                 new Text(ViewLabels.Clock(task.CreatedAt), Styles.Hint),
                 new Text(ViewLabels.Of(task.State), ViewLabels.StyleOf(task.State)),
                 new Text(waiting.Count.ToString(), waiting.Count == 0 ? Styles.Hint : Styles.Warning),

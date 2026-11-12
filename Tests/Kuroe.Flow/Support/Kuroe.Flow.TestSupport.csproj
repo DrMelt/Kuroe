@@ -21,6 +21,7 @@
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
     </ItemGroup>
 
 <ItemGroup>
@@ -29,5 +30,7 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

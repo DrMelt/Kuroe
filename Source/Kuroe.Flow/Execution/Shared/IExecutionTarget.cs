@@ -9,6 +9,9 @@ public interface IExecutionTarget
     /// <summary>执行种类，用于选择运行器。</summary>
     string Kind { get; }
 
+    /// <summary>没有自带运行器时是否使用默认运行器。</summary>
+    bool UsesDefaultRunner { get; }
+
     /// <summary>类型专属参数。</summary>
     IExecutionParameters Parameters { get; }
 }

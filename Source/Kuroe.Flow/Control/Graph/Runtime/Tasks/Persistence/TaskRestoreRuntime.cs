@@ -13,8 +13,7 @@ namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
     ITaskRestorer restorer,
-    IFlowRunner runner,
-    Kuroe.Flow.Execution.ExecutionRestorerRegistry restorers) : ITaskRestoreRuntime
+    IFlowRuntime runner) : ITaskRestoreRuntime
 {
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(
@@ -22,7 +21,6 @@ public sealed class TaskRestoreRuntime(
         CompiledFlow flow,
         IReadOnlyList<NodePath> seed)
     {
-        registry.Restorers = restorers;
         ErrorOr<WorkTask> task = restorer.Restore(record, flow);
         if (task.IsError)
         {
@@ -40,7 +38,7 @@ public sealed class TaskRestoreRuntime(
                     .Select(execution => execution.Input.Node)
                     .Distinct(),
             ];
-            runner.Restore(task.Value, [.. seed, .. restart]);
+            runner.Restore(task.Value, [.. seed.Select(FlowStepPaths.From), .. restart.Select(FlowStepPaths.From)]);
         }
 
         task.Value.NotifyChanged();

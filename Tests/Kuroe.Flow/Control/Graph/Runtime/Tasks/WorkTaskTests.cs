@@ -99,6 +99,7 @@ public sealed class WorkTaskTests
             PortTexts.Empty,
             flow,
             graph,
+            restorers: null,
             "测试任务",
             observer: null);
     }

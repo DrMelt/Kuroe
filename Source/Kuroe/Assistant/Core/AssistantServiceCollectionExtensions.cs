@@ -46,7 +46,7 @@ public static class AssistantServiceCollectionExtensions
         {
             // 对话任务自有任务域，不注册为 TaskRegistry，避免覆盖用户任务域
             TaskRegistry registry = new(sp.GetRequiredService<ExecutionIndex>(), pauseOnRestore: false);
-            FlowEngine engine = sp.GetRequiredService<FlowEngine>();
+            IFlowRuntime engine = sp.GetRequiredService<IFlowRuntime>();
             DialogueRound round = new(registry, new PendingService(
                 registry,
                 engine,
@@ -68,7 +68,14 @@ public static class AssistantServiceCollectionExtensions
             GuidTaskIdSource ids = new();
 
             return new DialogueHost(
-                new TaskActions(registry, engine, targets, hostInputs, start, ids),
+                new TaskActions(
+                    registry,
+                    engine,
+                    targets,
+                    hostInputs,
+                    start,
+                    ids,
+                    sp.GetRequiredService<Kuroe.Flow.Execution.ExecutionRestorerRegistry>()),
                 round,
                 models,
                 sp.GetRequiredService<SettingsProvider>(),

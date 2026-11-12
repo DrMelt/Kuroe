@@ -21,10 +21,6 @@ public sealed record TaskStartSnapshot(
     StartInputs Inputs,
     IReadOnlyDictionary<PortName, string> StartTexts);
 
-/// <summary>恢复任务时推进循环尚未处理的节点。</summary>
-public sealed record SchedulerSeed(
-    IReadOnlyList<NodePath> Targets);
-
 /// <summary>按流程名捕获当前流程文档快照。由宿主实现。</summary>
 public interface IFlowSnapshotSource
 {

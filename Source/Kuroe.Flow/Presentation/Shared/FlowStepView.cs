@@ -9,4 +9,8 @@ public sealed record FlowStepView(
     IReadOnlyList<FlowPortView> Inputs,
     IReadOnlyList<FlowPortView> Outputs,
     IReadOnlyList<FlowExecutionView> Executions,
-    int MaxExecutions);
+    int MaxExecutions)
+{
+    /// <summary>所属分组的路径，根级步骤为空。</summary>
+    public string? ParentPath { get; init; }
+}

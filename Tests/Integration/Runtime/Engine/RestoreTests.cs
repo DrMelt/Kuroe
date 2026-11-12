@@ -120,8 +120,11 @@ public sealed class RestoreTests
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
-        environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
-        ExecutionId execution = environment.Registry.LiveExecutions().Single().Id;
+        environment.Wait(id, snapshot => snapshot.Executables
+            .SelectMany(node => node.Executions)
+            .Any(entry => entry.State == ExecutionState.Running));
+        ExecutionId execution = environment.Registry.LiveExecutions()
+            .Single(entry => entry.State == ExecutionState.Running).Id;
 
         environment.Tasks.StopExecution(execution).ThrowIfError();
         TaskSnapshot paused = environment.Wait(id, snapshot =>

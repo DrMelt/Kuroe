@@ -8,18 +8,16 @@ public sealed class ExecutionRunnerRegistry(
     /// <summary>为一次执行建立运行器。</summary>
     public IExecutionRunner Create(
         IExecutionRunnerFactory? own,
-        string kind,
-        bool hasModelPort,
         IExecutionTarget target,
         ExecutionId execution)
     {
         IExecutionRunnerFactory? factory = own
-            ?? (hasModelPort ? fallback : null)
-            ?? runners?.FirstOrDefault(candidate => candidate.Kind == kind)
+            ?? (target.UsesDefaultRunner ? fallback : null)
+            ?? runners?.FirstOrDefault(candidate => candidate.Kind == target.Kind)
             ?? runners?.FirstOrDefault(candidate => candidate.Kind == "*");
 
         return factory is null
-            ? throw new InvalidOperationException($"执行种类 {kind} 没有可用的执行器。")
+            ? throw new InvalidOperationException($"执行种类 {target.Kind} 没有可用的执行器。")
             : factory.Create(target, execution);
     }
 }

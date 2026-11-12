@@ -232,7 +232,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskLeaseStore>(sp => new FileTaskLeaseStore(paths.RecordsDirectory));
         services.AddSingleton<ITaskRestorer>(sp => new TaskRestorer(
             taskRegistry,
-            sp.GetRequiredService<IExecutionTargetResolver>()));
+            sp.GetRequiredService<IExecutionTargetResolver>(),
+            sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<ITaskRecordSource>(new TaskRecordSource(taskRegistry));
         services.AddSingleton<ITaskRecordCoordinator>(sp => new TaskRecordCoordinator(
             sp.GetRequiredService<ITaskRecordSource>(),
@@ -241,15 +242,17 @@ public static class ServiceCollectionExtensions
         // 容器只反射 public 构造函数，库内实现类型在此显式建实例，释放仍由容器负责
         services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
-        services.AddSingleton(sp => new FlowEngine(
+        services.AddSingleton<IFlowControlFactory>(sp => new GraphFlowControlFactory(
             sp.GetRequiredService<ExecutionRuntime>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
-        services.AddSingleton<IFlowRunner>(sp => sp.GetRequiredService<FlowEngine>());
+        services.AddSingleton(sp => new FlowRuntime(
+            sp.GetRequiredService<ExecutionRuntime>(),
+            sp.GetRequiredService<IFlowControlFactory>()));
+        services.AddSingleton<IFlowRuntime>(sp => sp.GetRequiredService<FlowRuntime>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
             taskRegistry,
             sp.GetRequiredService<ITaskRestorer>(),
-            sp.GetRequiredService<IFlowRunner>(),
-            sp.GetRequiredService<ExecutionRestorerRegistry>()));
+            sp.GetRequiredService<IFlowRuntime>()));
         if (coreOptions.PersistTasks)
         {
             services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
@@ -261,11 +264,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new TaskService(
             new TaskActions(
                 taskRegistry,
-                sp.GetRequiredService<FlowEngine>(),
+                sp.GetRequiredService<IFlowRuntime>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
                 sp.GetRequiredService<IHostStartInputs>(),
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<ITaskIdSource>(),
+                sp.GetRequiredService<ExecutionRestorerRegistry>(),
                 coreOptions.PersistTasks ? flows.Value : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null),
@@ -273,7 +277,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
         services.AddSingleton(sp => new PendingService(
             taskRegistry,
-            sp.GetRequiredService<FlowEngine>(),
+            sp.GetRequiredService<IFlowRuntime>(),
             sp.GetRequiredService<IInputDelivery>()));
         services.AddSingleton(sp => new SessionFactory(
             sp.GetRequiredService<IModelAccess>(),

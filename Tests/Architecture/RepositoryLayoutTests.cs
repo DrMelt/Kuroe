@@ -116,6 +116,145 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Execution_projects_stay_free_of_graph_and_node_semantics()
+    {
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution");
+        string[] forbidden =
+        [
+            "NodePath",
+            "NodeGraph",
+            "ExecutableNode",
+            "ModelPort",
+            "GraphExecution",
+            "IExecutionTargetResolver",
+        ];
+
+        Assert.NotEmpty(SourceFiles(execution));
+        foreach (string file in SourceFiles(execution))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现图或节点语义 {word}。");
+            }
+        }
+    }
+
+    [Fact]
+    public void Flow_runtime_stays_free_of_graph_control()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Graph",
+            "Runtime",
+            "Engine",
+            "FlowRuntime.cs");
+        string text = File.ReadAllText(file);
+
+        foreach (string word in (string[])["TaskDriver", "TaskRuntime", "GraphExecution", "NodeGraph"])
+        {
+            Assert.DoesNotContain(word, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Control_shared_stays_free_of_graph_runtime()
+    {
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
+        string[] forbidden =
+        [
+            "TaskRuntime",
+            "GraphExecution",
+            "NodeGraph",
+            "ExecutableNode",
+            "GraphFlow",
+            "ModelPort",
+        ];
+
+        Assert.NotEmpty(SourceFiles(control));
+        foreach (string file in SourceFiles(control))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现图运行期语义 {word}。");
+            }
+        }
+    }
+
+    [Fact]
+    public void Core_project_does_not_reference_graph_control()
+    {
+        string project = Path.Combine(SourceRoot, "Kuroe.Flow", "Core", "Kuroe.Flow.csproj");
+
+        Assert.DoesNotContain(
+            ProjectReferences(project),
+            reference => reference.Contains("Control\\Graph", StringComparison.OrdinalIgnoreCase)
+                || reference.Contains("Control/Graph", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Core_source_stays_free_of_graph_runtime()
+    {
+        string core = Path.Combine(SourceRoot, "Kuroe.Flow", "Core");
+        string[] forbidden =
+        [
+            "TaskDriver",
+            "TaskRuntime",
+            "GraphExecution",
+            "NodeGraph",
+            "ExecutableNode",
+            "GraphFlow",
+        ];
+
+        Assert.NotEmpty(SourceFiles(core));
+        foreach (string file in SourceFiles(core))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现图运行期语义 {word}。");
+            }
+        }
+    }
+
+    [Fact]
+    public void Graph_runtime_lives_in_control_graph()
+    {
+        string core = Path.Combine(SourceRoot, "Kuroe.Flow", "Core");
+        string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
+
+        Assert.False(File.Exists(Path.Combine(core, "Runtime", "Tasks", "WorkTask.cs")));
+        Assert.False(File.Exists(Path.Combine(core, "Runtime", "Engine", "TaskDriver.cs")));
+        Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Tasks", "WorkTask.cs")));
+        Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Engine", "TaskDriver.cs")));
+        Assert.True(File.Exists(Path.Combine(graph, "Runtime", "Graph", "TaskRuntime.cs")));
+    }
+
+    [Fact]
+    public void Task_registry_has_no_restorer_surface()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Graph",
+            "Runtime",
+            "Tasks",
+            "TaskRegistry.cs");
+
+        Assert.DoesNotContain("Restorers", File.ReadAllText(file), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Node_projects_do_not_reference_flow_implementation()
     {
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
@@ -182,13 +321,61 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Control.Shared.csproj");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
 
         Assert.All(
             ProjectReferences(project),
             reference => Assert.True(
-                IsUnder(reference, nodes) || IsUnder(reference, tasks) || IsUnder(reference, execution),
+                IsUnder(reference, nodes)
+                    || IsUnder(reference, tasks)
+                    || IsUnder(reference, taskPresentation)
+                    || IsUnder(reference, execution),
                 $"Kuroe.Flow.Control.Shared 引用了契约层之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Task_presentation_references_only_contract_layers()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Tasks",
+            "Presentation",
+            "Shared",
+            "Kuroe.Flow.Tasks.Presentation.Shared.csproj");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, nodes)
+                    || IsUnder(reference, tasks)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, presentation),
+                $"Kuroe.Flow.Tasks.Presentation.Shared 引用了契约层之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Task_presentation_stays_free_of_graph_control()
+    {
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
+        string[] forbidden = ["TaskDriver", "TaskRuntime", "NodeGraph", "Control.Graph"];
+
+        Assert.NotEmpty(SourceFiles(presentation));
+        foreach (string file in SourceFiles(presentation))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现图控制语义 {word}。");
+            }
+        }
     }
 
     [Fact]
@@ -280,6 +467,7 @@ public sealed class RepositoryLayoutTests
         string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
         string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string taskContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string executionContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
         string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
@@ -296,6 +484,7 @@ public sealed class RepositoryLayoutTests
                     IsPersistenceBoundary(reference, persistence)
                         || IsUnder(reference, flowContracts)
                         || IsUnder(reference, taskContracts)
+                        || IsUnder(reference, taskPresentation)
                         || IsUnder(reference, executionContracts)
                         || IsUnder(reference, executionRecords)
                         || IsUnder(reference, taskRecords)
@@ -399,6 +588,11 @@ public sealed class RepositoryLayoutTests
 
     private static IEnumerable<string> ProjectFiles(string root) =>
         Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"));
+
+    private static IEnumerable<string> SourceFiles(string root) =>
+        Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                 && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"));
 

@@ -6,17 +6,12 @@ public sealed class ExecutionRuntime(
     ExecutionRunnerRegistry runners,
     ExecutionRestorerRegistry restorers)
 {
-    /// <summary>本域可用的恢复能力。</summary>
-    public ExecutionRestorerRegistry Restorers => restorers;
-
     /// <summary>为一次执行建立运行器。</summary>
     public IExecutionRunner CreateRunner(
         IExecutionRunnerFactory? own,
-        string kind,
-        bool hasModelPort,
         IExecutionTarget target,
         ExecutionId execution) =>
-        runners.Create(own, kind, hasModelPort, target, execution);
+        runners.Create(own, target, execution);
 
     /// <summary>入队一个执行并等它收口。</summary>
     public Task DispatchAsync(

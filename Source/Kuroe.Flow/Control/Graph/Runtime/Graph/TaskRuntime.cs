@@ -46,15 +46,17 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
     private readonly RuntimeStartSource _startSource;
+    private readonly Kuroe.Flow.Execution.ExecutionRestorerRegistry? _restorers;
     private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
     private static readonly IInputProgress IdleProgress = new UnmaterializedProgress();
 
-    internal TaskRuntime(WorkTask task)
+    internal TaskRuntime(WorkTask task, Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null)
     {
         _task = task;
+        _restorers = restorers;
         _materializer = new NodeMaterializer(task.Graph, this);
         _staticPorts = new StaticPortValues(task.Graph, task.StartPorts, this);
         _startSource = new RuntimeStartSource(task.Graph.StartPorts, task.StartPorts);
@@ -773,7 +775,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             || node.Block?.Execution is not { } blocked
             || AtLimit(node)
             || Frozen(node.Path)
-            || _task.Registry.Restorers is not { } restorers)
+            || _restorers is not { } restorers)
         {
             return null;
         }

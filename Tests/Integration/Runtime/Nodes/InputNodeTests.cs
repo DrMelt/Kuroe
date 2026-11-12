@@ -157,10 +157,11 @@ public sealed class InputNodeTests
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.InputFlow);
 
         TaskId id = environment.Submit("补齐 README");
-        TaskSnapshot parked = WaitForInputs(environment, id, 1);
+        WaitForInputs(environment, id, 1);
+        NodeGraph graph = environment.Registry.Find(id).ThrowIfError().Graph;
 
-        ExecutableNode input = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
-        ExecutableNode implement = parked.Graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
+        ExecutableNode input = graph.ExecutableNodes.Single(node => node.Label.Value == "用户输入");
+        ExecutableNode implement = graph.ExecutableNodes.Single(node => node.Label.Value == "实施");
 
         Assert.Null(input.InputBindings);
         Assert.NotNull(implement.InputBindings);

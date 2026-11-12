@@ -12,10 +12,14 @@ using Kuroe.Flow.Tasks.Records;
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
 /// <summary>从存档恢复任务对象：重建执行历史与节点状态，不启动推进循环。</summary>
-public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver? targets = null) : ITaskRestorer
+public sealed class TaskRestorer(
+    TaskRegistry registry,
+    IExecutionTargetResolver? targets = null,
+    Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null) : ITaskRestorer
 {
     private readonly TaskRegistry _registry = registry;
     private readonly IExecutionTargetResolver? _targets = targets;
+    private readonly Kuroe.Flow.Execution.ExecutionRestorerRegistry? _restorers = restorers;
 
     /// <inheritdoc/>
     public ErrorOr<WorkTask> Restore(TaskRecord record, CompiledFlow flow)
@@ -42,7 +46,7 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
                 restored.Add(GraphExecution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
             }
 
-            WorkTask task = WorkTask.Restore(_registry, record, state, flow, startTexts, restored);
+            WorkTask task = WorkTask.Restore(_registry, record, state, flow, startTexts, restored, _restorers);
             foreach (GraphExecution execution in task.Executions)
             {
                 _registry.RestoreExecution(task, execution);

@@ -32,6 +32,7 @@ public sealed class WorkTask
         IPortTexts startTexts,
         FlowDefinition flow,
         NodeGraph graph,
+        Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers,
         string title,
         ProcessObserver? observer)
     {
@@ -42,7 +43,7 @@ public sealed class WorkTask
         StartPorts = new StartPortValues(graph.StartPorts, startTexts, inputs);
         Flow = flow;
         Graph = graph;
-        Runtime = new TaskRuntime(this);
+        Runtime = new TaskRuntime(this, restorers);
         _createdAt = DateTimeOffset.UtcNow;
         _lastActivityAt = _createdAt;
         _observer = observer;
@@ -56,6 +57,7 @@ public sealed class WorkTask
         IPortTexts startTexts,
         FlowDefinition flow,
         NodeGraph graph,
+        Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers,
         string title,
         DateTimeOffset createdAt,
         DateTimeOffset lastActivityAt,
@@ -68,7 +70,7 @@ public sealed class WorkTask
         StartPorts = new StartPortValues(graph.StartPorts, startTexts, inputs);
         Flow = flow;
         Graph = graph;
-        Runtime = new TaskRuntime(this);
+        Runtime = new TaskRuntime(this, restorers);
         _createdAt = createdAt;
         _lastActivityAt = lastActivityAt;
         _observer = observer;
@@ -83,6 +85,7 @@ public sealed class WorkTask
         CompiledFlow flow,
         IPortTexts startTexts,
         IReadOnlyList<GraphExecution> executions,
+        Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers = null,
         ProcessObserver? observer = null)
     {
         WorkTask task = new(
@@ -92,6 +95,7 @@ public sealed class WorkTask
             startTexts,
             flow.Model,
             flow.Graph,
+            restorers,
             record.Identity.Title,
             record.Identity.CreatedAt,
             record.Identity.LastActivityAt,
@@ -134,7 +138,7 @@ public sealed class WorkTask
             }
         }
 
-        if (registry.Restorers is not null)
+        if (restorers is not null)
         {
             task.Runtime.RefreshRestorePlans();
         }
@@ -168,6 +172,9 @@ public sealed class WorkTask
 
     /// <summary>提交时锁定的流程快照，写存档时使用。</summary>
     internal GraphFlowDefinitionRecord? FlowSnapshot { get; set; }
+
+    /// <summary>任务启动后的流程控制实例，命令由运行期引擎转发给它。</summary>
+    public Kuroe.Flow.Control.IFlowControl? Control { get; internal set; }
 
     /// <summary>推进循环给出的待处理目标，写存档时使用。</summary>
     internal Func<SchedulerSeed>? SeedSource { get; set; }
@@ -485,12 +492,17 @@ public sealed class WorkTask
         {
             IReadOnlyList<GraphExecutionSnapshot> executions = [.. _executions.Select(execution => execution.Snapshot())];
             TaskProjection projection = new(Graph, Runtime.Materializer, Runtime.StaticPorts);
+            IReadOnlyList<ExecutableSnapshot> executables = projection.Executables(executions);
+            IReadOnlyList<ExecutableStateSnapshot> states = projection.ExecutableStates();
+            IReadOnlyList<ContainerSnapshot> containers = projection.Containers();
 
-            return new TaskSnapshot(Id, _title, Inputs, StartTexts, Flow, Graph, Summarize(),
+            return new TaskSnapshot(Id, _title, Inputs, StartTexts,
+                projection.View(Flow, executables, states, containers),
+                Summarize(),
                 _executions.Count(execution => execution.IsLive),
-                projection.Executables(executions),
-                projection.ExecutableStates(),
-                projection.Containers(), Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
+                executables,
+                states,
+                containers, Journal.Entries, Journal.DroppedEntries, _createdAt, _lastActivityAt);
         }
     }
 }

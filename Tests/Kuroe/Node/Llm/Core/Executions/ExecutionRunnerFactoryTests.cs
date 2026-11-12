@@ -58,6 +58,8 @@ public sealed class ExecutionRunnerFactoryTests
 
         public string Kind => "Llm";
 
+        public bool UsesDefaultRunner => true;
+
         public IExecutionParameters Parameters { get; } = parameters;
     }
 }

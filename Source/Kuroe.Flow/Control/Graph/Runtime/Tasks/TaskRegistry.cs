@@ -16,8 +16,6 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     /// <summary>任务域是否在可恢复的中断收口时暂停任务，等待宿主恢复。</summary>
     internal bool PauseOnRestore { get; } = pauseOnRestore;
 
-    /// <summary>本域可用的恢复能力，推进器启动时设置。宿主单独装配任务恢复时可直接给出。</summary>
-    public Kuroe.Flow.Execution.ExecutionRestorerRegistry? Restorers { get; set; }
     private readonly Dictionary<string, WorkTask> _tasks = [];
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
@@ -32,12 +30,13 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
         StartInputs inputs,
         IPortTexts startTexts,
         CompiledFlow flow,
+        Kuroe.Flow.Execution.ExecutionRestorerRegistry? restorers,
         string title,
         ProcessObserver? observer)
     {
         lock (_gate)
         {
-            WorkTask task = new(this, id, inputs, startTexts, flow.Model, flow.Graph, title, observer);
+            WorkTask task = new(this, id, inputs, startTexts, flow.Model, flow.Graph, restorers, title, observer);
             _tasks[task.Id.Value] = task;
 
             return task;
