@@ -77,7 +77,7 @@ public sealed class LazyRuntimeTests
         TaskSnapshot snapshot = environment.Wait(id, _ => environment.Awaiting(id, PendingKind.Approve).Count == 1);
 
         Assert.Equal(TaskState.Running, snapshot.State);
-        Assert.Equal(4, snapshot.ExecutableStates.Count);
+        Assert.Equal(4, snapshot.View.Steps.Count);
     }
 
     /// <summary>容器成员里尚未放行的成员不因状态查询被实例化：查询只读已实例化节点，未实例化成员视为没有产出。
@@ -89,11 +89,11 @@ public sealed class LazyRuntimeTests
         environment.Runner.Gate.Hold(NodePath.Of("整体", "交付", "实施"));
 
         TaskId id = environment.Submit("目标");
-        environment.Wait(id, snapshot => snapshot.ExecutableStates[1].State == NodeState.Running);
+        environment.Wait(id, snapshot => snapshot.View.Steps[1].State == FlowNodeState.Running);
 
         // 已实例化的是根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
-        Assert.Equal(NodeState.Running, environment.Snapshot(id).ExecutableStates[1].State);
-        Assert.Equal(NodeState.Pending, environment.Snapshot(id).ExecutableStates[2].State);
+        Assert.Equal(FlowNodeState.Running, environment.Snapshot(id).View.Steps[1].State);
+        Assert.Equal(FlowNodeState.Pending, environment.Snapshot(id).View.Steps[2].State);
     }
 
     [Fact]
@@ -110,7 +110,9 @@ public sealed class LazyRuntimeTests
         task.Snapshot();
         task.Snapshot();
 
-        Assert.Equal(before.ExecutableStates, task.Snapshot().ExecutableStates);
+        Assert.Equal(
+            before.View.Steps.Select(step => step.State),
+            task.Snapshot().View.Steps.Select(step => step.State));
     }
 
     [Fact]
@@ -124,7 +126,7 @@ public sealed class LazyRuntimeTests
         environment.Tasks.StopTask(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
-        Assert.Equal(NodeState.Canceled, environment.Snapshot(id).ExecutableStates[0].State);
+        Assert.Equal(FlowNodeState.Canceled, environment.Snapshot(id).View.Steps[0].State);
         Assert.Empty(environment.Pendings.Pending(id).ThrowIfError());
     }
 

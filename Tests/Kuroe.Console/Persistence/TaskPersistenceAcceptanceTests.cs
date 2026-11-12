@@ -108,14 +108,14 @@ public abstract class TaskPersistenceAcceptanceTests
             {
                 id = first.Submit("阻塞任务");
                 TaskSnapshot blocked = first.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
-                Assert.Contains(blocked.ExecutableStates, state => state.Block is not null);
+                Assert.Contains(blocked.View.Steps, step => step.Block is not null);
                 await first.PauseAsync(id);
                 await first.ShutdownAsync();
             }
 
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
             TaskSnapshot loaded = second.Snapshot(id);
-            Assert.Contains(loaded.ExecutableStates, state => state.Block is not null);
+            Assert.Contains(loaded.View.Steps, step => step.Block is not null);
             ErrorOr<Success> resumed = second.Resume(id);
             ErrorOr<Success> rerun = second.Rerun(id);
 
@@ -162,7 +162,7 @@ public abstract class TaskPersistenceAcceptanceTests
             {
                 id = first.Submit("历史任务");
                 TaskSnapshot settled = first.WaitForInput(id);
-                executions = settled.Executables.Sum(node => node.Executions.Count);
+                executions = settled.Executions.Count;
                 ErrorOr<Success> paused = await first.PauseAsync(id);
                 Assert.False(paused.IsError);
                 await first.ShutdownAsync();
@@ -171,7 +171,7 @@ public abstract class TaskPersistenceAcceptanceTests
             await using ITaskPersistenceSession second = await CreateSessionAsync(root);
             TaskSnapshot loaded = second.Snapshot(id);
 
-            Assert.Equal(executions, loaded.Executables.Sum(node => node.Executions.Count));
+            Assert.Equal(executions, loaded.Executions.Count);
         }
         finally
         {

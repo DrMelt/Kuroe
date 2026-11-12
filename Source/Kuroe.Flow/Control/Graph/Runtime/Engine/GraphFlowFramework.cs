@@ -50,6 +50,10 @@ public sealed class GraphFlowFramework(
     public bool Handles(FlowName name) => flows.FindCompiled(name).IsSuccess;
 
     /// <inheritdoc/>
+    public bool Handles(FlowRecord record) =>
+        record.Kind == Kind && record.Definition is GraphFlowDefinitionRecord;
+
+    /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
     {
         ErrorOr<CompiledFlow> compiled = flows.FindCompiled(name);
@@ -209,14 +213,10 @@ public sealed class GraphFlowFramework(
         TaskRuntime runtime = state.Runtime;
 
         TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
-        IReadOnlyList<GraphExecutionSnapshot> snapshotsByExecution =
+        IReadOnlyList<GraphExecutionSnapshot> executionSnapshots =
             [.. state.Executions.Select(execution => execution.Snapshot())];
 
-        return projection.View(
-            state.Flow.Model,
-            projection.Executables(snapshotsByExecution),
-            projection.ExecutableStates(),
-            projection.Containers());
+        return projection.View(state.Flow.Model, executionSnapshots);
     }
 
     /// <inheritdoc/>
@@ -231,15 +231,12 @@ public sealed class GraphFlowFramework(
         TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
         IReadOnlyList<GraphExecutionSnapshot> executionSnapshots =
             [.. state.Executions.Select(execution => execution.Snapshot())];
-        IReadOnlyList<ExecutableSnapshot> executables = projection.Executables(executionSnapshots);
-        IReadOnlyList<ExecutableStateSnapshot> states = projection.ExecutableStates();
-        IReadOnlyList<ContainerSnapshot> containers = projection.Containers();
 
         return new TaskSnapshot(
             task.Id,
             task.Title,
             task.Inputs,
-            projection.View(state.Flow.Model, executables, states, containers),
+            projection.View(state.Flow.Model, executionSnapshots),
             task.State,
             task.Executions.Count(execution => execution.IsLive),
             task.JournalEntries,
@@ -250,9 +247,6 @@ public sealed class GraphFlowFramework(
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
             Pending = task.Control?.Pending() ?? [],
             StartTexts = state.StartTexts,
-            Executables = executables,
-            ExecutableStates = states,
-            Containers = containers,
         };
     }
 
@@ -333,7 +327,6 @@ public sealed class GraphFlowFramework(
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input);
                 state.Executions.Add(execution);
                 units.Add(execution.Unit);
-                gateway.Attach(execution.Unit, execution);
             }
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException)

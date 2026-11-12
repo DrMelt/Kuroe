@@ -1,5 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
 
@@ -16,9 +17,9 @@ public sealed class StaticInputStartTests
 
         TaskSnapshot done = environment.Settle(environment.Submit("目标"));
 
-        ExecutableSnapshot use = Assert.Single(done.Executables, node => node.Executable.Label.Value == "使用");
-        Assert.Equal("fake", Assert.Single(use.Executions).Input.Texts[new PortName("资料")]);
-        Assert.Equal(2, done.Containers.Count);
+        GraphExecutionSnapshot use = Assert.Single(environment.GraphExecutions(done, "使用"));
+        Assert.Equal("fake", use.Input.Texts[new PortName("资料")]);
+        Assert.Equal(2, done.View.Groups.Count);
     }
 
     private const string ContainerConstantFlow = """

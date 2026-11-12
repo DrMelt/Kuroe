@@ -131,6 +131,7 @@ public sealed class RepositoryLayoutTests
             "ModelPort",
             "GraphExecution",
             "IExecutionTargetResolver",
+            "RuntimeGraph.Execution",
         ];
 
         Assert.NotEmpty(SourceFiles(execution));
@@ -407,7 +408,6 @@ public sealed class RepositoryLayoutTests
             "Presentation",
             "Shared",
             "Kuroe.Flow.Tasks.Presentation.Shared.csproj");
-        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
@@ -416,8 +416,7 @@ public sealed class RepositoryLayoutTests
         Assert.All(
             ProjectReferences(project),
             reference => Assert.True(
-                IsUnder(reference, nodes)
-                    || IsUnder(reference, tasks)
+                IsUnder(reference, tasks)
                     || IsUnder(reference, execution)
                     || IsUnder(reference, presentation)
                     || IsUnder(reference, shared),
@@ -441,6 +440,97 @@ public sealed class RepositoryLayoutTests
                     $"{Path.GetFileName(file)} 出现图控制语义 {word}。");
             }
         }
+    }
+
+    [Fact]
+    public void Task_presentation_stays_free_of_node_and_graph_types()
+    {
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
+        string[] forbidden =
+        [
+            "NodePath",
+            "NodeGraph",
+            "ExecutableSnapshot",
+            "ExecutableStateSnapshot",
+            "ContainerSnapshot",
+            "FlowExecutableView",
+        ];
+
+        Assert.NotEmpty(SourceFiles(presentation));
+        foreach (string file in SourceFiles(presentation))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现节点或图类型 {word}。");
+            }
+        }
+
+        string snapshot = File.ReadAllText(Path.Combine(presentation, "TaskSnapshot.cs"));
+        Assert.DoesNotContain("Executables", snapshot, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecutableStates", snapshot, StringComparison.Ordinal);
+        Assert.DoesNotContain("Containers", snapshot, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Execution_index_stays_free_of_flow_payload()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Core",
+            "Runtime",
+            "ExecutionIndex.cs");
+        string text = File.ReadAllText(file);
+
+        Assert.DoesNotContain("Payload", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("object?", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Execution_gateway_stays_neutral()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Shared",
+            "IFlowExecutionGateway.cs");
+
+        Assert.DoesNotContain("Attach", File.ReadAllText(file), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Flow_restore_resolves_by_record_not_kind()
+    {
+        string contract = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Shared",
+            "IFlowFrameworkSource.cs");
+        string source = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Core",
+            "Runtime",
+            "Tasks",
+            "FlowFrameworkSource.cs");
+        string restore = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Core",
+            "Runtime",
+            "Tasks",
+            "Persistence",
+            "TaskRestoreRuntime.cs");
+
+        Assert.Contains("Find(FlowRecord record)", File.ReadAllText(contract), StringComparison.Ordinal);
+        Assert.DoesNotContain("Find(string kind)", File.ReadAllText(contract), StringComparison.Ordinal);
+        Assert.DoesNotContain("Find(record.Flow.Kind)", File.ReadAllText(restore), StringComparison.Ordinal);
+        Assert.Contains("Handles(record)", File.ReadAllText(source), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -14,6 +14,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Pending;
@@ -54,8 +55,7 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<CannotCompleteSubmitter>(),
             new ExecutionStatusReader(Executions));
         runner.ContractToolFactory = execution =>
-            CreateContractTools((GraphExecution)Executions.FindPayload(
-                new Kuroe.Flow.Execution.ExecutionId(execution.Value))!);
+            CreateContractTools(GraphExecution(new Kuroe.Flow.Execution.ExecutionId(execution.Value)));
     }
 
     /// <summary>临时工作目录。</summary>
@@ -117,12 +117,31 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>取指定路径的契约工具。</summary>
     private ITool ContractTool(ExecutionId execution, string path)
     {
-        GraphExecution found = (GraphExecution)Executions.FindPayload(
-            new Kuroe.Flow.Execution.ExecutionId(execution.Value))!;
+        GraphExecution found = GraphExecution(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
         IReadOnlyList<ITool> tools = CreateContractTools(found);
 
         return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
     }
+
+    /// <summary>按中性执行号取图侧执行对象。</summary>
+    public GraphExecution GraphExecution(Kuroe.Flow.Execution.ExecutionId id)
+    {
+        var owned = Executions.FindOwned(id).ThrowIfError();
+        IGraphFlowState state = (IGraphFlowState)owned.Owner.FlowState;
+
+        return state.Executions.Single(execution => execution.Id.Value == id.Value);
+    }
+
+    /// <summary>按步骤顺位取图侧执行快照。</summary>
+    public IReadOnlyList<GraphExecutionSnapshot> GraphExecutions(TaskSnapshot task, int step) =>
+        [.. task.View.Steps[step].Executions.Select(execution => GraphSnapshot(execution.Id))];
+
+    /// <summary>按步骤标签取图侧执行快照。</summary>
+    public IReadOnlyList<GraphExecutionSnapshot> GraphExecutions(TaskSnapshot task, string label) =>
+        [.. task.View.Steps.Single(step => step.Label == label).Executions.Select(execution => GraphSnapshot(execution.Id))];
+
+    private GraphExecutionSnapshot GraphSnapshot(int execution) =>
+        GraphExecution(new Kuroe.Flow.Execution.ExecutionId(execution)).Snapshot();
 
     public CatalogService Catalog => _provider.GetRequiredService<CatalogService>();
 

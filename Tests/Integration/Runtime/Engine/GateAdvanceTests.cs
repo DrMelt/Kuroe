@@ -34,13 +34,13 @@ public sealed class GateAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot blocked = environment.Settle(id);
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Empty(blocked.Executables[2].Executions);
+        Assert.Empty(blocked.View.Steps[2].Executions);
 
         environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[2].Executions);
+        Assert.Single(done.View.Steps[2].Executions);
     }
 
     /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>
@@ -59,7 +59,7 @@ public sealed class GateAdvanceTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[2].Executions);
+        Assert.Single(done.View.Steps[2].Executions);
     }
 
     [Fact]
@@ -87,15 +87,15 @@ public sealed class GateAdvanceTests
         TaskSnapshot blocked = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(NodeState.Blocked, Assert.Single(blocked.ExecutableStates, state => state.Node.Label == new NodeLabel("甲")).State);
-        Assert.Empty(blocked.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("闸门")).Executions);
+        Assert.Equal(FlowNodeState.Blocked, Assert.Single(blocked.View.Steps, step => step.Label == "甲").State);
+        Assert.Empty(blocked.View.Steps.Single(step => step.Label == "闸门").Executions);
 
         environment.Tasks.Rerun(id).ThrowIfError();
         TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("甲")).Executions.Count);
-        Assert.Single(done.Executables.Single(snapshot => snapshot.Executable.Label == new NodeLabel("闸门")).Executions);
+        Assert.Equal(2, done.View.Steps.Single(step => step.Label == "甲").Executions.Count);
+        Assert.Single(done.View.Steps.Single(step => step.Label == "闸门").Executions);
     }
 
     /// <summary>汇合的 From 来源甲依赖乙，乙先齐备时 From 未齐备不得启动；乙、甲都齐备后才启动一次。</summary>

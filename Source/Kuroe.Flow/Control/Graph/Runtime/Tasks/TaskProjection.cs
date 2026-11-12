@@ -20,12 +20,8 @@ internal sealed class TaskProjection(
     NodeMaterializer materializer,
     StaticPortValues staticPorts)
 {
-    /// <summary>节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。阻塞节点的可恢复标记来自恢复计划缓存。</summary>
-    public ExecutableStateSnapshot State(NodePath path) =>
-        materializer.Find(path)?.Snapshot() ?? new ExecutableStateSnapshot(path, NodeState.Pending);
-
-    /// <summary>各执行节点在快照里的一刻状态：静态文本、执行与次数上限。</summary>
-    public IReadOnlyList<ExecutableSnapshot> Executables(IReadOnlyList<GraphExecutionSnapshot> executions)
+    /// <summary>任务流程视图：步骤与分组来自执行节点与容器的当前状态，名称与说明来自流程模板。</summary>
+    public IFlowView View(FlowDefinition flow, IReadOnlyList<GraphExecutionSnapshot> executions)
     {
         Dictionary<NodePath, List<GraphExecutionSnapshot>> byNode = [];
         foreach (GraphExecutionSnapshot execution in executions)
@@ -39,121 +35,82 @@ internal sealed class TaskProjection(
             values.Add(execution);
         }
 
-        return
-        [
-            .. graph.ExecutableNodes.Select(node => new ExecutableSnapshot(
-                Executable(node),
-                staticPorts.For(node),
-                staticPorts.ConstantsFor(node),
-                byNode.GetValueOrDefault(node.Path) ?? [],
-                materializer.Find(node.Path)?.Progress.Executions ?? 0,
-                LimitOf(node.Path) ?? node.MaxExecutions)),
-        ];
-    }
-
-    /// <summary>各执行节点在快照里的一刻状态。</summary>
-    public IReadOnlyList<ExecutableStateSnapshot> ExecutableStates() =>
-        [.. graph.ExecutableNodes.Select(node => State(node.Path))];
-
-    /// <summary>各容器在快照里的一刻状态：内容齐备情况、成员活动与发布。</summary>
-    public IReadOnlyList<ContainerSnapshot> Containers()
-    {
-        List<ContainerSnapshot> snapshots = [];
-        foreach (ContainerNode container in graph.Containers)
-        {
-            snapshots.Add(materializer.Find(container.Path) is RuntimeContainer runtime
-                ? Of(runtime)
-                : new ContainerSnapshot(
-                    container.Path,
-                    ActivityState(container),
-                    ChildPaths(container),
-                    staticPorts.ConstantsFor(container),
-                    0,
-                    LimitOf(container.Path) ?? container.MaxExecutions)
-                {
-                    Outputs = [.. container.Outputs.Select(Output)],
-                });
-        }
-
-        return snapshots;
-    }
-
-    /// <summary>已实例化容器的一刻状态。成员状态只在已实例化成员上读，未实例化成员视为没有活动。</summary>
-    private ContainerSnapshot Of(RuntimeContainer container)
-    {
-        NodeState state;
-        if (container.Canceled)
-        {
-            state = NodeState.Canceled;
-        }
-        else if (container.Released)
-        {
-            state = NodeState.Done;
-        }
-        else
-        {
-            state = ActivityState(container.Container);
-        }
-
-        return new ContainerSnapshot(
-            container.Path,
-            state,
-            ChildPaths(container.Container),
-            staticPorts.ConstantsFor(container.Container),
-            container.Progress.Executions,
-            LimitOf(container.Path) ?? container.Container.MaxExecutions)
-        {
-            Outputs = [.. container.Container.Outputs.Select(Output)],
-        };
-    }
-
-    /// <summary>任务流程视图：步骤与分组来自执行节点与容器的当前状态，名称与说明来自流程模板。</summary>
-    public IFlowView View(
-        FlowDefinition flow,
-        IReadOnlyList<ExecutableSnapshot> executables,
-        IReadOnlyList<ExecutableStateSnapshot> states,
-        IReadOnlyList<ContainerSnapshot> containers)
-    {
-        Dictionary<NodePath, ExecutableStateSnapshot> stateByPath =
-            states.ToDictionary(state => state.Node);
-
         return new FlowView(
             flow.Name.Value,
             "graph",
             flow.Description,
             [.. graph.StartPorts.Select(Output)],
-            [.. executables.Select(executable => Step(
-                executable,
-                stateByPath.GetValueOrDefault(executable.Executable.Path)
-                    ?? new ExecutableStateSnapshot(executable.Executable.Path, NodeState.Pending)))],
-            [.. containers.Select(container => new FlowGroupView(
-                container.Path.Value,
-                container.Path.Label.Value,
-                [.. container.Children.Select(child => child.Value)])
-            {
-                ParentPath = container.Path.Parent?.Value,
-                State = StateOf(container.State),
-                Outputs = container.Outputs,
-                MaxExecutions = container.MaxExecutions,
-                PublicationCount = container.PublicationCount,
-            })]);
+            [.. graph.ExecutableNodes.Select(node => Step(node, byNode.GetValueOrDefault(node.Path) ?? []))],
+            [.. graph.Containers.Select(Group)]);
     }
 
-    private static FlowStepView Step(ExecutableSnapshot executable, ExecutableStateSnapshot state) => new(
-        executable.Executable.Path.Value,
-        executable.Executable.Label.Value,
-        executable.Executable.Kind.Value,
-        StateOf(state.State),
-        [.. executable.Executable.Inputs.Select(port => Input(port, executable.StaticTexts))],
-        [.. executable.Executable.Outputs.Select(port => Output(port, executable.ConstantTexts))],
-        [.. executable.Executions.Select(Execution)],
-        executable.MaxExecutions)
+    /// <summary>执行节点在快照里的一刻状态：节点自己给出，未实例化的节点按默认待办报告。阻塞节点的可恢复标记来自恢复计划缓存。</summary>
+    private ExecutableStateSnapshot State(NodePath path) =>
+        materializer.Find(path)?.Snapshot() ?? new ExecutableStateSnapshot(path, NodeState.Pending);
+
+    private FlowStepView Step(ExecutableNode node, IReadOnlyList<GraphExecutionSnapshot> executions)
     {
-        ParentPath = executable.Executable.Path.Parent?.Value,
-        ExecutionCount = executable.ExecutionCount,
-        CanRestore = state.CanRestore,
-        Block = state.Block?.Summary,
-    };
+        ExecutableStateSnapshot state = State(node.Path);
+        IPortTexts staticTexts = staticPorts.For(node);
+        IPortTexts constantTexts = staticPorts.ConstantsFor(node);
+
+        return new FlowStepView(
+            node.Path.Value,
+            node.Label.Value,
+            node.Kind.Value,
+            StateOf(state.State),
+            [.. node.Inputs.Select(port => Input(port, staticTexts))],
+            [.. node.Outputs.Select(port => Output(port, constantTexts))],
+            [.. executions.Select(Execution)],
+            LimitOf(node.Path) ?? node.MaxExecutions)
+        {
+            ParentPath = node.Path.Parent?.Value,
+            ExecutionCount = materializer.Find(node.Path)?.Progress.Executions ?? 0,
+            CanRestore = state.CanRestore,
+            Block = state.Block?.Summary,
+        };
+    }
+
+    /// <summary>容器在快照里的一刻状态：成员活动、输出与发布。成员状态只在已实例化成员上读，未实例化成员视为没有活动。</summary>
+    private FlowGroupView Group(ContainerNode container)
+    {
+        NodeState state;
+        int publicationCount;
+        if (materializer.Find(container.Path) is RuntimeContainer runtime)
+        {
+            if (runtime.Canceled)
+            {
+                state = NodeState.Canceled;
+            }
+            else if (runtime.Released)
+            {
+                state = NodeState.Done;
+            }
+            else
+            {
+                state = ActivityState(container);
+            }
+
+            publicationCount = runtime.Progress.Executions;
+        }
+        else
+        {
+            state = ActivityState(container);
+            publicationCount = 0;
+        }
+
+        return new FlowGroupView(
+            container.Path.Value,
+            container.Path.Label.Value,
+            ChildPaths(container))
+        {
+            ParentPath = container.Path.Parent?.Value,
+            State = StateOf(state),
+            Outputs = [.. container.Outputs.Select(Output)],
+            MaxExecutions = LimitOf(container.Path) ?? container.MaxExecutions,
+            PublicationCount = publicationCount,
+        };
+    }
 
     private static FlowNodeState StateOf(NodeState state) => state switch
     {
@@ -163,18 +120,6 @@ internal sealed class TaskProjection(
         NodeState.Canceled => FlowNodeState.Canceled,
         _ => FlowNodeState.Pending,
     };
-
-    private static FlowExecutableView Executable(ExecutableNode node) => new(
-        node.Path,
-        node.Label,
-        node.Kind,
-        node.Type,
-        node.Spec,
-        node.Inputs,
-        node.Outputs,
-        node.OutputBindings,
-        node.Incoming,
-        node.MaxExecutions);
 
     private static FlowPortView Input(InputPort port, IPortTexts staticTexts) => new(
         port.Name.Value,
@@ -216,8 +161,8 @@ internal sealed class TaskProjection(
     private int? LimitOf(NodePath path) => graph.PlanOf(path)?.MaxExecutions;
 
     /// <summary>容器的直接子节点路径，先根序。</summary>
-    private static IReadOnlyList<NodePath> ChildPaths(ContainerNode container) =>
-        [.. container.Children.Select(child => child.Path)];
+    private static IReadOnlyList<string> ChildPaths(ContainerNode container) =>
+        [.. container.Children.Select(child => child.Path.Value)];
 
     /// <summary>容器里已实例化成员的活动状态：有在跑或已产出即运行中，都没有即待办。</summary>
     private NodeState ActivityState(ContainerNode container) =>

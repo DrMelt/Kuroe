@@ -1,7 +1,6 @@
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 
 namespace Kuroe.Flow.Tasks;
 
@@ -26,15 +25,6 @@ public sealed record TaskSnapshot(
 
     /// <summary>任务启动时的开始端口文本。</summary>
     public IPortTexts? StartTexts { get; init; }
-
-    /// <summary>图流程的执行节点明细，由具体流程实现给出。</summary>
-    public IReadOnlyList<ExecutableSnapshot> Executables { get; init; } = [];
-
-    /// <summary>图流程的执行节点状态明细。</summary>
-    public IReadOnlyList<ExecutableStateSnapshot> ExecutableStates { get; init; } = [];
-
-    /// <summary>图流程的容器明细。</summary>
-    public IReadOnlyList<ContainerSnapshot> Containers { get; init; } = [];
 
     /// <summary>流程的执行节点数。</summary>
     public int TotalExecutableNodes => View.Steps.Count;

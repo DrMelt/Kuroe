@@ -128,6 +128,8 @@ public sealed class WorkTaskTests
         public string Name => "测试";
 
         public bool Handles(FlowName name) => false;
+
+        public bool Handles(Kuroe.Flow.Tasks.Records.FlowRecord record) => false;
     }
 
     private sealed class TestSubmission : IFlowSubmission

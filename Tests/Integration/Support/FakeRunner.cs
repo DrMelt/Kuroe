@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime;
+using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
@@ -209,8 +210,8 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        object? payload = executions.FindPayload(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
-        if (payload is not IExecution started)
+        IExecution? started = FindGraphExecution(executions, execution);
+        if (started is null)
         {
             return await ExecuteCodeAsync(execution, journal, cancellationToken).ConfigureAwait(false);
         }
@@ -266,6 +267,19 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         {
             Gate.Leave(handle);
         }
+    }
+
+    /// <summary>按执行号取图侧执行；不是图流程执行时为空。</summary>
+    private static IExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
+    {
+        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
+            executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
+        if (found.IsError || found.Value.Owner.FlowState is not IGraphFlowState state)
+        {
+            return null;
+        }
+
+        return state.Executions.FirstOrDefault(candidate => candidate.Id.Value == execution.Value);
     }
 
     /// <summary>代码流程执行：不依赖图侧执行对象，直接按中性执行记录收口。</summary>

@@ -17,7 +17,7 @@ public sealed class TaskRestoreRuntime(
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(TaskRecord record)
     {
-        ErrorOr<FlowProvider> resolved = frameworks.Find(record.Flow.Kind);
+        ErrorOr<FlowProvider> resolved = frameworks.Find(record.Flow);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;

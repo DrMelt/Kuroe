@@ -39,9 +39,7 @@ public sealed class InputNodeTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Empty(environment.Awaiting(id, PendingKind.Answer));
 
-        ExecutionSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "实施")
-            .Executions.Single();
+        ExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, "实施"));
         Assert.Contains(implement.Input.Inputs,
             value => value.Text.Contains("需要支持多语言")
                 && value.Origin is InputSource);
@@ -180,9 +178,9 @@ public sealed class InputNodeTests
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        ExecutableSnapshot implement = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "实施");
+        FlowStepView implement = Assert.Single(done.View.Steps, step => step.Label == "实施");
         Assert.Single(implement.Executions);
-        ExecutableSnapshot input = Assert.Single(done.Executables, entry => entry.Executable.Label.Value == "用户输入");
+        FlowStepView input = Assert.Single(done.View.Steps, step => step.Label == "用户输入");
         Assert.Equal(1, input.ExecutionCount);
         Assert.Equal(int.MaxValue, input.MaxExecutions);
     }
@@ -199,9 +197,9 @@ public sealed class InputNodeTests
 
         TaskSnapshot awaiting = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && snapshot.Containers.Single(container => container.Path.Label == new NodeLabel("审查容器")).State == NodeState.Done);
+            && snapshot.View.Groups.Single(group => group.Label == "审查容器").State == FlowNodeState.Done);
         Assert.Equal(TaskState.Running, awaiting.State);
-        Assert.Equal(NodeState.Done, Assert.Single(awaiting.Containers, container => container.Path.Label == new NodeLabel("审查容器")).State);
+        Assert.Equal(FlowNodeState.Done, Assert.Single(awaiting.View.Groups, group => group.Label == "审查容器").State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Pendings.Approve(id).ThrowIfError();
@@ -238,7 +236,7 @@ public sealed class InputNodeTests
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
 
         // 容器不表达成员的等待，只按成员活动给状态；等待由节点的待处理报告给出
-        Assert.All(parked.Containers, container => Assert.Equal(NodeState.Pending, container.State));
+        Assert.All(parked.View.Groups, group => Assert.Equal(FlowNodeState.Pending, group.State));
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 
@@ -271,11 +269,9 @@ public sealed class InputNodeTests
 
         environment.Pendings.Answer(id, null, "第一问").ThrowIfError();
         TaskSnapshot first = environment.Wait(id, snapshot =>
-            snapshot.Executables.Single(node => node.Executable.Label.Value == "回话").Executions
-                .Any(execution => execution.Journal.Any(entry => entry.Text == "回复第1轮")));
+            snapshot.Executions.Any(execution => execution.Journal.Any(entry => entry.Text == "回复第1轮")));
         Assert.Equal(TaskState.Running, first.State);
-        ExecutableSnapshot replyNode = first.Executables.Single(node => node.Executable.Label.Value == "回话");
-        ExecutionSnapshot firstExecution = replyNode.Executions[^1];
+        ExecutionSnapshot firstExecution = environment.GraphExecutions(first, "回话")[^1];
         Assert.Contains(firstExecution.Input.Texts.Values, text => text.Contains("第一问"));
         Assert.Contains(firstExecution.Journal, entry => entry.Text == "回复第1轮");
         // 本轮回答已被回话消费并随反馈复位，等待下一次输入
@@ -284,12 +280,10 @@ public sealed class InputNodeTests
 
         environment.Pendings.Answer(id, null, "第二问").ThrowIfError();
         TaskSnapshot second = environment.Wait(id, snapshot =>
-            snapshot.Executables.Single(node => node.Executable.Label.Value == "回话").Executions
-                .Any(execution => execution.Journal.Any(entry => entry.Text == "回复第2轮")));
+            snapshot.Executions.Any(execution => execution.Journal.Any(entry => entry.Text == "回复第2轮")));
         Assert.Equal(TaskState.Running, second.State);
-        ExecutableSnapshot replyNodeSecond = second.Executables.Single(node => node.Executable.Label.Value == "回话");
-        Assert.Equal(2, replyNodeSecond.Executions.Count);
-        ExecutionSnapshot secondExecution = replyNodeSecond.Executions[^1];
+        Assert.Equal(2, second.View.Steps.Single(step => step.Label == "回话").Executions.Count);
+        ExecutionSnapshot secondExecution = environment.GraphExecutions(second, "回话")[^1];
         Assert.Contains(secondExecution.Input.Texts.Values, text => text.Contains("第二问"));
         Assert.Contains(secondExecution.Journal, entry => entry.Text == "回复第2轮");
     }

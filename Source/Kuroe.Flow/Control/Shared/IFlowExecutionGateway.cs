@@ -13,9 +13,6 @@ public interface IFlowExecutionGateway
     /// <summary>按执行号取执行，不存在时返回错误。</summary>
     ErrorOr<LoopExecution> Find(ExecutionId id);
 
-    /// <summary>为一次执行附加流程实现自己的执行对象。</summary>
-    void Attach(LoopExecution execution, object payload);
-
     /// <summary>按执行号停止一个已启动的执行。</summary>
     ErrorOr<Success> Stop(ITaskFlowContext owner, ExecutionId id);
 }

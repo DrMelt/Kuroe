@@ -20,7 +20,7 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
         lock (_gate)
         {
             LoopExecution execution = new(new ExecutionId(_nextExecution++), request);
-            _entries[execution.Id] = new Entry(execution, owner, null);
+            _entries[execution.Id] = new Entry(execution, owner);
 
             return execution;
         }
@@ -31,29 +31,8 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     {
         lock (_gate)
         {
-            _entries[execution.Id] = new Entry(execution, owner, null);
+            _entries[execution.Id] = new Entry(execution, owner);
             _nextExecution = Math.Max(_nextExecution, execution.Id.Value + 1);
-        }
-    }
-
-    /// <summary>为一次执行附加流程实现自己的执行对象。</summary>
-    public void Attach(LoopExecution execution, object payload)
-    {
-        lock (_gate)
-        {
-            if (_entries.TryGetValue(execution.Id, out Entry entry))
-            {
-                _entries[execution.Id] = entry with { Payload = payload };
-            }
-        }
-    }
-
-    /// <summary>按执行号取流程实现附加的执行对象。</summary>
-    public object? FindPayload(ExecutionId id)
-    {
-        lock (_gate)
-        {
-            return _entries.TryGetValue(id, out Entry entry) ? entry.Payload : null;
         }
     }
 
@@ -111,5 +90,5 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
         }
     }
 
-    private readonly record struct Entry(LoopExecution Execution, ITaskFlowContext Owner, object? Payload);
+    private readonly record struct Entry(LoopExecution Execution, ITaskFlowContext Owner);
 }

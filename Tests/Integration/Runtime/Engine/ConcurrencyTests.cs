@@ -39,7 +39,7 @@ public sealed class ConcurrencyTests
             TaskSnapshot done = environment.Settle(id);
 
             Assert.Equal(TaskState.Done, done.State);
-            Assert.Equal(2, done.Executables.Sum(node => node.Executions.Count));
+            Assert.Equal(2, done.View.Steps.Sum(step => step.Executions.Count));
         }
 
         Assert.Equal(3, environment.Registry.ClearSettled().Count);

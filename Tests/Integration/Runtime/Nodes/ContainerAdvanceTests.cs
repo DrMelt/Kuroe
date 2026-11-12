@@ -18,22 +18,22 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && ContainerState(snapshot, "交付") == NodeState.Done);
+            && ContainerState(snapshot, "交付") == FlowNodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
         // 两条分支各一个执行，审批节点停在待批准，汇总还没有执行
-        Assert.Single(parked.Executables[1].Executions);
-        Assert.Single(parked.Executables[2].Executions);
-        Assert.Empty(parked.Executables[3].Executions);
-        Assert.Empty(parked.Executables[4].Executions);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
+        Assert.Single(parked.View.Steps[1].Executions);
+        Assert.Single(parked.View.Steps[2].Executions);
+        Assert.Empty(parked.View.Steps[3].Executions);
+        Assert.Empty(parked.View.Steps[4].Executions);
+        Assert.Equal(FlowNodeState.Done, Assert.Single(parked.View.Groups, group => group.Label == "交付").State);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[4].Executions);
-        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
+        Assert.Single(done.View.Steps[4].Executions);
+        Assert.All(done.View.Groups, group => Assert.Equal(FlowNodeState.Done, group.State));
     }
 
     [Fact]
@@ -46,12 +46,12 @@ public sealed class ContainerAdvanceTests
 
         Assert.Equal(TaskState.Done, done.State);
         // 两条分支各一个执行，收拢节点等容器齐备后一条执行汇拢
-        Assert.Single(done.Executables[1].Executions);
-        Assert.Single(done.Executables[2].Executions);
-        ExecutionSnapshot check = Assert.Single(done.Executables[3].Executions);
+        Assert.Single(done.View.Steps[1].Executions);
+        Assert.Single(done.View.Steps[2].Executions);
+        ExecutionSnapshot check = Assert.Single(environment.GraphExecutions(done, 3));
         // 根容器与交付容器的快照状态汇拢后完成
-        Assert.Equal(2, done.Containers.Count);
-        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
+        Assert.Equal(2, done.View.Groups.Count);
+        Assert.All(done.View.Groups, group => Assert.Equal(FlowNodeState.Done, group.State));
 
         // 容器来源把成员命名段按输出端口转进：每条绑定端口一条容器端口取值
         Assert.Contains(check.Input.Inputs, value =>
@@ -68,21 +68,21 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && ContainerState(snapshot, "交付") == NodeState.Done
-            && ContainerState(snapshot, "撰写组") == NodeState.Done);
+            && ContainerState(snapshot, "交付") == FlowNodeState.Done
+            && ContainerState(snapshot, "撰写组") == FlowNodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables[3].Executions);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("撰写组")).State);
+        Assert.Empty(parked.View.Steps[3].Executions);
+        Assert.Equal(FlowNodeState.Done, Assert.Single(parked.View.Groups, group => group.Label == "交付").State);
+        Assert.Equal(FlowNodeState.Done, Assert.Single(parked.View.Groups, group => group.Label == "撰写组").State);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
         // 审批节点获得批准后，容器广播接续到收拢节点，只跑一轮
-        Assert.Single(done.Executables[3].Executions);
-        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
+        Assert.Single(done.View.Steps[3].Executions);
+        Assert.All(done.View.Groups, group => Assert.Equal(FlowNodeState.Done, group.State));
     }
 
     [Fact]
@@ -93,18 +93,18 @@ public sealed class ContainerAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && ContainerState(snapshot, "交付") == NodeState.Done);
+            && ContainerState(snapshot, "交付") == FlowNodeState.Done);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables[3].Executions);
-        Assert.Equal(NodeState.Done, Assert.Single(parked.Containers, container => container.Path.Label == new NodeLabel("交付")).State);
+        Assert.Empty(parked.View.Steps[3].Executions);
+        Assert.Equal(FlowNodeState.Done, Assert.Single(parked.View.Groups, group => group.Label == "交付").State);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[3].Executions);
-        Assert.All(done.Containers, container => Assert.Equal(NodeState.Done, container.State));
+        Assert.Single(done.View.Steps[3].Executions);
+        Assert.All(done.View.Groups, group => Assert.Equal(FlowNodeState.Done, group.State));
     }
 
     [Fact]
@@ -120,13 +120,13 @@ public sealed class ContainerAdvanceTests
 
         Assert.Equal(TaskState.Done, done.State);
         // 容器广播在成员作废复位后重新发出，重跑的撰写重新激活下游
-        Assert.Equal(2, done.Executables[0].Executions.Count);
-        Assert.Single(done.Executables[1].Executions);
+        Assert.Equal(2, done.View.Steps[0].Executions.Count);
+        Assert.Single(done.View.Steps[1].Executions);
     }
 
     /// <summary>容器在快照里的状态。</summary>
-    private static NodeState ContainerState(TaskSnapshot snapshot, string label) =>
-        snapshot.Containers.Single(container => container.Path.Label == new NodeLabel(label)).State;
+    private static FlowNodeState ContainerState(TaskSnapshot snapshot, string label) =>
+        snapshot.View.Groups.Single(group => group.Label == label).State;
 
     private const string ApprovalGateFlow = """
         {

@@ -28,7 +28,7 @@ public sealed class DriverApiTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
+        ExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, 1));
         ExecutionId implementExecution = implement.Id;
 
         ToolFunction submit = Assert.Single(environment.PortToolFor(implementExecution).Functions);
@@ -45,7 +45,7 @@ public sealed class DriverApiTests
         environment.Runner.PortValuesJson = """{ "别的端口": "值" }""";
 
         TaskSnapshot blocked = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot plan = Assert.Single(blocked.Executables[0].Executions);
+        ExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(blocked, 0));
 
         Assert.Equal(TaskState.Blocked, blocked.State);
         Assert.Contains(environment.Runner.Submissions, text => text.Contains("端口必须与需交回的端口一一对应"));

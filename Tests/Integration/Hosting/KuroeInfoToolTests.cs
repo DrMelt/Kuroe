@@ -57,10 +57,7 @@ public sealed class KuroeInfoToolTests
         TaskId id = environment.Submit("做一个测试任务");
         await environment.SettleAsync(id);
 
-        ExecutionId executionId = environment.Snapshot(id).Executables
-            .SelectMany(node => node.Executions)
-            .First()
-            .Id;
+        ExecutionId executionId = new(environment.Snapshot(id).Executions[0].Id.Value);
         TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()))
             .Replace("\r", string.Empty);
@@ -88,15 +85,13 @@ public sealed class KuroeInfoToolTests
         };
 
         TaskId id = environment.Submit("做一个测试任务");
-        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables
-            .SelectMany(node => node.Executions)
-            .Any(execution => execution.State == ExecutionState.Running
+        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executions
+            .Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Running
                 && execution.Progress.Contains("调用工具 file/ReadFile", StringComparison.Ordinal)));
 
-        ExecutionId executionId = running.Executables
-            .SelectMany(node => node.Executions)
-            .First(execution => execution.State == ExecutionState.Running)
-            .Id;
+        ExecutionId executionId = new(running.Executions
+            .First(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Running)
+            .Id.Value);
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);
 
@@ -121,15 +116,13 @@ public sealed class KuroeInfoToolTests
         };
 
         TaskId id = environment.Submit("做一个测试任务");
-        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executables
-            .SelectMany(node => node.Executions)
-            .Any(execution => execution.State == ExecutionState.Running
+        TaskSnapshot running = environment.Wait(id, snapshot => snapshot.Executions
+            .Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Running
                 && execution.Progress == "输出"));
 
-        ExecutionId executionId = running.Executables
-            .SelectMany(node => node.Executions)
-            .First(execution => execution.State == ExecutionState.Running)
-            .Id;
+        ExecutionId executionId = new(running.Executions
+            .First(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Running)
+            .Id.Value);
 
         TaskKuroeInfoTool tool = new(environment.TaskReader);
         string output = Call(tool, "GetExecution", ("executionId", executionId.Value.ToString()));

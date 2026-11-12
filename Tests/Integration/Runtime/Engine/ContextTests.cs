@@ -18,7 +18,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        GraphExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(done, 0));
 
         InputValue goal = Assert.Single(plan.Input.Inputs);
         Assert.Equal("补齐 README", goal.Value.Text);
@@ -32,8 +32,8 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        GraphExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
-        GraphExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
+        GraphExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(done, 0));
+        GraphExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, 1));
 
         InputValue value = Assert.Single(implement.Input.Inputs);
         Assert.Equal("计划产出", value.Value.Text);
@@ -46,7 +46,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        GraphExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
 
         InputValue seed = Assert.Single(execution.Input.Inputs);
         Assert.Equal("固定背景", seed.Value.Text);
@@ -64,7 +64,7 @@ public sealed class ContextTests
             new StartInput(new PortName("风格"), "技术文档风格"),
         ])));
 
-        GraphExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
         Assert.Equal(["补齐 README", "技术文档风格"], execution.Input.Inputs.Select(value => value.Text));
         Assert.Equal(new PortName("风格"), Assert.IsType<StartSource>(execution.Input.Inputs[1].Origin).Port);
     }
@@ -79,7 +79,7 @@ public sealed class ContextTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[0].Executions);
+        Assert.Single(done.View.Steps[0].Executions);
         Assert.Null(done.Inputs.Text(new PortName("启动")));
     }
 
@@ -143,7 +143,7 @@ public sealed class ContextTests
 
         TaskSnapshot done = environment.Settle(environment.Submit(
             StartInputs.Single(new PortName("目标"), "补齐 README")));
-        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        ExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
 
         Assert.Equal("main", done.Inputs.Text(new PortName("分支")));
         Assert.Equal(["补齐 README", "main"], execution.Input.Inputs.Select(value => value.Text));
@@ -160,7 +160,7 @@ public sealed class ContextTests
             new StartInput(new PortName("目标"), "补齐 README"),
             new StartInput(new PortName("分支"), "feature/x"),
         ])));
-        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        ExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
 
         Assert.Equal("feature/x", done.Inputs.Text(new PortName("分支")));
         Assert.Equal(["补齐 README", "feature/x"], execution.Input.Inputs.Select(value => value.Text));
@@ -189,7 +189,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create(DefaultInputFlow);
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot execution = Implement(done);
+        ExecutionSnapshot execution = Implement(environment, done);
 
         InputValue[] values = [.. execution.Input.Inputs];
         Assert.Equal(["计划产出", "固定格式"], values.Select(value => value.Text));
@@ -205,7 +205,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create(ConnectedDefaultInputFlow);
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot execution = Implement(done);
+        ExecutionSnapshot execution = Implement(environment, done);
 
         Assert.Equal(["计划产出", "计划产出"], execution.Input.Inputs.Select(value => value.Text));
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Origin is DefaultSource);
@@ -237,13 +237,13 @@ public sealed class ContextTests
         // 乙先齐备，实施按已完成的组启动；甲在实施运行期间才发布
         ExecutionHandle implementHandle = await environment.Runner.Gate.Entered(implement);
         environment.Runner.Gate.Open(slow);
-        await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
-            node.Executable.Label.Value == "准备甲"
-            && node.Executions.Any(execution => execution.State == ExecutionState.Succeeded)));
+        await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
+            step.Label == "准备甲"
+            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded)));
         environment.Runner.Gate.Open(implementHandle);
 
         TaskSnapshot done = await environment.SettleAsync(id);
-        ExecutionSnapshot execution = Implement(done);
+        ExecutionSnapshot execution = Implement(environment, done);
 
         Assert.Equal(["乙产出", "默认依据", "默认附加"], execution.Input.Inputs.Select(value => value.Text));
         Assert.DoesNotContain(execution.Input.Inputs, value => value.Text.Contains("甲产出", StringComparison.Ordinal));
@@ -251,10 +251,8 @@ public sealed class ContextTests
     }
 
     /// <summary>取实施节点的唯一一次执行。</summary>
-    private static GraphExecutionSnapshot Implement(TaskSnapshot done) =>
-        Assert.Single(done.Executables
-            .Single(executable => executable.Executable.Path.Value.EndsWith("实施", StringComparison.Ordinal))
-            .Executions);
+    private static GraphExecutionSnapshot Implement(TestEnvironment environment, TaskSnapshot done) =>
+        Assert.Single(environment.GraphExecutions(done, "实施"));
 
     /// <summary>实施节点声明一个默认值端口，From 只连接计划。</summary>
     private const string DefaultInputFlow = """

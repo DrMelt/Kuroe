@@ -87,9 +87,9 @@ public sealed class NodePathTests
         TaskSnapshot snapshot = environment.Snapshot(id);
 
         Assert.Equal("整体",
-            Assert.Single(snapshot.Containers, container => container.Path.Value == "整体").Path.Value);
+            Assert.Single(snapshot.View.Groups, group => group.Path == "整体").Path);
         Assert.Equal("整体/文档组",
-            Assert.Single(snapshot.Containers, container => container.Path.Value == "整体/文档组").Path.Value);
+            Assert.Single(snapshot.View.Groups, group => group.Path == "整体/文档组").Path);
 
         // 同一节点组的两次引用各自拥有同名成员，路径由树位置区分
         using TestEnvironment repeated = TestEnvironment.Create(RepeatedInstanceFlow);

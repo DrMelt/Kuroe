@@ -20,9 +20,7 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "实施")
-            .Executions.Single();
+        ExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, "实施"));
         Assert.Contains(implement.Input.Inputs, value =>
             value.Origin is ExecutionSource { Port: var port }
                 && port.Value == "结论"
@@ -39,7 +37,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
-        Assert.Contains(blocked.ExecutableStates, state => state.State == NodeState.Blocked);
+        Assert.Contains(blocked.View.Steps, step => step.State == FlowNodeState.Blocked);
     }
 
     [Fact]
@@ -66,9 +64,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot report = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "汇报")
-            .Executions.Single();
+        ExecutionSnapshot report = Assert.Single(environment.GraphExecutions(done, "汇报"));
 
         // 上游执行的输入取值按原出处透传进下游
         Assert.Contains(report.Input.Inputs, value =>
@@ -85,9 +81,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "实施")
-            .Executions.Single();
+        ExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, "实施"));
 
         // 上下文输入边与普通 From 各注入一次来源产出，两条取值来源相同
         Assert.Equal(2, implement.Input.Inputs.Count);
@@ -113,9 +107,7 @@ public sealed class PortNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot implement = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "实施")
-            .Executions.Single();
+        ExecutionSnapshot implement = Assert.Single(environment.GraphExecutions(done, "实施"));
         Assert.Contains(implement.Input.Inputs, value => value.Text.Contains("结论产出"));
     }
 
@@ -127,7 +119,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot execution = done.Executables.Single().Executions.Single();
+        ExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
 
         // 系统指令只由节点声明的恒定块组成
         Assert.Equal("固定背景一\n固定背景二", Assert.IsType<LlmNodeType>(execution.Input.Type).SystemPrompt());
@@ -197,9 +189,7 @@ public sealed class PortNodeTests
 
         Assert.Equal(TaskState.Done, done.State);
 
-        ExecutionSnapshot finish = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "收尾")
-            .Executions.Single();
+        ExecutionSnapshot finish = Assert.Single(environment.GraphExecutions(done, "收尾"));
         Assert.Empty(finish.Input.Inputs);
     }
 
@@ -213,7 +203,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
-        Assert.Contains(blocked.ExecutableStates, state => state.State == NodeState.Blocked);
+        Assert.Contains(blocked.View.Steps, step => step.State == FlowNodeState.Blocked);
     }
 
     /// <summary>端口交回工具的说明按需交回端口列出 Signal 端口。</summary>

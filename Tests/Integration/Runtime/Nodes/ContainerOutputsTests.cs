@@ -19,9 +19,7 @@ public sealed class ContainerOutputsTests
         Assert.Equal(TaskState.Done, done.State);
 
         // 容器内实施成员放行命名段产出后，下游按容器输出端口取到对应命名段，出处指向容器
-        ExecutionSnapshot retrospective = done.Executables
-            .Single(entry => entry.Executable.Label.Value == "复盘")
-            .Executions.Single();
+        ExecutionSnapshot retrospective = Assert.Single(environment.GraphExecutions(done, "复盘"));
         Assert.Contains(retrospective.Input.Inputs, value =>
             value.Origin is ContainerPortSource source
                 && source.Port == new PortName("结论")

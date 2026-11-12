@@ -37,8 +37,8 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[0].Executions);
-        Assert.Single(done.Executables[1].Executions);
+        Assert.Single(done.View.Steps[0].Executions);
+        Assert.Single(done.View.Steps[1].Executions);
         Assert.Equal(2, done.FrontierNodes);
     }
 
@@ -83,17 +83,17 @@ public sealed class FlowAdvanceTests
         TaskId id = environment.Submit("补齐 README");
         TaskSnapshot parked = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && snapshot.Executables[0].Executions.Count == 1);
+            && snapshot.View.Steps[0].Executions.Count == 1);
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Single(parked.Executables[0].Executions);
-        Assert.Empty(parked.Executables[2].Executions);
+        Assert.Single(parked.View.Steps[0].Executions);
+        Assert.Empty(parked.View.Steps[2].Executions);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables[2].Executions);
+        Assert.Single(done.View.Steps[2].Executions);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        ExecutionSnapshot plan = Assert.Single(blocked.Executables[0].Executions);
+        ExecutionSnapshot plan = Assert.Single(environment.GraphExecutions(blocked, 0));
         Assert.Equal(ExecutionState.Failed, plan.State);
         Assert.Contains(plan.Failures, failure => failure.Contains("未收口"));
     }
@@ -121,13 +121,13 @@ public sealed class FlowAdvanceTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Single(blocked.Executables[0].Executions);
+        Assert.Single(blocked.View.Steps[0].Executions);
 
         environment.Runner.SubmitsPorts = true;
         environment.Tasks.Rerun(id).ThrowIfError();
 
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
-        Assert.Equal(2, done.Executables[0].Executions.Count);
+        Assert.Equal(2, done.View.Steps[0].Executions.Count);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables[1].Executions.Count);
+        Assert.Equal(2, done.View.Steps[1].Executions.Count);
     }
 
     [Fact]
@@ -160,8 +160,8 @@ public sealed class FlowAdvanceTests
         TaskSnapshot canceled = environment.Settle(id);
 
         Assert.Equal(TaskState.Terminated, canceled.State);
-        Assert.DoesNotContain(canceled.ExecutableStates, state => state.State == NodeState.Blocked);
-        Assert.DoesNotContain(canceled.ExecutableStates, state => state.Block is not null);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
         Assert.Single(environment.Registry.ClearSettled());
     }
 
@@ -178,7 +178,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot canceled = environment.Settle(id);
         Assert.Equal(TaskState.Terminated, canceled.State);
         Assert.Equal(0, canceled.LiveExecutions);
-        Assert.DoesNotContain(canceled.ExecutableStates, state => state.Block is not null);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
     }
     [Fact]
     public void Pause_interrupts_running_execution_and_resume_waits_for_rerun()
@@ -194,11 +194,11 @@ public sealed class FlowAdvanceTests
         TaskSnapshot paused = environment.Wait(id, snapshot =>
             snapshot.State == TaskState.Paused
             && snapshot.LiveExecutions == 0
-            && snapshot.Executables.SelectMany(node => node.Executions)
-                .Any(execution => execution.State == ExecutionState.Interrupted));
+            && snapshot.Executions
+                .Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Interrupted));
         Assert.Contains(
-            paused.Executables.SelectMany(node => node.Executions),
-            execution => execution.State == ExecutionState.Interrupted);
+            paused.Executions,
+            execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Interrupted);
 
         environment.Tasks.Resume(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);

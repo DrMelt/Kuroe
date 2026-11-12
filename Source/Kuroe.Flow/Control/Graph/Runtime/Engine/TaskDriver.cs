@@ -258,11 +258,7 @@ internal sealed class GraphFlowControl(
             TaskProjection projection = new(state.Flow.Graph, state.Runtime.Materializer, state.Runtime.StaticPorts);
             IReadOnlyList<GraphExecutionSnapshot> executions = [.. state.Executions.Select(execution => execution.Snapshot())];
 
-            return projection.View(
-                state.Flow.Model,
-                projection.Executables(executions),
-                projection.ExecutableStates(),
-                projection.Containers());
+            return projection.View(state.Flow.Model, executions);
         }
     }
 
@@ -272,7 +268,6 @@ internal sealed class GraphFlowControl(
         GraphExecution execution = new(input, unit, task.ControlVersion);
         state.Executions.Add(execution);
         task.AttachExecution(unit);
-        gateway.Attach(unit, execution);
         unit.Started += () => task.UnderLock(() =>
         {
             state.Runtime.Executable(input.Node).RecordExecution();

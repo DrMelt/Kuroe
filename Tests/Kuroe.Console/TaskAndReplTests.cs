@@ -503,9 +503,8 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Answer(new TaskId(1), null, "用户输入 需要 补充多语言");
         cli.Environment.Settle(new TaskId(1));
 
-        Assert.Contains(cli.Environment.Snapshot(new TaskId(1)).Executables
-            .Single(entry => entry.Executable.Label.Value == "实施")
-            .Executions.Single().Input.Inputs,
+        Assert.Contains(
+            cli.Environment.Snapshot(new TaskId(1)).Executions.SelectMany(execution => execution.Request.Inputs),
             value => value.Text.Contains("用户输入 需要 补充多语言"));
     }
 

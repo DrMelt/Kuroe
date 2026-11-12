@@ -20,8 +20,8 @@ public sealed class EngineAdvanceTests
         try
         {
             // 慢执行的下游链末端已启动，慢执行自身应尚未收口
-            await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
-                node.Executable.Label.Value == "收官" && node.Executions.Count > 0));
+            await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
+                step.Label == "收官" && step.Executions.Count > 0));
 
             Assert.Contains(environment.TaskReader.LiveExecutions(), execution =>
             Uri.UnescapeDataString(execution.Request.Target.Value).EndsWith("慢工"));
@@ -50,16 +50,16 @@ public sealed class EngineAdvanceTests
         // 甲先发布拉起汇合，乙在汇合运行期间发布
         await environment.Runner.Gate.Entered(merge);
         environment.Runner.Gate.Open(second);
-        await environment.WaitAsync(id, snapshot => snapshot.Executables.Any(node =>
-            node.Executable.Label.Value == "乙"
-            && node.Executions.Any(execution => execution.State == ExecutionState.Succeeded)));
+        await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
+            step.Label == "乙"
+            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded)));
 
         environment.Runner.Gate.Open(merge);
 
         TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.NotEmpty(done.Executables[2].Executions);
+        Assert.NotEmpty(done.View.Steps[2].Executions);
     }
 
     private const string SlowParallelFlow = """

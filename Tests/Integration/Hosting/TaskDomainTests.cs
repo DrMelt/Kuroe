@@ -84,7 +84,7 @@ public sealed class TaskDomainTests
 
         Assert.False(reply.IsError);
         Assert.Equal(1, dialogue.Id.Value);
-        IReadOnlyList<ExecutionSnapshot> executions = [.. done.Executables.SelectMany(node => node.Executions)];
+        IReadOnlyList<Kuroe.Flow.Execution.ExecutionSnapshot> executions = [.. done.Executions];
         Assert.NotEmpty(executions);
         Assert.All(executions, execution => Assert.True(execution.Id.Value > dialogue.Id.Value));
         Assert.All(executions, execution =>

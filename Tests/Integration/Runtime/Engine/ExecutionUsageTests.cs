@@ -19,7 +19,7 @@ public sealed class ExecutionUsageTests
         TaskId id = environment.Submit("统计用量");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot execution = Assert.Single(Assert.Single(done.Executables).Executions);
+        ExecutionSnapshot execution = Assert.Single(environment.GraphExecutions(done, 0));
         Assert.Equal(usage, execution.Usage);
     }
 
@@ -34,16 +34,15 @@ public sealed class ExecutionUsageTests
         TaskId id = environment.Submit("统计用量");
         TaskSnapshot running = environment.Wait(
             id,
-            snapshot => snapshot.Executables
-                .SelectMany(node => node.Executions)
-                .Any(execution => execution.State == ExecutionState.Running));
+            snapshot => snapshot.Executions
+                .Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Running));
 
-        Assert.Equal(usage, Assert.Single(Assert.Single(running.Executables).Executions).Usage);
+        Assert.Equal(usage, Assert.Single(environment.GraphExecutions(running, 0)).Usage);
 
         environment.Runner.Gate.ClearHolds();
         TaskSnapshot done = environment.Settle(id);
 
-        Assert.Equal(usage, Assert.Single(Assert.Single(done.Executables).Executions).Usage);
+        Assert.Equal(usage, Assert.Single(environment.GraphExecutions(done, 0)).Usage);
     }
 
     /// <summary>单个执行节点。</summary>

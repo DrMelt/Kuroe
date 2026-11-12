@@ -9,7 +9,7 @@ using Kuroe.Flow.Shared.StaticGraph.Flow;
 namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行。</summary>
-internal sealed class GraphFlowState : IFlowState
+internal sealed class GraphFlowState : IGraphFlowState
 {
     public GraphFlowState(
         CompiledFlow flow,
@@ -47,6 +47,8 @@ internal sealed class GraphFlowState : IFlowState
 
     /// <summary>图运行期的执行，按提交顺序。</summary>
     public List<GraphExecution> Executions { get; } = [];
+
+    IReadOnlyList<GraphExecution> IGraphFlowState.Executions => Executions;
 
     /// <summary>图运行期状态，任务建立后创建。</summary>
     public TaskRuntime Runtime => _runtime ?? throw new InvalidOperationException("图流程状态还没有运行期。");

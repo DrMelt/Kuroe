@@ -45,6 +45,12 @@ public sealed class DialogueFlowFramework(
     public bool Handles(FlowName name) => name == DialogueFlow.Name;
 
     /// <inheritdoc/>
+    public bool Handles(FlowRecord record) =>
+        record.Kind == Kind
+        && record.Definition is CodeFlowDefinitionRecord definition
+        && definition.Implementation == DialogueFlow.Implementation;
+
+    /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
     {
         if (!Handles(name))

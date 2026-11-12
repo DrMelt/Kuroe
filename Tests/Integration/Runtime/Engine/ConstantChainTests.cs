@@ -25,7 +25,7 @@ public sealed class ConstantChainTests
             value => value.Port.Value == "目标" && value.Text == "目标内容");
         Assert.Contains(executions[1].Input.Inputs,
             value => value.Port.Value == "结果" && value.Text == "结果产出");
-        Assert.All(done.Executables, node => Assert.Single(node.Executions));
+        Assert.All(done.View.Steps, step => Assert.Single(step.Executions));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class ConstantChainTests
 
         Assert.Equal(TaskState.Done, done.State);
         Assert.Equal(6, environment.Runner.Started.Count);
-        Assert.All(done.Executables, node => Assert.Single(node.Executions));
+        Assert.All(done.View.Steps, step => Assert.Single(step.Executions));
         IExecution compare = environment.Runner.Started.Single(execution => execution.Input.Node.Label.Value == "比选");
         Assert.Equal(2, compare.Input.Inputs.Count(value => value.Port.Value is "甲稿" or "乙稿"));
     }

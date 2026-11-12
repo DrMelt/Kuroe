@@ -151,7 +151,7 @@ public sealed class ExecutionLimitTests
 
     /// <summary>执行节点按启动的执行记录计数。</summary>
     private static int Executions(WorkTask task, string label) =>
-        task.Snapshot().Executables
-            .Single(executable => executable.Executable.Label.Value == label)
+        task.Snapshot().View.Steps
+            .Single(step => step.Label == label)
             .Executions.Count;
 }

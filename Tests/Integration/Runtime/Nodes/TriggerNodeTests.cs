@@ -20,8 +20,8 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "来源").Executions);
-        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        Assert.Single(done.View.Steps.Single(step => step.Label == "来源").Executions);
+        ExecutionSnapshot triggered = Assert.Single(environment.GraphExecutions(done, "触发"));
         Assert.Empty(triggered.Input.Inputs);
     }
 
@@ -57,7 +57,7 @@ public sealed class TriggerNodeTests
 
     /// <summary>任务里给定标签的执行节点已经启动的执行数。</summary>
     private static int RoundCount(TaskSnapshot snapshot, string label) =>
-        snapshot.Executables.Single(node => node.Executable.Label.Value == label).Executions.Count;
+        snapshot.View.Steps.Single(step => step.Label == label).Executions.Count;
 
     /// <summary>触发与数据 From 并存：数据源产出照常注入，触发源内容不进上下文。</summary>
     [Fact]
@@ -68,7 +68,7 @@ public sealed class TriggerNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot merged = done.Executables.Single(entry => entry.Executable.Label.Value == "合并").Executions.Single();
+        ExecutionSnapshot merged = Assert.Single(environment.GraphExecutions(done, "合并"));
         Assert.Contains(merged.Input.Inputs, value =>
             value.Origin is ExecutionSource { Node: var node, Port: var port }
                 && node == NodePath.Of("整体", "数据")
@@ -87,7 +87,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        ExecutionSnapshot triggered = Assert.Single(environment.GraphExecutions(done, "触发"));
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("准备产出"));
     }
 
@@ -102,7 +102,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions.Single();
+        ExecutionSnapshot triggered = Assert.Single(environment.GraphExecutions(done, "触发"));
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("信号产出"));
     }
 
@@ -123,7 +123,7 @@ public sealed class TriggerNodeTests
 
         TaskSnapshot done = environment.Settle(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Equal(2, done.Executables.Single(entry => entry.Executable.Label.Value == "回话").Executions.Count);
+        Assert.Equal(2, done.View.Steps.Single(step => step.Label == "回话").Executions.Count);
         Assert.Equal([1, 2], [.. environment.Runner.Started.Select(execution => execution.Input.ExecutionCount)]);
     }
 
@@ -137,7 +137,7 @@ public sealed class TriggerNodeTests
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        ExecutionSnapshot triggered = done.Executables.Single(entry => entry.Executable.Label.Value == "触发实例").Executions.Single();
+        ExecutionSnapshot triggered = Assert.Single(environment.GraphExecutions(done, "触发实例"));
         Assert.DoesNotContain(triggered.Input.Inputs, value => value.Text.Contains("来源产出"));
     }
 
@@ -152,13 +152,13 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
+        Assert.Empty(parked.View.Steps.Single(step => step.Label == "触发").Executions);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
+        Assert.Single(done.View.Steps.Single(step => step.Label == "触发").Executions);
     }
 
     /// <summary>Review 容器作触发源：成员齐备后审批节点停等批准，批准放行后再触发目标启动。</summary>
@@ -172,13 +172,13 @@ public sealed class TriggerNodeTests
 
         Assert.Equal(TaskState.Running, parked.State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
-        Assert.Empty(parked.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
+        Assert.Empty(parked.View.Steps.Single(step => step.Label == "触发").Executions);
 
         environment.Pendings.Approve(id).ThrowIfError();
         TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(done.Executables.Single(entry => entry.Executable.Label.Value == "触发").Executions);
+        Assert.Single(done.View.Steps.Single(step => step.Label == "触发").Executions);
     }
 
     /// <summary>来源先发布再触发下游，触发节点无数据输入。</summary>

@@ -28,12 +28,12 @@ public sealed class TriggerPortTests
         Assert.Equal(TaskState.Done, snapshot.State);
         if (trigger)
         {
-            GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+            GraphExecutionSnapshot downstream = Assert.Single(environment.GraphExecutions(snapshot, "下游"));
             Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
             return;
         }
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
         Assert.Contains(environment.Runner.Submissions, text =>
             text.Contains("其中 1 个端口不触发下游", StringComparison.Ordinal));
         Assert.Contains(snapshot.Journal, entry =>
@@ -62,14 +62,14 @@ public sealed class TriggerPortTests
         Assert.Equal(TaskState.Done, snapshot.State);
         if (trigger)
         {
-            Assert.Empty(Executions(snapshot, "下游"));
+            Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
             Assert.Contains(snapshot.Journal, entry =>
                 entry.Level == JournalLevel.Information
                 && entry.Text.Contains("翻转条件要求 false", StringComparison.Ordinal));
             return;
         }
 
-        GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(environment.GraphExecutions(snapshot, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
     }
 
@@ -86,7 +86,7 @@ public sealed class TriggerPortTests
         TaskSnapshot snapshot = environment.Wait(id, current =>
             current.State == TaskState.Done && HasTriggerInfo(current));
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
     /// <summary>同一来源的另一个端口不受影响：停用的端口只消费自己的组。</summary>
@@ -101,12 +101,12 @@ public sealed class TriggerPortTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot snapshot = environment.Wait(id, current =>
             current.State == TaskState.Done
-            && Executions(current, "走下游").Count == 1
+            && environment.GraphExecutions(current, "走下游").Count == 1
             && HasTriggerInfo(current));
 
-        var item = Assert.Single(Executions(snapshot, "走下游"));
+        var item = Assert.Single(environment.GraphExecutions(snapshot, "走下游"));
         Assert.Contains(item.Input.Inputs, value => value.Text == "走");
-        Assert.Empty(Executions(snapshot, "停下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "停下游"));
     }
 
     /// <summary>普通 Text 端口不接受触发值，交回被拒后节点停在阻塞。</summary>
@@ -139,7 +139,7 @@ public sealed class TriggerPortTests
         TaskSnapshot snapshot = environment.Wait(id, current =>
             current.State == TaskState.Done && HasTriggerInfo(current));
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
         Assert.Contains(snapshot.Journal, entry =>
             entry.Level == JournalLevel.Information
             && entry.Text.Contains("箱@结论", StringComparison.Ordinal));
@@ -159,7 +159,7 @@ public sealed class TriggerPortTests
             current.State == TaskState.Done && HasTriggerInfo(current));
 
         Assert.False(environment.Awaiting(id));
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
     /// <summary>抑制发生时另一分支仍在执行，任务保持进行；该分支完成后任务收口。</summary>
@@ -183,8 +183,8 @@ public sealed class TriggerPortTests
 
         TaskSnapshot done = await environment.SettleAsync(id);
         Assert.Equal(TaskState.Done, done.State);
-        Assert.Single(Executions(done, "慢下游"));
-        Assert.Empty(Executions(done, "快下游"));
+        Assert.Single(environment.GraphExecutions(done, "慢下游"));
+        Assert.Empty(environment.GraphExecutions(done, "快下游"));
     }
 
     /// <summary>普通 Text 端口配置触发后可以交回 false，下游组被消耗但不启动。</summary>
@@ -200,7 +200,7 @@ public sealed class TriggerPortTests
         TaskSnapshot snapshot = environment.Wait(id, current =>
             current.State == TaskState.Done && HasTriggerInfo(current));
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
     /// <summary>容器输出不承载触发时忽略成员的 false，下游照常启动。</summary>
@@ -215,7 +215,7 @@ public sealed class TriggerPortTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        GraphExecutionSnapshot downstream = Assert.Single(Executions(done, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(environment.GraphExecutions(done, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内停用");
     }
 
@@ -232,7 +232,7 @@ public sealed class TriggerPortTests
         TaskSnapshot snapshot = environment.Wait(id, current =>
             current.State == TaskState.Done && HasTriggerInfo(current));
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
     }
 
     /// <summary>容器触发输入为 false 时容器不发布，下游不启动；为 true 时容器发布并按自身输出配置转发成员触发值。</summary>
@@ -255,12 +255,12 @@ public sealed class TriggerPortTests
 
         if (trigger)
         {
-            GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+            GraphExecutionSnapshot downstream = Assert.Single(environment.GraphExecutions(snapshot, "下游"));
             Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内内容");
             return;
         }
 
-        Assert.Empty(Executions(snapshot, "下游"));
+        Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
         Assert.Contains(snapshot.Journal, entry =>
             entry.Level == JournalLevel.Information
             && entry.Text.Contains("整体", StringComparison.Ordinal)
@@ -290,14 +290,14 @@ public sealed class TriggerPortTests
         Assert.Equal(TaskState.Done, snapshot.State);
         if (trigger)
         {
-            Assert.Empty(Executions(snapshot, "下游"));
+            Assert.Empty(environment.GraphExecutions(snapshot, "下游"));
             Assert.Contains(snapshot.Journal, entry =>
                 entry.Level == JournalLevel.Information
                 && entry.Text.Contains("翻转条件要求 false", StringComparison.Ordinal));
             return;
         }
 
-        GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(environment.GraphExecutions(snapshot, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内内容");
     }
 
@@ -316,8 +316,8 @@ public sealed class TriggerPortTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        Assert.Equal(2, Executions(done, "加工").Count);
-        Assert.Equal(2, Executions(done, "下游").Count);
+        Assert.Equal(2, environment.GraphExecutions(done, "加工").Count);
+        Assert.Equal(2, environment.GraphExecutions(done, "下游").Count);
     }
 
     /// <summary>本轮过程记录里是否已有触发抑制的信息条目。</summary>
@@ -325,10 +325,6 @@ public sealed class TriggerPortTests
         snapshot.Journal.Any(entry =>
             entry.Level == JournalLevel.Information
             && entry.Text.Contains("未满足触发条件", StringComparison.Ordinal));
-
-    /// <summary>某个标签的执行节点已启动的执行。</summary>
-    private static IReadOnlyList<GraphExecutionSnapshot> Executions(TaskSnapshot snapshot, string label) =>
-        snapshot.Executables.Single(entry => entry.Executable.Label.Value == label).Executions;
 
     /// <summary>是否为来源节点，用于区分交回值。</summary>
     private static bool SourceValues(IExecution execution) =>
