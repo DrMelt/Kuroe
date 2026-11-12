@@ -1,6 +1,5 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Execution;
+using Kuroe.Node.Llm;
 using Kuroe.Tool;
 using Xunit;
 
@@ -35,7 +34,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["ReadFile", "SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters { Tools = [new ToolPath("ReadFile")] })
-                .ToolPaths([new Port(new PortName("结论"), PortTypes.Text)])
+                .ToolPaths([Port("结论", ExecutionPortKind.Text)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -43,7 +42,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("结论"), PortTypes.Text)])
+                .ToolPaths([Port("结论", ExecutionPortKind.Text)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -51,7 +50,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["SubmitPortValues", "ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("完成"), PortTypes.Signal)])
+                .ToolPaths([Port("完成", ExecutionPortKind.Signal)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -59,7 +58,7 @@ public sealed class LlmNodeComposeTests
         Assert.Equal(
             ["ReportCannotComplete", "GetStatus"],
             Typed(new LlmParameters())
-                .ToolPaths([new Port(new PortName("上下文"), PortTypes.Context)])
+                .ToolPaths([Port("上下文", ExecutionPortKind.Context)])
                 .Select(path => path.Value));
 
     [Fact]
@@ -70,20 +69,23 @@ public sealed class LlmNodeComposeTests
 
     private static LlmNodeType Typed(LlmParameters parameters) => Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(parameters));
 
-    /// <summary>第 2 轮执行的输入。</summary>
-    private static ExecutionInput Round() => new()
-    {
-        Task = new TaskId(1),
-        Node = NodePath.Of("实施"),
-        Type = LlmNodeTypes.Create(null),
-        ExecutionCount = 2,
-    };
+    private static ExecutionOutputPort Port(string name, ExecutionPortKind kind) =>
+        new(new ExecutionPortName(name), kind, true, false, kind != ExecutionPortKind.Context);
 
-    /// <summary>节点首次执行的输入。</summary>
-    private static ExecutionInput WholeNode() => new()
-    {
-        Task = new TaskId(1),
-        Node = NodePath.Of("实施"),
-        Type = LlmNodeTypes.Create(null),
-    };
+    /// <summary>第 2 轮执行的请求。</summary>
+    private static ExecutionRequest Round() => Request(2);
+
+    /// <summary>节点首次执行的请求。</summary>
+    private static ExecutionRequest WholeNode() => Request(1);
+
+    private static ExecutionRequest Request(int attempt) =>
+        new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId("实施"),
+            "Llm",
+            attempt,
+            [],
+            [],
+            new Dictionary<ExecutionPortName, string>(),
+            []);
 }

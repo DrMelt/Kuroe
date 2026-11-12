@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Flow;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// <remarks>装配用户任务提交所需的动作与流程目录。</remarks>
 public sealed class TaskService(
     TaskActions actions,
-    IFlowRuntimeCatalog flows)
+    IFlowRuntimeCatalog flows) : ITaskControl
 {
     private readonly TaskActions _actions = actions;
     private readonly IFlowRuntimeCatalog _flows = flows;

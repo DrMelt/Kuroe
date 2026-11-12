@@ -44,6 +44,8 @@
     <Project Path="Source/Kuroe.Flow/Persistence/Serialization/Shared/Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Persistence/Serialization/Json/Core/Kuroe.Flow.Persistence.Json.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeType/Container/Core/Kuroe.Flow.NodeType.Container.csproj" />
+    <Project Path="Source/Kuroe.Flow/Node/Shared/Kuroe.Flow.Node.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Control/Shared/Kuroe.Flow.Control.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Shared/Kuroe.Flow.InputChannel.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Core/Kuroe.Flow.InputChannel.csproj" />

@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Tools;
 
@@ -15,21 +15,22 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
     /// <summary>一次执行的会话，工具载体与历史都由执行输入给出。带恢复数据时恢复历史。</summary>
     internal Session ForExecution(
         ExecutionId execution,
-        ExecutionInput context,
+        ExecutionRequest request,
+        LlmExecutionParameters parameters,
         ProcessJournal journal,
         LlmExecutionState? restored)
     {
-        ExecutionHistory history = new(context);
+        ExecutionHistory history = new(request, parameters);
         if (restored is null)
         {
             return new Session(
                 _clients,
-                new ToolCollection(_tools.Create(execution, context), _json),
+                new ToolCollection(_tools.Create(execution, request, parameters), _json),
                 history,
                 journal);
         }
 
-        string? model = (context.Declaration as KuroeNodeDeclaration)?.Model?.Value;
+        string? model = parameters.Model;
         if (restored.Model != model)
         {
             throw new InvalidOperationException(
@@ -38,7 +39,7 @@ public sealed class SessionFactory(IModelAccess access, IToolFactory tools, IToo
 
         return new Session(
             _clients,
-            new ToolCollection(_tools.Create(execution, context), _json),
+            new ToolCollection(_tools.Create(execution, request, parameters), _json),
             history,
             journal,
             [.. restored.Messages.Select(LlmExecutionStateCodec.ToMessage)]);

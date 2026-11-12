@@ -18,7 +18,7 @@ internal static class PlainTaskView
 
         foreach (ExecutableSnapshot executable in task.Executables)
         {
-            foreach (ExecutionSnapshot execution in executable.Executions)
+            foreach (GraphExecutionSnapshot execution in executable.Executions)
             {
                 foreach (string failure in execution.Failures)
                 {
@@ -33,7 +33,7 @@ internal static class PlainTaskView
     {
         foreach (ExecutableSnapshot executable in task.Executables)
         {
-            foreach (ExecutionSnapshot execution in executable.Executions)
+            foreach (GraphExecutionSnapshot execution in executable.Executions)
             {
                 if (execution.Usage.RequestCount == 0)
                 {

@@ -45,6 +45,9 @@ public sealed class CommandNodeType(CommandParameters? parameters, IProcessRunne
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
+    /// <inheritdoc/>
+    string IExecutionRunnerFactory.Kind => Kind.Value;
+
     /// <summary>为一次执行建立命令运行器。</summary>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is CommandParameters declared

@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 
@@ -7,7 +7,7 @@ static class ContractReceipts
 {
     /// <summary>本轮仍需交回的产出，未缺时说明已齐备。</summary>
     public static string Needs(ExecutionStatus status) =>
-        status.OutstandingPorts.Count == 0
+        status.OutstandingOutputs.Count == 0
             ? "本轮产出已齐备。"
-            : $"本轮仍需交回：端口{string.Join('、', status.OutstandingPorts.Select(name => $"「{name}」"))}。";
+            : $"本轮仍需交回：端口{string.Join('、', status.OutstandingOutputs.Select(name => $"「{name}」"))}。";
 }

@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Assistant;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Runtime;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
@@ -27,8 +28,8 @@ public sealed class WiringTests : IDisposable
     {
         using ServiceProvider provider = Services();
 
-        Assert.NotNull(provider.GetRequiredService<IExecutionRunnerFactory>());
-        Assert.NotNull(provider.GetRequiredService<IExecutionRunnerSource>());
+        Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionRunnerFactory>());
+        Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.ExecutionRuntime>());
         Assert.NotNull(provider.GetRequiredService<SessionFactory>());
     }
 
@@ -148,9 +149,10 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<ToolCollection>());
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
         Assert.NotNull(provider.GetRequiredService<PortSubmitter>());
-        Assert.NotNull(provider.GetRequiredService<ExecutionDispatcher>());
-        Assert.NotNull(provider.GetRequiredService<IExecutionStatusReader>());
+        Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.ExecutionDispatcher>());
+        Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionStatusReader>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());
+        Assert.NotNull(provider.GetRequiredService<ITaskControl>());
         Assert.NotEmpty(provider.GetServices<IToolSource>());
     }
 

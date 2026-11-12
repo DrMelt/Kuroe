@@ -1,6 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Tool;
@@ -8,7 +8,8 @@ using Kuroe.Tool;
 namespace Kuroe.Node.Llm;
 
 /// <summary>Llm 类型：由模型执行并交回端口产出。运行期对象由引擎按形状建立，类型专属声明封在实例里。</summary>
-public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null) : INodeType, INodeTypeValidation
+public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog? contracts = null)
+    : INodeType, INodeTypeValidation, IExecutionParameterProvider
 {
     /// <summary>本节点的类型专属声明，未声明时为空。</summary>
     public LlmParameters? Parameters { get; } = parameters;
@@ -68,7 +69,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     }
 
     /// <summary>本轮要做的事：节点要求在请求最前，随后是轮次。</summary>
-    public string Instruction(ExecutionInput input)
+    public string Instruction(ExecutionRequest request)
     {
         List<string> instruction = [];
         if (Parameters?.Prompt is { Length: > 0 } prompt)
@@ -76,9 +77,9 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
             instruction.Add(prompt);
         }
 
-        if (input.ExecutionCount > 1)
+        if (request.Attempt > 1)
         {
-            instruction.Add($"这是第 {input.ExecutionCount} 轮实施。");
+            instruction.Add($"这是第 {request.Attempt} 轮实施。");
         }
 
         return string.Join('\n', instruction);
@@ -89,10 +90,10 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
         Parameters?.SystemPrompt is { Count: > 0 } blocks ? string.Join('\n', blocks) : null;
 
     /// <summary>本轮可用的工具路径：节点声明的白名单，加按需交回输出端口附上的交回能力，以及所有执行节点都有的上报与查看通道。</summary>
-    public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<Port> outputs)
+    public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<ExecutionOutputPort> outputs)
     {
         List<ToolPath> paths = [.. Parameters?.Tools ?? []];
-        if (outputs.Any(port => port.Mode == PortMode.Constant || PortRules.RequiresSubmission(port.Type)))
+        if (outputs.Any(port => port.RequiresSubmission || port.IsConstant))
         {
             paths.Add(new ToolPath(ContractTools.Port));
         }
@@ -102,4 +103,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
 
         return paths;
     }
+
+    /// <summary>按本次执行建立 Llm 参数。</summary>
+    public IExecutionParameters Create(ExecutionParameterContext context) => new LlmExecutionParameters(this, context.Model);
 }

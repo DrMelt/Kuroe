@@ -1,34 +1,24 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Sessions;
 using Microsoft.Extensions.AI;
 using Xunit;
 
 namespace Kuroe.Node.Llm.Tests;
 
-/// <summary>本轮请求历史：输入取值按出处与文本写成模型消息。</summary>
+/// <summary>本轮请求历史：输入取值按来源与文本写成模型消息。</summary>
 public sealed class ExecutionHistoryTests
 {
     [Fact]
     public void Execution_source_renders_node_port_and_text()
     {
-        ExecutionInput input = new()
-        {
-            Task = new TaskId(1),
-            Node = NodePath.Of("实施"),
-            Type = LlmNodeTypes.Create(null),
-            Inputs =
-            [
-                new InputValue(
-                    new PortName("计划"),
-                    new ContextValue(
-                        new ExecutionSource(new ExecutionId(2), NodePath.Of("整体/制定计划"), new PortName("计划")),
-                        "计划产出")),
-            ],
-        };
+        ExecutionRequest request = Request(
+            [new ExecutionInputValue(
+                new ExecutionPortName("计划"),
+                "计划产出",
+                "节点「整体/制定计划」的端口「计划」产出")]);
         List<ChatMessage> messages = [];
 
-        new ExecutionHistory(input).LayOut(messages);
+        History(request).LayOut(messages);
 
         Assert.Equal("节点「整体/制定计划」的端口「计划」产出：\n计划产出", Assert.Single(messages).Text);
     }
@@ -37,22 +27,26 @@ public sealed class ExecutionHistoryTests
     public void Long_input_is_laid_out_without_truncation()
     {
         string text = new('甲', 3000);
-        ExecutionInput input = new()
-        {
-            Task = new TaskId(1),
-            Node = NodePath.Of("实施"),
-            Type = LlmNodeTypes.Create(null),
-            Inputs =
-            [
-                new InputValue(
-                    new PortName("正文"),
-                    new ContextValue(new StartSource(new PortName("正文")), text)),
-            ],
-        };
+        ExecutionRequest request = Request(
+            [new ExecutionInputValue(new ExecutionPortName("正文"), text, null)]);
         List<ChatMessage> messages = [];
 
-        new ExecutionHistory(input).LayOut(messages);
+        History(request).LayOut(messages);
 
         Assert.EndsWith(text, Assert.Single(messages).Text);
     }
+
+    private static ExecutionHistory History(ExecutionRequest request) =>
+        new(request, new LlmExecutionParameters(new LlmNodeType(null), null));
+
+    private static ExecutionRequest Request(IReadOnlyList<ExecutionInputValue> inputs) =>
+        new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId("实施"),
+            "Llm",
+            1,
+            [],
+            inputs,
+            new Dictionary<ExecutionPortName, string>(),
+            []);
 }

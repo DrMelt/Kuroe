@@ -1,8 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 
@@ -12,7 +10,9 @@ namespace Kuroe.Tool.Contract;
 internal static class PortValues
 {
     /// <summary>解析端口名到端口值的 JSON 对象，取值形态按端口配置判定。</summary>
-    public static ErrorOr<IReadOnlyDictionary<string, PortValue>> Parse(string valuesJson, IReadOnlyList<Port>? declared)
+    public static ErrorOr<IReadOnlyList<ExecutionOutputValue>> Parse(
+        string valuesJson,
+        IReadOnlyList<ExecutionOutputPort>? declared)
     {
         if (declared is not { Count: > 0 })
         {
@@ -34,49 +34,54 @@ internal static class PortValues
             return [PortError("端口产出为空")];
         }
 
-        Dictionary<string, PortValue> result = [];
+        List<ExecutionOutputValue> result = [];
         foreach ((string name, JsonElement element) in parsed)
         {
-            if (declared.Find(new PortName(name)) is not { } port)
+            ExecutionPortName portName = new(name);
+            if (declared.Find(portName) is not { } port)
             {
-                result[name] = new PortValue(element.ValueKind == JsonValueKind.String ? element.GetString() : null);
+                result.Add(new ExecutionOutputValue(
+                    portName,
+                    element.ValueKind == JsonValueKind.String ? element.GetString() : null));
 
                 continue;
             }
 
-            ErrorOr<PortValue> value = Read(port, element);
+            ErrorOr<ExecutionOutputValue> value = Read(port, element);
             if (value.IsError)
             {
                 return value.ErrorsOrEmptyList;
             }
 
-            result[name] = value.Value;
+            result.Add(value.Value);
         }
 
         return result;
     }
 
     /// <summary>按端口配置读取一个取值。不承载触发的端口只接受内容形态，Signal 不承载内容；承载触发的端口按数据语义读取。</summary>
-    private static ErrorOr<PortValue> Read(Port port, JsonElement element)
+    private static ErrorOr<ExecutionOutputValue> Read(ExecutionOutputPort port, JsonElement element)
     {
-        if (!port.Trigger)
+        if (!port.CarriesTrigger)
         {
             if (element.ValueKind is JsonValueKind.String or JsonValueKind.Null)
             {
-                if (port.Type.Semantics == PortSemantics.Signal)
+                if (port.Kind == ExecutionPortKind.Signal)
                 {
-                    return new PortValue(null);
+                    return new ExecutionOutputValue(port.Name, null);
                 }
 
-                return new PortValue(element.ValueKind == JsonValueKind.String ? element.GetString() : null);
+                return new ExecutionOutputValue(
+                    port.Name,
+                    element.ValueKind == JsonValueKind.String ? element.GetString() : null);
             }
 
-            string allowed = port.Type.Semantics == PortSemantics.Text ? "取值为文本" : "取值为空文本或端口名";
+            string allowed = port.Kind == ExecutionPortKind.Text ? "取值为文本" : "取值为空文本或端口名";
 
             return [ValueError(port, $"普通端口不承载触发值，{allowed}")];
         }
 
-        if (port.Type.Semantics == PortSemantics.Text)
+        if (port.Kind == ExecutionPortKind.Text)
         {
             return ReadTriggeredText(port, element);
         }
@@ -85,11 +90,11 @@ internal static class PortValues
     }
 
     /// <summary>Text 触发端口取值：字符串即触发，对象同时给 text 与 trigger。</summary>
-    private static ErrorOr<PortValue> ReadTriggeredText(Port port, JsonElement element)
+    private static ErrorOr<ExecutionOutputValue> ReadTriggeredText(ExecutionOutputPort port, JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.String)
         {
-            return new PortValue(element.GetString());
+            return new ExecutionOutputValue(port.Name, element.GetString());
         }
 
         if (element.ValueKind != JsonValueKind.Object)
@@ -122,20 +127,20 @@ internal static class PortValues
             }
         }
 
-        return new PortValue(text, trigger);
+        return new ExecutionOutputValue(port.Name, text, trigger);
     }
 
     /// <summary>Signal 触发端口取值：布尔值即触发值，对象写 trigger，空值按 true。</summary>
-    private static ErrorOr<PortValue> ReadTriggeredSignal(Port port, JsonElement element)
+    private static ErrorOr<ExecutionOutputValue> ReadTriggeredSignal(ExecutionOutputPort port, JsonElement element)
     {
         if (element.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
-            return new PortValue(null, element.GetBoolean());
+            return new ExecutionOutputValue(port.Name, null, element.GetBoolean());
         }
 
         if (element.ValueKind is JsonValueKind.Null or JsonValueKind.String)
         {
-            return new PortValue(null);
+            return new ExecutionOutputValue(port.Name, null);
         }
 
         if (element.ValueKind != JsonValueKind.Object)
@@ -160,12 +165,12 @@ internal static class PortValues
             }
         }
 
-        return new PortValue(null, trigger);
+        return new ExecutionOutputValue(port.Name, null, trigger);
     }
 
     private static Error PortError(string reason) => Error.Validation(
         "Tool.Argument", $"{reason}。要提交端口名到值的 JSON 对象。");
 
-    private static Error ValueError(Port port, string reason) => Error.Validation(
+    private static Error ValueError(ExecutionOutputPort port, string reason) => Error.Validation(
         "Tool.Argument", $"端口 {port.Name} {reason}。");
 }

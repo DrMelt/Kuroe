@@ -62,7 +62,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     public void ClearRerun() => Progress.ClearRerun();
 
     /// <summary>本轮该交回但尚未交回的命名端口，按节点声明的需交回端口与执行契约判定。</summary>
-    public IReadOnlyList<PortName> OutstandingPorts(Execution execution)
+    public IReadOnlyList<PortName> OutstandingPorts(GraphExecution execution)
     {
         IReadOnlyDictionary<PortName, PortValue>? values = execution.Contract.Ports;
 
@@ -117,10 +117,10 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>按端口产出发布，没有内容产出时使用。</summary>
-    public void Publish(Execution execution) => Publish(execution, ExecutionOutput.Ports);
+    public void Publish(GraphExecution execution) => Publish(execution, ExecutionOutput.Ports);
 
     /// <summary>产出发布：按执行结果的形态选择端口发布或内容发布，版本单调递增，下游据此重新评估。</summary>
-    public void Publish(Execution execution, ExecutionOutput output)
+    public void Publish(GraphExecution execution, ExecutionOutput output)
     {
         switch (output.Kind)
         {
@@ -138,11 +138,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>端口产出的发布：按这次执行的契约构造发布。</summary>
-    private void PublishPorts(Execution execution) =>
+    private void PublishPorts(GraphExecution execution) =>
         Progress.Publish(CreatePublication(execution, Progress.NextRevision()));
 
     /// <summary>内容产出的发布：把同一条文本写入承载文本的输出端口，触发位按默认处理。</summary>
-    private void PublishContent(Execution execution, string content) =>
+    private void PublishContent(GraphExecution execution, string content) =>
         Progress.Publish(CreateContentPublication(execution, content, Progress.NextRevision()));
 
     /// <summary>作废已发布产出，重新执行起点用它让下游重新等待。阻塞与重新执行目标不在此清除：达到执行上限的目标长期留驻，由 <see cref="FinishRerun"/> 按处理进度解除。</summary>
@@ -173,7 +173,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     public void AddActive() => Active++;
 
     /// <summary>按内容产出构造一次发布：承载文本的输出端口给出同一条内容，出处指向本次执行。内容为空时只发布版本与触发。</summary>
-    private Publication CreateContentPublication(Execution execution, string content, long revision)
+    private Publication CreateContentPublication(GraphExecution execution, string content, long revision)
     {
         Dictionary<PortName, IReadOnlyList<ContextValue>> values = content.Length > 0
             ? Executable.Outputs
@@ -188,7 +188,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
 
     /// <summary>按这次执行构造一次发布：承载触发的端口取交回触发位，动态 Context 端口转发来源输入内容，
     /// 承载内容的端口取交回文本，其余端口不承载内容。</summary>
-    private Publication CreatePublication(Execution execution, long revision)
+    private Publication CreatePublication(GraphExecution execution, long revision)
     {
         Dictionary<PortName, bool> triggers = [];
         Dictionary<PortName, IReadOnlyList<ContextValue>> content = [];
@@ -213,11 +213,11 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>来源执行输入侧取到的内容，按原出处给出。</summary>
-    private static IReadOnlyList<ContextValue> ContextInputs(Execution execution) =>
+    private static IReadOnlyList<ContextValue> ContextInputs(GraphExecution execution) =>
         [.. execution.Input.Inputs.Select(value => value.Value)];
 
     /// <summary>按端口取这次执行交回的值，未交回时为空。</summary>
-    private static PortValue? SubmittedValue(Execution execution, PortName port) =>
+    private static PortValue? SubmittedValue(GraphExecution execution, PortName port) =>
         execution.Contract.Ports is { } values
         && values.TryGetValue(port, out PortValue value)
             ? value

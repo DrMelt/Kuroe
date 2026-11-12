@@ -23,6 +23,10 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
     </ItemGroup>
 
+<ItemGroup>
+        <ProjectReference Include="..\..\..\..\..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
+    </ItemGroup>
 </Project>

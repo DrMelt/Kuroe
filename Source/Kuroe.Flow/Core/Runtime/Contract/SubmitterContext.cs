@@ -8,7 +8,7 @@ namespace Kuroe.Flow.Runtime.Contract;
 internal static class SubmitterContext
 {
     /// <summary>认定提交者，action 是提交入口的动作名，进入未在跑的提示。</summary>
-    public static ErrorOr<(Execution Execution, WorkTask Task)> Resolve(ExecutionIndex executions, ExecutionId id, string action)
+    public static ErrorOr<(GraphExecution Execution, WorkTask Task)> Resolve(ExecutionIndex executions, ExecutionId id, string action)
     {
         if (executions.FindOwned(id) is not { IsError: false } found || !found.Value.Execution.IsLive)
         {

@@ -1,5 +1,7 @@
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
+using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 
@@ -29,15 +31,15 @@ public static class InfoLabels
             : Of(state.State);
 
     /// <summary>执行恢复数据的展示名。</summary>
-    public static string RestoreData(ExecutionSnapshot execution) =>
+    public static string RestoreData(GraphExecutionSnapshot execution) =>
         execution.HasRestoreData ? "有" : "无";
 
     /// <summary>执行恢复来源的展示名。</summary>
-    public static string ContinuedFrom(ExecutionSnapshot execution) =>
+    public static string ContinuedFrom(GraphExecutionSnapshot execution) =>
         execution.ContinuedFrom?.Value.ToString() ?? "—";
 
     /// <summary>执行状态的展示名，未收口时附当前活动。</summary>
-    public static string State(ExecutionSnapshot execution) =>
+    public static string State(GraphExecutionSnapshot execution) =>
         execution.State.IsSettled() || execution.Progress.Length == 0
             ? execution.State.Label()
             : $"{execution.State.Label()}（{execution.Progress}）";

@@ -1,11 +1,11 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 
 /// <summary>契约工具源：按执行创建交回、上报与状态查询载体。</summary>
 public sealed class ContractToolSource(
-    IPortSubmitter ports,
-    ICannotCompleteSubmitter cannotComplete,
+    IExecutionPortSubmitter ports,
+    IExecutionCannotCompleteSubmitter cannotComplete,
     IExecutionStatusReader status) : IToolSource
 {
     /// <inheritdoc/>

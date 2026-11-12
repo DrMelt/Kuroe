@@ -154,7 +154,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<IExecutionRunnerFactory>(runner);
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();

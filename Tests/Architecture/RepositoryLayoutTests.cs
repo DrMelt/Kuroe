@@ -116,6 +116,82 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
+    public void Node_projects_do_not_reference_flow_implementation()
+    {
+        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Core");
+        string flow = Path.Combine(SourceRoot, "Kuroe.Flow", "Core");
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records");
+
+        Assert.NotEmpty(ProjectFiles(nodes));
+        foreach (string project in ProjectFiles(nodes))
+        {
+            IReadOnlyList<string> references = ProjectReferences(project);
+
+            Assert.DoesNotContain(references, reference => IsUnder(reference, execution));
+            Assert.DoesNotContain(references, reference => IsUnder(reference, flow));
+            Assert.DoesNotContain(references, reference => IsUnder(reference, graphRecords));
+        }
+    }
+
+    [Fact]
+    public void Node_projects_reference_node_shared()
+    {
+        string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
+        string nodeShared = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Node",
+            "Shared",
+            "Kuroe.Flow.Node.Shared.csproj");
+
+        Assert.NotEmpty(ProjectFiles(nodes));
+        foreach (string project in ProjectFiles(nodes))
+        {
+            Assert.Contains(nodeShared, ProjectReferences(project));
+        }
+    }
+
+    [Fact]
+    public void Node_shared_project_references_only_contract_layers()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Node",
+            "Shared",
+            "Kuroe.Flow.Node.Shared.csproj");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, tasks) || IsUnder(reference, execution),
+                $"Kuroe.Flow.Node.Shared 引用了契约层之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Control_shared_project_references_only_contract_layers()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Shared",
+            "Kuroe.Flow.Control.Shared.csproj");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, nodes) || IsUnder(reference, tasks) || IsUnder(reference, execution),
+                $"Kuroe.Flow.Control.Shared 引用了契约层之外的 {reference}。"));
+    }
+
+    [Fact]
     public void Tasks_shared_project_stays_free_of_graph_references()
     {
         string project = Path.Combine(
@@ -187,10 +263,14 @@ public sealed class RepositoryLayoutTests
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string tasksRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         Assert.All(references, reference =>
             Assert.True(
-                IsUnder(reference, graph) || IsUnder(reference, tasksRecords) || IsUnder(reference, execution),
+                IsUnder(reference, graph)
+                    || IsUnder(reference, tasksRecords)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, nodes),
                 $"{Path.GetFileName(project)} 引用了图记录边界之外的 {reference}。"));
     }
 
@@ -204,6 +284,7 @@ public sealed class RepositoryLayoutTests
         string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
         {
@@ -218,7 +299,8 @@ public sealed class RepositoryLayoutTests
                         || IsUnder(reference, executionContracts)
                         || IsUnder(reference, executionRecords)
                         || IsUnder(reference, taskRecords)
-                        || IsUnder(reference, graphRecords),
+                        || IsUnder(reference, graphRecords)
+                        || IsUnder(reference, nodeContracts),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }

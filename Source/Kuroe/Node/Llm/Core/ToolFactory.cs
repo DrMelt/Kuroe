@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
@@ -7,5 +7,8 @@ namespace Kuroe.Node.Llm;
 public interface IToolFactory
 {
     /// <summary>为一次执行创建全部工具载体。</summary>
-    IReadOnlyList<ITool> Create(ExecutionId execution, ExecutionInput input);
+    IReadOnlyList<ITool> Create(
+        ExecutionId execution,
+        ExecutionRequest request,
+        LlmExecutionParameters parameters);
 }

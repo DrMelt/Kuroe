@@ -14,7 +14,7 @@ internal sealed class ExecutionDetailView(Terminal terminal)
 
     private readonly Terminal _terminal = terminal;
 
-    public void Print(TaskSnapshot task, ExecutionSnapshot execution)
+    public void Print(TaskSnapshot task, GraphExecutionSnapshot execution)
     {
         ExecutionInput input = execution.Input;
         List<(string Label, IRenderable Value)> fields =

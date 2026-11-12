@@ -63,7 +63,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_preserves_restore_data()
     {
-        _registry.RestorerSource = new AcceptAllRestorer();
+        _registry.Restorers = Registry();
         ExecutionRestoreRecord data = new("test", "state");
         TaskRecord record = InterruptedRecord with
         {
@@ -80,7 +80,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
         Assert.False(restored.IsError);
-        ExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
+        GraphExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
         Assert.True(execution.HasRestoreData);
         Assert.Equal(new ExecutionId(9), execution.ContinuedFrom);
 
@@ -91,7 +91,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_does_not_plan_a_block_without_a_resumable_execution()
     {
-        _registry.RestorerSource = new AcceptAllRestorer();
+        _registry.Restorers = Registry();
         ExecutableNodeRecord blocked = Assert.IsType<ExecutableNodeRecord>(State(InterruptedRecord).Nodes[0]);
         TaskRecord record = WithNodes(
             InterruptedRecord with
@@ -125,14 +125,14 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         ErrorOr<WorkTask> restored = CreateRestorer().Restore(record, CompileFixtureFlow());
 
         Assert.False(restored.IsError);
-        ExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
+        GraphExecutionSnapshot execution = restored.Value.Executions[0].Snapshot();
         Assert.True(execution.HasRestoreData);
     }
 
     [Fact]
     public void Restore_terminated_record_cancels_nodes_and_clears_blocks()
     {
-        _registry.RestorerSource = new AcceptAllRestorer();
+        _registry.Restorers = Registry();
         TaskRecord template = Create(TaskLifecycle.Terminated, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
         TaskRecord record = template with
         {
@@ -156,7 +156,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_does_not_plan_a_block_associated_with_a_succeeded_execution()
     {
-        _registry.RestorerSource = new AcceptAllRestorer();
+        _registry.Restorers = Registry();
         TaskRecord template = Create(TaskLifecycle.Paused, Kuroe.Flow.Execution.ExecutionState.Succeeded, published: false, blocked: true);
         TaskRecord record = template with
         {
@@ -178,7 +178,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     [Fact]
     public void Restore_does_not_plan_a_block_of_a_completed_task()
     {
-        _registry.RestorerSource = new AcceptAllRestorer();
+        _registry.Restorers = Registry();
         TaskRecord template = Create(TaskLifecycle.Active, Kuroe.Flow.Execution.ExecutionState.Failed, published: true, blocked: true);
         TaskRecord record = template with
         {
@@ -202,7 +202,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     {
         TaskRecord record = Create(TaskLifecycle.Terminated, Kuroe.Flow.Execution.ExecutionState.Interrupted, published: false, blocked: true);
         RecordingRunner runner = new();
-        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, new AcceptAllRestorer());
+        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, Registry());
 
         ErrorOr<TaskSnapshot> restored = runtime.Restore(record, CompileFixtureFlow(), []);
 
@@ -220,7 +220,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
             Executions = [template.Executions[0] with { StartedAt = null }],
         };
         RecordingRunner runner = new();
-        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, new AcceptAllRestorer());
+        TaskRestoreRuntime runtime = new(_registry, CreateRestorer(), runner, Registry());
 
         ErrorOr<TaskSnapshot> restored = runtime.Restore(record, CompileFixtureFlow(), []);
 
@@ -374,6 +374,9 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
     private static TaskRecord WithPorts(TaskRecord record, IReadOnlyList<PortPublicationRecord> ports) =>
         WithState(record, State(record) with { Ports = ports });
 
+    private static Kuroe.Flow.Execution.ExecutionRestorerRegistry Registry() =>
+        new([new AcceptAllRestorer()]);
+
     private sealed class RecordingRunner : IFlowRunner
     {
         public int RestoreCount { get; private set; }
@@ -390,7 +393,7 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
 
         public void Pause(WorkTask task) => throw new NotSupportedException();
 
-        public ErrorOr<Success> StopExecution(WorkTask task, Execution execution) =>
+        public ErrorOr<Success> StopExecution(WorkTask task, GraphExecution execution) =>
             throw new NotSupportedException();
 
         public void ResumeTask(WorkTask task, bool continueRestores = true) => throw new NotSupportedException();
@@ -404,21 +407,21 @@ public sealed class TaskRestorerTests : TaskRestoreContractTests, IDisposable
         public Task ShutdownAsync() => Task.CompletedTask;
     }
 
-    private sealed class AcceptAllRestorer : IExecutionRestorerSource
+    private sealed class AcceptAllRestorer : Kuroe.Flow.Execution.IExecutionRestorer
     {
-        public ErrorOr<PreparedRestore> Prepare(
-            ExecutableNode node,
-            RestorePreparationContext context) =>
-            new PreparedRestore(context.Input, new TestData());
+        public string Kind => "*";
 
-        public IExecutionRunner CreateRestored(
-            ExecutableNode node,
-            ExecutionId execution,
-            PreparedRestore restore) =>
+        public ErrorOr<Kuroe.Flow.Execution.IExecutionRestoreData> Prepare(
+            Kuroe.Flow.Execution.ExecutionRestoreContext context) =>
+            new TestData();
+
+        public Kuroe.Flow.Execution.IExecutionRunner CreateRestored(
+            Kuroe.Flow.Execution.ExecutionRestoreContext context,
+            Kuroe.Flow.Execution.IExecutionRestoreData data) =>
             throw new NotSupportedException();
     }
 
-    private sealed record TestData : IExecutionRestoreData;
+    private sealed record TestData : Kuroe.Flow.Execution.IExecutionRestoreData;
 
     public void Dispose() => _environment.Dispose();
 }

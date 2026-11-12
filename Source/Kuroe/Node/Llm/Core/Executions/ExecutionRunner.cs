@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Sessions;
 using Microsoft.Extensions.AI;
 
@@ -13,7 +13,8 @@ internal sealed class ExecutionRunner(
     SessionFactory sessions,
     IExecutionStatusReader status,
     ExecutionId execution,
-    LlmExecutionState? restored = null) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreDataReader
+    LlmExecutionParameters parameters,
+    LlmExecutionState? restored = null) : IExecutionRunner, IExecutionUsageSource, IExecutionRestoreDataSource
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
@@ -21,9 +22,10 @@ internal sealed class ExecutionRunner(
     private readonly SessionFactory _sessions = sessions;
     private readonly ContractReminder _reminder = new(status);
     private readonly ProcessJournal _journal = new();
+    private readonly LlmExecutionParameters _parameters = parameters;
     private readonly LlmExecutionState? _restored = restored;
     private volatile Session? _session;
-    private volatile ExecutionRestorePayload? _restoreData;
+    private volatile ExecutionRestoreState? _restoreData;
 
     /// <summary>本次执行的过程记录。</summary>
     public IProcessJournal Journal => _journal;
@@ -32,18 +34,17 @@ internal sealed class ExecutionRunner(
     public ExecutionUsage Usage => _session?.Usage ?? ExecutionUsage.None;
 
     /// <summary>本次执行留下的恢复数据，不产生时为空。</summary>
-    public ExecutionRestorePayload? RestoreData => _restoreData;
+    public ExecutionRestoreState? RestoreData => _restoreData;
 
     /// <summary>运行中恢复数据变化后触发。</summary>
     public event Action? RestoreDataChanged;
 
     /// <summary>执行一次 Llm 请求，按产出契约补发要求。恢复数据存在时从上次中断处继续。</summary>
     public async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionInput input,
+        ExecutionRequest request,
         CancellationToken cancellationToken)
     {
-        LlmNodeType? type = input.Type as LlmNodeType;
-        Session session = _sessions.ForExecution(execution, input, _journal, _restored);
+        Session session = _sessions.ForExecution(execution, request, _parameters, _journal, _restored);
         _session = session;
         if (_restored is not null)
         {
@@ -56,7 +57,7 @@ internal sealed class ExecutionRunner(
         {
             ErrorOr<Success> reply = await AskWithReminders(
                 text => TurnLoop(session, tools, text, cancellationToken),
-                session.IsRestored ? null : type?.Instruction(input) ?? string.Empty,
+                session.IsRestored ? null : _parameters.Type.Instruction(request),
                 () => _reminder.Text(execution));
 
             if (reply.IsError)
@@ -68,7 +69,7 @@ internal sealed class ExecutionRunner(
 
             _ = CaptureRestoreData(session);
 
-            return ExecutionOutput.Ports;
+            return ExecutionOutput.FromPorts([]);
         }
         catch (Exception)
         {

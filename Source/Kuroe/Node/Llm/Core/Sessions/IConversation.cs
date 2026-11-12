@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;

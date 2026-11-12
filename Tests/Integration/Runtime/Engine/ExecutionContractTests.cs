@@ -111,7 +111,7 @@ public sealed class ExecutionContractTests
         string text = function.Invoke(new ToolArguments(new Dictionary<string, object?>())).Value;
 
         Assert.Contains("本轮仍需交回：端口「结论」、「理由」。", text, StringComparison.Ordinal);
-        Assert.Contains("节点状态：已阻塞", text, StringComparison.Ordinal);
+        Assert.Contains("执行状态：失败", text, StringComparison.Ordinal);
     }
 
     /// <summary>声明了输出端口的那个执行，端口相关的系统指令与工具描述都在它身上。</summary>

@@ -1,7 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Xunit;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -15,7 +13,7 @@ public sealed class CannotCompleteToolTests
         FakeSubmitter submitter = new()
         {
             Status = new ExecutionStatus(
-                NodePath.Of("节点"), 1, 3, NodeState.Blocked, [new PortName("结论")], "缺少输入资料"),
+                new ExecutionTargetId("节点"), 1, 3, ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料"),
         };
         CannotCompleteTool tool = new(submitter, new ExecutionId(1));
 
@@ -43,12 +41,14 @@ public sealed class CannotCompleteToolTests
         Assert.Equal("上报无法完成时必须给出原因。", result.FirstError.Description);
     }
 
-    private sealed class FakeSubmitter : ICannotCompleteSubmitter
+    private sealed class FakeSubmitter : IExecutionCannotCompleteSubmitter
     {
-        public ExecutionStatus Status { get; init; } = new(NodePath.Of("节点"), 1, 3, NodeState.Running, [], null);
+        public ExecutionStatus Status { get; init; } =
+            new(new ExecutionTargetId("节点"), 1, 3, ExecutionState.Running, [], null);
 
         public Error? Failure { get; init; }
 
-        public ErrorOr<ExecutionStatus> Report(ExecutionId id, string? reason) => Failure is { } error ? error : Status;
+        public ErrorOr<ExecutionStatus> Report(ExecutionId id, string reason) =>
+            Failure is { } error ? error : Status;
     }
 }

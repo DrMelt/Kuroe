@@ -1,5 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm;
 using Kuroe.Tool;
 
@@ -11,15 +10,18 @@ internal sealed class KuroeToolFactory(
     string workspaceDirectory) : IToolFactory
 {
     /// <inheritdoc/>
-    public IReadOnlyList<ITool> Create(ExecutionId execution, ExecutionInput input)
+    public IReadOnlyList<ITool> Create(
+        ExecutionId execution,
+        ExecutionRequest request,
+        LlmExecutionParameters parameters)
     {
-        Dictionary<string, IReadOnlyDictionary<string, PortName>> portsByTool = [];
-        IReadOnlyList<ToolPath> paths = input.Type is LlmNodeType type ? type.ToolPaths(input.OutputPorts) : [];
-        if (input.Type is LlmNodeType { Parameters: { } parameters })
+        Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> portsByTool = [];
+        IReadOnlyList<ToolPath> paths = parameters.Type.ToolPaths(request.OutputPorts);
+        if (parameters.Type.Parameters is { } declared)
         {
             List<(ToolPath Prefix, IReadOnlyDictionary<string, string> Ports)> mappings =
             [
-                .. parameters.ToolPorts
+                .. declared.ToolPorts
                     .Select(pair => (Prefix: new ToolPath(pair.Key), Ports: pair.Value))
                     .OrderByDescending(mapping => mapping.Prefix.Value.Length),
             ];
@@ -32,12 +34,17 @@ internal sealed class KuroeToolFactory(
                 .Where(entry => entry.Match.Ports is not null)
                 .ToDictionary(
                     entry => entry.Definition.Path.Value,
-                    entry => (IReadOnlyDictionary<string, PortName>)entry.Match.Ports.ToDictionary(
+                    entry => (IReadOnlyDictionary<string, ExecutionPortName>)entry.Match.Ports.ToDictionary(
                         pair => pair.Key,
-                        pair => new PortName(pair.Value)));
+                        pair => new ExecutionPortName(pair.Value)));
         }
 
-        ToolContext context = new(new ExecutionPortAccess(input), portsByTool, workspaceDirectory, execution, paths);
+        ToolContext context = new(
+            new ExecutionPortAccess(request),
+            portsByTool,
+            workspaceDirectory,
+            execution,
+            paths);
 
         return [.. sources.SelectMany(source => source.Create(context))];
     }

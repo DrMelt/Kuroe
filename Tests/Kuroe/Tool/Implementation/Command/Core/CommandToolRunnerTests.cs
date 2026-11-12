@@ -240,8 +240,11 @@ public sealed class CommandToolRunnerTests
             200,
             ["root"]);
         ToolBinding binding = new(
-            new FixedPortAccess(new PortName("root"), root),
-            new Dictionary<string, PortName> { ["root"] = new PortName("root") },
+            new FixedPortAccess(new Kuroe.Flow.Execution.ExecutionPortName("root"), root),
+            new Dictionary<string, Kuroe.Flow.Execution.ExecutionPortName>
+            {
+                ["root"] = new Kuroe.Flow.Execution.ExecutionPortName("root"),
+            },
             root);
         FakeProcessRunner process = new();
 

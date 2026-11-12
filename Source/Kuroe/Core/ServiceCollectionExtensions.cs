@@ -14,8 +14,10 @@ using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Json;
 using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime;
 using Kuroe.Shared;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Persistence.Restoring.Shared;
@@ -213,10 +215,15 @@ public static class ServiceCollectionExtensions
             sp.GetServices<IToolSource>().SelectMany(source => source.Definitions),
             sp.GetRequiredService<IToolJson>()));
         services.AddSingleton<ExecutionDispatcher>();
-        services.AddSingleton<ExecutionRunnerSource>(sp => new ExecutionRunnerSource(
-            sp.GetRequiredService<IExecutionRunnerFactory>()));
-        services.AddSingleton<IExecutionRunnerSource>(sp => sp.GetRequiredService<ExecutionRunnerSource>());
-        services.AddSingleton<IExecutionRestorerSource>(sp => sp.GetRequiredService<ExecutionRunnerSource>());
+        services.AddSingleton(sp => new ExecutionRunnerRegistry(
+            [.. sp.GetServices<Kuroe.Flow.Execution.IExecutionRunnerFactory>()],
+            sp.GetService<Kuroe.Flow.Execution.IExecutionRunnerFactory>()));
+        services.AddSingleton(sp => new ExecutionRestorerRegistry(
+            [.. sp.GetServices<Kuroe.Flow.Execution.IExecutionRestorer>()]));
+        services.AddSingleton(sp => new ExecutionRuntime(
+            sp.GetRequiredService<ExecutionDispatcher>(),
+            sp.GetRequiredService<ExecutionRunnerRegistry>(),
+            sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
@@ -235,15 +242,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IExecutionTargetResolver>(sp => new ExecutionTargetResolver(
             new NodeModelResolver(sp.GetRequiredService<IModelAccess>())));
         services.AddSingleton(sp => new FlowEngine(
-            sp.GetRequiredService<ExecutionDispatcher>(),
-            sp.GetRequiredService<IExecutionRunnerSource>(),
+            sp.GetRequiredService<ExecutionRuntime>(),
             sp.GetRequiredService<IExecutionTargetResolver>()));
         services.AddSingleton<IFlowRunner>(sp => sp.GetRequiredService<FlowEngine>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
             taskRegistry,
             sp.GetRequiredService<ITaskRestorer>(),
             sp.GetRequiredService<IFlowRunner>(),
-            sp.GetRequiredService<IExecutionRestorerSource>()));
+            sp.GetRequiredService<ExecutionRestorerRegistry>()));
         if (coreOptions.PersistTasks)
         {
             services.AddSingleton<ITaskRestoreService>(sp => new TaskRestoreService(
@@ -264,6 +270,7 @@ public static class ServiceCollectionExtensions
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null),
             sp.GetRequiredService<IFlowRuntimeCatalog>()));
+        services.AddSingleton<ITaskControl>(sp => sp.GetRequiredService<TaskService>());
         services.AddSingleton(sp => new PendingService(
             taskRegistry,
             sp.GetRequiredService<FlowEngine>(),
@@ -272,9 +279,13 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IModelAccess>(),
             sp.GetRequiredService<IToolFactory>(),
             sp.GetRequiredService<IToolJson>()));
-        services.AddSingleton<IExecutionRunnerFactory>(sp => new ExecutionRunnerFactory(
+        services.AddSingleton(sp => new ExecutionRunnerFactory(
             sp.GetRequiredService<SessionFactory>(),
-            sp.GetRequiredService<IExecutionStatusReader>()));
+            sp.GetRequiredService<Kuroe.Flow.Execution.IExecutionStatusReader>()));
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(sp =>
+            sp.GetRequiredService<ExecutionRunnerFactory>());
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRestorer>(sp =>
+            sp.GetRequiredService<ExecutionRunnerFactory>());
 
         return composition;
     }
@@ -316,11 +327,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaskChangeSource>(taskRegistry);
         services.AddSingleton<ITaskReader>(taskReader);
         services.AddSingleton(portSubmitter);
-        services.AddSingleton<IPortSubmitter>(portSubmitter);
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionPortSubmitter>(portSubmitter);
         services.AddSingleton(cannotCompleteSubmitter);
-        services.AddSingleton<ICannotCompleteSubmitter>(cannotCompleteSubmitter);
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionCannotCompleteSubmitter>(cannotCompleteSubmitter);
         services.AddSingleton(statusReader);
-        services.AddSingleton<IExecutionStatusReader>(statusReader);
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionStatusReader>(statusReader);
         services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(
             [.. sp.GetServices<IToolSource>()],
             workingDirectory));

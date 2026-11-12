@@ -100,13 +100,13 @@ public sealed class TaskKuroeInfoTool : ITool
             return ToolErrors.Argument($"执行号要写成数字，收到 {text ?? "空"}。");
         }
 
-        ErrorOr<ExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
+        ErrorOr<GraphExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        ExecutionSnapshot execution = found.Value;
+        GraphExecutionSnapshot execution = found.Value;
         ErrorOr<TaskSnapshot> owner = _registry.Find(execution.Input.Task);
         if (owner.IsError)
         {
@@ -148,7 +148,7 @@ public sealed class TaskKuroeInfoTool : ITool
 
             text.AppendLine($"  {task.OrdinalOf(node.Executable.Path)}. {node.Executable.Path}"
                 + $"（{node.Executable.Kind.Value}）");
-            foreach (ExecutionSnapshot execution in node.Executions)
+            foreach (GraphExecutionSnapshot execution in node.Executions)
             {
                 text.AppendLine($"    {ExecutionLine(execution)}");
             }
@@ -164,7 +164,7 @@ public sealed class TaskKuroeInfoTool : ITool
         return text.ToString().TrimEnd();
     }
     /// <summary>执行的完整详情文本。</summary>
-    private static string DescribeExecution(TaskSnapshot task, ExecutionSnapshot execution)
+    private static string DescribeExecution(TaskSnapshot task, GraphExecutionSnapshot execution)
     {
         ExecutionInput input = execution.Input;
         var text = new StringBuilder();
@@ -238,7 +238,7 @@ public sealed class TaskKuroeInfoTool : ITool
     }
 
     /// <summary>列表里一行的执行概况。</summary>
-    private static string ExecutionLine(ExecutionSnapshot execution)
+    private static string ExecutionLine(GraphExecutionSnapshot execution)
     {
         List<string> parts =
         [

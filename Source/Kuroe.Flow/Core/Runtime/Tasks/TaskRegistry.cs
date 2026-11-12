@@ -17,7 +17,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     internal bool PauseOnRestore { get; } = pauseOnRestore;
 
     /// <summary>本域可用的恢复能力，推进器启动时设置。宿主单独装配任务恢复时可直接给出。</summary>
-    public IExecutionRestorerSource? RestorerSource { get; set; }
+    public Kuroe.Flow.Execution.ExecutionRestorerRegistry? Restorers { get; set; }
     private readonly Dictionary<string, WorkTask> _tasks = [];
 
     /// <summary>一条值得单独提示的执行事件，宿主把它打成一行。</summary>
@@ -54,9 +54,9 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>把恢复的执行登记进共享执行索引，并推进下一次执行号。</summary>
-    internal void RestoreExecution(WorkTask owner, Execution execution) => executions.Restore(owner, execution);
+    internal void RestoreExecution(WorkTask owner, GraphExecution execution) => executions.Restore(owner, execution);
 
-    internal Execution NewExecution(WorkTask owner, ExecutionInput input) => executions.Create(owner, input);
+    internal GraphExecution NewExecution(WorkTask owner, ExecutionInput input) => executions.Create(owner, input);
 
     /// <summary>按任务键取任务，不存在时返回错误。</summary>
     public ErrorOr<WorkTask> Find(TaskId id)
@@ -91,7 +91,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>按执行号取本域的执行，不存在或属于其它任务域时返回错误。</summary>
-    public ErrorOr<Execution> FindExecution(ExecutionId id)
+    public ErrorOr<GraphExecution> FindExecution(ExecutionId id)
     {
         if (executions.FindOwned(id) is not { IsError: false } found
             || !ReferenceEquals(found.Value.Owner.Registry, this))
@@ -115,7 +115,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>本域在跑的执行，含排队中的，按启动先后。</summary>
-    public IReadOnlyList<ExecutionSnapshot> LiveExecutions()
+    public IReadOnlyList<GraphExecutionSnapshot> LiveExecutions()
     {
         WorkTask[] tasks;
         lock (_gate)
@@ -154,7 +154,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
 
                 lock (_gate)
                 {
-                    foreach (Execution execution in task.Executions)
+                    foreach (GraphExecution execution in task.Executions)
                     {
                         executions.Remove(execution.Id);
                     }
@@ -184,7 +184,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
         {
             lock (task.Gate)
             {
-                foreach (Execution execution in task.Executions)
+                foreach (GraphExecution execution in task.Executions)
                 {
                     executions.Remove(execution.Id);
                 }

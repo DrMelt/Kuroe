@@ -1,6 +1,4 @@
-using ApiHub.Shared.Models;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Xunit;
@@ -14,7 +12,7 @@ public sealed class ExecutionRunnerFactoryTests
     public void Prepare_rejects_an_execution_that_reported_cannot_complete()
     {
         ExecutionRunnerFactory factory = new(null!, null!);
-        RestorePreparationContext context = Context(new ExecutionContract(CannotCompleteReason: "缺少资料"));
+        ExecutionRestoreContext context = Context(new ExecutionContract(CannotCompleteReason: "缺少资料"));
 
         Assert.True(factory.Prepare(context).IsError);
     }
@@ -23,26 +21,43 @@ public sealed class ExecutionRunnerFactoryTests
     public void Prepare_accepts_a_restorable_session_without_a_cannot_complete_report()
     {
         ExecutionRunnerFactory factory = new(null!, null!);
-        RestorePreparationContext context = Context(ExecutionContract.Empty);
+        ExecutionRestoreContext context = Context(ExecutionContract.Empty);
 
         Assert.False(factory.Prepare(context).IsError);
     }
 
-    private static RestorePreparationContext Context(ExecutionContract contract)
+    private static ExecutionRestoreContext Context(ExecutionContract contract)
     {
         LlmExecutionState state = new(
             "fake",
             [new LlmMessageState("user", [new LlmContentState("text", Text: "继续")])]);
 
-        return new RestorePreparationContext(
-            new ExecutionInput
-            {
-                Task = new TaskId(1),
-                Node = NodePath.Of("实施"),
-                Type = null!,
-                Declaration = new KuroeNodeDeclaration(ModelName.Create("fake").Value),
-            },
+        ExecutionRequest request = new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId("实施"),
+            "Llm",
+            1,
+            [],
+            [],
+            new Dictionary<ExecutionPortName, string>(),
+            []);
+        IExecutionTarget target = new FakeTarget(
+            new LlmExecutionParameters(new LlmNodeType(null), "fake"));
+
+        return new ExecutionRestoreContext(
+            new ExecutionId(1),
+            request,
+            target,
             LlmExecutionStateCodec.Encode(state),
             contract);
+    }
+
+    private sealed class FakeTarget(IExecutionParameters parameters) : IExecutionTarget
+    {
+        public ExecutionTargetId Id { get; } = new("实施");
+
+        public string Kind => "Llm";
+
+        public IExecutionParameters Parameters { get; } = parameters;
     }
 }

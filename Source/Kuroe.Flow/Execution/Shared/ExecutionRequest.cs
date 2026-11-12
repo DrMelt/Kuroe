@@ -9,4 +9,5 @@ public sealed record ExecutionRequest(
     IReadOnlyList<ExecutionInputPort> InputPorts,
     IReadOnlyList<ExecutionInputValue> Inputs,
     IReadOnlyDictionary<ExecutionPortName, string> Texts,
-    IReadOnlyList<ExecutionOutputPort> OutputPorts);
+    IReadOnlyList<ExecutionOutputPort> OutputPorts,
+    int MaxAttempts = 1);

@@ -18,7 +18,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
 
         InputValue goal = Assert.Single(plan.Input.Inputs);
         Assert.Equal("补齐 README", goal.Value.Text);
@@ -32,8 +32,8 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create();
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
-        ExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
+        GraphExecutionSnapshot plan = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot implement = Assert.Single(done.Executables[1].Executions);
 
         InputValue value = Assert.Single(implement.Input.Inputs);
         Assert.Equal("计划产出", value.Value.Text);
@@ -46,7 +46,7 @@ public sealed class ContextTests
         using TestEnvironment environment = TestEnvironment.Create(StartConstantFlow);
 
         TaskSnapshot done = environment.Settle(environment.Submit("补齐 README"));
-        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
 
         InputValue seed = Assert.Single(execution.Input.Inputs);
         Assert.Equal("固定背景", seed.Value.Text);
@@ -64,7 +64,7 @@ public sealed class ContextTests
             new StartInput(new PortName("风格"), "技术文档风格"),
         ])));
 
-        ExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
+        GraphExecutionSnapshot execution = Assert.Single(done.Executables[0].Executions);
         Assert.Equal(["补齐 README", "技术文档风格"], execution.Input.Inputs.Select(value => value.Text));
         Assert.Equal(new PortName("风格"), Assert.IsType<StartSource>(execution.Input.Inputs[1].Origin).Port);
     }
@@ -251,7 +251,7 @@ public sealed class ContextTests
     }
 
     /// <summary>取实施节点的唯一一次执行。</summary>
-    private static ExecutionSnapshot Implement(TaskSnapshot done) =>
+    private static GraphExecutionSnapshot Implement(TaskSnapshot done) =>
         Assert.Single(done.Executables
             .Single(executable => executable.Executable.Path.Value.EndsWith("实施", StringComparison.Ordinal))
             .Executions);

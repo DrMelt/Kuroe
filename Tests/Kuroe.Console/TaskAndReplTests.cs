@@ -423,7 +423,7 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(new ExecutionId(1)).ThrowIfError();
+        GraphExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(new ExecutionId(1)).ThrowIfError();
         cli.Tasks.ShowExecution(execution.Id);
 
         Assert.Contains("执行 #1", cli.Output.Output);

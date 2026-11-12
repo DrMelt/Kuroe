@@ -24,15 +24,15 @@ public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader
     }
 
     /// <inheritdoc/>
-    public ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id)
+    public ErrorOr<GraphExecutionSnapshot> FindExecution(ExecutionId id)
     {
-        ErrorOr<Execution> found = registry.FindExecution(id);
+        ErrorOr<GraphExecution> found = registry.FindExecution(id);
 
         return found.IsError ? found.ErrorsOrEmptyList : found.Value.Snapshot();
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
+    public IReadOnlyList<GraphExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
 
     /// <inheritdoc/>
     public IReadOnlyList<TaskSnapshot> Snapshots() => registry.Snapshots();

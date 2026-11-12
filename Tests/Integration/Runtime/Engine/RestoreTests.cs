@@ -124,7 +124,11 @@ public sealed class RestoreTests
         ExecutionId execution = environment.Registry.LiveExecutions().Single().Id;
 
         environment.Tasks.StopExecution(execution).ThrowIfError();
-        TaskSnapshot paused = environment.Wait(id, snapshot => snapshot.State == TaskState.Paused);
+        TaskSnapshot paused = environment.Wait(id, snapshot =>
+            snapshot.State == TaskState.Paused
+            && snapshot.Executables
+                .SelectMany(node => node.Executions)
+                .All(entry => entry.State == ExecutionState.Interrupted));
 
         var task = environment.Registry.Find(id).ThrowIfError();
         ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
@@ -177,7 +181,10 @@ public sealed class RestoreTests
         Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
 
         environment.Runner.RestoreData = null;
-        environment.Runner.Usage = new ExecutionUsage(1, 0, TokenUsage.None);
+        environment.Runner.Usage = new Kuroe.Flow.Execution.ExecutionUsage(
+            1,
+            0,
+            Kuroe.Flow.Execution.TokenUsage.None);
         environment.Tasks.Resume(id).ThrowIfError();
         TaskSnapshot blocked = environment.Wait(id, snapshot =>
             snapshot.State == TaskState.Blocked
@@ -245,7 +252,11 @@ public sealed class RestoreTests
         environment.Wait(id, snapshot => snapshot.LiveExecutions > 0);
 
         environment.Tasks.StopTask(id).ThrowIfError();
-        TaskSnapshot terminated = environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
+        TaskSnapshot terminated = environment.Wait(id, snapshot =>
+            snapshot.State == TaskState.Terminated
+            && snapshot.Executables
+                .SelectMany(node => node.Executions)
+                .All(entry => entry.State != ExecutionState.Running));
 
         var task = environment.Registry.Find(id).ThrowIfError();
         Assert.Contains(task.Executions, execution => execution.Snapshot().HasRestoreData);

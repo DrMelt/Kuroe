@@ -5,6 +5,14 @@ using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Microsoft.Extensions.DependencyInjection;
+using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
+using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Flow.Execution.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Flow.Execution.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
+using NeutralExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
+using NeutralExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
 
 namespace Kuroe.Cli.Tests.Support;
 
@@ -38,7 +46,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<IExecutionRunnerFactory>(runner));
+            services => services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(runner));
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));
@@ -114,30 +122,37 @@ internal sealed class CliEnvironment : IAsyncDisposable
 }
 
 /// <summary>不接模型的执行器：只播发固定文本，不提交端口产出。</summary>
-internal sealed class StubRunner : IExecutionRunnerFactory
+internal sealed class StubRunner : NeutralExecutionRunnerFactory
 {
+    /// <inheritdoc/>
+    public string Kind => "*";
+
     /// <summary>每次执行播发的文本。</summary>
     public string Text { get; set; } = "输出";
 
     /// <summary>执行器上报的模型请求用量，不设置时表示没有请求。</summary>
-    public ExecutionUsage Usage { get; set; } = ExecutionUsage.None;
+    public NeutralExecutionUsage Usage { get; set; } = NeutralExecutionUsage.None;
 
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) => new Run(this);
+    public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution) =>
+        new Run(this);
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的替身状态。</summary>
-    private sealed class Run(StubRunner owner) : IExecutionRunner, IExecutionUsageReader
+    private sealed class Run(StubRunner owner) : NeutralExecutionRunner, NeutralExecutionUsageSource
     {
         private readonly StubJournal _journal = new();
 
         public IProcessJournal Journal => _journal;
 
-        public ExecutionUsage Usage => owner.Usage;
+        public NeutralExecutionUsage Usage => owner.Usage;
 
-        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken)
+        public Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
+            NeutralExecutionRequest request,
+            CancellationToken cancellationToken)
         {
             _journal.AppendContent(ProcessContentKind.Reply, owner.Text);
 
-            return Task.FromResult<ErrorOr<ExecutionOutput>>(ExecutionOutput.Ports);
+            return Task.FromResult<ErrorOr<NeutralExecutionOutput>>(
+                NeutralExecutionOutput.FromPorts([]));
         }
     }
 

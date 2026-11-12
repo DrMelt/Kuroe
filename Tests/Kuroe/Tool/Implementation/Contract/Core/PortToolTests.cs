@@ -1,9 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Execution;
 using Xunit;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -11,8 +7,8 @@ namespace Kuroe.Tool.Contract.Tests;
 /// <summary>交回端口产出的载体：说明带端口清单，回执给出本轮尚缺的端口。</summary>
 public sealed class PortToolTests
 {
-    private static readonly PortName Conclusion = new("结论");
-    private static readonly PortName Reason = new("理由");
+    private static readonly ExecutionPortName Conclusion = new("结论");
+    private static readonly ExecutionPortName Reason = new("理由");
 
     [Fact]
     public void Description_lists_the_ports_to_submit()
@@ -58,23 +54,25 @@ public sealed class PortToolTests
         Assert.Equal("端口值不合法。", result.FirstError.Description);
     }
 
-    private static Port Port(PortName name) => new(name, PortTypes.Text);
+    private static ExecutionOutputPort Port(ExecutionPortName name) =>
+        new(name, ExecutionPortKind.Text, true, false, true);
 
-    private static ExecutionStatus Status(IReadOnlyList<PortName> outstanding) =>
-        new(NodePath.Of("节点"), 1, 3, NodeState.Running, outstanding, null);
+    private static ExecutionStatus Status(IReadOnlyList<ExecutionPortName> outstanding) =>
+        new(new ExecutionTargetId("节点"), 1, 3, ExecutionState.Running, outstanding, null);
 
     private static ToolArguments Given(params (string Name, object? Value)[] values) =>
         new(values.ToDictionary(value => value.Name, value => value.Value));
 
-    private sealed class FakeSubmitter : IPortSubmitter
+    private sealed class FakeSubmitter : IExecutionPortSubmitter
     {
-        public ExecutionStatus Outcome { get; init; } = new(NodePath.Of("节点"), 1, 3, NodeState.Running, [], null);
+        public ExecutionStatus Outcome { get; init; } =
+            new(new ExecutionTargetId("节点"), 1, 3, ExecutionState.Running, [], null);
 
         public Error? Failure { get; init; }
 
-        public ErrorOr<ExecutionStatus> SubmitValues(
+        public ErrorOr<ExecutionStatus> Submit(
             ExecutionId id,
-            IReadOnlyDictionary<string, PortValue> values) =>
+            IReadOnlyList<ExecutionOutputValue> values) =>
             Failure is { } error ? error : Outcome;
     }
 }

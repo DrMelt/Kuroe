@@ -1,5 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
@@ -27,25 +26,17 @@ public sealed class KuroeToolFactoryTests
                 ["group/sub"] = new Dictionary<string, string> { ["project"] = "项目路径" },
             },
         };
-        ExecutionInput input = new()
+        ExecutionRequest request = Request(new Dictionary<ExecutionPortName, string>
         {
-            Task = new TaskId(1),
-            Node = NodePath.Of("流程", "节点"),
-            Type = new LlmNodeType(parameters),
-            Inputs =
-            [
-                new InputValue(new PortName("任务路径"), Value("任务值")),
-                new InputValue(new PortName("项目路径"), Value("项目值")),
-            ],
-            Texts = new Dictionary<PortName, string>
-            {
-                [new PortName("任务路径")] = "任务值",
-                [new PortName("项目路径")] = "项目值",
-            },
-        };
+            [new ExecutionPortName("任务路径")] = "任务值",
+            [new ExecutionPortName("项目路径")] = "项目值",
+        });
 
         IReadOnlyList<ITool> tools = new KuroeToolFactory([source], "C:/workspace")
-            .Create(new ExecutionId(1), input);
+            .Create(
+                new ExecutionId(1),
+                request,
+                new LlmExecutionParameters(new LlmNodeType(parameters), null));
         CapturingTool parent = Assert.IsType<CapturingTool>(
             tools.Single(tool => tool.Functions.Single().Definition.Path.Value == "group/tool"));
         CapturingTool child = Assert.IsType<CapturingTool>(
@@ -59,10 +50,14 @@ public sealed class KuroeToolFactoryTests
     public void A_static_port_reads_only_the_static_value()
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
-        ExecutionInput input = ToolInput(staticPort: true, "任务值", "动态值");
+        ExecutionRequest request = ToolInput(staticPort: true, "任务值", "动态值");
+        LlmParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
-            new KuroeToolFactory([source], "C:/workspace").Create(new ExecutionId(1), input)));
+            new KuroeToolFactory([source], "C:/workspace").Create(
+                new ExecutionId(1),
+                request,
+                new LlmExecutionParameters(new LlmNodeType(parameters), null))));
 
         Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -71,38 +66,47 @@ public sealed class KuroeToolFactoryTests
     public void A_dynamic_port_reads_only_the_input_value()
     {
         CapturingToolSource source = new(new ToolDefinition(new ToolPath("group/tool"), "父", [], [PathVariables.RootName]));
-        ExecutionInput input = ToolInput(staticPort: false, "静态值", "动态值");
+        ExecutionRequest request = ToolInput(staticPort: false, "静态值", "动态值");
+        LlmParameters parameters = ToolParameters();
 
         CapturingTool tool = Assert.IsType<CapturingTool>(Assert.Single(
-            new KuroeToolFactory([source], "C:/workspace").Create(new ExecutionId(1), input)));
+            new KuroeToolFactory([source], "C:/workspace").Create(
+                new ExecutionId(1),
+                request,
+                new LlmExecutionParameters(new LlmNodeType(parameters), null))));
 
         Assert.Equal("动态值", tool.Binding.Variable(PathVariables.RootName));
     }
 
-    private static ExecutionInput ToolInput(bool staticPort, string staticText, string inputText)
+    private static ExecutionRequest ToolInput(bool staticPort, string staticText, string inputText)
     {
-        PortName port = new("任务路径");
-        LlmParameters parameters = new()
-        {
-            Tools = [new ToolPath("group")],
-            ToolPorts = new Dictionary<string, IReadOnlyDictionary<string, string>>
-            {
-                ["group"] = new Dictionary<string, string> { [PathVariables.RootName] = port.Value },
-            },
-        };
+        ExecutionPortName port = new("任务路径");
 
-        return new ExecutionInput
+        return Request(new Dictionary<ExecutionPortName, string>
         {
-            Task = new TaskId(1),
-            Node = NodePath.Of("流程", "节点"),
-            Type = new LlmNodeType(parameters),
-            Inputs = [new InputValue(port, Value(inputText))],
-            Texts = new Dictionary<PortName, string> { [port] = staticPort ? staticText : inputText },
-        };
+            [port] = staticPort ? staticText : inputText,
+        });
     }
 
-    private static ContextValue Value(string text) =>
-        new(new NodeSource(NodePath.Of("来源", "节点"), new PortName("结果")), text);
+    private static LlmParameters ToolParameters() => new()
+    {
+        Tools = [new ToolPath("group")],
+        ToolPorts = new Dictionary<string, IReadOnlyDictionary<string, string>>
+        {
+            ["group"] = new Dictionary<string, string> { [PathVariables.RootName] = "任务路径" },
+        },
+    };
+
+    private static ExecutionRequest Request(IReadOnlyDictionary<ExecutionPortName, string> texts) =>
+        new(
+            new ExecutionOwnerId("1"),
+            new ExecutionTargetId("流程/节点"),
+            "Llm",
+            1,
+            [],
+            [],
+            texts,
+            []);
 
     [Fact]
     public void A_source_creates_only_tools_in_the_available_face()
@@ -113,8 +117,8 @@ public sealed class KuroeToolFactoryTests
             ToolEntry.Of(one, () => new TestTool(one)),
             ToolEntry.Of(two, () => new TestTool(two)));
         ToolContext context = new(
-            new FixedPortAccess(new PortName(PathVariables.RootName), "C:/workspace"),
-            new Dictionary<string, IReadOnlyDictionary<string, PortName>>(),
+            new FixedPortAccess(new ExecutionPortName(PathVariables.RootName), "C:/workspace"),
+            new Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>>(),
             "C:/workspace",
             new ExecutionId(1),
             [new ToolPath("group/one")]);

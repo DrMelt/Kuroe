@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm.Executions;
@@ -17,12 +17,12 @@ internal sealed class ContractReminder(IExecutionStatusReader status)
         ExecutionStatus round = read.Value;
 
         // 已上报无法完成的执行，缺项是它主动留下的，不再追问
-        if (round.CannotCompleteReason is not null || round.OutstandingPorts.Count == 0)
+        if (round.CannotCompleteReason is not null || round.OutstandingOutputs.Count == 0)
         {
             return null;
         }
 
-        string ports = string.Join('、', round.OutstandingPorts.Select(name => $"「{name}」"));
+        string ports = string.Join('、', round.OutstandingOutputs.Select(name => $"「{name}」"));
 
         return $"本轮还缺交回：输出端口{ports}，请调用 {ContractTools.Port} 提交。";
     }

@@ -16,7 +16,7 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// 可变成只经内部方法改动，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask
 {
-    private readonly List<Execution> _executions = [];
+    private readonly List<GraphExecution> _executions = [];
     private readonly DateTimeOffset _createdAt;
     private readonly ProcessObserver? _observer;
     private string _title;
@@ -82,7 +82,7 @@ public sealed class WorkTask
         GraphFlowStateRecord state,
         CompiledFlow flow,
         IPortTexts startTexts,
-        IReadOnlyList<Execution> executions,
+        IReadOnlyList<GraphExecution> executions,
         ProcessObserver? observer = null)
     {
         WorkTask task = new(
@@ -109,10 +109,10 @@ public sealed class WorkTask
         }
         else
         {
-            foreach (Execution execution in executions
+            foreach (GraphExecution execution in executions
                 .Where(execution => execution.State == ExecutionState.Interrupted))
             {
-                ExecutionSnapshot snapshot = execution.Snapshot();
+                GraphExecutionSnapshot snapshot = execution.Snapshot();
                 var runtime = task.Runtime.Executable(execution.Input.Node);
                 if (snapshot.StartedAt is null)
                 {
@@ -134,7 +134,7 @@ public sealed class WorkTask
             }
         }
 
-        if (registry.RestorerSource is not null)
+        if (registry.Restorers is not null)
         {
             task.Runtime.RefreshRestorePlans();
         }
@@ -234,13 +234,13 @@ public sealed class WorkTask
     /// <summary>任务内状态改动的串行点。锁序以任务 Gate 为最外层，注册表先于执行索引。</summary>
     internal Lock Gate { get; } = new();
 
-    private event Action<Execution>? ExecutionSettled;
+    private event Action<GraphExecution>? ExecutionSettled;
 
     /// <summary>执行收口后的通知，回答等待方借此取回本轮产出。要求持有 Gate 触发。</summary>
-    internal void NotifyExecutionSettled(Execution execution) => ExecutionSettled?.Invoke(execution);
+    internal void NotifyExecutionSettled(GraphExecution execution) => ExecutionSettled?.Invoke(execution);
 
     /// <summary>订阅执行收口通知，返回解除订阅的委托。</summary>
-    public Action SubscribeExecutionSettled(Action<Execution> handler)
+    public Action SubscribeExecutionSettled(Action<GraphExecution> handler)
     {
         ExecutionSettled += handler;
 
@@ -274,7 +274,7 @@ public sealed class WorkTask
     }
 
     /// <summary>提交顺序排列的执行，宿主对话功能读数用。仅在持有 <see cref="Gate"/> 时读写。</summary>
-    public IReadOnlyList<Execution> Executions => _executions;
+    public IReadOnlyList<GraphExecution> Executions => _executions;
 
     /// <summary>任务的整体状态，由控制状态、执行节点状态与在跑的执行汇总得出。</summary>
     public TaskState State
@@ -418,7 +418,7 @@ public sealed class WorkTask
         Runtime.ClearRestorePlans();
         Journal.AppendInfo("任务终止。");
 
-        foreach (Execution execution in _executions.Where(execution => execution.IsLive))
+        foreach (GraphExecution execution in _executions.Where(execution => execution.IsLive))
         {
             execution.Interrupt("任务终止。");
         }
@@ -431,7 +431,7 @@ public sealed class WorkTask
     }
 
     /// <summary>记下一个启动的执行。要求持有 <see cref="Gate"/>。</summary>
-    internal void Attach(Execution execution)
+    internal void Attach(GraphExecution execution)
     {
         _executions.Add(execution);
         _lastActivityAt = DateTimeOffset.UtcNow;
@@ -453,7 +453,7 @@ public sealed class WorkTask
     }
 
     /// <summary>执行真正进入运行态时记一次执行尝试。</summary>
-    private void OnExecutionStarted(Execution execution)
+    private void OnExecutionStarted(GraphExecution execution)
     {
         lock (Gate)
         {
@@ -466,10 +466,10 @@ public sealed class WorkTask
 
     private void OnRestoreDataChanged() => NotifyChanged();
 
-    private event Action<Execution>? ExecutionAttached;
+    private event Action<GraphExecution>? ExecutionAttached;
 
     /// <summary>订阅新执行启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
-    public Action SubscribeExecutionAttached(Action<Execution> handler)
+    public Action SubscribeExecutionAttached(Action<GraphExecution> handler)
     {
         ExecutionAttached += handler;
 
@@ -483,7 +483,7 @@ public sealed class WorkTask
     {
         lock (Gate)
         {
-            IReadOnlyList<ExecutionSnapshot> executions = [.. _executions.Select(execution => execution.Snapshot())];
+            IReadOnlyList<GraphExecutionSnapshot> executions = [.. _executions.Select(execution => execution.Snapshot())];
             TaskProjection projection = new(Graph, Runtime.Materializer, Runtime.StaticPorts);
 
             return new TaskSnapshot(Id, _title, Inputs, StartTexts, Flow, Graph, Summarize(),

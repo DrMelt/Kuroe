@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -16,9 +17,7 @@ namespace Kuroe.Flow.Runtime.Engine;
 /// 队列空且任务停在等待时挂起等宿主信号。任务状态仍在任务对象上，这里是调度面。</summary>
 internal sealed class TaskDriver(
     WorkTask task,
-    ExecutionDispatcher dispatcher,
-    IExecutionRunnerSource runners,
-    IExecutionRestorerSource? restorers,
+    ExecutionRuntime runtime,
     IExecutionTargetResolver targetResolver)
 {
     private readonly Lock _gate = new();
@@ -90,16 +89,16 @@ internal sealed class TaskDriver(
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
     {
-        foreach (Execution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
+        foreach (GraphExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
         {
             execution.Interrupt("任务已暂停。");
         }
     }
 
     /// <summary>停止一个已启动的执行。未启动的执行不构成一次尝试，不能停止。</summary>
-    public static ErrorOr<Success> StopExecution(Execution execution)
+    public static ErrorOr<Success> StopExecution(GraphExecution execution)
     {
-        ExecutionSnapshot snapshot = execution.Snapshot();
+        GraphExecutionSnapshot snapshot = execution.Snapshot();
         if (!execution.IsLive)
         {
             return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
@@ -202,7 +201,7 @@ internal sealed class TaskDriver(
     /// <summary>退出时中断推进：保留任务控制状态与节点状态，中断在跑的执行并让主循环退出。</summary>
     public void InterruptForShutdown()
     {
-        Execution[] live;
+        GraphExecution[] live;
         lock (task.Gate)
         {
             lock (_gate)
@@ -219,7 +218,7 @@ internal sealed class TaskDriver(
             live = [.. task.Executions.Where(execution => execution.IsLive)];
         }
 
-        foreach (Execution execution in live)
+        foreach (GraphExecution execution in live)
         {
             execution.Interrupt("进程退出。");
         }
@@ -496,7 +495,7 @@ internal sealed class TaskDriver(
     private async Task DispatchExecutionAsync(RuntimeExecutable node, NodeInputValues inputs)
     {
         ExecutableNode executable = node.Executable;
-        (Execution Execution, bool Paused)? prepared;
+        (GraphExecution Execution, bool Paused)? prepared;
         lock (task.Gate)
         {
             if (task.Lifecycle == TaskLifecycle.Terminated)
@@ -519,7 +518,7 @@ internal sealed class TaskDriver(
             }
 
             ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
-            Execution execution = task.Registry.NewExecution(task, input);
+            GraphExecution execution = task.Registry.NewExecution(task, input);
             task.Attach(execution);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }
@@ -540,7 +539,7 @@ internal sealed class TaskDriver(
     /// <summary>按恢复计划装配一次恢复执行，派发并收口。</summary>
     private async Task DispatchRestoreExecutionAsync(TaskRuntime.RestorePlan target)
     {
-        (RuntimeExecutable Node, Execution Execution, PreparedRestore Restore)? prepared;
+        (RuntimeExecutable Node, GraphExecution Execution, TaskRuntime.RestorePlan Restore)? prepared;
         lock (task.Gate)
         {
             RuntimeExecutable node = task.Runtime.Executable(target.Blocked);
@@ -552,7 +551,7 @@ internal sealed class TaskDriver(
             }
 
             task.Runtime.RemoveRestorePlan(target);
-            Execution execution = task.Registry.NewExecution(task, target.Prepared.Input);
+            GraphExecution execution = task.Registry.NewExecution(task, target.Input);
             execution.ContinueFrom(target.Source);
             node.ClearRerun();
             node.ClearBlock();
@@ -560,7 +559,7 @@ internal sealed class TaskDriver(
             node.AddActive();
             task.Journal.AppendInfo(
                 $"从执行 {target.Source.Id.Value} 恢复为执行 {execution.Id.Value}，节点 {node.Path}。");
-            prepared = (node, execution, target.Prepared);
+            prepared = (node, execution, target);
         }
 
         if (prepared is not { } step)
@@ -574,18 +573,22 @@ internal sealed class TaskDriver(
     /// <summary>派发一个已装配的执行并收口，再按收口计划入队下游或重派目标。</summary>
     private async Task RunAndSettleAsync(
         RuntimeExecutable node,
-        Execution execution,
-        PreparedRestore? restore)
+        GraphExecution execution,
+        TaskRuntime.RestorePlan? restore)
     {
         try
         {
             var runner = restore is null
-                ? runners.Create(node.Executable, execution.Target, execution.Id)
-                : ExecutionRunnerAdapter.Adapt(
-                    restore.Input,
-                    restorers?.CreateRestored(node.Executable, execution.Id, restore)
-                        ?? throw new InvalidOperationException("任务域没有配置恢复能力。"));
-            await dispatcher.DispatchAsync(execution, runner, CancellationToken.None).ConfigureAwait(false);
+                ? runtime.CreateRunner(
+                    node.Executable.Type as IExecutionRunnerFactory,
+                    node.Executable.Type.Kind.Value,
+                    node.Executable.Type.ModelPort is not null,
+                    execution.Target,
+                    new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value))
+                : runtime.CreateRestored(
+                    new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value),
+                    restore.Prepared);
+            await runtime.DispatchAsync(execution.Unit, runner, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

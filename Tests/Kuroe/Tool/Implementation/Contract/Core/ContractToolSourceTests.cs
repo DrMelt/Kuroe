@@ -1,8 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Execution;
 using Xunit;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -20,23 +17,24 @@ public sealed class ContractToolSourceTests
             source.Definitions.Select(definition => definition.Path.Value));
     }
 
-    private sealed class FakePorts : IPortSubmitter
+    private sealed class FakePorts : IExecutionPortSubmitter
     {
-        public ErrorOr<ExecutionStatus> SubmitValues(
+        public ErrorOr<ExecutionStatus> Submit(
             ExecutionId id,
-            IReadOnlyDictionary<string, PortValue> values) =>
-            new ExecutionStatus(NodePath.Of("节点"), 1, 1, NodeState.Running, [], null);
+            IReadOnlyList<ExecutionOutputValue> values) =>
+            Status();
     }
 
-    private sealed class FakeCannotComplete : ICannotCompleteSubmitter
+    private sealed class FakeCannotComplete : IExecutionCannotCompleteSubmitter
     {
-        public ErrorOr<ExecutionStatus> Report(ExecutionId id, string? reason) =>
-            new ExecutionStatus(NodePath.Of("节点"), 1, 1, NodeState.Running, [], null);
+        public ErrorOr<ExecutionStatus> Report(ExecutionId id, string reason) => Status();
     }
 
     private sealed class FakeStatus : IExecutionStatusReader
     {
-        public ErrorOr<ExecutionStatus> Read(ExecutionId id) =>
-            new ExecutionStatus(NodePath.Of("节点"), 1, 1, NodeState.Running, [], null);
+        public ErrorOr<ExecutionStatus> Read(ExecutionId id) => Status();
     }
+
+    private static ExecutionStatus Status() =>
+        new(new ExecutionTargetId("节点"), 1, 1, ExecutionState.Running, [], null);
 }

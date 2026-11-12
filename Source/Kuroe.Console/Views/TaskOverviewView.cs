@@ -111,7 +111,7 @@ internal sealed class TaskOverviewView(Terminal terminal, PendingService pending
 
         foreach (ExecutableSnapshot node in executed)
         {
-            foreach (ExecutionSnapshot execution in node.Executions.OrderBy(execution => execution.Id.Value))
+            foreach (GraphExecutionSnapshot execution in node.Executions.OrderBy(execution => execution.Id.Value))
             {
                 (string id, string round, string state, string elapsed, string? failures) = ViewLabels.ExecutionParts(execution);
                 table.AddRow(

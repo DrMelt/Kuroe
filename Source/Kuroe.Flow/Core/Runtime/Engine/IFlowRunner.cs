@@ -17,7 +17,7 @@ public interface IFlowRunner
     void Pause(WorkTask task);
 
     /// <summary>要求持有任务 Gate：停止一个已启动的执行。</summary>
-    ErrorOr<Success> StopExecution(WorkTask task, Execution execution);
+    ErrorOr<Success> StopExecution(WorkTask task, GraphExecution execution);
 
     /// <summary>要求持有任务 Gate：恢复推进循环，continueRestores 为真时恢复可恢复的阻塞。</summary>
     void ResumeTask(WorkTask task, bool continueRestores = true);

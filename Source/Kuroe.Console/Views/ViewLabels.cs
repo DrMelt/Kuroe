@@ -2,6 +2,7 @@ using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using Kuroe.Pending;
 using Spectre.Console;
 
@@ -30,7 +31,7 @@ internal static class ViewLabels
             : Of(waiting.Kind);
 
     /// <summary>执行的状态，未收口时带上过程摘要。</summary>
-    public static string State(ExecutionSnapshot execution) => InfoLabels.State(execution);
+    public static string State(GraphExecutionSnapshot execution) => InfoLabels.State(execution);
 
     public static Style StyleOf(TaskState state) => state switch
     {
@@ -66,7 +67,7 @@ internal static class ViewLabels
 
     /// <summary>执行在一行里的字段与顺序，树行、菜单项与执行清单共用。</summary>
     public static (string Id, string Round, string State, string Elapsed, string? Failures) ExecutionParts(
-        ExecutionSnapshot execution) => (
+        GraphExecutionSnapshot execution) => (
         execution.Id.ToString(),
         $"第 {execution.Input.ExecutionCount} 轮",
         State(execution),
@@ -74,7 +75,7 @@ internal static class ViewLabels
         execution.Failures.Count > 0 ? $"失败 {execution.Failures.Count} 条" : null);
 
     /// <summary>执行概况一行，供菜单与清单使用。</summary>
-    public static string ExecutionLabel(ExecutionSnapshot execution)
+    public static string ExecutionLabel(GraphExecutionSnapshot execution)
     {
         (string id, string round, string state, string elapsed, string? failures) = ExecutionParts(execution);
         List<string> parts = [id, round, state, elapsed];

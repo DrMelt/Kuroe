@@ -2,6 +2,8 @@ using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
+using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.TestSupport;
@@ -128,7 +130,7 @@ public sealed class ViewLabelsTests
         Assert.Equal("风格=技术文档风格", port.StartLabel());
     }
 
-    private static ExecutionSnapshot Execution(string progress) => new(
+    private static GraphExecutionSnapshot Execution(string progress) => new(
         new ExecutionId(1), Input(), ExecutionState.Running, progress,
         TestTime.At, TestTime.At, null, [], [], ExecutionUsage.None);
 

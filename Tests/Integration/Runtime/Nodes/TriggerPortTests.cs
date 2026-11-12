@@ -28,7 +28,7 @@ public sealed class TriggerPortTests
         Assert.Equal(TaskState.Done, snapshot.State);
         if (trigger)
         {
-            ExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+            GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
             Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
             return;
         }
@@ -69,7 +69,7 @@ public sealed class TriggerPortTests
             return;
         }
 
-        ExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "继续");
     }
 
@@ -215,7 +215,7 @@ public sealed class TriggerPortTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Settle(id);
 
-        ExecutionSnapshot downstream = Assert.Single(Executions(done, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(Executions(done, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内停用");
     }
 
@@ -255,7 +255,7 @@ public sealed class TriggerPortTests
 
         if (trigger)
         {
-            ExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+            GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
             Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内内容");
             return;
         }
@@ -297,7 +297,7 @@ public sealed class TriggerPortTests
             return;
         }
 
-        ExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
+        GraphExecutionSnapshot downstream = Assert.Single(Executions(snapshot, "下游"));
         Assert.Contains(downstream.Input.Inputs, value => value.Text == "箱内内容");
     }
 
@@ -314,7 +314,7 @@ public sealed class TriggerPortTests
         };
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot done = environment.Wait(id, current => current.State == TaskState.Done);
+        TaskSnapshot done = environment.Settle(id);
 
         Assert.Equal(2, Executions(done, "加工").Count);
         Assert.Equal(2, Executions(done, "下游").Count);
@@ -327,7 +327,7 @@ public sealed class TriggerPortTests
             && entry.Text.Contains("未满足触发条件", StringComparison.Ordinal));
 
     /// <summary>某个标签的执行节点已启动的执行。</summary>
-    private static IReadOnlyList<ExecutionSnapshot> Executions(TaskSnapshot snapshot, string label) =>
+    private static IReadOnlyList<GraphExecutionSnapshot> Executions(TaskSnapshot snapshot, string label) =>
         snapshot.Executables.Single(entry => entry.Executable.Label.Value == label).Executions;
 
     /// <summary>是否为来源节点，用于区分交回值。</summary>

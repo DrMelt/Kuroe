@@ -1,6 +1,8 @@
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
+using NeutralExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
+using NeutralTokenUsage = Kuroe.Flow.Execution.TokenUsage;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
@@ -11,7 +13,7 @@ public sealed class ExecutionUsageTests
     public void Runner_usage_reaches_the_execution_snapshot()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
-        ExecutionUsage usage = new(3, 1, new TokenUsage(120, 30, 150, 80, 5)) { ContextTokens = 120 };
+        NeutralExecutionUsage usage = new(3, 1, new NeutralTokenUsage(120, 30, 150, 80, 5)) { ContextTokens = 120 };
         environment.Runner.Usage = usage;
 
         TaskId id = environment.Submit("统计用量");
@@ -25,7 +27,7 @@ public sealed class ExecutionUsageTests
     public void Runner_usage_is_visible_while_the_execution_runs()
     {
         using TestEnvironment environment = TestEnvironment.Create(SingleNodeFlow);
-        ExecutionUsage usage = new(1, 0, new TokenUsage(12, 3, 15, 4, 1)) { ContextTokens = 12 };
+        NeutralExecutionUsage usage = new(1, 0, new NeutralTokenUsage(12, 3, 15, 4, 1)) { ContextTokens = 12 };
         environment.Runner.Usage = usage;
         environment.Runner.Gate.HoldAll();
 

@@ -13,6 +13,11 @@ using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Nodes;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using NeutralExecutionRestoreContext = Kuroe.Flow.Execution.ExecutionRestoreContext;
+using NeutralExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
+using PreparedExecutionRestore = Kuroe.Flow.Execution.PreparedExecutionRestore;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
@@ -342,7 +347,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
     /// <summary>执行收口：未启动的中断单独分类，失败与未收口先停驻阻塞，通过后发布产出并给出下游通知。
     /// 接收器先经 ReleaseActive 再进入。终止任务的收口只通知等待方，不再阻塞或发布。</summary>
-    public SettlePlan Settle(RuntimeExecutable node, Execution execution)
+    public SettlePlan Settle(RuntimeExecutable node, GraphExecution execution)
     {
         if (_task.Lifecycle == TaskLifecycle.Terminated)
         {
@@ -387,10 +392,10 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     }
 
     /// <summary>执行停驻阻塞：判定先交回等待方，再把这个执行节点记为阻塞并检查执行上限。</summary>
-    private SettlePlan Block(RuntimeExecutable node, Execution execution)
+    private SettlePlan Block(RuntimeExecutable node, GraphExecution execution)
     {
         _task.NotifyExecutionSettled(execution);
-        ExecutionSnapshot snapshot = execution.Snapshot();
+        GraphExecutionSnapshot snapshot = execution.Snapshot();
         if (snapshot.StartedAt is null
             && snapshot.State == ExecutionState.Interrupted)
         {
@@ -687,8 +692,9 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     /// <summary>一个可执行的恢复计划：停住的节点、提供恢复数据的来源执行与已装配的恢复。</summary>
     public sealed record RestorePlan(
         NodePath Blocked,
-        Execution Source,
-        PreparedRestore Prepared);
+        GraphExecution Source,
+        ExecutionInput Input,
+        PreparedExecutionRestore Prepared);
 
     /// <summary>是否存在可派发的恢复计划。要求持有 Gate。</summary>
     public bool HasRestorePlans => _restorePlans.Count > 0;
@@ -767,12 +773,12 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             || node.Block?.Execution is not { } blocked
             || AtLimit(node)
             || Frozen(node.Path)
-            || _task.Registry.RestorerSource is not { } restorers)
+            || _task.Registry.Restorers is not { } restorers)
         {
             return null;
         }
 
-        Execution? candidate = _task.Executions.FirstOrDefault(execution => execution.Id == blocked);
+        GraphExecution? candidate = _task.Executions.FirstOrDefault(execution => execution.Id == blocked);
         while (candidate is not null)
         {
             if (!Resumable(candidate))
@@ -788,11 +794,17 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                     OutputPorts = node.Executable.SubmittablePorts,
                 };
 
-                RestorePreparationContext context = new(input, data, candidate.Contract);
-                ErrorOr<PreparedRestore> prepared;
+                NeutralExecutionRequest request = GraphExecution.BuildRequest(input);
+                NeutralExecutionRestoreContext context = new(
+                    new NeutralExecutionId(candidate.Id.Value),
+                    request,
+                    GraphExecution.BuildTarget(input, request),
+                    new NeutralExecutionRestoreState(data.Format, data.Payload),
+                    GraphExecution.ToNeutralContract(candidate.Contract));
+                ErrorOr<PreparedExecutionRestore> prepared;
                 try
                 {
-                    prepared = restorers.Prepare(node.Executable, context);
+                    prepared = restorers.Prepare(context);
                 }
                 catch (Exception)
                 {
@@ -804,7 +816,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                     return null;
                 }
 
-                RestorePlan plan = new(node.Path, candidate, prepared.Value);
+                RestorePlan plan = new(node.Path, candidate, input, prepared.Value);
                 SetRestorePlan(node, plan);
 
                 return plan;
@@ -825,7 +837,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     }
 
     /// <summary>可从这次执行继续：失败与中断可以恢复，完成不恢复。</summary>
-    private static bool Resumable(Execution execution) =>
+    private static bool Resumable(GraphExecution execution) =>
         execution.State is ExecutionState.Failed or ExecutionState.Interrupted;
 
     /// <summary>缓存或移除节点的恢复计划，并同步快照标记。</summary>

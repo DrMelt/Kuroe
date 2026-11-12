@@ -1,16 +1,30 @@
 using ErrorOr;
+using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.TestSupport;
+using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
+using NeutralExecutionOutputPort = Kuroe.Flow.Execution.ExecutionOutputPort;
+using NeutralExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
+using NeutralExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
+using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Flow.Execution.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Flow.Execution.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
+using NeutralPortKind = Kuroe.Flow.Execution.ExecutionPortKind;
 
 namespace Kuroe.Console.Tests.Support;
 
 /// <summary>不接模型的执行器：按节点产出要求交回端口取值，并按声明收口。</summary>
-public sealed class FakeRunner : IExecutionRunnerFactory
+public sealed class FakeRunner : NeutralExecutionRunnerFactory
 {
+    /// <inheritdoc/>
+    public string Kind => "*";
+
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
     public PortSubmitter? PortSubmitter { get; set; }
 
@@ -21,38 +35,45 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     public bool SubmitsPorts { get; set; } = true;
 
     /// <summary>按声明的端口生成提交取值：Text 语义端口给同名校验文本，Signal 端口只给端口名。</summary>
-    private static Dictionary<string, PortValue> PortValuesFor(IReadOnlyList<Port> ports) =>
-        ports.ToDictionary(
-            port => port.Name.Value,
-            port => port.Type.Semantics == PortSemantics.Text
-                ? new PortValue($"{port.Name.Value}产出")
-                : new PortValue(null));
+    private static IReadOnlyList<NeutralExecutionOutputValue> PortValuesFor(
+        IReadOnlyList<NeutralExecutionOutputPort> ports) =>
+        [
+            .. ports.Select(port => new NeutralExecutionOutputValue(
+                new NeutralExecutionPortName(port.Name.Value),
+                port.Kind == NeutralPortKind.Text ? $"{port.Name.Value}产出" : null,
+                true)),
+        ];
 
-    public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
+    public NeutralExecutionRunner Create(NeutralExecutionTarget target, NeutralExecutionId execution) =>
         new Run(this, execution);
 
-    private async Task<ErrorOr<ExecutionOutput>> ExecuteAsync(
-        ExecutionId execution,
-        ExecutionInput input,
+    private async Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
+        NeutralExecutionId execution,
+        NeutralExecutionRequest request,
         OutputJournal journal,
         CancellationToken cancellationToken)
     {
-        ExecutionHandle handle = Gate.Arrive(execution, input.Node, input.ExecutionCount);
+        NodePath node = new(
+            [.. request.Target.Value
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
+        ExecutionHandle handle = Gate.Arrive(new ExecutionId(execution.Value), node, request.Attempt);
         try
         {
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);
 
-            IReadOnlyList<Port> ports = input.RequiredPorts;
+            IReadOnlyList<NeutralExecutionOutputPort> ports =
+                [.. request.OutputPorts.Where(port => port.RequiresSubmission)];
             if (ports.Count > 0 && SubmitsPorts)
             {
                 PortSubmitter submitter = PortSubmitter
                     ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
-                _ = submitter.SubmitValues(execution, PortValuesFor(ports));
+                _ = submitter.Submit(execution, PortValuesFor(ports));
             }
 
-            journal.AppendContent(ProcessContentKind.Reply, $"{input.Node}产出");
+            journal.AppendContent(ProcessContentKind.Reply, $"{node}产出");
 
-            return ExecutionOutput.Ports;
+            return NeutralExecutionOutput.FromPorts([]);
         }
         finally
         {
@@ -126,13 +147,15 @@ public sealed class FakeRunner : IExecutionRunnerFactory
     }
 
     /// <summary>一次执行的运行器：过程记录随执行建立，运行委托给共享的假执行器状态。</summary>
-    private sealed class Run(FakeRunner owner, ExecutionId execution) : IExecutionRunner
+    private sealed class Run(FakeRunner owner, NeutralExecutionId execution) : NeutralExecutionRunner
     {
         private readonly OutputJournal _journal = new();
 
         public IProcessJournal Journal => _journal;
 
-        public Task<ErrorOr<ExecutionOutput>> ExecuteAsync(ExecutionInput input, CancellationToken cancellationToken) =>
-            owner.ExecuteAsync(execution, input, _journal, cancellationToken);
+        public Task<ErrorOr<NeutralExecutionOutput>> ExecuteAsync(
+            NeutralExecutionRequest request,
+            CancellationToken cancellationToken) =>
+            owner.ExecuteAsync(execution, request, _journal, cancellationToken);
     }
 }

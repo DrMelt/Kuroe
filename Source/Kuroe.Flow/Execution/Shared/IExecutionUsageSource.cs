@@ -4,5 +4,5 @@ namespace Kuroe.Flow.Execution;
 public interface IExecutionUsageSource
 {
     /// <summary>本次执行累计的用量，运行中给出当前累计，执行结束后给出最终值。</summary>
-    ExecutionUsageSnapshot Usage { get; }
+    ExecutionUsage Usage { get; }
 }

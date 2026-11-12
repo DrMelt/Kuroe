@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Sessions;
@@ -38,11 +38,11 @@ internal static class LlmExecutionStateCodec
     private const string ResultKind = "result";
 
     /// <summary>把恢复数据写成执行记录中的恢复数据。</summary>
-    internal static ExecutionRestorePayload Encode(LlmExecutionState state) =>
+    internal static ExecutionRestoreState Encode(LlmExecutionState state) =>
         new(Format, JsonSerializer.Serialize(state, LlmExecutionStateJson.Default.LlmExecutionState));
 
     /// <summary>从执行记录中的恢复负载读回。</summary>
-    internal static LlmExecutionState Decode(ExecutionRestorePayload data)
+    internal static LlmExecutionState Decode(ExecutionRestoreState data)
     {
         if (data.Format != Format)
         {

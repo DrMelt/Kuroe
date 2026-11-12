@@ -40,6 +40,9 @@ public sealed class FileWriteNodeType(FileParameters? parameters, IWorkspaceFile
         Reject(node.Spec?.MaxExecutions is { } limit && limit < 1, "MaxExecutions 必须是正整数。");
     }
 
+    /// <inheritdoc/>
+    string IExecutionRunnerFactory.Kind => Kind.Value;
+
     /// <summary>为一次执行建立文件写入运行器。</summary>
     public IExecutionRunner Create(IExecutionTarget target, ExecutionId execution) =>
         target.Parameters is FileParameters declared

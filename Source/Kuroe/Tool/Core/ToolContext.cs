@@ -1,7 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Execution;
 using Kuroe.Shared;
 
 namespace Kuroe.Tool;
@@ -13,8 +10,8 @@ namespace Kuroe.Tool;
 /// <param name="Execution">所属执行。</param>
 /// <param name="Paths">本轮模型可用的工具路径。</param>
 public sealed record ToolContext(
-    IPortAccess Ports,
-    IReadOnlyDictionary<string, IReadOnlyDictionary<string, PortName>> PortsByTool,
+    IExecutionPortAccess Ports,
+    IReadOnlyDictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> PortsByTool,
     string WorkspaceDirectory,
     ExecutionId Execution,
     IReadOnlyList<ToolPath> Paths)
@@ -24,10 +21,10 @@ public sealed record ToolContext(
         new(Ports, PortsFor(toolPath), WorkspaceDirectory);
 
     /// <summary>某个工具的变量映射，未声明时为空。</summary>
-    public IReadOnlyDictionary<string, PortName> PortsFor(string toolPath) =>
-        PortsByTool.TryGetValue(toolPath, out IReadOnlyDictionary<string, PortName>? ports)
+    public IReadOnlyDictionary<string, ExecutionPortName> PortsFor(string toolPath) =>
+        PortsByTool.TryGetValue(toolPath, out IReadOnlyDictionary<string, ExecutionPortName>? ports)
             ? ports
-            : new Dictionary<string, PortName>();
+            : new Dictionary<string, ExecutionPortName>();
 
     /// <summary>该工具路径是否在本轮可用工具面内。</summary>
     public bool Allows(ToolPath path) => Paths.Any(entry => entry.Allows(path.Value));
@@ -46,33 +43,32 @@ public sealed record ToolContext(
 /// <param name="PortsByName">变量名到输入端口名。</param>
 /// <param name="WorkspaceDirectory">工作区根目录。</param>
 public sealed record ToolBinding(
-    IPortAccess Ports,
-    IReadOnlyDictionary<string, PortName> PortsByName,
+    IExecutionPortAccess Ports,
+    IReadOnlyDictionary<string, ExecutionPortName> PortsByName,
     string WorkspaceDirectory)
 {
     /// <summary>无变量映射的绑定，root 变量指向给定目录。用于测试与不经过流程装配的载体。</summary>
     public static ToolBinding Root(string workspaceDirectory)
     {
-        PortName port = new(PathVariables.RootName);
+        ExecutionPortName port = new(PathVariables.RootName);
 
         return new(
             new FixedPortAccess(port, workspaceDirectory),
-            new Dictionary<string, PortName> { [PathVariables.RootName] = port },
+            new Dictionary<string, ExecutionPortName> { [PathVariables.RootName] = port },
             workspaceDirectory);
     }
 
     /// <summary>某个变量的端口值，未映射或端口为空时为空。</summary>
     public string? Variable(string name) =>
-        PortsByName.TryGetValue(name, out PortName port) ? Ports.Text(port) : null;
+        PortsByName.TryGetValue(name, out ExecutionPortName port) ? Ports.Text(port) : null;
 }
 
 /// <summary>固定返回一个端口文本的访问，用于不经过流程装配的载体。</summary>
-public sealed class FixedPortAccess(PortName fixedPort, string text) : IPortAccess
+public sealed class FixedPortAccess(ExecutionPortName fixedPort, string text) : IExecutionPortAccess
 {
     /// <inheritdoc/>
-    public IReadOnlyList<Port> Outputs => [];
+    public IReadOnlyList<ExecutionOutputPort> Outputs => [];
 
     /// <inheritdoc/>
-    public IReadOnlyDictionary<PortName, string> Texts { get; } =
-        new Dictionary<PortName, string> { [fixedPort] = text };
+    public string? Text(ExecutionPortName port) => port == fixedPort ? text : null;
 }

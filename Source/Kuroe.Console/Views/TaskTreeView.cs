@@ -173,13 +173,13 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
             }
         }
 
-        foreach (ExecutionSnapshot execution in facts.Executions(executable.Path).OrderBy(execution => execution.Id.Value))
+        foreach (GraphExecutionSnapshot execution in facts.Executions(executable.Path).OrderBy(execution => execution.Id.Value))
         {
             yield return ExecutionLine(execution);
         }
     }
 
-    private static Paragraph ExecutionLine(ExecutionSnapshot execution)
+    private static Paragraph ExecutionLine(GraphExecutionSnapshot execution)
     {
         (string id, string round, string state, string elapsed, string? failures) = ViewLabels.ExecutionParts(execution);
         ViewLine line = new ViewLine()
@@ -203,7 +203,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         private readonly Dictionary<NodePath, NodeBlock> _blocks;
         private readonly HashSet<NodePath> _canRestore;
         private readonly Dictionary<NodePath, ExecutableSnapshot> _snapshots;
-        private readonly Dictionary<NodePath, IReadOnlyList<ExecutionSnapshot>> _executions;
+        private readonly Dictionary<NodePath, IReadOnlyList<GraphExecutionSnapshot>> _executions;
         private readonly Dictionary<NodePath, ContainerSnapshot> _containers;
         private readonly Dictionary<NodePath, PendingNode> _waiting;
         private readonly Dictionary<NodePath, IPortTexts> _staticTexts;
@@ -244,8 +244,8 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         public PendingNode? Waiting(NodePath path) =>
             _waiting.TryGetValue(path, out PendingNode node) ? node : null;
 
-        public IReadOnlyList<ExecutionSnapshot> Executions(NodePath path) =>
-            _executions.TryGetValue(path, out IReadOnlyList<ExecutionSnapshot>? executions) ? executions : [];
+        public IReadOnlyList<GraphExecutionSnapshot> Executions(NodePath path) =>
+            _executions.TryGetValue(path, out IReadOnlyList<GraphExecutionSnapshot>? executions) ? executions : [];
 
         public ExecutableSnapshot? Executable(NodePath path) =>
             _snapshots.GetValueOrDefault(path);

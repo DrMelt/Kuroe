@@ -28,7 +28,7 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
             }
 
             PortTexts startTexts = new(state.Start.StartTexts);
-            List<Execution> restored = [];
+            List<GraphExecution> restored = [];
             foreach (ExecutionRecord saved in record.Executions)
             {
                 NodePath path = GraphRecordTargets.Parse(saved.Target);
@@ -39,11 +39,11 @@ public sealed class TaskRestorer(TaskRegistry registry, IExecutionTargetResolver
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
-                restored.Add(Execution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
+                restored.Add(GraphExecution.Restore(saved, BuildInput(record.Identity.Id, node, saved)));
             }
 
             WorkTask task = WorkTask.Restore(_registry, record, state, flow, startTexts, restored);
-            foreach (Execution execution in task.Executions)
+            foreach (GraphExecution execution in task.Executions)
             {
                 _registry.RestoreExecution(task, execution);
             }

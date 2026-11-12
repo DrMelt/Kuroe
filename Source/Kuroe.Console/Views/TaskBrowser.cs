@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph;
@@ -15,7 +16,7 @@ namespace Kuroe.Console.Views;
 /// <summary>任务列表 → 任务概览与执行 → 执行详情的三级下钻。进入时独占终端，退出时冲刷排队的通知。</summary>
 internal sealed class TaskBrowser(
     TaskRegistry registry,
-    TaskService tasks,
+    ITaskControl tasks,
     PendingService pendings,
     FlowService flows,
     IHostStartInputs hostStartInputs,
@@ -355,7 +356,7 @@ internal sealed class TaskBrowser(
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(ExecutionId executionId)
     {
-        ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> found = FindExecution(executionId);
+        ErrorOr<(TaskSnapshot Task, GraphExecutionSnapshot Execution)> found = FindExecution(executionId);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -380,7 +381,7 @@ internal sealed class TaskBrowser(
             }
 
             TaskSnapshot task = found.Value.Task;
-            ExecutionSnapshot snapshot = found.Value.Execution;
+            GraphExecutionSnapshot snapshot = found.Value.Execution;
 
             terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Input.Node}");
             executionView.Print(task, snapshot);
@@ -416,15 +417,15 @@ internal sealed class TaskBrowser(
     }
 
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
-    private ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> FindExecution(ExecutionId id)
+    private ErrorOr<(TaskSnapshot Task, GraphExecutionSnapshot Execution)> FindExecution(ExecutionId id)
     {
-        ErrorOr<Execution> execution = registry.FindExecution(id);
+        ErrorOr<GraphExecution> execution = registry.FindExecution(id);
         if (execution.IsError)
         {
             return execution.ErrorsOrEmptyList;
         }
 
-        ExecutionSnapshot snapshot = execution.Value.Snapshot();
+        GraphExecutionSnapshot snapshot = execution.Value.Snapshot();
         ErrorOr<WorkTask> owner = registry.Find(snapshot.Input.Task);
 
         return owner.IsError
@@ -493,7 +494,7 @@ internal sealed class TaskBrowser(
     private Item Choose(string title, IReadOnlyList<Item> items) =>
         terminal.Prompt(new MenuPrompt<Item>(title, items, item => item.Label, Back));
 
-    private static string ExecutionItemLabel(ExecutionSnapshot execution) =>
+    private static string ExecutionItemLabel(GraphExecutionSnapshot execution) =>
         $"{execution.Input.Node} · {ViewLabels.ExecutionLabel(execution)}";
 
     private static string TaskLabel(TaskSnapshot task) =>

@@ -357,13 +357,13 @@ public sealed class TaskActions(
     /// <summary>停止一个已启动的执行。它所在的执行节点随后被阻塞，Llm 节点可随任务恢复。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id)
     {
-        ErrorOr<Execution> found = _registry.FindExecution(id);
+        ErrorOr<GraphExecution> found = _registry.FindExecution(id);
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        Execution execution = found.Value;
+        GraphExecution execution = found.Value;
         ErrorOr<WorkTask> owner = _registry.Find(execution.Input.Task);
         if (owner.IsError)
         {

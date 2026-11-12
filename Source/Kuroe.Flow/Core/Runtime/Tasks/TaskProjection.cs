@@ -21,12 +21,12 @@ internal sealed class TaskProjection(
         materializer.Find(path)?.Snapshot() ?? new ExecutableStateSnapshot(path, NodeState.Pending);
 
     /// <summary>各执行节点在快照里的一刻状态：静态文本、执行与次数上限。</summary>
-    public IReadOnlyList<ExecutableSnapshot> Executables(IReadOnlyList<ExecutionSnapshot> executions)
+    public IReadOnlyList<ExecutableSnapshot> Executables(IReadOnlyList<GraphExecutionSnapshot> executions)
     {
-        Dictionary<NodePath, List<ExecutionSnapshot>> byNode = [];
-        foreach (ExecutionSnapshot execution in executions)
+        Dictionary<NodePath, List<GraphExecutionSnapshot>> byNode = [];
+        foreach (GraphExecutionSnapshot execution in executions)
         {
-            if (!byNode.TryGetValue(execution.Input.Node, out List<ExecutionSnapshot>? values))
+            if (!byNode.TryGetValue(execution.Input.Node, out List<GraphExecutionSnapshot>? values))
             {
                 values = [];
                 byNode[execution.Input.Node] = values;

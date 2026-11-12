@@ -1,7 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Xunit;
 
 namespace Kuroe.Tool.Contract.Tests;
@@ -14,7 +12,7 @@ public sealed class StatusToolTests
     {
         StatusTool tool = new(
             new FakeReader(new ExecutionStatus(
-                NodePath.Of("节点"), 2, 5, NodeState.Blocked, [new PortName("结论")], "缺少输入资料")),
+                new ExecutionTargetId("节点"), 2, 5, ExecutionState.Failed, [new ExecutionPortName("结论")], "缺少输入资料")),
             new ExecutionId(1));
 
         ErrorOr<string> result = Assert.Single(tool.Functions).Invoke(new ToolArguments(new Dictionary<string, object?>()));

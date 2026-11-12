@@ -12,11 +12,11 @@ public sealed class ExecutionIndex
     private int _nextExecution = 1;
 
     /// <summary>为一个任务建立执行并登记归属。</summary>
-    internal Execution Create(WorkTask owner, ExecutionInput input)
+    internal GraphExecution Create(WorkTask owner, ExecutionInput input)
     {
         lock (_gate)
         {
-            Execution execution = new(new ExecutionId(_nextExecution++), input, owner.ControlVersion);
+            GraphExecution execution = new(new ExecutionId(_nextExecution++), input, owner.ControlVersion);
             _entries[execution.Id] = new Entry(execution, owner);
 
             return execution;
@@ -24,7 +24,7 @@ public sealed class ExecutionIndex
     }
 
     /// <summary>登记一个从存档恢复的执行，推进下一次执行号。</summary>
-    internal void Restore(WorkTask owner, Execution execution)
+    internal void Restore(WorkTask owner, GraphExecution execution)
     {
         lock (_gate)
         {
@@ -34,7 +34,7 @@ public sealed class ExecutionIndex
     }
 
     /// <summary>按执行号取执行，不存在时返回错误。</summary>
-    public ErrorOr<Execution> Find(ExecutionId id)
+    public ErrorOr<GraphExecution> Find(ExecutionId id)
     {
         lock (_gate)
         {
@@ -43,7 +43,7 @@ public sealed class ExecutionIndex
     }
 
     /// <summary>按执行号取执行与它的归属任务，不存在时返回错误。</summary>
-    public ErrorOr<(Execution Execution, WorkTask Owner)> FindOwned(ExecutionId id)
+    public ErrorOr<(GraphExecution Execution, WorkTask Owner)> FindOwned(ExecutionId id)
     {
         lock (_gate)
         {
@@ -62,5 +62,5 @@ public sealed class ExecutionIndex
         }
     }
 
-    private readonly record struct Entry(Execution Execution, WorkTask Owner);
+    private readonly record struct Entry(GraphExecution Execution, WorkTask Owner);
 }

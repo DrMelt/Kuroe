@@ -49,11 +49,11 @@ public sealed class TaskKuroeInfoToolTests
         public ErrorOr<TaskSnapshot> FindByReference(string reference) =>
             Error.NotFound("Task.NotFound", $"没有任务 {reference}。");
 
-        public ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id) =>
+        public ErrorOr<GraphExecutionSnapshot> FindExecution(ExecutionId id) =>
             Error.NotFound("Execution.NotFound", $"没有执行 {id}。");
 
         public IReadOnlyList<TaskSnapshot> Snapshots() => [];
 
-        public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => [];
+        public IReadOnlyList<GraphExecutionSnapshot> LiveExecutions() => [];
     }
 }

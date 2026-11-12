@@ -1,5 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Tool;
 using Microsoft.Extensions.AI;
 
@@ -22,32 +22,29 @@ internal interface ISessionHistory
 }
 
 /// <summary>一次执行的会话：历史起点由执行的输入端口给出，执行期间来源不再改变。</summary>
-internal sealed class ExecutionHistory(ExecutionInput input) : ISessionHistory
+internal sealed class ExecutionHistory(ExecutionRequest request, LlmExecutionParameters parameters) : ISessionHistory
 {
-    public ModelName? Model => (input.Declaration as KuroeNodeDeclaration)?.Model;
+    public ModelName? Model =>
+        parameters.Model is { Length: > 0 } model && ModelName.Create(model) is { IsError: false } parsed
+            ? parsed.Value
+            : null;
 
     /// <summary>该执行的系统指令：节点声明的恒定块，置于请求最前。</summary>
-    public string? SystemPrompt => (input.Type as LlmNodeType)?.SystemPrompt();
+    public string? SystemPrompt => parameters.Type.SystemPrompt();
 
     /// <summary>该执行的能力面：节点声明的白名单与按输出端口附上的契约能力。</summary>
-    public IReadOnlyList<ToolPath> ToolPaths => (input.Type as LlmNodeType)?.ToolPaths(input.OutputPorts) ?? [];
+    public IReadOnlyList<ToolPath> ToolPaths => parameters.Type.ToolPaths(request.OutputPorts);
 
     public void LayOut(List<ChatMessage> messages)
     {
         messages.Clear();
-        foreach (InputValue value in input.Inputs)
+        foreach (ExecutionInputValue value in request.Inputs)
         {
-            messages.Add(new ChatMessage(ChatRole.User, Text(value.Value)));
+            messages.Add(new ChatMessage(ChatRole.User, Text(value)));
         }
     }
 
-    /// <summary>一条取值在请求里的写法：上游产出标明来源节点与端口，输入节点给回答，流程起点的初始输入原样给出。</summary>
-    private static string Text(ContextValue value) => value.Origin switch
-    {
-        ExecutionSource source => $"节点「{source.Node}」的端口「{source.Port}」产出：\n{value.Text}",
-        ContainerPortSource source => $"节点「{source.Container}」的端口「{source.Port}」产出：\n{value.Text}",
-        InputSource source => $"节点「{source.Node}」的输入：\n{value.Text}",
-        DefaultSource source => $"节点「{source.Node}」的端口「{source.Port}」默认值：\n{value.Text}",
-        _ => value.Text,
-    };
+    /// <summary>一条取值在请求里的写法：有来源标识时标明来源，没有时原样给出。</summary>
+    private static string Text(ExecutionInputValue value) =>
+        value.Source is { Length: > 0 } source ? $"{source}：\n{value.Text}" : value.Text;
 }

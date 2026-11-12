@@ -1,7 +1,6 @@
 using System.Text;
 using ErrorOr;
-using Kuroe.Flow.Shared.Display;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 
@@ -30,8 +29,8 @@ public sealed class StatusTool(IExecutionStatusReader reader, ExecutionId execut
         ExecutionStatus status = read.Value;
 
         var text = new StringBuilder();
-        text.AppendLine($"节点 {status.Node} · 第 {status.ExecutionCount} 轮 · 执行上限 {status.MaxExecutions}");
-        text.AppendLine($"节点状态：{InfoLabels.Of(status.NodeState)}");
+        text.AppendLine($"节点 {status.Target} · 第 {status.Attempt} 轮 · 执行上限 {status.MaxAttempts}");
+        text.AppendLine($"执行状态：{status.State.Label()}");
         text.AppendLine(ContractReceipts.Needs(status));
 
         if (status.CannotCompleteReason is { } reason)

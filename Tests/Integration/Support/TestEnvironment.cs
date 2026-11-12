@@ -22,6 +22,7 @@ using Kuroe.Tool.Contract;
 using Kuroe.Workflows.Flows;
 using Kuroe.Flow.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -51,7 +52,8 @@ public sealed class TestEnvironment : IDisposable
             provider.GetRequiredService<PortSubmitter>(),
             provider.GetRequiredService<CannotCompleteSubmitter>(),
             new ExecutionStatusReader(Executions));
-        runner.ContractToolFactory = (execution, input) => CreateContractTools(execution, input);
+        runner.ContractToolFactory = execution =>
+            CreateContractTools(Executions.Find(execution).ThrowIfError());
     }
 
     /// <summary>临时工作目录。</summary>
@@ -98,12 +100,12 @@ public sealed class TestEnvironment : IDisposable
     public ITool StatusToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.Status);
 
     /// <summary>按执行创建全部契约工具。</summary>
-    public IReadOnlyList<ITool> CreateContractTools(ExecutionId execution, ExecutionInput input) =>
+    public IReadOnlyList<ITool> CreateContractTools(GraphExecution execution) =>
         _contractTools.Create(new ToolContext(
-            new ExecutionPortAccess(input),
-            new Dictionary<string, IReadOnlyDictionary<string, PortName>>(),
+            new Kuroe.Flow.Execution.ExecutionPortAccess(execution.Request),
+            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Flow.Execution.ExecutionPortName>>(),
             Root,
-            execution,
+            new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value),
             [
                 new ToolPath(ContractTools.Port),
                 new ToolPath(ContractTools.CannotComplete),
@@ -113,8 +115,8 @@ public sealed class TestEnvironment : IDisposable
     /// <summary>取指定路径的契约工具。</summary>
     private ITool ContractTool(ExecutionId execution, string path)
     {
-        Execution found = Executions.Find(execution).ThrowIfError();
-        IReadOnlyList<ITool> tools = CreateContractTools(execution, found.Input);
+        GraphExecution found = Executions.Find(execution).ThrowIfError();
+        IReadOnlyList<ITool> tools = CreateContractTools(found);
 
         return tools.Single(tool => tool.Functions.Any(function => function.Definition.Path.Value == path));
     }
@@ -200,8 +202,18 @@ public sealed class TestEnvironment : IDisposable
             return assistant.ErrorsOrEmptyList;
         }
 
-        // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<IExecutionRunnerFactory>(runner);
+        // 替身执行器替换真实执行与恢复能力
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (services[index].ServiceType == typeof(Kuroe.Flow.Execution.IExecutionRunnerFactory)
+                || services[index].ServiceType == typeof(Kuroe.Flow.Execution.IExecutionRestorer))
+            {
+                services.RemoveAt(index);
+            }
+        }
+
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(runner);
+        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRestorer>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         // 不写存档的装配不注册恢复服务

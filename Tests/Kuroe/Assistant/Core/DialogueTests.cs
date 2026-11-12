@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Input;
 using Kuroe.Tool;
 using Kuroe.Flow.Compilation;
@@ -65,13 +66,33 @@ public sealed class DialogueTests
             parameters.SystemPrompt);
     }
 
+    private static ExecutionOutputPort ToExecutionPort(Port port)
+    {
+        ExecutionPortKind kind = port.Type == PortTypes.Signal
+            ? ExecutionPortKind.Signal
+            : ExecutionPortKind.Text;
+        if (port.Type == PortTypes.Context)
+        {
+            kind = ExecutionPortKind.Context;
+        }
+
+        return new ExecutionOutputPort(
+            new ExecutionPortName(port.Name.Value),
+            kind,
+            false,
+            port.Trigger,
+            PortRules.RequiresSubmission(port.Type),
+            port.Mode == PortMode.Constant);
+    }
+
     /// <summary>回话节点的 Signal 输出端口同样按需交回端口放行端口交回工具。</summary>
     [Fact]
     public void Dialogue_reply_node_grants_the_port_contract_tool()
     {
         NodeSpec reply = Members(DefaultLanguage)[1];
         LlmNodeType type = Assert.IsType<LlmNodeType>(reply.Type);
-        IReadOnlyList<string> paths = [.. type.ToolPaths(reply.Outputs).Select(path => path.Value)];
+        IReadOnlyList<string> paths =
+            [.. type.ToolPaths([.. reply.Outputs.Select(ToExecutionPort)]).Select(path => path.Value)];
 
         Assert.Equal(DialogueFlow.Tools.Select(path => path.Value), paths.Take(DialogueFlow.Tools.Count));
         Assert.Equal(

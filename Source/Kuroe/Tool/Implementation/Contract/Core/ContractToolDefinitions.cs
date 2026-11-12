@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 
@@ -6,7 +6,7 @@ namespace Kuroe.Tool.Contract;
 static class ContractToolDefinitions
 {
     /// <summary>交回命名端口产出的工具定义，有端口清单时写进说明。</summary>
-    public static ToolDefinition Port(IReadOnlyList<Port>? ports) => WithPorts(new ToolDefinition(
+    public static ToolDefinition Port(IReadOnlyList<ExecutionOutputPort>? ports) => WithPorts(new ToolDefinition(
         new ToolPath(ContractTools.Port),
         "提交本执行节点命名输出端口的值。Text 端口给文本；Signal 端口给空文本或端口名；承载触发的 Text 端口给文本，或带 text 与 trigger 的对象；"
         + "承载触发的 Signal 端口给 true 或 false，或带 trigger 的对象。trigger 省略时为 true，false 表示本次产出只被下游启动组消耗、不触发下游节点。",
@@ -25,8 +25,11 @@ static class ContractToolDefinitions
         []);
 
     /// <summary>说明末尾附上本轮需交回的端口清单，未声明端口时原样返回。</summary>
-    private static ToolDefinition WithPorts(ToolDefinition definition, IReadOnlyList<Port>? ports) =>
+    private static ToolDefinition WithPorts(ToolDefinition definition, IReadOnlyList<ExecutionOutputPort>? ports) =>
         ports is null
             ? definition
-            : definition with { Description = $"{definition.Description}本节点需要交回的端口：{PortRules.List(ports)}。" };
+            : definition with
+            {
+                Description = $"{definition.Description}本节点需要交回的端口：{ExecutionPortRules.List(ports)}。",
+            };
 }

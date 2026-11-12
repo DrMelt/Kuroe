@@ -14,7 +14,7 @@ public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
     ITaskRestorer restorer,
     IFlowRunner runner,
-    IExecutionRestorerSource restorers) : ITaskRestoreRuntime
+    Kuroe.Flow.Execution.ExecutionRestorerRegistry restorers) : ITaskRestoreRuntime
 {
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(
@@ -22,7 +22,7 @@ public sealed class TaskRestoreRuntime(
         CompiledFlow flow,
         IReadOnlyList<NodePath> seed)
     {
-        registry.RestorerSource = restorers;
+        registry.Restorers = restorers;
         ErrorOr<WorkTask> task = restorer.Restore(record, flow);
         if (task.IsError)
         {

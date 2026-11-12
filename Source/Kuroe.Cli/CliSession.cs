@@ -2,6 +2,7 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Workflows.Flows;
@@ -20,7 +21,7 @@ internal sealed class CliSession : IAsyncDisposable
     {
         _provider = provider;
         Registry = provider.GetRequiredService<TaskRegistry>();
-        Tasks = provider.GetRequiredService<TaskService>();
+        Tasks = provider.GetRequiredService<ITaskControl>();
         Flows = provider.GetRequiredService<FlowService>();
         Catalog = provider.GetRequiredService<CatalogService>();
         Models = provider.GetRequiredService<ModelService>();
@@ -32,7 +33,7 @@ internal sealed class CliSession : IAsyncDisposable
     public TaskRegistry Registry { get; }
 
     /// <summary>用户任务的提交与生命周期动作。</summary>
-    public TaskService Tasks { get; }
+    public ITaskControl Tasks { get; }
 
     /// <summary>流程集合。</summary>
     public FlowService Flows { get; }

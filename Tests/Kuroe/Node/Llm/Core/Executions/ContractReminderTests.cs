@@ -1,7 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Tool;
 using Xunit;
@@ -11,8 +9,8 @@ namespace Kuroe.Node.Llm.Tests.Executions;
 /// <summary>产出契约的补交提示：缺端口时点名缺项与交回工具，齐备或已上报无法完成时不给提示。</summary>
 public sealed class ContractReminderTests
 {
-    private static readonly PortName Conclusion = new("结论");
-    private static readonly PortName Completion = new("完成");
+    private static readonly ExecutionPortName Conclusion = new("结论");
+    private static readonly ExecutionPortName Completion = new("完成");
 
     [Fact]
     public void Missing_port_values_remind_the_port_and_the_contract_tool()
@@ -59,8 +57,10 @@ public sealed class ContractReminderTests
         Assert.Null(reminder.Text(new ExecutionId(1)));
     }
 
-    private static ExecutionStatus Status(IReadOnlyList<PortName> outstanding, string? reason = null) =>
-        new(NodePath.Of("实施"), 1, 3, NodeState.Running, outstanding, reason);
+    private static ExecutionStatus Status(
+        IReadOnlyList<ExecutionPortName> outstanding,
+        string? reason = null) =>
+        new(new ExecutionTargetId("实施"), 1, 3, ExecutionState.Running, outstanding, reason);
 
     private sealed class FakeReader(ErrorOr<ExecutionStatus> result) : IExecutionStatusReader
     {

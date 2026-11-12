@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Kuroe.Node.Llm.Executions;
 using Kuroe.Node.Llm.Sessions;
 using Kuroe.Node.Llm.Tools;
@@ -267,7 +267,7 @@ public sealed class SessionTests
                 new LlmMessageState("assistant", [new LlmContentState("text", Text: "回答")]),
             ]);
 
-        ExecutionRestorePayload encoded = LlmExecutionStateCodec.Encode(state);
+        ExecutionRestoreState encoded = LlmExecutionStateCodec.Encode(state);
         LlmExecutionState decoded = LlmExecutionStateCodec.Decode(encoded);
 
         Assert.Equal(LlmExecutionStateCodec.Format, encoded.Format);

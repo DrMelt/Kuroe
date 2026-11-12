@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Runtime.Tasks;
@@ -9,8 +10,7 @@ namespace Kuroe.Flow.Runtime.Engine;
 /// <summary>任务推进的宿主：每次提交为任务建一个推进循环，暂停、恢复、重新执行与终止经信号或状态迁移落地。
 /// 执行节点状态由任务对象承载，这里只管流程生命周期。</summary>
 public sealed class FlowEngine(
-    ExecutionDispatcher dispatcher,
-    IExecutionRunnerSource runners,
+    ExecutionRuntime runtime,
     IExecutionTargetResolver targetResolver) : IFlowRunner
 {
     private readonly Lock _gate = new();
@@ -19,8 +19,8 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：启动该任务的推进循环。</summary>
     public void Start(WorkTask task)
     {
-        task.Registry.RestorerSource = runners as IExecutionRestorerSource;
-        TaskDriver driver = new(task, dispatcher, runners, runners as IExecutionRestorerSource, targetResolver);
+        task.Registry.Restorers = runtime.Restorers;
+        TaskDriver driver = new(task, runtime, targetResolver);
         driver.Start();
         Launch(task, driver);
     }
@@ -28,8 +28,8 @@ public sealed class FlowEngine(
     /// <summary>要求持有任务 Gate：按调度种子恢复推进循环，任务保持暂停不自动推进。</summary>
     public void Restore(WorkTask task, IReadOnlyList<NodePath> seed)
     {
-        task.Registry.RestorerSource = runners as IExecutionRestorerSource;
-        TaskDriver driver = new(task, dispatcher, runners, runners as IExecutionRestorerSource, targetResolver);
+        task.Registry.Restorers = runtime.Restorers;
+        TaskDriver driver = new(task, runtime, targetResolver);
         driver.Restore(seed);
         Launch(task, driver);
     }
@@ -62,7 +62,7 @@ public sealed class FlowEngine(
     }
 
     /// <summary>要求持有任务 Gate：停止一个已启动的执行。</summary>
-    public ErrorOr<Success> StopExecution(WorkTask task, Execution execution)
+    public ErrorOr<Success> StopExecution(WorkTask task, GraphExecution execution)
     {
         if (Find(task) is not null)
         {
@@ -82,7 +82,7 @@ public sealed class FlowEngine(
         return StopDirect(execution);
     }
 
-    private static ErrorOr<Success> StopDirect(Execution execution)
+    private static ErrorOr<Success> StopDirect(GraphExecution execution)
     {
         execution.Interrupt("已停止执行。");
 
@@ -190,7 +190,7 @@ public sealed class FlowEngine(
         }
 
         // 先收口派发器，排队与在跑的执行随之结束，推进循环才能等到在途归零
-        await dispatcher.ShutdownAsync();
+        await runtime.ShutdownAsync();
 
         foreach (TaskDriver driver in drivers)
         {
