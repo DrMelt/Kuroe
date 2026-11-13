@@ -17,7 +17,7 @@ public sealed class DialogueFlowSubmission(
     ModelService models,
     SettingsProvider settings,
     KuroePaths paths,
-    IExecutionRuntime executions) : IFlowSubmission
+    IFlowExecutionGateway executions) : IFlowSubmission
 {
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)

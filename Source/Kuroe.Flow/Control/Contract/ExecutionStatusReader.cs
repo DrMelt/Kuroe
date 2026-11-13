@@ -6,7 +6,7 @@ using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
 namespace Kuroe.Flow.Control.Contract;
 
 /// <summary>执行的本轮契约状态读取：缺口与已上报的无法完成原因只在此算一次，回执、追问与查看工具共用同一口径。</summary>
-public sealed class ExecutionStatusReader(IFlowExecutionGateway executions) : IExecutionStatusReader
+public sealed class ExecutionStatusReader(IExecutionOwnerIndex executions) : IExecutionStatusReader
 {
     /// <summary>按执行号读出本轮契约状态，执行不存在时返回错误。</summary>
     public ErrorOr<ExecutionStatus> Read(ExecutionId id)

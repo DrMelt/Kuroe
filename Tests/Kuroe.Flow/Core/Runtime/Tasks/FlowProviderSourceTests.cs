@@ -93,7 +93,8 @@ public sealed class FlowProviderSourceTests
             NoFlowStateBinder.Instance,
             new TestControls(),
             new TestPresentation(implementation),
-            new TestRecords());
+            new TestRecords(),
+            NoFlowTemplates.Instance);
     }
 
     private static FlowRecord CodeRecord(string implementation) =>

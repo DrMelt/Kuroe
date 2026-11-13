@@ -9,13 +9,13 @@ public sealed class DialogueFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
     public IFlowView CaptureView(ITaskFlowContext task) =>
-        DialogueView.Build(DialogueFlowAccess.State(task), task.Control, task);
+        DialogueView.Build(DialogueFlowAccess.State(task), task.Control as IFlowInputControl, task);
 
     /// <inheritdoc/>
     public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
     {
         DialogueFlowState state = DialogueFlowAccess.State(task);
-        IFlowControl? control = task.Control;
+        IFlowInputControl? control = task.Control as IFlowInputControl;
 
         return new TaskSnapshot(
             task.Id,

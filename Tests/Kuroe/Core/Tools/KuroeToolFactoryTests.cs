@@ -36,7 +36,7 @@ public sealed class KuroeToolFactoryTests
             .Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(new LlmNodeType(parameters), null));
+                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind));
         CapturingTool parent = Assert.IsType<CapturingTool>(
             tools.Single(tool => tool.Functions.Single().Definition.Path.Value == "group/tool"));
         CapturingTool child = Assert.IsType<CapturingTool>(
@@ -57,7 +57,7 @@ public sealed class KuroeToolFactoryTests
             new KuroeToolFactory([source], "C:/workspace").Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(new LlmNodeType(parameters), null))));
+                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind))));
 
         Assert.Equal("任务值", tool.Binding.Variable(PathVariables.RootName));
     }
@@ -73,7 +73,7 @@ public sealed class KuroeToolFactoryTests
             new KuroeToolFactory([source], "C:/workspace").Create(
                 new ExecutionId(1),
                 request,
-                new LlmExecutionParameters(new LlmNodeType(parameters), null))));
+                new LlmExecutionParameters(parameters, null, LlmNodeTypes.Kind))));
 
         Assert.Equal("动态值", tool.Binding.Variable(PathVariables.RootName));
     }

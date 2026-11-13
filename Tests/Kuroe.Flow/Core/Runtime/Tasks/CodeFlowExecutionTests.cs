@@ -113,7 +113,8 @@ public sealed class CodeFlowExecutionTests
                 NoFlowStateBinder.Instance,
                 new CodeControls(),
                 new CodePresentation(),
-                new CodeRecords());
+                new CodeRecords(),
+                NoFlowTemplates.Instance);
             WorkTask task = new(
                 new TaskRegistry(index),
                 runtime,

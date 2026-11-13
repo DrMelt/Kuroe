@@ -46,10 +46,4 @@ public interface IFlowControl
 
     /// <summary>退出时中断推进，保留任务控制状态与步骤状态。</summary>
     void InterruptForShutdown();
-
-    /// <summary>此刻等待外部输入的步骤。</summary>
-    IReadOnlyList<FlowPendingStep> Pending();
-
-    /// <summary>向等待中的步骤交付一次外部输入。</summary>
-    ErrorOr<Success> Deliver(FlowStepPath step, string text);
 }

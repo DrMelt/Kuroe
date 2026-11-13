@@ -140,7 +140,8 @@ public sealed class WorkTaskTests
                 Binder,
                 new TestControls(),
                 Presentation,
-                new TestRecords());
+                new TestRecords(),
+                NoFlowTemplates.Instance);
         }
 
         public IFlowIdentity Identity { get; }

@@ -9,7 +9,7 @@ internal static class SubmitterContext
 {
     /// <summary>认定提交者，action 是提交入口的动作名，进入未在跑的提示。</summary>
     public static ErrorOr<(IExecution Execution, ITaskFlowContext Task)> Resolve(
-        IFlowExecutionGateway executions,
+        IExecutionOwnerIndex executions,
         ExecutionId id,
         string action)
     {

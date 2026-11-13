@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Control.Contract;
 
 /// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待重新执行。</summary>
 public sealed class CannotCompleteSubmitter(
-    IFlowExecutionGateway executions,
+    IExecutionOwnerIndex executions,
     IExecutionContractWriter contracts) : IExecutionCannotCompleteSubmitter
 {
     /// <summary>上报本轮无法完成并给出原因，原因必填。</summary>

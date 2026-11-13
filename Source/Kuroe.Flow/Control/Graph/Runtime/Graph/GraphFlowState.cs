@@ -13,7 +13,7 @@ namespace Kuroe.Flow.Control.Graph;
 internal sealed class GraphFlowState : IGraphFlowState
 {
     private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
-    private readonly IExecutionRuntime _executionsRuntime;
+    private readonly IFlowExecutionGateway _executionsRuntime;
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
 
@@ -23,7 +23,7 @@ internal sealed class GraphFlowState : IGraphFlowState
         IPortTexts startTexts,
         StartPortValues startPorts,
         GraphFlowDefinitionRecord? definition,
-        IExecutionRuntime executions)
+        IFlowExecutionGateway executions)
     {
         Flow = flow;
         Inputs = inputs;

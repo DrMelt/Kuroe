@@ -12,9 +12,8 @@ namespace Kuroe.Assistant.Dialogue;
 /// <summary>对话流程控制：等待输入与每一轮回话执行。</summary>
 internal sealed class DialogueFlowControl(
     ITaskFlowContext task,
-    IExecutionRuntime executions,
     IFlowExecutionGateway gateway,
-    DialogueFlowState state) : IFlowControl
+    DialogueFlowState state) : IFlowControl, IFlowInputControl
 {
     /// <summary>回话步骤路径。</summary>
     internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyLabel);
@@ -50,7 +49,7 @@ internal sealed class DialogueFlowControl(
         _awaiting = false;
         if (_live is { IsLive: true } live)
         {
-            executions.Interrupt(live, "任务暂停。");
+            gateway.Interrupt(live, "任务暂停。");
         }
     }
 
@@ -90,7 +89,7 @@ internal sealed class DialogueFlowControl(
         {
             if (_live is { IsLive: true } live)
             {
-                executions.Interrupt(live, "进程退出。");
+                gateway.Interrupt(live, "进程退出。");
             }
         }
 
@@ -117,7 +116,7 @@ internal sealed class DialogueFlowControl(
         }
 
         _awaiting = false;
-        IExecution execution = gateway.Open(task, Request(text), executions.Create);
+        IExecution execution = gateway.Open(task, Request(text));
         task.AttachExecution(execution);
         _live = execution;
         _ = RunAsync(execution);
@@ -141,10 +140,10 @@ internal sealed class DialogueFlowControl(
 
     private async Task RunAsync(IExecution execution)
     {
-        await executions.RunAsync(
+        await gateway.RunAsync(
             execution,
             null,
-            new DialogueTarget(new LlmNodeType(state.Parameters), state.Model)).ConfigureAwait(false);
+            new DialogueTarget(state.Parameters, state.Model)).ConfigureAwait(false);
 
         lock (task.Gate)
         {
@@ -161,7 +160,7 @@ internal sealed class DialogueFlowControl(
 }
 
 /// <summary>对话执行的类型目标：Llm 种类与对话参数。</summary>
-internal sealed class DialogueTarget(LlmNodeType type, string model) : IExecutionTarget
+internal sealed class DialogueTarget(LlmParameters parameters, string model) : IExecutionTarget
 {
     /// <inheritdoc/>
     public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
@@ -173,5 +172,5 @@ internal sealed class DialogueTarget(LlmNodeType type, string model) : IExecutio
     public bool UsesDefaultRunner => true;
 
     /// <inheritdoc/>
-    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(type, model);
+    public IExecutionParameters Parameters { get; } = new LlmExecutionParameters(parameters, model, LlmNodeTypes.Kind);
 }

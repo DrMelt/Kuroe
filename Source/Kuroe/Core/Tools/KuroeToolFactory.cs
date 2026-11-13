@@ -16,8 +16,8 @@ internal sealed class KuroeToolFactory(
         LlmExecutionParameters parameters)
     {
         Dictionary<string, IReadOnlyDictionary<string, ExecutionPortName>> portsByTool = [];
-        IReadOnlyList<ToolPath> paths = parameters.Type.ToolPaths(request.OutputPorts);
-        if (parameters.Type.Parameters is { } declared)
+        IReadOnlyList<ToolPath> paths = parameters.ToolPaths(request.OutputPorts);
+        if (parameters.Parameters is { } declared)
         {
             List<(ToolPath Prefix, IReadOnlyDictionary<string, string> Ports)> mappings =
             [

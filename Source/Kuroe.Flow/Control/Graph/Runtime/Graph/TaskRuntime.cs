@@ -44,14 +44,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
     private readonly RuntimeStartSource _startSource;
-    private readonly IExecutionRuntime _executions;
+    private readonly IFlowExecutionGateway _executions;
     private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
     private static readonly IInputProgress IdleProgress = new UnmaterializedProgress();
 
-    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, IExecutionRuntime executions)
+    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, IFlowExecutionGateway executions)
     {
         _task = task;
         _state = state;

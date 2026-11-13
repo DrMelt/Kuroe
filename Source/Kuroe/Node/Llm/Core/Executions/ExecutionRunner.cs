@@ -57,7 +57,7 @@ internal sealed class ExecutionRunner(
         {
             ErrorOr<Success> reply = await AskWithReminders(
                 text => TurnLoop(session, tools, text, cancellationToken),
-                session.IsRestored ? null : _parameters.Type.Instruction(request),
+                session.IsRestored ? null : _parameters.Instruction(request),
                 () => _reminder.Text(execution));
 
             if (reply.IsError)

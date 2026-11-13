@@ -30,10 +30,10 @@ internal sealed class ExecutionHistory(ExecutionRequest request, LlmExecutionPar
             : null;
 
     /// <summary>该执行的系统指令：节点声明的恒定块，置于请求最前。</summary>
-    public string? SystemPrompt => parameters.Type.SystemPrompt();
+    public string? SystemPrompt => parameters.SystemPrompt();
 
     /// <summary>该执行的能力面：节点声明的白名单与按输出端口附上的契约能力。</summary>
-    public IReadOnlyList<ToolPath> ToolPaths => parameters.Type.ToolPaths(request.OutputPorts);
+    public IReadOnlyList<ToolPath> ToolPaths => parameters.ToolPaths(request.OutputPorts);
 
     public void LayOut(List<ChatMessage> messages)
     {

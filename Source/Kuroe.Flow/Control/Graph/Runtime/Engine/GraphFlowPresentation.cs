@@ -34,7 +34,7 @@ public sealed class GraphFlowPresentation : IFlowPresentation
             task.LastActivityAt)
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = [.. (task.Control?.Pending() ?? []).Select(PendingOf)],
+            Pending = [.. ((task.Control as IFlowInputControl)?.Pending() ?? []).Select(PendingOf)],
             StartTexts = new FlowTexts(state.StartTexts.Texts),
         };
     }

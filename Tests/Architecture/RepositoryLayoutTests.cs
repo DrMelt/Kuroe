@@ -1529,6 +1529,74 @@ public sealed class RepositoryLayoutTests
         }
     }
 
+    [Fact]
+    public void Flow_control_port_excludes_input_delivery()
+    {
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared", "IFlowControl.cs");
+        string input = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared", "IFlowInputControl.cs");
+        string controlText = File.ReadAllText(control);
+
+        Assert.DoesNotContain("Pending", controlText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Deliver", controlText, StringComparison.Ordinal);
+        Assert.Contains("Pending", File.ReadAllText(input), StringComparison.Ordinal);
+        Assert.Contains("Deliver", File.ReadAllText(input), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Flow_template_catalog_uses_provider_sources()
+    {
+        string catalog = Path.Combine(SourceRoot, "Kuroe", "Core", "Workflows", "Flows", "FlowTemplateCatalog.cs");
+        string provider = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared", "FlowProvider.cs");
+        string catalogText = File.ReadAllText(catalog);
+
+        Assert.Contains("IFlowProviderSource", catalogText, StringComparison.Ordinal);
+        Assert.DoesNotContain("IFlowCatalog", catalogText, StringComparison.Ordinal);
+        Assert.Contains("IFlowTemplateSource Templates", File.ReadAllText(provider), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Flow_control_uses_one_execution_gateway()
+    {
+        string gateway = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared", "IFlowExecutionGateway.cs");
+        string graphFactory = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Graph",
+            "Runtime",
+            "Engine",
+            "GraphFlowControlFactory.cs");
+        string dialogueFactory = Path.Combine(
+            SourceRoot,
+            "Kuroe",
+            "Assistant",
+            "Core",
+            "Dialogue",
+            "DialogueFlowControlFactory.cs");
+        string gatewayText = File.ReadAllText(gateway);
+
+        Assert.Contains("RunAsync", gatewayText, StringComparison.Ordinal);
+        Assert.Contains("RunRestoreAsync", gatewayText, StringComparison.Ordinal);
+        Assert.Contains("PrepareRestore", gatewayText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Func<", gatewayText, StringComparison.Ordinal);
+        Assert.DoesNotContain("IExecutionRuntime", File.ReadAllText(graphFactory), StringComparison.Ordinal);
+        Assert.DoesNotContain("IExecutionRuntime", File.ReadAllText(dialogueFactory), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Llm_execution_parameters_do_not_reference_node_type()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe",
+            "Node",
+            "Llm",
+            "Core",
+            "LlmExecutionParameters.cs");
+
+        Assert.DoesNotContain("LlmNodeType", File.ReadAllText(file), StringComparison.Ordinal);
+    }
+
     private static IReadOnlyList<string> InternalsVisibleTo(string project) =>
         [.. XDocument.Load(project)
             .Descendants("InternalsVisibleTo")

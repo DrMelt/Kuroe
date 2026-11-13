@@ -187,8 +187,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(hostStartInputs.Value);
         services.AddSingleton<IHostStartInputs>(hostStartInputs.Value);
         services.AddSingleton<IFlowTemplateCatalog>(sp => new FlowTemplateCatalog(
-            sp.GetRequiredService<IFlowCatalog>(),
-            sp.GetRequiredService<IHostStartInputs>()));
+            sp.GetRequiredService<IFlowProviderSource>()));
         services.AddSingleton<IHostTaskStart>(sp => new KuroeTaskStart(
             paths.WorkingDirectory, taskDirectory.Value, sp.GetRequiredService<ModelService>()));
         services.AddSingleton(descriptionCompiler);
@@ -231,16 +230,21 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ExecutionRunnerRegistry>(),
             sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
+        services.AddSingleton<IExecutionOwnerIndex>(executions);
+        services.AddSingleton<IFlowExecutionGateway>(sp => new FlowExecutionGateway(
+            executions,
+            sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IExecutionContractWriter, ExecutionContractWriter>();
         services.AddSingleton(sp => new PortSubmitter(
-            executions,
+            sp.GetRequiredService<IExecutionOwnerIndex>(),
             sp.GetRequiredService<IExecutionContractWriter>()));
         services.AddSingleton<IExecutionPortSubmitter>(sp => sp.GetRequiredService<PortSubmitter>());
         services.AddSingleton(sp => new CannotCompleteSubmitter(
-            executions,
+            sp.GetRequiredService<IExecutionOwnerIndex>(),
             sp.GetRequiredService<IExecutionContractWriter>()));
         services.AddSingleton<IExecutionCannotCompleteSubmitter>(sp => sp.GetRequiredService<CannotCompleteSubmitter>());
-        services.AddSingleton(sp => new ExecutionStatusReader(executions));
+        services.AddSingleton(sp => new ExecutionStatusReader(
+            sp.GetRequiredService<IExecutionOwnerIndex>()));
         services.AddSingleton<IExecutionStatusReader>(sp => sp.GetRequiredService<ExecutionStatusReader>());
         services.AddSingleton<IToolSource>(sp => new ContractToolSource(
             sp.GetRequiredService<IExecutionPortSubmitter>(),
@@ -272,16 +276,18 @@ public static class ServiceCollectionExtensions
                 hostStartInputs.Value,
                 sp.GetRequiredService<IHostTaskStart>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
-                sp.GetRequiredService<IExecutionRuntime>(),
+                sp.GetRequiredService<IFlowExecutionGateway>(),
                 coreOptions.PersistTasks ? flows.Value : null),
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
-                sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
                 inputs,
-                executions),
+                sp.GetRequiredService<IFlowExecutionGateway>()),
             new GraphFlowPresentation(),
-            new GraphFlowRecordSource()));
+            new GraphFlowRecordSource(),
+            new GraphFlowTemplateSource(
+                flows.Value,
+                hostStartInputs.Value)));
         services.AddSingleton(sp => new FlowProviderSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowProviderSource>(sp => sp.GetRequiredService<FlowProviderSource>());
         services.AddSingleton(sp => new FlowRuntime(
@@ -348,7 +354,7 @@ public static class ServiceCollectionExtensions
             new KuroeInfoToolSource(
                 taskReader,
                 new ToolCatalogView(catalog, models),
-                new FlowTemplateCatalog(flows, hostStartInputs),
+                new FlowTemplateCatalog(new GraphFlowTemplateSource(flows, hostStartInputs)),
                 settings),
         ];
 

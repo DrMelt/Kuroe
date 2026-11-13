@@ -46,6 +46,10 @@ public static class AssistantServiceCollectionExtensions
 
             ModelService models = sp.GetRequiredService<ModelService>();
 
+            FlowExecutionGateway gateway = new(
+                sp.GetRequiredService<ExecutionIndex>(),
+                sp.GetRequiredService<IExecutionRuntime>());
+
             // 对话流程由代码定义，不进入图流程库与宿主开始输入表
             FlowProvider provider = new(
                 new DialogueFlowIdentity(),
@@ -53,13 +57,12 @@ public static class AssistantServiceCollectionExtensions
                     models,
                     sp.GetRequiredService<SettingsProvider>(),
                     sp.GetRequiredService<KuroePaths>(),
-                    sp.GetRequiredService<IExecutionRuntime>()),
+                    gateway),
                 NoFlowStateBinder.Instance,
-                new DialogueFlowControlFactory(
-                    sp.GetRequiredService<IExecutionRuntime>(),
-                    sp.GetRequiredService<ExecutionIndex>()),
+                new DialogueFlowControlFactory(gateway),
                 new DialogueFlowPresentation(),
-                new DialogueFlowRecordSource());
+                new DialogueFlowRecordSource(),
+                NoFlowTemplates.Instance);
 
             // 对话任务自有任务域，任务键不占用用户任务域的序列
             GuidTaskIdSource ids = new();

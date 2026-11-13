@@ -37,7 +37,7 @@ public sealed class ExecutionHistoryTests
     }
 
     private static ExecutionHistory History(ExecutionRequest request) =>
-        new(request, new LlmExecutionParameters(new LlmNodeType(null), null));
+        new(request, new LlmExecutionParameters(null, null, LlmNodeTypes.Kind));
 
     private static ExecutionRequest Request(IReadOnlyList<ExecutionInputValue> inputs) =>
         new(

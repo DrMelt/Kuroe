@@ -141,4 +141,16 @@ public sealed class FlowRuntime(
             return _controls.GetValueOrDefault(task);
         }
     }
+
+    /// <summary>活跃控制实例数。</summary>
+    public int ActiveControls
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _controls.Count;
+            }
+        }
+    }
 }

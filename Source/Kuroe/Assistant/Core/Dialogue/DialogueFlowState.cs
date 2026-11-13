@@ -44,7 +44,7 @@ internal static class DialogueView
 {
     internal static FlowView Build(
         DialogueFlowState state,
-        IFlowControl? control,
+        IFlowInputControl? control,
         ITaskFlowContext task,
         TaskState? taskState = null)
     {

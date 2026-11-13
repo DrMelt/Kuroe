@@ -63,7 +63,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
                 return [PendingErrors.Paused(id, kind)];
             }
 
-            if (task.Control is not { } control)
+            if (task.Control is not IFlowInputControl control)
             {
                 return [PendingErrors.NoAwaiting(id, kind)];
             }
@@ -118,7 +118,7 @@ public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
     /// <summary>任务里此刻待处理的节点，带等待时的提问。要求持有 Gate。</summary>
     private static List<PendingNode> Pending(WorkTask task)
     {
-        if (task.Control is not { } control)
+        if (task.Control is not IFlowInputControl control)
         {
             return [];
         }

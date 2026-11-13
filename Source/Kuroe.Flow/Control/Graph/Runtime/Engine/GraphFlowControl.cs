@@ -20,10 +20,9 @@ namespace Kuroe.Flow.Control.Graph.Engine;
 internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
-    IExecutionRuntime runtime,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
-    IFlowExecutionGateway gateway) : IFlowControl
+    IFlowExecutionGateway gateway) : IFlowControl, IFlowInputControl
 {
     private readonly Lock _gate = new();
     private readonly Queue<NodePath> _pending = [];
@@ -210,7 +209,7 @@ internal sealed class GraphFlowControl(
     {
         foreach (IExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
         {
-            runtime.Interrupt(execution, "任务已暂停。");
+            gateway.Interrupt(execution, "任务已暂停。");
         }
     }
 
@@ -322,7 +321,7 @@ internal sealed class GraphFlowControl(
 
         foreach (GraphExecution execution in live)
         {
-            runtime.Interrupt(execution.Unit, "进程退出。");
+            gateway.Interrupt(execution.Unit, "进程退出。");
         }
     }
 
@@ -620,7 +619,7 @@ internal sealed class GraphFlowControl(
             }
 
             GraphExecutionInput input = GraphExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
-            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input), runtime.Create), input);
+            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input)), input);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }
 
@@ -631,7 +630,7 @@ internal sealed class GraphFlowControl(
 
         if (step.Paused)
         {
-            runtime.Interrupt(step.Execution.Unit, "任务已暂停。");
+            gateway.Interrupt(step.Execution.Unit, "任务已暂停。");
         }
 
         await RunAndSettleAsync(node, step.Execution, null).ConfigureAwait(false);
@@ -653,7 +652,7 @@ internal sealed class GraphFlowControl(
 
             state.Runtime.RemoveRestorePlan(target);
             GraphExecution execution = Attach(
-                gateway.Open(task, GraphExecution.BuildRequest(target.Input), runtime.Create),
+                gateway.Open(task, GraphExecution.BuildRequest(target.Input)),
                 target.Input);
             node.ClearRerun();
             node.ClearBlock();
@@ -681,11 +680,11 @@ internal sealed class GraphFlowControl(
         try
         {
             run = restore is null
-                ? await runtime.RunAsync(
+                ? await gateway.RunAsync(
                     execution.Unit,
                     node.Executable.Type as IExecutionRunnerFactory,
                     execution.Target).ConfigureAwait(false)
-                : await runtime.RunRestoreAsync(
+                : await gateway.RunRestoreAsync(
                     execution.Unit,
                     restore.Source.Unit,
                     restore.Prepared).ConfigureAwait(false);

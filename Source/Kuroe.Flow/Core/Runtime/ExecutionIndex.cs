@@ -5,7 +5,7 @@ using Kuroe.Flow.Execution;
 namespace Kuroe.Flow.Runtime;
 
 /// <summary>执行号与执行归属的全局索引：执行号在全部任务域间递增，按号取执行时一并交出归属任务。</summary>
-public sealed class ExecutionIndex : IFlowExecutionGateway
+public sealed class ExecutionIndex : IExecutionOwnerIndex
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<ExecutionId, Entry> _entries = [];

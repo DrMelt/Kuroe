@@ -59,18 +59,14 @@ public sealed class FlowRuntimeTests
 
         control.Finish();
 
-        await WaitUntil(() =>
+        await WaitUntil(() => runtime.ActiveControls == 0);
+
+        lock (task.Gate)
         {
-            int before = control.Pauses;
-            lock (task.Gate)
-            {
-                runtime.Pause(task);
-            }
+            runtime.Pause(task);
+        }
 
-            return control.Pauses == before;
-        });
-
-        Assert.True(control.Pauses <= 1);
+        Assert.Equal(0, control.Pauses);
     }
 
     [Fact]
@@ -172,7 +168,8 @@ internal static class FlowRuntimeTestDoubles
             NoFlowStateBinder.Instance,
             new TestControls(control),
             new TestPresentation(),
-            new TestRecords());
+            new TestRecords(),
+            NoFlowTemplates.Instance);
 
         return new WorkTask(
             new TaskRegistry(new ExecutionIndex()),
@@ -241,10 +238,6 @@ internal sealed class TestControl : IFlowControl
         Shutdowns++;
         Finish();
     }
-
-    public IReadOnlyList<FlowPendingStep> Pending() => [];
-
-    public ErrorOr<Success> Deliver(FlowStepPath step, string text) => Result.Success;
 
     public void Finish() => _completion.TrySetResult();
 }

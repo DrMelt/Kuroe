@@ -130,9 +130,29 @@ internal sealed class FakeGateway : IFlowExecutionGateway
 
     public IExecution Open(
         ITaskFlowContext owner,
-        ExecutionRequest request,
-        Func<ExecutionId, ExecutionRequest, IExecution> create) =>
+        ExecutionRequest request) =>
         throw new NotSupportedException();
+
+    public IExecution Restore(ExecutionRestorePlan plan) => throw new NotSupportedException();
+
+    public ErrorOr<PreparedExecutionRestore> PrepareRestore(ExecutionRestoreContext context) =>
+        throw new NotSupportedException();
+
+    public Task<ErrorOr<Success>> RunAsync(
+        IExecution execution,
+        IExecutionRunnerFactory? own,
+        IExecutionTarget target) =>
+        throw new NotSupportedException();
+
+    public Task<ErrorOr<Success>> RunRestoreAsync(
+        IExecution execution,
+        IExecution source,
+        PreparedExecutionRestore prepared) =>
+        throw new NotSupportedException();
+
+    public void Interrupt(IExecution execution, string reason) => throw new NotSupportedException();
+
+    public void Reject(IExecution execution, string reason) => throw new NotSupportedException();
 
     public ErrorOr<(IExecution Execution, ITaskFlowContext Owner)> FindOwned(ExecutionId id) =>
         _entries.TryGetValue(id, out (IExecution Execution, ITaskFlowContext Owner) entry)

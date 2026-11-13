@@ -42,7 +42,7 @@ public sealed class ExecutionRunnerFactoryTests
             new Dictionary<ExecutionPortName, string>(),
             []);
         IExecutionTarget target = new FakeTarget(
-            new LlmExecutionParameters(new LlmNodeType(null), "fake"));
+            new LlmExecutionParameters(null, "fake", LlmNodeTypes.Kind));
 
         return new ExecutionRestoreContext(
             new ExecutionId(1),
