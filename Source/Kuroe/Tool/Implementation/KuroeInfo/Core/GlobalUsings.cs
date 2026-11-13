@@ -1,1 +1,1 @@
-global using JournalEntry = Kuroe.Flow.Execution.Shared.JournalEntry;
+global using JournalEntry = Kuroe.Execution.Shared.JournalEntry;

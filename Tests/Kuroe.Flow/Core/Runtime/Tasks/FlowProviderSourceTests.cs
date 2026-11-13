@@ -15,11 +15,11 @@ namespace Kuroe.Flow.Tests.Runtime.Tasks;
 public sealed class FlowProviderSourceTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+    private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
-            new Kuroe.Flow.Execution.ExecutionDispatcher(),
-            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionDispatcher(),
+            new Kuroe.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Execution.ExecutionRestorerRegistry());
     [Fact]
     public void Identity_finds_provider_by_implementation()
     {
@@ -174,7 +174,7 @@ public sealed class FlowProviderSourceTests
 
         public void Pause(ITaskFlowContext task) => throw new NotSupportedException();
 
-        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Flow.Execution.Shared.ExecutionId id) =>
+        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Execution.Shared.ExecutionId id) =>
             throw new NotSupportedException();
 
         public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>

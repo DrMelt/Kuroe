@@ -25,9 +25,9 @@
     <Project Path="Source/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.csproj" />
     <Project Path="Source/Kuroe.Flow/Core/Kuroe.Flow.csproj" />
     <Project Path="Source/Kuroe.Flow/Runtime/Core/Kuroe.Flow.Runtime.csproj" />
-    <Project Path="Source/Kuroe.Flow/Execution/Core/Kuroe.Flow.Execution.csproj" />
-    <Project Path="Source/Kuroe.Flow/Execution/Shared/Kuroe.Flow.Execution.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Execution/Records/Shared/Kuroe.Flow.Execution.Records.Shared.csproj" />
+    <Project Path="Source/Kuroe.Execution/Core/Kuroe.Execution.csproj" />
+    <Project Path="Source/Kuroe.Execution/Shared/Kuroe.Execution.Shared.csproj" />
+    <Project Path="Source/Kuroe.Execution/Records/Shared/Kuroe.Execution.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Presentation/Shared/Kuroe.Flow.Presentation.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Tasks/Shared/Kuroe.Flow.Tasks.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Tasks/Presentation/Shared/Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
@@ -86,9 +86,9 @@
     <Project Path="Tests/Kuroe/Tool/Implementation/Dotnet/Core/Kuroe.Tool.Dotnet.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Implementation/Contract/Core/Kuroe.Tool.Contract.Tests.csproj" />
     <Project Path="Tests/Kuroe/Tool/Implementation/KuroeInfo/Core/Kuroe.Tool.KuroeInfo.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Execution/Shared/Kuroe.Flow.Execution.Shared.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Execution/Core/Kuroe.Flow.Execution.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Execution/Records/Shared/Kuroe.Flow.Execution.Records.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Execution/Shared/Kuroe.Execution.Shared.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Execution/Core/Kuroe.Execution.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Execution/Records/Shared/Kuroe.Execution.Records.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Presentation/Shared/Kuroe.Flow.Presentation.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Tasks/Shared/Kuroe.Flow.Tasks.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Tasks/Records/Shared/Kuroe.Flow.Tasks.Records.Shared.Tests.csproj" />

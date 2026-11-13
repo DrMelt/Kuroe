@@ -14,11 +14,11 @@ namespace Kuroe.Flow.Tests.Runtime.Tasks;
 public sealed class WorkTaskTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+    private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
-            new Kuroe.Flow.Execution.ExecutionDispatcher(),
-            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionDispatcher(),
+            new Kuroe.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Execution.ExecutionRestorerRegistry());
     [Fact]
     public void Pause_accepts_transient_done_snapshot()
     {

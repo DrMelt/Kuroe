@@ -1,5 +1,5 @@
 using Kuroe.Flow.Control.Graph.Runtime;
-using Kuroe.Flow.Execution.Shared;
+using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Tasks.Shared;
@@ -11,11 +11,11 @@ namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 public sealed class GraphExecutionTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+    private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
-            new Kuroe.Flow.Execution.ExecutionDispatcher(),
-            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionDispatcher(),
+            new Kuroe.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Execution.ExecutionRestorerRegistry());
 
     [Fact]
     public void Snapshot_without_journal_has_no_entries()
@@ -43,8 +43,8 @@ public sealed class GraphExecutionTests
             ],
         };
 
-        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Flow.Execution.Shared.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
+        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Execution.Shared.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
 
         Assert.Equal("结论", port.Name.Value);
         Assert.True(port.Required);
@@ -54,7 +54,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Request_carries_the_execution_limit()
     {
-        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
+        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
 
         Assert.Equal(7, request.MaxAttempts);
     }
@@ -62,9 +62,9 @@ public sealed class GraphExecutionTests
     private static GraphExecution Create()
     {
         GraphExecutionInput input = Input();
-        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Flow.Execution.Shared.IExecution unit = Runtime().Create(
-            new Kuroe.Flow.Execution.Shared.ExecutionId(1),
+        Kuroe.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Execution.Shared.IExecution unit = Runtime().Create(
+            new Kuroe.Execution.Shared.ExecutionId(1),
             request);
 
         return new GraphExecution(input, unit, 0);

@@ -1,8 +1,8 @@
 using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Flow.Tasks.Shared;
 using Xunit;
-using NeutralExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
-using NeutralTokenUsage = Kuroe.Flow.Execution.Shared.TokenUsage;
+using NeutralExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
+using NeutralTokenUsage = Kuroe.Execution.Shared.TokenUsage;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
 
@@ -35,7 +35,7 @@ public sealed class ExecutionUsageTests
         TaskSnapshot running = environment.Wait(
             id,
             snapshot => snapshot.Executions
-                .Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Running));
+                .Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Running));
 
         Assert.Equal(usage, Assert.Single(environment.GraphExecutions(running, 0)).Usage);
 

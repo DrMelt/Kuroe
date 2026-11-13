@@ -1,7 +1,7 @@
 namespace Kuroe.Node.File;
 
 /// <summary>文件节点的类型专属声明：文件路径的原文、路径变量映射、路径解析的边界根与字符上限。</summary>
-public sealed record FileParameters : Kuroe.Flow.Execution.Shared.IExecutionParameters
+public sealed record FileParameters : Kuroe.Execution.Shared.IExecutionParameters
 {
     /// <summary>文件里写下的路径，可含路径变量，用于展示与错误说明。</summary>
     public required string Path { get; init; }

@@ -2,14 +2,14 @@ using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Microsoft.Extensions.DependencyInjection;
-using NeutralExecutionId = Kuroe.Flow.Execution.Shared.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Flow.Execution.Shared.ExecutionOutput;
-using NeutralExecutionRequest = Kuroe.Flow.Execution.Shared.ExecutionRequest;
-using NeutralExecutionRunner = Kuroe.Flow.Execution.Shared.IExecutionRunner;
-using NeutralExecutionRunnerFactory = Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Flow.Execution.Shared.IExecutionTarget;
-using NeutralExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
-using NeutralExecutionUsageSource = Kuroe.Flow.Execution.Shared.IExecutionUsageSource;
+using NeutralExecutionId = Kuroe.Execution.Shared.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Execution.Shared.ExecutionOutput;
+using NeutralExecutionRequest = Kuroe.Execution.Shared.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Execution.Shared.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Execution.Shared.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Execution.Shared.IExecutionTarget;
+using NeutralExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
+using NeutralExecutionUsageSource = Kuroe.Execution.Shared.IExecutionUsageSource;
 
 namespace Kuroe.Cli.Tests.Support;
 
@@ -43,7 +43,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory>(runner));
+            services => services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner));
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));

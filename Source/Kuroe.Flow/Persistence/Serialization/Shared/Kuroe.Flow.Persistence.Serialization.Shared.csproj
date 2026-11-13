@@ -9,8 +9,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Execution\Records\Shared\Kuroe.Flow.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Kuroe.Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
     </ItemGroup>

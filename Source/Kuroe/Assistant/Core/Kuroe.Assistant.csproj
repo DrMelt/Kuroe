@@ -16,11 +16,11 @@
         <ProjectReference Include="..\..\Tool\Implementation\Source\Core\Kuroe.Tool.Source.csproj" />
         <ProjectReference Include="..\..\Tool\Implementation\KuroeInfo\Core\Kuroe.Tool.KuroeInfo.csproj" />
         <ProjectReference Include="..\..\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         
         <ProjectReference Include="..\..\..\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Flow\Execution\Records\Shared\Kuroe.Flow.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Persistence\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Flow\Persistence\Saving\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />

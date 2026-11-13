@@ -1,10 +1,10 @@
-using Kuroe.Flow.Execution.Shared;
+using Kuroe.Execution.Shared;
 using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Flow.Tasks.Shared;
 using System.Text;
 using ErrorOr;
 using Kuroe.Flow.Presentation.Shared;
-using ExecutionSnapshot = Kuroe.Flow.Execution.Shared.ExecutionSnapshot;
+using ExecutionSnapshot = Kuroe.Execution.Shared.ExecutionSnapshot;
 
 namespace Kuroe.Tool.KuroeInfo;
 

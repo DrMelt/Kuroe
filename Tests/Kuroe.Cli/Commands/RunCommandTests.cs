@@ -100,10 +100,10 @@ public sealed class RunCommandTests
     public async Task Done_flow_reports_requests_tokens_and_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        environment.Runner.Usage = new Kuroe.Flow.Execution.Shared.ExecutionUsage(
+        environment.Runner.Usage = new Kuroe.Execution.Shared.ExecutionUsage(
             2,
             0,
-            new Kuroe.Flow.Execution.Shared.TokenUsage(100, 20, 120, 80, 5))
+            new Kuroe.Execution.Shared.TokenUsage(100, 20, 120, 80, 5))
         {
             ContextTokens = 75,
         };
@@ -123,10 +123,10 @@ public sealed class RunCommandTests
     public async Task Done_flow_reports_unknown_context()
     {
         await using CliEnvironment environment = CliEnvironment.Create(CliFlows.Done);
-        environment.Runner.Usage = new Kuroe.Flow.Execution.Shared.ExecutionUsage(
+        environment.Runner.Usage = new Kuroe.Execution.Shared.ExecutionUsage(
             1,
             1,
-            Kuroe.Flow.Execution.Shared.TokenUsage.None);
+            Kuroe.Execution.Shared.TokenUsage.None);
         (RunCommand command, _, StringWriter error) = Build(environment);
 
         int code = await command.RunAsync("默认", null, ["目标=目标"]);

@@ -1,7 +1,7 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Flow.Control.Shared;
-using Kuroe.Flow.Execution.Shared;
+using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
@@ -209,7 +209,7 @@ public sealed class DialogueHostTests
         }
 
         await WaitUntilAsync(() => !execution.IsLive);
-        Assert.Equal(Kuroe.Flow.Execution.Shared.ExecutionState.Interrupted, execution.State);
+        Assert.Equal(Kuroe.Execution.Shared.ExecutionState.Interrupted, execution.State);
         Assert.True((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
 
         lock (owner.Gate)

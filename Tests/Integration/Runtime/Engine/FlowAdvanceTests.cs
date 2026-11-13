@@ -191,10 +191,10 @@ public sealed class FlowAdvanceTests
             snapshot.State == TaskState.Paused
             && snapshot.LiveExecutions == 0
             && snapshot.Executions
-                .Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Interrupted));
+                .Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Interrupted));
         Assert.Contains(
             paused.Executions,
-            execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Interrupted);
+            execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Interrupted);
 
         environment.Tasks.Resume(id).ThrowIfError();
         Assert.Equal(TaskState.Blocked, environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked).State);
@@ -274,7 +274,7 @@ public sealed class FlowAdvanceTests
         await environment.Tasks.ShutdownAsync();
 
         Assert.Equal(TaskLifecycle.Active, task.Lifecycle);
-        Assert.Contains(task.Executions, execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Interrupted);
+        Assert.Contains(task.Executions, execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Interrupted);
     }
 
 

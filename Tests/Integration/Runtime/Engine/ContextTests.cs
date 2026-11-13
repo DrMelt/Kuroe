@@ -239,7 +239,7 @@ public sealed class ContextTests
         environment.Runner.Gate.Open(slow);
         await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
             step.Label == "准备甲"
-            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded)));
+            && step.Executions.Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Succeeded)));
         environment.Runner.Gate.Open(implementHandle);
 
         TaskSnapshot done = await environment.SettleAsync(id);

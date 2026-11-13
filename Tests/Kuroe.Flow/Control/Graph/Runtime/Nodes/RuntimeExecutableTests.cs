@@ -15,17 +15,17 @@ namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;
 public sealed class RuntimeExecutableTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+    private static Kuroe.Execution.ExecutionRuntime Runtime() =>
         new(
-            new Kuroe.Flow.Execution.ExecutionDispatcher(),
-            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
-            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
+            new Kuroe.Execution.ExecutionDispatcher(),
+            new Kuroe.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Execution.ExecutionRestorerRegistry());
     private static readonly PortName Conclusion = new("结论");
 
     [Fact]
     public void Published_false_trigger_silences_the_port()
     {
-        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Flow.Execution.Shared.IExecutionContractWriter contracts) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Execution.Shared.IExecutionContractWriter contracts) = Node();
         Submit(contracts, execution, Values(new PortValue("内容", false)));
 
         Assert.True(node.Triggers(Conclusion));
@@ -38,7 +38,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Published_true_trigger_fires_the_port()
     {
-        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Flow.Execution.Shared.IExecutionContractWriter contracts) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Execution.Shared.IExecutionContractWriter contracts) = Node();
         Submit(contracts, execution, Values(new PortValue("内容", true)));
         node.Publish(execution);
 
@@ -48,7 +48,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Missing_submission_is_reported_as_outstanding_ports()
     {
-        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Flow.Execution.Shared.IExecutionContractWriter contracts) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Execution.Shared.IExecutionContractWriter contracts) = Node();
 
         Assert.Equal([Conclusion], node.OutstandingPorts(execution));
 
@@ -60,7 +60,7 @@ public sealed class RuntimeExecutableTests
     [Fact]
     public void Invalidate_removes_the_published_trigger_value()
     {
-        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Flow.Execution.Shared.IExecutionContractWriter contracts) = Node();
+        (RuntimeExecutable node, RuntimeExecution execution, Kuroe.Execution.Shared.IExecutionContractWriter contracts) = Node();
         Submit(contracts, execution, Values(new PortValue("内容", false)));
         node.Publish(execution);
         Assert.False(node.Triggers(Conclusion));
@@ -70,7 +70,7 @@ public sealed class RuntimeExecutableTests
         Assert.True(node.Triggers(Conclusion));
     }
 
-    private static (RuntimeExecutable Node, RuntimeExecution Exec, Kuroe.Flow.Execution.Shared.IExecutionContractWriter Contracts) Node()
+    private static (RuntimeExecutable Node, RuntimeExecution Exec, Kuroe.Execution.Shared.IExecutionContractWriter Contracts) Node()
     {
         ExecutableNode executable = new()
         {
@@ -88,17 +88,17 @@ public sealed class RuntimeExecutableTests
             Type = executable.Type,
             OutputPorts = executable.Outputs,
         };
-        Kuroe.Flow.Execution.ExecutionRuntime runtime = Runtime();
-        Kuroe.Flow.Execution.Shared.IExecution unit = runtime.Create(
-            new Kuroe.Flow.Execution.Shared.ExecutionId(1),
+        Kuroe.Execution.ExecutionRuntime runtime = Runtime();
+        Kuroe.Execution.Shared.IExecution unit = runtime.Create(
+            new Kuroe.Execution.Shared.ExecutionId(1),
             RuntimeExecution.BuildRequest(input));
         RuntimeExecution execution = new(input, unit, 0);
 
-        return (new RuntimeExecutable(executable), execution, new Kuroe.Flow.Execution.ExecutionContractWriter());
+        return (new RuntimeExecutable(executable), execution, new Kuroe.Execution.ExecutionContractWriter());
     }
 
     private static void Submit(
-        Kuroe.Flow.Execution.Shared.IExecutionContractWriter contracts,
+        Kuroe.Execution.Shared.IExecutionContractWriter contracts,
         RuntimeExecution execution,
         Dictionary<PortName, PortValue> values) =>
         contracts.SubmitOutputs(execution.Unit, ToNeutralOutputs(values));
@@ -106,12 +106,12 @@ public sealed class RuntimeExecutableTests
     private static Dictionary<PortName, PortValue> Values(PortValue value) =>
         new() { [Conclusion] = value };
 
-    private static Dictionary<Kuroe.Flow.Execution.Shared.ExecutionPortName, Kuroe.Flow.Execution.Shared.ExecutionOutputValue>
+    private static Dictionary<Kuroe.Execution.Shared.ExecutionPortName, Kuroe.Execution.Shared.ExecutionOutputValue>
         ToNeutralOutputs(IReadOnlyDictionary<PortName, PortValue> values) =>
         values.ToDictionary(
-            pair => new Kuroe.Flow.Execution.Shared.ExecutionPortName(pair.Key.Value),
-            pair => new Kuroe.Flow.Execution.Shared.ExecutionOutputValue(
-                new Kuroe.Flow.Execution.Shared.ExecutionPortName(pair.Key.Value),
+            pair => new Kuroe.Execution.Shared.ExecutionPortName(pair.Key.Value),
+            pair => new Kuroe.Execution.Shared.ExecutionOutputValue(
+                new Kuroe.Execution.Shared.ExecutionPortName(pair.Key.Value),
                 pair.Value.Text,
                 pair.Value.Fires));
 }

@@ -31,7 +31,7 @@
         <ProjectReference Include="..\..\Kuroe.Files\Core\Kuroe.Files.csproj" />
         <ProjectReference Include="..\Process\Core\Kuroe.Process.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\InputChannel\Core\Kuroe.Flow.InputChannel.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Json\Shared\Kuroe.Flow.Json.Shared.csproj" />
@@ -50,7 +50,7 @@
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Code\Core\Kuroe.Flow.Persistence.Code.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Runtime\Core\Kuroe.Flow.Runtime.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Execution\Core\Kuroe.Flow.Execution.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Execution\Core\Kuroe.Execution.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Compilation\Core\Kuroe.Flow.Compilation.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\NodeLibrary\Core\Kuroe.Flow.NodeLibrary.csproj" />

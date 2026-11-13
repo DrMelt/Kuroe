@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Control.Shared;
-using Kuroe.Flow.Execution.Shared;
-using ExecutionStatus = Kuroe.Flow.Execution.Shared.ExecutionStatus;
+using Kuroe.Execution.Shared;
+using ExecutionStatus = Kuroe.Execution.Shared.ExecutionStatus;
 
 namespace Kuroe.Flow.Control.Contract;
 

@@ -14,8 +14,8 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Control\Contract\Kuroe.Flow.Control.Contract.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Execution\Core\Kuroe.Flow.Execution.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Execution\Core\Kuroe.Execution.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\Source\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />

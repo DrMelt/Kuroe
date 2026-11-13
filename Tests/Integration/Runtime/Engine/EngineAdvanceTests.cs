@@ -52,7 +52,7 @@ public sealed class EngineAdvanceTests
         environment.Runner.Gate.Open(second);
         await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
             step.Label == "乙"
-            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded)));
+            && step.Executions.Any(execution => execution.State == Kuroe.Execution.Shared.ExecutionState.Succeeded)));
 
         environment.Runner.Gate.Open(merge);
 

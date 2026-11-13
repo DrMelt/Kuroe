@@ -1,1 +1,1 @@
-global using ProcessObserver = Kuroe.Flow.Execution.Shared.ProcessObserver;
+global using ProcessObserver = Kuroe.Execution.Shared.ProcessObserver;

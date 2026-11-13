@@ -63,10 +63,9 @@ public sealed class RepositoryLayoutTests
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Execution",
+            "Kuroe.Execution",
             "Shared",
-            "Kuroe.Flow.Execution.Shared.csproj");
+            "Kuroe.Execution.Shared.csproj");
 
         Assert.Empty(ProjectReferences(project));
     }
@@ -74,7 +73,7 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Execution_projects_stay_free_of_flow_control_vocabulary()
     {
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution");
         string pattern = @"(?<![A-Za-z])(FlowStepPath|StartInputs|FlowName|FlowSeed|PortName)(?![A-Za-z])";
 
         Assert.NotEmpty(SourceFiles(execution));
@@ -104,7 +103,7 @@ public sealed class RepositoryLayoutTests
         {
             string text = File.ReadAllText(file);
 
-            Assert.DoesNotContain("using Kuroe.Flow.Execution", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("using Kuroe.Execution", text, StringComparison.Ordinal);
             Assert.DoesNotContain("using Kuroe.Flow.Tasks", text, StringComparison.Ordinal);
         }
     }
@@ -119,7 +118,7 @@ public sealed class RepositoryLayoutTests
             "Shared",
             "Kuroe.Flow.Presentation.Shared.csproj");
 
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
 
         Assert.All(
@@ -134,16 +133,14 @@ public sealed class RepositoryLayoutTests
     {
         string shared = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Execution",
+            "Kuroe.Execution",
             "Shared",
-            "Kuroe.Flow.Execution.Shared.csproj");
+            "Kuroe.Execution.Shared.csproj");
         string core = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Execution",
+            "Kuroe.Execution",
             "Core",
-            "Kuroe.Flow.Execution.csproj");
+            "Kuroe.Execution.csproj");
         IReadOnlyList<string> references = ProjectReferences(core);
 
         Assert.Equal([shared], references);
@@ -152,7 +149,7 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Execution_projects_stay_free_of_graph_and_node_semantics()
     {
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution");
         string[] forbidden =
         [
             "NodePath",
@@ -231,7 +228,7 @@ public sealed class RepositoryLayoutTests
 
         Assert.DoesNotContain(
             ProjectReferences(project),
-            reference => IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Core")));
+            reference => IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Execution", "Core")));
     }
 
     [Fact]
@@ -329,7 +326,7 @@ public sealed class RepositoryLayoutTests
     public void Node_projects_do_not_reference_flow_implementation()
     {
         string nodes = Path.Combine(SourceRoot, "Kuroe", "Node");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Core");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Core");
         string flow = Path.Combine(SourceRoot, "Kuroe.Flow", "Core");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records");
 
@@ -372,7 +369,7 @@ public sealed class RepositoryLayoutTests
             "Shared",
             "Kuroe.Flow.Node.Shared.csproj");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
 
         Assert.All(
@@ -391,7 +388,7 @@ public sealed class RepositoryLayoutTests
             "Shared",
             "Kuroe.Flow.Shared.csproj");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
 
         Assert.All(
             ProjectReferences(project),
@@ -412,7 +409,7 @@ public sealed class RepositoryLayoutTests
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
@@ -441,7 +438,7 @@ public sealed class RepositoryLayoutTests
             "Shared",
             "Kuroe.Flow.Tasks.Presentation.Shared.csproj");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
 
@@ -604,7 +601,7 @@ public sealed class RepositoryLayoutTests
         Assert.DoesNotContain(references, reference =>
             IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Core")));
         Assert.DoesNotContain(references, reference =>
-            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Execution")));
+            IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Execution")));
     }
 
     [Fact]
@@ -612,17 +609,16 @@ public sealed class RepositoryLayoutTests
     {
         string project = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Execution",
+            "Kuroe.Execution",
             "Records",
             "Shared",
-            "Kuroe.Flow.Execution.Records.Shared.csproj");
+            "Kuroe.Execution.Records.Shared.csproj");
 
         IReadOnlyList<string> references = ProjectReferences(project);
 
         Assert.Single(references);
         Assert.Contains(
-            Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared", "Kuroe.Flow.Execution.Shared.csproj"),
+            Path.Combine(SourceRoot, "Kuroe.Execution", "Shared", "Kuroe.Execution.Shared.csproj"),
             references);
     }
 
@@ -663,8 +659,8 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Tasks.Records.Shared.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
-        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Execution", "Records", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
 
         Assert.All(references, reference =>
             Assert.True(
@@ -688,7 +684,7 @@ public sealed class RepositoryLayoutTests
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string tasksRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         Assert.All(references, reference =>
@@ -708,8 +704,8 @@ public sealed class RepositoryLayoutTests
         string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string taskContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
-        string executionContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
-        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
+        string executionContracts = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
+        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Execution", "Records", "Shared");
         string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
@@ -813,7 +809,7 @@ public sealed class RepositoryLayoutTests
         string contract = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Contract");
         string project = Path.Combine(contract, "Kuroe.Flow.Control.Contract.csproj");
         string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
 
         Assert.All(ProjectReferences(project), reference => Assert.True(
             IsUnder(reference, control) || IsUnder(reference, execution),
@@ -875,6 +871,15 @@ public sealed class RepositoryLayoutTests
             }
         }
 
+        // 执行单元的共享契约是中性基础层，任何共享层都可引用
+        string executionContracts = Path.Combine(SourceRoot, "Kuroe.Execution");
+        if (Directory.Exists(executionContracts))
+        {
+            directories.AddRange(Directory
+                .EnumerateDirectories(executionContracts, "Shared", SearchOption.AllDirectories)
+                .Where(directory => !IsBuildOutput(directory)));
+        }
+
         string sourceDirectory = Path.Combine([SourceRoot, .. segments]);
         if (!directories.Contains(sourceDirectory, StringComparer.Ordinal))
         {
@@ -914,7 +919,7 @@ public sealed class RepositoryLayoutTests
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string tasksPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string tasksRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
 
         Assert.All(
@@ -1070,7 +1075,7 @@ public sealed class RepositoryLayoutTests
     public void Execution_records_capture_the_source_key()
     {
         string capture = Path.Combine(
-            SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared", "ExecutionRecordCapture.cs");
+            SourceRoot, "Kuroe.Execution", "Records", "Shared", "ExecutionRecordCapture.cs");
 
         Assert.Contains("SourceKey", File.ReadAllText(capture), StringComparison.Ordinal);
     }
@@ -1086,7 +1091,7 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Execution_records_stay_free_of_graph_and_node_types()
     {
-        string records = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
+        string records = Path.Combine(SourceRoot, "Kuroe.Execution", "Records", "Shared");
         string[] forbidden =
         [
             "NodePath",
@@ -1151,7 +1156,7 @@ public sealed class RepositoryLayoutTests
             "Core",
             "Kuroe.Flow.Runtime.csproj");
         string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
 
         Assert.All(
@@ -1174,7 +1179,7 @@ public sealed class RepositoryLayoutTests
             "Shared",
             "Kuroe.Flow.Tasks.Presentation.Shared.csproj");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
 
         Assert.All(
@@ -1340,8 +1345,8 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Control.Graph.csproj");
         string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
         string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
-        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
-        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
+        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Execution", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
         string inputChannel = Path.Combine(SourceRoot, "Kuroe.Flow", "InputChannel", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
@@ -1368,15 +1373,15 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Execution_shared_defines_no_concrete_state_machine()
     {
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
-        string core = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Core");
+        string shared = Path.Combine(SourceRoot, "Kuroe.Execution", "Shared");
+        string core = Path.Combine(SourceRoot, "Kuroe.Execution", "Core");
 
-        Assert.False(File.Exists(Path.Combine(shared, "Execution.cs")));
-        Assert.True(File.Exists(Path.Combine(core, "Execution.cs")));
+        Assert.False(File.Exists(Path.Combine(shared, "ExecutionInstance.cs")));
+        Assert.True(File.Exists(Path.Combine(core, "ExecutionInstance.cs")));
         Assert.All(
             SourceFiles(shared),
             file => Assert.DoesNotContain(
-                "sealed class Execution :",
+                "sealed class ExecutionInstance :",
                 File.ReadAllText(file),
                 StringComparison.Ordinal));
     }
@@ -1392,10 +1397,10 @@ public sealed class RepositoryLayoutTests
         ];
         string[] forbidden =
         [
-            "Kuroe.Flow.Execution.Execution;",
-            "Kuroe.Flow.Execution.Execution ",
-            "Kuroe.Flow.Execution.Execution)",
-            "Kuroe.Flow.Execution.Execution,",
+            "Kuroe.Execution.ExecutionInstance;",
+            "Kuroe.Execution.ExecutionInstance ",
+            "Kuroe.Execution.ExecutionInstance)",
+            "Kuroe.Execution.ExecutionInstance,",
         ];
 
         foreach (string directory in directories)
@@ -1505,8 +1510,7 @@ public sealed class RepositoryLayoutTests
     {
         string file = Path.Combine(
             SourceRoot,
-            "Kuroe.Flow",
-            "Execution",
+            "Kuroe.Execution",
             "Shared",
             "IExecutionRuntime.cs");
         string text = File.ReadAllText(file);

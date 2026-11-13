@@ -24,7 +24,7 @@
         <ProjectReference Include="..\Kuroe\Tool\Json\Kuroe.Tool.Json.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Persistence\Restoring\Shared\Kuroe.Flow.Persistence.Restoring.Shared.csproj" />
-        <ProjectReference Include="..\Kuroe.Flow\Execution\Shared\Kuroe.Flow.Execution.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe\Shared\Kuroe.Shared.csproj" />
     </ItemGroup>

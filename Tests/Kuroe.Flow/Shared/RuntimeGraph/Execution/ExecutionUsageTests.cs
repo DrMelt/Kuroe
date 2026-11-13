@@ -1,6 +1,6 @@
 using Xunit;
-using ExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
-using TokenUsage = Kuroe.Flow.Execution.Shared.TokenUsage;
+using ExecutionUsage = Kuroe.Execution.Shared.ExecutionUsage;
+using TokenUsage = Kuroe.Execution.Shared.TokenUsage;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 

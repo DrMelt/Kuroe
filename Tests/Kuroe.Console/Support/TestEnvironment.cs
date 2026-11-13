@@ -49,7 +49,7 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Flow.Execution.Shared.IExecutionPortSubmitter>();
+        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Execution.Shared.IExecutionPortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -161,7 +161,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory>(runner);
+        services.AddSingleton<Kuroe.Execution.Shared.IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();

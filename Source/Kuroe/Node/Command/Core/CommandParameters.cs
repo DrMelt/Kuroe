@@ -1,7 +1,7 @@
 namespace Kuroe.Node.Command;
 
 /// <summary>命令节点的类型专属声明：程序、参数、执行目录原文、路径变量映射、边界根、超时、输出上限与退出码策略。</summary>
-public sealed record CommandParameters : Kuroe.Flow.Execution.Shared.IExecutionParameters
+public sealed record CommandParameters : Kuroe.Execution.Shared.IExecutionParameters
 {
     /// <summary>要执行的程序，程序名或路径。</summary>
     public required string Program { get; init; }
