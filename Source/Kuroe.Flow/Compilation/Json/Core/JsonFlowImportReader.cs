@@ -2,7 +2,6 @@ using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json.Shared;
-using Kuroe.Flow.Shared;
 
 namespace Kuroe.Flow.Json;
 

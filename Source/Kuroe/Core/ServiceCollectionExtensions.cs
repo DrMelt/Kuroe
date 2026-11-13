@@ -265,11 +265,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new FlowFrameworkSource(sp.GetServices<FlowProvider>()));
         services.AddSingleton<IFlowFrameworkSource>(sp => sp.GetRequiredService<FlowFrameworkSource>());
         services.AddSingleton(sp => new FlowRuntime(
-            sp.GetRequiredService<IExecutionRuntime>(),
-            executions));
+            sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IFlowRuntime>(sp => sp.GetRequiredService<FlowRuntime>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
             taskRegistry,
+            sp.GetRequiredService<IExecutionRuntime>(),
             sp.GetRequiredService<IFlowFrameworkSource>(),
             sp.GetRequiredService<IFlowRuntime>()));
         if (coreOptions.PersistTasks)
@@ -282,6 +282,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new TaskService(
             new TaskActions(
                 taskRegistry,
+                sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<IFlowRuntime>(),
                 sp.GetRequiredService<IFlowFrameworkSource>(),
                 sp.GetRequiredService<ITaskIdSource>(),

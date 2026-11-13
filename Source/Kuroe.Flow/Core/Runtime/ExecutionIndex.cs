@@ -1,9 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Runtime.Tasks;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
-using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Flow.Runtime;
 
@@ -15,19 +12,23 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
     private int _nextExecution = 1;
 
     /// <summary>为一个任务建立执行并登记归属。</summary>
-    public LoopExecution Open(ITaskFlowContext owner, ExecutionRequest request)
+    public IExecution Open(
+        ITaskFlowContext owner,
+        ExecutionRequest request,
+        Func<ExecutionId, ExecutionRequest, IExecution> create)
     {
         lock (_gate)
         {
-            LoopExecution execution = new(new ExecutionId(_nextExecution++), request);
-            _entries[execution.Id] = new Entry(execution, owner);
+            ExecutionId id = new(_nextExecution++);
+            IExecution execution = create(id, request);
+            _entries[id] = new Entry(execution, owner);
 
             return execution;
         }
     }
 
     /// <summary>登记一个从存档恢复的执行，推进下一次执行号。</summary>
-    public void Restore(ITaskFlowContext owner, LoopExecution execution)
+    public void Restore(ITaskFlowContext owner, IExecution execution)
     {
         lock (_gate)
         {
@@ -36,17 +37,8 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
         }
     }
 
-    /// <summary>按执行号取执行，不存在时返回错误。</summary>
-    public ErrorOr<LoopExecution> Find(ExecutionId id)
-    {
-        lock (_gate)
-        {
-            return _entries.TryGetValue(id, out Entry entry) ? entry.Execution : [ExecutionErrors.ExecutionNotFound(id.Value)];
-        }
-    }
-
     /// <summary>按执行号取执行与它的归属任务，不存在时返回错误。</summary>
-    public ErrorOr<(LoopExecution Execution, ITaskFlowContext Owner)> FindOwned(ExecutionId id)
+    public ErrorOr<(IExecution Execution, ITaskFlowContext Owner)> FindOwned(ExecutionId id)
     {
         lock (_gate)
         {
@@ -54,31 +46,6 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
                 ? (entry.Execution, entry.Owner)
                 : [ExecutionErrors.ExecutionNotFound(id.Value)];
         }
-    }
-
-    /// <summary>停止一个已启动的执行。未启动的执行不构成一次尝试，不能停止。</summary>
-    public ErrorOr<Success> Stop(ITaskFlowContext owner, ExecutionId id)
-    {
-        LoopExecution? execution = owner.UnderLock(() =>
-            owner.Executions.FirstOrDefault(candidate => candidate.Id == id));
-        if (execution is null)
-        {
-            return [ExecutionErrors.ExecutionNotFound(id.Value)];
-        }
-
-        if (!execution.IsLive)
-        {
-            return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
-        }
-
-        if (execution.Snapshot().StartedAt is null)
-        {
-            return [ExecutionErrors.ExecutionNotStarted(execution.Id)];
-        }
-
-        execution.Interrupt("已停止执行。");
-
-        return Result.Success;
     }
 
     /// <summary>移除一个已清空任务的执行条目。</summary>
@@ -90,5 +57,5 @@ public sealed class ExecutionIndex : IFlowExecutionGateway
         }
     }
 
-    private readonly record struct Entry(LoopExecution Execution, ITaskFlowContext Owner);
+    private readonly record struct Entry(IExecution Execution, ITaskFlowContext Owner);
 }

@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Shared.Model;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>执行节点的命名输入或输出端口名。展示即原文。</summary>
 public readonly record struct PortName(string Value)

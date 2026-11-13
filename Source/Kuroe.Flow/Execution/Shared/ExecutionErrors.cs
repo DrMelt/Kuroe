@@ -1,8 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
-using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using Kuroe.Flow.Tasks;
 
-namespace Kuroe.Flow.Runtime;
+namespace Kuroe.Flow.Execution;
 
 /// <summary>执行侧的错误构造。</summary>
 public static class ExecutionErrors

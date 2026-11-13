@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
-using LoopExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using Kuroe.Flow.Execution;
 
 namespace Kuroe.Flow.Runtime.Contract;
 
@@ -9,9 +8,9 @@ namespace Kuroe.Flow.Runtime.Contract;
 internal static class SubmitterContext
 {
     /// <summary>认定提交者，action 是提交入口的动作名，进入未在跑的提示。</summary>
-    public static ErrorOr<(LoopExecution Execution, ITaskFlowContext Task)> Resolve(
-        ExecutionIndex executions,
-        LoopExecutionId id,
+    public static ErrorOr<(IExecution Execution, ITaskFlowContext Task)> Resolve(
+        IFlowExecutionGateway executions,
+        ExecutionId id,
         string action)
     {
         if (executions.FindOwned(id) is not { IsError: false } found || !found.Value.Execution.IsLive)

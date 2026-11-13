@@ -1,4 +1,3 @@
-using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 
@@ -21,10 +20,10 @@ public sealed record TaskSnapshot(
     public IReadOnlyList<ExecutionSnapshot> Executions { get; init; } = [];
 
     /// <summary>此刻等待外部输入的步骤。</summary>
-    public IReadOnlyList<FlowPendingStep> Pending { get; init; } = [];
+    public IReadOnlyList<PendingStepView> Pending { get; init; } = [];
 
     /// <summary>任务启动时的开始端口文本。</summary>
-    public IPortTexts? StartTexts { get; init; }
+    public FlowTexts? StartTexts { get; init; }
 
     /// <summary>流程的执行节点数。</summary>
     public int TotalExecutableNodes => View.Steps.Count;

@@ -1,6 +1,5 @@
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -31,8 +30,13 @@ public sealed class DialogueFlowPresentation : IFlowPresentation
             task.LastActivityAt)
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = control?.Pending() ?? [],
-            StartTexts = new PortTexts(state.StartTexts.Texts),
+            Pending = [.. (control?.Pending() ?? []).Select(PendingOf)],
+            StartTexts = new FlowTexts(state.StartTexts.Texts),
         };
     }
+
+    private static PendingStepView PendingOf(FlowPendingStep pending) => new(
+        pending.Step.Value,
+        pending.Kind == FlowPendingKind.Approve ? PendingStepKind.Approve : PendingStepKind.Input,
+        pending.Question);
 }

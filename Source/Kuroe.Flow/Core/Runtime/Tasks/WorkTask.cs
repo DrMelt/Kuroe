@@ -4,9 +4,7 @@ using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Runtime.Process;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Tasks.Records;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
@@ -17,8 +15,8 @@ namespace Kuroe.Flow.Runtime.Tasks;
 /// 流程语义由 <see cref="FlowProvider"/> 的端口提供，宿主读 <see cref="Snapshot"/>。</summary>
 public sealed class WorkTask : ITaskFlowHost
 {
-    private readonly List<LoopExecution> _executions = [];
-    private LoopExecution[] _executionsSnapshot = [];
+    private readonly List<IExecution> _executions = [];
+    private IExecution[] _executionsSnapshot = [];
     private readonly DateTimeOffset _createdAt;
     private readonly ProcessObserver? _observer;
     private readonly FlowProvider _provider;
@@ -28,11 +26,13 @@ public sealed class WorkTask : ITaskFlowHost
     private TaskLifecycle _lifecycle = TaskLifecycle.Active;
     private int _controlVersion;
     private bool _completed;
+    private readonly IExecutionRuntime _executionRuntime;
     private readonly IFlowDefinitionRecord? _flowSnapshot;
 
     /// <summary>建立一个尚未启动的新任务。</summary>
     public WorkTask(
         TaskRegistry registry,
+        IExecutionRuntime executions,
         TaskId id,
         StartInputs inputs,
         FlowTexts startTexts,
@@ -43,6 +43,7 @@ public sealed class WorkTask : ITaskFlowHost
         ProcessObserver? observer)
     {
         Registry = registry;
+        _executionRuntime = executions;
         Id = id;
         Inputs = inputs;
         StartTexts = startTexts;
@@ -58,14 +59,16 @@ public sealed class WorkTask : ITaskFlowHost
 
     private WorkTask(
         TaskRegistry registry,
+        IExecutionRuntime executions,
         TaskRecord record,
         FlowProvider provider,
         IFlowState state,
         FlowTexts startTexts,
-        IReadOnlyList<LoopExecution> executions,
+        IReadOnlyList<IExecution> executionsFromRecord,
         ProcessObserver? observer)
     {
         Registry = registry;
+        _executionRuntime = executions;
         Id = record.Identity.Id;
         Inputs = state.Inputs;
         StartTexts = startTexts;
@@ -80,7 +83,7 @@ public sealed class WorkTask : ITaskFlowHost
         _completed = record.Completed;
         Journal.Restore(record.Journal.Entries, record.Journal.DroppedEntries);
 
-        foreach (LoopExecution execution in executions)
+        foreach (IExecution execution in executionsFromRecord)
         {
             AttachExecution(execution);
         }
@@ -92,13 +95,14 @@ public sealed class WorkTask : ITaskFlowHost
     /// <summary>从存档恢复任务。执行列表由具体流程实现重建。</summary>
     public static WorkTask Restore(
         TaskRegistry registry,
+        IExecutionRuntime executions,
         TaskRecord record,
         FlowProvider provider,
         IFlowState state,
         FlowTexts startTexts,
-        IReadOnlyList<LoopExecution> executions,
+        IReadOnlyList<IExecution> executionsFromRecord,
         ProcessObserver? observer = null) =>
-        new(registry, record, provider, state, startTexts, executions, observer);
+        new(registry, executions, record, provider, state, startTexts, executionsFromRecord, observer);
 
     /// <summary>任务标识。</summary>
     public TaskId Id { get; }
@@ -172,13 +176,13 @@ public sealed class WorkTask : ITaskFlowHost
     /// <summary>任务内状态改动的串行点。锁序以任务 Gate 为最外层，注册表先于执行索引。</summary>
     public Lock Gate { get; } = new();
 
-    private event Action<LoopExecution>? ExecutionSettled;
+    private event Action<IExecution>? ExecutionSettled;
 
     /// <summary>执行收口后的通知，回答等待方借此取回本轮产出。要求持有 Gate 触发。</summary>
-    public void NotifyExecutionSettled(LoopExecution execution) => ExecutionSettled?.Invoke(execution);
+    public void NotifyExecutionSettled(IExecution execution) => ExecutionSettled?.Invoke(execution);
 
     /// <summary>订阅执行收口通知，返回解除订阅的委托。</summary>
-    public Action SubscribeExecutionSettled(Action<LoopExecution> handler)
+    public Action SubscribeExecutionSettled(Action<IExecution> handler)
     {
         ExecutionSettled += handler;
 
@@ -186,7 +190,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>任务的全部执行，按提交顺序。对外给出不可变快照，读取不需要任务 Gate。</summary>
-    public IReadOnlyList<LoopExecution> Executions => _executionsSnapshot;
+    public IReadOnlyList<IExecution> Executions => _executionsSnapshot;
 
     /// <summary>任务标题，创建时按输入与流程名推导，可由宿主改写。</summary>
     public string Title
@@ -387,9 +391,9 @@ public sealed class WorkTask : ITaskFlowHost
         _lifecycle = TaskLifecycle.Terminated;
         Journal.AppendInfo("任务终止。");
 
-        foreach (LoopExecution execution in _executions.Where(execution => execution.IsLive))
+        foreach (IExecution execution in _executions.Where(execution => execution.IsLive))
         {
-            execution.Interrupt("任务终止。");
+            _executionRuntime.Interrupt(execution, "任务终止。");
         }
 
         _lastActivityAt = DateTimeOffset.UtcNow;
@@ -399,7 +403,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>记下一个执行。要求持有 <see cref="Gate"/>。</summary>
-    public void AttachExecution(LoopExecution execution)
+    public void AttachExecution(IExecution execution)
     {
         _executions.Add(execution);
         _executionsSnapshot = [.. _executions];
@@ -421,7 +425,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>执行真正进入运行态时记一次执行尝试。</summary>
-    private void OnExecutionStarted(LoopExecution execution)
+    private void OnExecutionStarted(IExecution execution)
     {
         lock (Gate)
         {
@@ -431,10 +435,10 @@ public sealed class WorkTask : ITaskFlowHost
         }
     }
 
-    private event Action<LoopExecution>? ExecutionAttached;
+    private event Action<IExecution>? ExecutionAttached;
 
     /// <summary>订阅新执行启动的通知，回答等待方借此挂上流式观察。要求持有 Gate 触发。</summary>
-    public Action SubscribeExecutionAttached(Action<LoopExecution> handler)
+    public Action SubscribeExecutionAttached(Action<IExecution> handler)
     {
         ExecutionAttached += handler;
 

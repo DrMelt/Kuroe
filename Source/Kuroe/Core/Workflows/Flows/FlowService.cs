@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
@@ -264,7 +263,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
             _compiled = compiled.Value.Flows;
             _failures = compiled.Value.Failures;
 
-            return new FlowImport(file.Source, [], [.. file.Nodes.Select(node => new NodeName(node.Name))], notes);
+            return new FlowImport(file.Source, [], [.. file.Nodes.Select(node => node.Name)], notes);
         }
     }
 

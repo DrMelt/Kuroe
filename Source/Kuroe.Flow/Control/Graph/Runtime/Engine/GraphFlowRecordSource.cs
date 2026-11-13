@@ -3,7 +3,6 @@ using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Nodes;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Runtime.Engine;
@@ -48,7 +47,8 @@ public sealed class GraphFlowRecordSource : IFlowRecordSource
             .. task.Executions.Select(execution => new GraphExecution(
                 state.Context(execution.Id).Input,
                 execution,
-                state.Context(execution.Id).ControlVersion).CaptureRecord()),
+                state.Context(execution.Id).ControlVersion,
+                state.ExecutionsRuntime ?? throw new InvalidOperationException("图流程没有执行运行期。")).CaptureRecord()),
         ];
     }
 }

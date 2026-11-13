@@ -1,15 +1,15 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Tasks.Records;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 
 /// <summary>从存档恢复任务并加入任务域。未完成的任务启动推进循环；完成与终止的任务只恢复状态，不再推进。</summary>
 public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
+    IExecutionRuntime executions,
     IFlowFrameworkSource frameworks,
     IFlowRuntime runner) : ITaskRestoreRuntime
 {
@@ -31,13 +31,14 @@ public sealed class TaskRestoreRuntime(
 
         WorkTask task = WorkTask.Restore(
             registry,
+            executions,
             record,
             provider,
             restored.Value.State,
             restored.Value.StartTexts,
             restored.Value.Executions);
         registry.Adopt(task);
-        foreach (LoopExecution execution in task.Executions)
+        foreach (IExecution execution in task.Executions)
         {
             registry.RestoreExecution(task, execution);
         }

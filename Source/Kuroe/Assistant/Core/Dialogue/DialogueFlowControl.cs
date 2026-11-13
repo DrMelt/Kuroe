@@ -19,7 +19,7 @@ internal sealed class DialogueFlowControl(
     internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyNodeLabel.Value);
 
     private bool _awaiting = true;
-    private Execution? _live;
+    private IExecution? _live;
 
     /// <inheritdoc/>
     public Task Loop => Task.CompletedTask;
@@ -47,7 +47,7 @@ internal sealed class DialogueFlowControl(
         {
             if (_live is { IsLive: true } live)
             {
-                live.Interrupt("任务暂停。");
+                executions.Interrupt(live, "任务暂停。");
             }
         }
     }
@@ -102,7 +102,7 @@ internal sealed class DialogueFlowControl(
         }
 
         _awaiting = false;
-        Execution execution = gateway.Open(task, Request(text));
+        IExecution execution = gateway.Open(task, Request(text), executions.Create);
         task.AttachExecution(execution);
         _live = execution;
         _ = RunAsync(execution);
@@ -124,7 +124,7 @@ internal sealed class DialogueFlowControl(
             },
             []);
 
-    private async Task RunAsync(Execution execution)
+    private async Task RunAsync(IExecution execution)
     {
         try
         {
@@ -136,7 +136,7 @@ internal sealed class DialogueFlowControl(
         }
         catch (Exception ex)
         {
-            execution.MarkFailed([Error.Failure("Flow.Dispatch", $"对话执行失败：{ex.Message}")]);
+            executions.Fail(execution, [Error.Failure("Flow.Dispatch", $"对话执行失败：{ex.Message}")]);
         }
 
         lock (task.Gate)

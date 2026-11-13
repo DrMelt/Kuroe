@@ -1,8 +1,8 @@
-using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Execution;
+using Kuroe.Flow.Presentation;
 using Xunit;
 
-namespace Kuroe.Flow.Shared.Tests.Display;
+namespace Kuroe.Flow.Presentation.Tests;
 
 /// <summary>token 用量条目与请求次数的展示文本。</summary>
 public sealed class InfoLabelsTests

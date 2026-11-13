@@ -5,7 +5,6 @@ using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
@@ -16,6 +15,12 @@ namespace Kuroe.Flow.Tests.Runtime.Tasks;
 /// <summary>流程实现分派：恢复按存档定义选择实现，同一种类可以有多个实现。</summary>
 public sealed class FlowFrameworkSourceTests
 {
+    /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
+    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
+        new Kuroe.Flow.Execution.ExecutionRuntime(
+            new Kuroe.Flow.Execution.ExecutionDispatcher(),
+            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
     [Fact]
     public void Record_finds_provider_by_definition_implementation()
     {
@@ -56,7 +61,11 @@ public sealed class FlowFrameworkSourceTests
         FlowProvider second = Provider("second");
         ExecutionIndex executions = new();
         TaskRegistry registry = new(executions);
-        TaskRestoreRuntime runtime = new(registry, new FlowFrameworkSource([first, second]), new UnusedRuntime());
+        TaskRestoreRuntime runtime = new(
+            registry,
+            Runtime(),
+            new FlowFrameworkSource([first, second]),
+            new UnusedRuntime());
 
         TaskSnapshot snapshot = runtime.Restore(CodeTask("second")).ThrowIfError();
 

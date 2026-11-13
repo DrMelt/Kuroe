@@ -4,7 +4,6 @@ using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
@@ -14,7 +13,6 @@ using Kuroe.Flow.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Shared.StaticGraph.Ports;
 using Kuroe.Flow.Tasks.Records;
 using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
@@ -142,7 +140,7 @@ public sealed class GraphFlowSubmission(
             SavedAt = record.SavedAt,
         };
 
-        List<LoopExecution> units = [];
+        List<IExecution> units = [];
         try
         {
             foreach (ExecutionRecord executionRecord in record.Executions)
@@ -156,7 +154,7 @@ public sealed class GraphFlowSubmission(
                 }
 
                 ExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord);
-                GraphExecution execution = GraphExecution.Restore(executionRecord, input);
+                GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
             }

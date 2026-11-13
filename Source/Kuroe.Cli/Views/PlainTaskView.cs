@@ -1,5 +1,5 @@
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Shared.Display;
+using Kuroe.Flow.Presentation;
 
 namespace Kuroe.Cli.Views;
 

@@ -1,5 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Workflows.Flows;
 
@@ -7,5 +6,5 @@ namespace Kuroe.Workflows.Flows;
 public sealed record FlowImport(
     string Source,
     IReadOnlyList<FlowName> Flows,
-    IReadOnlyList<NodeName> Nodes,
+    IReadOnlyList<string> Nodes,
     IReadOnlyList<string> Notes);

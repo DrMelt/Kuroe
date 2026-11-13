@@ -98,10 +98,10 @@ public static class TaskRecordFixture
                                     new PortName("结论")),
                                 "计划结果")]),
                     ],
-                    new Kuroe.Flow.Control.FlowSeed(
+                    new Kuroe.Flow.Tasks.FlowSeed(
                     [
-                        new Kuroe.Flow.Control.FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
-                        new Kuroe.Flow.Control.FlowStepPath([.. read.Levels.Select(level => level.Value)]),
+                        new Kuroe.Flow.Tasks.FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
+                        new Kuroe.Flow.Tasks.FlowStepPath([.. read.Levels.Select(level => level.Value)]),
                     ]))),
             [
                 new ExecutionRecord(

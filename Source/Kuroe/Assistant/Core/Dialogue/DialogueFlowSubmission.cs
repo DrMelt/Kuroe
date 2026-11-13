@@ -6,7 +6,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
@@ -18,7 +17,8 @@ namespace Kuroe.Assistant.Dialogue;
 public sealed class DialogueFlowSubmission(
     ModelService models,
     SettingsProvider settings,
-    KuroePaths paths) : IFlowSubmission
+    KuroePaths paths,
+    IExecutionRuntime executions) : IFlowSubmission
 {
     /// <inheritdoc/>
     public ErrorOr<FlowSubmission> Prepare(TaskId id, FlowName name, StartInputs inputs, string? title)
@@ -61,7 +61,7 @@ public sealed class DialogueFlowSubmission(
         string model = DialogueFlowAccess.Model(saved.Values, models.Current?.Value ?? string.Empty);
         string workspace = DialogueFlowAccess.Workspace(saved.Values, paths.WorkingDirectory);
         DialogueFlowState state = new(saved.Inputs, workspace, model, language);
-        List<Execution> restored = [.. record.Executions.Select(execution => RestoreExecution(record.Identity.Id, execution))];
+        List<IExecution> restored = [.. record.Executions.Select(execution => RestoreExecution(record.Identity.Id, execution))];
 
         return new FlowRestore(
             state,
@@ -70,7 +70,7 @@ public sealed class DialogueFlowSubmission(
             DialogueFlowState.AwaitingSeed);
     }
 
-    private static Execution RestoreExecution(TaskId task, ExecutionRecord record)
+    private IExecution RestoreExecution(TaskId task, ExecutionRecord record)
     {
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Value),
@@ -82,31 +82,32 @@ public sealed class DialogueFlowSubmission(
             record.Texts,
             []);
 
-        return Execution.Restore(
-            record.Id,
-            request,
-            record.CreatedAt,
-            record.State,
-            record.Progress,
-            record.StartedAt,
-            record.FinishedAt,
-            record.Failures,
-            new ExecutionUsage(
-                record.Usage.RequestCount,
-                record.Usage.RequestsWithoutUsage,
-                new TokenUsage(
-                    record.Usage.Tokens.Input,
-                    record.Usage.Tokens.Output,
-                    record.Usage.Tokens.Total,
-                    record.Usage.Tokens.CachedInput,
-                    record.Usage.Tokens.Reasoning))
-            {
-                ContextTokens = record.Usage.ContextTokens,
-            },
-            record.RestoreData is { } restore ? new ExecutionRestoreState(restore.Format, restore.Payload) : null,
-            record.Contract is { } contract
-                ? new ExecutionContract(contract.Outputs, contract.CannotCompleteReason)
-                : ExecutionContract.Empty,
-            record.ContinuedFrom);
+        return executions.Restore(
+            new ExecutionRestorePlan(
+                record.Id,
+                request,
+                record.CreatedAt,
+                record.State,
+                record.Progress,
+                record.StartedAt,
+                record.FinishedAt,
+                record.Failures,
+                new ExecutionUsage(
+                    record.Usage.RequestCount,
+                    record.Usage.RequestsWithoutUsage,
+                    new TokenUsage(
+                        record.Usage.Tokens.Input,
+                        record.Usage.Tokens.Output,
+                        record.Usage.Tokens.Total,
+                        record.Usage.Tokens.CachedInput,
+                        record.Usage.Tokens.Reasoning))
+                {
+                    ContextTokens = record.Usage.ContextTokens,
+                },
+                record.RestoreData is { } restore ? new ExecutionRestoreState(restore.Format, restore.Payload) : null,
+                record.Contract is { } contract
+                    ? new ExecutionContract(contract.Outputs, contract.CannotCompleteReason)
+                    : ExecutionContract.Empty,
+                record.ContinuedFrom));
     }
 }

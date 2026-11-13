@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.Display;
+using Kuroe.Flow.Presentation;
 using Spectre.Console;
 
 namespace Kuroe.Console.Views;

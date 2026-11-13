@@ -11,36 +11,37 @@ public sealed class ExecutionDispatcher
     private readonly Lock _gate = new();
     private readonly Queue<(Execution Execution, IExecutionRunner Runner)> _queue = [];
     private readonly Dictionary<ExecutionId, (Execution Execution, Task Task)> _live = [];
-    private readonly Dictionary<ExecutionId, Action<Execution>> _settled = [];
+    private readonly Dictionary<ExecutionId, Action<IExecution>> _settled = [];
     private bool _stopping;
 
     /// <summary>入队一个执行并等它收口。推进循环用，结果由任务侧按收口处理。</summary>
     public Task DispatchAsync(
-        Execution execution,
+        IExecution execution,
         IExecutionRunner runner,
         CancellationToken cancellationToken = default)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatch(execution, runner, _ => completion.TrySetResult());
+        Dispatch(Unit(execution), runner, _ => completion.TrySetResult());
 
         return completion.Task.WaitAsync(cancellationToken);
     }
 
     /// <summary>入队一个执行，跑完或失败后回调 settled。</summary>
-    public void Dispatch(Execution execution, IExecutionRunner runner, Action<Execution> settled)
+    public void Dispatch(IExecution execution, IExecutionRunner runner, Action<IExecution> settled)
     {
+        Execution unit = Unit(execution);
         List<Execution> dropped = [];
         lock (_gate)
         {
-            _settled[execution.Id] = settled;
+            _settled[unit.Id] = settled;
             if (_stopping)
             {
-                execution.MarkInterrupted("进程退出。");
-                dropped.Add(execution);
+                unit.MarkInterrupted("进程退出。");
+                dropped.Add(unit);
             }
             else
             {
-                _queue.Enqueue((execution, runner));
+                _queue.Enqueue((unit, runner));
                 Pump(dropped);
             }
         }
@@ -161,7 +162,7 @@ public sealed class ExecutionDispatcher
     {
         foreach (Execution execution in executions)
         {
-            Action<Execution>? settled;
+            Action<IExecution>? settled;
             lock (_gate)
             {
                 settled = _settled.GetValueOrDefault(execution.Id);
@@ -171,4 +172,6 @@ public sealed class ExecutionDispatcher
             settled?.Invoke(execution);
         }
     }
+
+    private static Execution Unit(IExecution execution) => (Execution)execution;
 }

@@ -136,7 +136,7 @@ public sealed class FlowImportTests
         File.WriteAllText(Path.Combine(environment.Root, "library.json"), LibraryFlows);
 
         FlowImport nodeImport = environment.Flows.Import("nodes.json").ThrowIfError();
-        Assert.Equal([new NodeName("执行"), new NodeName("交付")], nodeImport.Nodes);
+        Assert.Equal(["执行", "交付"], nodeImport.Nodes);
         Assert.Contains(nodeImport.Notes, note => note.Contains("新增节点"));
 
         FlowImport flowImport = environment.Flows.Import("library.json").ThrowIfError();

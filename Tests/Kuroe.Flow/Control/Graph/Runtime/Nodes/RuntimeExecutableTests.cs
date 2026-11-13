@@ -14,6 +14,12 @@ namespace Kuroe.Flow.Tests.Runtime.Nodes;
 /// <summary>执行节点的发布状态：直接构造节点、执行与端口值，断言触发位与缺口，不启动任务。</summary>
 public sealed class RuntimeExecutableTests
 {
+    /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
+    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
+        new Kuroe.Flow.Execution.ExecutionRuntime(
+            new Kuroe.Flow.Execution.ExecutionDispatcher(),
+            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
     private static readonly PortName Conclusion = new("结论");
 
     [Fact]
@@ -81,7 +87,7 @@ public sealed class RuntimeExecutableTests
             Node = executable.Path,
             Type = executable.Type,
             OutputPorts = executable.Outputs,
-        }, 0);
+        }, 0, Runtime());
 
         return (new RuntimeExecutable(executable), execution);
     }

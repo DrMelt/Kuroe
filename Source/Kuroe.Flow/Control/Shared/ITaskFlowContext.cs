@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Control;
 
@@ -39,7 +38,7 @@ public interface ITaskFlowContext
     IFlowControl? Control { get; }
 
     /// <summary>记下一个执行。要求持有 <see cref="Gate"/>。</summary>
-    void AttachExecution(LoopExecution execution);
+    void AttachExecution(IExecution execution);
 
     /// <summary>任务推进循环已退出且任务真正走完。</summary>
     bool Completed { get; }
@@ -48,7 +47,7 @@ public interface ITaskFlowContext
     int ControlVersion { get; }
 
     /// <summary>任务的全部执行，按提交顺序。</summary>
-    IReadOnlyList<LoopExecution> Executions { get; }
+    IReadOnlyList<IExecution> Executions { get; }
 
     /// <summary>任务的过程记录。</summary>
     IReadOnlyList<JournalEntry> JournalEntries { get; }
@@ -96,13 +95,13 @@ public interface ITaskFlowContext
     void PauseForRestore();
 
     /// <summary>执行收口后的通知。</summary>
-    void NotifyExecutionSettled(LoopExecution execution);
+    void NotifyExecutionSettled(IExecution execution);
 
     /// <summary>订阅执行收口通知，返回解除订阅的委托。</summary>
-    Action SubscribeExecutionSettled(Action<LoopExecution> handler);
+    Action SubscribeExecutionSettled(Action<IExecution> handler);
 
     /// <summary>订阅新执行启动的通知，返回解除订阅的委托。</summary>
-    Action SubscribeExecutionAttached(Action<LoopExecution> handler);
+    Action SubscribeExecutionAttached(Action<IExecution> handler);
 
     /// <summary>在任务状态锁下执行一段操作。</summary>
     T UnderLock<T>(Func<T> action);

@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -26,9 +25,9 @@ public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader
     /// <inheritdoc/>
     public ErrorOr<ExecutionSnapshot> FindExecution(ExecutionId id)
     {
-        ErrorOr<LoopExecution> found = registry.FindExecution(id);
+        IExecution? found = registry.FindExecution(id);
 
-        return found.IsError ? found.ErrorsOrEmptyList : found.Value.Snapshot();
+        return found is null ? [ExecutionErrors.ExecutionNotFound(id.Value)] : found.Snapshot();
     }
 
     /// <inheritdoc/>

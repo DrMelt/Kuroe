@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>流程与任务侧的错误码，宿主按码给可操作指引。</summary>
 public static class FlowErrorCodes

@@ -3,7 +3,6 @@ using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Shared.Display;
 using Kuroe.Flow.Tasks;
 using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 
@@ -140,9 +139,9 @@ public sealed class TaskKuroeInfoTool : ITool
         if (task.Pending.Count > 0)
         {
             text.AppendLine("等待：");
-            foreach (FlowPendingStep pending in task.Pending)
+            foreach (PendingStepView pending in task.Pending)
             {
-                text.AppendLine($"  {pending.Step} · {pending.Kind} · {pending.Question ?? "无提问"}");
+                text.AppendLine($"  {pending.Path} · {pending.Kind} · {pending.Question ?? "无提问"}");
             }
         }
 

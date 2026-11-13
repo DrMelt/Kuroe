@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks;
 using ProcessObserver = Kuroe.Flow.Execution.ProcessObserver;
-using LoopExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Control;
 
@@ -29,7 +28,7 @@ public interface ITaskControl
     ErrorOr<Success> Rerun(TaskId id);
 
     /// <summary>停止一个已启动的执行。</summary>
-    ErrorOr<Success> StopExecution(LoopExecutionId id);
+    ErrorOr<Success> StopExecution(ExecutionId id);
 
     /// <summary>丢掉已完成或已终止的任务。</summary>
     IReadOnlyList<TaskId> ClearSettled();

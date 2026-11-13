@@ -2,7 +2,6 @@ using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.TestSupport;
@@ -116,6 +115,7 @@ public sealed class TaskRecordSerializationMapperTests
     public void Round_trip_preserves_code_flow_records()
     {
         Dictionary<string, string> values = new() { ["language"] = "中文" };
+        FlowTexts startTexts = new(new Dictionary<PortName, string> { [new PortName("目标")] = "对话" });
         TaskRecord record = new(
             new TaskIdentity(new TaskId(1), "对话", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch),
             DateTimeOffset.UnixEpoch,
@@ -127,7 +127,7 @@ public sealed class TaskRecordSerializationMapperTests
                 new CodeFlowDefinitionRecord("dialogue", values),
                 new CodeFlowStateRecord(
                     StartInputs.Single(new PortName("目标"), "对话"),
-                    FlowTexts.Empty,
+                    startTexts,
                     values)),
             []);
 
@@ -140,6 +140,7 @@ public sealed class TaskRecordSerializationMapperTests
         Assert.Equal("中文", definition.Values["language"]);
         Assert.Equal("中文", state.Values["language"]);
         Assert.Equal("对话", state.Inputs.Text(new PortName("目标")));
+        Assert.Equal("对话", state.StartTexts.Text(new PortName("目标")));
     }
 
     private static TaskRecord RoundTrip(TaskRecord record) =>

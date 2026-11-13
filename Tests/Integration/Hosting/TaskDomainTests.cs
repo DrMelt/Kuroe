@@ -3,7 +3,6 @@ using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Xunit;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -47,7 +46,7 @@ public sealed class TaskDomainTests
         environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
-        LoopExecution round = Assert.Single(environment.Runner.StartedCode);
+        IExecution round = Assert.Single(environment.Runner.StartedCode);
 
         Assert.False(reply.IsError);
         Assert.True(environment.TaskReader.Find(new TaskId(round.Request.Owner.Value)).IsError);
@@ -78,7 +77,7 @@ public sealed class TaskDomainTests
         environment.Runner.CodeReply = _ => "回复你好";
 
         ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("你好", null);
-        LoopExecution dialogue = Assert.Single(environment.Runner.StartedCode);
+        IExecution dialogue = Assert.Single(environment.Runner.StartedCode);
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = await environment.SettleAsync(id);
 

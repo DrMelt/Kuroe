@@ -1,13 +1,13 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
+using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Flow.Runtime.Engine;
 
 /// <summary>流程运行期：只持有活跃控制实例，转发命令并在退出时收口。流程语义在控制实例内。</summary>
 public sealed class FlowRuntime(
-    IExecutionRuntime executions,
-    IFlowExecutionGateway gateway) : IFlowRuntime
+    IExecutionRuntime executions) : IFlowRuntime
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<ITaskFlowContext, IFlowControl> _controls = [];
@@ -52,9 +52,30 @@ public sealed class FlowRuntime(
     /// <summary>要求持有任务 Gate：暂停任务的推进循环并中断在跑执行。</summary>
     public void Pause(ITaskFlowContext task) => Find(task)?.Pause();
 
-    /// <summary>要求持有任务 Gate：停止一个已启动的执行。</summary>
-    public ErrorOr<Success> StopExecution(ITaskFlowContext task, ExecutionId id) =>
-        gateway.Stop(task, id);
+    /// <summary>按执行号取出本任务的一个已启动执行并停止它。</summary>
+    public ErrorOr<Success> StopExecution(ITaskFlowContext task, ExecutionId id)
+    {
+        IExecution? execution = task.UnderLock(() =>
+            task.Executions.FirstOrDefault(candidate => candidate.Id == id));
+        if (execution is null)
+        {
+            return [ExecutionErrors.ExecutionNotFound(id.Value)];
+        }
+
+        if (!execution.IsLive)
+        {
+            return [ExecutionErrors.ExecutionSettled(execution.Id, "停止")];
+        }
+
+        if (execution.Snapshot().StartedAt is null)
+        {
+            return [ExecutionErrors.ExecutionNotStarted(execution.Id)];
+        }
+
+        executions.Interrupt(execution, "已停止执行。");
+
+        return Result.Success;
+    }
 
     /// <summary>要求持有任务 Gate：恢复任务的推进循环，并把可恢复的阻塞排入恢复队列。</summary>
     public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>

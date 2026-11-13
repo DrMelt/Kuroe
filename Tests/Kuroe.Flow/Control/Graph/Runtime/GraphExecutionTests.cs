@@ -16,10 +16,17 @@ namespace Kuroe.Flow.Runtime.Tests;
 /// <summary>执行的过程记录与过程事件：附加读取视图、播发、进度与收口后停止。</summary>
 public sealed class GraphExecutionTests
 {
+    /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
+    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
+        new Kuroe.Flow.Execution.ExecutionRuntime(
+            new Kuroe.Flow.Execution.ExecutionDispatcher(),
+            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
+
     [Fact]
     public void Snapshot_without_journal_has_no_entries()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
 
         GraphExecutionSnapshot snapshot = execution.Snapshot();
 
@@ -31,7 +38,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Successful_settle_keeps_restore_data()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestRestoreReader reader = new() { RestoreData = new ExecutionRestoreState("test", "data") };
 
         execution.AttachRestoreDataReader(reader);
@@ -47,7 +54,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Settling_without_data_clears_restore_data()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestRestoreReader reader = new() { RestoreData = new ExecutionRestoreState("test", "data") };
 
         execution.AttachRestoreDataReader(reader);
@@ -62,7 +69,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Attached_journal_appears_in_snapshot()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         JournalEntry entry = new(TestTime.At, JournalLevel.Information, "信息", "记录");
         TestJournal journal = new([entry]);
 
@@ -75,7 +82,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Attached_usage_reader_appears_in_snapshot()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
 
         execution.AttachUsageReader(reader);
@@ -90,7 +97,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Settled_usage_stops_following_the_reader()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestUsageReader reader = new() { Usage = new ExecutionUsage(1, 0, new TokenUsage(10, 2, 12, null, null)) };
         ExecutionUsage settled = new(2, 0, new TokenUsage(30, 4, 34, null, null));
 
@@ -104,7 +111,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Journal_content_entry_and_progress_reach_subscribers()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestJournal journal = new([]);
         List<ProcessContent> contents = [];
         List<JournalEntry> entries = [];
@@ -136,7 +143,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Progress_clearing_reaches_snapshot()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestJournal journal = new([]);
         execution.AttachJournal(journal);
         execution.MarkRunning();
@@ -150,7 +157,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Settled_execution_stops_events_and_keeps_journal()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestJournal journal = new([new JournalEntry(TestTime.At, JournalLevel.Information, "回复", "保留")]);
         execution.AttachJournal(journal);
         int contents = 0;
@@ -174,7 +181,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Every_subscriber_receives_content_and_entries()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestJournal journal = new([]);
         List<ProcessContent> firstContents = [];
         List<ProcessContent> secondContents = [];
@@ -200,7 +207,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Subscription_after_settle_receives_nothing()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         TestJournal journal = new([]);
         execution.AttachJournal(journal);
         execution.MarkRunning();
@@ -221,7 +228,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Started_event_fires_once_when_running()
     {
-        GraphExecution execution = new(new ExecutionId(1), Input());
+        GraphExecution execution = new(new ExecutionId(1), Input(), Runtime());
         int started = 0;
         execution.Started += () => started++;
 

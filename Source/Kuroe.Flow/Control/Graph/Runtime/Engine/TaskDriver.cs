@@ -1,14 +1,12 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime.Contract;
 using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
@@ -146,7 +144,7 @@ internal sealed class GraphFlowControl(
     }
 
     /// <summary>一次执行的契约状态，供契约工具回执。</summary>
-    internal ExecutionStatus Status(LoopExecution execution)
+    internal ExecutionStatus Status(IExecution execution)
     {
         GraphExecution graph = Find(execution);
         RuntimeExecutable node = state.Runtime.Executable(graph.Input.Node);
@@ -163,7 +161,7 @@ internal sealed class GraphFlowControl(
 
     /// <summary>交回一次执行的端口产出。</summary>
     internal ErrorOr<ExecutionStatus> SubmitPorts(
-        LoopExecution execution,
+        IExecution execution,
         IReadOnlyDictionary<PortName, PortValue> ports)
     {
         GraphExecution graph = Find(execution);
@@ -186,7 +184,7 @@ internal sealed class GraphFlowControl(
     }
 
     /// <summary>上报一次执行无法完成。</summary>
-    internal ErrorOr<ExecutionStatus> ReportCannotComplete(LoopExecution execution, string reason)
+    internal ErrorOr<ExecutionStatus> ReportCannotComplete(IExecution execution, string reason)
     {
         GraphExecution graph = Find(execution);
         graph.ReportCannotComplete(reason);
@@ -194,7 +192,7 @@ internal sealed class GraphFlowControl(
         return Status(execution);
     }
 
-    private GraphExecution Find(LoopExecution execution) =>
+    private GraphExecution Find(IExecution execution) =>
         state.Executions.FirstOrDefault(candidate => candidate.Id.Value == execution.Id.Value)
         ?? throw new InvalidOperationException($"任务 {task.Id} 没有执行 {execution.Id.Value}。");
 
@@ -247,7 +245,7 @@ internal sealed class GraphFlowControl(
     }
 
     /// <summary>登记一次新执行到任务与流程状态。</summary>
-    private GraphExecution Attach(LoopExecution unit, ExecutionInput input)
+    private GraphExecution Attach(IExecution unit, ExecutionInput input)
     {
         state.Bind(unit.Id, input, task.ControlVersion);
         task.AttachExecution(unit);
@@ -257,15 +255,15 @@ internal sealed class GraphFlowControl(
             return true;
         });
 
-        return new GraphExecution(input, unit, task.ControlVersion);
+        return new GraphExecution(input, unit, task.ControlVersion, runtime);
     }
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
     public void Pause()
     {
-        foreach (LoopExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
+        foreach (IExecution execution in task.Executions.Where(execution => execution.IsLive).ToArray())
         {
-            execution.Interrupt("任务已暂停。");
+            runtime.Interrupt(execution, "任务已暂停。");
         }
     }
 
@@ -675,7 +673,7 @@ internal sealed class GraphFlowControl(
             }
 
             ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
-            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input)), input);
+            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input), runtime.Create), input);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }
 
@@ -707,7 +705,9 @@ internal sealed class GraphFlowControl(
             }
 
             state.Runtime.RemoveRestorePlan(target);
-            GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(target.Input)), target.Input);
+            GraphExecution execution = Attach(
+                gateway.Open(task, GraphExecution.BuildRequest(target.Input), runtime.Create),
+                target.Input);
             execution.ContinueFrom(target.Source);
             node.ClearRerun();
             node.ClearBlock();

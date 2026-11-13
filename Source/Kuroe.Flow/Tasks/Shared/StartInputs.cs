@@ -1,5 +1,3 @@
-using Kuroe.Flow.Shared.Model;
-
 namespace Kuroe.Flow.Tasks;
 
 /// <summary>提交任务时给出的一个开始输入：开始端口名与文本。</summary>

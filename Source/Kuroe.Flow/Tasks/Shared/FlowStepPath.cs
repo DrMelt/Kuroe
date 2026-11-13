@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>流程步骤路径：从根到步骤的标签序列。流程控制与宿主只使用它，不依赖具体流程实现。</summary>
 public readonly record struct FlowStepPath(IReadOnlyList<string> Levels)

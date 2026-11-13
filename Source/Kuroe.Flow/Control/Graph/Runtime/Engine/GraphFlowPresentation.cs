@@ -34,10 +34,15 @@ public sealed class GraphFlowPresentation : IFlowPresentation
             task.LastActivityAt)
         {
             Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = task.Control?.Pending() ?? [],
-            StartTexts = state.StartTexts,
+            Pending = [.. (task.Control?.Pending() ?? []).Select(PendingOf)],
+            StartTexts = new FlowTexts(state.StartTexts.Texts),
         };
     }
+
+    private static PendingStepView PendingOf(FlowPendingStep pending) => new(
+        pending.Step.Value,
+        pending.Kind == FlowPendingKind.Approve ? PendingStepKind.Approve : PendingStepKind.Input,
+        pending.Question);
 
     private static IFlowView View(ITaskFlowContext task)
     {
@@ -54,7 +59,8 @@ public sealed class GraphFlowPresentation : IFlowPresentation
         [.. task.Executions.Select(execution => new GraphExecution(
             state.Context(execution.Id).Input,
             execution,
-            state.Context(execution.Id).ControlVersion).Snapshot())];
+            state.Context(execution.Id).ControlVersion,
+            state.ExecutionsRuntime ?? throw new InvalidOperationException("图流程没有执行运行期。")).Snapshot())];
 
     private static GraphFlowState State(ITaskFlowContext task)
     {

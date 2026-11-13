@@ -1,6 +1,5 @@
 using ErrorOr;
 using Kuroe.Flow.Execution;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Control;
 
@@ -8,11 +7,11 @@ namespace Kuroe.Flow.Control;
 public interface IFlowExecutionGateway
 {
     /// <summary>为任务建立一个排队中的执行并分配执行号。</summary>
-    LoopExecution Open(ITaskFlowContext owner, ExecutionRequest request);
+    IExecution Open(
+        ITaskFlowContext owner,
+        ExecutionRequest request,
+        Func<ExecutionId, ExecutionRequest, IExecution> create);
 
-    /// <summary>按执行号取执行，不存在时返回错误。</summary>
-    ErrorOr<LoopExecution> Find(ExecutionId id);
-
-    /// <summary>按执行号停止一个已启动的执行。</summary>
-    ErrorOr<Success> Stop(ITaskFlowContext owner, ExecutionId id);
+    /// <summary>按执行号取执行与它的归属任务，不存在时返回错误。</summary>
+    ErrorOr<(IExecution Execution, ITaskFlowContext Owner)> FindOwned(ExecutionId id);
 }

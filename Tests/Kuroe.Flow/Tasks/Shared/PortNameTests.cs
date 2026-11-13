@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Shared.Tests.Model;
+namespace Kuroe.Flow.Tasks.Tests;
 
 /// <summary>端口名的解析：入口校验。</summary>
 public sealed class PortNameTests

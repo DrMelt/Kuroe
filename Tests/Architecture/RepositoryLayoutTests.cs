@@ -83,12 +83,13 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Presentation.Shared.csproj");
 
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
 
         Assert.All(
             ProjectReferences(project),
             reference => Assert.True(
-                IsUnder(reference, execution),
-                $"Kuroe.Flow.Presentation.Shared 引用了中性执行契约之外的 {reference}。"));
+                IsUnder(reference, execution) || IsUnder(reference, tasks),
+                $"Kuroe.Flow.Presentation.Shared 引用了中性契约之外的 {reference}。"));
     }
 
     [Fact]
@@ -629,6 +630,7 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow.Graph.Records.Shared.csproj");
         IReadOnlyList<string> references = ProjectReferences(project);
         string graph = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string tasksRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
         string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
@@ -636,6 +638,7 @@ public sealed class RepositoryLayoutTests
         Assert.All(references, reference =>
             Assert.True(
                 IsUnder(reference, graph)
+                    || IsUnder(reference, tasks)
                     || IsUnder(reference, tasksRecords)
                     || IsUnder(reference, execution)
                     || IsUnder(reference, nodes),
@@ -756,7 +759,6 @@ public sealed class RepositoryLayoutTests
             "Control",
             "Shared",
             "Kuroe.Flow.Control.Shared.csproj");
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string tasksPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string tasksRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
@@ -767,8 +769,7 @@ public sealed class RepositoryLayoutTests
         Assert.All(
             ProjectReferences(project),
             reference => Assert.True(
-                IsUnder(reference, shared)
-                    || IsUnder(reference, tasks)
+                IsUnder(reference, tasks)
                     || IsUnder(reference, tasksPresentation)
                     || IsUnder(reference, tasksRecords)
                     || IsUnder(reference, execution)
@@ -854,7 +855,7 @@ public sealed class RepositoryLayoutTests
 
         Assert.DoesNotContain("private readonly List<GraphExecution>", text, StringComparison.Ordinal);
         Assert.DoesNotContain("public List<GraphExecution>", text, StringComparison.Ordinal);
-        Assert.Contains("Dictionary<LoopExecutionId, GraphExecutionContext>", text, StringComparison.Ordinal);
+        Assert.Contains("Dictionary<NeutralExecutionId, GraphExecutionContext>", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -881,7 +882,7 @@ public sealed class RepositoryLayoutTests
     [Fact]
     public void Flow_name_lives_in_neutral_tasks()
     {
-        string file = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared", "FlowName.cs");
+        string file = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared", "FlowName.cs");
 
         Assert.Contains("namespace Kuroe.Flow.Tasks;", File.ReadAllText(file), StringComparison.Ordinal);
     }
@@ -938,7 +939,54 @@ public sealed class RepositoryLayoutTests
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph")));
             Assert.DoesNotContain(references, reference =>
                 IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared")));
+            Assert.DoesNotContain(references, reference =>
+                IsUnder(reference, Path.Combine(SourceRoot, "Kuroe.Flow", "Shared")));
         }
+    }
+
+    [Fact]
+    public void Flow_runtime_references_only_neutral_contracts()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Runtime",
+            "Core",
+            "Kuroe.Flow.Runtime.csproj");
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, control)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, tasks),
+                $"Kuroe.Flow.Runtime 引用了中性契约之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Tasks_presentation_references_only_neutral_contracts()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Tasks",
+            "Presentation",
+            "Shared",
+            "Kuroe.Flow.Tasks.Presentation.Shared.csproj");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, tasks)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, presentation),
+                $"Kuroe.Flow.Tasks.Presentation.Shared 引用了中性契约之外的 {reference}。"));
     }
 
     [Fact]
@@ -991,6 +1039,92 @@ public sealed class RepositoryLayoutTests
             "interface IGraphExecution",
             File.ReadAllText(Path.Combine(execution, "IGraphExecution.cs")),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Control_graph_references_only_contract_and_graph_layers()
+    {
+        string project = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Control",
+            "Graph",
+            "Kuroe.Flow.Control.Graph.csproj");
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
+        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string inputChannel = Path.Combine(SourceRoot, "Kuroe.Flow", "InputChannel", "Shared");
+        string nodes = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Presentation", "Shared");
+        string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
+        string taskPresentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
+        string taskRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Records", "Shared");
+
+        Assert.All(
+            ProjectReferences(project),
+            reference => Assert.True(
+                IsUnder(reference, control)
+                    || IsUnder(reference, shared)
+                    || IsUnder(reference, execution)
+                    || IsUnder(reference, executionRecords)
+                    || IsUnder(reference, graphRecords)
+                    || IsUnder(reference, inputChannel)
+                    || IsUnder(reference, nodes)
+                    || IsUnder(reference, presentation)
+                    || IsUnder(reference, tasks)
+                    || IsUnder(reference, taskPresentation)
+                    || IsUnder(reference, taskRecords),
+                $"Kuroe.Flow.Control.Graph 引用了契约层与图记录之外的 {reference}。"));
+    }
+
+    [Fact]
+    public void Execution_shared_defines_no_concrete_state_machine()
+    {
+        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+        string core = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Core");
+
+        Assert.False(File.Exists(Path.Combine(shared, "Execution.cs")));
+        Assert.True(File.Exists(Path.Combine(core, "Execution.cs")));
+        Assert.All(
+            SourceFiles(shared),
+            file => Assert.DoesNotContain(
+                "sealed class Execution :",
+                File.ReadAllText(file),
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Flow_control_does_not_name_concrete_execution()
+    {
+        string[] directories =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared"),
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph"),
+            Path.Combine(SourceRoot, "Kuroe", "Assistant", "Core"),
+        ];
+        string[] forbidden =
+        [
+            "Kuroe.Flow.Execution.Execution;",
+            "Kuroe.Flow.Execution.Execution ",
+            "Kuroe.Flow.Execution.Execution)",
+            "Kuroe.Flow.Execution.Execution,",
+        ];
+
+        foreach (string directory in directories)
+        {
+            foreach (string file in SourceFiles(directory))
+            {
+                string text = File.ReadAllText(file);
+                foreach (string name in forbidden)
+                {
+                    Assert.False(
+                        text.Contains(name, StringComparison.Ordinal),
+                        $"{Path.GetFileName(file)} 引用了执行状态机。");
+                }
+            }
+        }
     }
 
     private static IReadOnlyList<string> InternalsVisibleTo(string project) =>

@@ -21,7 +21,6 @@ using NeutralExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
 using NeutralExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
 using NeutralExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
 using NeutralPortKind = Kuroe.Flow.Execution.ExecutionPortKind;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Integration.Tests.Support;
 
@@ -81,13 +80,13 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     public Func<IGraphExecution, string>? Reply { get; set; }
 
     /// <summary>代码流程执行的回复文本，按中性执行给出。</summary>
-    public Func<LoopExecution, string>? CodeReply { get; set; }
+    public Func<Kuroe.Flow.Execution.IExecution, string>? CodeReply { get; set; }
 
     /// <summary>代码流程执行期间写进过程记录的内容。</summary>
-    internal Action<LoopExecution, RecordingJournal>? CodeEmits { get; set; }
+    internal Action<Kuroe.Flow.Execution.IExecution, RecordingJournal>? CodeEmits { get; set; }
 
     /// <summary>代码流程的执行观察点，按进入顺序。</summary>
-    public IReadOnlyList<LoopExecution> StartedCode
+    public IReadOnlyList<Kuroe.Flow.Execution.IExecution> StartedCode
     {
         get
         {
@@ -98,7 +97,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
     }
 
-    private readonly List<LoopExecution> _startedCode = [];
+    private readonly List<Kuroe.Flow.Execution.IExecution> _startedCode = [];
 
     /// <summary>本次执行期间写进过程记录的内容，用于断言记录与过程事件。</summary>
     internal Action<IGraphExecution, RecordingJournal>? Emits { get; set; }
@@ -272,7 +271,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>按执行号取图侧执行；不是图流程执行时为空。</summary>
     private static IGraphExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
     {
-        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
+        ErrorOr<(Kuroe.Flow.Execution.IExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
         if (found.IsError || found.Value.Owner.FlowState is not IGraphFlowState state)
         {
@@ -290,14 +289,14 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        ErrorOr<(LoopExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
+        ErrorOr<(Kuroe.Flow.Execution.IExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Flow.Execution.ExecutionId(execution.Value));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        LoopExecution started = found.Value.Execution;
+        Kuroe.Flow.Execution.IExecution started = found.Value.Execution;
         lock (_gate)
         {
             _startedCode.Add(started);

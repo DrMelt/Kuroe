@@ -4,7 +4,7 @@ using Kuroe.Flow.Tasks;
 namespace Kuroe.Flow.Execution;
 
 /// <summary>一次执行的状态机：排队、运行、收口、中断与过程记录。执行只使用执行请求与中性产出，不读取节点与图。</summary>
-public sealed class Execution
+internal sealed class Execution : IExecution
 {
     private readonly Lock _gate = new();
     private readonly CancellationTokenSource _cancellation = new();
@@ -26,13 +26,13 @@ public sealed class Execution
     private bool _startedNotified;
 
     /// <summary>建立一次排队中的执行。</summary>
-    public Execution(ExecutionId id, ExecutionRequest request)
+    internal Execution(ExecutionId id, ExecutionRequest request)
         : this(id, request, DateTimeOffset.UtcNow)
     {
     }
 
     /// <summary>建立一次指定创建时刻的排队执行。</summary>
-    public Execution(ExecutionId id, ExecutionRequest request, DateTimeOffset createdAt)
+    internal Execution(ExecutionId id, ExecutionRequest request, DateTimeOffset createdAt)
     {
         Id = id;
         Request = request;
@@ -90,7 +90,7 @@ public sealed class Execution
     public event Action? RestoreDataChanged;
 
     /// <summary>进入运行态。</summary>
-    public void MarkRunning()
+    internal void MarkRunning()
     {
         bool started;
         lock (_gate)
@@ -115,7 +115,7 @@ public sealed class Execution
     }
 
     /// <summary>附加本次执行的过程记录，过程通知转给订阅者。</summary>
-    public void AttachJournal(IProcessJournal journal)
+    internal void AttachJournal(IProcessJournal journal)
     {
         lock (_gate)
         {
@@ -128,7 +128,7 @@ public sealed class Execution
     }
 
     /// <summary>附加本次执行的用量来源，快照读取其当前累计。</summary>
-    public void AttachUsageReader(IExecutionUsageSource reader)
+    internal void AttachUsageReader(IExecutionUsageSource reader)
     {
         lock (_gate)
         {
@@ -137,7 +137,7 @@ public sealed class Execution
     }
 
     /// <summary>记下本次执行的最终用量并解除用量来源。</summary>
-    public void SettleUsage(ExecutionUsage usage)
+    internal void SettleUsage(ExecutionUsage usage)
     {
         lock (_gate)
         {
@@ -159,7 +159,7 @@ public sealed class Execution
     }
 
     /// <summary>记下恢复数据，变化时通知。</summary>
-    public void SetRestoreData(ExecutionRestoreState? data)
+    internal void SetRestoreData(ExecutionRestoreState? data)
     {
         bool changed;
         lock (_gate)
@@ -175,7 +175,7 @@ public sealed class Execution
     }
 
     /// <summary>附加运行器的恢复数据读取面。</summary>
-    public void AttachRestoreDataReader(IExecutionRestoreDataSource reader)
+    internal void AttachRestoreDataReader(IExecutionRestoreDataSource reader)
     {
         lock (_gate)
         {
@@ -187,7 +187,7 @@ public sealed class Execution
     }
 
     /// <summary>记下运行器的最终恢复数据并解除读取面。</summary>
-    public void SettleRestoreData(IExecutionRestoreDataSource? reader)
+    internal void SettleRestoreData(IExecutionRestoreDataSource? reader)
     {
         reader?.RestoreDataChanged -= OnRestoreDataChanged;
         lock (_gate)
@@ -246,7 +246,7 @@ public sealed class Execution
     }
 
     /// <summary>记下从哪次执行恢复，并继承来源执行的契约状态。</summary>
-    public void ContinueFrom(Execution source)
+    internal void ContinueFrom(IExecution source)
     {
         ExecutionContract contract = source.Contract;
         lock (_gate)
@@ -257,7 +257,7 @@ public sealed class Execution
     }
 
     /// <summary>记下本次执行交回的端口值。</summary>
-    public void SubmitOutputs(IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs)
+    internal void SubmitOutputs(IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs)
     {
         lock (_gate)
         {
@@ -266,7 +266,7 @@ public sealed class Execution
     }
 
     /// <summary>记下本次执行上报的无法完成原因。</summary>
-    public void ReportCannotComplete(string reason)
+    internal void ReportCannotComplete(string reason)
     {
         lock (_gate)
         {
@@ -274,7 +274,7 @@ public sealed class Execution
         }
     }
 /// <summary>进入成功终态并记下产出。</summary>
-    public void MarkSucceeded(ExecutionOutput output)
+    internal void MarkSucceeded(ExecutionOutput output)
     {
         lock (_gate)
         {
@@ -294,7 +294,7 @@ public sealed class Execution
         Settle(ExecutionState.Failed, [.. errors.Select(error => error.Description)]);
 
     /// <summary>请求中断本次执行，进行中的一轮请求随之结束。</summary>
-    public void Interrupt(string reason = "已中断。")
+    internal void Interrupt(string reason = "已中断。")
     {
         lock (_gate)
         {
@@ -309,7 +309,7 @@ public sealed class Execution
     }
 
     /// <summary>直接记为已中断，用于未进入执行的排队项与退出时的丢弃项。</summary>
-    public void MarkInterrupted(string? reason = null)
+    internal void MarkInterrupted(string? reason = null)
     {
         string text;
         lock (_gate)
@@ -322,7 +322,7 @@ public sealed class Execution
     }
 
     /// <summary>本次请求正常结束但没交回要求的内容，从已完成降级为失败。</summary>
-    public void MarkUncollected(string reason)
+    internal void MarkUncollected(string reason)
     {
         lock (_gate)
         {
@@ -374,7 +374,7 @@ public sealed class Execution
             journal?.Entries ?? [], usage, restoreData, contract, output, continuedFrom);
     }
 /// <summary>按存档状态建立已收口的执行，未收口的执行记为已中断。</summary>
-    public static Execution Restore(
+    internal static Execution Restore(
         ExecutionId id,
         ExecutionRequest request,
         DateTimeOffset createdAt,

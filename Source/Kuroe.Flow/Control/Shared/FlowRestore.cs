@@ -1,6 +1,5 @@
-using Kuroe.Flow.Shared;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks.Records;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Flow.Control;
 
@@ -8,5 +7,5 @@ namespace Kuroe.Flow.Control;
 public sealed record FlowRestore(
     IFlowState State,
     FlowTexts StartTexts,
-    IReadOnlyList<LoopExecution> Executions,
+    IReadOnlyList<IExecution> Executions,
     FlowSeed Seed);

@@ -1,18 +1,17 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
-using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>一个任务域内的任务动作：提交、暂停、恢复、重新执行、终止与改名。流程语义经 <see cref="IFlowFramework"/> 落地。</summary>
 public sealed class TaskActions(
     TaskRegistry registry,
+    IExecutionRuntime executions,
     IFlowRuntime driver,
     IFlowFrameworkSource frameworks,
     ITaskIdSource ids,
@@ -20,6 +19,7 @@ public sealed class TaskActions(
     ITaskLeaseStore? leases = null)
 {
     private readonly TaskRegistry _registry = registry;
+    private readonly IExecutionRuntime _executions = executions;
     private readonly IFlowRuntime _driver = driver;
     private readonly IFlowFrameworkSource _frameworks = frameworks;
     private readonly ITaskIdSource _ids = ids;
@@ -77,6 +77,7 @@ public sealed class TaskActions(
 
         WorkTask task = new(
             _registry,
+            _executions,
             id,
             submission.State.Inputs,
             submission.StartTexts,
@@ -228,13 +229,12 @@ public sealed class TaskActions(
     /// <summary>停止一个已启动的执行。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id)
     {
-        ErrorOr<LoopExecution> found = _registry.FindExecution(id);
-        if (found.IsError)
+        IExecution? execution = _registry.FindExecution(id);
+        if (execution is null)
         {
-            return found.ErrorsOrEmptyList;
+            return [ExecutionErrors.ExecutionNotFound(id.Value)];
         }
 
-        LoopExecution execution = found.Value;
         ErrorOr<WorkTask> owner = _registry.Find(new TaskId(execution.Request.Owner.Value));
         if (owner.IsError)
         {

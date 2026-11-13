@@ -6,7 +6,6 @@ using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Node.Llm;
 using Kuroe.Pending;
 using Xunit;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 
 namespace Kuroe.Integration.Tests.Hosting;
 
@@ -160,7 +159,7 @@ public sealed class DialogueHostTests
         Assert.False(reply.IsError, ErrorText(reply));
         Assert.Equal(["增量", "回复你好"], observer.Texts);
 
-        LoopExecution round = Assert.Single(environment.Runner.StartedCode);
+        IExecution round = Assert.Single(environment.Runner.StartedCode);
         List<JournalEntry> entries = [.. round.Snapshot().Journal];
         Assert.Contains(entries, entry => entry.Label == "输入" && entry.Text == "问题");
         Assert.Contains(entries, entry => entry.Text.Contains("增量", StringComparison.Ordinal));

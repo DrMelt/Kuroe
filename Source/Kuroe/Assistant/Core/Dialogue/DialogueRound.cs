@@ -41,7 +41,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         }
 
         var outcome = new TaskCompletionSource<ErrorOr<Success>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Execution? round = null;
+        IExecution? round = null;
         int boundary = 0;
         Action unsubscribeAttached = () => { };
         Action unsubscribeSettled = () => { };

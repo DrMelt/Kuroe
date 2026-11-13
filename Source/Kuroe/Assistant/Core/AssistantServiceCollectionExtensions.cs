@@ -7,7 +7,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
 using Kuroe.Tool.Source;
@@ -53,7 +52,8 @@ public static class AssistantServiceCollectionExtensions
                 new DialogueFlowSubmission(
                     models,
                     sp.GetRequiredService<SettingsProvider>(),
-                    sp.GetRequiredService<KuroePaths>()),
+                    sp.GetRequiredService<KuroePaths>(),
+                    sp.GetRequiredService<IExecutionRuntime>()),
                 NoFlowStateBinder.Instance,
                 new DialogueFlowControlFactory(
                     sp.GetRequiredService<IExecutionRuntime>(),
@@ -65,6 +65,7 @@ public static class AssistantServiceCollectionExtensions
             GuidTaskIdSource ids = new();
             TaskActions actions = new(
                 registry,
+                sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<IFlowRuntime>(),
                 new FlowFrameworkSource([provider]),
                 ids);

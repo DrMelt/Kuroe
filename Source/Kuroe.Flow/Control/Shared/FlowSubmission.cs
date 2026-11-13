@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Control;

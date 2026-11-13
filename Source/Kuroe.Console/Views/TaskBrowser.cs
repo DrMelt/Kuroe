@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Pending;
@@ -420,14 +420,14 @@ internal sealed class TaskBrowser(
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
     private ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        ErrorOr<Kuroe.Flow.Execution.Execution> execution = registry.FindExecution(
+        Kuroe.Flow.Execution.IExecution? execution = registry.FindExecution(
             new Kuroe.Flow.Execution.ExecutionId(id));
-        if (execution.IsError)
+        if (execution is null)
         {
-            return execution.ErrorsOrEmptyList;
+            return [Kuroe.Flow.Execution.ExecutionErrors.ExecutionNotFound(id)];
         }
 
-        ErrorOr<WorkTask> owner = registry.Find(new TaskId(execution.Value.Request.Owner.Value));
+        ErrorOr<WorkTask> owner = registry.Find(new TaskId(execution.Request.Owner.Value));
         if (owner.IsError)
         {
             return owner.ErrorsOrEmptyList;

@@ -6,15 +6,14 @@ using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
 using Kuroe.Flow.Shared.StaticGraph.Flow;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
-using LoopExecutionId = Kuroe.Flow.Execution.ExecutionId;
+using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Runtime.Graph;
 
 /// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行上下文。</summary>
 internal sealed class GraphFlowState : IGraphFlowState
 {
-    private readonly Dictionary<LoopExecutionId, GraphExecutionContext> _executions = [];
+    private readonly Dictionary<NeutralExecutionId, GraphExecutionContext> _executions = [];
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
 
@@ -64,11 +63,11 @@ internal sealed class GraphFlowState : IGraphFlowState
     public bool Attached => _runtime is not null;
 
     /// <summary>记下一个执行在图侧的上下文。要求持有任务 Gate。</summary>
-    internal void Bind(LoopExecutionId id, ExecutionInput input, int controlVersion) =>
+    internal void Bind(NeutralExecutionId id, ExecutionInput input, int controlVersion) =>
         _executions[id] = new GraphExecutionContext(input, controlVersion);
 
     /// <summary>按执行号取图侧上下文，不存在时抛出。</summary>
-    internal GraphExecutionContext Context(LoopExecutionId id) =>
+    internal GraphExecutionContext Context(NeutralExecutionId id) =>
         _executions.TryGetValue(id, out GraphExecutionContext? context)
             ? context
             : throw new InvalidOperationException($"图流程没有执行 {id.Value} 的上下文。");
@@ -81,10 +80,14 @@ internal sealed class GraphFlowState : IGraphFlowState
         }
 
         List<GraphExecution> executions = [];
-        foreach (LoopExecution unit in task.Executions)
+        foreach (IExecution unit in task.Executions)
         {
             GraphExecutionContext context = Context(unit.Id);
-            executions.Add(new GraphExecution(context.Input, unit, context.ControlVersion));
+            executions.Add(new GraphExecution(
+                context.Input,
+                unit,
+                context.ControlVersion,
+                ExecutionsRuntime ?? throw new InvalidOperationException("图流程没有执行运行期。")));
         }
 
         return executions;

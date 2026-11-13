@@ -3,7 +3,6 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
@@ -17,6 +16,12 @@ namespace Kuroe.Flow.Tests.Runtime.Tasks;
 /// <summary>任务控制状态：瞬态 Done 快照不阻止暂停与终止，真正完成后才拒绝。</summary>
 public sealed class WorkTaskTests
 {
+    /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
+    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
+        new Kuroe.Flow.Execution.ExecutionRuntime(
+            new Kuroe.Flow.Execution.ExecutionDispatcher(),
+            new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
+            new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
     [Fact]
     public void Pause_accepts_transient_done_snapshot()
     {
@@ -79,6 +84,7 @@ public sealed class WorkTaskTests
 
         _ = new WorkTask(
             new TaskRegistry(new ExecutionIndex()),
+            Runtime(),
             new TaskId(1),
             inputs,
             FlowTexts.Empty,
@@ -98,6 +104,7 @@ public sealed class WorkTaskTests
 
         return new WorkTask(
             new TaskRegistry(new ExecutionIndex()),
+            Runtime(),
             new TaskId(1),
             inputs,
             FlowTexts.Empty,

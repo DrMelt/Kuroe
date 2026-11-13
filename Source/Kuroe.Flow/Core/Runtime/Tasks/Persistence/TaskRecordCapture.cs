@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Shared;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;

@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks;
-using LoopExecution = Kuroe.Flow.Execution.Execution;
 using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 
@@ -36,7 +35,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>把恢复的执行登记进共享执行索引，并推进下一次执行号。</summary>
-    public void RestoreExecution(ITaskFlowContext owner, LoopExecution execution) => executions.Restore(owner, execution);
+    public void RestoreExecution(ITaskFlowContext owner, IExecution execution) => executions.Restore(owner, execution);
 
     /// <summary>按任务键取任务，不存在时返回错误。</summary>
     public ErrorOr<WorkTask> Find(TaskId id)
@@ -70,12 +69,12 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
         }
     }
 
-    /// <summary>按执行号取本域的执行，不存在或属于其它任务域时返回错误。</summary>
-    public ErrorOr<LoopExecution> FindExecution(ExecutionId id)
+    /// <summary>按执行号取本域的执行，不存在或属于其它任务域时为空。</summary>
+    public IExecution? FindExecution(ExecutionId id)
     {
         if (executions.FindOwned(id) is not { IsError: false } found)
         {
-            return [ExecutionErrors.ExecutionNotFound(id.Value)];
+            return null;
         }
 
         lock (_gate)
@@ -83,7 +82,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
             if (!_tasks.TryGetValue(found.Value.Owner.Id.Value, out WorkTask? task)
                 || !ReferenceEquals(task, found.Value.Owner))
             {
-                return [ExecutionErrors.ExecutionNotFound(id.Value)];
+                return null;
             }
         }
 
@@ -142,7 +141,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
 
                 lock (_gate)
                 {
-                    foreach (LoopExecution execution in task.Executions)
+                    foreach (IExecution execution in task.Executions)
                     {
                         executions.Remove(execution.Id);
                     }
@@ -172,7 +171,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
         {
             lock (task.Gate)
             {
-                foreach (LoopExecution execution in task.Executions)
+                foreach (IExecution execution in task.Executions)
                 {
                     executions.Remove(execution.Id);
                 }

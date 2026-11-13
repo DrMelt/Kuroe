@@ -9,9 +9,9 @@ namespace Kuroe.Pending;
 public readonly record struct PendingNode(FlowStepPath Step, PendingKind Kind, string? Question);
 
 /// <summary>等待型节点的宿主功能：定位待处理节点、点名与歧义判定、交付外部输入并唤醒推进。</summary>
-public sealed class PendingService(TaskRegistry registry, Kuroe.Flow.Runtime.Engine.IFlowRuntime runner)
+public sealed class PendingService(TaskRegistry registry, IFlowRuntime runner)
 {
-    private readonly Kuroe.Flow.Runtime.Engine.IFlowRuntime _runner = runner;
+    private readonly IFlowRuntime _runner = runner;
     /// <summary>任务里此刻待处理的节点，按流程视图顺序，带等待时的提问。</summary>
     public ErrorOr<List<PendingNode>> Pending(TaskId id)
     {
