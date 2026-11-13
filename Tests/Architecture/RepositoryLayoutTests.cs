@@ -544,20 +544,20 @@ public sealed class RepositoryLayoutTests
             "Kuroe.Flow",
             "Control",
             "Shared",
-            "IFlowFramework.cs");
+            "IFlowIdentity.cs");
         string contract = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
             "Control",
             "Shared",
-            "IFlowFrameworkSource.cs");
+            "IFlowProviderSource.cs");
         string source = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
             "Core",
             "Runtime",
             "Tasks",
-            "FlowFrameworkSource.cs");
+            "FlowProviderSource.cs");
         string restore = Path.Combine(
             SourceRoot,
             "Kuroe.Flow",
@@ -654,7 +654,7 @@ public sealed class RepositoryLayoutTests
     }
 
     [Fact]
-    public void Tasks_records_project_references_only_task_execution_and_shared()
+    public void Tasks_records_project_references_only_task_and_execution()
     {
         string project = Path.Combine(
             SourceRoot,
@@ -667,14 +667,12 @@ public sealed class RepositoryLayoutTests
         string tasks = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared");
         string executionRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Records", "Shared");
         string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
-        string shared = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
 
         Assert.All(references, reference =>
             Assert.True(
                 IsUnder(reference, tasks)
                     || IsUnder(reference, executionRecords)
-                    || IsUnder(reference, execution)
-                    || IsUnder(reference, shared),
+                    || IsUnder(reference, execution),
                 $"{Path.GetFileName(project)} 引用了任务记录边界之外的 {reference}。"));
     }
 
@@ -722,18 +720,19 @@ public sealed class RepositoryLayoutTests
         {
             IReadOnlyList<string> references = [.. ProjectReferences(project)
                 .Where(reference => IsUnder(reference, SourceRoot))];
+            bool graphCodec = IsUnder(project, Path.Combine(persistence, "Serialization", "Graph"));
 
             Assert.All(references, reference =>
                 Assert.True(
                     IsPersistenceBoundary(reference, persistence)
-                        || IsUnder(reference, flowContracts)
                         || IsUnder(reference, taskContracts)
                         || IsUnder(reference, taskPresentation)
                         || IsUnder(reference, executionContracts)
                         || IsUnder(reference, executionRecords)
                         || IsUnder(reference, taskRecords)
-                        || IsUnder(reference, graphRecords)
-                        || IsUnder(reference, nodeContracts),
+                        || graphCodec && IsUnder(reference, flowContracts)
+                        || graphCodec && IsUnder(reference, graphRecords)
+                        || graphCodec && IsUnder(reference, nodeContracts),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }
@@ -744,6 +743,101 @@ public sealed class RepositoryLayoutTests
 
         return IsUnder(directory, persistence)
             && string.Equals(Path.GetFileName(directory), "Shared", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Persistence_task_projects_stay_free_of_graph_and_node()
+    {
+        string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
+        string[] projects =
+        [
+            Path.Combine(persistence, "Files", "Shared", "Kuroe.Flow.Persistence.Files.Shared.csproj"),
+            Path.Combine(persistence, "Files", "Core", "Kuroe.Flow.Persistence.Files.csproj"),
+            Path.Combine(persistence, "Restoring", "Shared", "Kuroe.Flow.Persistence.Restoring.Shared.csproj"),
+            Path.Combine(persistence, "Restoring", "Core", "Kuroe.Flow.Persistence.Restoring.csproj"),
+            Path.Combine(persistence, "Saving", "Shared", "Kuroe.Flow.Persistence.Saving.Shared.csproj"),
+            Path.Combine(persistence, "Saving", "Core", "Kuroe.Flow.Persistence.Saving.csproj"),
+        ];
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+
+        foreach (string project in projects)
+        {
+            Assert.All(ProjectReferences(project), reference => Assert.False(
+                IsUnder(reference, graphRecords) || IsUnder(reference, nodeContracts) || IsUnder(reference, flowContracts),
+                $"{Path.GetFileName(project)} 引用了图或节点模型 {reference}。"));
+
+            foreach (string file in SourceFiles(DirectoryOf(project)))
+            {
+                string text = File.ReadAllText(file);
+                Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("Kuroe.Flow.Shared", text, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
+    public void Serialization_shared_and_json_stay_free_of_graph_and_node()
+    {
+        string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence");
+        string[] projects =
+        [
+            Path.Combine(persistence, "Serialization", "Shared", "Kuroe.Flow.Persistence.Serialization.Shared.csproj"),
+            Path.Combine(persistence, "Serialization", "Json", "Core", "Kuroe.Flow.Persistence.Json.csproj"),
+        ];
+        string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
+        string flowContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Shared");
+
+        foreach (string project in projects)
+        {
+            Assert.All(ProjectReferences(project), reference => Assert.False(
+                IsUnder(reference, graphRecords) || IsUnder(reference, nodeContracts) || IsUnder(reference, flowContracts),
+                $"{Path.GetFileName(project)} 引用了图或节点模型 {reference}。"));
+
+            foreach (string file in SourceFiles(DirectoryOf(project)))
+            {
+                string text = File.ReadAllText(file);
+                Assert.DoesNotContain("Kuroe.Flow.Node", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("Kuroe.Flow.Graph", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("Kuroe.Flow.Shared", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("GraphFlowDefinitionRecord", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("CodeFlowDefinitionRecord", text, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
+    public void Control_contract_project_stays_free_of_graph_and_node()
+    {
+        string contract = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Contract");
+        string project = Path.Combine(contract, "Kuroe.Flow.Control.Contract.csproj");
+        string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
+        string execution = Path.Combine(SourceRoot, "Kuroe.Flow", "Execution", "Shared");
+
+        Assert.All(ProjectReferences(project), reference => Assert.True(
+            IsUnder(reference, control) || IsUnder(reference, execution),
+            $"Kuroe.Flow.Control.Contract 引用了中性契约之外的 {reference}。"));
+
+        foreach (string file in SourceFiles(contract))
+        {
+            string text = File.ReadAllText(file);
+            Assert.DoesNotContain("GraphFlowControl", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("GraphExecution", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("NodeGraph", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Flow_record_codecs_live_outside_central_serialization()
+    {
+        string persistence = Path.Combine(SourceRoot, "Kuroe.Flow", "Persistence", "Serialization");
+
+        Assert.True(File.Exists(Path.Combine(persistence, "Graph", "Core", "GraphFlowRecordCodec.cs")));
+        Assert.True(File.Exists(Path.Combine(persistence, "Code", "Core", "CodeFlowRecordCodec.cs")));
+        Assert.True(File.Exists(Path.Combine(persistence, "Shared", "FlowRecordCodec.cs")));
     }
 
     [Fact]

@@ -101,6 +101,7 @@ internal static class GraphExecutionInputBuilder
             Type = node.Executable.Type,
             Declaration = declaration,
             ExecutionCount = node.Executions + 1,
+            MaxAttempts = node.Executable.MaxExecutions,
             Inputs = values,
             Texts = texts,
             OutputPorts = node.Executable.SubmittablePorts,

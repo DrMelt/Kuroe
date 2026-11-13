@@ -17,7 +17,6 @@ using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
@@ -51,7 +50,7 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        runner.PortSubmitter = provider.GetRequiredService<PortSubmitter>();
+        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionPortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>

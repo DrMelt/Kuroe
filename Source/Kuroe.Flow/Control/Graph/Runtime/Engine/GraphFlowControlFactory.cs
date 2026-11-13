@@ -9,7 +9,6 @@ namespace Kuroe.Flow.Control.Graph.Engine;
 /// <summary>为图流程任务建立控制实例。</summary>
 public sealed class GraphFlowControlFactory(
     IExecutionRuntime executions,
-    IExecutionContractWriter contracts,
     IExecutionTargetResolver targets,
     IInputDelivery inputs,
     IFlowExecutionGateway gateway) : IFlowControlFactory
@@ -22,6 +21,6 @@ public sealed class GraphFlowControlFactory(
             throw new InvalidOperationException("图流程控制工厂收到非图流程状态。");
         }
 
-        return new GraphFlowControl(task, state, executions, contracts, targets, inputs, gateway);
+        return new GraphFlowControl(task, state, executions, targets, inputs, gateway);
     }
 }

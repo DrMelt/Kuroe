@@ -8,12 +8,12 @@ using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>一个任务域内的任务动作：提交、暂停、恢复、重新执行、终止与改名。流程语义经 <see cref="IFlowFramework"/> 落地。</summary>
+/// <summary>一个任务域内的任务动作：提交、暂停、恢复、重新执行、终止与改名。流程语义经 <see cref="IFlowIdentity"/> 落地。</summary>
 public sealed class TaskActions(
     TaskRegistry registry,
     IExecutionRuntime executions,
     IFlowRuntime driver,
-    IFlowFrameworkSource frameworks,
+    IFlowProviderSource providers,
     ITaskIdSource ids,
     ITaskRecordCoordinator? records = null,
     ITaskLeaseStore? leases = null)
@@ -21,7 +21,7 @@ public sealed class TaskActions(
     private readonly TaskRegistry _registry = registry;
     private readonly IExecutionRuntime _executions = executions;
     private readonly IFlowRuntime _driver = driver;
-    private readonly IFlowFrameworkSource _frameworks = frameworks;
+    private readonly IFlowProviderSource _providers = providers;
     private readonly ITaskIdSource _ids = ids;
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
@@ -33,7 +33,7 @@ public sealed class TaskActions(
         string? title,
         ProcessObserver? observer = null)
     {
-        ErrorOr<FlowProvider> resolved = _frameworks.Resolve(flowName);
+        ErrorOr<FlowProvider> resolved = _providers.Resolve(flowName);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;

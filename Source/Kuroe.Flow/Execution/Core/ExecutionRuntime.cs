@@ -6,7 +6,7 @@ namespace Kuroe.Flow.Execution;
 public sealed class ExecutionRuntime(
     ExecutionDispatcher dispatcher,
     ExecutionRunnerRegistry runners,
-    ExecutionRestorerRegistry restorers) : IExecutionRuntime, IExecutionContractWriter
+    ExecutionRestorerRegistry restorers) : IExecutionRuntime
 {
     /// <inheritdoc/>
     public IExecution Create(ExecutionId id, ExecutionRequest request) => ExecutionFactory.Create(id, request);
@@ -63,16 +63,6 @@ public sealed class ExecutionRuntime(
 
     /// <inheritdoc/>
     public Task ShutdownAsync() => dispatcher.ShutdownAsync();
-
-    /// <inheritdoc/>
-    public void SubmitOutputs(
-        IExecution execution,
-        IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> outputs) =>
-        Unit(execution).SubmitOutputs(outputs);
-
-    /// <inheritdoc/>
-    public void ReportCannotComplete(IExecution execution, string reason) =>
-        Unit(execution).ReportCannotComplete(reason);
 
     private async Task<ErrorOr<Success>> DispatchAsync(IExecution execution, IExecutionRunner runner)
     {

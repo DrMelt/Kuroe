@@ -122,16 +122,6 @@ public sealed class GraphExecution : IGraphExecution
     /// <summary>本次执行的本轮契约状态。</summary>
     internal GraphExecutionContract Contract => ToContract(_unit.Contract);
 
-    /// <summary>把图侧交回的端口值转为中性执行值。</summary>
-    internal static IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> ToNeutralOutputs(
-        IReadOnlyDictionary<PortName, PortValue> ports) =>
-        ports.ToDictionary(
-            pair => new ExecutionPortName(pair.Key.Value),
-            pair => new ExecutionOutputValue(
-                new ExecutionPortName(pair.Key.Value),
-                pair.Value.Text,
-                pair.Value.Fires));
-
     /// <summary>本次执行的产出。</summary>
     internal ExecutionOutput? Output => _unit.Output;
 
@@ -239,7 +229,8 @@ internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
                         port.Trigger,
                         port.Description);
                 }),
-            ]);
+            ],
+            input.MaxAttempts);
 
     internal static IExecutionTarget BuildTarget(GraphExecutionInput input, ExecutionRequest request) =>
         new GraphExecutionTarget(input, new ExecutionParameterContext(

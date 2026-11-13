@@ -12,6 +12,7 @@ public sealed class KuroeComposition
 {
     private readonly IServiceCollection _services;
     private readonly List<IToolSource> _sources = [];
+    private readonly List<ToolDefinition> _definitions = [];
 
     internal KuroeComposition(
         IServiceCollection services,
@@ -38,9 +39,28 @@ public sealed class KuroeComposition
     public ErrorOr<Success> AddToolSources(IEnumerable<IToolSource> sources)
     {
         List<IToolSource> incoming = [.. sources];
-        List<ToolDefinition> definitions = [.. _sources.Concat(incoming).SelectMany(source => source.Definitions)];
+        ErrorOr<Success> added = AddToolDefinitions(incoming.SelectMany(source => source.Definitions));
+        if (added.IsError)
+        {
+            return added;
+        }
 
-        List<ToolPath> duplicates = [.. definitions
+        foreach (IToolSource source in incoming)
+        {
+            _services.AddSingleton<IToolSource>(source);
+            _sources.Add(source);
+        }
+
+        return Result.Success;
+    }
+
+    /// <summary>并入工具定义并按函数路径与模型调用名校验重复。供由容器延迟创建的工具源预先占位。</summary>
+    public ErrorOr<Success> AddToolDefinitions(IEnumerable<ToolDefinition> definitions)
+    {
+        List<ToolDefinition> incoming = [.. definitions];
+        List<ToolDefinition> all = [.. _definitions, .. incoming];
+
+        List<ToolPath> duplicates = [.. all
             .GroupBy(definition => definition.Path)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)];
@@ -49,7 +69,7 @@ public sealed class KuroeComposition
             return duplicates.Select(path => ToolFileErrors.Duplicate(path.Value)).ToList();
         }
 
-        List<Error> conflicts = [.. definitions
+        List<Error> conflicts = [.. all
             .GroupBy(definition => definition.Path.CallName.Value)
             .Where(group => group.Select(definition => definition.Path.Value).Distinct().Count() > 1)
             .Select(group => ToolFileErrors.CallNameConflict(
@@ -59,11 +79,7 @@ public sealed class KuroeComposition
             return conflicts;
         }
 
-        foreach (IToolSource source in incoming)
-        {
-            _services.AddSingleton<IToolSource>(source);
-            _sources.Add(source);
-        }
+        _definitions.AddRange(incoming);
 
         return Result.Success;
     }

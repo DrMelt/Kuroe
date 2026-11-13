@@ -3,7 +3,6 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.Control.Graph;
 
 using Kuroe.Flow.Shared.Model;
@@ -22,7 +21,6 @@ internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
     IExecutionRuntime runtime,
-    IExecutionContractWriter contracts,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
     IFlowExecutionGateway gateway) : IFlowControl
@@ -144,59 +142,6 @@ internal sealed class GraphFlowControl(
 
         return targets.Count;
     }
-
-    /// <summary>一次执行的契约状态，供契约工具回执。</summary>
-    internal ExecutionStatus Status(IExecution execution)
-    {
-        GraphExecution graph = Find(execution);
-        RuntimeExecutable node = state.Runtime.Executable(graph.Input.Node);
-        GraphExecutionContract contract = graph.Contract;
-
-        return new ExecutionStatus(
-            graph.Request.Target,
-            graph.Request.Attempt,
-            state.Runtime.Plan(graph.Input.Node)?.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
-            graph.State,
-            [.. node.OutstandingPorts(graph).Select(name => new Kuroe.Flow.Execution.ExecutionPortName(name.Value))],
-            contract.CannotCompleteReason);
-    }
-
-    /// <summary>交回一次执行的端口产出。</summary>
-    internal ErrorOr<ExecutionStatus> SubmitPorts(
-        IExecution execution,
-        IReadOnlyDictionary<PortName, PortValue> ports)
-    {
-        GraphExecution graph = Find(execution);
-        if (graph.Contract.Ports is not null)
-        {
-            return Error.Validation("Tool.Argument", "端口产出已提交，无需重复提交。");
-        }
-
-        ErrorOr<Success> valid = PortSubmissionRules.Validate(
-            state.Runtime.Executable(graph.Input.Node).Executable.RequiredPorts,
-            ports);
-        if (valid.IsError)
-        {
-            return valid.ErrorsOrEmptyList;
-        }
-
-        contracts.SubmitOutputs(graph.Unit, GraphExecution.ToNeutralOutputs(ports));
-
-        return Status(execution);
-    }
-
-    /// <summary>上报一次执行无法完成。</summary>
-    internal ErrorOr<ExecutionStatus> ReportCannotComplete(IExecution execution, string reason)
-    {
-        GraphExecution graph = Find(execution);
-        contracts.ReportCannotComplete(graph.Unit, reason);
-
-        return Status(execution);
-    }
-
-    private GraphExecution Find(IExecution execution) =>
-        state.Executions.FirstOrDefault(candidate => candidate.Id.Value == execution.Id.Value)
-        ?? throw new InvalidOperationException($"任务 {task.Id} 没有执行 {execution.Id.Value}。");
 
     /// <summary>终止任务并结束推进循环。要求持有任务 Gate。</summary>
     public ErrorOr<Success> Terminate() => Stop();

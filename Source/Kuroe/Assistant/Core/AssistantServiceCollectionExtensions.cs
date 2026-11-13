@@ -67,7 +67,7 @@ public static class AssistantServiceCollectionExtensions
                 registry,
                 sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<IFlowRuntime>(),
-                new FlowFrameworkSource([provider]),
+                new FlowProviderSource([provider]),
                 ids);
 
             return new DialogueHost(actions, provider, round, models, registry);

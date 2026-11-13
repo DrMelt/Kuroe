@@ -12,7 +12,6 @@
         <ProjectReference Include="..\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />
         <ProjectReference Include="..\..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Files\Shared\Kuroe.Flow.Persistence.Files.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Shared\Kuroe.Flow.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
@@ -20,7 +19,6 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\..\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

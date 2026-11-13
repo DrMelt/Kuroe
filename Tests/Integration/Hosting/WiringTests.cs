@@ -10,7 +10,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Tool;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -148,7 +147,7 @@ public sealed class WiringTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<ModelService>());
         Assert.NotNull(provider.GetRequiredService<ToolCollection>());
         Assert.NotNull(provider.GetRequiredService<TaskRegistry>());
-        Assert.NotNull(provider.GetRequiredService<PortSubmitter>());
+        Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionPortSubmitter>());
         Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.ExecutionDispatcher>());
         Assert.NotNull(provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionStatusReader>());
         Assert.NotNull(provider.GetRequiredService<TaskService>());

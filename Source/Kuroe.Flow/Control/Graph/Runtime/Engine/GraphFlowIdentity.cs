@@ -7,7 +7,7 @@ using Kuroe.Flow.Tasks.Records;
 namespace Kuroe.Flow.Control.Graph.Engine;
 
 /// <summary>图流程的身份：流程种类、实现标识与流程归属。</summary>
-public sealed class GraphFlowIdentity(IFlowRuntimeCatalog flows) : IFlowFramework
+public sealed class GraphFlowIdentity(IFlowRuntimeCatalog flows) : IFlowIdentity
 {
     /// <summary>图流程的实现标识。</summary>
     public const string Implementation = "graph";

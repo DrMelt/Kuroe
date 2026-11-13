@@ -3,7 +3,7 @@ using Kuroe.Flow.Tasks;
 namespace Kuroe.Flow.Control;
 
 /// <summary>流程实现的身份判定与展示名。</summary>
-public interface IFlowFramework
+public interface IFlowIdentity
 {
     /// <summary>流程展示名。</summary>
     string DisplayName { get; }

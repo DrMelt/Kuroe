@@ -4,7 +4,7 @@ using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.RuntimeGraph.Ports;
 using Kuroe.Flow.Node.StaticGraph.Graph;
 using Kuroe.Flow.Node.StaticGraph.Ports;
-using Kuroe.Flow.Control.Graph.Contract;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.TestSupport;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
@@ -26,7 +26,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
     public string Kind => "*";
 
     /// <summary>需交回端口节点的交回通道，端口节点由此提交命名段。</summary>
-    public PortSubmitter? PortSubmitter { get; set; }
+    public IExecutionPortSubmitter? PortSubmitter { get; set; }
 
     /// <summary>执行闸门：替身执行器在此登记进入并保持，测试等待进入并放行。</summary>
     public IExecutionGate Gate { get; } = new ExecutionGate();
@@ -66,7 +66,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
                 [.. request.OutputPorts.Where(port => port.Required)];
             if (ports.Count > 0 && SubmitsPorts)
             {
-                PortSubmitter submitter = PortSubmitter
+                IExecutionPortSubmitter submitter = PortSubmitter
                     ?? throw new InvalidOperationException("测试环境没有提供端口提交器。");
                 _ = submitter.Submit(execution, PortValuesFor(ports));
             }

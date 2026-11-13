@@ -179,6 +179,7 @@ public sealed class GraphFlowSubmission(
             Node = node.Path,
             Type = node.Type,
             ExecutionCount = saved.Attempt,
+            MaxAttempts = node.MaxExecutions,
             Inputs =
             [
                 .. saved.Inputs.Select(value => new InputValue(

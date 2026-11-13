@@ -6,8 +6,8 @@ using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Persistence.Json;
 
-/// <summary>存档的 JSON 编解码。版本与字段映射由通用格式负责，本类只处理 JSON 文本。</summary>
-public sealed class TaskRecordCodec : ITaskRecordCodec
+/// <summary>存档的 JSON 编解码。版本、字段映射与流程片段编解码由通用格式负责，本类处理 JSON 文本与旧版本迁移。</summary>
+public sealed class TaskRecordCodec(TaskRecordSerializationMapper mapper) : ITaskRecordCodec
 {
     /// <inheritdoc/>
     public string FileExtension => ".json";
@@ -15,7 +15,7 @@ public sealed class TaskRecordCodec : ITaskRecordCodec
     /// <inheritdoc/>
     public ErrorOr<TaskRecord> Read(string text)
     {
-        int version;
+        TaskRecordDocument? file;
         try
         {
             using JsonDocument document = JsonDocument.Parse(text, new JsonDocumentOptions
@@ -23,40 +23,37 @@ public sealed class TaskRecordCodec : ITaskRecordCodec
                 AllowTrailingCommas = true,
                 CommentHandling = JsonCommentHandling.Skip,
             });
-            if (ReadVersion(document.RootElement) is not { } declared)
+            if (ReadVersion(document.RootElement) is not { } version)
             {
                 return [Error.Failure(FlowErrorCodes.RecordFormat, "存档缺少版本。")];
             }
 
-            version = declared;
+            if (!TaskRecordSerializationVersion.IsReadable(version)
+                && !TaskRecordSerializationVersion.IsMigratable(version))
+            {
+                return [Error.Failure(FlowErrorCodes.RecordVersion, $"不支持的存档版本 {version}。")];
+            }
+
+            file = TaskRecordSerializationVersion.IsReadable(version)
+                ? document.RootElement.Deserialize(TaskRecordJson.Default.TaskRecordDocument)
+                : TaskRecordLegacyFormat.Migrate(document.RootElement);
         }
         catch (JsonException ex)
         {
             return [Error.Failure(FlowErrorCodes.RecordFormat, $"存档 JSON 不合法：{ex.Message}")];
         }
-
-        if (!TaskRecordSerializationVersion.IsReadable(version))
+        catch (FormatException ex)
         {
-            return [Error.Failure(FlowErrorCodes.RecordVersion, $"不支持的存档版本 {version}。")];
+            return [Error.Failure(FlowErrorCodes.RecordFormat, ex.Message)];
         }
 
-        TaskRecordDocument? file;
-        try
-        {
-            file = JsonSerializer.Deserialize(text, TaskRecordJson.Default.TaskRecordDocument);
-        }
-        catch (JsonException ex)
-        {
-            return [Error.Failure(FlowErrorCodes.RecordFormat, $"存档 JSON 不合法：{ex.Message}")];
-        }
-
-        return TaskRecordSerializationMapper.FromDocument(file);
+        return mapper.FromDocument(file);
     }
 
     /// <inheritdoc/>
     public ErrorOr<string> Write(TaskRecord record)
     {
-        ErrorOr<TaskRecordDocument> document = TaskRecordSerializationMapper.ToDocument(record);
+        ErrorOr<TaskRecordDocument> document = mapper.ToDocument(record);
         if (document.IsError)
         {
             return document.ErrorsOrEmptyList;

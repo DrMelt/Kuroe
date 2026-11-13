@@ -4,7 +4,7 @@ using Kuroe.Flow.Tasks;
 namespace Kuroe.Flow.Control;
 
 /// <summary>按流程身份与流程名查找流程实现。</summary>
-public interface IFlowFrameworkSource
+public interface IFlowProviderSource
 {
     /// <summary>全部已注册的流程实现。</summary>
     IReadOnlyList<FlowProvider> All();

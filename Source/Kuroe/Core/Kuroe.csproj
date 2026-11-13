@@ -46,6 +46,8 @@
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Saving\Shared\Kuroe.Flow.Persistence.Saving.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Files\Core\Kuroe.Flow.Persistence.Files.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Graph\Core\Kuroe.Flow.Persistence.Graph.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Flow\Persistence\Serialization\Code\Core\Kuroe.Flow.Persistence.Code.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Core\Kuroe.Flow.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Runtime\Core\Kuroe.Flow.Runtime.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Execution\Core\Kuroe.Flow.Execution.csproj" />
@@ -69,6 +71,7 @@
 <ItemGroup>
         <ProjectReference Include="..\..\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Flow\Control\Contract\Kuroe.Flow.Control.Contract.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />

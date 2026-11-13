@@ -10,13 +10,13 @@ namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 public sealed class TaskRestoreRuntime(
     TaskRegistry registry,
     IExecutionRuntime executions,
-    IFlowFrameworkSource frameworks,
+    IFlowProviderSource providers,
     IFlowRuntime runner) : ITaskRestoreRuntime
 {
     /// <inheritdoc/>
     public ErrorOr<TaskSnapshot> Restore(TaskRecord record)
     {
-        ErrorOr<FlowProvider> resolved = frameworks.Find(record.Flow.Identity);
+        ErrorOr<FlowProvider> resolved = providers.Find(record.Flow.Identity);
         if (resolved.IsError)
         {
             return resolved.ErrorsOrEmptyList;

@@ -5,12 +5,12 @@ using Kuroe.Flow.Tasks;
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>按流程身份与流程名分派已注册的流程实现。</summary>
-public sealed class FlowFrameworkSource : IFlowFrameworkSource
+public sealed class FlowProviderSource : IFlowProviderSource
 {
     private readonly List<FlowProvider> _providers;
 
     /// <summary>按给定流程实现建立分派表。</summary>
-    public FlowFrameworkSource(IEnumerable<FlowProvider> providers) => _providers = [.. providers];
+    public FlowProviderSource(IEnumerable<FlowProvider> providers) => _providers = [.. providers];
 
     /// <inheritdoc/>
     public IReadOnlyList<FlowProvider> All() => _providers;
@@ -19,7 +19,7 @@ public sealed class FlowFrameworkSource : IFlowFrameworkSource
     public ErrorOr<FlowProvider> Find(FlowIdentity identity)
     {
         FlowProvider[] found =
-            [.. _providers.Where(provider => provider.Framework.Handles(identity))];
+            [.. _providers.Where(provider => provider.Identity.Handles(identity))];
 
         return found.Length switch
         {
@@ -37,7 +37,7 @@ public sealed class FlowFrameworkSource : IFlowFrameworkSource
     public ErrorOr<FlowProvider> Resolve(FlowName name)
     {
         FlowProvider[] found =
-            [.. _providers.Where(provider => provider.Framework.Handles(name))];
+            [.. _providers.Where(provider => provider.Identity.Handles(name))];
 
         return found.Length switch
         {

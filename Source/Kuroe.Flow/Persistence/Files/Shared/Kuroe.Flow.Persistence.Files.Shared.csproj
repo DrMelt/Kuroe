@@ -10,14 +10,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Shared\Kuroe.Flow.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
         <ProjectReference Include="..\..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
-    </ItemGroup>
-
-<ItemGroup>
-        <ProjectReference Include="..\..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
     </ItemGroup>
 </Project>

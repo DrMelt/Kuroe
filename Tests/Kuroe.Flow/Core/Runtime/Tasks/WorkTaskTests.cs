@@ -131,11 +131,11 @@ public sealed class WorkTaskTests
     {
         public TestProvider()
         {
-            Framework = new TestFramework();
+            Identity = new TestIdentity();
             Presentation = new TestPresentation();
             Binder = new TestBinder();
             Provider = new FlowProvider(
-                Framework,
+                Identity,
                 new TestSubmission(),
                 Binder,
                 new TestControls(),
@@ -143,7 +143,7 @@ public sealed class WorkTaskTests
                 new TestRecords());
         }
 
-        public IFlowFramework Framework { get; }
+        public IFlowIdentity Identity { get; }
 
         public IFlowPresentation Presentation { get; }
 
@@ -152,7 +152,7 @@ public sealed class WorkTaskTests
         public FlowProvider Provider { get; }
     }
 
-    private sealed class TestFramework : IFlowFramework
+    private sealed class TestIdentity : IFlowIdentity
     {
         public string DisplayName => "测试";
 

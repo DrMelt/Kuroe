@@ -12,6 +12,8 @@ using Kuroe.Node.File;
 using Kuroe.Flow.Compilation.Description;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Json;
+using Kuroe.Flow.Persistence.Code;
+using Kuroe.Flow.Persistence.Graph;
 using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Execution;
@@ -37,11 +39,11 @@ using Kuroe.Workflows.Tasks;
 using Kuroe.Flow.Persistence.Files;
 using Kuroe.Tools;
 using Kuroe.Flow.Control.Graph.Engine;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Control.Contract;
 using Kuroe.Flow.Persistence.Restoring;
 using Kuroe.Flow.Persistence.Saving;
+using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Files;
@@ -229,9 +231,27 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ExecutionRunnerRegistry>(),
             sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
-        services.AddSingleton<IExecutionContractWriter>(sp => sp.GetRequiredService<ExecutionRuntime>());
+        services.AddSingleton<IExecutionContractWriter, ExecutionContractWriter>();
+        services.AddSingleton(sp => new PortSubmitter(
+            executions,
+            sp.GetRequiredService<IExecutionContractWriter>()));
+        services.AddSingleton<IExecutionPortSubmitter>(sp => sp.GetRequiredService<PortSubmitter>());
+        services.AddSingleton(sp => new CannotCompleteSubmitter(
+            executions,
+            sp.GetRequiredService<IExecutionContractWriter>()));
+        services.AddSingleton<IExecutionCannotCompleteSubmitter>(sp => sp.GetRequiredService<CannotCompleteSubmitter>());
+        services.AddSingleton(sp => new ExecutionStatusReader(executions));
+        services.AddSingleton<IExecutionStatusReader>(sp => sp.GetRequiredService<ExecutionStatusReader>());
+        services.AddSingleton<IToolSource>(sp => new ContractToolSource(
+            sp.GetRequiredService<IExecutionPortSubmitter>(),
+            sp.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
+            sp.GetRequiredService<IExecutionStatusReader>()));
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
-        services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
+        services.AddSingleton<IFlowRecordCodec, GraphFlowRecordCodec>();
+        services.AddSingleton<IFlowRecordCodec, CodeFlowRecordCodec>();
+        services.AddSingleton(sp => new TaskRecordSerializationMapper([.. sp.GetServices<IFlowRecordCodec>()]));
+        services.AddSingleton<ITaskRecordCodec>(sp => new TaskRecordCodec(
+            sp.GetRequiredService<TaskRecordSerializationMapper>()));
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
             paths.RecordsDirectory,
             sp.GetRequiredService<ITaskRecordCodec>()));
@@ -257,21 +277,20 @@ public static class ServiceCollectionExtensions
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
                 sp.GetRequiredService<IExecutionRuntime>(),
-                sp.GetRequiredService<IExecutionContractWriter>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
                 inputs,
                 executions),
             new GraphFlowPresentation(),
             new GraphFlowRecordSource()));
-        services.AddSingleton(sp => new FlowFrameworkSource(sp.GetServices<FlowProvider>()));
-        services.AddSingleton<IFlowFrameworkSource>(sp => sp.GetRequiredService<FlowFrameworkSource>());
+        services.AddSingleton(sp => new FlowProviderSource(sp.GetServices<FlowProvider>()));
+        services.AddSingleton<IFlowProviderSource>(sp => sp.GetRequiredService<FlowProviderSource>());
         services.AddSingleton(sp => new FlowRuntime(
             sp.GetRequiredService<IExecutionRuntime>()));
         services.AddSingleton<IFlowRuntime>(sp => sp.GetRequiredService<FlowRuntime>());
         services.AddSingleton<ITaskRestoreRuntime>(sp => new TaskRestoreRuntime(
             taskRegistry,
             sp.GetRequiredService<IExecutionRuntime>(),
-            sp.GetRequiredService<IFlowFrameworkSource>(),
+            sp.GetRequiredService<IFlowProviderSource>(),
             sp.GetRequiredService<IFlowRuntime>()));
         if (coreOptions.PersistTasks)
         {
@@ -285,7 +304,7 @@ public static class ServiceCollectionExtensions
                 taskRegistry,
                 sp.GetRequiredService<IExecutionRuntime>(),
                 sp.GetRequiredService<IFlowRuntime>(),
-                sp.GetRequiredService<IFlowFrameworkSource>(),
+                sp.GetRequiredService<IFlowProviderSource>(),
                 sp.GetRequiredService<ITaskIdSource>(),
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskRecordCoordinator>() : null,
                 coreOptions.PersistTasks ? sp.GetRequiredService<ITaskLeaseStore>() : null)));
@@ -323,9 +342,6 @@ public static class ServiceCollectionExtensions
         ExecutionIndex executions)
     {
         TaskSnapshotReader taskReader = new(taskRegistry);
-        PortSubmitter portSubmitter = new(executions);
-        CannotCompleteSubmitter cannotCompleteSubmitter = new(executions);
-        ExecutionStatusReader statusReader = new(executions);
 
         List<IToolSource> sources =
         [
@@ -334,7 +350,6 @@ public static class ServiceCollectionExtensions
                 new ToolCatalogView(catalog, models),
                 new FlowTemplateCatalog(flows, hostStartInputs),
                 settings),
-            new ContractToolSource(portSubmitter, cannotCompleteSubmitter, statusReader),
         ];
 
         ErrorOr<Success> added = composition.AddToolSources(sources);
@@ -343,16 +358,16 @@ public static class ServiceCollectionExtensions
             return added.ErrorsOrEmptyList;
         }
 
+        ErrorOr<Success> contractDefinitions = composition.AddToolDefinitions(ContractToolSource.AllDefinitions);
+        if (contractDefinitions.IsError)
+        {
+            return contractDefinitions.ErrorsOrEmptyList;
+        }
+
         services.AddSingleton(executions);
         services.AddSingleton(taskRegistry);
         services.AddSingleton<ITaskChangeSource>(taskRegistry);
         services.AddSingleton<ITaskReader>(taskReader);
-        services.AddSingleton(portSubmitter);
-        services.AddSingleton<Kuroe.Flow.Execution.IExecutionPortSubmitter>(portSubmitter);
-        services.AddSingleton(cannotCompleteSubmitter);
-        services.AddSingleton<Kuroe.Flow.Execution.IExecutionCannotCompleteSubmitter>(cannotCompleteSubmitter);
-        services.AddSingleton(statusReader);
-        services.AddSingleton<Kuroe.Flow.Execution.IExecutionStatusReader>(statusReader);
         services.AddSingleton<IToolFactory>(sp => new KuroeToolFactory(
             [.. sp.GetServices<IToolSource>()],
             workingDirectory));

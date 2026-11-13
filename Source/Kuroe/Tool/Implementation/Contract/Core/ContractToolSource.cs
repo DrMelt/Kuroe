@@ -8,13 +8,16 @@ public sealed class ContractToolSource(
     IExecutionCannotCompleteSubmitter cannotComplete,
     IExecutionStatusReader status) : IToolSource
 {
-    /// <inheritdoc/>
-    public IReadOnlyList<ToolDefinition> Definitions { get; } =
+    /// <summary>契约工具的全部定义，供装配时先占位再按容器创建源。</summary>
+    public static IReadOnlyList<ToolDefinition> AllDefinitions { get; } =
     [
         ContractToolDefinitions.Port(null),
         ContractToolDefinitions.CannotComplete(),
         ContractToolDefinitions.Status(),
     ];
+
+    /// <inheritdoc/>
+    public IReadOnlyList<ToolDefinition> Definitions => AllDefinitions;
 
     /// <inheritdoc/>
     public IReadOnlyList<ITool> Create(ToolContext context) =>

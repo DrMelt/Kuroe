@@ -18,7 +18,6 @@ using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Control.Graph;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Pending;
 using Kuroe.Process;
@@ -54,9 +53,9 @@ public sealed class TestEnvironment : IDisposable
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
         _contractTools = new ContractToolSource(
-            provider.GetRequiredService<PortSubmitter>(),
-            provider.GetRequiredService<CannotCompleteSubmitter>(),
-            new ExecutionStatusReader(Executions));
+            provider.GetRequiredService<IExecutionPortSubmitter>(),
+            provider.GetRequiredService<IExecutionCannotCompleteSubmitter>(),
+            provider.GetRequiredService<IExecutionStatusReader>());
         runner.ContractToolFactory = execution =>
             CreateContractTools(GraphExecution(new Kuroe.Flow.Execution.ExecutionId(execution.Value)));
     }
@@ -97,9 +96,6 @@ public sealed class TestEnvironment : IDisposable
 
     /// <summary>宿主开始输入表，流程展示与任务提交共用。</summary>
     public IHostStartInputs HostStartInputs => _provider.GetRequiredService<IHostStartInputs>();
-
-    /// <summary>端口产出的交回通道，测试直接调用它验证提交校验。</summary>
-    public PortSubmitter PortSubmitter => _provider.GetRequiredService<PortSubmitter>();
 
     /// <summary>交回端口产出的契约工具，按执行创建。</summary>
     public ITool PortToolFor(ExecutionId execution) => ContractTool(execution, ContractTools.Port);

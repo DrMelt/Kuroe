@@ -8,7 +8,7 @@ namespace Kuroe.Integration.Tests.Persistence;
 /// <summary>存档文件随任务清理一起删除。</summary>
 public sealed class TaskRecordCleanupTests : IDisposable
 {
-    private static readonly TaskRecordCodec Codec = new();
+    private static readonly TaskRecordCodec Codec = Kuroe.Flow.TestSupport.TaskRecordCodecs.Codec();
     private readonly TestEnvironment _environment = TestEnvironment.Create(persistTasks: true);
 
     [Fact]

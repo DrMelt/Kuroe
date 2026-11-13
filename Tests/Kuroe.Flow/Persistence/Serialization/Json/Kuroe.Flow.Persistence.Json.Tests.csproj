@@ -11,6 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Persistence\Serialization\Json\Core\Kuroe.Flow.Persistence.Json.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Persistence\Serialization\Shared\Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
         <ProjectReference Include="..\..\..\..\..\Source\Kuroe.Flow\Execution\Records\Shared\Kuroe.Flow.Execution.Records.Shared.csproj" />

@@ -94,15 +94,24 @@ public sealed class RuntimeExecutableTests
             RuntimeExecution.BuildRequest(input));
         RuntimeExecution execution = new(input, unit, 0);
 
-        return (new RuntimeExecutable(executable), execution, (Kuroe.Flow.Execution.IExecutionContractWriter)runtime);
+        return (new RuntimeExecutable(executable), execution, new Kuroe.Flow.Execution.ExecutionContractWriter());
     }
 
     private static void Submit(
         Kuroe.Flow.Execution.IExecutionContractWriter contracts,
         RuntimeExecution execution,
         Dictionary<PortName, PortValue> values) =>
-        contracts.SubmitOutputs(execution.Unit, RuntimeExecution.ToNeutralOutputs(values));
+        contracts.SubmitOutputs(execution.Unit, ToNeutralOutputs(values));
 
     private static Dictionary<PortName, PortValue> Values(PortValue value) =>
         new() { [Conclusion] = value };
+
+    private static IReadOnlyDictionary<Kuroe.Flow.Execution.ExecutionPortName, Kuroe.Flow.Execution.ExecutionOutputValue>
+        ToNeutralOutputs(IReadOnlyDictionary<PortName, PortValue> values) =>
+        values.ToDictionary(
+            pair => new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+            pair => new Kuroe.Flow.Execution.ExecutionOutputValue(
+                new Kuroe.Flow.Execution.ExecutionPortName(pair.Key.Value),
+                pair.Value.Text,
+                pair.Value.Fires));
 }

@@ -167,7 +167,7 @@ internal static class FlowRuntimeTestDoubles
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
         FlowProvider provider = new(
-            new TestFramework(),
+            new TestIdentity(),
             new TestSubmission(),
             NoFlowStateBinder.Instance,
             new TestControls(control),
@@ -253,7 +253,7 @@ internal sealed class TestState(StartInputs inputs) : IFlowState
     public StartInputs Inputs { get; } = inputs;
 }
 
-internal sealed class TestFramework : IFlowFramework
+internal sealed class TestIdentity : IFlowIdentity
 {
     public string DisplayName => "测试";
 

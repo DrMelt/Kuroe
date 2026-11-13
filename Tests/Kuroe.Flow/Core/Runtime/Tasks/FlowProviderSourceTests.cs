@@ -13,7 +13,7 @@ using Xunit;
 namespace Kuroe.Flow.Tests.Runtime.Tasks;
 
 /// <summary>流程实现分派：恢复按存档定义选择实现，同一种类可以有多个实现。</summary>
-public sealed class FlowFrameworkSourceTests
+public sealed class FlowProviderSourceTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
     private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
@@ -26,7 +26,7 @@ public sealed class FlowFrameworkSourceTests
     {
         FlowProvider first = Provider("first");
         FlowProvider second = Provider("second");
-        FlowFrameworkSource source = new([first, second]);
+        FlowProviderSource source = new([first, second]);
 
         ErrorOr<FlowProvider> found = source.Find(CodeRecord("second").Identity);
 
@@ -37,7 +37,7 @@ public sealed class FlowFrameworkSourceTests
     [Fact]
     public void Unknown_implementation_returns_an_error()
     {
-        FlowFrameworkSource source = new([Provider("first")]);
+        FlowProviderSource source = new([Provider("first")]);
 
         ErrorOr<FlowProvider> found = source.Find(CodeRecord("missing").Identity);
 
@@ -47,7 +47,7 @@ public sealed class FlowFrameworkSourceTests
     [Fact]
     public void Several_providers_for_the_same_identity_are_rejected()
     {
-        FlowFrameworkSource source = new([Provider("same"), Provider("same")]);
+        FlowProviderSource source = new([Provider("same"), Provider("same")]);
 
         ErrorOr<FlowProvider> found = source.Find(CodeRecord("same").Identity);
 
@@ -59,7 +59,7 @@ public sealed class FlowFrameworkSourceTests
     {
         FlowProvider first = Provider("first");
         FlowProvider second = Provider("second");
-        FlowFrameworkSource source = new([first, second]);
+        FlowProviderSource source = new([first, second]);
 
         ErrorOr<FlowProvider> found = source.Resolve(new FlowName("second"));
 
@@ -76,7 +76,7 @@ public sealed class FlowFrameworkSourceTests
         TaskRestoreRuntime runtime = new(
             registry,
             Runtime(),
-            new FlowFrameworkSource([first, second]),
+            new FlowProviderSource([first, second]),
             new UnusedRuntime());
 
         TaskSnapshot snapshot = runtime.Restore(CodeTask("second")).ThrowIfError();
@@ -86,9 +86,9 @@ public sealed class FlowFrameworkSourceTests
 
     private static FlowProvider Provider(string implementation)
     {
-        TestFramework framework = new(implementation);
+        TestIdentity identity = new(implementation);
         return new FlowProvider(
-            framework,
+            identity,
             new TestSubmission(),
             NoFlowStateBinder.Instance,
             new TestControls(),
@@ -118,7 +118,7 @@ public sealed class FlowFrameworkSourceTests
             []);
     }
 
-    private sealed class TestFramework(string implementation) : IFlowFramework
+    private sealed class TestIdentity(string implementation) : IFlowIdentity
     {
         public string DisplayName => implementation;
 

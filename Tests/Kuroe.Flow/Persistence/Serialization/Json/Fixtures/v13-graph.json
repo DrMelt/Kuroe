@@ -1,0 +1,353 @@
+{
+  "Version": 13,
+  "Task": {
+    "Identity": {
+      "Id": "00000000000000000000000000000007",
+      "Title": "存档任务",
+      "CreatedAt": "2026-01-02T03:04:05+00:00",
+      "LastActivityAt": "2026-01-02T03:05:06+00:00"
+    },
+    "SavedAt": "2026-01-02T03:05:07+00:00",
+    "Lifecycle": "Paused",
+    "Completed": false,
+    "Journal": {
+      "Entries": [
+        {
+          "At": "2026-01-02T03:05:00+00:00",
+          "Level": "Information",
+          "Label": "信息",
+          "Text": "已暂停。"
+        }
+      ],
+      "DroppedEntries": 0
+    },
+    "Flow": {
+      "Name": "默认",
+      "Kind": "graph",
+      "Implementation": "graph",
+      "GraphDefinition": {
+        "Name": "默认",
+        "Nodes": "{\"Nodes\":[]}",
+        "Flow": "{\"Flows\":[]}"
+      },
+      "GraphState": {
+        "Start": {
+          "Inputs": [
+            {
+              "Port": "目标",
+              "Text": "目标内容"
+            }
+          ],
+          "StartTexts": {
+            "目标": "目标内容"
+          }
+        },
+        "Nodes": [
+          {
+            "Kind": "Executable",
+            "Path": {
+              "Levels": [
+                "整体",
+                "计划"
+              ]
+            },
+            "Common": {
+              "Revision": 2,
+              "Executions": 1,
+              "LastInputGroup": 0,
+              "Consumed": [
+                {
+                  "Source": {
+                    "Levels": [
+                      "Start"
+                    ]
+                  },
+                  "Revision": 1
+                }
+              ],
+              "ActivePublicationRevision": 2,
+              "ForceRerun": false
+            },
+            "ReworkTargets": []
+          },
+          {
+            "Kind": "Executable",
+            "Path": {
+              "Levels": [
+                "整体",
+                "读取"
+              ]
+            },
+            "Common": {
+              "Revision": 0,
+              "Executions": 1,
+              "Consumed": [
+                {
+                  "Source": {
+                    "Levels": [
+                      "Start"
+                    ]
+                  },
+                  "Revision": 1
+                }
+              ],
+              "ForceRerun": false
+            },
+            "Block": {
+              "Summary": "读取失败。",
+              "Execution": 72,
+              "At": "2026-01-02T03:04:22+00:00"
+            },
+            "ReworkTargets": [
+              {
+                "Levels": [
+                  "整体",
+                  "读取"
+                ]
+              }
+            ]
+          },
+          {
+            "Kind": "Input",
+            "Path": {
+              "Levels": [
+                "整体",
+                "回答"
+              ]
+            },
+            "Common": {
+              "Revision": 1,
+              "Executions": 1,
+              "Consumed": [
+                {
+                  "Source": {
+                    "Levels": [
+                      "Start"
+                    ]
+                  },
+                  "Revision": 1
+                }
+              ],
+              "ForceRerun": false
+            },
+            "Waiting": false
+          },
+          {
+            "Kind": "Approval",
+            "Path": {
+              "Levels": [
+                "整体",
+                "审批"
+              ]
+            },
+            "Common": {
+              "Revision": 1,
+              "Executions": 1,
+              "LastInputGroup": 0,
+              "Consumed": [
+                {
+                  "Source": {
+                    "Levels": [
+                      "Start"
+                    ]
+                  },
+                  "Revision": 1
+                }
+              ],
+              "ForceRerun": false
+            },
+            "Inputs": {
+              "Ordered": [
+                {
+                  "Target": "目标",
+                  "Type": "Text",
+                  "Value": {
+                    "Port": "目标",
+                    "Origin": {
+                      "Kind": "Start",
+                      "Port": "目标"
+                    },
+                    "Text": "目标内容"
+                  }
+                }
+              ]
+            },
+            "Awaiting": false
+          },
+          {
+            "Kind": "Container",
+            "Path": {
+              "Levels": [
+                "整体"
+              ]
+            },
+            "Common": {
+              "Revision": 1,
+              "Executions": 1,
+              "Consumed": [
+                {
+                  "Source": {
+                    "Levels": [
+                      "Start"
+                    ]
+                  },
+                  "Revision": 1
+                }
+              ],
+              "ForceRerun": false
+            }
+          }
+        ],
+        "Ports": [
+          {
+            "Node": {
+              "Levels": [
+                "整体",
+                "计划"
+              ]
+            },
+            "Port": "结论",
+            "Revision": 1,
+            "At": "2026-01-02T03:04:09+00:00",
+            "Trigger": true,
+            "Values": [
+              {
+                "Origin": {
+                  "Kind": "Execution",
+                  "Execution": 71,
+                  "Node": {
+                    "Levels": [
+                      "整体",
+                      "计划"
+                    ]
+                  },
+                  "Port": "结论"
+                },
+                "Text": "旧计划结果"
+              }
+            ]
+          },
+          {
+            "Node": {
+              "Levels": [
+                "整体",
+                "计划"
+              ]
+            },
+            "Port": "结论",
+            "Revision": 2,
+            "At": "2026-01-02T03:04:13+00:00",
+            "Trigger": false,
+            "Values": [
+              {
+                "Origin": {
+                  "Kind": "Execution",
+                  "Execution": 71,
+                  "Node": {
+                    "Levels": [
+                      "整体",
+                      "计划"
+                    ]
+                  },
+                  "Port": "结论"
+                },
+                "Text": "计划结果"
+              }
+            ]
+          }
+        ],
+        "Pending": {
+          "Targets": [
+            {
+              "Levels": [
+                "整体",
+                "计划"
+              ]
+            },
+            {
+              "Levels": [
+                "整体",
+                "读取"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "Executions": [
+      {
+        "Id": 71,
+        "Target": "%E6%95%B4%E4%BD%93/%E8%AE%A1%E5%88%92",
+        "Attempt": 1,
+        "State": "Succeeded",
+        "Progress": "完成",
+        "CreatedAt": "2026-01-02T03:04:10+00:00",
+        "StartedAt": "2026-01-02T03:04:11+00:00",
+        "FinishedAt": "2026-01-02T03:04:12+00:00",
+        "Failures": [],
+        "Usage": {
+          "RequestCount": 2,
+          "RequestsWithoutUsage": 0,
+          "Tokens": {
+            "Input": 120,
+            "Output": 30,
+            "Total": 150,
+            "CachedInput": 80,
+            "Reasoning": 5
+          },
+          "ContextTokens": 90
+        },
+        "Inputs": [
+          {
+            "Port": "目标",
+            "Source": "start:::%E7%9B%AE%E6%A0%87",
+            "Text": "目标内容"
+          }
+        ],
+        "Texts": {
+          "目标": "目标内容"
+        }
+      },
+      {
+        "Id": 72,
+        "Target": "%E6%95%B4%E4%BD%93/%E8%AF%BB%E5%8F%96",
+        "Attempt": 1,
+        "State": "Failed",
+        "Progress": "失败",
+        "CreatedAt": "2026-01-02T03:04:20+00:00",
+        "StartedAt": "2026-01-02T03:04:21+00:00",
+        "FinishedAt": "2026-01-02T03:04:22+00:00",
+        "Failures": [
+          "读取失败。"
+        ],
+        "Usage": {
+          "RequestCount": 0,
+          "RequestsWithoutUsage": 0,
+          "Tokens": {}
+        },
+        "Inputs": [],
+        "Texts": {}
+      },
+      {
+        "Id": 73,
+        "Target": "%E6%95%B4%E4%BD%93/%E5%9B%9E%E7%AD%94",
+        "Attempt": 1,
+        "State": "Interrupted",
+        "Progress": "已中断",
+        "CreatedAt": "2026-01-02T03:04:30+00:00",
+        "StartedAt": "2026-01-02T03:04:31+00:00",
+        "FinishedAt": "2026-01-02T03:04:32+00:00",
+        "Failures": [
+          "任务已暂停。"
+        ],
+        "Usage": {
+          "RequestCount": 0,
+          "RequestsWithoutUsage": 0,
+          "Tokens": {}
+        },
+        "Inputs": [],
+        "Texts": {}
+      }
+    ]
+  }
+}

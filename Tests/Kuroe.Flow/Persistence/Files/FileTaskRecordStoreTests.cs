@@ -13,7 +13,7 @@ namespace Kuroe.Flow.Persistence.Files.Tests;
 /// <summary>文件存档存储的契约实现，失败注入只在测试侧包装。</summary>
 public sealed class FileTaskRecordStoreTests : TaskRecordStoreContractTests, IDisposable
 {
-    private static readonly TaskRecordCodec Codec = new();
+    private static readonly TaskRecordCodec Codec = TaskRecordCodecs.Codec();
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kuroe-tests", Guid.NewGuid().ToString("N"));
 
     protected override ITaskRecordStore CreateStore() =>

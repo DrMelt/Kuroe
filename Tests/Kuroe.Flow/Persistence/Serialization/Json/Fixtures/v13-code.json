@@ -1,0 +1,46 @@
+{
+  "Version": 13,
+  "Task": {
+    "Identity": {
+      "Id": "00000000000000000000000000000001",
+      "Title": "对话",
+      "CreatedAt": "1970-01-01T00:00:00+00:00",
+      "LastActivityAt": "1970-01-01T00:00:00+00:00"
+    },
+    "SavedAt": "1970-01-01T00:00:00+00:00",
+    "Lifecycle": "Active",
+    "Completed": false,
+    "Journal": {
+      "Entries": [],
+      "DroppedEntries": 0
+    },
+    "Flow": {
+      "Name": "对话",
+      "Kind": "code",
+      "Implementation": "dialogue",
+      "CodeDefinition": {
+        "Implementation": "dialogue",
+        "Values": {
+          "language": "中文"
+        }
+      },
+      "CodeState": {
+        "Start": {
+          "Inputs": [
+            {
+              "Port": "目标",
+              "Text": "对话"
+            }
+          ],
+          "StartTexts": {
+            "目标": "对话"
+          }
+        },
+        "Values": {
+          "language": "中文"
+        }
+      }
+    },
+    "Executions": []
+  }
+}
