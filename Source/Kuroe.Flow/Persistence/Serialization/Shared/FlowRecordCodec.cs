@@ -1,6 +1,6 @@
+using Kuroe.Flow.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Tasks.Records.Shared;
 
 namespace Kuroe.Flow.Persistence.Serialization.Shared;
 

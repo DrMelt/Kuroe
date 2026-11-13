@@ -1,11 +1,9 @@
+using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Tasks.Records;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Persistence;
@@ -53,7 +51,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
     public void Capture_retains_restore_data_of_a_successful_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow, persistTasks: true);
-        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "data");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.Shared.ExecutionRestoreState("test", "data");
         TaskId id = environment.Submit("保留恢复数据");
         environment.Settle(id);
         WorkTask task = environment.Registry.Find(id).ThrowIfError();
@@ -64,7 +62,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
 
         Assert.Contains(
             record.Executions,
-            execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded && execution.RestoreData is not null);
+            execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded && execution.RestoreData is not null);
     }
 
     private static GraphFlowStateRecord State(TaskRecord record) =>

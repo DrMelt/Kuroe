@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>可构造的流程视图，供代码定义流程与图流程共用。</summary>
 public sealed record FlowView(

@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>上报本轮无法完成的入口。工具实现依赖此契约，具体记录由执行契约写入口完成。</summary>
 public interface IExecutionCannotCompleteSubmitter

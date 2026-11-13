@@ -1,5 +1,6 @@
 using Kuroe.Console.Views;
 using Kuroe.Flow.Persistence.Restoring.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Console.Tests.Views;

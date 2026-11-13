@@ -1,5 +1,5 @@
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Pending;
 using Spectre.Console;
@@ -155,7 +155,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
         return line.Build();
     }
-private static IEnumerable<IRenderable> Details(FlowGroupView group)
+    private static IEnumerable<IRenderable> Details(FlowGroupView group)
     {
         foreach (FlowPortView port in group.Outputs)
         {
@@ -205,7 +205,7 @@ private static IEnumerable<IRenderable> Details(FlowGroupView group)
         string? ParentPath,
         Paragraph Line,
         IReadOnlyList<IRenderable> DetailLines);
-/// <summary>一棵任务树里各节点的一刻读数，渲染时一次建好。</summary>
+    /// <summary>一棵任务树里各节点的一刻读数，渲染时一次建好。</summary>
     private sealed class Facts
     {
         private readonly Dictionary<string, FlowStepView> _steps;

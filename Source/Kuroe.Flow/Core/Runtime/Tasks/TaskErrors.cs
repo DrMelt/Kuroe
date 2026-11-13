@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 

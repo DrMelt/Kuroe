@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Presentation.Shared;
 
 /// <summary>任务快照里等待外部输入的步骤种类。</summary>
 public enum PendingStepKind

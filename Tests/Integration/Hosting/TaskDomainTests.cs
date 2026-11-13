@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Hosting;
@@ -83,12 +83,12 @@ public sealed class TaskDomainTests
 
         Assert.False(reply.IsError);
         Assert.Equal(1, dialogue.Id.Value);
-        IReadOnlyList<Kuroe.Flow.Execution.ExecutionSnapshot> executions = [.. done.Executions];
+        IReadOnlyList<Kuroe.Flow.Execution.Shared.ExecutionSnapshot> executions = [.. done.Executions];
         Assert.NotEmpty(executions);
         Assert.All(executions, execution => Assert.True(execution.Id.Value > dialogue.Id.Value));
         Assert.All(executions, execution =>
             Assert.Equal(id, environment.Executions.FindOwned(
-                new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
+                new Kuroe.Flow.Execution.Shared.ExecutionId(execution.Id.Value)).ThrowIfError().Owner.Id));
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Flow.Json.Tests;

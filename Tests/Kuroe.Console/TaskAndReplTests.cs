@@ -1,9 +1,8 @@
 using ApiHub.Shared.Models;
 using Kuroe.Console.Views;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Pending;
 using Spectre.Console.Testing;
 using Xunit;
@@ -423,8 +422,8 @@ public sealed partial class TaskAndReplTests
         cli.Tasks.Submit(new FlowName("默认"), "目标");
         cli.Environment.Settle(new TaskId(1));
 
-        Kuroe.Flow.Execution.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
-            new Kuroe.Flow.Execution.ExecutionId(1)).ThrowIfError();
+        Kuroe.Flow.Execution.Shared.ExecutionSnapshot execution = cli.Environment.TaskReader.FindExecution(
+            new Kuroe.Flow.Execution.Shared.ExecutionId(1)).ThrowIfError();
         cli.Tasks.ShowExecution(execution.Id.Value);
 
         Assert.Contains("执行 #1", cli.Output.Output);

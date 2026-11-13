@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的端口访问：本次可读的端口文本与输出端口声明。工具按它读取运行期环境，不接触执行请求的具体形状。</summary>
 public interface IExecutionPortAccess

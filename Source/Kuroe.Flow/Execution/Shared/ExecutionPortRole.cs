@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行输入端口在本次执行中的角色。</summary>
 public enum ExecutionPortRole

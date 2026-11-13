@@ -1,11 +1,11 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
-using RecordExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using RecordExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
-using RecordExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Execution.Records.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using RecordExecutionId = Kuroe.Flow.Execution.Shared.ExecutionId;
+using RecordExecutionPortName = Kuroe.Flow.Execution.Shared.ExecutionPortName;
+using RecordExecutionOutputValue = Kuroe.Flow.Execution.Shared.ExecutionOutputValue;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Persistence.Serialization.Shared;
 
@@ -140,7 +140,7 @@ public sealed class TaskRecordSerializationMapper(IReadOnlyList<IFlowRecordCodec
 
     private static TokenUsageData ToData(TokenUsageRecord tokens) =>
         new(tokens.Input, tokens.Output, tokens.Total, tokens.CachedInput, tokens.Reasoning);
-private TaskRecord ReadTask(TaskRecordData? dto)
+    private TaskRecord ReadTask(TaskRecordData? dto)
     {
         if (dto is null)
         {

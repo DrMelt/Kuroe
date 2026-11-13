@@ -1,12 +1,13 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Graph;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Graph;
 
 /// <summary>输入侧进展：消费版本、发布版本、作废与执行计数。</summary>
 public sealed class InputProgressTests

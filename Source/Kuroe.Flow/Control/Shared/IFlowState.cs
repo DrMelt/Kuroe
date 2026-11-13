@@ -1,6 +1,6 @@
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>流程运行状态的标记。由具体流程实现解释。</summary>
 public interface IFlowState

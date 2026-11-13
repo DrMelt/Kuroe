@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>不提供流程模板的实现。内部流程使用它。</summary>
 public sealed class NoFlowTemplates : IFlowTemplateSource

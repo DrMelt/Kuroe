@@ -1,8 +1,8 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
 /// <summary>流程图上展平后的容器：直接成员与直接子容器的组织单元，自身不执行。
 /// 容器是汇合点：成员产出齐备时容器可被上下游消费。

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行累计的模型 token 用量。字段为 provider 给出的计数，未提供时为空。
 /// 缓存输入是输入的子集，推理是输出的子集，都不参与合计。</summary>

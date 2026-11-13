@@ -4,8 +4,8 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Json;
 using Kuroe.Flow.NodeLibrary;
 using Kuroe.Flow.NodeType.Container;
-using Kuroe.Flow.Node.StaticGraph.Flow;
 
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Tests.Support;
 using Kuroe.Workflows.Flows;

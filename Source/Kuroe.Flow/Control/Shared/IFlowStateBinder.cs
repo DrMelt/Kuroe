@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>把流程运行期接到任务。存档恢复的节点、端口与中断执行在此重建。</summary>
 public interface IFlowStateBinder

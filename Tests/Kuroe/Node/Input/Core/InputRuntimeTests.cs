@@ -1,11 +1,11 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
-using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Input.Tests;
 

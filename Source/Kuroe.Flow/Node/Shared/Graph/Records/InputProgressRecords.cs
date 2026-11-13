@@ -1,7 +1,7 @@
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Node.Shared.Graph.Records;
 
 /// <summary>输入侧进展的持久形态转换：版本、执行次数、上次启动组、已消费版本、重跑意图与活动发布版本。</summary>
 public static class InputProgressRecords

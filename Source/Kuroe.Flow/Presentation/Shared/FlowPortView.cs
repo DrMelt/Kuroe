@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>展示用端口：名称、种类、文本与触发位。</summary>
 public sealed record FlowPortView(

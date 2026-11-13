@@ -1,7 +1,8 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
 /// <summary>一段内容的出处：内容从哪个节点的哪个端口来，详情视图据此回跳上游。</summary>
 public abstract record ContextSource

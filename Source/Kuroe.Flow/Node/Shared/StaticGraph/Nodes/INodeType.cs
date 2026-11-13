@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
 /// <summary>一个节点类型：类型名与静态形状，由实现方建出实例挂在节点上。
 /// 引擎按形状解析声明与推进执行，类型专属声明封在实例里，引擎只透传不解释。

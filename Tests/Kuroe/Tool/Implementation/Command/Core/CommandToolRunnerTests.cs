@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
 using Kuroe.Process;
 using Kuroe.Tool.Command.Shared;
 using Xunit;
@@ -240,10 +239,10 @@ public sealed class CommandToolRunnerTests
             200,
             ["root"]);
         ToolBinding binding = new(
-            new FixedPortAccess(new Kuroe.Flow.Execution.ExecutionPortName("root"), root),
-            new Dictionary<string, Kuroe.Flow.Execution.ExecutionPortName>
+            new FixedPortAccess(new Kuroe.Flow.Execution.Shared.ExecutionPortName("root"), root),
+            new Dictionary<string, Kuroe.Flow.Execution.Shared.ExecutionPortName>
             {
-                ["root"] = new Kuroe.Flow.Execution.ExecutionPortName("root"),
+                ["root"] = new Kuroe.Flow.Execution.Shared.ExecutionPortName("root"),
             },
             root);
         FakeProcessRunner process = new();

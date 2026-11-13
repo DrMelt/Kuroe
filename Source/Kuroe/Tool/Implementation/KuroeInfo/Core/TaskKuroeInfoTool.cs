@@ -1,10 +1,10 @@
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using System.Text;
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
-using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
+using Kuroe.Flow.Presentation.Shared;
+using ExecutionSnapshot = Kuroe.Flow.Execution.Shared.ExecutionSnapshot;
 
 namespace Kuroe.Tool.KuroeInfo;
 
@@ -109,7 +109,7 @@ public sealed class TaskKuroeInfoTool : ITool
 
         return DescribeExecution(found.Value.Task, found.Value.Execution);
     }
-/// <summary>任务状态展示名，执行中带上当前执行的进展。</summary>
+    /// <summary>任务状态展示名，执行中带上当前执行的进展。</summary>
     private static string StateLabel(TaskSnapshot task)
     {
         string? progress = task.Executions

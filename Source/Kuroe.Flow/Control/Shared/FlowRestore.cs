@@ -1,7 +1,7 @@
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>从存档恢复的流程状态。</summary>
 public sealed record FlowRestore(

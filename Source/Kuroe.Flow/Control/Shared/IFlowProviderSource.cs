@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>按流程身份与流程名查找流程实现。</summary>
 public interface IFlowProviderSource

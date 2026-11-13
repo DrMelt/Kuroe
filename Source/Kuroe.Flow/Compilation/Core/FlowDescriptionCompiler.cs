@@ -4,10 +4,10 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.Flow;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Validation;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Compilation;
 

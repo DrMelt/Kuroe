@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>端口类型注册表：登记类型、语义与允许模式，模式不再生成类型名后缀。
 /// 内置 Text、Context 与 Signal 三种语义，各自声明支持的模式。类型名唯一，解析不区分大小写。

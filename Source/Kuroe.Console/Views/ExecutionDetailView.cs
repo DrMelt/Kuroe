@@ -1,4 +1,5 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -26,9 +27,9 @@ internal sealed class ExecutionDetailView(Terminal terminal)
             ("上下文", new Text(ViewLabels.Context(execution.Usage), Styles.Hint)),
             ("状态", new Text(execution.State.ToString(), execution.State switch
             {
-                Kuroe.Flow.Execution.ExecutionState.Succeeded => Styles.Success,
-                Kuroe.Flow.Execution.ExecutionState.Failed => Styles.Error,
-                Kuroe.Flow.Execution.ExecutionState.Running or Kuroe.Flow.Execution.ExecutionState.Queued => Styles.Key,
+                Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded => Styles.Success,
+                Kuroe.Flow.Execution.Shared.ExecutionState.Failed => Styles.Error,
+                Kuroe.Flow.Execution.Shared.ExecutionState.Running or Kuroe.Flow.Execution.Shared.ExecutionState.Queued => Styles.Key,
                 _ => Styles.Hint,
             })),
             ("恢复数据", new Text(execution.RestoreData is null ? "无" : "有", Styles.Hint)),

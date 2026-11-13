@@ -1,11 +1,11 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Control.Graph.Tasks;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Control.Graph.Runtime.Tasks;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>图流程的任务表现：从同一份中性执行状态生成流程视图与等待步骤。</summary>
 public sealed class GraphFlowPresentation : IFlowPresentation

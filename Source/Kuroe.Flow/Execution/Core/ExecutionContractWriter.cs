@@ -1,3 +1,5 @@
+using Kuroe.Flow.Execution.Shared;
+
 namespace Kuroe.Flow.Execution;
 
 /// <summary>执行契约的写入口：把端口产出与无法完成原因写到目标执行。只依赖执行实例，不持有执行运行期。</summary>

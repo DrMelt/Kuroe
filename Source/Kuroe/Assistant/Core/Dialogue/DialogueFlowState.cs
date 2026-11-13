@@ -1,10 +1,8 @@
 using Kuroe.Assistant.Flows;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -43,7 +41,6 @@ internal sealed class DialogueFlowState(
 internal static class DialogueView
 {
     internal static FlowView Build(
-        DialogueFlowState state,
         IFlowInputControl? control,
         ITaskFlowContext task,
         TaskState? taskState = null)

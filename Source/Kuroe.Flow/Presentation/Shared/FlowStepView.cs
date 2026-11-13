@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>展示用步骤：路径、标签、种类、状态、输入、输出与执行列表。</summary>
 public sealed record FlowStepView(

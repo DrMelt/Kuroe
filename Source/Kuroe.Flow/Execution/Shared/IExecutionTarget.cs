@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的目标：标识、种类与类型专属参数。执行单元只读取这些信息。</summary>
 public interface IExecutionTarget

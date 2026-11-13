@@ -1,9 +1,9 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 
 /// <summary>节点输入侧的运行期进展：已消费版本、执行次数、上次启动组、重跑意图、当前发布与发布历史。
 /// 发布是不可变快照，进展由节点在发布与作废点改动，读写都要求持有任务 Gate。</summary>

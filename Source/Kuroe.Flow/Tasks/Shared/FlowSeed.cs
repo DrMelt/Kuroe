@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Shared;
 
 /// <summary>恢复任务时推进循环尚未处理的步骤。</summary>
 public sealed record FlowSeed(IReadOnlyList<FlowStepPath> Steps)

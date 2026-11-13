@@ -1,9 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Tasks;
-using ProcessObserver = Kuroe.Flow.Execution.ProcessObserver;
+using Kuroe.Flow.Execution.Shared;
+using ProcessObserver = Kuroe.Flow.Execution.Shared.ProcessObserver;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>宿主对用户任务域的动作端口。实现负责提交策略与任务生命周期，宿主只经此提交与操作任务。</summary>
 public interface ITaskControl

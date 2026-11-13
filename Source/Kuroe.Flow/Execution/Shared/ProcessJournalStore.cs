@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>过程记录的共享存储：追加、同标签增量合并与快照。条目不按条数丢弃。</summary>
 /// <param name="segmentLimit">同标签文本增量合并的单条上限。</param>

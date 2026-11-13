@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行端口承载的内容种类。</summary>
 public enum ExecutionPortKind

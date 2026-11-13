@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行在一个输入端口上取到的内容。来源描述与来源标识都是不透明字符串，由流程控制解释。</summary>
 /// <param name="Port">输入端口。</param>

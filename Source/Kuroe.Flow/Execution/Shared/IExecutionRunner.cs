@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行运行器。运行器只读取执行请求与执行目标，不读取节点与图。</summary>
 public interface IExecutionRunner

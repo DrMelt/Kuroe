@@ -1,10 +1,10 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Node.Input.Tests;
 

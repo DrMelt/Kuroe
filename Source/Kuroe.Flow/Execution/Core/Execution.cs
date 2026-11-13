@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Execution.Shared;
 namespace Kuroe.Flow.Execution;
 
 /// <summary>一次执行的状态机：排队、运行、收口、中断与过程记录。执行只使用执行请求与中性产出，不读取节点与图。</summary>
@@ -271,7 +272,7 @@ internal sealed class Execution : IExecution
             _contract = _contract with { CannotCompleteReason = reason };
         }
     }
-/// <summary>进入成功终态并记下产出。</summary>
+    /// <summary>进入成功终态并记下产出。</summary>
     internal void MarkSucceeded(ExecutionOutput output)
     {
         lock (_gate)
@@ -371,7 +372,7 @@ internal sealed class Execution : IExecution
             Id, Request, state, progress, CreatedAt, startedAt, finishedAt, failures,
             journal?.Entries ?? [], usage, restoreData, contract, output, continuedFrom);
     }
-/// <summary>按存档状态建立已收口的执行，未收口的执行记为已中断。</summary>
+    /// <summary>按存档状态建立已收口的执行，未收口的执行记为已中断。</summary>
     internal static Execution Restore(
         ExecutionId id,
         ExecutionRequest request,
@@ -481,7 +482,7 @@ internal sealed class Execution : IExecution
         _cancellation.Dispose();
         Changed?.Invoke();
     }
-/// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>
+    /// <summary>过程事件的广播：收口后不再接受订阅，也不再转发。</summary>
     private sealed class ProcessBroadcast
     {
         private readonly Lock _gate = new();

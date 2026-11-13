@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>为任务建立控制实例。</summary>
 public interface IFlowControlFactory

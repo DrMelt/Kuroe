@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 
 /// <summary>一次发布的可观察状态：版本、各输出端口的触发位与内容同属一份产出。
 /// 节点在发布点构造，读取方只按端口取值，不再回读节点当前状态。</summary>

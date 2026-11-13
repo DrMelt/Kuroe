@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Workflows.Flows;
 

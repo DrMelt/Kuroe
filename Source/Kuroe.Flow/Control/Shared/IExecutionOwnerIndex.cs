@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>按执行号查找执行与归属任务的中性索引。契约工具只依赖它。</summary>
 public interface IExecutionOwnerIndex

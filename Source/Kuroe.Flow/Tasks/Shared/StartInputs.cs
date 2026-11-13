@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Shared;
 
 /// <summary>提交任务时给出的一个开始输入：开始端口名与文本。</summary>
 public readonly record struct StartInput(PortName Port, string Text);

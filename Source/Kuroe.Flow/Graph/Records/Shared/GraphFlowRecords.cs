@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Node.Shared.Graph.Records;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Graph.Records.Shared;
 
 /// <summary>图驱动流程的持久定义：流程名、节点库文本与流程文本。</summary>
 public sealed record GraphFlowDefinitionRecord(FlowName Name, string Nodes, string Flow) : IFlowDefinitionRecord;

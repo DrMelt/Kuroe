@@ -1,10 +1,11 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 namespace Kuroe.Flow.Compilation.Graph;
 
 /// <summary>把流程树编译成执行视图：流程开始端口是独立来源，节点以从根到本节点的路径标识，容器登记直接子节点，

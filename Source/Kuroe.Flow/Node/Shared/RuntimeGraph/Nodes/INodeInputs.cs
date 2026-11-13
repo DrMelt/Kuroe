@@ -1,8 +1,7 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 
 /// <summary>节点可见的输入内容：按绑定顺序的取值、按输入端口聚合的取值与端口文本。
 /// 触发位与连接状态属于流程控制与执行装配，不在节点视图里；静态输入值并入端口文本。</summary>

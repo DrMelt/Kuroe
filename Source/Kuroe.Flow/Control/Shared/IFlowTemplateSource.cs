@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>流程模板来源。由流程实现提供，宿主目录只聚合来源。</summary>
 public interface IFlowTemplateSource

@@ -1,10 +1,9 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Shared;
 using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>为图流程任务建立控制实例。</summary>
 public sealed class GraphFlowControlFactory(

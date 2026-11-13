@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>从存档重建一次执行所需的中性数据。</summary>
 public sealed record ExecutionRestorePlan(

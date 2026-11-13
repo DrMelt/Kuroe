@@ -1,6 +1,6 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Execution.Records;
+namespace Kuroe.Flow.Execution.Records.Shared;
 
 /// <summary>一次执行的持久状态。执行记录只使用中性执行端口与不透明来源标识。</summary>
 public sealed record ExecutionRecord(

@@ -1,5 +1,5 @@
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的过程记录，提供读取与过程通知。条目由执行器按通用结构写入，标签由执行器决定，取用方只按时间、级别、标签与文本形态使用。
 /// 流式内容按种类通知，不进入条目的标签解析。事件在相应变更完成后、释放记录自身的锁之后触发。</summary>

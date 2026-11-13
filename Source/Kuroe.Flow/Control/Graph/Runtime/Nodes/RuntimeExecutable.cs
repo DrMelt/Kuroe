@@ -1,17 +1,18 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Node.RuntimeGraph;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
-using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.Shared.RuntimeGraph;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
 
-using Kuroe.Flow.Node.Runtime.Nodes;
-namespace Kuroe.Flow.Control.Graph.Nodes;
+using Kuroe.Flow.Node.Shared.Runtime.Nodes;
+using Kuroe.Flow.Tasks.Shared;
+namespace Kuroe.Flow.Control.Graph.Runtime.Nodes;
 
 /// <summary>一个执行节点在任务内的运行时对象：执行节点定义与节点自身状态的合体，交回与产出也记在它上面。
 /// 待收口的交回按执行记，发布后只保留已发布那次，产出锚指向已发布的那次执行。

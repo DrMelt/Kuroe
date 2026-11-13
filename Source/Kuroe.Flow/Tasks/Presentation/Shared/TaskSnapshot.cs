@@ -1,7 +1,8 @@
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Presentation.Shared;
 
 /// <summary>任务在某一刻的只读形状：流程视图、过程记录与全部执行。渲染时不再回读可变成。</summary>
 public sealed record TaskSnapshot(

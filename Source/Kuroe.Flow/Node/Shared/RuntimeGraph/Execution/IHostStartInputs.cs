@@ -1,8 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
 /// <summary>宿主开始输入表：按流程名给出开始端口到宿主输入名的绑定。表由宿主维护，不进入流程定义与流程编译。
 /// 表项里的开始端口由宿主在任务启动时给值，不接受提交输入；表项之外承载内容的开始端口按用户输入处理，不承载内容的开始端口不进入提交，没有表项的流程不获得宿主输入。</summary>

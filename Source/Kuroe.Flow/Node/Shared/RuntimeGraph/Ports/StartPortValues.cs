@@ -1,8 +1,7 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
 
 /// <summary>任务开始端口的文本视图：固定值优先，其次宿主给值，最后提交输入。
 /// 只有承载内容的开始端口进入视图，运行期开始来源与静态解析读取同一份结果。</summary>

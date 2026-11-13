@@ -1,6 +1,4 @@
-using Kuroe.Flow.Tasks;
-
-namespace Kuroe.Flow.Runtime.Process;
+namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>任务级诊断记录。追加与读取共用共享存储，交出的快照不受后续追加影响。</summary>
 internal sealed class Journal

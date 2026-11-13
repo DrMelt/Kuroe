@@ -1,6 +1,6 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Execution.Records;
+namespace Kuroe.Flow.Execution.Records.Shared;
 
 /// <summary>把中性执行快照捕获为存档记录。</summary>
 public static class ExecutionRecordCapture

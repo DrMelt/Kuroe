@@ -1,10 +1,8 @@
 using ErrorOr;
 using Kuroe.Assistant.Flows;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;

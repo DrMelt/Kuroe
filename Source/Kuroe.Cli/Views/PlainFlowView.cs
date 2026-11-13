@@ -1,4 +1,4 @@
-using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Presentation.Shared;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Views;

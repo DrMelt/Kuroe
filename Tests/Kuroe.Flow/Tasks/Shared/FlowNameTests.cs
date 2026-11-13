@@ -1,7 +1,6 @@
-using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Tasks.Tests;
+namespace Kuroe.Flow.Tasks.Shared.Tests;
 
 /// <summary>流程名的解析：去空白与空值拒绝。</summary>
 public sealed class FlowNameTests

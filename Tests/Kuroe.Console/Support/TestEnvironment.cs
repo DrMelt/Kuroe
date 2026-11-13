@@ -1,23 +1,22 @@
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Node.Llm.Tools;
 using Kuroe.Assistant;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Assistant.Dialogue;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Control.Graph.Engine;
+using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Pending;
 using Kuroe.Workflows.Flows;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +49,7 @@ public sealed class TestEnvironment : IDisposable
         _waiter = new NotifiedTaskWaiter(
             TaskReader,
             provider.GetRequiredService<ITaskChangeSource>());
-        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Flow.Execution.IExecutionPortSubmitter>();
+        runner.PortSubmitter = provider.GetRequiredService<Kuroe.Flow.Execution.Shared.IExecutionPortSubmitter>();
     }
 
     /// <summary>临时工作目录。</summary>
@@ -162,7 +161,7 @@ public sealed class TestEnvironment : IDisposable
         }
 
         // 后注册的同类型解析时胜出，据此把真实执行器换成假的
-        services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(runner);
+        services.AddSingleton<Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory>(runner);
         services.AddSingleton<ITaskIdSource>(new SequentialTaskIdSource());
         ServiceProvider provider = services.BuildServiceProvider();
         TaskLoadReport loaded = provider.GetRequiredService<ITaskRestoreService>().Restore();

@@ -1,3 +1,5 @@
+using Kuroe.Flow.Execution.Shared;
+
 namespace Kuroe.Flow.Execution;
 
 /// <summary>执行实例的建立入口。状态迁移仍只由执行核完成。</summary>

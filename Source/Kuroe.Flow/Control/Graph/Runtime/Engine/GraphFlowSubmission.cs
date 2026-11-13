@@ -1,20 +1,22 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Control.Graph;
+using Kuroe.Flow.Control.Graph.Runtime.Catalog;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Execution.Records.Shared;
+using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
-using Kuroe.Flow.Tasks.Records;
-using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Records.Shared;
+using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>图流程的提交与恢复：校验开始输入，建立图状态，从存档重建执行上下文。</summary>
 public sealed class GraphFlowSubmission(
@@ -114,7 +116,7 @@ public sealed class GraphFlowSubmission(
             new FlowTexts(start.Value.Texts),
             definition);
     }
-/// <inheritdoc/>
+    /// <inheritdoc/>
     public ErrorOr<FlowRestore> Restore(TaskRecord record)
     {
         if (record.Flow.Definition is not GraphFlowDefinitionRecord definition
@@ -197,7 +199,7 @@ public sealed class GraphFlowSubmission(
 
         return input;
     }
-/// <summary>开始输入必须覆盖承载内容、不带固定值、不带默认值且未绑定宿主输入的开始端口，且只落在用户端口上。</summary>
+    /// <summary>开始输入必须覆盖承载内容、不带固定值、不带默认值且未绑定宿主输入的开始端口，且只落在用户端口上。</summary>
     private static List<Error> CheckInputs(
         IReadOnlyList<Port> ports,
         IReadOnlyDictionary<PortName, string> hostInputs,
@@ -284,8 +286,8 @@ public sealed class GraphFlowSubmission(
 
         return errors;
     }
-private static Error MissingInput(PortName port) =>
-        Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 没有输入。");
+    private static Error MissingInput(PortName port) =>
+            Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 没有输入。");
 
     private static Error BlankInput(PortName port) =>
         Error.Validation(FlowErrorCodes.TaskInput, $"开始端口 {port} 的输入不能为空。");

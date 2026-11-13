@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的输入：归属、目标、轮次、执行端口与执行可读文本。</summary>
 public sealed record ExecutionRequest(

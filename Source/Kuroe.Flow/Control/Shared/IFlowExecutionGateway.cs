@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>流程控制访问执行单元的唯一端口：建立、查找、恢复、运行、中断与拒绝执行。</summary>
 public interface IFlowExecutionGateway : IExecutionOwnerIndex

@@ -3,11 +3,11 @@ using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Configuration;
 using Kuroe.Configuration.Files;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Execution.Records.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>展示用开始端口：端口形状、输入来源与宿主绑定。</summary>
 public sealed record FlowStartPortView(

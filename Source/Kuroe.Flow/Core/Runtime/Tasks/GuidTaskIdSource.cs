@@ -1,5 +1,4 @@
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 

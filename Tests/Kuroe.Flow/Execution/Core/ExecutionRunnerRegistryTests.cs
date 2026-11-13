@@ -1,6 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Execution.Shared;
 using Xunit;
 
 namespace Kuroe.Flow.Execution.Tests;
@@ -20,8 +19,8 @@ public sealed class ExecutionRunnerRegistryTests
 
         IExecutionRunner runner = registry.Create(own, Target("kind", usesDefaultRunner: true), ExecutionKey);
 
-        Assert.IsType<NamedRunner>(runner);
-        Assert.Equal("own", ((NamedRunner)runner).Name);
+        var typed = Assert.IsType<NamedRunner>(runner);
+        Assert.Equal("own", (typed).Name);
     }
 
     [Fact]

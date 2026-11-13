@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的只读形状：请求、状态、过程记录、用量、恢复数据与契约。</summary>
 public sealed record ExecutionSnapshot(

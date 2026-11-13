@@ -1,10 +1,11 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Control.Graph.Nodes;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Node.Shared.Graph.Records;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>图流程的存档捕获：流程定义与节点、端口状态。</summary>
 public sealed class GraphFlowRecordSource : IFlowRecordSource

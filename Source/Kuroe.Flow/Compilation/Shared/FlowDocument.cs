@@ -1,5 +1,5 @@
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Compilation.Shared;
 

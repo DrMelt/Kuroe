@@ -1,22 +1,22 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Node.RuntimeGraph;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-using Kuroe.Flow.Control.Graph.Nodes;
-using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
+using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph;
+namespace Kuroe.Flow.Control.Graph.Runtime.Graph;
 
 /// <summary>一次执行中断后的结果，只由执行状态与节点限制决定。</summary>
 public enum ExecutionInterruption

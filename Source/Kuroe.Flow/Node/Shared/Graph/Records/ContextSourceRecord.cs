@@ -1,7 +1,8 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Node.Shared.Graph.Records;
 
 /// <summary>一次执行进入某个输入端口的取值与出处。</summary>
 public sealed record InputValueRecord(

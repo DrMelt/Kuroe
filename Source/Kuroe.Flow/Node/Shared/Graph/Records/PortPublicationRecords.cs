@@ -1,8 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Node.Shared.Graph.Records;
 
 /// <summary>端口发布历史的持久形态转换：每次发布按端口展开，恢复时按版本重建。</summary>
 public static class PortPublicationRecords

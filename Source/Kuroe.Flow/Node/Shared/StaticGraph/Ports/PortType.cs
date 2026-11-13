@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>注册后的端口类型：名字与语义。模式由端口声明选择，支持范围由类型注册声明。
 /// 端口类型只能经 <see cref="PortTypes.Register"/> 产生。</summary>

@@ -1,6 +1,6 @@
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Tasks;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Tasks;
 
 /// <summary>开始端口提交规则：提交通道承载内容，只有承载内容的开始端口接受提交。
 /// 是否必填由固定值、宿主绑定与 Default 决定，不承载内容的开始端口不进入提交。</summary>

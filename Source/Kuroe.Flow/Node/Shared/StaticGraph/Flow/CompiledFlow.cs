@@ -1,6 +1,6 @@
-using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Node.StaticGraph.Flow;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 
 /// <summary>编译完成的流程：校验通过的具体模型与执行视图。</summary>
 /// <param name="model">校验通过的流程模型。</param>

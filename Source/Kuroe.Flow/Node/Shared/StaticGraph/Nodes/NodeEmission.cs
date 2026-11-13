@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
 /// <summary>节点产出模式：逐次发布或首次发布后冻结。</summary>
 public enum NodeEmission

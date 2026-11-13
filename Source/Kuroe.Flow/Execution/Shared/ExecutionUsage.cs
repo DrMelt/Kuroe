@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的模型请求用量：请求次数、未取得用量的请求数、token 合计与最近一次返回用量的请求的上下文 token 数。</summary>
 public sealed record ExecutionUsage(int RequestCount, int RequestsWithoutUsage, TokenUsage Tokens)

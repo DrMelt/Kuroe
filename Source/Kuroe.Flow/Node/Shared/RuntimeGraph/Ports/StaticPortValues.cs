@@ -1,7 +1,8 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
 
 /// <summary>静态输入与常量输出的运行期取值：按编译期落定的结构终点取固定值、字面量、默认值、开始端口文本或运行期常量，
 /// 并按节点给出静态输入与常量输出文本视图。运行期常量按需读取，未产出时不进入视图。</summary>

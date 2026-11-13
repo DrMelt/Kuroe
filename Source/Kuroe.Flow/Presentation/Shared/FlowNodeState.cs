@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>步骤或分组在某一刻的状态。</summary>
 public enum FlowNodeState

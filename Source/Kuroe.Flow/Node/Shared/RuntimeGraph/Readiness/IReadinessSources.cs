@@ -1,6 +1,6 @@
-using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Readiness;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
 
 /// <summary>判定读的来源侧：节点或流程开始端口的状态。</summary>
 public interface IReadinessSources

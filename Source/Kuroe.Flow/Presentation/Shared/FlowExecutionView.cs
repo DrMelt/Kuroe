@@ -1,6 +1,6 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>展示用一次执行：标识、状态、过程与输出端口。</summary>
 public sealed record FlowExecutionView(

@@ -1,11 +1,11 @@
-using Kuroe.Flow.Control.Graph.Nodes;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Nodes;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;
 
 /// <summary>任务内开始来源：任务启动即放行，只有动态承载内容的端口给出内容。</summary>
 public sealed class RuntimeStartSourceTests

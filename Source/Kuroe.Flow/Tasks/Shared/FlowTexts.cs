@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Shared;
 
 /// <summary>按端口读取的文本表，任务的开始端口文本与流程视图共用。</summary>
 public sealed class FlowTexts(IReadOnlyDictionary<PortName, string> texts)

@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Persistence.Files.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -97,7 +97,7 @@ public sealed class TaskActions(
 
     /// <summary>写入该任务并等待落盘，用于任务身份变更与终止等需要立即可见的动作。</summary>
     private void PersistImmediately(TaskId id) => _records?.FlushAsync(id).GetAwaiter().GetResult();
-/// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。</summary>
+    /// <summary>暂停任务：停止新的推进与派发，在跑的执行就地中断。</summary>
     public ErrorOr<Success> Pause(TaskId id)
     {
         ErrorOr<WorkTask> found = _registry.Find(id);

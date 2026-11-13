@@ -1,16 +1,14 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
 /// <summary>按流程身份与流程名分派已注册的流程实现。</summary>
-public sealed class FlowProviderSource : IFlowProviderSource
+/// <remarks>按给定流程实现建立分派表。</remarks>
+public sealed class FlowProviderSource(IEnumerable<FlowProvider> providers) : IFlowProviderSource
 {
-    private readonly List<FlowProvider> _providers;
-
-    /// <summary>按给定流程实现建立分派表。</summary>
-    public FlowProviderSource(IEnumerable<FlowProvider> providers) => _providers = [.. providers];
+    private readonly List<FlowProvider> _providers = [.. providers];
 
     /// <inheritdoc/>
     public IReadOnlyList<FlowProvider> All() => _providers;

@@ -1,9 +1,9 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Graph.Records.Shared;
 
 /// <summary>图输入出处与执行记录不透明来源标识之间的转换。标识由本类解释。</summary>
 public static class GraphRecordSources

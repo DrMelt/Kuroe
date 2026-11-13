@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
 /// <summary>绑定的来源：节点端口或流程开始端口。节点来源可以没有端口，表示按节点整体推进。</summary>
 public readonly record struct BindingSource

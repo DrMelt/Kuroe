@@ -1,6 +1,7 @@
 using ErrorOr;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>流程控制的等待输入面。只有需要外部输入的流程实现才提供。</summary>
 public interface IFlowInputControl

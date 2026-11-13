@@ -1,10 +1,9 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Graph.Runtime.Catalog;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>图流程的身份：流程种类、实现标识与流程归属。</summary>
 public sealed class GraphFlowIdentity(IFlowRuntimeCatalog flows) : IFlowIdentity

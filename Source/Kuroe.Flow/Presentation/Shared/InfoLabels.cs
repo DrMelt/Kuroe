@@ -1,8 +1,8 @@
-using Kuroe.Flow.Tasks;
-using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
-using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
+using ExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
+using TokenUsage = Kuroe.Flow.Execution.Shared.TokenUsage;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Presentation;
+namespace Kuroe.Flow.Presentation.Shared;
 
 /// <summary>库与宿主共用的状态与时间展示名。</summary>
 public static class InfoLabels

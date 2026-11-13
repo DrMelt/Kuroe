@@ -1,6 +1,6 @@
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>任务标题的推导与截断：未给出标题时取第一个开始输入的首行，标题过长时截断。</summary>
 public static class TaskTitle

@@ -1,6 +1,7 @@
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>端口引用：来源标签与端口名。来源为空且是绑定端口时由所在容器的绑定域展开，
 /// 开始端口引用直接落到流程端口。类型不随引用走，由来源端口表在编译期解析。</summary>

@@ -1,4 +1,4 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
 namespace Kuroe.Tool.Contract;
 

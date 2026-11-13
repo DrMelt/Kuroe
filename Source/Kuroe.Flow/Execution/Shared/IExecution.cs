@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>一次执行的只读面：标识、请求、状态、契约、产出与过程订阅。状态迁移只由执行核心完成。</summary>
 public interface IExecution

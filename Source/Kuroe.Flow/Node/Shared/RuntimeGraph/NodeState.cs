@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.RuntimeGraph;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph;
 
 /// <summary>一个执行节点的执行状态。</summary>
 public enum NodeState

@@ -1,6 +1,6 @@
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 
 namespace Kuroe.Node.Approval.Tests;
 

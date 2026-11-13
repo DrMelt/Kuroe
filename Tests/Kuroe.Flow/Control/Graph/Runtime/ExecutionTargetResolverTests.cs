@@ -1,13 +1,14 @@
 using ErrorOr;
-using Kuroe.Flow.Control.Graph.Engine;
+using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
 /// <summary>执行目标解析：没有模型端口的节点不进入模型解析器。</summary>
 public sealed class ExecutionTargetResolverTests

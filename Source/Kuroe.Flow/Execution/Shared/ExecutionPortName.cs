@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行单元的数据交换端口名。展示即原文。</summary>
 public readonly record struct ExecutionPortName(string Value)

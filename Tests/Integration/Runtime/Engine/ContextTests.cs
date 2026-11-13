@@ -1,9 +1,9 @@
 using ApiHub.Shared.Models;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 
@@ -239,7 +239,7 @@ public sealed class ContextTests
         environment.Runner.Gate.Open(slow);
         await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
             step.Label == "准备甲"
-            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded)));
+            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded)));
         environment.Runner.Gate.Open(implementHandle);
 
         TaskSnapshot done = await environment.SettleAsync(id);

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>流程控制建立执行目标时交给目标类型的输入。</summary>
 public sealed record ExecutionParameterContext(

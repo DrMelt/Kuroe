@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
 /// <summary>上下文取值的文本拼合：非空段按来源顺序以空行连接，没有内容时为空。</summary>
 public static class ContextValues

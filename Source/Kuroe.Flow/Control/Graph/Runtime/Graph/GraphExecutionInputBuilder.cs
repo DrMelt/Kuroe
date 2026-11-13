@@ -1,10 +1,10 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
-using Kuroe.Flow.Control.Graph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph;
+namespace Kuroe.Flow.Control.Graph.Runtime.Graph;
 
 /// <summary>为执行节点装配执行输入：按输入端口的执行角色决定内容与配置，动态取值与常量取值使用同一份出处结构。
 /// Content 端口进入内容输入，Configuration 端口只进入文本视图，Control 端口只参与启动。

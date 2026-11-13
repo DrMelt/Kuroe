@@ -1,6 +1,4 @@
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Tasks.Records.Shared;
 
 namespace Kuroe.Flow.TestSupport;
 

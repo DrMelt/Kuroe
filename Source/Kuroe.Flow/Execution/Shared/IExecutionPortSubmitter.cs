@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>交回命名端口产出的入口。工具实现依赖此契约，具体提交由执行契约写入口完成。</summary>
 public interface IExecutionPortSubmitter

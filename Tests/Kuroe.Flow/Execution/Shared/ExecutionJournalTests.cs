@@ -1,8 +1,6 @@
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Tasks;
 using Xunit;
 
-namespace Kuroe.Flow.Execution.Tests;
+namespace Kuroe.Flow.Execution.Shared.Tests;
 
 /// <summary>执行过程记录：内容合并、进度与条目保留。</summary>
 public sealed class ExecutionJournalTests

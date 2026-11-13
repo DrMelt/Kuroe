@@ -1,18 +1,15 @@
 using System.Text.Json;
 using ApiHub.Shared.Models;
 using ErrorOr;
-
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.StaticGraph.Graph;
 using Microsoft.Extensions.DependencyInjection;
-using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
-using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
-using NeutralExecutionRunner = Kuroe.Flow.Execution.IExecutionRunner;
-using NeutralExecutionRunnerFactory = Kuroe.Flow.Execution.IExecutionRunnerFactory;
-using NeutralExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
-using NeutralExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
-using NeutralExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
+using NeutralExecutionId = Kuroe.Flow.Execution.Shared.ExecutionId;
+using NeutralExecutionOutput = Kuroe.Flow.Execution.Shared.ExecutionOutput;
+using NeutralExecutionRequest = Kuroe.Flow.Execution.Shared.ExecutionRequest;
+using NeutralExecutionRunner = Kuroe.Flow.Execution.Shared.IExecutionRunner;
+using NeutralExecutionRunnerFactory = Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory;
+using NeutralExecutionTarget = Kuroe.Flow.Execution.Shared.IExecutionTarget;
+using NeutralExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
+using NeutralExecutionUsageSource = Kuroe.Flow.Execution.Shared.IExecutionUsageSource;
 
 namespace Kuroe.Cli.Tests.Support;
 
@@ -46,7 +43,7 @@ internal sealed class CliEnvironment : IAsyncDisposable
         StubRunner runner = new();
         ErrorOr<CliSession> created = CliSession.Create(
             root,
-            services => services.AddSingleton<Kuroe.Flow.Execution.IExecutionRunnerFactory>(runner));
+            services => services.AddSingleton<Kuroe.Flow.Execution.Shared.IExecutionRunnerFactory>(runner));
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join('；', created.ErrorsOrEmptyList.Select(error => error.Description)));

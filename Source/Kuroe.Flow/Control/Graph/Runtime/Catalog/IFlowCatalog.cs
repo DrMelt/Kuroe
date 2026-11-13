@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Graph.Runtime.Catalog;
 
 /// <summary>运行期的流程模板查询。由宿主实现，引擎只经它取流程定义。</summary>
 public interface IFlowCatalog

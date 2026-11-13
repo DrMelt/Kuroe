@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Shared;
 
 /// <summary>没有额外运行期状态的流程实现使用的空绑定。</summary>
 public sealed class NoFlowStateBinder : IFlowStateBinder

@@ -1,25 +1,18 @@
-using ErrorOr;
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Control.Graph.Engine;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Graph.Runtime;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
-using IExecutionRestoreDataSource = Kuroe.Flow.Execution.IExecutionRestoreDataSource;
-using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
-using ExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
-using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
-using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
-using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 
-namespace Kuroe.Flow.Control.Graph.Tests;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
 /// <summary>执行的过程记录与过程事件：附加读取视图、播发、进度与收口后停止。</summary>
 public sealed class GraphExecutionTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
-        new Kuroe.Flow.Execution.ExecutionRuntime(
+    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+        new(
             new Kuroe.Flow.Execution.ExecutionDispatcher(),
             new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
             new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
@@ -43,15 +36,15 @@ public sealed class GraphExecutionTests
         {
             OutputPorts =
             [
-                new Kuroe.Flow.Node.StaticGraph.Ports.Port(
+                new Kuroe.Flow.Node.Shared.StaticGraph.Ports.Port(
                     new PortName("结论"),
-                    Kuroe.Flow.Node.StaticGraph.Ports.PortTypes.Text,
+                    Kuroe.Flow.Node.Shared.StaticGraph.Ports.PortTypes.Text,
                     description: "结论文本"),
             ],
         };
 
-        Kuroe.Flow.Execution.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Flow.Execution.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
+        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Flow.Execution.Shared.ExecutionOutputPort port = Assert.Single(request.OutputPorts);
 
         Assert.Equal("结论", port.Name.Value);
         Assert.True(port.Required);
@@ -61,7 +54,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Request_carries_the_execution_limit()
     {
-        Kuroe.Flow.Execution.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
+        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(Input() with { MaxAttempts = 7 });
 
         Assert.Equal(7, request.MaxAttempts);
     }
@@ -69,9 +62,9 @@ public sealed class GraphExecutionTests
     private static GraphExecution Create()
     {
         GraphExecutionInput input = Input();
-        Kuroe.Flow.Execution.ExecutionRequest request = GraphExecution.BuildRequest(input);
-        Kuroe.Flow.Execution.IExecution unit = Runtime().Create(
-            new Kuroe.Flow.Execution.ExecutionId(1),
+        Kuroe.Flow.Execution.Shared.ExecutionRequest request = GraphExecution.BuildRequest(input);
+        Kuroe.Flow.Execution.Shared.IExecution unit = Runtime().Create(
+            new Kuroe.Flow.Execution.Shared.ExecutionId(1),
             request);
 
         return new GraphExecution(input, unit, 0);

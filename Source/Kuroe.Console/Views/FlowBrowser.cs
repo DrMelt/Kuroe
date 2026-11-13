@@ -1,7 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Workflows.Flows;
 using Spectre.Console;
 
@@ -142,7 +142,7 @@ internal sealed class FlowBrowser(
             Import(values[0]);
         }
     }
-private void Print(IReadOnlyList<FlowTemplateView> all)
+    private void Print(IReadOnlyList<FlowTemplateView> all)
     {
         if (all.Count == 0)
         {

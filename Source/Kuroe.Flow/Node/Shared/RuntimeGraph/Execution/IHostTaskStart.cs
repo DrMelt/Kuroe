@@ -1,8 +1,7 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
 /// <summary>任务启动时提供开始端口值的钩子：宿主开始输入表里的端口由此解析并给值。</summary>
 public interface IHostTaskStart

@@ -1,13 +1,12 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Flow.Tests.Runtime.Tasks;
@@ -16,8 +15,8 @@ namespace Kuroe.Flow.Tests.Runtime.Tasks;
 public sealed class FlowProviderSourceTests
 {
     /// <summary>测试用的执行核，派发器不启动后台任务。</summary>
-    private static Kuroe.Flow.Execution.IExecutionRuntime Runtime() =>
-        new Kuroe.Flow.Execution.ExecutionRuntime(
+    private static Kuroe.Flow.Execution.ExecutionRuntime Runtime() =>
+        new(
             new Kuroe.Flow.Execution.ExecutionDispatcher(),
             new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
             new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
@@ -175,7 +174,7 @@ public sealed class FlowProviderSourceTests
 
         public void Pause(ITaskFlowContext task) => throw new NotSupportedException();
 
-        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Flow.Execution.ExecutionId id) =>
+        public ErrorOr<Success> StopExecution(ITaskFlowContext task, Kuroe.Flow.Execution.Shared.ExecutionId id) =>
             throw new NotSupportedException();
 
         public void ResumeTask(ITaskFlowContext task, bool continueRestores = true) =>

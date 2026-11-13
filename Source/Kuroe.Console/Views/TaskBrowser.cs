@@ -1,10 +1,9 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Pending;
 
 namespace Kuroe.Console.Views;
@@ -90,7 +89,7 @@ internal sealed class TaskBrowser(
 
     /// <summary>停止单个执行。</summary>
     public void StopExecution(int id) => results.Report(
-        tasks.StopExecution(new Kuroe.Flow.Execution.ExecutionId(id)),
+        tasks.StopExecution(new Kuroe.Flow.Execution.Shared.ExecutionId(id)),
         $"执行 #{id} 已停止。");
 
     /// <summary>打开任务节点树页。</summary>
@@ -351,7 +350,7 @@ internal sealed class TaskBrowser(
     /// <summary>打印执行详情。</summary>
     public void ShowExecution(int executionId)
     {
-        ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> found = FindExecution(executionId);
+        ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.Shared.ExecutionSnapshot Execution)> found = FindExecution(executionId);
         if (found.IsError)
         {
             results.Reject(found.ErrorsOrEmptyList);
@@ -378,7 +377,7 @@ internal sealed class TaskBrowser(
             }
 
             TaskSnapshot task = found.Value.Task;
-            Kuroe.Flow.Execution.ExecutionSnapshot snapshot = found.Value.Execution;
+            Kuroe.Flow.Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution;
 
             terminal.Page("主菜单", "任务", $"{task.Id} {task.Title}", $"{snapshot.Id} {snapshot.Request.Target}");
             executionView.Print(task, snapshot);
@@ -390,9 +389,9 @@ internal sealed class TaskBrowser(
                 items.Add(new Item($"↑ 执行 #{upstream.Value}", "execution", Execution: upstream.Value));
             }
 
-            if (snapshot.State is not (Kuroe.Flow.Execution.ExecutionState.Succeeded
-                or Kuroe.Flow.Execution.ExecutionState.Failed
-                or Kuroe.Flow.Execution.ExecutionState.Interrupted)
+            if (snapshot.State is not (Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded
+                or Kuroe.Flow.Execution.Shared.ExecutionState.Failed
+                or Kuroe.Flow.Execution.Shared.ExecutionState.Interrupted)
                 && snapshot.StartedAt is not null)
             {
                 items.Add(new Item("× 停止该执行", "stopExecution", Execution: executionId));
@@ -418,17 +417,17 @@ internal sealed class TaskBrowser(
     }
 
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
-    private ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> FindExecution(int id)
+    private ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.Shared.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        ErrorOr<(WorkTask Task, Kuroe.Flow.Execution.IExecution Execution)> found =
-            registry.FindOwnedExecution(new Kuroe.Flow.Execution.ExecutionId(id));
+        ErrorOr<(WorkTask Task, Kuroe.Flow.Execution.Shared.IExecution Execution)> found =
+            registry.FindOwnedExecution(new Kuroe.Flow.Execution.Shared.ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
         WorkTask owner = found.Value.Task;
-        Kuroe.Flow.Execution.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
+        Kuroe.Flow.Execution.Shared.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
 
         return (owner.Snapshot(), snapshot);
     }

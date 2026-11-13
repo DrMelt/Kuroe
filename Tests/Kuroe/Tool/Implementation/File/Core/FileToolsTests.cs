@@ -1,5 +1,4 @@
 using System.Text;
-using Kuroe.Flow.Shared.Model;
 using Kuroe.Shared;
 using Kuroe.Files.Shared;
 using Kuroe.TestSupport;
@@ -1188,12 +1187,12 @@ public sealed class FileToolsTests
     {
         _files.AddFile(PathOf("mapped.txt"), "映射内容");
 
-        Kuroe.Flow.Execution.ExecutionPortName port = new("工作区");
+        Kuroe.Flow.Execution.Shared.ExecutionPortName port = new("工作区");
         ToolContext context = new(
             new FixedPortAccess(port, _root),
-            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Flow.Execution.ExecutionPortName>>
+            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Flow.Execution.Shared.ExecutionPortName>>
             {
-                ["file/read/ReadFile"] = new Dictionary<string, Kuroe.Flow.Execution.ExecutionPortName>
+                ["file/read/ReadFile"] = new Dictionary<string, Kuroe.Flow.Execution.Shared.ExecutionPortName>
                 {
                     [PathVariables.RootName] = port,
                 },
@@ -1213,8 +1212,8 @@ public sealed class FileToolsTests
     public void Context_without_a_mapping_rejects_the_tool_call()
     {
         ToolContext context = new(
-            new FixedPortAccess(new Kuroe.Flow.Execution.ExecutionPortName("工作区"), _root),
-            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Flow.Execution.ExecutionPortName>>(),
+            new FixedPortAccess(new Kuroe.Flow.Execution.Shared.ExecutionPortName("工作区"), _root),
+            new Dictionary<string, IReadOnlyDictionary<string, Kuroe.Flow.Execution.Shared.ExecutionPortName>>(),
             _root,
             default,
             []);

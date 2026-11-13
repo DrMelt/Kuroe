@@ -1,10 +1,10 @@
-using Kuroe.Flow.Control.Graph.Nodes;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Control.Graph;
+namespace Kuroe.Flow.Control.Graph.Runtime.Graph;
 
 /// <summary>运行期节点的物化：按图定义建立节点对象，按路径逐段下钻，未命中时按需建出缺失的段。
 /// 容器的直接子节点登记在容器上，根级节点由这里持有。取消后迟实例化的节点创建即取消。</summary>

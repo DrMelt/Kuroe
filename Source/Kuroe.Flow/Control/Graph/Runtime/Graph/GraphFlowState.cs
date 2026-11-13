@@ -1,52 +1,41 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Graph.Records.Shared;
+using Kuroe.Flow.Node.Shared.Graph.Records;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph;
+namespace Kuroe.Flow.Control.Graph.Runtime.Graph;
 
 /// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行上下文。</summary>
-internal sealed class GraphFlowState : IGraphFlowState
+internal sealed class GraphFlowState(
+    CompiledFlow flow,
+    StartInputs inputs,
+    IPortTexts startTexts,
+    StartPortValues startPorts,
+    GraphFlowDefinitionRecord? definition,
+    IFlowExecutionGateway executions) : IGraphFlowState
 {
     private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
-    private readonly IFlowExecutionGateway _executionsRuntime;
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
 
-    public GraphFlowState(
-        CompiledFlow flow,
-        StartInputs inputs,
-        IPortTexts startTexts,
-        StartPortValues startPorts,
-        GraphFlowDefinitionRecord? definition,
-        IFlowExecutionGateway executions)
-    {
-        Flow = flow;
-        Inputs = inputs;
-        StartTexts = startTexts;
-        StartPorts = startPorts;
-        Definition = definition;
-        _executionsRuntime = executions;
-    }
-
     /// <summary>锁定的编译流程。</summary>
-    public CompiledFlow Flow { get; }
+    public CompiledFlow Flow { get; } = flow;
 
     /// <summary>提交时的开始输入。</summary>
-    public StartInputs Inputs { get; }
+    public StartInputs Inputs { get; } = inputs;
 
     /// <summary>任务启动时的开始端口文本。</summary>
-    public IPortTexts StartTexts { get; }
+    public IPortTexts StartTexts { get; } = startTexts;
 
     /// <summary>任务启动时确定的开始端口值。</summary>
-    public StartPortValues StartPorts { get; }
+    public StartPortValues StartPorts { get; } = startPorts;
 
     /// <summary>提交时锁定的流程定义记录。</summary>
-    public GraphFlowDefinitionRecord? Definition { get; set; }
+    public GraphFlowDefinitionRecord? Definition { get; set; } = definition;
 
     /// <summary>图运行期的执行，按提交顺序从任务的中性执行列表投影。</summary>
     internal IReadOnlyList<GraphExecution> Executions => Project();
@@ -69,24 +58,24 @@ internal sealed class GraphFlowState : IGraphFlowState
             ? context
             : throw new InvalidOperationException($"图流程没有执行 {id.Value} 的上下文。");
 
-    private IReadOnlyList<GraphExecution> Project()
+    private List<GraphExecution> Project()
     {
         if (_task is not { } task)
         {
             throw new InvalidOperationException("图流程状态还没有接到任务。");
         }
 
-        List<GraphExecution> executions = [];
+        List<GraphExecution> projected = [];
         foreach (IExecution unit in task.Executions)
         {
             GraphExecutionContext context = Context(unit.Id);
-            executions.Add(new GraphExecution(
+            projected.Add(new GraphExecution(
                 context.Input,
                 unit,
                 context.ControlVersion));
         }
 
-        return executions;
+        return projected;
     }
 
     /// <summary>存档恢复的节点状态。</summary>
@@ -105,7 +94,7 @@ internal sealed class GraphFlowState : IGraphFlowState
     public void Attach(ITaskFlowContext task)
     {
         _task = task;
-        _runtime = new TaskRuntime(task, this, _executionsRuntime);
+        _runtime = new TaskRuntime(task, this, executions);
     }
 }
 

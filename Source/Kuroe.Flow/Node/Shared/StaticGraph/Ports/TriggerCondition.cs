@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>触发门控条件：来源触发值满足条件时启动组放行。</summary>
 public enum TriggerCondition

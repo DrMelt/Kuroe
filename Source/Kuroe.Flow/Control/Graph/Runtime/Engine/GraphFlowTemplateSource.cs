@@ -1,11 +1,12 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.StaticGraph.Flow;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Graph.Runtime.Catalog;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>图流程的模板来源：把流程定义与宿主开始输入投影为中性模板。</summary>
 public sealed class GraphFlowTemplateSource(

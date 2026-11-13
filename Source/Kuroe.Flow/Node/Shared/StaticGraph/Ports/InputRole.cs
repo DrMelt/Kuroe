@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>输入端口在节点执行中的角色。角色由节点执行契约决定，与端口来源是常量还是动态无关。</summary>
 public enum InputRole

@@ -1,5 +1,6 @@
-using Kuroe.Flow.Shared.Model;
-namespace Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
+
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>输出端口声明：名字、类型、模式、说明、来源、默认值与触发配置。所有节点的输出都使用这一形状。
 /// 类型在编译期落定产出形态与消费方式，引用只写名字；说明写端口承载什么内容、怎么交回，未写时为空。

@@ -1,6 +1,6 @@
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.TestSupport;
 using Xunit;
 

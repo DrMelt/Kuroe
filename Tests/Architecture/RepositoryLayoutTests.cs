@@ -1080,7 +1080,7 @@ public sealed class RepositoryLayoutTests
     {
         string file = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Shared", "FlowName.cs");
 
-        Assert.Contains("namespace Kuroe.Flow.Tasks;", File.ReadAllText(file), StringComparison.Ordinal);
+        Assert.Contains("namespace Kuroe.Flow.Tasks.Shared;", File.ReadAllText(file), StringComparison.Ordinal);
     }
 
     [Fact]

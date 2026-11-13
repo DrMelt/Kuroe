@@ -1,5 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Persistence.Restoring.Shared;
 

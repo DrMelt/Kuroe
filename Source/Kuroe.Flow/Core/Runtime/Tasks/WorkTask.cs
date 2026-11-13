@@ -1,10 +1,10 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Runtime.Process;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Execution.Records.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -139,7 +139,7 @@ public sealed class WorkTask : ITaskFlowHost
             }
         }
     }
-/// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
+    /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
     void ITaskFlowContext.MarkCompleted()
     {
         _completed = true;

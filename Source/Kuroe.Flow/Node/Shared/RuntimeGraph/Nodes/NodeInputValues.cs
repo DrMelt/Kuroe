@@ -1,10 +1,10 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 
 /// <summary>一次激活的输入：按输入端口给出本次取到的来源产出，保留绑定顺序与端口类型。输入端口文本统一经 <see cref="Text"/> 读取。
 /// 节点按 <see cref="INodeInputs"/> 读取内容，连接状态只供执行装配使用。</summary>

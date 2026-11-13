@@ -1,4 +1,4 @@
-using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Presentation.Shared;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 

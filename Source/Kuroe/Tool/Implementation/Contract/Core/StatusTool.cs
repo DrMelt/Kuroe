@@ -1,6 +1,6 @@
+using Kuroe.Flow.Execution.Shared;
 using System.Text;
 using ErrorOr;
-using Kuroe.Flow.Execution;
 
 namespace Kuroe.Tool.Contract;
 

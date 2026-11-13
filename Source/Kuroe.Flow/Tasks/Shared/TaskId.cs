@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Kuroe.Flow.Tasks;
+namespace Kuroe.Flow.Tasks.Shared;
 
 /// <summary>任务标识：跨进程唯一的 32 位十六进制键。界面显示末尾 8 位，存储与引用使用完整键。</summary>
 public readonly record struct TaskId(string Value)

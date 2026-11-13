@@ -1,10 +1,8 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Tasks;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Tasks;
 
 /// <summary>任务标题：直接构造提交输入与标题，断言截断与优先级。</summary>
 public sealed class TaskTitleTests

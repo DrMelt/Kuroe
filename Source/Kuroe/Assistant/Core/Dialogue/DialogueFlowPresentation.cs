@@ -1,6 +1,6 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 
@@ -10,7 +10,6 @@ public sealed class DialogueFlowPresentation : IFlowPresentation
     /// <inheritdoc/>
     public IFlowView CaptureView(ITaskFlowContext task) =>
         DialogueView.Build(
-            DialogueFlowAccess.State(task),
             task.Control as IFlowInputControl,
             task,
             task.State);

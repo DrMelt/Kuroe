@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
 
 namespace Kuroe.Flow.Runtime;
 

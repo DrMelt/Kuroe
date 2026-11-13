@@ -1,4 +1,4 @@
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Integration.Tests.Support;
 

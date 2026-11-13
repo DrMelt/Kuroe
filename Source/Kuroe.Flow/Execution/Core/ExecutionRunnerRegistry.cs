@@ -1,3 +1,5 @@
+using Kuroe.Flow.Execution.Shared;
+
 namespace Kuroe.Flow.Execution;
 
 /// <summary>按执行种类选择运行器。节点类型自带运行器时优先，其次同种类注册，最后通配注册。</summary>

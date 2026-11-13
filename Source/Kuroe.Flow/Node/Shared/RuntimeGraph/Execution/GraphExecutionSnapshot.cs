@@ -1,7 +1,7 @@
 
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 
-namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 
 /// <summary>一次执行的只读形状。</summary>
 public sealed record GraphExecutionSnapshot(

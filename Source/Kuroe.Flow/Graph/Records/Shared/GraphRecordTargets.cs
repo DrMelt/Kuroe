@@ -1,7 +1,7 @@
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
 
-namespace Kuroe.Flow.Graph.Records;
+namespace Kuroe.Flow.Graph.Records.Shared;
 
 /// <summary>图节点路径与中性执行目标标识的转换。路径段按 URI 规则转义，段之间用 / 分隔。</summary>
 public static class GraphRecordTargets

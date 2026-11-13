@@ -1,5 +1,5 @@
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Presentation.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Pending;
 using Spectre.Console;
 using Spectre.Console.Rendering;

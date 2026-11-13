@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行单元的控制面：建立、恢复、运行收口、中断、拒绝未收口执行与退出收口。执行状态机只在执行单元内部推进。</summary>
 public interface IExecutionRuntime

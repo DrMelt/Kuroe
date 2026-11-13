@@ -1,6 +1,6 @@
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Node.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 
 /// <summary>节点类型的静态形状：引擎按它解析文件、校验声明与推进执行，不依赖类型自身的行为。
 /// 形状之外的差异由类型定义自己在校验与运行期实现里表达。</summary>

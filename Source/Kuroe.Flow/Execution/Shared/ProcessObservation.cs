@@ -1,5 +1,5 @@
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>收到一段流式内容。</summary>
 /// <param name="content">本次增量的内容与种类。</param>

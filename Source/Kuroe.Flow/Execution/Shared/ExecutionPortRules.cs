@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行输出端口的查找与声明文本，只使用中性端口字段。</summary>
 public static class ExecutionPortRules

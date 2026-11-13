@@ -1,14 +1,15 @@
-using Kuroe.Flow.Control.Graph.Nodes;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Readiness;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Nodes;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;
 
 /// <summary>容器内容齐备只由内容来源决定，门控来源不撤销已发布快照。</summary>
 public sealed class RuntimeContainerTests

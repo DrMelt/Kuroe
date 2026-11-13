@@ -1,6 +1,6 @@
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Tasks.Records;
+namespace Kuroe.Flow.Tasks.Records.Shared;
 
 /// <summary>代码定义流程的存档定义：实现种类与流程自有的定义值。</summary>
 public sealed record CodeFlowDefinitionRecord(

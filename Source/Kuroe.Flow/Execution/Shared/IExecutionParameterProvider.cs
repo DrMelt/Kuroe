@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行目标类型提供的参数。流程控制按目标类型取出参数，执行单元不解释具体类型。</summary>
 public interface IExecutionParameterProvider

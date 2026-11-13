@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行标识，跨任务全局递增，按号即可定位。</summary>
 public readonly record struct ExecutionId(int Value)

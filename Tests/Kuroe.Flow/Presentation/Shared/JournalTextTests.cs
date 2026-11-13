@@ -1,7 +1,6 @@
-using Kuroe.Flow.Presentation;
 using Xunit;
 
-namespace Kuroe.Flow.Presentation.Tests;
+namespace Kuroe.Flow.Presentation.Shared.Tests;
 
 /// <summary>过程记录文本的换行归一与逻辑行切分。</summary>
 public sealed class JournalTextTests

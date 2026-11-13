@@ -1,11 +1,10 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Shared.Model;
-using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
-using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
-using Kuroe.Flow.Node.RuntimeGraph;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using ExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
+using TokenUsage = Kuroe.Flow.Execution.Shared.TokenUsage;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Flow.TestSupport;
 using Spectre.Console;
 using Xunit;

@@ -1,10 +1,10 @@
-using Kuroe.Flow.Control.Graph.Nodes;
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Nodes;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;
 
 /// <summary>输出触发判定：直接构造端口配置与产出触发值，断言下游是否启动。</summary>
 public sealed class TriggerRulesTests

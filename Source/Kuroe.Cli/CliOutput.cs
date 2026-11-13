@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Presentation;
+using Kuroe.Flow.Presentation.Shared;
 
 namespace Kuroe.Cli;
 

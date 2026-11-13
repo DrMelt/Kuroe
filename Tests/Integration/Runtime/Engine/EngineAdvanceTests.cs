@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Runtime.Engine;
@@ -52,7 +52,7 @@ public sealed class EngineAdvanceTests
         environment.Runner.Gate.Open(second);
         await environment.WaitAsync(id, snapshot => snapshot.View.Steps.Any(step =>
             step.Label == "乙"
-            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.ExecutionState.Succeeded)));
+            && step.Executions.Any(execution => execution.State == Kuroe.Flow.Execution.Shared.ExecutionState.Succeeded)));
 
         environment.Runner.Gate.Open(merge);
 

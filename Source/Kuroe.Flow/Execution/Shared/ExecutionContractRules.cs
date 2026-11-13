@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Execution;
+namespace Kuroe.Flow.Execution.Shared;
 
 /// <summary>执行契约的端口级校验：未声明端口、端口键不一致、必填缺失与空白原因。</summary>
 public static class ExecutionContractRules

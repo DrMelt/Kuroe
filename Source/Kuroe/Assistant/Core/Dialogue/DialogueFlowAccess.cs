@@ -1,4 +1,5 @@
-using Kuroe.Flow.Control;
+
+using Kuroe.Flow.Control.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 

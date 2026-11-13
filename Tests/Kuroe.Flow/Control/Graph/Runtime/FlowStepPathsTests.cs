@@ -1,9 +1,9 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Control.Graph.Engine;
+using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Control.Graph.Engine.Tests;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime;
 
 /// <summary>流程步骤路径与节点路径的互相转换。</summary>
 public sealed class FlowStepPathsTests
@@ -15,7 +15,7 @@ public sealed class FlowStepPathsTests
 
         FlowStepPath step = FlowStepPaths.From(path);
 
-        Assert.Equal(new[] { "整体", "制定计划" }, step.Levels);
+        Assert.Equal(["整体", "制定计划"], step.Levels);
         Assert.Equal(path, FlowStepPaths.ToNodePath(step));
     }
 

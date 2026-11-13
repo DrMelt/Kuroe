@@ -1,15 +1,16 @@
-using Kuroe.Flow.Control.Graph;
-using Kuroe.Flow.Control.Graph.Nodes;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.StaticGraph.Graph;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 using Xunit;
 
-namespace Kuroe.Flow.Tests.Runtime.Graph;
+namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Graph;
 
 /// <summary>执行输入的端口文本与取值来自同一份完整取值，静态端口文本单独保留。</summary>
 public sealed class GraphExecutionInputBuilderTests

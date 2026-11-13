@@ -1,8 +1,9 @@
 using ErrorOr;
 using Kuroe.Cli.Views;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Presentation.Shared;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Workflows.Flows;
 
 namespace Kuroe.Cli.Commands;

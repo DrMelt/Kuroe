@@ -1,4 +1,5 @@
 using Kuroe.Flow.Persistence.Saving.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 

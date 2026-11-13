@@ -1,7 +1,7 @@
-using Kuroe.Flow.Execution;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Tasks;
-using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
+using Kuroe.Flow.Execution.Shared;
+using Kuroe.Flow.Presentation.Shared;
+using ExecutionUsage = Kuroe.Flow.Execution.Shared.ExecutionUsage;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Pending;
 using Spectre.Console;
 

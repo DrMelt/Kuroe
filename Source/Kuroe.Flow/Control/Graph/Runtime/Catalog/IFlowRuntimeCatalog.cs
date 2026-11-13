@@ -1,7 +1,8 @@
 using ErrorOr;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control;
+namespace Kuroe.Flow.Control.Graph.Runtime.Catalog;
 
 /// <summary>运行期的编译结果查询：提交任务直接取已校验的流程与执行视图。</summary>
 public interface IFlowRuntimeCatalog

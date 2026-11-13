@@ -1,5 +1,5 @@
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Shared.Catalogs;
 using Kuroe.Shared.Configuration;
 using Kuroe.Tool;

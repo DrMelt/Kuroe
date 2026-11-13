@@ -1,20 +1,17 @@
 using ErrorOr;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution;
+using Kuroe.Flow.Control.Graph.Runtime.Graph;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Execution.Shared;
 using Kuroe.Flow.InputChannel.Shared;
-using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Control.Graph;
 
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Nodes;
-using Kuroe.Flow.Node.RuntimeGraph.Ports;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
-using Kuroe.Flow.Control.Graph.Nodes;
-using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
+using Kuroe.Flow.Control.Graph.Runtime.Nodes;
+using ExecutableNode = Kuroe.Flow.Node.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Control.Graph.Engine;
+namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
 
 /// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止与等待交付。</summary>
 internal sealed class GraphFlowControl(
@@ -156,7 +153,7 @@ internal sealed class GraphFlowControl(
         }
     }
 
-/// <summary>此刻等待外部输入的步骤，按流程图顺序。</summary>
+    /// <summary>此刻等待外部输入的步骤，按流程图顺序。</summary>
     public IReadOnlyList<FlowPendingStep> Pending()
     {
         lock (task.Gate)

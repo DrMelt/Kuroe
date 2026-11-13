@@ -1,8 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Nodes;
-using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Tasks.Shared;
 
-namespace Kuroe.Flow.Node.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 
 /// <summary>流程编译出的执行视图：节点以从根到本节点的路径标识，执行节点与容器在同一棵树上。
 /// 依赖由 From 绑定、静态输入指向的运行期常量依赖与容器触发输入共同表达，绑定的角色与取值域固化在绑定上。执行按“组齐备且有驱动则激活”推进。

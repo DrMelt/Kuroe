@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Flows;
-using Kuroe.Flow.Control;
-using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Control.Shared;
+using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Flow.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
 

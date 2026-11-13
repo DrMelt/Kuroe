@@ -1,4 +1,4 @@
-using Kuroe.Flow.Tasks;
+using Kuroe.Flow.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
@@ -59,8 +59,8 @@ internal static class DialogueFlow
     };
 
     /// <summary>工具路径到路径变量映射的对应表，子树按上级路径给出。</summary>
-    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> ToolPorts() =>
-        new Dictionary<string, IReadOnlyDictionary<string, string>>
+    private static Dictionary<string, IReadOnlyDictionary<string, string>> ToolPorts() =>
+        new()
         {
             ["file"] = RootPorts(),
             ["git"] = RootPorts(),
@@ -68,8 +68,8 @@ internal static class DialogueFlow
         };
 
     /// <summary>单个工具组的变量映射，root 指向工作区端口。</summary>
-    private static IReadOnlyDictionary<string, string> RootPorts() =>
-        new Dictionary<string, string>
+    private static Dictionary<string, string> RootPorts() =>
+        new()
         {
             [PathVariables.RootName] = WorkspacePort.Value,
         };
