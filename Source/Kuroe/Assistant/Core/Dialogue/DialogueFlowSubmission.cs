@@ -6,7 +6,6 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Node.Llm;
@@ -75,7 +74,7 @@ public sealed class DialogueFlowSubmission(
         ExecutionRequest request = new(
             new ExecutionOwnerId(task.Value),
             record.Target,
-            LlmNodeTypes.Name.Value,
+            LlmNodeTypes.Kind,
             record.Attempt,
             [],
             [.. record.Inputs.Select(input => new ExecutionInputValue(input.Port, input.Text, null))],

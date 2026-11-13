@@ -5,9 +5,9 @@ using Kuroe.Flow.Node.StaticGraph.Ports;
 
 namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
-/// <summary>一次执行的输入：节点身份、轮次、本轮各输入端口取到的内容、执行可读的端口文本与节点声明。
+/// <summary>一次图执行的输入：节点身份、轮次、本轮各输入端口取到的内容、执行可读的端口文本与节点声明。
 /// 启动的执行只用这里声明的内容，不继承任何未声明的历史。输入端口文本统一经 <see cref="Texts"/> 读取。</summary>
-public sealed record ExecutionInput : IPortTexts
+public sealed record GraphExecutionInput : IPortTexts
 {
     /// <summary>所属任务。</summary>
     public required TaskId Task { get; init; }

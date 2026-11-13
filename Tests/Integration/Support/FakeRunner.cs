@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Control.Graph;
@@ -123,10 +124,10 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     public NeutralExecutionUsage Usage { get; set; } = NeutralExecutionUsage.None;
 
     /// <summary>执行器上报的恢复数据，未设置时不可恢复。</summary>
-    public ExecutionRestorePayload? RestoreData { get; set; }
+    public NeutralExecutionRestoreState? RestoreData { get; set; }
 
     /// <summary>各次执行收到的恢复数据，普通启动为空，按建立顺序。</summary>
-    public IReadOnlyList<ExecutionRestorePayload?> Starts
+    public IReadOnlyList<NeutralExecutionRestoreState?> Starts
     {
         get
         {
@@ -137,7 +138,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         }
     }
 
-    private readonly List<ExecutionRestorePayload?> _starts = [];
+    private readonly List<NeutralExecutionRestoreState?> _starts = [];
     private readonly List<NeutralExecutionTarget> _targets = [];
 
     /// <summary>各次执行收到的执行目标，按建立顺序。</summary>
@@ -194,7 +195,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         lock (_gate)
         {
             _starts.Add(data is TestRestoreData restored
-                ? new ExecutionRestorePayload(restored.Value.Format, restored.Value.Payload)
+                ? new Kuroe.Flow.Execution.ExecutionRestoreState(restored.Value.Format, restored.Value.Payload)
                 : null);
         }
 
@@ -260,7 +261,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             string reply = Reply?.Invoke(started) ?? $"{node}产出";
             journal.AppendContent(ProcessContentKind.Reply, reply);
 
-            return ExecutionOutput.Ports;
+            return NeutralExecutionOutput.FromPorts([]);
         }
         finally
         {
@@ -316,7 +317,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             string reply = CodeReply?.Invoke(started) ?? "回复";
             journal.AppendContent(ProcessContentKind.Reply, reply);
 
-            return ExecutionOutput.Ports;
+            return NeutralExecutionOutput.FromPorts([]);
         }
         finally
         {

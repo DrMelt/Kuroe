@@ -18,11 +18,14 @@ public sealed class TaskRecordTests
             TaskLifecycle.Paused,
             Completed: false,
             new TaskJournalRecord([], 0),
-            new FlowRecord(FlowRecordKinds.Graph, new Definition(), new State()),
+            new FlowRecord(
+                new FlowIdentity(new FlowName("默认"), FlowRecordKinds.Graph, "graph"),
+                new Definition(),
+                new State()),
             []);
 
         Assert.Equal(id, record.Identity.Id);
-        Assert.Equal(FlowRecordKinds.Graph, record.Flow.Kind);
+        Assert.Equal(FlowRecordKinds.Graph, record.Flow.Identity.Kind);
         Assert.IsType<Definition>(record.Flow.Definition);
         Assert.IsType<State>(record.Flow.State);
         Assert.Empty(record.Executions);

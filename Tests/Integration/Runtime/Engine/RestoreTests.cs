@@ -17,7 +17,7 @@ public sealed class RestoreTests
     public void A_restorable_failure_pauses_the_task_and_resume_restores()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -43,7 +43,7 @@ public sealed class RestoreTests
     public void Rerun_on_a_paused_task_starts_without_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -67,7 +67,7 @@ public sealed class RestoreTests
     public void A_successful_execution_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
 
         TaskId id = environment.Submit("目标");
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
@@ -84,7 +84,7 @@ public sealed class RestoreTests
     public void A_failed_restore_can_retry_from_the_source_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -121,7 +121,7 @@ public sealed class RestoreTests
     public void Stopping_an_execution_interrupts_it_and_keeps_the_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
@@ -152,7 +152,7 @@ public sealed class RestoreTests
     public void A_queued_execution_restarts_after_pause_and_resume()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ManyRootsFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.Gate.HoldAll();
 
         TaskId id = environment.Submit("目标");
@@ -185,7 +185,7 @@ public sealed class RestoreTests
     public void A_failed_restore_that_consumed_requests_does_not_fall_back()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -218,7 +218,7 @@ public sealed class RestoreTests
     public void A_pending_target_survives_resume_alongside_a_restore()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.ParallelRootFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = execution => execution.Input.Node.Label.Value == "先失败";
         environment.Runner.Gate.Hold(NodePath.Of("后完成"));
 
@@ -251,7 +251,7 @@ public sealed class RestoreTests
     public void Terminating_a_running_restore_keeps_restore_data()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -283,7 +283,7 @@ public sealed class RestoreTests
     public void Restore_preparation_runs_once_for_snapshots_and_dispatch()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -310,7 +310,7 @@ public sealed class RestoreTests
     public void Restore_inherits_submitted_ports()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
 
         TaskId id = environment.Submit("目标");
@@ -331,7 +331,7 @@ public sealed class RestoreTests
     public void Resume_during_a_held_execution_does_not_pause_again()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "state");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "state");
         environment.Runner.FailsWhen = _ => true;
         environment.Runner.Gate.HoldAll();
         environment.Runner.IgnoreCancellationWhileHeld = true;

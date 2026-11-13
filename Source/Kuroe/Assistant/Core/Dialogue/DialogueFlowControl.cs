@@ -17,7 +17,7 @@ internal sealed class DialogueFlowControl(
     DialogueFlowState state) : IFlowControl
 {
     /// <summary>回话步骤路径。</summary>
-    internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyNodeLabel.Value);
+    internal static FlowStepPath ReplyStep { get; } = FlowStepPath.Of(DialogueFlow.ReplyLabel);
 
     private bool _awaiting = true;
     private IExecution? _live;
@@ -128,8 +128,8 @@ internal sealed class DialogueFlowControl(
     private ExecutionRequest Request(string text) =>
         new(
             new ExecutionOwnerId(task.Id.Value),
-            new ExecutionTargetId(DialogueFlow.ReplyNodeLabel.Value),
-            LlmNodeTypes.Name.Value,
+            new ExecutionTargetId(DialogueFlow.ReplyLabel),
+            LlmNodeTypes.Kind,
             1,
             [],
             [new ExecutionInputValue(new ExecutionPortName(DialogueFlow.InputPort.Value), text, null)],
@@ -164,10 +164,10 @@ internal sealed class DialogueFlowControl(
 internal sealed class DialogueTarget(LlmNodeType type, string model) : IExecutionTarget
 {
     /// <inheritdoc/>
-    public ExecutionTargetId Id => new(DialogueFlow.ReplyNodeLabel.Value);
+    public ExecutionTargetId Id => new(DialogueFlow.ReplyLabel);
 
     /// <inheritdoc/>
-    public string Kind => LlmNodeTypes.Name.Value;
+    public string Kind => LlmNodeTypes.Kind;
 
     /// <inheritdoc/>
     public bool UsesDefaultRunner => true;

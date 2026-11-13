@@ -153,7 +153,7 @@ public sealed class GraphFlowSubmission(
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
-                ExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord);
+                GraphExecutionInput input = BuildInput(record.Identity.Id, node, executionRecord);
                 GraphExecution execution = GraphExecution.Restore(executionRecord, input, executions);
                 state.Bind(execution.Unit.Id, input, execution.ControlVersion);
                 units.Add(execution.Unit);
@@ -171,9 +171,9 @@ public sealed class GraphFlowSubmission(
             saved.Pending);
     }
 
-    private ExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
+    private GraphExecutionInput BuildInput(TaskId task, ExecutableNode node, ExecutionRecord saved)
     {
-        ExecutionInput input = new()
+        GraphExecutionInput input = new()
         {
             Task = task,
             Node = node.Path,

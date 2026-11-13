@@ -26,7 +26,7 @@ public sealed class TaskActions(
     private readonly ITaskRecordCoordinator? _records = records;
     private readonly ITaskLeaseStore? _leases = leases;
 
-    /// <summary>按流程名提交：取负责的流程实现准备状态、分配任务号、占用任务键，再建任务并启动推进。observer 收到该任务全部执行的过程事件。</summary>
+    /// <summary>按流程名提交：取负责的流程实现，再按实现提交。observer 收到该任务全部执行的过程事件。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         FlowName flowName,
         StartInputs inputs,
@@ -39,26 +39,19 @@ public sealed class TaskActions(
             return resolved.ErrorsOrEmptyList;
         }
 
-        FlowProvider provider = resolved.Value;
-
-        return Submit(
-            provider,
-            id => provider.Submission.Prepare(id, flowName, inputs, title),
-            inputs,
-            title,
-            observer);
+        return Submit(resolved.Value, flowName, inputs, title, observer);
     }
 
-    /// <summary>按已选定的流程实现提交：分配任务号、准备状态、占用任务键，再建任务并启动推进。</summary>
+    /// <summary>按已选定的流程实现提交：分配任务号、由实现准备状态、占用任务键，再建任务并启动推进。</summary>
     public ErrorOr<TaskSnapshot> Submit(
         FlowProvider provider,
-        Func<TaskId, ErrorOr<FlowSubmission>> prepare,
+        FlowName flowName,
         StartInputs inputs,
         string? title,
         ProcessObserver? observer = null)
     {
         TaskId id = _ids.Next();
-        ErrorOr<FlowSubmission> prepared = prepare(id);
+        ErrorOr<FlowSubmission> prepared = provider.Submission.Prepare(id, flowName, inputs, title);
         if (prepared.IsError)
         {
             return prepared.ErrorsOrEmptyList;

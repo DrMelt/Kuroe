@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
@@ -35,7 +36,7 @@ public static class TaskRecordFixture
             Completed: false,
             new TaskJournalRecord([new JournalEntry(At(3, 5), JournalLevel.Information, "信息", "已暂停。")], 0),
             new FlowRecord(
-                FlowRecordKinds.Graph,
+                new FlowIdentity(flow, FlowRecordKinds.Graph, "graph"),
                 new GraphFlowDefinitionRecord(flow, """{"Nodes":[]}""", """{"Flows":[]}"""),
                 new GraphFlowStateRecord(
                     new TaskStartSnapshot(

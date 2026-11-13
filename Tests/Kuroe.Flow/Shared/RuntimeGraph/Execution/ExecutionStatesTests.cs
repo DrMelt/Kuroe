@@ -1,4 +1,4 @@
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Execution;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;

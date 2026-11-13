@@ -37,7 +37,7 @@ public abstract class TaskRecordStoreContractTests
         Assert.Equal(record.Identity, loaded.Identity);
         GraphFlowStateRecord state = Assert.IsType<GraphFlowStateRecord>(record.Flow.State);
         GraphFlowStateRecord loadedState = Assert.IsType<GraphFlowStateRecord>(loaded.Flow.State);
-        Assert.Equal(record.Flow.Kind, loaded.Flow.Kind);
+        Assert.Equal(record.Flow.Identity.Kind, loaded.Flow.Identity.Kind);
         Assert.Equal(
             Assert.IsType<GraphFlowDefinitionRecord>(record.Flow.Definition),
             Assert.IsType<GraphFlowDefinitionRecord>(loaded.Flow.Definition));

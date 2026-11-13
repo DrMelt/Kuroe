@@ -6,14 +6,14 @@ using Xunit;
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;
 
 /// <summary>执行输入的端口文本：已装配的文本表是唯一读取来源。</summary>
-public sealed class ExecutionInputTests
+public sealed class GraphExecutionInputTests
 {
     private static readonly PortName Content = new("正文");
 
     [Fact]
     public void Defaults_execution_count_and_inputs()
     {
-        ExecutionInput input = Input(new Dictionary<PortName, string>());
+        GraphExecutionInput input = Input(new Dictionary<PortName, string>());
 
         Assert.Equal(1, input.ExecutionCount);
         Assert.Empty(input.Inputs);
@@ -22,7 +22,7 @@ public sealed class ExecutionInputTests
     [Fact]
     public void Text_reads_the_assembled_table()
     {
-        ExecutionInput input = Input(new Dictionary<PortName, string> { [Content] = "内容" });
+        GraphExecutionInput input = Input(new Dictionary<PortName, string> { [Content] = "内容" });
 
         Assert.Equal("内容", input.Text(Content));
     }
@@ -30,7 +30,7 @@ public sealed class ExecutionInputTests
     [Fact]
     public void Undeclared_port_has_no_text()
     {
-        ExecutionInput input = Input(new Dictionary<PortName, string>());
+        GraphExecutionInput input = Input(new Dictionary<PortName, string>());
 
         Assert.Null(input.Text(new PortName("未装配")));
     }
@@ -38,14 +38,14 @@ public sealed class ExecutionInputTests
     [Fact]
     public void Raw_inputs_do_not_leak_through_the_text_table()
     {
-        ExecutionInput input = Input(
+        GraphExecutionInput input = Input(
             new Dictionary<PortName, string>(),
             new InputValue(Content, new ContextValue(new StartSource(Content), "动态")));
 
         Assert.Null(input.Text(Content));
     }
 
-    private static ExecutionInput Input(
+    private static GraphExecutionInput Input(
         IReadOnlyDictionary<PortName, string> texts,
         params InputValue[] inputs) => new()
         {

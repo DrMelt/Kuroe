@@ -3,7 +3,6 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Node.Llm;
@@ -91,9 +90,9 @@ internal static class DialogueView
             [new FlowPortView(DialogueFlow.StartPort.Value, "Text", null)],
             [
                 new FlowStepView(
-                    DialogueFlow.ReplyNodeLabel.Value,
-                    DialogueFlow.ReplyNodeLabel.Value,
-                    LlmNodeTypes.Name.Value,
+                    DialogueFlow.ReplyLabel,
+                    DialogueFlow.ReplyLabel,
+                    LlmNodeTypes.Kind,
                     stepState,
                     [new FlowPortView(DialogueFlow.InputPort.Value, "Text", null)],
                     [new FlowPortView("完成", "Signal", null, Fires: false)],

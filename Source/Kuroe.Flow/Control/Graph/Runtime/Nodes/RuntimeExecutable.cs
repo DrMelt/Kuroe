@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Node.RuntimeGraph;
@@ -118,7 +119,7 @@ internal sealed class RuntimeExecutable(ExecutableNode executable) : RuntimeNode
     }
 
     /// <summary>按端口产出发布，没有内容产出时使用。</summary>
-    public void Publish(GraphExecution execution) => Publish(execution, ExecutionOutput.Ports);
+    public void Publish(GraphExecution execution) => Publish(execution, ExecutionOutput.FromPorts([]));
 
     /// <summary>产出发布：按执行结果的形态选择端口发布或内容发布，版本单调递增，下游据此重新评估。</summary>
     public void Publish(GraphExecution execution, ExecutionOutput output)

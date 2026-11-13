@@ -22,13 +22,13 @@ public sealed class FlowFrameworkSourceTests
             new Kuroe.Flow.Execution.ExecutionRunnerRegistry(),
             new Kuroe.Flow.Execution.ExecutionRestorerRegistry());
     [Fact]
-    public void Record_finds_provider_by_definition_implementation()
+    public void Identity_finds_provider_by_implementation()
     {
         FlowProvider first = Provider("first");
         FlowProvider second = Provider("second");
         FlowFrameworkSource source = new([first, second]);
 
-        ErrorOr<FlowProvider> found = source.Find(CodeRecord("second"));
+        ErrorOr<FlowProvider> found = source.Find(CodeRecord("second").Identity);
 
         Assert.False(found.IsError);
         Assert.Same(second, found.Value);
@@ -39,23 +39,35 @@ public sealed class FlowFrameworkSourceTests
     {
         FlowFrameworkSource source = new([Provider("first")]);
 
-        ErrorOr<FlowProvider> found = source.Find(CodeRecord("missing"));
+        ErrorOr<FlowProvider> found = source.Find(CodeRecord("missing").Identity);
 
         Assert.True(found.IsError);
     }
 
     [Fact]
-    public void Several_providers_for_the_same_record_are_rejected()
+    public void Several_providers_for_the_same_identity_are_rejected()
     {
         FlowFrameworkSource source = new([Provider("same"), Provider("same")]);
 
-        ErrorOr<FlowProvider> found = source.Find(CodeRecord("same"));
+        ErrorOr<FlowProvider> found = source.Find(CodeRecord("same").Identity);
 
         Assert.True(found.IsError);
     }
 
     [Fact]
-    public void Restore_uses_the_provider_selected_by_the_record()
+    public void Name_resolves_the_provider_that_owns_it()
+    {
+        FlowProvider first = Provider("first");
+        FlowProvider second = Provider("second");
+        FlowFrameworkSource source = new([first, second]);
+
+        ErrorOr<FlowProvider> found = source.Resolve(new FlowName("second"));
+
+        Assert.Same(second, found.Value);
+    }
+
+    [Fact]
+    public void Restore_uses_the_provider_selected_by_the_identity()
     {
         FlowProvider first = Provider("first");
         FlowProvider second = Provider("second");
@@ -86,7 +98,7 @@ public sealed class FlowFrameworkSourceTests
 
     private static FlowRecord CodeRecord(string implementation) =>
         new(
-            FlowRecordKinds.Code,
+            new FlowIdentity(new FlowName(implementation), FlowRecordKinds.Code, implementation),
             new CodeFlowDefinitionRecord(implementation, new Dictionary<string, string>()),
             new CodeFlowStateRecord(
                 new StartInputs([]),
@@ -108,16 +120,13 @@ public sealed class FlowFrameworkSourceTests
 
     private sealed class TestFramework(string implementation) : IFlowFramework
     {
-        public string Kind => FlowRecordKinds.Code;
+        public string DisplayName => implementation;
 
-        public string Name => implementation;
+        public bool Handles(FlowName name) => name.Value == implementation;
 
-        public bool Handles(FlowName name) => false;
-
-        public bool Handles(FlowRecord record) =>
-            record.Kind == Kind
-            && record.Definition is CodeFlowDefinitionRecord definition
-            && definition.Implementation == implementation;
+        public bool Handles(FlowIdentity identity) =>
+            identity.Kind == FlowRecordKinds.Code
+            && identity.Implementation == implementation;
     }
 
     private sealed class TestSubmission : IFlowSubmission

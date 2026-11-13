@@ -81,7 +81,7 @@ public sealed class RuntimeExecutableTests
             Outputs = [new Port(Conclusion, PortTypes.Text, mode: PortMode.Trigger)],
             MaxExecutions = ExecutableNode.DefaultMaxExecutions,
         };
-        ExecutionInput input = new()
+        GraphExecutionInput input = new()
         {
             Task = new TaskId(1),
             Node = executable.Path,

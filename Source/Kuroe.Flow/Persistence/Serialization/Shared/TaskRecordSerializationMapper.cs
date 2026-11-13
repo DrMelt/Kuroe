@@ -1,4 +1,5 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
@@ -9,6 +10,7 @@ using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
+using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using RecordExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using RecordExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
 using RecordExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
@@ -77,9 +79,11 @@ public static class TaskRecordSerializationMapper
     private static FlowData ToData(FlowRecord flow) =>
         flow switch
         {
-            { Kind: FlowRecordKinds.Graph, Definition: GraphFlowDefinitionRecord definition, State: GraphFlowStateRecord state } =>
+            { Identity.Kind: FlowRecordKinds.Graph, Definition: GraphFlowDefinitionRecord definition, State: GraphFlowStateRecord state } =>
                 new FlowData(
-                    FlowRecordKinds.Graph,
+                    flow.Identity.Name.Value,
+                    flow.Identity.Kind,
+                    flow.Identity.Implementation,
                     new GraphFlowDefinitionData(definition.Name.Value, definition.Nodes, definition.Flow),
                     new GraphFlowStateData(
                         new TaskStartData(
@@ -88,9 +92,11 @@ public static class TaskRecordSerializationMapper
                         [.. state.Nodes.Select(ToData)],
                         [.. state.Ports.Select(ToData)],
                         new SchedulerSeedData([.. state.Pending.Steps.Select(step => ToData(NodePath.Of([.. step.Levels])))]))),
-            { Kind: FlowRecordKinds.Code, Definition: CodeFlowDefinitionRecord definition, State: CodeFlowStateRecord state } =>
+            { Identity.Kind: FlowRecordKinds.Code, Definition: CodeFlowDefinitionRecord definition, State: CodeFlowStateRecord state } =>
                 new FlowData(
-                    FlowRecordKinds.Code,
+                    flow.Identity.Name.Value,
+                    flow.Identity.Kind,
+                    flow.Identity.Implementation,
                     null,
                     null,
                     new CodeFlowDefinitionData(definition.Implementation, ToData(definition.Values)),
@@ -99,7 +105,7 @@ public static class TaskRecordSerializationMapper
                             [.. state.Inputs.Values.Select(input => new StartInputData(input.Port.Value, input.Text))],
                             ToData(state.StartTexts.Texts)),
                         ToData(state.Values))),
-            _ => throw new NotSupportedException($"未知的流程记录 {flow.Kind}。"),
+            _ => throw new NotSupportedException($"未知的流程记录 {flow.Identity.Kind}。"),
         };
 
     private static JournalEntryData ToData(JournalEntry entry) =>
@@ -283,15 +289,19 @@ public static class TaskRecordSerializationMapper
     private static FlowRecord ReadFlow(FlowData dto)
     {
         string kind = RequiredText(dto.Kind, "流程种类");
+        FlowIdentity identity = new(
+            new FlowName(RequiredText(dto.Name, "流程名")),
+            kind,
+            RequiredText(dto.Implementation, "实现标识"));
 
         return kind switch
         {
             FlowRecordKinds.Graph => new FlowRecord(
-                kind,
+                identity,
                 ReadGraphDefinition(dto.GraphDefinition),
                 ReadGraphState(dto.GraphState)),
             FlowRecordKinds.Code => new FlowRecord(
-                kind,
+                identity,
                 ReadCodeDefinition(dto.CodeDefinition),
                 ReadCodeState(dto.CodeState)),
             _ => throw new FormatException($"未知的流程种类 {kind}。"),

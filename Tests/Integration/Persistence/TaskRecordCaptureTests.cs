@@ -53,7 +53,7 @@ public sealed class TaskRecordCaptureTests : IDisposable
     public void Capture_retains_restore_data_of_a_successful_execution()
     {
         using TestEnvironment environment = TestEnvironment.Create(TestFlows.PortFlow, persistTasks: true);
-        environment.Runner.RestoreData = new ExecutionRestorePayload("test", "data");
+        environment.Runner.RestoreData = new Kuroe.Flow.Execution.ExecutionRestoreState("test", "data");
         TaskId id = environment.Submit("保留恢复数据");
         environment.Settle(id);
         WorkTask task = environment.Registry.Find(id).ThrowIfError();

@@ -9,3 +9,5 @@ global using ProcessObserver = Kuroe.Flow.Execution.ProcessObserver;
 global using ExecutionJournal = Kuroe.Flow.Execution.ExecutionJournal;
 global using ProcessJournalStore = Kuroe.Flow.Execution.ProcessJournalStore;
 global using Kuroe.Flow.TestSupport;
+global using JournalEntry = Kuroe.Flow.Execution.JournalEntry;
+global using JournalLevel = Kuroe.Flow.Execution.JournalLevel;

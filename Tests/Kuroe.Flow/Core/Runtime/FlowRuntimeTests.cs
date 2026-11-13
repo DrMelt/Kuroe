@@ -255,13 +255,13 @@ internal sealed class TestState(StartInputs inputs) : IFlowState
 
 internal sealed class TestFramework : IFlowFramework
 {
-    public string Kind => "test";
+    public string DisplayName => "测试";
 
-    public string Name => "测试";
+
 
     public bool Handles(FlowName name) => false;
 
-    public bool Handles(FlowRecord record) => false;
+    public bool Handles(FlowIdentity identity) => false;
 }
 
 internal sealed class TestSubmission : IFlowSubmission

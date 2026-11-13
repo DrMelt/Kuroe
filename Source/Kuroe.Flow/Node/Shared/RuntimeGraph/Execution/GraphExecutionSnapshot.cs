@@ -1,10 +1,12 @@
 
+using Kuroe.Flow.Execution;
+
 namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次执行的只读形状。</summary>
 public sealed record GraphExecutionSnapshot(
     ExecutionId Id,
-    ExecutionInput Input,
+    GraphExecutionInput Input,
     ExecutionState State,
     string Progress,
     DateTimeOffset CreatedAt,
@@ -12,7 +14,7 @@ public sealed record GraphExecutionSnapshot(
     DateTimeOffset? FinishedAt,
     IReadOnlyList<string> Failures,
     IReadOnlyList<JournalEntry> Journal,
-    Kuroe.Flow.Execution.ExecutionUsage Usage,
+    ExecutionUsage Usage,
     bool HasRestoreData = false,
     ExecutionId? ContinuedFrom = null)
 {

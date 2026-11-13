@@ -4,8 +4,6 @@ using Kuroe.Assistant.Flows;
 using Kuroe.Catalogs;
 using Kuroe.Flow.Control;
 using Kuroe.Node.Llm;
-using Kuroe.Flow.Node.RuntimeGraph.Execution;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Runtime.Tasks;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -85,11 +83,7 @@ public sealed class DialogueHost(
         registry.ClearSettled();
 
         StartInputs inputs = StartInputs.Single(DialogueFlow.StartPort, "对话");
-        ErrorOr<TaskSnapshot> created = actions.Submit(
-            flow,
-            id => flow.Submission.Prepare(id, DialogueFlow.Name, inputs, "对话"),
-            inputs,
-            "对话");
+        ErrorOr<TaskSnapshot> created = actions.Submit(flow, DialogueFlow.Name, inputs, "对话");
         if (created.IsError)
         {
             throw new InvalidOperationException(string.Join("；", created.ErrorsOrEmptyList.Select(error => error.Description)));

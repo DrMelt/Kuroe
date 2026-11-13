@@ -1,11 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Shared.Flow;
-using Kuroe.Flow.Tasks.Records;
+using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
-/// <summary>按存档流程记录与流程名分派已注册的流程实现。</summary>
+/// <summary>按流程身份与流程名分派已注册的流程实现。</summary>
 public sealed class FlowFrameworkSource : IFlowFrameworkSource
 {
     private readonly List<FlowProvider> _providers;
@@ -17,20 +16,20 @@ public sealed class FlowFrameworkSource : IFlowFrameworkSource
     public IReadOnlyList<FlowProvider> All() => _providers;
 
     /// <inheritdoc/>
-    public ErrorOr<FlowProvider> Find(FlowRecord record)
+    public ErrorOr<FlowProvider> Find(FlowIdentity identity)
     {
         FlowProvider[] found =
-            [.. _providers.Where(provider => provider.Framework.Handles(record))];
+            [.. _providers.Where(provider => provider.Framework.Handles(identity))];
 
         return found.Length switch
         {
             1 => found[0],
             0 => Error.Failure(
                 FlowErrorCodes.RecordFormat,
-                $"没有流程实现负责种类为 {record.Kind} 的存档流程。"),
+                $"没有流程实现负责 {identity.Kind}/{identity.Implementation} 的流程 {identity.Name}。"),
             _ => Error.Failure(
                 FlowErrorCodes.RecordFormat,
-                $"多个流程实现同时负责种类为 {record.Kind} 的存档流程。"),
+                $"多个流程实现同时负责 {identity.Kind}/{identity.Implementation} 的流程 {identity.Name}。"),
         };
     }
 

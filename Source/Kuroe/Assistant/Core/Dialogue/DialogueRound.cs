@@ -2,7 +2,6 @@ using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Pending;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -27,7 +26,7 @@ public sealed class DialogueRound(TaskRegistry registry, PendingService pendings
         WorkTask task = found.Value;
         string? output = task.UnderLock(() =>
             task.Snapshot().View.Steps
-                .FirstOrDefault(step => step.Label == DialogueFlow.ReplyNodeLabel.Value)?.Path);
+                .FirstOrDefault(step => step.Label == DialogueFlow.ReplyLabel)?.Path);
 
         if (output is not { } target)
         {

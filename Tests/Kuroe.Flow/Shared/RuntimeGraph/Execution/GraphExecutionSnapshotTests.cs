@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
@@ -42,7 +43,7 @@ public sealed class GraphExecutionSnapshotTests
             created ?? new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             started, finished, [], [], ExecutionUsage.None);
 
-    private static ExecutionInput Input() => new()
+    private static GraphExecutionInput Input() => new()
     {
         Task = new TaskId(1),
         Node = NodePath.Of("制定计划"),

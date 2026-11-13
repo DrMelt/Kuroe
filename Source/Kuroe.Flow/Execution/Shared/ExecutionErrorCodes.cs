@@ -3,6 +3,9 @@ namespace Kuroe.Flow.Execution;
 /// <summary>执行契约的错误码。</summary>
 public static class ExecutionErrorCodes
 {
+    /// <summary>执行号不存在。</summary>
+    public const string NotFound = "Execution.NotFound";
+
     /// <summary>执行端口名不合法。</summary>
     public const string Port = "ExecutionPort";
 

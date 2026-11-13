@@ -7,3 +7,5 @@ global using JournalEntryHandler = Kuroe.Flow.Execution.JournalEntryHandler;
 global using ProgressTextHandler = Kuroe.Flow.Execution.ProgressTextHandler;
 global using ProcessObserver = Kuroe.Flow.Execution.ProcessObserver;
 global using ExecutionJournal = Kuroe.Flow.Execution.ExecutionJournal;
+global using JournalEntry = Kuroe.Flow.Execution.JournalEntry;
+global using JournalLevel = Kuroe.Flow.Execution.JournalLevel;

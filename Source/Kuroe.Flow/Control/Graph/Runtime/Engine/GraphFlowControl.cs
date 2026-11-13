@@ -1,7 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Control.Graph.Contract;
@@ -15,7 +14,6 @@ using Kuroe.Flow.Node.RuntimeGraph.Ports;
 using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Control.Graph.Nodes;
 using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
-using ExecutionId = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Control.Graph.Engine;
 
@@ -152,13 +150,13 @@ internal sealed class GraphFlowControl(
     {
         GraphExecution graph = Find(execution);
         RuntimeExecutable node = state.Runtime.Executable(graph.Input.Node);
-        Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionContract contract = graph.Contract;
+        GraphExecutionContract contract = graph.Contract;
 
         return new ExecutionStatus(
             graph.Request.Target,
             graph.Request.Attempt,
             state.Runtime.Plan(graph.Input.Node)?.MaxExecutions ?? ExecutableNode.DefaultMaxExecutions,
-            (Kuroe.Flow.Execution.ExecutionState)graph.State,
+            graph.State,
             [.. node.OutstandingPorts(graph).Select(name => new Kuroe.Flow.Execution.ExecutionPortName(name.Value))],
             contract.CannotCompleteReason);
     }
@@ -249,7 +247,7 @@ internal sealed class GraphFlowControl(
     }
 
     /// <summary>登记一次新执行到任务与流程状态。</summary>
-    private GraphExecution Attach(IExecution unit, ExecutionInput input)
+    private GraphExecution Attach(IExecution unit, GraphExecutionInput input)
     {
         state.Bind(unit.Id, input, task.ControlVersion);
         task.AttachExecution(unit);
@@ -676,7 +674,7 @@ internal sealed class GraphFlowControl(
                 return;
             }
 
-            ExecutionInput input = ExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
+            GraphExecutionInput input = GraphExecutionInputBuilder.Build(task.Id, node, inputs, declaration.Value);
             GraphExecution execution = Attach(gateway.Open(task, GraphExecution.BuildRequest(input), runtime.Create), input);
             prepared = (execution, task.Lifecycle == TaskLifecycle.Paused);
         }

@@ -154,13 +154,13 @@ public sealed class WorkTaskTests
 
     private sealed class TestFramework : IFlowFramework
     {
-        public string Kind => "test";
+        public string DisplayName => "测试";
 
-        public string Name => "测试";
+
 
         public bool Handles(FlowName name) => false;
 
-        public bool Handles(Kuroe.Flow.Tasks.Records.FlowRecord record) => false;
+        public bool Handles(FlowIdentity identity) => false;
     }
 
     private sealed class TestSubmission : IFlowSubmission

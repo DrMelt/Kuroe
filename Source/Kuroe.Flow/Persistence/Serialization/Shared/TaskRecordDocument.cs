@@ -33,7 +33,9 @@ public sealed record JournalEntryData(DateTimeOffset At, JournalLevel Level, str
 
 /// <summary>流程记录的形状。</summary>
 public sealed record FlowData(
+    string? Name,
     string? Kind,
+    string? Implementation,
     GraphFlowDefinitionData? GraphDefinition,
     GraphFlowStateData? GraphState,
     CodeFlowDefinitionData? CodeDefinition = null,

@@ -8,8 +8,11 @@ namespace Kuroe.Node.Llm;
 /// <summary>Llm 节点类型的对外入口：类型名、静态形状与实例建立。Llm 节点由模型执行，收口时交回端口输出。</summary>
 public static class LlmNodeTypes
 {
+    /// <summary>类型名的文本形式，执行目标与执行请求使用。</summary>
+    public const string Kind = "Llm";
+
     /// <summary>类型名，与流程文件里 Kind 的取值对应。</summary>
-    public static NodeKind Name { get; } = new("Llm");
+    public static NodeKind Name { get; } = new(Kind);
 
     /// <summary>模型名静态输入端口，由宿主在任务启动时给出。</summary>
     public static PortName ModelPort { get; } = new("MODEL_NAME");

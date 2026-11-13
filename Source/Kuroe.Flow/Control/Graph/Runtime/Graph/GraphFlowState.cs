@@ -6,14 +6,13 @@ using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.RuntimeGraph.Ports;
 using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Node.StaticGraph.Flow;
-using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
 namespace Kuroe.Flow.Control.Graph;
 
 /// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行上下文。</summary>
 internal sealed class GraphFlowState : IGraphFlowState
 {
-    private readonly Dictionary<NeutralExecutionId, GraphExecutionContext> _executions = [];
+    private readonly Dictionary<ExecutionId, GraphExecutionContext> _executions = [];
     private readonly IExecutionRuntime _executionsRuntime;
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
@@ -61,11 +60,11 @@ internal sealed class GraphFlowState : IGraphFlowState
     public bool Attached => _runtime is not null;
 
     /// <summary>记下一个执行在图侧的上下文。要求持有任务 Gate。</summary>
-    internal void Bind(NeutralExecutionId id, ExecutionInput input, int controlVersion) =>
+    internal void Bind(ExecutionId id, GraphExecutionInput input, int controlVersion) =>
         _executions[id] = new GraphExecutionContext(input, controlVersion);
 
     /// <summary>按执行号取图侧上下文，不存在时抛出。</summary>
-    internal GraphExecutionContext Context(NeutralExecutionId id) =>
+    internal GraphExecutionContext Context(ExecutionId id) =>
         _executions.TryGetValue(id, out GraphExecutionContext? context)
             ? context
             : throw new InvalidOperationException($"图流程没有执行 {id.Value} 的上下文。");
@@ -111,4 +110,4 @@ internal sealed class GraphFlowState : IGraphFlowState
 }
 
 /// <summary>一次执行在图侧的上下文：图输入与创建时的任务控制代次。</summary>
-internal sealed record GraphExecutionContext(ExecutionInput Input, int ControlVersion);
+internal sealed record GraphExecutionContext(GraphExecutionInput Input, int ControlVersion);

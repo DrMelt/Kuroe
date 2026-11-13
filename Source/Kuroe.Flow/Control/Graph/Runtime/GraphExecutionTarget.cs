@@ -7,7 +7,7 @@ namespace Kuroe.Flow.Control.Graph;
 /// <summary>图侧执行目标：执行标识取节点路径，种类取节点类型，参数由节点类型给出。</summary>
 internal sealed class GraphExecutionTarget : IExecutionTarget
 {
-    internal GraphExecutionTarget(ExecutionInput input, ExecutionParameterContext context)
+    internal GraphExecutionTarget(GraphExecutionInput input, ExecutionParameterContext context)
     {
         Input = input;
         Id = GraphRecordTargets.Format(input.Node);
@@ -31,5 +31,5 @@ internal sealed class GraphExecutionTarget : IExecutionTarget
     public IExecutionParameters Parameters { get; }
 
     /// <summary>本次执行的图侧输入，供图侧旧运行器适配使用。</summary>
-    internal ExecutionInput Input { get; }
+    internal GraphExecutionInput Input { get; }
 }

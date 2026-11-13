@@ -14,7 +14,7 @@ public sealed class DialogueFlowRecordSource : IFlowRecordSource
         DialogueFlowState state = DialogueFlowAccess.State(task);
 
         return new FlowRecord(
-            FlowRecordKinds.Code,
+            new FlowIdentity(DialogueFlow.Name, FlowRecordKinds.Code, DialogueFlow.Implementation),
             new CodeFlowDefinitionRecord(DialogueFlow.Implementation, DialogueFlowAccess.Values(state.Language)),
             new CodeFlowStateRecord(state.Inputs, state.StartTexts, DialogueFlowAccess.Values(state)));
     }

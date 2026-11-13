@@ -10,10 +10,10 @@ namespace Kuroe.Flow.Control.Graph;
 /// Content 端口进入内容输入，Configuration 端口只进入文本视图，Control 端口只参与启动。
 /// Context 内容端口置于内容输入最前，其余按组内连接序。
 /// 取值按上游发布原样进入，装配层不改变内容长度。</summary>
-internal static class ExecutionInputBuilder
+internal static class GraphExecutionInputBuilder
 {
     /// <summary>为执行节点装配这一轮的输入。</summary>
-    internal static ExecutionInput Build(
+    internal static GraphExecutionInput Build(
         TaskId id,
         RuntimeExecutable node,
         NodeInputValues inputs,
@@ -94,7 +94,7 @@ internal static class ExecutionInputBuilder
             }
         }
 
-        return new ExecutionInput
+        return new GraphExecutionInput
         {
             Task = id,
             Node = node.Path,

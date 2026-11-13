@@ -2,8 +2,6 @@ using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks;
-using ExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using ExecutionSnapshot = Kuroe.Flow.Execution.ExecutionSnapshot;
 
 namespace Kuroe.Flow.Runtime.Tasks;
 
@@ -76,7 +74,7 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     /// <summary>按执行号取执行与它的归属任务。执行不存在或属于其它任务域时返回错误。</summary>
     public ErrorOr<(WorkTask Task, IExecution Execution)> FindOwnedExecution(ExecutionId id)
     {
-        ErrorOr<(Kuroe.Flow.Execution.IExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
+        ErrorOr<(IExecution Execution, ITaskFlowContext Owner)> found =
             executions.FindOwned(id);
         if (found.IsError)
         {

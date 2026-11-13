@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Shared.Flow;
+namespace Kuroe.Flow.Tasks;
 
 /// <summary>流程与流程装配的错误构造。</summary>
 public static class FlowErrors

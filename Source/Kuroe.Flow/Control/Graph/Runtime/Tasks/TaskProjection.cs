@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Control.Graph;
@@ -144,7 +145,7 @@ internal sealed class TaskProjection(
 
     private static FlowExecutionView Execution(GraphExecutionSnapshot execution) => new(
         execution.Id.Value,
-        (Kuroe.Flow.Execution.ExecutionState)execution.State,
+        execution.State,
         execution.Progress,
         [])
     {

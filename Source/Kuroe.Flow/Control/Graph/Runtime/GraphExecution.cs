@@ -1,33 +1,11 @@
 using ErrorOr;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.RuntimeGraph.Ports;
 using Kuroe.Flow.Node.StaticGraph.Ports;
-using IExecution = Kuroe.Flow.Execution.IExecution;
-using IExecutionRuntime = Kuroe.Flow.Execution.IExecutionRuntime;
-using NeutralExecutionContract = Kuroe.Flow.Execution.ExecutionContract;
-using NeutralExecutionRestorePlan = Kuroe.Flow.Execution.ExecutionRestorePlan;
-using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
-using NeutralExecutionOutputKind = Kuroe.Flow.Execution.ExecutionOutputKind;
-using ExecutionInputPort = Kuroe.Flow.Execution.ExecutionInputPort;
-using ExecutionInputValue = Kuroe.Flow.Execution.ExecutionInputValue;
-using ExecutionOutputPort = Kuroe.Flow.Execution.ExecutionOutputPort;
-using ExecutionOutputValue = Kuroe.Flow.Execution.ExecutionOutputValue;
-using ExecutionOwnerId = Kuroe.Flow.Execution.ExecutionOwnerId;
-using ExecutionPortKind = Kuroe.Flow.Execution.ExecutionPortKind;
-using ExecutionPortName = Kuroe.Flow.Execution.ExecutionPortName;
-using ExecutionPortRole = Kuroe.Flow.Execution.ExecutionPortRole;
-using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
-using ExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
-using ExecutionUsage = Kuroe.Flow.Execution.ExecutionUsage;
-using IExecutionRestoreDataSource = Kuroe.Flow.Execution.IExecutionRestoreDataSource;
-using IExecutionTarget = Kuroe.Flow.Execution.IExecutionTarget;
-using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
-using ExecutionParameterContext = Kuroe.Flow.Execution.ExecutionParameterContext;
-using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 
 namespace Kuroe.Flow.Control.Graph;
 
@@ -47,7 +25,7 @@ public sealed class GraphExecution : IGraphExecution
     }
 
     internal GraphExecution(
-        ExecutionInput input,
+        GraphExecutionInput input,
         IExecution unit,
         int controlVersion)
     {
@@ -61,13 +39,13 @@ public sealed class GraphExecution : IGraphExecution
     /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
     internal static GraphExecution Restore(
         ExecutionRecord record,
-        ExecutionInput input,
+        GraphExecutionInput input,
         IExecutionRuntime executions)
     {
         ExecutionRequest request = BuildRequest(input);
         IExecution unit = executions.Restore(
-            new NeutralExecutionRestorePlan(
-                new NeutralExecutionId(record.Id.Value),
+            new ExecutionRestorePlan(
+                record.Id,
                 request,
                 record.CreatedAt,
                 record.State,
@@ -78,16 +56,16 @@ public sealed class GraphExecution : IGraphExecution
                 FromRecord(record.Usage),
                 record.RestoreData is { } data ? new ExecutionRestoreState(data.Format, data.Payload) : null,
                 NeutralContract(record.Contract),
-                record.ContinuedFrom is { } continued ? new NeutralExecutionId(continued.Value) : null));
+                record.ContinuedFrom));
 
         return new GraphExecution(input, unit, 0);
     }
 
     /// <summary>执行标识。</summary>
-    public ExecutionId Id => new(_unit.Id.Value);
+    public ExecutionId Id => _unit.Id;
 
     /// <summary>本次执行的输入。</summary>
-    public ExecutionInput Input { get; }
+    public GraphExecutionInput Input { get; }
 
     /// <summary>本次执行的中性请求。</summary>
     public ExecutionRequest Request { get; }
@@ -102,7 +80,7 @@ public sealed class GraphExecution : IGraphExecution
     internal int ControlVersion { get; }
 
     /// <summary>当前执行状态。</summary>
-    public ExecutionState State => (ExecutionState)_unit.State;
+    public ExecutionState State => _unit.State;
 
     /// <summary>还在排队或正在执行。</summary>
     public bool IsLive => _unit.IsLive;
@@ -129,7 +107,7 @@ public sealed class GraphExecution : IGraphExecution
     }
 
     /// <summary>本次执行保留的恢复数据，作为执行历史，成功与完成后仍在。</summary>
-    internal ExecutionRestorePayload? RestoreData => ToRestorePayload(_unit.RestoreData);
+    internal ExecutionRestoreState? RestoreData => _unit.RestoreData;
 
     /// <summary>恢复数据变化后触发，存档捕获据此写盘。</summary>
     internal event Action? RestoreDataChanged
@@ -139,11 +117,10 @@ public sealed class GraphExecution : IGraphExecution
     }
 
     /// <summary>本次执行从哪次执行恢复，独立执行时为空。</summary>
-    internal ExecutionId? ContinuedFrom =>
-        _unit.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null;
+    internal ExecutionId? ContinuedFrom => _unit.ContinuedFrom;
 
     /// <summary>本次执行的本轮契约状态。</summary>
-    internal ExecutionContract Contract => ToContract(_unit.Contract);
+    internal GraphExecutionContract Contract => ToContract(_unit.Contract);
 
     /// <summary>把图侧交回的端口值转为中性执行值。</summary>
     internal static IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> ToNeutralOutputs(
@@ -156,17 +133,17 @@ public sealed class GraphExecution : IGraphExecution
                 pair.Value.Fires));
 
     /// <summary>本次执行的产出。</summary>
-    internal ExecutionOutput? Output => _unit.Output is { } output ? ToOutput(output) : null;
+    internal ExecutionOutput? Output => _unit.Output;
 
     /// <summary>当前状态的只读快照。</summary>
     public GraphExecutionSnapshot Snapshot()
     {
-        Kuroe.Flow.Execution.ExecutionSnapshot unit = _unit.Snapshot();
+        ExecutionSnapshot unit = _unit.Snapshot();
 
         return new GraphExecutionSnapshot(
-            Id,
+            _unit.Id,
             Input,
-            (ExecutionState)unit.State,
+            unit.State,
             unit.Progress,
             unit.CreatedAt,
             unit.StartedAt,
@@ -175,19 +152,19 @@ public sealed class GraphExecution : IGraphExecution
             unit.Journal,
             unit.Usage,
             unit.RestoreData is not null,
-            unit.ContinuedFrom is { } continued ? new ExecutionId(continued.Value) : null);
+            unit.ContinuedFrom);
     }
 /// <summary>捕获本次执行的状态与恢复数据。</summary>
     internal ExecutionRecord CaptureRecord()
     {
         GraphExecutionSnapshot snapshot = Snapshot();
-        ExecutionContract contract = Contract;
+        GraphExecutionContract contract = Contract;
 
         return new ExecutionRecord(
-            new NeutralExecutionId(snapshot.Id.Value),
+            snapshot.Id,
             GraphRecordTargets.Format(snapshot.Input.Node),
             snapshot.Input.ExecutionCount,
-            (Kuroe.Flow.Execution.ExecutionState)snapshot.State,
+            snapshot.State,
             snapshot.Progress,
             snapshot.CreatedAt,
             snapshot.StartedAt,
@@ -215,9 +192,7 @@ public sealed class GraphExecution : IGraphExecution
             snapshot.HasRestoreData && RestoreData is { } restore
                 ? new ExecutionRestoreRecord(restore.Format, restore.Payload)
                 : null,
-            snapshot.ContinuedFrom is { } continued
-                ? new NeutralExecutionId(continued.Value)
-                : null,
+            snapshot.ContinuedFrom,
             contract is { Ports: null, CannotCompleteReason: null }
                 ? null
                 : new ExecutionContractRecord(
@@ -229,7 +204,7 @@ public sealed class GraphExecution : IGraphExecution
                             pair.Value.Fires)),
                     contract.CannotCompleteReason));
     }
-internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
+internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
         new(
             new ExecutionOwnerId(input.Task.Value),
             GraphRecordTargets.Format(input.Node),
@@ -266,7 +241,7 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
                 }),
             ]);
 
-    internal static IExecutionTarget BuildTarget(ExecutionInput input, ExecutionRequest request) =>
+    internal static IExecutionTarget BuildTarget(GraphExecutionInput input, ExecutionRequest request) =>
         new GraphExecutionTarget(input, new ExecutionParameterContext(
             request.Owner,
             request.Target,
@@ -319,10 +294,10 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
             ContextTokens = usage.ContextTokens,
         };
 
-    private static NeutralExecutionContract NeutralContract(ExecutionContractRecord? contract) =>
+    private static ExecutionContract NeutralContract(ExecutionContractRecord? contract) =>
         contract is null
-            ? NeutralExecutionContract.Empty
-            : new NeutralExecutionContract(
+            ? ExecutionContract.Empty
+            : new ExecutionContract(
                 contract.Outputs?.ToDictionary(
                     pair => new ExecutionPortName(pair.Key.Value),
                     pair => new ExecutionOutputValue(
@@ -331,7 +306,7 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
                         pair.Value.Fires)),
                 contract.CannotCompleteReason);
 
-    private static ExecutionContract ToContract(NeutralExecutionContract contract) =>
+    private static GraphExecutionContract ToContract(ExecutionContract contract) =>
         new(
             contract.Outputs?.ToDictionary(
                 pair => new PortName(pair.Key.Value),
@@ -339,7 +314,7 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
             contract.CannotCompleteReason);
 
     /// <summary>把图侧契约状态转为中性形状，供恢复计划装配使用。</summary>
-    internal static NeutralExecutionContract ToNeutralContract(ExecutionContract contract) =>
+    internal static ExecutionContract ToNeutralContract(GraphExecutionContract contract) =>
         new(
             contract.Ports?.ToDictionary(
                 pair => new ExecutionPortName(pair.Key.Value),
@@ -348,12 +323,4 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
                     pair.Value.Text,
                     pair.Value.Fires)),
             contract.CannotCompleteReason);
-
-    private static ExecutionRestorePayload? ToRestorePayload(ExecutionRestoreState? state) =>
-        state is null ? null : new ExecutionRestorePayload(state.Format, state.Payload);
-
-    private static ExecutionOutput ToOutput(NeutralExecutionOutput output) =>
-        output.Kind == NeutralExecutionOutputKind.Content
-            ? ExecutionOutput.FromContent(output.Content)
-            : ExecutionOutput.Ports;
 }

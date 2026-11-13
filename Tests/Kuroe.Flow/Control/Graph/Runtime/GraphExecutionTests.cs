@@ -1,6 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Control.Graph;
 using Kuroe.Flow.Control.Graph.Engine;
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Xunit;
@@ -38,7 +39,7 @@ public sealed class GraphExecutionTests
     [Fact]
     public void Request_carries_required_output_port_and_description()
     {
-        ExecutionInput input = Input() with
+        GraphExecutionInput input = Input() with
         {
             OutputPorts =
             [
@@ -59,7 +60,7 @@ public sealed class GraphExecutionTests
 
     private static GraphExecution Create()
     {
-        ExecutionInput input = Input();
+        GraphExecutionInput input = Input();
         Kuroe.Flow.Execution.ExecutionRequest request = GraphExecution.BuildRequest(input);
         Kuroe.Flow.Execution.IExecution unit = Runtime().Create(
             new Kuroe.Flow.Execution.ExecutionId(1),
@@ -68,7 +69,7 @@ public sealed class GraphExecutionTests
         return new GraphExecution(input, unit, 0);
     }
 
-    private static ExecutionInput Input() => new()
+    private static GraphExecutionInput Input() => new()
     {
         Task = new TaskId(1),
         Node = NodePath.Of("实施"),

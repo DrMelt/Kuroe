@@ -1,5 +1,4 @@
 using ErrorOr;
-using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Flow.Execution;
 
@@ -7,7 +6,7 @@ namespace Kuroe.Flow.Execution;
 public static class ExecutionErrors
 {
     /// <summary>执行号不存在。</summary>
-    public static Error ExecutionNotFound(int value) => Error.NotFound(FlowErrorCodes.ExecutionNotFound, $"没有执行 #{value}。");
+    public static Error ExecutionNotFound(int value) => Error.NotFound(ExecutionErrorCodes.NotFound, $"没有执行 #{value}。");
 
     /// <summary>该执行已结束。</summary>
     public static Error ExecutionSettled(ExecutionId execution, string action) =>

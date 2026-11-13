@@ -123,7 +123,7 @@ public sealed class TaskRecordSerializationMapperTests
             false,
             new TaskJournalRecord([], 0),
             new FlowRecord(
-                FlowRecordKinds.Code,
+                new FlowIdentity(new FlowName("对话"), FlowRecordKinds.Code, "dialogue"),
                 new CodeFlowDefinitionRecord("dialogue", values),
                 new CodeFlowStateRecord(
                     StartInputs.Single(new PortName("目标"), "对话"),
@@ -138,6 +138,9 @@ public sealed class TaskRecordSerializationMapperTests
 
         Assert.Equal("dialogue", definition.Implementation);
         Assert.Equal("中文", definition.Values["language"]);
+        Assert.Equal(new FlowName("对话"), loaded.Flow.Identity.Name);
+        Assert.Equal(FlowRecordKinds.Code, loaded.Flow.Identity.Kind);
+        Assert.Equal("dialogue", loaded.Flow.Identity.Implementation);
         Assert.Equal("中文", state.Values["language"]);
         Assert.Equal("对话", state.Inputs.Text(new PortName("目标")));
         Assert.Equal("对话", state.StartTexts.Text(new PortName("目标")));

@@ -12,7 +12,7 @@ using Xunit;
 namespace Kuroe.Flow.Tests.Runtime.Graph;
 
 /// <summary>执行输入的端口文本与取值来自同一份完整取值，静态端口文本单独保留。</summary>
-public sealed class ExecutionInputBuilderTests
+public sealed class GraphExecutionInputBuilderTests
 {
     private static readonly PortName Content = new("正文");
     private static readonly PortName Fallback = new("默认");
@@ -29,7 +29,7 @@ public sealed class ExecutionInputBuilderTests
             new HashSet<PortName> { Content },
             staticTexts: new PortTexts(new Dictionary<PortName, string> { [Static] = "静态值" }));
 
-        ExecutionInput input = ExecutionInputBuilder.Build(new TaskId(1), node, inputs, null);
+        GraphExecutionInput input = GraphExecutionInputBuilder.Build(new TaskId(1), node, inputs, null);
 
         Assert.Equal(longText, input.Text(Content));
         Assert.Equal(longText, input.Inputs.Single(value => value.Port == Content).Text);

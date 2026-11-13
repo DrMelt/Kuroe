@@ -57,7 +57,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
             [.. request.Target.Value
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
                 .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
-        ExecutionHandle handle = Gate.Arrive(new ExecutionId(execution.Value), node, request.Attempt);
+        ExecutionHandle handle = Gate.Arrive(execution, node, request.Attempt);
         try
         {
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);

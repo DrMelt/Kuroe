@@ -15,15 +15,6 @@ using Kuroe.Flow.Node.StaticGraph.Ports;
 
 using Kuroe.Flow.Control.Graph.Nodes;
 using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
-using ExecutionId = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionId;
-using ExecutionOutput = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionOutput;
-using ExecutionOutputKind = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionOutputKind;
-using ExecutionState = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionState;
-using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
-using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
-using NeutralExecutionRestoreContext = Kuroe.Flow.Execution.ExecutionRestoreContext;
-using NeutralExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
-using PreparedExecutionRestore = Kuroe.Flow.Execution.PreparedExecutionRestore;
 
 namespace Kuroe.Flow.Control.Graph;
 
@@ -372,7 +363,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         }
 
         // 内容产出的执行不经过端口交回，产出文本直接发布到承载文本的端口
-        ExecutionOutput output = execution.Output ?? ExecutionOutput.Ports;
+        ExecutionOutput output = execution.Output ?? ExecutionOutput.FromPorts([]);
         if (output.Kind == ExecutionOutputKind.Content)
         {
             node.Publish(execution, output);
@@ -703,7 +694,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     public sealed record RestorePlan(
         NodePath Blocked,
         GraphExecution Source,
-        ExecutionInput Input,
+        GraphExecutionInput Input,
         PreparedExecutionRestore Prepared);
 
     /// <summary>是否存在可派发的恢复计划。要求持有 Gate。</summary>
@@ -797,18 +788,18 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
 
             if (candidate.RestoreData is { } data)
             {
-                ExecutionInput input = candidate.Input with
+                GraphExecutionInput input = candidate.Input with
                 {
                     ExecutionCount = node.Executions + 1,
                     OutputPorts = node.Executable.SubmittablePorts,
                 };
 
-                NeutralExecutionRequest request = GraphExecution.BuildRequest(input);
-                NeutralExecutionRestoreContext context = new(
-                    new NeutralExecutionId(candidate.Id.Value),
+                ExecutionRequest request = GraphExecution.BuildRequest(input);
+                ExecutionRestoreContext context = new(
+                    candidate.Id,
                     request,
                     GraphExecution.BuildTarget(input, request),
-                    new NeutralExecutionRestoreState(data.Format, data.Payload),
+                    data,
                     GraphExecution.ToNeutralContract(candidate.Contract));
                 ErrorOr<PreparedExecutionRestore> prepared;
                 try

@@ -1,3 +1,4 @@
+using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Tasks;
 
@@ -25,9 +26,9 @@ public sealed record TaskJournalRecord(
     IReadOnlyList<JournalEntry> Entries,
     int DroppedEntries);
 
-/// <summary>任务锁定的流程记录：种类、定义与状态。</summary>
+/// <summary>任务锁定的流程记录：身份、定义与状态。</summary>
 public sealed record FlowRecord(
-    string Kind,
+    FlowIdentity Identity,
     IFlowDefinitionRecord Definition,
     IFlowStateRecord State);
 

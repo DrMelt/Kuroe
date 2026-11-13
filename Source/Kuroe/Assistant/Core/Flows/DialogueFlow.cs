@@ -1,5 +1,4 @@
-using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Tasks;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 using Kuroe.Tool;
@@ -19,7 +18,7 @@ internal static class DialogueFlow
     internal static PortName StartPort { get; } = new("目标");
 
     /// <summary>回话步骤的路径与标签。</summary>
-    internal static NodeLabel ReplyNodeLabel { get; } = new("回话");
+    internal const string ReplyLabel = "回话";
 
     /// <summary>回话执行接收用户输入的端口名。</summary>
     internal static PortName InputPort { get; } = new("回答");

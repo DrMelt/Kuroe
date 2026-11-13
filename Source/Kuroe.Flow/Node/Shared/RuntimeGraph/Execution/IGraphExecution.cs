@@ -1,3 +1,5 @@
+using Kuroe.Flow.Execution;
+
 namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次图执行对宿主的视图：所属上下文、状态快照与过程事件。状态改动只在引擎内部。</summary>
@@ -7,7 +9,7 @@ public interface IGraphExecution
     ExecutionId Id { get; }
 
     /// <summary>本次执行的输入。</summary>
-    ExecutionInput Input { get; }
+    GraphExecutionInput Input { get; }
 
     /// <summary>当前执行状态。</summary>
     ExecutionState State { get; }
