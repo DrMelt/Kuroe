@@ -1,19 +1,16 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.RuntimeGraph.Execution;
 using Kuroe.Node.Llm.Sessions;
-using Microsoft.Extensions.AI;
 
 namespace Kuroe.Node.Llm.Executions;
 
-/// <summary>一次执行的运行器：按上下文装配会话并持有本次执行的过程记录。
-/// 每轮请求都带完整工具面，模型请求工具时在同一会话内执行并回填结果，直到模型给出回复。
-/// 产出契约未满足时在同一会话里补发要求再请求，模型因此能看到自己上一轮的回复。
-/// 请求的模型侧内容全部取自节点类型自身给出的指令、系统指令与工具面，因此只适用于 Llm 类型的执行节点。</summary>
+/// <summary>一次执行的运行器：按上下文装配 MAF 会话并持有本次执行的过程记录。
+/// 工具调用由 MAF 在同一会话内完成，产出契约未满足时补发要求再请求。</summary>
 internal sealed class ExecutionRunner(
     SessionFactory sessions,
     IExecutionStatusReader status,
     ExecutionId execution,
-    LlmExecutionState? restored = null) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreDataReader
+    LlmAgentSessionPayload? restored = null) : IExecutionRunner, IExecutionUsageReader, IExecutionRestoreDataReader
 {
     /// <summary>补发要求的上限，用尽仍未交回按收口失败处理。</summary>
     private const int ReminderLimit = 2;
@@ -21,8 +18,8 @@ internal sealed class ExecutionRunner(
     private readonly SessionFactory _sessions = sessions;
     private readonly ContractReminder _reminder = new(status);
     private readonly ProcessJournal _journal = new();
-    private readonly LlmExecutionState? _restored = restored;
-    private volatile Session? _session;
+    private readonly LlmAgentSessionPayload? _restored = restored;
+    private volatile IConversation? _session;
     private volatile ExecutionRestorePayload? _restoreData;
 
     /// <summary>本次执行的过程记录。</summary>
@@ -43,44 +40,54 @@ internal sealed class ExecutionRunner(
         CancellationToken cancellationToken)
     {
         LlmNodeType? type = input.Type as LlmNodeType;
-        Session session = _sessions.ForExecution(execution, input, _journal, _restored);
+        ErrorOr<IConversation> created = await _sessions.ForExecutionAsync(
+            execution,
+            input,
+            _journal,
+            _restored,
+            cancellationToken).ConfigureAwait(false);
+
+        if (created.IsError)
+        {
+            return created.ErrorsOrEmptyList;
+        }
+
+        IConversation session = created.Value;
         _session = session;
         if (_restored is not null)
         {
             _journal.AppendRestored();
         }
 
-        IToolInvoker tools = new ToolInvoker(session.Functions);
-
         try
         {
             ErrorOr<Success> reply = await AskWithReminders(
-                text => TurnLoop(session, tools, text, cancellationToken),
+                text => session.AskAsync(text, cancellationToken),
                 session.IsRestored ? null : type?.Instruction(input) ?? string.Empty,
                 () => _reminder.Text(execution));
 
             if (reply.IsError)
             {
-                CaptureInterruptedRound(session);
+                await CaptureInterruptedRound(session).ConfigureAwait(false);
 
                 return reply.ErrorsOrEmptyList;
             }
 
-            _ = CaptureRestoreData(session);
+            await CaptureRestoreData(session, CancellationToken.None).ConfigureAwait(false);
 
             return ExecutionOutput.Ports;
         }
         catch (Exception)
         {
-            CaptureInterruptedRound(session);
+            await CaptureInterruptedRound(session).ConfigureAwait(false);
             throw;
         }
     }
 
     /// <summary>按会话当前状态留下恢复数据；历史不能继续时丢弃尚未收口的一轮并通知。</summary>
-    private void CaptureInterruptedRound(Session session)
+    private async Task CaptureInterruptedRound(IConversation session)
     {
-        if (!CaptureRestoreData(session))
+        if (!await CaptureRestoreData(session, CancellationToken.None).ConfigureAwait(false))
         {
             session.DiscardRound();
 
@@ -91,12 +98,15 @@ internal sealed class ExecutionRunner(
     }
 
     /// <summary>按会话当前状态记下恢复数据，返回是否得到可继续的历史。</summary>
-    private bool CaptureRestoreData(Session session)
+    private async Task<bool> CaptureRestoreData(IConversation session, CancellationToken cancellationToken)
     {
         try
         {
-            LlmExecutionState? state = session.CreateRestoreData();
-            _restoreData = state is null ? null : LlmExecutionStateCodec.Encode(state);
+            LlmAgentSessionPayload? state = await session
+                .CreateRestoreDataAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            _restoreData = state is null ? null : AgentSessionCodec.Encode(state);
 
             return state is not null;
         }
@@ -105,33 +115,6 @@ internal sealed class ExecutionRunner(
             _restoreData = null;
 
             return false;
-        }
-    }
-
-    /// <summary>以一条指令开始，执行模型请求的每次工具调用，直到模型不再请求工具或请求次数用尽。</summary>
-    internal static async Task<ErrorOr<Success>> TurnLoop(
-        IConversation conversation,
-        IToolInvoker tools,
-        string? instruction,
-        CancellationToken cancellationToken)
-    {
-        string? input = instruction;
-        while (true)
-        {
-            ErrorOr<TurnReply> reply = await conversation.AskAsync(input, cancellationToken);
-            if (reply.IsError)
-            {
-                return reply.ErrorsOrEmptyList;
-            }
-
-            if (reply.Value.Calls.Count == 0)
-            {
-                return Result.Success;
-            }
-
-            IReadOnlyList<FunctionResultContent> results = await tools.InvokeAsync(reply.Value.Calls, cancellationToken);
-            conversation.AppendResults(results);
-            input = null;
         }
     }
 

@@ -5,19 +5,19 @@ using Xunit;
 
 namespace Kuroe.Node.Llm.Tests;
 
-/// <summary>模型客户端的解析与缓存：接入信息可解析为单回合请求，未注册的模型给出接入错误，
+/// <summary>模型客户端的解析与缓存：接入信息可解析为基础客户端，未注册的模型给出接入错误，
 /// 接入信息未变时复用客户端，变化时重建。</summary>
 public sealed class ClientProviderTests
 {
     [Fact]
-    public void Resolve_returns_a_turn_client_for_a_registered_model()
+    public void Resolve_returns_a_client_for_a_registered_model()
     {
         using ClientProvider provider = new(new Access());
 
-        ErrorOr<ITurnClient> client = provider.Resolve(ModelName.Create("fake").Value);
+        ErrorOr<ResolvedClient> client = provider.Resolve(ModelName.Create("fake").Value);
 
         Assert.False(client.IsError);
-        Assert.NotNull(client.Value);
+        Assert.NotNull(client.Value.Client);
     }
 
     [Fact]
@@ -25,10 +25,10 @@ public sealed class ClientProviderTests
     {
         using ClientProvider provider = new(new Access());
 
-        ErrorOr<ITurnClient> client = provider.Resolve(ModelName.Create("missing").Value);
+        ErrorOr<ResolvedClient> client = provider.Resolve(ModelName.Create("missing").Value);
 
         Assert.True(client.IsError);
-        Assert.Equal("Model.Missing", client.FirstError.Code);
+        Assert.Equal("Model.Missing", Assert.Single(client.Errors).Code);
     }
 
     [Fact]
@@ -37,10 +37,12 @@ public sealed class ClientProviderTests
         using ClientProvider provider = new(new Access());
         ModelName model = ModelName.Create("fake").Value;
 
-        ChatTurnClient first = Assert.IsType<ChatTurnClient>(provider.Resolve(model).Value);
-        ChatTurnClient second = Assert.IsType<ChatTurnClient>(provider.Resolve(model).Value);
+        ErrorOr<ResolvedClient> first = provider.Resolve(model);
+        ErrorOr<ResolvedClient> second = provider.Resolve(model);
 
-        Assert.Same(first.Client, second.Client);
+        Assert.False(first.IsError);
+        Assert.False(second.IsError);
+        Assert.Same(first.Value.Client, second.Value.Client);
     }
 
     [Fact]
@@ -50,11 +52,13 @@ public sealed class ClientProviderTests
         using ClientProvider provider = new(access);
         ModelName model = ModelName.Create("fake").Value;
 
-        ChatTurnClient first = Assert.IsType<ChatTurnClient>(provider.Resolve(model).Value);
+        ErrorOr<ResolvedClient> first = provider.Resolve(model);
         access.Key = "other";
-        ChatTurnClient second = Assert.IsType<ChatTurnClient>(provider.Resolve(model).Value);
+        ErrorOr<ResolvedClient> second = provider.Resolve(model);
 
-        Assert.NotSame(first.Client, second.Client);
+        Assert.False(first.IsError);
+        Assert.False(second.IsError);
+        Assert.NotSame(first.Value.Client, second.Value.Client);
     }
 
     private sealed class Access : IModelAccess

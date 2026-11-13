@@ -14,7 +14,7 @@ public sealed class ExecutionRunnerFactory(
     public IExecutionRunner Create(ExecutableNode node, ExecutionId execution) =>
         new ExecutionRunner(sessions, status, execution);
 
-    /// <summary>校验恢复数据并装配一次恢复。已上报无法完成的执行不允许恢复。</summary>
+    /// <summary>校验恢复负载的格式与模型并装配一次恢复。历史可继续性在建立恢复会话时校验。已上报无法完成的执行不允许恢复。</summary>
     public ErrorOr<PreparedRestore> Prepare(RestorePreparationContext context)
     {
         try
@@ -24,18 +24,13 @@ public sealed class ExecutionRunnerFactory(
                 return Error.Failure("Llm.Restore", $"执行已上报无法完成：{reason}");
             }
 
-            LlmExecutionState restored = LlmExecutionStateCodec.Decode(context.Payload);
+            LlmAgentSessionPayload restored = AgentSessionCodec.Decode(context.Payload);
             string? model = (context.Input.Declaration as KuroeNodeDeclaration)?.Model?.Value;
             if (restored.Model != model)
             {
                 return Error.Failure(
                     "Llm.Restore",
                     $"恢复数据属于模型 {restored.Model}，当前执行使用 {model ?? "未声明模型"}。");
-            }
-
-            if (!LlmExecutionStateCodec.IsRestorable(restored))
-            {
-                return Error.Failure("Llm.Restore", "恢复数据中的会话历史不能继续。");
             }
 
             return new PreparedRestore(context.Input, restored);
@@ -51,7 +46,7 @@ public sealed class ExecutionRunnerFactory(
         ExecutableNode node,
         ExecutionId execution,
         PreparedRestore restore) =>
-        restore.Data is LlmExecutionState state
+        restore.Data is LlmAgentSessionPayload state
             ? new ExecutionRunner(sessions, status, execution, state)
             : throw new InvalidOperationException("Llm 恢复数据类型不匹配。");
 }
