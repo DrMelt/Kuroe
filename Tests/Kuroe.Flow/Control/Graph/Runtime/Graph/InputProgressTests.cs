@@ -1,9 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 using Xunit;
 
 namespace Kuroe.Flow.Tests.Runtime.Graph;

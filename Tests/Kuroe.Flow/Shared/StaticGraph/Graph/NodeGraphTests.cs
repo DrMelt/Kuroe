@@ -1,8 +1,8 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
+using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.StaticGraph.Graph;

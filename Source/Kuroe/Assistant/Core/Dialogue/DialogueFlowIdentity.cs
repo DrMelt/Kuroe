@@ -1,6 +1,6 @@
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Assistant.Dialogue;

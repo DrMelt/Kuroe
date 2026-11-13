@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
 
 namespace Kuroe.Flow.Compilation.Shared.Validation;
 

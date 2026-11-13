@@ -1,8 +1,8 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
 
 namespace Kuroe.Node.Llm;
 

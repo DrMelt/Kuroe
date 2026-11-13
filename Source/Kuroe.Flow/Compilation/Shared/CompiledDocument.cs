@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 
 namespace Kuroe.Flow.Compilation.Shared;
 

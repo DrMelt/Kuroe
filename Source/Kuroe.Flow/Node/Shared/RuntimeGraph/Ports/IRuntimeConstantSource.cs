@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Ports;
+namespace Kuroe.Flow.Node.RuntimeGraph.Ports;
 
 /// <summary>运行期常量的取值来源：由任务运行状态给出 Once 节点唯一一次执行的产出文本，未产出时为空。</summary>
 public interface IRuntimeConstantSource

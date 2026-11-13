@@ -9,16 +9,16 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Persistence.Saving.Shared;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Assistant;
 using Kuroe.Assistant.Dialogue;
+using Kuroe.Flow.Control.Graph;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Graph;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Runtime.Contract;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control.Graph.Contract;
+using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Pending;
 using Kuroe.Process;
 using Kuroe.Tool;
@@ -74,6 +74,9 @@ public sealed class TestEnvironment : IDisposable
     public ExecutionIndex Executions { get; }
 
     public TaskService Tasks { get; }
+
+    /// <summary>流程运行期，转发任务命令到活跃控制实例。</summary>
+    public IFlowRuntime Driver => _provider.GetRequiredService<IFlowRuntime>();
 
     /// <summary>等待型节点的宿主功能，回答与批准经它交付外部输入。</summary>
     public PendingService Pendings { get; }

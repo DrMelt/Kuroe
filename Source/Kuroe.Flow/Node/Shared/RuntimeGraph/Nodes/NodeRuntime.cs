@@ -1,9 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
 
 /// <summary>一个节点在任务内的运行期对象：节点定义与自身状态的合体，也是下游读产出的来源状态。
 /// 引擎按它读放行、版本与触发，下游按它读端口取值，两者都读最近一次发布。状态改动的时机由引擎与节点实现共同保证在任务 Gate 下。</summary>

@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>进入某个输入端口的一段取值。端口名保留目标侧身份，取值保留出处与文本。</summary>
 /// <param name="Port">目标输入端口名。</param>

@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Runtime.Contract;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.TestSupport;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using NeutralExecutionOutput = Kuroe.Flow.Execution.ExecutionOutput;
@@ -63,7 +63,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory
             await Gate.WaitOpen(handle).WaitAsync(cancellationToken);
 
             IReadOnlyList<NeutralExecutionOutputPort> ports =
-                [.. request.OutputPorts.Where(port => port.RequiresSubmission)];
+                [.. request.OutputPorts.Where(port => port.Required)];
             if (ports.Count > 0 && SubmitsPorts)
             {
                 PortSubmitter submitter = PortSubmitter

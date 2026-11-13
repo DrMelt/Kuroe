@@ -2,10 +2,10 @@ using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Tasks.Records;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 
 namespace Kuroe.Flow.TestSupport;
 

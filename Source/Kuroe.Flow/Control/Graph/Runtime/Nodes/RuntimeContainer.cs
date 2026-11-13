@@ -1,11 +1,12 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
+using Kuroe.Flow.Node.RuntimeGraph;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-namespace Kuroe.Flow.Runtime.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Ports;
+using Kuroe.Flow.Node.Runtime.Nodes;
+namespace Kuroe.Flow.Control.Graph.Nodes;
 /// <summary>一个容器在任务内的运行时对象：容器定义与最近一次发布。容器不派发执行器，按统一节点方案随成员与触发输入推进，每次发布计一次执行。
 /// 状态查询只读已实例化节点，不创建节点：未实例化的成员视为没有产出。
 /// 读写都要求持有任务 Gate。</summary>

@@ -1,9 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
 
 /// <summary>引擎给节点实现的机制入口：来源状态、来源内容、输入侧方案与运行期对象。读写要求持有任务 Gate。</summary>
 public interface INodeContext : IReadinessSources

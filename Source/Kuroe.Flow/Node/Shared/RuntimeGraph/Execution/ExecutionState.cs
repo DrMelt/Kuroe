@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次执行的状态，只表达跑没跑完。</summary>
 public enum ExecutionState

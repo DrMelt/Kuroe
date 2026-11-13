@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control.Graph.Engine;
 using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
 
-namespace Kuroe.Flow.Runtime.Contract;
+namespace Kuroe.Flow.Control.Graph.Contract;
 
 /// <summary>执行的本轮契约状态读取：缺口与已上报的无法完成原因只在此算一次，回执、追问与查看工具共用同一口径。</summary>
 public sealed class ExecutionStatusReader(IFlowExecutionGateway executions) : IExecutionStatusReader

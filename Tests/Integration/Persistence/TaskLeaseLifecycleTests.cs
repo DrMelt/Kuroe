@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Configuration.Files;
 using Kuroe.Flow.Persistence.Files;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Persistence;

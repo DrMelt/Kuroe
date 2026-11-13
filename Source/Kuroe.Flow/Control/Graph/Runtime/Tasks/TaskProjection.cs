@@ -1,17 +1,17 @@
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Runtime.Nodes;
+using Kuroe.Flow.Control.Graph;
+using Kuroe.Flow.Control.Graph.Nodes;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Runtime.Tasks;
+namespace Kuroe.Flow.Control.Graph.Tasks;
 
 /// <summary>任务快照的只读投影：按已实例化节点读出执行节点与容器的一刻状态。
 /// 投影不实例化节点，未实例化的节点按默认待办报告。</summary>

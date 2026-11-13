@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次执行的产出。内容产出给出文本，端口产出交回命名端口后只给空内容。</summary>
 public sealed record ExecutionOutput(ExecutionOutputKind Kind, string Content = "")

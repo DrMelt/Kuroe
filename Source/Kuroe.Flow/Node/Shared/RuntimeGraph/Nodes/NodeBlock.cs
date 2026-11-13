@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
 
 /// <summary>节点停在阻塞时的原因、可恢复的关联执行与时刻。关联为空表示当前阻塞不可恢复。</summary>
 public sealed record NodeBlock(

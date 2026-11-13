@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-namespace Kuroe.Flow.Shared.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.StaticGraph.Ports;
 
 /// <summary>输入端口声明：名字、类型、模式、说明、默认值、执行角色与驱动配置。类型决定动态来源产出如何进入本节点。
 /// 容器与执行节点共用，动态输入由 From 连接，静态输入由 Bindings 绑定。

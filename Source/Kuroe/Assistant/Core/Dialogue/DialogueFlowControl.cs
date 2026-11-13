@@ -4,6 +4,7 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Tasks;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -20,9 +21,13 @@ internal sealed class DialogueFlowControl(
 
     private bool _awaiting = true;
     private IExecution? _live;
+    private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <inheritdoc/>
     public Task Loop => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task Completion => _completion.Task;
 
     /// <inheritdoc/>
     public bool HasBlocked => false;
@@ -43,12 +48,9 @@ internal sealed class DialogueFlowControl(
     public void Pause()
     {
         _awaiting = false;
-        lock (task.Gate)
+        if (_live is { IsLive: true } live)
         {
-            if (_live is { IsLive: true } live)
-            {
-                executions.Interrupt(live, "任务暂停。");
-            }
+            executions.Interrupt(live, "任务暂停。");
         }
     }
 
@@ -71,7 +73,10 @@ internal sealed class DialogueFlowControl(
     public ErrorOr<Success> Terminate()
     {
         _awaiting = false;
-        return task.Terminate();
+        ErrorOr<Success> result = task.Terminate();
+        _completion.TrySetResult();
+
+        return result;
     }
 
     /// <inheritdoc/>
@@ -80,6 +85,16 @@ internal sealed class DialogueFlowControl(
     /// <inheritdoc/>
     public void InterruptForShutdown()
     {
+        _awaiting = false;
+        lock (task.Gate)
+        {
+            if (_live is { IsLive: true } live)
+            {
+                executions.Interrupt(live, "进程退出。");
+            }
+        }
+
+        _completion.TrySetResult();
     }
 
     /// <inheritdoc/>
@@ -126,18 +141,10 @@ internal sealed class DialogueFlowControl(
 
     private async Task RunAsync(IExecution execution)
     {
-        try
-        {
-            IExecutionRunner runner = executions.CreateRunner(
-                null,
-                new DialogueTarget(new LlmNodeType(state.Parameters), state.Model),
-                execution.Id);
-            await executions.DispatchAsync(execution, runner, execution.CancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            executions.Fail(execution, [Error.Failure("Flow.Dispatch", $"对话执行失败：{ex.Message}")]);
-        }
+        await executions.RunAsync(
+            execution,
+            null,
+            new DialogueTarget(new LlmNodeType(state.Parameters), state.Model)).ConfigureAwait(false);
 
         lock (task.Gate)
         {
@@ -146,7 +153,7 @@ internal sealed class DialogueFlowControl(
                 _live = null;
             }
 
-            _awaiting = true;
+            _awaiting = task.Lifecycle != TaskLifecycle.Terminated;
             task.NotifyExecutionSettled(execution);
             task.NotifyChanged();
         }

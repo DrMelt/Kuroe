@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次图执行对宿主的视图：所属上下文、状态快照与过程事件。状态改动只在引擎内部。</summary>
 public interface IGraphExecution

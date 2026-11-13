@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次执行的本轮契约状态：已交回的端口值与已上报的无法完成原因。</summary>
 public sealed record ExecutionContract(

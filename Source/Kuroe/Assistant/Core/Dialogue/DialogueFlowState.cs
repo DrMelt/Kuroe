@@ -3,7 +3,7 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Node.Llm;

@@ -22,8 +22,8 @@ using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 using Kuroe.Flow.Persistence.Saving.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.Tasks;
 using Kuroe.Tool;
 using Kuroe.Tool.Command.Json;
@@ -37,12 +37,12 @@ using Kuroe.Workflows.BuiltinNodes;
 using Kuroe.Workflows.Tasks;
 using Kuroe.Flow.Persistence.Files;
 using Kuroe.Tools;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Persistence.Restoring;
 using Kuroe.Flow.Persistence.Saving;
 using Kuroe.Flow.Runtime.Tasks.Persistence;
-using Kuroe.Flow.Runtime.Contract;
+using Kuroe.Flow.Control.Graph.Contract;
 using Kuroe.Flow.Compilation;
 using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Files;
@@ -230,6 +230,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ExecutionRunnerRegistry>(),
             sp.GetRequiredService<ExecutionRestorerRegistry>()));
         services.AddSingleton<IExecutionRuntime>(sp => sp.GetRequiredService<ExecutionRuntime>());
+        services.AddSingleton<IExecutionContractWriter>(sp => sp.GetRequiredService<ExecutionRuntime>());
         services.AddSingleton<ITaskIdSource, GuidTaskIdSource>();
         services.AddSingleton<ITaskRecordCodec>(new TaskRecordCodec());
         services.AddSingleton<ITaskRecordStore>(sp => new FileTaskRecordStore(
@@ -257,6 +258,7 @@ public static class ServiceCollectionExtensions
             new GraphFlowStateBinder(),
             new GraphFlowControlFactory(
                 sp.GetRequiredService<IExecutionRuntime>(),
+                sp.GetRequiredService<IExecutionContractWriter>(),
                 sp.GetRequiredService<IExecutionTargetResolver>(),
                 inputs,
                 executions),

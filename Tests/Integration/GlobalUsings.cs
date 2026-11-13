@@ -11,4 +11,4 @@ global using ExecutionJournal = Kuroe.Flow.Execution.ExecutionJournal;
 global using ProcessJournalStore = Kuroe.Flow.Execution.ProcessJournalStore;
 global using Kuroe.Integration.Tests.Support;
 global using Kuroe.TestSupport;
-global using ExecutionSnapshot = Kuroe.Flow.Shared.RuntimeGraph.Execution.GraphExecutionSnapshot;
+global using ExecutionSnapshot = Kuroe.Flow.Node.RuntimeGraph.Execution.GraphExecutionSnapshot;

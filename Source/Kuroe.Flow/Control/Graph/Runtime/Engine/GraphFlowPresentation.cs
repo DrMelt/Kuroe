@@ -1,11 +1,11 @@
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Control.Graph;
+using Kuroe.Flow.Control.Graph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Flow.Tasks;
 
-namespace Kuroe.Flow.Runtime.Engine;
+namespace Kuroe.Flow.Control.Graph.Engine;
 
 /// <summary>图流程的任务表现：从同一份中性执行状态生成流程视图与任务快照。</summary>
 public sealed class GraphFlowPresentation : IFlowPresentation
@@ -59,8 +59,7 @@ public sealed class GraphFlowPresentation : IFlowPresentation
         [.. task.Executions.Select(execution => new GraphExecution(
             state.Context(execution.Id).Input,
             execution,
-            state.Context(execution.Id).ControlVersion,
-            state.ExecutionsRuntime ?? throw new InvalidOperationException("图流程没有执行运行期。")).Snapshot())];
+            state.Context(execution.Id).ControlVersion).Snapshot())];
 
     private static GraphFlowState State(ITaskFlowContext task)
     {

@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Graph.Records;

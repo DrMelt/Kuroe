@@ -1,9 +1,9 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>一次执行的输入：节点身份、轮次、本轮各输入端口取到的内容、执行可读的端口文本与节点声明。
 /// 启动的执行只用这里声明的内容，不继承任何未声明的历史。输入端口文本统一经 <see cref="Texts"/> 读取。</summary>

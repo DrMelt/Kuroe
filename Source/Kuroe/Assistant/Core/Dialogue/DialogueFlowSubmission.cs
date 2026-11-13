@@ -6,7 +6,7 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Execution.Records;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Node.Llm;

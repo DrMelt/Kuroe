@@ -4,26 +4,27 @@ using Kuroe.Flow.Execution;
 using ExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Runtime.Contract;
-using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Runtime.Tasks;
+using Kuroe.Flow.Control.Graph.Contract;
+using Kuroe.Flow.Control.Graph;
+
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Runtime.Nodes;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
-using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Control.Graph.Nodes;
+using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using ExecutionId = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionId;
 
-namespace Kuroe.Flow.Runtime.Engine;
+namespace Kuroe.Flow.Control.Graph.Engine;
 
 /// <summary>一个任务的图流程控制：推进循环、恢复、重新执行、终止与等待交付。</summary>
 internal sealed class GraphFlowControl(
     ITaskFlowContext task,
     GraphFlowState state,
     IExecutionRuntime runtime,
+    IExecutionContractWriter contracts,
     IExecutionTargetResolver targetResolver,
     IInputDelivery inputDelivery,
     IFlowExecutionGateway gateway) : IFlowControl
@@ -44,6 +45,9 @@ internal sealed class GraphFlowControl(
 
     /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
     public Task Loop { get; private set; } = Task.CompletedTask;
+
+    /// <summary>推进循环结束即控制实例不再需要。</summary>
+    public Task Completion => Loop;
 
     /// <summary>是否有步骤停在阻塞。</summary>
     public bool HasBlocked => state.Runtime.HasBlocked;
@@ -148,7 +152,7 @@ internal sealed class GraphFlowControl(
     {
         GraphExecution graph = Find(execution);
         RuntimeExecutable node = state.Runtime.Executable(graph.Input.Node);
-        Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionContract contract = graph.Contract;
+        Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionContract contract = graph.Contract;
 
         return new ExecutionStatus(
             graph.Request.Target,
@@ -178,7 +182,7 @@ internal sealed class GraphFlowControl(
             return valid.ErrorsOrEmptyList;
         }
 
-        graph.SubmitPorts(ports);
+        contracts.SubmitOutputs(graph.Unit, GraphExecution.ToNeutralOutputs(ports));
 
         return Status(execution);
     }
@@ -187,7 +191,7 @@ internal sealed class GraphFlowControl(
     internal ErrorOr<ExecutionStatus> ReportCannotComplete(IExecution execution, string reason)
     {
         GraphExecution graph = Find(execution);
-        graph.ReportCannotComplete(reason);
+        contracts.ReportCannotComplete(graph.Unit, reason);
 
         return Status(execution);
     }
@@ -255,7 +259,7 @@ internal sealed class GraphFlowControl(
             return true;
         });
 
-        return new GraphExecution(input, unit, task.ControlVersion, runtime);
+        return new GraphExecution(input, unit, task.ControlVersion);
     }
 
     /// <summary>暂停推进：在跑的执行就地中断。暂停状态在任务对象上，推进循环读取它。</summary>
@@ -375,7 +379,7 @@ internal sealed class GraphFlowControl(
 
         foreach (GraphExecution execution in live)
         {
-            execution.Interrupt("进程退出。");
+            runtime.Interrupt(execution.Unit, "进程退出。");
         }
     }
 
@@ -684,7 +688,7 @@ internal sealed class GraphFlowControl(
 
         if (step.Paused)
         {
-            step.Execution.Interrupt("任务已暂停。");
+            runtime.Interrupt(step.Execution.Unit, "任务已暂停。");
         }
 
         await RunAndSettleAsync(node, step.Execution, null).ConfigureAwait(false);
@@ -708,7 +712,6 @@ internal sealed class GraphFlowControl(
             GraphExecution execution = Attach(
                 gateway.Open(task, GraphExecution.BuildRequest(target.Input), runtime.Create),
                 target.Input);
-            execution.ContinueFrom(target.Source);
             node.ClearRerun();
             node.ClearBlock();
             node.AddActive();
@@ -731,23 +734,27 @@ internal sealed class GraphFlowControl(
         GraphExecution execution,
         TaskRuntime.RestorePlan? restore)
     {
+        ErrorOr<Success> run;
         try
         {
-            var runner = restore is null
-                ? runtime.CreateRunner(
+            run = restore is null
+                ? await runtime.RunAsync(
+                    execution.Unit,
                     node.Executable.Type as IExecutionRunnerFactory,
-                    execution.Target,
-                    new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value))
-                : runtime.CreateRestored(
-                    new Kuroe.Flow.Execution.ExecutionId(execution.Id.Value),
-                    restore.Prepared);
-            await runtime.DispatchAsync(execution.Unit, runner, CancellationToken.None).ConfigureAwait(false);
+                    execution.Target).ConfigureAwait(false)
+                : await runtime.RunRestoreAsync(
+                    execution.Unit,
+                    restore.Source.Unit,
+                    restore.Prepared).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            // 派发未走完时执行不会自行收口，显式收口后走统一收口路径把执行节点停驻
-            string message = $"执行派发异常：{ex.Message}";
-            execution.MarkFailed([Error.Failure("Task.Dispatch", message)]);
+            run = Error.Failure("Task.Dispatch", $"执行派发异常：{ex.Message}");
+        }
+
+        if (run.IsError)
+        {
+            string message = run.FirstError.Description;
             lock (task.Gate)
             {
                 task.AppendError(message);

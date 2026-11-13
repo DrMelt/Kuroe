@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Ports;
+namespace Kuroe.Flow.Node.RuntimeGraph.Ports;
 
 /// <summary>执行输入端口与输出端口声明的只读视图。工具按它读取运行期环境，不接触执行输入的具体形状。</summary>
 public interface IPortAccess : IPortTexts

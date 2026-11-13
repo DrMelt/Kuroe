@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm.Executions;

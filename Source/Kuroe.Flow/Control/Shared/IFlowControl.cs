@@ -5,8 +5,11 @@ namespace Kuroe.Flow.Control;
 /// <summary>一个任务的流程控制实例：推进循环、恢复、重新执行、终止与等待交付。任务聚合只持有它，命令经运行期引擎转发。</summary>
 public interface IFlowControl
 {
-    /// <summary>该任务的推进循环，宿主持有以便收口。</summary>
+    /// <summary>该任务的推进循环，宿主持有以便收口。循环结束不等于控制实例不再需要。</summary>
     Task Loop { get; }
+
+    /// <summary>控制实例不再需要时完成。流程运行期按它移除活跃控制实例。</summary>
+    Task Completion { get; }
 
     /// <summary>是否有步骤停在阻塞。</summary>
     bool HasBlocked { get; }

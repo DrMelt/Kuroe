@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Nodes;
 
 /// <summary>节点类型的输出端口声明方式：由流程声明、从输入派生，或由类型给出。</summary>
 public abstract record OutputDeclaration

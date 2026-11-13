@@ -420,24 +420,17 @@ internal sealed class TaskBrowser(
     /// <summary>按执行号取执行与其所属任务的快照。</summary>
     private ErrorOr<(TaskSnapshot Task, Kuroe.Flow.Execution.ExecutionSnapshot Execution)> FindExecution(int id)
     {
-        Kuroe.Flow.Execution.IExecution? execution = registry.FindExecution(
-            new Kuroe.Flow.Execution.ExecutionId(id));
-        if (execution is null)
+        ErrorOr<(WorkTask Task, Kuroe.Flow.Execution.IExecution Execution)> found =
+            registry.FindOwnedExecution(new Kuroe.Flow.Execution.ExecutionId(id));
+        if (found.IsError)
         {
-            return [Kuroe.Flow.Execution.ExecutionErrors.ExecutionNotFound(id)];
+            return found.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkTask> owner = registry.Find(new TaskId(execution.Request.Owner.Value));
-        if (owner.IsError)
-        {
-            return owner.ErrorsOrEmptyList;
-        }
+        WorkTask owner = found.Value.Task;
+        Kuroe.Flow.Execution.ExecutionSnapshot snapshot = found.Value.Execution.Snapshot();
 
-        Kuroe.Flow.Execution.ExecutionSnapshot snapshot = owner.Value.Executions
-            .Single(candidate => candidate.Id.Value == id)
-            .Snapshot();
-
-        return (owner.Value.Snapshot(), snapshot);
+        return (owner.Snapshot(), snapshot);
     }
 
     /// <summary>终止整个任务不可恢复，选择后要求再次确认，默认停在保留任务的选项。</summary>

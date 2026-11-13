@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Runtime;
-using Kuroe.Flow.Runtime.Graph;
+using Kuroe.Flow.Control.Graph;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Kuroe.Flow.TestSupport;
 using Kuroe.Tool;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
@@ -212,7 +212,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
         IGraphExecution? started = FindGraphExecution(executions, execution);
         if (started is null)
         {
-            return await ExecuteCodeAsync(execution, journal, cancellationToken).ConfigureAwait(false);
+            return await ExecuteCodeAsync(execution, request, journal, cancellationToken).ConfigureAwait(false);
         }
 
         NodePath node = GraphRecordTargets.Parse(request.Target);
@@ -231,7 +231,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             await (IgnoreCancellationWhileHeld ? opened : opened.WaitAsync(cancellationToken));
 
             IReadOnlyList<NeutralExecutionOutputPort> requiredPorts =
-                [.. request.OutputPorts.Where(port => port.RequiresSubmission)];
+                [.. request.OutputPorts.Where(port => port.Required)];
             IReadOnlyList<ITool> contractTools = ContractToolFactory?.Invoke(execution) ?? [];
             if (requiredPorts.Count > 0 && SubmitsPorts)
             {
@@ -284,6 +284,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>代码流程执行：不依赖图侧执行对象，直接按中性执行记录收口。</summary>
     private async Task<ErrorOr<ExecutionOutput>> ExecuteCodeAsync(
         ExecutionId execution,
+        NeutralExecutionRequest request,
         RecordingJournal journal,
         CancellationToken cancellationToken)
     {
@@ -302,12 +303,25 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
             _startedCode.Add(started);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        CodeEmits?.Invoke(started, journal);
-        string reply = CodeReply?.Invoke(started) ?? "回复";
-        journal.AppendContent(ProcessContentKind.Reply, reply);
+        NodePath node = new(
+            [.. request.Target.Value
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(level => new NodeLabel(Uri.UnescapeDataString(level)))]);
+        ExecutionHandle handle = Gate.Arrive(execution, node, request.Attempt);
+        try
+        {
+            await Gate.WaitOpen(handle).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            CodeEmits?.Invoke(started, journal);
+            string reply = CodeReply?.Invoke(started) ?? "回复";
+            journal.AppendContent(ProcessContentKind.Reply, reply);
 
-        return await Task.FromResult(ExecutionOutput.Ports).ConfigureAwait(false);
+            return ExecutionOutput.Ports;
+        }
+        finally
+        {
+            Gate.Leave(handle);
+        }
     }
 
     /// <summary>按模型调用工具的方式取回执文本，实参按参数名给出。</summary>

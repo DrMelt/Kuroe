@@ -1,8 +1,8 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.StaticGraph.Graph;
 
 /// <summary>一棵流程树展平后的一个执行节点及其解析结果。类型给出执行方式，只有形状声明派发执行的类型才真正启动执行。</summary>
 public sealed record ExecutableNode : GraphNode

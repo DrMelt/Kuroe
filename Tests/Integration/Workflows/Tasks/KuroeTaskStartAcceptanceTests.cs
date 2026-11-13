@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Workflows.Tasks;

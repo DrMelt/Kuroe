@@ -1,10 +1,10 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control.Graph.Engine;
 using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
 
-namespace Kuroe.Flow.Runtime.Contract;
+namespace Kuroe.Flow.Control.Graph.Contract;
 
 /// <summary>模型侧上报本轮无法完成的入口：给出原因即停驻待重新执行。</summary>
 public sealed class CannotCompleteSubmitter(IFlowExecutionGateway executions) : IExecutionCannotCompleteSubmitter

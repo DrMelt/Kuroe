@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-namespace Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Ports;
 
 /// <summary>端口表的查找、交回判定与声明文本。</summary>
 public static class PortRules

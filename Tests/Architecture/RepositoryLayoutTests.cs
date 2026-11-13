@@ -133,6 +133,10 @@ public sealed class RepositoryLayoutTests
             "GraphExecution",
             "IExecutionTargetResolver",
             "RuntimeGraph.Execution",
+            "IsConstant",
+            "RequiresSubmission",
+            "PortMode",
+            "NodeEmission",
         ];
 
         Assert.NotEmpty(SourceFiles(execution));
@@ -784,8 +788,8 @@ public sealed class RepositoryLayoutTests
         string control = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Shared");
         string[] forbidden =
         [
-            "Kuroe.Flow.Shared.RuntimeGraph",
-            "Kuroe.Flow.Shared.StaticGraph",
+            "Kuroe.Flow.Node.RuntimeGraph",
+            "Kuroe.Flow.Node.StaticGraph",
             "Kuroe.Flow.Control.Graph",
             "Kuroe.Flow.Node.Shared",
         ];
@@ -809,8 +813,8 @@ public sealed class RepositoryLayoutTests
         string presentation = Path.Combine(SourceRoot, "Kuroe.Flow", "Tasks", "Presentation", "Shared");
         string[] forbidden =
         [
-            "Kuroe.Flow.Shared.RuntimeGraph",
-            "Kuroe.Flow.Shared.StaticGraph",
+            "Kuroe.Flow.Node.RuntimeGraph",
+            "Kuroe.Flow.Node.StaticGraph",
             "Kuroe.Flow.Control.Graph",
             "Kuroe.Flow.Node.Shared",
         ];
@@ -1000,8 +1004,8 @@ public sealed class RepositoryLayoutTests
         ];
         string[] forbidden =
         [
-            "using Kuroe.Flow.Shared.StaticGraph",
-            "using Kuroe.Flow.Shared.RuntimeGraph",
+            "using Kuroe.Flow.Node.StaticGraph",
+            "using Kuroe.Flow.Node.RuntimeGraph",
             "using Kuroe.Flow.Control.Graph",
             "using Kuroe.Flow.Node.Shared",
         ];
@@ -1123,6 +1127,162 @@ public sealed class RepositoryLayoutTests
                         text.Contains(name, StringComparison.Ordinal),
                         $"{Path.GetFileName(file)} 引用了执行状态机。");
                 }
+            }
+        }
+    }
+
+    [Fact]
+    public void Graph_namespaces_follow_their_owning_projects()
+    {
+        string[] forbidden =
+        [
+            "Kuroe.Flow.Shared.StaticGraph",
+            "Kuroe.Flow.Shared.RuntimeGraph",
+            "Kuroe.Flow.Runtime.Graph",
+            "Kuroe.Flow.Runtime.Engine",
+            "Kuroe.Flow.Runtime.Contract",
+            "Kuroe.Flow.Runtime.Nodes",
+        ];
+
+        foreach (string file in SourceFiles(SourceRoot))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现旧图命名空间 {word}。");
+            }
+        }
+    }
+
+    [Fact]
+    public void Work_task_does_not_repeat_internal_state_mutations_as_public_members()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Core",
+            "Runtime",
+            "Tasks",
+            "WorkTask.cs");
+        string text = File.ReadAllText(file);
+        string[] forbidden =
+        [
+            "public Lock Gate",
+            "public void MarkCompleted",
+            "public void AppendInfo",
+            "public void AppendError",
+            "public void AppendJournal",
+            "public void RestoreJournal",
+            "public void NotifyChanged",
+            "public void NotifyExecutionSettled",
+            "public void PauseForRestore",
+            "public void Report(",
+            "public void Touch(",
+            "public ErrorOr<Success> Pause(",
+            "public ErrorOr<Success> Resume(",
+            "public ErrorOr<Success> Terminate(",
+            "public void AttachExecution(",
+        ];
+
+        foreach (string word in forbidden)
+        {
+            Assert.DoesNotContain(word, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Task_actions_and_hosts_resolve_execution_ownership_without_parsing_owner_text()
+    {
+        string[] files =
+        [
+            Path.Combine(SourceRoot, "Kuroe.Flow", "Core", "Runtime", "Tasks", "TaskActions.cs"),
+            Path.Combine(SourceRoot, "Kuroe.Console", "Views", "TaskBrowser.cs"),
+            Path.Combine(
+                SourceRoot,
+                "Kuroe",
+                "Tool",
+                "Implementation",
+                "KuroeInfo",
+                "Core",
+                "TaskKuroeInfoTool.cs"),
+        ];
+
+        foreach (string file in files)
+        {
+            Assert.DoesNotContain(
+                "Request.Owner",
+                File.ReadAllText(file),
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Execution_runtime_exposes_control_commands_not_state_transitions()
+    {
+        string file = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Execution",
+            "Shared",
+            "IExecutionRuntime.cs");
+        string text = File.ReadAllText(file);
+        string[] forbidden =
+        [
+            "MarkRunning",
+            "MarkFailed",
+            "MarkSucceeded",
+            "MarkInterrupted",
+            "MarkUncollected",
+            "AttachJournal",
+            "AttachUsageReader",
+            "SettleUsage",
+            "AttachRestoreDataReader",
+            "SettleRestoreData",
+            "ContinueFrom",
+            "CreateRunner",
+            "CreateRestored",
+            "DispatchAsync",
+            "Succeed(",
+            "Fail(",
+        ];
+
+        foreach (string word in forbidden)
+        {
+            Assert.DoesNotContain(word, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Graph_control_does_not_drive_the_execution_state_machine()
+    {
+        string directory = Path.Combine(SourceRoot, "Kuroe.Flow", "Control", "Graph");
+        string[] forbidden =
+        [
+            "MarkRunning",
+            "MarkFailed",
+            "MarkSucceeded",
+            "MarkInterrupted",
+            "MarkUncollected",
+            "AttachJournal",
+            "AttachUsageReader",
+            "SettleUsage",
+            "AttachRestoreDataReader",
+            "SettleRestoreData",
+            "CreateRunner",
+            "CreateRestored",
+        ];
+
+        Assert.NotEmpty(SourceFiles(directory));
+        foreach (string file in SourceFiles(directory))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string word in forbidden)
+            {
+                Assert.False(
+                    text.Contains(word, StringComparison.Ordinal),
+                    $"{Path.GetFileName(file)} 出现执行状态机写入口 {word}。");
             }
         }
     }

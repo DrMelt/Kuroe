@@ -117,19 +117,19 @@ public sealed class WorkTask : ITaskFlowHost
     internal IFlowDefinitionRecord? FlowSnapshot => _flowSnapshot;
 
     /// <summary>流程运行状态，由具体流程实现解释。</summary>
-    public IFlowState FlowState => _state;
+    IFlowState ITaskFlowContext.FlowState => _state;
 
     /// <summary>任务所属的流程实现端口集合。</summary>
     internal FlowProvider Provider => _provider;
 
     /// <summary>任务的流程控制工厂。</summary>
-    public IFlowControlFactory Controls => _provider.Controls;
+    IFlowControlFactory ITaskFlowHost.Controls => _provider.Controls;
 
     /// <summary>任务启动后的流程控制实例，命令由运行期引擎转发给它。</summary>
     public IFlowControl? Control { get; private set; }
 
     /// <summary>接上控制实例。</summary>
-    public void AttachControl(IFlowControl control) => Control = control;
+    void ITaskFlowHost.AttachControl(IFlowControl control) => Control = control;
 
     /// <summary>任务推进循环已退出，任务真正走完。瞬态的 Done 快照不代表此值为真。</summary>
     public bool Completed
@@ -143,14 +143,17 @@ public sealed class WorkTask : ITaskFlowHost
         }
     }
 /// <summary>标记任务已走完。要求持有 <see cref="Gate"/>。</summary>
-    public void MarkCompleted()
+    void ITaskFlowContext.MarkCompleted()
     {
         _completed = true;
         Journal.AppendInfo("任务完成。");
     }
 
     /// <summary>通知任务状态已变，存档捕获与观察方据此读取新状态。</summary>
-    public void NotifyChanged() => Registry.ReportChanged(Id);
+    internal void NotifyChanged() => Registry.ReportChanged(Id);
+
+    /// <inheritdoc/>
+    void ITaskFlowContext.NotifyChanged() => NotifyChanged();
 
     /// <summary>任务所属的任务域。</summary>
     internal TaskRegistry Registry { get; }
@@ -174,12 +177,16 @@ public sealed class WorkTask : ITaskFlowHost
     internal Journal Journal { get; } = new();
 
     /// <summary>任务内状态改动的串行点。锁序以任务 Gate 为最外层，注册表先于执行索引。</summary>
-    public Lock Gate { get; } = new();
+    internal Lock Gate { get; } = new();
+
+    /// <inheritdoc/>
+    Lock ITaskFlowContext.Gate => Gate;
 
     private event Action<IExecution>? ExecutionSettled;
 
     /// <summary>执行收口后的通知，回答等待方借此取回本轮产出。要求持有 Gate 触发。</summary>
-    public void NotifyExecutionSettled(IExecution execution) => ExecutionSettled?.Invoke(execution);
+    void ITaskFlowContext.NotifyExecutionSettled(IExecution execution) =>
+        ExecutionSettled?.Invoke(execution);
 
     /// <summary>订阅执行收口通知，返回解除订阅的委托。</summary>
     public Action SubscribeExecutionSettled(Action<IExecution> handler)
@@ -272,7 +279,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>任务控制代次，暂停、恢复与收口暂停都会推进。</summary>
-    public int ControlVersion => _controlVersion;
+    int ITaskFlowContext.ControlVersion => _controlVersion;
 
     /// <summary>任务域是否在可恢复的中断收口时暂停任务。</summary>
     internal bool PauseOnRestore => Registry.PauseOnRestore;
@@ -287,17 +294,21 @@ public sealed class WorkTask : ITaskFlowHost
     public int DroppedJournal => Journal.DroppedEntries;
 
     /// <summary>用存档内容覆盖过程记录。</summary>
-    public void RestoreJournal(IReadOnlyList<JournalEntry> entries, int dropped) =>
+    internal void RestoreJournal(IReadOnlyList<JournalEntry> entries, int dropped) =>
         Journal.Restore(entries, dropped);
 
+    /// <inheritdoc/>
+    void ITaskFlowContext.RestoreJournal(IReadOnlyList<JournalEntry> entries, int dropped) =>
+        RestoreJournal(entries, dropped);
+
     /// <summary>追加一条信息记录。</summary>
-    public void AppendInfo(string text) => Journal.AppendInfo(text);
+    void ITaskFlowContext.AppendInfo(string text) => Journal.AppendInfo(text);
 
     /// <summary>追加一条错误记录。</summary>
-    public void AppendError(string text) => Journal.AppendError(text);
+    void ITaskFlowContext.AppendError(string text) => Journal.AppendError(text);
 
     /// <summary>追加一条过程记录。</summary>
-    public void AppendJournal(JournalLevel level, string text)
+    void ITaskFlowContext.AppendJournal(JournalLevel level, string text)
     {
         if (level == JournalLevel.Error)
         {
@@ -310,10 +321,10 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>上报一条执行事件。</summary>
-    public void Report(ExecutionNotice notice) => Registry.Report(notice);
+    void ITaskFlowContext.Report(ExecutionNotice notice) => Registry.Report(notice);
 
     /// <summary>可恢复的中断收口后暂停任务，只停止新的调度，不中断在跑的执行。</summary>
-    public void PauseForRestore()
+    void ITaskFlowContext.PauseForRestore()
     {
         if (_completed || _lifecycle != TaskLifecycle.Active)
         {
@@ -328,7 +339,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>暂停任务：不再启动新的执行，等待中的在跑执行由推进器中断。</summary>
-    public ErrorOr<Success> Pause()
+    internal ErrorOr<Success> Pause()
     {
         if (_lifecycle == TaskLifecycle.Terminated)
         {
@@ -354,8 +365,11 @@ public sealed class WorkTask : ITaskFlowHost
         return Result.Success;
     }
 
+    /// <inheritdoc/>
+    ErrorOr<Success> ITaskFlowContext.Pause() => Pause();
+
     /// <summary>恢复暂停的任务，之后由推进器重新取待处理步骤。</summary>
-    public ErrorOr<Success> Resume()
+    internal ErrorOr<Success> Resume()
     {
         if (_lifecycle == TaskLifecycle.Terminated)
         {
@@ -375,8 +389,12 @@ public sealed class WorkTask : ITaskFlowHost
 
         return Result.Success;
     }
-/// <summary>终止任务：在跑的执行一并中断。要求持有 <see cref="Gate"/>。</summary>
-    public ErrorOr<Success> Terminate()
+
+    /// <inheritdoc/>
+    ErrorOr<Success> ITaskFlowContext.Resume() => Resume();
+
+    /// <summary>终止任务：在跑的执行一并中断。要求持有 <see cref="Gate"/>。</summary>
+    internal ErrorOr<Success> Terminate()
     {
         if (_lifecycle == TaskLifecycle.Terminated)
         {
@@ -402,8 +420,11 @@ public sealed class WorkTask : ITaskFlowHost
         return Result.Success;
     }
 
+    /// <inheritdoc/>
+    ErrorOr<Success> ITaskFlowContext.Terminate() => Terminate();
+
     /// <summary>记下一个执行。要求持有 <see cref="Gate"/>。</summary>
-    public void AttachExecution(IExecution execution)
+    internal void AttachExecution(IExecution execution)
     {
         _executions.Add(execution);
         _executionsSnapshot = [.. _executions];
@@ -423,6 +444,9 @@ public sealed class WorkTask : ITaskFlowHost
         execution.Changed += NotifyChanged;
         ExecutionAttached?.Invoke(execution);
     }
+
+    /// <inheritdoc/>
+    void ITaskFlowContext.AttachExecution(IExecution execution) => AttachExecution(execution);
 
     /// <summary>执行真正进入运行态时记一次执行尝试。</summary>
     private void OnExecutionStarted(IExecution execution)
@@ -446,7 +470,7 @@ public sealed class WorkTask : ITaskFlowHost
     }
 
     /// <summary>记一次任务活动。</summary>
-    public void Touch() => _lastActivityAt = DateTimeOffset.UtcNow;
+    void ITaskFlowContext.Touch() => _lastActivityAt = DateTimeOffset.UtcNow;
 
     /// <summary>当前状态的只读快照，含流程视图、过程记录与执行列表。</summary>
     public TaskSnapshot Snapshot()

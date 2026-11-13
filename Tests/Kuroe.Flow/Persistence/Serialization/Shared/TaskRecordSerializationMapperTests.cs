@@ -3,7 +3,7 @@ using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 

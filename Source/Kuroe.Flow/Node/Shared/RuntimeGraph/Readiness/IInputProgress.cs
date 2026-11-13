@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Readiness;
+namespace Kuroe.Flow.Node.RuntimeGraph.Readiness;
 
 /// <summary>判定要读的目标自身状态：已消费版本、执行次数、产出发布与重跑意图。</summary>
 public interface IInputProgress

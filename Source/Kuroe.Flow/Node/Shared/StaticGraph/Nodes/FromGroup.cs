@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Nodes;
 
 /// <summary>一条上游连接：目标输入端口、来源引用与触发门控条件。取用方式由目标输入端口的声明决定。</summary>
 public sealed record FromLink(

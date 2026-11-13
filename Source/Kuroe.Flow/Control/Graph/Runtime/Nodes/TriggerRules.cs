@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Runtime.Nodes;
+namespace Kuroe.Flow.Control.Graph.Nodes;
 
 /// <summary>输出端口的触发判定：不承载触发的端口恒触发，承载触发的端口按最近一次产出的触发位决定。</summary>
 internal static class TriggerRules

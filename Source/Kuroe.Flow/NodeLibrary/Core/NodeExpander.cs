@@ -1,9 +1,9 @@
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 using Kuroe.Flow.Tasks;
 namespace Kuroe.Flow.NodeLibrary;
 /// <summary>把流程装配展开成具体节点树：引用按库定义实例化，容器的静态绑定与 From 在所在作用域建立绑定域，成员的 From 与 Bindings 引用都在该绑定域里取 @端口。

@@ -1,6 +1,6 @@
 using ErrorOr;
 
-namespace Kuroe.Flow.Runtime.Contract;
+namespace Kuroe.Flow.Control.Graph.Contract;
 
 /// <summary>契约提交域的错误构造。</summary>
 static class ContractErrors

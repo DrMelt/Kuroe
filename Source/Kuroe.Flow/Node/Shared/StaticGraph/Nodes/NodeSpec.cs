@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Nodes;
 
 /// <summary>统一节点：定义、引用、执行节点、输入节点与容器都落在同一表示上。
 /// 有 <see cref="Use"/> 是引用库定义，否则由 <see cref="Type"/> 决定类型；有 <see cref="Nodes"/> 是容器，有 <see cref="Spec"/> 是执行节点或输入节点。

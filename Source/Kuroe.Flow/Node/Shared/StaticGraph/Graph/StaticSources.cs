@@ -1,8 +1,8 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.StaticGraph.Graph;
 
 /// <summary>静态输入与常量输出的结构解析：沿绑定链找到值终点，只依赖图，不接触注入文本。
 /// 所有节点共用同一套输出来源，开始端口给固定值或注入绑定，常量输出沿输出来源或静态输入下钻，

@@ -1,5 +1,5 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
 namespace Kuroe.Flow.Graph.Records;
 

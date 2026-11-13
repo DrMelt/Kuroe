@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
 using ErrorOr;
 using Kuroe.Flow.Persistence.Restoring.Shared;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 
 namespace Kuroe.Console.Tests.Persistence;
 

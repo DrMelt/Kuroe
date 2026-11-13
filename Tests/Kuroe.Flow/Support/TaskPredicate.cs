@@ -1,4 +1,4 @@
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 
 namespace Kuroe.Flow.TestSupport;
 

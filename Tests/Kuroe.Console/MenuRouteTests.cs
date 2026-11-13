@@ -1,6 +1,6 @@
 using ApiHub.Shared.Models;
 using Kuroe.Console.Views;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 
 using Kuroe.Node.Llm;
 using Kuroe.Node.Llm.Tools;

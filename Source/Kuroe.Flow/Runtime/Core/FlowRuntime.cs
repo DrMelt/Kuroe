@@ -3,7 +3,7 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Tasks;
 
-namespace Kuroe.Flow.Runtime.Engine;
+namespace Kuroe.Flow.Runtime;
 
 /// <summary>流程运行期：只持有活跃控制实例，转发命令并在退出时收口。流程语义在控制实例内。</summary>
 public sealed class FlowRuntime(
@@ -28,7 +28,7 @@ public sealed class FlowRuntime(
         Launch(task, control);
     }
 
-    /// <summary>接上控制实例，循环结束后把控制移出索引。</summary>
+    /// <summary>接上控制实例，控制实例生命周期结束后把控制移出索引。</summary>
     private void Launch(ITaskFlowHost task, IFlowControl control)
     {
         task.AttachControl(control);
@@ -41,10 +41,14 @@ public sealed class FlowRuntime(
 
         _ = Task.Run(async () =>
         {
-            await control.Loop.ConfigureAwait(false);
+            await control.Completion.ConfigureAwait(false);
             lock (_gate)
             {
-                _controls.Remove(task);
+                if (_controls.TryGetValue(task, out IFlowControl? current)
+                    && ReferenceEquals(current, control))
+                {
+                    _controls.Remove(task);
+                }
             }
         });
     }
@@ -121,7 +125,7 @@ public sealed class FlowRuntime(
 
         foreach (IFlowControl control in active)
         {
-            await control.Loop.ConfigureAwait(false);
+            await control.Completion.ConfigureAwait(false);
         }
 
         lock (_gate)

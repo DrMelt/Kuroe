@@ -70,11 +70,17 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
     }
 
     /// <summary>按执行号取本域的执行，不存在或属于其它任务域时为空。</summary>
-    public IExecution? FindExecution(ExecutionId id)
+    public IExecution? FindExecution(ExecutionId id) =>
+        FindOwnedExecution(id) is { IsError: false } found ? found.Value.Execution : null;
+
+    /// <summary>按执行号取执行与它的归属任务。执行不存在或属于其它任务域时返回错误。</summary>
+    public ErrorOr<(WorkTask Task, IExecution Execution)> FindOwnedExecution(ExecutionId id)
     {
-        if (executions.FindOwned(id) is not { IsError: false } found)
+        ErrorOr<(Kuroe.Flow.Execution.IExecution Execution, Kuroe.Flow.Control.ITaskFlowContext Owner)> found =
+            executions.FindOwned(id);
+        if (found.IsError)
         {
-            return null;
+            return found.ErrorsOrEmptyList;
         }
 
         lock (_gate)
@@ -82,11 +88,11 @@ public sealed class TaskRegistry(ExecutionIndex executions, bool pauseOnRestore 
             if (!_tasks.TryGetValue(found.Value.Owner.Id.Value, out WorkTask? task)
                 || !ReferenceEquals(task, found.Value.Owner))
             {
-                return null;
+                return [ExecutionErrors.ExecutionNotFound(id.Value)];
             }
-        }
 
-        return found.Value.Execution;
+            return (task, found.Value.Execution);
+        }
     }
 
     /// <summary>本域全部任务的快照，按创建时间。</summary>

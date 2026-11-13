@@ -1,8 +1,10 @@
 using ApiHub.Shared.Models;
 using ErrorOr;
+using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Shared.Model;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Node.Llm;
 using Kuroe.Pending;
 using Xunit;
@@ -187,6 +189,57 @@ public sealed class DialogueHostTests
         Error error = PendingErrors.DialogueSettled(TaskState.Blocked);
 
         Assert.Equal("对话已阻塞，无法继续对话。", error.Description);
+    }
+
+    [Fact]
+    public async Task Pause_interrupts_a_running_dialogue_round_and_resume_continues()
+    {
+        using TestEnvironment environment = TestEnvironment.Create();
+        environment.Runner.CodeReply = _ => "回复";
+        environment.Runner.Gate.Hold(NodePath.Of("回话"));
+
+        Task<ErrorOr<Success>> running = environment.Dialogue.ReplyAsync("第一问", null);
+        await environment.Runner.Gate.Entered(NodePath.Of("回话"));
+        IExecution execution = Assert.Single(environment.Runner.StartedCode);
+        ITaskFlowContext owner = environment.Executions.FindOwned(execution.Id).ThrowIfError().Owner;
+
+        lock (owner.Gate)
+        {
+            owner.Pause().ThrowIfError();
+            environment.Driver.Pause(owner);
+        }
+
+        await WaitUntilAsync(() => !execution.IsLive);
+        Assert.Equal(Kuroe.Flow.Execution.ExecutionState.Interrupted, execution.State);
+        Assert.True((await running.WaitAsync(TestContext.Current.CancellationToken)).IsError);
+
+        lock (owner.Gate)
+        {
+            owner.Resume().ThrowIfError();
+            environment.Driver.ResumeTask(owner);
+        }
+
+        environment.Runner.Gate.ClearHolds();
+
+        ErrorOr<Success> reply = await environment.Dialogue.ReplyAsync("第二问", null);
+
+        Assert.False(reply.IsError, ErrorText(reply));
+        Assert.Equal(2, environment.Runner.StartedCode.Count);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (int attempt = 0; attempt < 100; attempt++)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        Assert.Fail("等待超时。");
     }
 
     private static string ErrorText(ErrorOr<Success> result) =>

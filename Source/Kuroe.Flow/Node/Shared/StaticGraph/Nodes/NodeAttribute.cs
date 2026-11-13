@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Nodes;
 
 /// <summary>节点类型提供给信息查询的一条属性。</summary>
 /// <param name="Name">属性名。</param>

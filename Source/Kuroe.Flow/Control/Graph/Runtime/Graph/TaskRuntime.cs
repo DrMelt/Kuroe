@@ -3,29 +3,29 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Shared.RuntimeGraph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Readiness;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Runtime.Nodes;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
-using ExecutionId = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionId;
-using ExecutionOutput = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionOutput;
-using ExecutionOutputKind = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionOutputKind;
-using ExecutionState = Kuroe.Flow.Shared.RuntimeGraph.Execution.ExecutionState;
+using Kuroe.Flow.Node.RuntimeGraph;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Nodes;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Readiness;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
+
+using Kuroe.Flow.Control.Graph.Nodes;
+using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
+using ExecutionId = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionId;
+using ExecutionOutput = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionOutput;
+using ExecutionOutputKind = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionOutputKind;
+using ExecutionState = Kuroe.Flow.Node.RuntimeGraph.Execution.ExecutionState;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 using NeutralExecutionRequest = Kuroe.Flow.Execution.ExecutionRequest;
 using NeutralExecutionRestoreContext = Kuroe.Flow.Execution.ExecutionRestoreContext;
 using NeutralExecutionRestoreState = Kuroe.Flow.Execution.ExecutionRestoreState;
 using PreparedExecutionRestore = Kuroe.Flow.Execution.PreparedExecutionRestore;
 
-namespace Kuroe.Flow.Runtime.Graph;
+namespace Kuroe.Flow.Control.Graph;
 
 /// <summary>一次执行中断后的结果，只由执行状态与节点限制决定。</summary>
 public enum ExecutionInterruption
@@ -53,18 +53,18 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
     private readonly NodeMaterializer _materializer;
     private readonly StaticPortValues _staticPorts;
     private readonly RuntimeStartSource _startSource;
-    private readonly IExecutionRuntime? _restorers;
+    private readonly IExecutionRuntime _executions;
     private readonly Dictionary<NodePath, RestorePlan> _restorePlans = [];
 
     private static readonly ISourceState IdleSource = new UnmaterializedSource();
 
     private static readonly IInputProgress IdleProgress = new UnmaterializedProgress();
 
-    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, IExecutionRuntime? restorers = null)
+    internal TaskRuntime(ITaskFlowContext task, GraphFlowState state, IExecutionRuntime executions)
     {
         _task = task;
         _state = state;
-        _restorers = restorers;
+        _executions = executions;
         _materializer = new NodeMaterializer(state.Flow.Graph, this);
         _staticPorts = new StaticPortValues(state.Flow.Graph, state.StartPorts, this);
         _startSource = new RuntimeStartSource(state.Flow.Graph.StartPorts, state.StartPorts);
@@ -384,14 +384,14 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
         // 上报无法完成的当轮不产出，直接停驻并把原因留给重新执行
         if (execution.Contract.CannotCompleteReason is { } cannotComplete)
         {
-            execution.MarkUncollected($"模型报告无法完成：{cannotComplete}");
+            _executions.Reject(execution.Unit, $"模型报告无法完成：{cannotComplete}");
 
             return Block(node, execution);
         }
 
         if (node.OutstandingPorts(execution).Count > 0)
         {
-            execution.MarkUncollected("输出端口内容未交回，本步未收口。");
+            _executions.Reject(execution.Unit, "输出端口内容未交回，本步未收口。");
             return Block(node, execution);
         }
 
@@ -782,8 +782,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
             || node.Canceled
             || node.Block?.Execution is not { } blocked
             || AtLimit(node)
-            || Frozen(node.Path)
-            || _restorers is not { } restorers)
+            || Frozen(node.Path))
         {
             return null;
         }
@@ -814,7 +813,7 @@ internal sealed class TaskRuntime : INodeContext, INodeRestoreContext, IRuntimeC
                 ErrorOr<PreparedExecutionRestore> prepared;
                 try
                 {
-                    prepared = restorers.PrepareRestore(context);
+                    prepared = _executions.PrepareRestore(context);
                 }
                 catch (Exception)
                 {

@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.StaticGraph.Graph;
 
 /// <summary>节点输入侧的编译期方案：产出模式、启动组、静态启动条件与执行次数上限。
 /// 方案在编译期一次算出，就绪判定由运行期读取它，不再反复扫图。</summary>

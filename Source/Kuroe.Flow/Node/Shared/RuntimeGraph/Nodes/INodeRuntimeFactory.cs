@@ -1,6 +1,6 @@
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Nodes;
+namespace Kuroe.Flow.Node.RuntimeGraph.Nodes;
 
 /// <summary>节点类型自行建立运行期对象的能力。派发执行与组织成员的类型由引擎按形状建立，不实现它。</summary>
 public interface INodeRuntimeFactory

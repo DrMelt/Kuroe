@@ -1,8 +1,8 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.StaticGraph.Ports;
 
 /// <summary>端口与上游连接的展示名。</summary>
 public static class PortLabels

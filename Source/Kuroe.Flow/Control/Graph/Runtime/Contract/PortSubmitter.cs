@@ -1,13 +1,13 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
-using Kuroe.Flow.Runtime.Engine;
+using Kuroe.Flow.Control.Graph.Engine;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 using ExecutionStatus = Kuroe.Flow.Execution.ExecutionStatus;
 
-namespace Kuroe.Flow.Runtime.Contract;
+namespace Kuroe.Flow.Control.Graph.Contract;
 
 /// <summary>模型侧交回结构化产出的入口：输出端口交端口名到端口值，Text 端口给内容，Signal 端口只给端口名。
 /// 提交者身份在此认定，结果以提交后的本轮契约状态交回，回执措辞由工具实现层给出。</summary>

@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.StaticGraph.Ports;
 
 /// <summary>端口模式：普通动态、触发动态或常量。模式互斥，由端口类型的注册声明支持范围。</summary>
 public enum PortMode

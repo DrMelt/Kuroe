@@ -4,9 +4,9 @@ using Kuroe.Flow.Presentation;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 using Kuroe.Flow.Tasks.Records;
 using Xunit;
@@ -118,7 +118,7 @@ public sealed class WorkTaskTests
     private static void MarkCompleted(WorkTask task) =>
         task.UnderLock(() =>
         {
-            task.MarkCompleted();
+            ((ITaskFlowContext)task).MarkCompleted();
             return true;
         });
 

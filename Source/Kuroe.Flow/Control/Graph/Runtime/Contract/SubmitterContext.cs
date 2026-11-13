@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 
-namespace Kuroe.Flow.Runtime.Contract;
+namespace Kuroe.Flow.Control.Graph.Contract;
 
 /// <summary>契约提交入口的提交者认定：执行必须仍在跑，并把执行与它的归属任务一并交出。</summary>
 internal static class SubmitterContext

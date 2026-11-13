@@ -55,7 +55,7 @@ public sealed class PortToolTests
     }
 
     private static ExecutionOutputPort Port(ExecutionPortName name) =>
-        new(name, ExecutionPortKind.Text, true, false, true);
+        new(name, ExecutionPortKind.Text, true, false);
 
     private static ExecutionStatus Status(IReadOnlyList<ExecutionPortName> outstanding) =>
         new(new ExecutionTargetId("节点"), 1, 3, ExecutionState.Running, outstanding, null);

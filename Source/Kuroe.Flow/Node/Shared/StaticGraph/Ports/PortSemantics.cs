@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph.Ports;
+namespace Kuroe.Flow.Node.StaticGraph.Ports;
 
 /// <summary>端口语义：端口承载什么产出，以及这份产出怎么被取用。端口类型的支持模式由类型注册声明。</summary>
 public enum PortSemantics

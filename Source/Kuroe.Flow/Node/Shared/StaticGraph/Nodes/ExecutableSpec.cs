@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.StaticGraph.Nodes;
+namespace Kuroe.Flow.Node.StaticGraph.Nodes;
 
 /// <summary>执行配置：执行节点的产出模式与执行上限声明。能力与措辞等类型专属声明由节点类型与参数承载。</summary>
 public sealed record ExecutableSpec

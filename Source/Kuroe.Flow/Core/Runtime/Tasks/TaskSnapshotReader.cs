@@ -31,6 +31,18 @@ public sealed class TaskSnapshotReader(TaskRegistry registry) : ITaskReader
     }
 
     /// <inheritdoc/>
+    public ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> FindOwnedExecution(ExecutionId id)
+    {
+        ErrorOr<(WorkTask Task, IExecution Execution)> found = registry.FindOwnedExecution(id);
+        if (found.IsError)
+        {
+            return found.ErrorsOrEmptyList;
+        }
+
+        return (found.Value.Task.Snapshot(), found.Value.Execution.Snapshot());
+    }
+
+    /// <inheritdoc/>
     public IReadOnlyList<ExecutionSnapshot> LiveExecutions() => registry.LiveExecutions();
 
     /// <inheritdoc/>

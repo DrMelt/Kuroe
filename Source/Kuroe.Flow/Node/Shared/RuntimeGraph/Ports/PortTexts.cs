@@ -1,6 +1,6 @@
 using Kuroe.Flow.Shared.Model;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Ports;
+namespace Kuroe.Flow.Node.RuntimeGraph.Ports;
 
 /// <summary>固定的端口文本表：按端口给出已装配的文本。静态端口视图与宿主开始值共用这一实现。</summary>
 /// <param name="texts">端口到文本的表。</param>

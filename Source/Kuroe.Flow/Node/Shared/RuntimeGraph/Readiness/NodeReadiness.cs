@@ -1,8 +1,8 @@
-using Kuroe.Flow.Shared.StaticGraph.Graph;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.RuntimeGraph.Readiness;
+namespace Kuroe.Flow.Node.RuntimeGraph.Readiness;
 
 /// <summary>输入侧的就绪判定：纯函数读取方案与运行期状态，不改状态。
 /// 组间任一齐备即启动，组内全部齐备；静态输入绑定的运行期常量全部发布后才进入启动判定；

@@ -1,8 +1,8 @@
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 
-namespace Kuroe.Flow.Runtime;
+namespace Kuroe.Flow.Control.Graph;
 
 /// <summary>图侧执行目标：执行标识取节点路径，种类取节点类型，参数由节点类型给出。</summary>
 internal sealed class GraphExecutionTarget : IExecutionTarget

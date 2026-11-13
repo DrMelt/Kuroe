@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.StaticGraph.Graph;
 
 /// <summary>流程图上的节点实体：开始、执行节点或容器。以从根到本节点的路径标识，路径唯一性来自树位置。
 /// 所有节点共用输入、输出与输出来源，具体节点只决定子节点与执行方式。</summary>

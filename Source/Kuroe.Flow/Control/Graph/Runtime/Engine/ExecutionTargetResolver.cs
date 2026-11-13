@@ -1,9 +1,9 @@
 using ErrorOr;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using ExecutableNode = Kuroe.Flow.Shared.StaticGraph.Graph.ExecutableNode;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using ExecutableNode = Kuroe.Flow.Node.StaticGraph.Graph.ExecutableNode;
 
-namespace Kuroe.Flow.Runtime.Engine;
+namespace Kuroe.Flow.Control.Graph.Engine;
 
 /// <summary>执行目标解析：没有模型端口的执行节点直接给出空声明，其余交给宿主解析器。</summary>
 public sealed class ExecutionTargetResolver(IExecutionTargetResolver resolver) : IExecutionTargetResolver

@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Xunit;
 
 namespace Kuroe.Flow.Shared.Tests.RuntimeGraph.Execution;

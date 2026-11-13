@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Runtime.Tasks;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
 using Kuroe.Pending;
 
 namespace Kuroe.Assistant.Dialogue;

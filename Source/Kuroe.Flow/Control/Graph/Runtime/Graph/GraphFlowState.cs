@@ -1,19 +1,20 @@
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Runtime.Graph;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.RuntimeGraph.Tasks;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Control.Graph;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Tasks;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using NeutralExecutionId = Kuroe.Flow.Execution.ExecutionId;
 
-namespace Kuroe.Flow.Runtime.Graph;
+namespace Kuroe.Flow.Control.Graph;
 
 /// <summary>图流程的运行状态：锁定的编译结果、开始端口值、运行期节点与执行上下文。</summary>
 internal sealed class GraphFlowState : IGraphFlowState
 {
     private readonly Dictionary<NeutralExecutionId, GraphExecutionContext> _executions = [];
+    private readonly IExecutionRuntime _executionsRuntime;
     private ITaskFlowContext? _task;
     private TaskRuntime? _runtime;
 
@@ -23,14 +24,14 @@ internal sealed class GraphFlowState : IGraphFlowState
         IPortTexts startTexts,
         StartPortValues startPorts,
         GraphFlowDefinitionRecord? definition,
-        IExecutionRuntime? executions = null)
+        IExecutionRuntime executions)
     {
         Flow = flow;
         Inputs = inputs;
         StartTexts = startTexts;
         StartPorts = startPorts;
         Definition = definition;
-        ExecutionsRuntime = executions;
+        _executionsRuntime = executions;
     }
 
     /// <summary>锁定的编译流程。</summary>
@@ -47,9 +48,6 @@ internal sealed class GraphFlowState : IGraphFlowState
 
     /// <summary>提交时锁定的流程定义记录。</summary>
     public GraphFlowDefinitionRecord? Definition { get; set; }
-
-    /// <summary>执行运行期，恢复计划在此准备。</summary>
-    public IExecutionRuntime? ExecutionsRuntime { get; }
 
     /// <summary>图运行期的执行，按提交顺序从任务的中性执行列表投影。</summary>
     internal IReadOnlyList<GraphExecution> Executions => Project();
@@ -86,8 +84,7 @@ internal sealed class GraphFlowState : IGraphFlowState
             executions.Add(new GraphExecution(
                 context.Input,
                 unit,
-                context.ControlVersion,
-                ExecutionsRuntime ?? throw new InvalidOperationException("图流程没有执行运行期。")));
+                context.ControlVersion));
         }
 
         return executions;
@@ -109,7 +106,7 @@ internal sealed class GraphFlowState : IGraphFlowState
     public void Attach(ITaskFlowContext task)
     {
         _task = task;
-        _runtime = new TaskRuntime(task, this, ExecutionsRuntime);
+        _runtime = new TaskRuntime(task, this, _executionsRuntime);
     }
 }
 

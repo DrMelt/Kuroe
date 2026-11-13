@@ -1,8 +1,8 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Execution;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 using Kuroe.Tool;
 
 namespace Kuroe.Node.Llm;
@@ -93,7 +93,7 @@ public sealed class LlmNodeType(LlmParameters? parameters, IToolContractCatalog?
     public IReadOnlyList<ToolPath> ToolPaths(IReadOnlyList<ExecutionOutputPort> outputs)
     {
         List<ToolPath> paths = [.. Parameters?.Tools ?? []];
-        if (outputs.Any(port => port.RequiresSubmission || port.IsConstant))
+        if (outputs.Any(port => port.Required))
         {
             paths.Add(new ToolPath(ContractTools.Port));
         }

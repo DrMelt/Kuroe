@@ -1,5 +1,5 @@
 using ApiHub.Shared.Models;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 namespace Kuroe.Node.Llm;
 

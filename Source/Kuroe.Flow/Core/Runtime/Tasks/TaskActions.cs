@@ -229,21 +229,16 @@ public sealed class TaskActions(
     /// <summary>停止一个已启动的执行。</summary>
     public ErrorOr<Success> StopExecution(ExecutionId id)
     {
-        IExecution? execution = _registry.FindExecution(id);
-        if (execution is null)
+        ErrorOr<(WorkTask Task, IExecution Execution)> found = _registry.FindOwnedExecution(id);
+        if (found.IsError)
         {
-            return [ExecutionErrors.ExecutionNotFound(id.Value)];
+            return found.ErrorsOrEmptyList;
         }
 
-        ErrorOr<WorkTask> owner = _registry.Find(new TaskId(execution.Request.Owner.Value));
-        if (owner.IsError)
+        WorkTask owner = found.Value.Task;
+        lock (owner.Gate)
         {
-            return owner.ErrorsOrEmptyList;
-        }
-
-        lock (owner.Value.Gate)
-        {
-            return _driver.StopExecution(owner.Value, execution.Id);
+            return _driver.StopExecution(owner, found.Value.Execution.Id);
         }
     }
 

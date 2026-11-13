@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
 using Kuroe.Tests.Support;
 using Kuroe.Workflows.Tasks;
 using Xunit;

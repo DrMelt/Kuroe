@@ -4,8 +4,8 @@ using Kuroe.Flow.Control;
 using Kuroe.Flow.Shared.Flow;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Flow.Graph.Records;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Flow;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
 using Kuroe.Workflows.Flows.Files;
 
 namespace Kuroe.Workflows.Flows;

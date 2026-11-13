@@ -1,7 +1,7 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Graph;
+namespace Kuroe.Flow.Node.StaticGraph.Graph;
 
 /// <summary>一条端口绑定：从来源端口取值，进入目标节点的输入端口。来源可以是节点或流程开始端口；节点来源的端口为空表示按节点整体取值。
 /// 角色决定参与方式：动态绑定进入启动组并驱动新版本，门控绑定只参与齐备与抑制，静态绑定只作为启动条件，别名只表达容器传入端口。

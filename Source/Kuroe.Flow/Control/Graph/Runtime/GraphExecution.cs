@@ -2,9 +2,9 @@ using ErrorOr;
 using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 using IExecution = Kuroe.Flow.Execution.IExecution;
 using IExecutionRuntime = Kuroe.Flow.Execution.IExecutionRuntime;
 using NeutralExecutionContract = Kuroe.Flow.Execution.ExecutionContract;
@@ -29,13 +29,12 @@ using IExecutionUsageSource = Kuroe.Flow.Execution.IExecutionUsageSource;
 using ExecutionParameterContext = Kuroe.Flow.Execution.ExecutionParameterContext;
 using TokenUsage = Kuroe.Flow.Execution.TokenUsage;
 
-namespace Kuroe.Flow.Runtime;
+namespace Kuroe.Flow.Control.Graph;
 
 /// <summary>一次执行。状态机由执行单元承担，这里装配图侧输入并转换执行单元的中性产出与契约。</summary>
 public sealed class GraphExecution : IGraphExecution
 {
     private readonly IExecution _unit;
-    private readonly IExecutionRuntime _executions;
 
     /// <summary>底层中性执行，供中性派发器使用。</summary>
     internal IExecution Unit => _unit;
@@ -47,52 +46,29 @@ public sealed class GraphExecution : IGraphExecution
         remove => _unit.Changed -= value;
     }
 
-    internal GraphExecution(ExecutionId id, ExecutionInput input, IExecutionRuntime executions)
-        : this(id, input, 0, executions)
-    {
-    }
-
-    internal GraphExecution(
-        ExecutionId id,
-        ExecutionInput input,
-        int controlVersion,
-        IExecutionRuntime executions)
-    {
-        Input = input;
-        ControlVersion = controlVersion;
-        Request = BuildRequest(input);
-        Target = BuildTarget(input, Request);
-        _executions = executions;
-        _unit = executions.Create(new NeutralExecutionId(id.Value), Request);
-    }
-
     internal GraphExecution(
         ExecutionInput input,
         IExecution unit,
-        int controlVersion,
-        IExecutionRuntime executions)
+        int controlVersion)
     {
         Input = input;
         ControlVersion = controlVersion;
         Request = unit.Request;
         Target = BuildTarget(input, Request);
-        _executions = executions;
         _unit = unit;
     }
 
-    private GraphExecution(
+    /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
+    internal static GraphExecution Restore(
         ExecutionRecord record,
         ExecutionInput input,
         IExecutionRuntime executions)
     {
-        Input = input;
-        Request = BuildRequest(input);
-        Target = BuildTarget(input, Request);
-        _executions = executions;
-        _unit = executions.Restore(
+        ExecutionRequest request = BuildRequest(input);
+        IExecution unit = executions.Restore(
             new NeutralExecutionRestorePlan(
                 new NeutralExecutionId(record.Id.Value),
-                Request,
+                request,
                 record.CreatedAt,
                 record.State,
                 record.Progress,
@@ -103,14 +79,9 @@ public sealed class GraphExecution : IGraphExecution
                 record.RestoreData is { } data ? new ExecutionRestoreState(data.Format, data.Payload) : null,
                 NeutralContract(record.Contract),
                 record.ContinuedFrom is { } continued ? new NeutralExecutionId(continued.Value) : null));
-    }
 
-    /// <summary>从存档恢复一次已收口的执行。未收口的执行记为已中断。</summary>
-    internal static GraphExecution Restore(
-        ExecutionRecord record,
-        ExecutionInput input,
-        IExecutionRuntime executions) =>
-        new(record, input, executions);
+        return new GraphExecution(input, unit, 0);
+    }
 
     /// <summary>执行标识。</summary>
     public ExecutionId Id => new(_unit.Id.Value);
@@ -136,8 +107,6 @@ public sealed class GraphExecution : IGraphExecution
     /// <summary>还在排队或正在执行。</summary>
     public bool IsLive => _unit.IsLive;
 
-    internal CancellationToken CancellationToken => _unit.CancellationToken;
-
     /// <summary>模型输出的一段流式内容，按到达顺序给出。</summary>
     public event ProcessContentHandler? ContentEmitted
     {
@@ -152,23 +121,12 @@ public sealed class GraphExecution : IGraphExecution
         remove => _unit.EntryEmitted -= value;
     }
 
-    internal void MarkRunning() => _executions.MarkRunning(_unit);
-
     /// <summary>执行进入运行态后触发一次，任务侧据此记录一次执行尝试。</summary>
     internal event Action? Started
     {
         add => _unit.Started += value;
         remove => _unit.Started -= value;
     }
-
-    /// <summary>记下本次执行的过程记录。</summary>
-    internal void AttachJournal(IProcessJournal journal) => _executions.AttachJournal(_unit, journal);
-
-    /// <summary>附加本次执行的用量来源，快照读取其当前累计。</summary>
-    internal void AttachUsageReader(IExecutionUsageSource reader) => _executions.AttachUsageReader(_unit, reader);
-
-    /// <summary>记下本次执行的最终用量并解除用量来源。</summary>
-    internal void SettleUsage(ExecutionUsage usage) => _executions.SettleUsage(_unit, usage);
 
     /// <summary>本次执行保留的恢复数据，作为执行历史，成功与完成后仍在。</summary>
     internal ExecutionRestorePayload? RestoreData => ToRestorePayload(_unit.RestoreData);
@@ -186,50 +144,19 @@ public sealed class GraphExecution : IGraphExecution
 
     /// <summary>本次执行的本轮契约状态。</summary>
     internal ExecutionContract Contract => ToContract(_unit.Contract);
-/// <summary>记下本次执行从哪次执行恢复，并继承来源执行的契约状态。</summary>
-    internal void ContinueFrom(GraphExecution source) => _executions.ContinueFrom(_unit, source._unit);
 
-    /// <summary>记下本次执行交回的端口值。</summary>
-    internal void SubmitPorts(IReadOnlyDictionary<PortName, PortValue> ports) =>
-        _executions.Submit(_unit, ports.ToDictionary(
+    /// <summary>把图侧交回的端口值转为中性执行值。</summary>
+    internal static IReadOnlyDictionary<ExecutionPortName, ExecutionOutputValue> ToNeutralOutputs(
+        IReadOnlyDictionary<PortName, PortValue> ports) =>
+        ports.ToDictionary(
             pair => new ExecutionPortName(pair.Key.Value),
             pair => new ExecutionOutputValue(
                 new ExecutionPortName(pair.Key.Value),
                 pair.Value.Text,
-                pair.Value.Fires)));
-
-    /// <summary>记下本次执行上报的无法完成原因。</summary>
-    internal void ReportCannotComplete(string reason) => _executions.ReportCannotComplete(_unit, reason);
-
-    /// <summary>附加运行器的恢复数据读取面。</summary>
-    internal void AttachRestoreDataReader(IExecutionRestoreDataSource reader) =>
-        _executions.AttachRestoreDataReader(_unit, reader);
-
-    /// <summary>记下运行器的最终恢复数据并解除读取面。</summary>
-    internal void SettleRestoreData(IExecutionRestoreDataSource? reader) =>
-        _executions.SettleRestoreData(_unit, reader);
+                pair.Value.Fires));
 
     /// <summary>本次执行的产出。</summary>
     internal ExecutionOutput? Output => _unit.Output is { } output ? ToOutput(output) : null;
-
-    internal void MarkSucceeded(NeutralExecutionOutput output)
-    {
-        NeutralExecutionOutput settled = output.Kind == NeutralExecutionOutputKind.Ports && output.Values.Count == 0
-            ? NeutralExecutionOutput.FromPorts(_unit.Contract.Outputs?.Values.ToArray() ?? [])
-            : output;
-        _executions.Succeed(_unit, settled);
-    }
-
-    internal void MarkFailed(IEnumerable<Error> errors) => _executions.Fail(_unit, [.. errors]);
-
-    /// <summary>请求中断本次执行，进行中的一轮请求随之结束。要求持有任务 Gate。</summary>
-    internal void Interrupt(string reason = "已中断。") => _executions.Interrupt(_unit, reason);
-
-    /// <summary>按中断请求收口，直接记为已中断，用于未进入执行的排队项与退出时的丢弃项。</summary>
-    internal void MarkInterrupted(string? reason = null) => _executions.MarkInterrupted(_unit, reason);
-
-    /// <summary>本次请求正常结束但没交回本执行节点要求的东西，从已完成降级为失败。</summary>
-    internal void MarkUncollected(string reason) => _executions.Reject(_unit, reason);
 
     /// <summary>当前状态的只读快照。</summary>
     public GraphExecutionSnapshot Snapshot()
@@ -335,8 +262,6 @@ internal static ExecutionRequest BuildRequest(ExecutionInput input) =>
                         KindOf(port.Type),
                         required,
                         port.Trigger,
-                        required,
-                        port.Mode == PortMode.Constant,
                         port.Description);
                 }),
             ]);

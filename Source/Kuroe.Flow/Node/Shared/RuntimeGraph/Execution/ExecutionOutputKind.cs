@@ -1,4 +1,4 @@
-namespace Kuroe.Flow.Shared.RuntimeGraph.Execution;
+namespace Kuroe.Flow.Node.RuntimeGraph.Execution;
 
 /// <summary>执行节点的产出形态。产出形态由类型声明，引擎按它选择发布方式。</summary>
 public enum ExecutionOutputKind

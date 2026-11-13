@@ -1,6 +1,6 @@
 using Kuroe.Cli.Commands;
 using Kuroe.Cli.Tests.Support;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
 using Xunit;
 
 namespace Kuroe.Cli.Tests.Commands;

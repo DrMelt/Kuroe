@@ -3,7 +3,7 @@ using Kuroe.Flow.Compilation.Shared;
 using Kuroe.Flow.Compilation.Shared.NodeTypes;
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
 using Xunit;
 
 namespace Kuroe.Flow.Compilation.Tests.Description;

@@ -1,5 +1,5 @@
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Shared.StaticGraph.Graph;
+using Kuroe.Flow.Node.StaticGraph.Graph;
 
 namespace Kuroe.Integration.Tests.Support;
 

@@ -100,19 +100,14 @@ public sealed class TaskKuroeInfoTool : ITool
             return ToolErrors.Argument($"执行号要写成数字，收到 {text ?? "空"}。");
         }
 
-        ErrorOr<ExecutionSnapshot> found = _registry.FindExecution(new ExecutionId(id));
+        ErrorOr<(TaskSnapshot Task, ExecutionSnapshot Execution)> found =
+            _registry.FindOwnedExecution(new ExecutionId(id));
         if (found.IsError)
         {
             return found.ErrorsOrEmptyList;
         }
 
-        ErrorOr<TaskSnapshot> owner = _registry.Find(new TaskId(found.Value.Request.Owner.Value));
-        if (owner.IsError)
-        {
-            return owner.ErrorsOrEmptyList;
-        }
-
-        return DescribeExecution(owner.Value, found.Value);
+        return DescribeExecution(found.Value.Task, found.Value.Execution);
     }
 /// <summary>任务状态展示名，执行中带上当前执行的进展。</summary>
     private static string StateLabel(TaskSnapshot task)

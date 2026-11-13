@@ -1,8 +1,8 @@
 using ErrorOr;
 using Kuroe.Flow.Control;
 using Kuroe.Flow.Presentation;
-using Kuroe.Flow.Shared.RuntimeGraph.Execution;
-using Kuroe.Flow.Shared.StaticGraph.Flow;
+using Kuroe.Flow.Node.RuntimeGraph.Execution;
+using Kuroe.Flow.Node.StaticGraph.Flow;
 using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Workflows.Flows;

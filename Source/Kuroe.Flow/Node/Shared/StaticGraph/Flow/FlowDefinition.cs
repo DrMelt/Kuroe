@@ -1,7 +1,7 @@
-using Kuroe.Flow.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Shared.StaticGraph.Ports;
+using Kuroe.Flow.Node.StaticGraph.Nodes;
+using Kuroe.Flow.Node.StaticGraph.Ports;
 
-namespace Kuroe.Flow.Shared.StaticGraph.Flow;
+namespace Kuroe.Flow.Node.StaticGraph.Flow;
 
 /// <summary>任务流程模板：流程级开始端口与根节点，根节点通常是承载流程全部内容的容器。
 /// 开始端口不是节点，根作用域的 @端口 取用初始输入，常量端口经 Bindings 读取。

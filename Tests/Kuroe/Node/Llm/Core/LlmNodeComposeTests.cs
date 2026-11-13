@@ -70,7 +70,7 @@ public sealed class LlmNodeComposeTests
     private static LlmNodeType Typed(LlmParameters parameters) => Assert.IsType<LlmNodeType>(LlmNodeTypes.Create(parameters));
 
     private static ExecutionOutputPort Port(string name, ExecutionPortKind kind) =>
-        new(new ExecutionPortName(name), kind, true, false, kind != ExecutionPortKind.Context);
+        new(new ExecutionPortName(name), kind, kind != ExecutionPortKind.Context, false);
 
     /// <summary>第 2 轮执行的请求。</summary>
     private static ExecutionRequest Round() => Request(2);
