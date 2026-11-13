@@ -16,29 +16,34 @@ public sealed class FlowRuntime(
     public void Start(ITaskFlowHost task)
     {
         IFlowControl control = task.Controls.CreateControl(task);
+        Attach(task, control);
         control.Start();
-        Launch(task, control);
+        Track(task, control);
     }
 
     /// <summary>要求持有任务 Gate：按恢复种子启动推进循环，任务保持暂停不自动推进。</summary>
     public void Restore(ITaskFlowHost task, FlowSeed seed)
     {
         IFlowControl control = task.Controls.CreateControl(task);
+        Attach(task, control);
         control.Restore(seed);
-        Launch(task, control);
+        Track(task, control);
     }
 
-    /// <summary>接上控制实例，控制实例生命周期结束后把控制移出索引。</summary>
-    private void Launch(ITaskFlowHost task, IFlowControl control)
+    /// <summary>接上控制实例并登记活跃索引，启动期间任务能读到自身控制。</summary>
+    private void Attach(ITaskFlowHost task, IFlowControl control)
     {
         task.AttachControl(control);
 
-        // 注册在推进循环启动之后，宿主拿到的推进循环一定已就绪
         lock (_gate)
         {
             _controls[task] = control;
         }
+    }
 
+    /// <summary>控制实例完成后把控制移出索引。</summary>
+    private void Track(ITaskFlowHost task, IFlowControl control)
+    {
         _ = Task.Run(async () =>
         {
             await control.Completion.ConfigureAwait(false);

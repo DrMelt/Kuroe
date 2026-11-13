@@ -144,57 +144,8 @@ public sealed class GraphExecution : IGraphExecution
             unit.RestoreData is not null,
             unit.ContinuedFrom);
     }
-/// <summary>捕获本次执行的状态与恢复数据。</summary>
-    internal ExecutionRecord CaptureRecord()
-    {
-        GraphExecutionSnapshot snapshot = Snapshot();
-        GraphExecutionContract contract = Contract;
 
-        return new ExecutionRecord(
-            snapshot.Id,
-            GraphRecordTargets.Format(snapshot.Input.Node),
-            snapshot.Input.ExecutionCount,
-            snapshot.State,
-            snapshot.Progress,
-            snapshot.CreatedAt,
-            snapshot.StartedAt,
-            snapshot.FinishedAt,
-            snapshot.Failures,
-            new ExecutionUsageRecord(
-                snapshot.Usage.RequestCount,
-                snapshot.Usage.RequestsWithoutUsage,
-                new TokenUsageRecord(
-                    snapshot.Usage.Tokens.Input,
-                    snapshot.Usage.Tokens.Output,
-                    snapshot.Usage.Tokens.Total,
-                    snapshot.Usage.Tokens.CachedInput,
-                    snapshot.Usage.Tokens.Reasoning),
-                snapshot.Usage.ContextTokens),
-            [
-                .. snapshot.Input.Inputs.Select(value => new ExecutionInputRecord(
-                    new ExecutionPortName(value.Port.Value),
-                    GraphRecordSources.Write(value.Value.Origin),
-                    value.Text)),
-            ],
-            snapshot.Input.Texts.ToDictionary(
-                pair => new ExecutionPortName(pair.Key.Value),
-                pair => pair.Value),
-            snapshot.HasRestoreData && RestoreData is { } restore
-                ? new ExecutionRestoreRecord(restore.Format, restore.Payload)
-                : null,
-            snapshot.ContinuedFrom,
-            contract is { Ports: null, CannotCompleteReason: null }
-                ? null
-                : new ExecutionContractRecord(
-                    contract.Ports?.ToDictionary(
-                        pair => new ExecutionPortName(pair.Key.Value),
-                        pair => new ExecutionOutputValue(
-                            new ExecutionPortName(pair.Key.Value),
-                            pair.Value.Text,
-                            pair.Value.Fires)),
-                    contract.CannotCompleteReason));
-    }
-internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
+    internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
         new(
             new ExecutionOwnerId(input.Task.Value),
             GraphRecordTargets.Format(input.Node),
@@ -212,7 +163,8 @@ internal static ExecutionRequest BuildRequest(GraphExecutionInput input) =>
                 .. input.Inputs.Select(value => new ExecutionInputValue(
                     new ExecutionPortName(value.Port.Value),
                     value.Text,
-                    SourceOf(value.Value.Origin))),
+                    SourceOf(value.Value.Origin),
+                    GraphRecordSources.Write(value.Value.Origin))),
             ],
             input.Texts.ToDictionary(
                 pair => new ExecutionPortName(pair.Key.Value),

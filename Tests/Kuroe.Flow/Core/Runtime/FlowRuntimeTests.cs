@@ -138,6 +138,39 @@ public sealed class FlowRuntimeTests
         Assert.Equal(1, secondControl.Pauses);
     }
 
+    [Fact]
+    public void Start_attaches_the_control_before_starting_it()
+    {
+        TestControl control = new();
+        WorkTask task = CreateTask(control);
+        FlowRuntime runtime = new(Runtime());
+
+        task.UnderLock(() =>
+        {
+            runtime.Start(task);
+            return true;
+        });
+
+        Assert.True(control.ControlVisibleAtStart);
+        Assert.Same(control, task.Control);
+    }
+
+    [Fact]
+    public void Snapshot_during_start_reads_the_attached_control()
+    {
+        TestControl control = new();
+        WorkTask task = CreateTask(control);
+        FlowRuntime runtime = new(Runtime());
+
+        task.UnderLock(() =>
+        {
+            runtime.Start(task);
+            return true;
+        });
+
+        Assert.Equal(TaskState.Running, task.Snapshot().State);
+    }
+
     private static WorkTask CreateTask(TestControl control) => FlowRuntimeTestDoubles.CreateTask(control);
 
     private static IExecutionRuntime Runtime() => FlowRuntimeTestDoubles.Runtime();
@@ -171,7 +204,7 @@ internal static class FlowRuntimeTestDoubles
             new TestRecords(),
             NoFlowTemplates.Instance);
 
-        return new WorkTask(
+        WorkTask task = new(
             new TaskRegistry(new ExecutionIndex()),
             Runtime(),
             new TaskId(1),
@@ -182,6 +215,9 @@ internal static class FlowRuntimeTestDoubles
             new TestState(inputs),
             null,
             observer: null);
+        control.Owner = task;
+
+        return task;
     }
 
     internal static IExecutionRuntime Runtime() =>
@@ -194,6 +230,10 @@ internal static class FlowRuntimeTestDoubles
 internal sealed class TestControl : IFlowControl
 {
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public ITaskFlowContext? Owner { get; set; }
+
+    public bool ControlVisibleAtStart { get; private set; }
 
     public int Starts { get; private set; }
 
@@ -213,7 +253,11 @@ internal sealed class TestControl : IFlowControl
 
     public bool HasRestores => false;
 
-    public void Start() => Starts++;
+    public void Start()
+    {
+        Starts++;
+        ControlVisibleAtStart = Owner?.Control is not null;
+    }
 
     public void Restore(FlowSeed seed)
     {
@@ -272,15 +316,13 @@ internal sealed class TestControls(IFlowControl control) : IFlowControlFactory
 
 internal sealed class TestPresentation : IFlowPresentation
 {
-    public IFlowView CaptureView(ITaskFlowContext task) => throw new NotSupportedException();
+    public IFlowView CaptureView(ITaskFlowContext task) =>
+        new FlowView("测试", "test", null, [], [], []);
 
-    public TaskSnapshot CreateSnapshot(ITaskFlowContext task) => throw new NotSupportedException();
+    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) => [];
 }
 
 internal sealed class TestRecords : IFlowRecordSource
 {
     public FlowRecord CaptureRecord(ITaskFlowContext task) => throw new NotSupportedException();
-
-    public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(
-        ITaskFlowContext task) => [];
 }

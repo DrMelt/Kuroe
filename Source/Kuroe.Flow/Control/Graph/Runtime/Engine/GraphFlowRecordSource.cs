@@ -1,5 +1,4 @@
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Graph.Records;
 using Kuroe.Flow.Control.Graph;
 using Kuroe.Flow.Control.Graph.Nodes;
@@ -7,7 +6,7 @@ using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Flow.Control.Graph.Engine;
 
-/// <summary>图流程的存档捕获：流程记录与按中性执行列表生成的执行记录。</summary>
+/// <summary>图流程的存档捕获：流程定义与节点、端口状态。</summary>
 public sealed class GraphFlowRecordSource : IFlowRecordSource
 {
     /// <inheritdoc/>
@@ -32,22 +31,5 @@ public sealed class GraphFlowRecordSource : IFlowRecordSource
                 [.. runtime.Materializer.Materialized
                     .SelectMany(node => ((IPortRecordSource)node).CapturePorts())],
                 seed));
-    }
-
-    /// <inheritdoc/>
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task)
-    {
-        if (task.FlowState is not GraphFlowState state)
-        {
-            throw new InvalidOperationException("图流程存档捕获收到非图流程状态。");
-        }
-
-        return
-        [
-            .. task.Executions.Select(execution => new GraphExecution(
-                state.Context(execution.Id).Input,
-                execution,
-                state.Context(execution.Id).ControlVersion).CaptureRecord()),
-        ];
     }
 }

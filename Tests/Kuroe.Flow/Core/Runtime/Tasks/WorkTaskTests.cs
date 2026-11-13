@@ -97,6 +97,31 @@ public sealed class WorkTaskTests
         Assert.Equal(1, provider.Binder.Binds);
     }
 
+    [Fact]
+    public void Snapshot_assembles_common_fields_from_task_and_presentation()
+    {
+        WorkTask task = CreateTask();
+        IFlowView view = new FlowView("测试", "test", null, [], [], []);
+        FlowTexts startTexts = new(new Dictionary<PortName, string> { [new PortName("目标")] = "目标" });
+        FlowPendingStep pending = new(FlowStepPath.Of("等待"), FlowPendingKind.Approve, "确认");
+
+        TaskSnapshot snapshot = TaskSnapshotFactory.Create(task, view, [pending], startTexts);
+
+        Assert.Equal(task.Id, snapshot.Id);
+        Assert.Equal(task.Title, snapshot.Title);
+        Assert.Equal(task.Inputs, snapshot.Inputs);
+        Assert.Same(view, snapshot.View);
+        Assert.Equal(task.State, snapshot.State);
+        Assert.Equal(task.JournalEntries, snapshot.Journal);
+        Assert.Equal(task.CreatedAt, snapshot.CreatedAt);
+        Assert.Equal(task.LastActivityAt, snapshot.LastActivityAt);
+        Assert.Same(startTexts, snapshot.StartTexts);
+        PendingStepView step = Assert.Single(snapshot.Pending);
+        Assert.Equal("等待", step.Path);
+        Assert.Equal(PendingStepKind.Approve, step.Kind);
+        Assert.Equal("确认", step.Question);
+    }
+
     private static WorkTask CreateTask()
     {
         StartInputs inputs = StartInputs.Single(new PortName("目标"), "目标");
@@ -188,24 +213,11 @@ public sealed class WorkTaskTests
     {
         public IFlowView CaptureView(ITaskFlowContext task) => new FlowView("测试", "test", null, [], [], []);
 
-        public TaskSnapshot CreateSnapshot(ITaskFlowContext task) => new(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            CaptureView(task),
-            task.State,
-            0,
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            DateTimeOffset.UtcNow);
+        public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) => [];
     }
 
     private sealed class TestRecords : IFlowRecordSource
     {
         public FlowRecord CaptureRecord(ITaskFlowContext task) => throw new NotSupportedException();
-
-        public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(
-            ITaskFlowContext task) => [];
     }
 }

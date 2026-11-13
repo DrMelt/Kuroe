@@ -59,4 +59,55 @@ public sealed class ExecutionRecordTests
         Assert.Null(record.Contract);
         Assert.Null(record.StartedAt);
     }
+
+    [Fact]
+    public void Capture_prefers_the_source_key()
+    {
+        ExecutionSnapshot snapshot = Snapshot(new ExecutionInputValue(
+            new ExecutionPortName("输入"),
+            "内容",
+            "显示来源",
+            "execution:1:节点:端口"));
+
+        ExecutionRecord record = snapshot.CaptureRecord();
+
+        Assert.Equal("execution:1:节点:端口", Assert.Single(record.Inputs).Source);
+    }
+
+    [Fact]
+    public void Capture_falls_back_to_the_display_source()
+    {
+        ExecutionSnapshot snapshot = Snapshot(new ExecutionInputValue(
+            new ExecutionPortName("输入"),
+            "内容",
+            "显示来源"));
+
+        ExecutionRecord record = snapshot.CaptureRecord();
+
+        Assert.Equal("显示来源", Assert.Single(record.Inputs).Source);
+    }
+
+    private static ExecutionSnapshot Snapshot(ExecutionInputValue input) => new(
+        new ExecutionId(4),
+        new ExecutionRequest(
+            new ExecutionOwnerId("task"),
+            new ExecutionTargetId("step"),
+            "test",
+            1,
+            [],
+            [input],
+            new Dictionary<ExecutionPortName, string> { [input.Port] = input.Text },
+            []),
+        ExecutionState.Queued,
+        string.Empty,
+        DateTimeOffset.UnixEpoch,
+        null,
+        null,
+        [],
+        [],
+        ExecutionUsage.None,
+        null,
+        ExecutionContract.Empty,
+        null,
+        null);
 }

@@ -157,25 +157,12 @@ public sealed class FlowProviderSourceTests
     {
         public IFlowView CaptureView(ITaskFlowContext task) => new FlowView(name, "code", null, [], [], []);
 
-        public TaskSnapshot CreateSnapshot(ITaskFlowContext task) => new(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            CaptureView(task),
-            task.State,
-            0,
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            task.LastActivityAt);
+        public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) => [];
     }
 
     private sealed class TestRecords : IFlowRecordSource
     {
         public FlowRecord CaptureRecord(ITaskFlowContext task) => throw new NotSupportedException();
-
-        public IReadOnlyList<Kuroe.Flow.Execution.Records.ExecutionRecord> CaptureExecutions(
-            ITaskFlowContext task) => [];
     }
 
     private sealed class UnusedRuntime : IFlowRuntime

@@ -9,34 +9,13 @@ public sealed class DialogueFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
     public IFlowView CaptureView(ITaskFlowContext task) =>
-        DialogueView.Build(DialogueFlowAccess.State(task), task.Control as IFlowInputControl, task);
+        DialogueView.Build(
+            DialogueFlowAccess.State(task),
+            task.Control as IFlowInputControl,
+            task,
+            task.State);
 
     /// <inheritdoc/>
-    public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
-    {
-        DialogueFlowState state = DialogueFlowAccess.State(task);
-        IFlowInputControl? control = task.Control as IFlowInputControl;
-
-        return new TaskSnapshot(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            DialogueView.Build(state, control, task, task.State),
-            task.State,
-            task.Executions.Count(execution => execution.IsLive),
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            task.LastActivityAt)
-        {
-            Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = [.. (control?.Pending() ?? []).Select(PendingOf)],
-            StartTexts = new FlowTexts(state.StartTexts.Texts),
-        };
-    }
-
-    private static PendingStepView PendingOf(FlowPendingStep pending) => new(
-        pending.Step.Value,
-        pending.Kind == FlowPendingKind.Approve ? PendingStepKind.Approve : PendingStepKind.Input,
-        pending.Question);
+    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) =>
+        (task.Control as IFlowInputControl)?.Pending() ?? [];
 }

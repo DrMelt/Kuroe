@@ -203,9 +203,6 @@ internal sealed class CodeRecords : IFlowRecordSource
                 FlowTexts.Empty,
                 new Dictionary<string, string> { ["mode"] = "test" }));
     }
-
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task) =>
-        [.. task.Executions.Select(execution => execution.Snapshot().CaptureRecord())];
 }
 
 internal sealed class CodePresentation : IFlowPresentation
@@ -229,21 +226,7 @@ internal sealed class CodePresentation : IFlowPresentation
             ],
             []);
 
-    public TaskSnapshot CreateSnapshot(ITaskFlowContext task) =>
-        new(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            CaptureView(task),
-            task.State,
-            0,
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            task.LastActivityAt)
-        {
-            Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-        };
+    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) => [];
 }
 
 internal sealed class CodeTarget : IExecutionTarget

@@ -29,7 +29,7 @@ public static class ExecutionRecordCapture
                 snapshot.Usage.ContextTokens),
             [.. snapshot.Request.Inputs.Select(input => new ExecutionInputRecord(
                 input.Port,
-                input.Source ?? string.Empty,
+                input.SourceKey is { Length: > 0 } key ? key : input.Source ?? string.Empty,
                 input.Text))],
             snapshot.Request.Texts,
             snapshot.RestoreData is { } restore

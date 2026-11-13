@@ -7,42 +7,15 @@ using Kuroe.Flow.Tasks;
 
 namespace Kuroe.Flow.Control.Graph.Engine;
 
-/// <summary>图流程的任务表现：从同一份中性执行状态生成流程视图与任务快照。</summary>
+/// <summary>图流程的任务表现：从同一份中性执行状态生成流程视图与等待步骤。</summary>
 public sealed class GraphFlowPresentation : IFlowPresentation
 {
     /// <inheritdoc/>
     public IFlowView CaptureView(ITaskFlowContext task) => View(task);
 
     /// <inheritdoc/>
-    public TaskSnapshot CreateSnapshot(ITaskFlowContext task)
-    {
-        GraphFlowState state = State(task);
-        TaskRuntime runtime = state.Runtime;
-        TaskProjection projection = new(state.Flow.Graph, runtime.Materializer, runtime.StaticPorts);
-        IReadOnlyList<GraphExecutionSnapshot> executionSnapshots = GraphExecutions(task, state);
-
-        return new TaskSnapshot(
-            task.Id,
-            task.Title,
-            task.Inputs,
-            projection.View(state.Flow.Model, executionSnapshots),
-            task.State,
-            task.Executions.Count(execution => execution.IsLive),
-            task.JournalEntries,
-            task.DroppedJournal,
-            task.CreatedAt,
-            task.LastActivityAt)
-        {
-            Executions = [.. task.Executions.Select(execution => execution.Snapshot())],
-            Pending = [.. ((task.Control as IFlowInputControl)?.Pending() ?? []).Select(PendingOf)],
-            StartTexts = new FlowTexts(state.StartTexts.Texts),
-        };
-    }
-
-    private static PendingStepView PendingOf(FlowPendingStep pending) => new(
-        pending.Step.Value,
-        pending.Kind == FlowPendingKind.Approve ? PendingStepKind.Approve : PendingStepKind.Input,
-        pending.Question);
+    public IReadOnlyList<FlowPendingStep> Pending(ITaskFlowContext task) =>
+        (task.Control as IFlowInputControl)?.Pending() ?? [];
 
     private static IFlowView View(ITaskFlowContext task)
     {

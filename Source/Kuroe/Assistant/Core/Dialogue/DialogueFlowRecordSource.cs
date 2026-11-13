@@ -1,6 +1,5 @@
 using Kuroe.Assistant.Flows;
 using Kuroe.Flow.Control;
-using Kuroe.Flow.Execution.Records;
 using Kuroe.Flow.Tasks.Records;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -18,8 +17,4 @@ public sealed class DialogueFlowRecordSource : IFlowRecordSource
             new CodeFlowDefinitionRecord(DialogueFlow.Implementation, DialogueFlowAccess.Values(state.Language)),
             new CodeFlowStateRecord(state.Inputs, state.StartTexts, DialogueFlowAccess.Values(state)));
     }
-
-    /// <inheritdoc/>
-    public IReadOnlyList<ExecutionRecord> CaptureExecutions(ITaskFlowContext task) =>
-        [.. task.Executions.Select(execution => execution.Snapshot().CaptureRecord())];
 }

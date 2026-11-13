@@ -474,7 +474,11 @@ public sealed class WorkTask : ITaskFlowHost
     {
         lock (Gate)
         {
-            return _provider.Presentation.CreateSnapshot(this);
+            return TaskSnapshotFactory.Create(
+                this,
+                _provider.Presentation.CaptureView(this),
+                _provider.Presentation.Pending(this),
+                StartTexts);
         }
     }
 
@@ -490,6 +494,6 @@ public sealed class WorkTask : ITaskFlowHost
             _completed,
             new TaskJournalRecord(Journal.Entries, Journal.DroppedEntries),
             flow,
-            _provider.Records.CaptureExecutions(this));
+            [.. Executions.Select(execution => execution.Snapshot().CaptureRecord())]);
     }
 }

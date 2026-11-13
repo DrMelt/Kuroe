@@ -77,7 +77,11 @@ public sealed class DialogueFlowSubmission(
             LlmNodeTypes.Kind,
             record.Attempt,
             [],
-            [.. record.Inputs.Select(input => new ExecutionInputValue(input.Port, input.Text, null))],
+            [.. record.Inputs.Select(input => new ExecutionInputValue(
+                input.Port,
+                input.Text,
+                input.Source,
+                input.Source))],
             record.Texts,
             []);
 
