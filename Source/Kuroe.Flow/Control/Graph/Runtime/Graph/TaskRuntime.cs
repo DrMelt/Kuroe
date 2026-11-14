@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Control.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Shared.Model;

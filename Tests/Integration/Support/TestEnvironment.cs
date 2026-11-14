@@ -1,6 +1,6 @@
 using Kuroe.Flow.Control.Graph.Runtime.Graph;
 using Kuroe.Flow.Control.Graph.Runtime;
-using Kuroe.Flow.Control.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Tasks.Presentation.Shared;
 using Kuroe.Flow.Tasks.Shared;

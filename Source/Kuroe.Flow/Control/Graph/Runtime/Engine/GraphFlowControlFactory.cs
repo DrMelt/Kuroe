@@ -1,5 +1,5 @@
 using Kuroe.Flow.Control.Graph.Runtime.Graph;
-using Kuroe.Flow.Control.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Flow.InputChannel.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 

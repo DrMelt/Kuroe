@@ -273,7 +273,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     /// <summary>按执行号取图侧执行；不是图流程执行时为空。</summary>
     private static GraphExecution? FindGraphExecution(ExecutionIndex executions, ExecutionId execution)
     {
-        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Flow.Control.Shared.ITaskFlowContext Owner)> found =
+        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Execution.Shared.ExecutionId(execution.Value));
         if (found.IsError || found.Value.Owner.FlowState is not IGraphFlowState state)
         {
@@ -292,7 +292,7 @@ public sealed class FakeRunner : NeutralExecutionRunnerFactory, NeutralExecution
     {
         ExecutionIndex executions = Executions
             ?? throw new InvalidOperationException("测试环境没有提供执行索引。");
-        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Flow.Control.Shared.ITaskFlowContext Owner)> found =
+        ErrorOr<(Kuroe.Execution.Shared.IExecution Execution, Kuroe.Control.Shared.ITaskFlowContext Owner)> found =
             executions.FindOwned(new Kuroe.Execution.Shared.ExecutionId(execution.Value));
         if (found.IsError)
         {

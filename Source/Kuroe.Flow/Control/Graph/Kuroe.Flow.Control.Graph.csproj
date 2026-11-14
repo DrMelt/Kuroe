@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Shared\Kuroe.Flow.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
         <ProjectReference Include="..\..\..\Kuroe.Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />

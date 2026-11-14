@@ -49,8 +49,8 @@
     <Project Path="Source/Kuroe.Flow/Persistence/Serialization/Code/Core/Kuroe.Flow.Persistence.Code.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeType/Container/Core/Kuroe.Flow.NodeType.Container.csproj" />
     <Project Path="Source/Kuroe.Flow/Node/Shared/Kuroe.Flow.Node.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Control/Shared/Kuroe.Flow.Control.Shared.csproj" />
-    <Project Path="Source/Kuroe.Flow/Control/Contract/Kuroe.Flow.Control.Contract.csproj" />
+    <Project Path="Source/Kuroe.Control/Shared/Kuroe.Control.Shared.csproj" />
+    <Project Path="Source/Kuroe.Control/Contract/Kuroe.Control.Contract.csproj" />
     <Project Path="Source/Kuroe.Flow/Control/Graph/Kuroe.Flow.Control.Graph.csproj" />
     <Project Path="Source/Kuroe.Flow/Shared/Kuroe.Flow.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/InputChannel/Shared/Kuroe.Flow.InputChannel.Shared.csproj" />
@@ -96,7 +96,7 @@
     <Project Path="Tests/Kuroe.Flow/Shared/Kuroe.Flow.Shared.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Support/Kuroe.Flow.TestSupport.csproj" />
     <Project Path="Tests/Kuroe.Flow/Core/Kuroe.Flow.Tests.csproj" />
-    <Project Path="Tests/Kuroe.Flow/Control/Contract/Kuroe.Flow.Control.Contract.Tests.csproj" />
+    <Project Path="Tests/Kuroe.Control/Contract/Kuroe.Control.Contract.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Control/Graph/Kuroe.Flow.Control.Graph.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Compilation/Core/Kuroe.Flow.Compilation.Tests.csproj" />
     <Project Path="Tests/Kuroe.Flow/Compilation/Shared/Kuroe.Flow.Compilation.Shared.Tests.csproj" />

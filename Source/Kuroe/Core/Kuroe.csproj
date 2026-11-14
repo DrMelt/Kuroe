@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <IsAotCompatible>true</IsAotCompatible>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -70,8 +70,8 @@
 
 <ItemGroup>
         <ProjectReference Include="..\..\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\Kuroe.Flow\Control\Contract\Kuroe.Flow.Control.Contract.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\Kuroe.Control\Contract\Kuroe.Control.Contract.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\..\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />

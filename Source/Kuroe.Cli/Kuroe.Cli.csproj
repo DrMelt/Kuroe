@@ -28,7 +28,7 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\Kuroe.Flow\Control\Shared\Kuroe.Flow.Control.Shared.csproj" />
+        <ProjectReference Include="..\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
         <ProjectReference Include="..\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>

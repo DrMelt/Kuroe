@@ -1,5 +1,5 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Control.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Flow.Persistence.Restoring.Shared;
 
 namespace Kuroe.Console;

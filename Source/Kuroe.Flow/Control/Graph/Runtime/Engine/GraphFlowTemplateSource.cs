@@ -1,6 +1,6 @@
 using ErrorOr;
 using Kuroe.Flow.Control.Graph.Runtime.Catalog;
-using Kuroe.Flow.Control.Shared;
+using Kuroe.Control.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Presentation.Shared;
