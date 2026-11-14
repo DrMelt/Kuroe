@@ -1,6 +1,6 @@
 using ErrorOr;
-using Kuroe.Flow.Tasks.Records.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Records.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Runtime.Tasks.Persistence;
 

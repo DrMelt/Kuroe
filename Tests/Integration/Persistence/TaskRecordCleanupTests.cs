@@ -1,6 +1,6 @@
 using Kuroe.Flow.Persistence.Json;
 using Kuroe.Flow.Persistence.Files;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Integration.Tests.Persistence;

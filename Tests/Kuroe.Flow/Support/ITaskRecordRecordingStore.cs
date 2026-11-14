@@ -1,5 +1,5 @@
 using Kuroe.Flow.Persistence.Files.Shared;
-using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Tasks.Records.Shared;
 
 namespace Kuroe.Flow.TestSupport;
 

@@ -1,5 +1,5 @@
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 namespace Kuroe.Flow.Node.Shared.StaticGraph.Ports;
 
 /// <summary>端口表的查找、交回判定与声明文本。</summary>

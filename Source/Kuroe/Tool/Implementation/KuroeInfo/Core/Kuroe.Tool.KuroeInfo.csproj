@@ -15,13 +15,13 @@
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

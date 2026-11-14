@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Catalogs;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Shared;
 

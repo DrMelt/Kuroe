@@ -12,15 +12,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
         <ProjectReference Include="..\..\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\Kuroe.Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
         <ProjectReference Include="..\..\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
         <ProjectReference Include="..\..\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
         <ProjectReference Include="..\..\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
-        <ProjectReference Include="..\..\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
-        <ProjectReference Include="..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
-        <ProjectReference Include="..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
     </ItemGroup>
 </Project>

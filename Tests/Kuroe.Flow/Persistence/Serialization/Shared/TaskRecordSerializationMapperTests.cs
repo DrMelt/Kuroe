@@ -1,6 +1,6 @@
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using System.Text.Json;
-using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Tasks.Records.Shared;
 using Kuroe.Flow.TestSupport;
 using Xunit;
 

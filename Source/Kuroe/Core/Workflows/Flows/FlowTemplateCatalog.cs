@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
-using Kuroe.Flow.Presentation.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Presentation.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Workflows.Flows;
 

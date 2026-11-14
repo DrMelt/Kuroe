@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Control\Contract\Kuroe.Control.Contract.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\Source\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
+    </ItemGroup>
+</Project>

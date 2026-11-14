@@ -4,7 +4,7 @@ using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Readiness;
 using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Node.Input.Tests;
 

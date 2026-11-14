@@ -1,7 +1,7 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Presentation.Shared;
-using Kuroe.Flow.Tasks.Presentation.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Presentation.Shared;
+using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Tasks.Shared;
 using Spectre.Console.Testing;
 using Xunit;
 

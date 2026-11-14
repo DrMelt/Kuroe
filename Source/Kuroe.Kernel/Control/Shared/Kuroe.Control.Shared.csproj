@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ErrorOr" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
+    </ItemGroup>
+</Project>

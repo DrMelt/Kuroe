@@ -1,6 +1,6 @@
 using Kuroe.Flow.Control.Graph.Runtime.Engine;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Flow.Control.Graph.Tests.Runtime;

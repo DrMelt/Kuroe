@@ -3,7 +3,7 @@ using ErrorOr;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 using Kuroe.Pending;
 using Xunit;

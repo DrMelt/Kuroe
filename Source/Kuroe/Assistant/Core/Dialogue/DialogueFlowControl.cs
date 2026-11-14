@@ -2,7 +2,7 @@ using ErrorOr;
 using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;

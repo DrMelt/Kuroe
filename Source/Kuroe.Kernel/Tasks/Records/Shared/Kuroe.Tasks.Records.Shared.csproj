@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Execution\Records\Shared\Kuroe.Execution.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

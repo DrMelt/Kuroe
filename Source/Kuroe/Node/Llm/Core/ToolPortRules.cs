@@ -1,7 +1,7 @@
 using Kuroe.Flow.Compilation.Shared.Validation;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Shared;
 using Kuroe.Tool;
 

@@ -1,4 +1,4 @@
-global using Kuroe.Flow.Presentation.Shared;
+global using Kuroe.Presentation.Shared;
 global using IProcessJournal = Kuroe.Execution.Shared.IProcessJournal;
 global using ProcessContent = Kuroe.Execution.Shared.ProcessContent;
 global using ProcessContentKind = Kuroe.Execution.Shared.ProcessContentKind;

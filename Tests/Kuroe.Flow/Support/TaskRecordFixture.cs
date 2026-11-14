@@ -3,10 +3,10 @@ using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Shared.Model;
 using Kuroe.Execution.Records.Shared;
-using Kuroe.Flow.Tasks.Records.Shared;
+using Kuroe.Tasks.Records.Shared;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Execution;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Nodes;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.TestSupport;
 
@@ -99,10 +99,10 @@ public static class TaskRecordFixture
                                     new PortName("结论")),
                                 "计划结果")]),
                     ],
-                    new Kuroe.Flow.Tasks.Shared.FlowSeed(
+                    new Kuroe.Tasks.Shared.FlowSeed(
                     [
-                        new Kuroe.Flow.Tasks.Shared.FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
-                        new Kuroe.Flow.Tasks.Shared.FlowStepPath([.. read.Levels.Select(level => level.Value)]),
+                        new Kuroe.Tasks.Shared.FlowStepPath([.. plan.Levels.Select(level => level.Value)]),
+                        new Kuroe.Tasks.Shared.FlowStepPath([.. read.Levels.Select(level => level.Value)]),
                     ]))),
             [
                 new ExecutionRecord(

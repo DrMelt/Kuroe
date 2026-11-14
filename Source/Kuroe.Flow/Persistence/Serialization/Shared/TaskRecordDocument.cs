@@ -1,5 +1,5 @@
 using Kuroe.Execution.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using System.Text.Json;
 
 namespace Kuroe.Flow.Persistence.Serialization.Shared;

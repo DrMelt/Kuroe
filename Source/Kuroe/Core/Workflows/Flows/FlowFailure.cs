@@ -1,5 +1,5 @@
 using ErrorOr;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Workflows.Flows;
 

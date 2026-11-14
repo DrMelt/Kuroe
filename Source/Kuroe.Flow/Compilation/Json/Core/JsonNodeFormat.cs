@@ -1,4 +1,4 @@
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using System.Text.Json;
 using ErrorOr;
 using Kuroe.Flow.Compilation.Shared;

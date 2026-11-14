@@ -1,5 +1,5 @@
 using Kuroe.Console.Views;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Console.Tests.Support;
 

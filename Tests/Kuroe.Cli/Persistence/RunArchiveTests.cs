@@ -4,8 +4,8 @@ using Kuroe.Configuration.Files;
 using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Flow.Node.Shared.Graph.Records;
 using Kuroe.Flow.Persistence.Files;
-using Kuroe.Flow.Tasks.Records.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Records.Shared;
+using Kuroe.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Cli.Tests.Persistence;

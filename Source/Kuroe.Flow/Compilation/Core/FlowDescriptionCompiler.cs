@@ -7,7 +7,7 @@ using Kuroe.Flow.Compilation.Validation;
 using Kuroe.Flow.Node.Shared.StaticGraph.Flow;
 using Kuroe.Flow.Node.Shared.StaticGraph.Graph;
 using Kuroe.Flow.Node.Shared.StaticGraph.Nodes;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Compilation;
 

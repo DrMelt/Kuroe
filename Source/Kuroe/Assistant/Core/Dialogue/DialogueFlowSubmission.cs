@@ -6,8 +6,8 @@ using Kuroe.Configuration.Files;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Execution.Records.Shared;
-using Kuroe.Flow.Tasks.Records.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Records.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 
 namespace Kuroe.Assistant.Dialogue;

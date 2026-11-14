@@ -10,8 +10,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Shared\Kuroe.Flow.Persistence.Serialization.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\..\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
-        <ProjectReference Include="..\..\..\..\Tasks\Records\Shared\Kuroe.Flow.Tasks.Records.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\..\..\..\Kuroe.Kernel\Tasks\Records\Shared\Kuroe.Tasks.Records.Shared.csproj" />
     </ItemGroup>
 </Project>

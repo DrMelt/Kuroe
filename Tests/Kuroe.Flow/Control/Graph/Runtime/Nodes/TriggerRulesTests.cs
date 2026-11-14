@@ -1,7 +1,7 @@
 using Kuroe.Flow.Control.Graph.Runtime.Nodes;
 using Kuroe.Flow.Node.Shared.RuntimeGraph.Ports;
 using Kuroe.Flow.Node.Shared.StaticGraph.Ports;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Shared;
 using Xunit;
 
 namespace Kuroe.Flow.Control.Graph.Tests.Runtime.Nodes;

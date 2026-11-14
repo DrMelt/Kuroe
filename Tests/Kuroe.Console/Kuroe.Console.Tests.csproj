@@ -24,8 +24,8 @@
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Control\Graph\Kuroe.Flow.Control.Graph.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Graph\Records\Shared\Kuroe.Flow.Graph.Records.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Shared\Kuroe.Flow.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Execution\Shared\Kuroe.Execution.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Execution\Core\Kuroe.Execution.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Shared\Kuroe.Execution.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Kernel\Execution\Core\Kuroe.Execution.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\Compilation\Shared\Kuroe.Flow.Compilation.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe.Flow\InputChannel\Shared\Kuroe.Flow.InputChannel.Shared.csproj" />
     <ProjectReference Include="..\..\Source\Kuroe\Node\Llm\Core\Kuroe.Node.Llm.csproj" />
@@ -39,13 +39,13 @@
   </ItemGroup>
 
 <ItemGroup>
-        <ProjectReference Include="..\..\Source\Kuroe.Flow\Tasks\Shared\Kuroe.Flow.Tasks.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Shared\Kuroe.Tasks.Shared.csproj" />
     </ItemGroup>
 
 <ItemGroup>
         <ProjectReference Include="..\..\Source\Kuroe.Flow\Node\Shared\Kuroe.Flow.Node.Shared.csproj" />
-        <ProjectReference Include="..\..\Source\Kuroe.Control\Shared\Kuroe.Control.Shared.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe.Flow\Presentation\Shared\Kuroe.Flow.Presentation.Shared.csproj" />
-    <ProjectReference Include="..\..\Source\Kuroe.Flow\Tasks\Presentation\Shared\Kuroe.Flow.Tasks.Presentation.Shared.csproj" />
+        <ProjectReference Include="..\..\Source\Kuroe.Kernel\Control\Shared\Kuroe.Control.Shared.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Kernel\Presentation\Shared\Kuroe.Presentation.Shared.csproj" />
+    <ProjectReference Include="..\..\Source\Kuroe.Kernel\Tasks\Presentation\Shared\Kuroe.Tasks.Presentation.Shared.csproj" />
     </ItemGroup>
 </Project>

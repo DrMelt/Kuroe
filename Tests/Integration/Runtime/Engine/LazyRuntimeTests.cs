@@ -1,7 +1,7 @@
 using ErrorOr;
 using Kuroe.Flow.Shared.Model;
-using Kuroe.Flow.Tasks.Presentation.Shared;
-using Kuroe.Flow.Tasks.Shared;
+using Kuroe.Tasks.Presentation.Shared;
+using Kuroe.Tasks.Shared;
 using Kuroe.Pending;
 using Kuroe.Flow.Runtime.Tasks;
 using Xunit;
