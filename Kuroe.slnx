@@ -33,6 +33,7 @@
     <Project Path="Source/Kuroe.Kernel/Tasks/Records/Shared/Kuroe.Tasks.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Kernel/Presentation/Shared/Kuroe.Presentation.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Graph/Records/Shared/Kuroe.Flow.Graph.Records.Shared.csproj" />
+    <Project Path="Source/Kuroe.Flow/Code/Records/Shared/Kuroe.Flow.Code.Records.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/NodeLibrary/Core/Kuroe.Flow.NodeLibrary.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Shared/Kuroe.Flow.Json.Shared.csproj" />
     <Project Path="Source/Kuroe.Flow/Compilation/Json/Core/Kuroe.Flow.Json.csproj" />

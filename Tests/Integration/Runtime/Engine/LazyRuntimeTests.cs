@@ -86,11 +86,11 @@ public sealed class LazyRuntimeTests
         environment.Runner.Gate.Hold(NodePath.Of("整体", "交付", "实施"));
 
         TaskId id = environment.Submit("目标");
-        environment.Wait(id, snapshot => snapshot.View.Steps[1].State == FlowNodeState.Running);
+        environment.Wait(id, snapshot => snapshot.View.Steps[1].State == FlowItemState.Running);
 
         // 已实例化的是根容器、根容器成员「制定计划」、容器「交付」与在跑的容器成员「交付/实施」
-        Assert.Equal(FlowNodeState.Running, environment.Snapshot(id).View.Steps[1].State);
-        Assert.Equal(FlowNodeState.Pending, environment.Snapshot(id).View.Steps[2].State);
+        Assert.Equal(FlowItemState.Running, environment.Snapshot(id).View.Steps[1].State);
+        Assert.Equal(FlowItemState.Pending, environment.Snapshot(id).View.Steps[2].State);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class LazyRuntimeTests
         environment.Tasks.StopTask(id).ThrowIfError();
         environment.Wait(id, snapshot => snapshot.State == TaskState.Terminated);
 
-        Assert.Equal(FlowNodeState.Canceled, environment.Snapshot(id).View.Steps[0].State);
+        Assert.Equal(FlowItemState.Canceled, environment.Snapshot(id).View.Steps[0].State);
         Assert.Empty(environment.Pendings.Pending(id).ThrowIfError());
     }
 

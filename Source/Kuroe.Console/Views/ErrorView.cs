@@ -64,7 +64,7 @@ internal sealed class ErrorView(Terminal terminal)
                     terminal.Hint("「流程」菜单导入时文件路径相对工作目录解析，路径非法时换一个写法。");
                     break;
 
-                case FlowErrorCodes.FlowNode or FlowErrorCodes.FlowBody or FlowErrorCodes.FlowName
+                case FlowErrorCodes.FlowEntry or FlowErrorCodes.FlowComposition or FlowErrorCodes.FlowName
                     or FlowErrorCodes.FlowFormat:
                     terminal.Hint("流程文件是工作目录 `.kuroe/` 下的 flows.json，改完在「流程」菜单确认是否加载成功。");
                     break;

@@ -6,14 +6,14 @@ public sealed record FlowGroupView(
     string Label,
     IReadOnlyList<string> Members)
 {
-    /// <summary>所属分组的路径，根级分组为空。</summary>
-    public string? ParentPath { get; init; }
+    /// <summary>父分组的路径，根级分组为空。</summary>
+    public string? ParentGroupPath { get; init; }
 
     /// <summary>分组状态。</summary>
-    public FlowNodeState State { get; init; } = FlowNodeState.Pending;
+    public FlowItemState State { get; init; } = FlowItemState.Pending;
 
-    /// <summary>分组节点类型名，模板视图使用。</summary>
-    public string? Kind { get; init; }
+    /// <summary>分组类型名，模板视图使用。</summary>
+    public string? TypeName { get; init; }
 
     /// <summary>分组输入端口，模板视图使用。</summary>
     public IReadOnlyList<FlowPortView> Inputs { get; init; } = [];

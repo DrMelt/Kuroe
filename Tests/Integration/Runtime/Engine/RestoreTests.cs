@@ -23,7 +23,7 @@ public sealed class RestoreTests
         Assert.Equal(TaskState.Paused, paused.State);
         FlowStepView blocked = Assert.Single(
             paused.View.Steps,
-            step => step.State == FlowNodeState.Blocked);
+            step => step.State == FlowItemState.Blocked);
         Assert.True(blocked.CanRestore);
 
         environment.Runner.FailsWhen = null;
@@ -110,7 +110,7 @@ public sealed class RestoreTests
         TaskSnapshot blocked = environment.Settle(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.False(Assert.Single(blocked.View.Steps, step => step.State == FlowNodeState.Blocked).CanRestore);
+        Assert.False(Assert.Single(blocked.View.Steps, step => step.State == FlowItemState.Blocked).CanRestore);
         Assert.True(environment.Tasks.Resume(id).IsError);
     }
 
@@ -137,7 +137,7 @@ public sealed class RestoreTests
         Kuroe.Execution.Shared.ExecutionSnapshot stopped = task.Executions.Single(candidate => candidate.Id == execution).Snapshot();
         Assert.Equal(Kuroe.Execution.Shared.ExecutionState.Interrupted, stopped.State);
         Assert.NotNull(stopped.RestoreData);
-        Assert.True(Assert.Single(paused.View.Steps, step => step.State == FlowNodeState.Blocked).CanRestore);
+        Assert.True(Assert.Single(paused.View.Steps, step => step.State == FlowItemState.Blocked).CanRestore);
 
         environment.Runner.Gate.ClearHolds();
         environment.Runner.RestoreData = null;
@@ -167,7 +167,7 @@ public sealed class RestoreTests
         environment.Tasks.Resume(id).ThrowIfError();
         TaskSnapshot done = environment.Wait(id, snapshot => snapshot.State == TaskState.Done);
 
-        Assert.DoesNotContain(done.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.DoesNotContain(done.View.Steps, step => step.State == FlowItemState.Blocked);
         Assert.All(done.View.Steps, step =>
         {
             Assert.Equal(2, step.ExecutionCount);
@@ -206,7 +206,7 @@ public sealed class RestoreTests
         Assert.Equal(1, environment.Runner.Usage.RequestCount);
         Assert.Equal(1, second.Usage.RequestCount);
         Assert.Null(second.RestoreData);
-        Assert.False(Assert.Single(blocked.View.Steps, step => step.State == FlowNodeState.Blocked).CanRestore);
+        Assert.False(Assert.Single(blocked.View.Steps, step => step.State == FlowItemState.Blocked).CanRestore);
         Assert.Equal(2, environment.Runner.Starts.Count);
         Assert.True(environment.Tasks.Resume(id).IsError);
     }
@@ -223,7 +223,7 @@ public sealed class RestoreTests
         Assert.Equal(TaskState.Paused, environment.Wait(id, snapshot => snapshot.State == TaskState.Paused).State);
         environment.Runner.Gate.Open(NodePath.Of("后完成"));
         environment.Wait(id, snapshot => snapshot.View.Steps.Any(
-            step => step.Label == "后完成" && step.State == FlowNodeState.Done));
+            step => step.Label == "后完成" && step.State == FlowItemState.Done));
 
         environment.Runner.FailsWhen = null;
         environment.Tasks.Resume(id).ThrowIfError();
@@ -270,7 +270,7 @@ public sealed class RestoreTests
         Kuroe.Execution.Shared.ExecutionSnapshot terminatedExecution = task.Executions[^1].Snapshot();
         Assert.Equal(Kuroe.Execution.Shared.ExecutionState.Interrupted, terminatedExecution.State);
         Assert.NotNull(terminatedExecution.RestoreData);
-        Assert.DoesNotContain(terminated.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.DoesNotContain(terminated.View.Steps, step => step.State == FlowItemState.Blocked);
         Assert.True(environment.Tasks.Resume(id).IsError);
 
         environment.Runner.Gate.ClearHolds();
@@ -291,7 +291,7 @@ public sealed class RestoreTests
         {
             Assert.True(Assert.Single(
                 environment.Snapshot(id).View.Steps,
-                step => step.State == FlowNodeState.Blocked).CanRestore);
+                step => step.State == FlowItemState.Blocked).CanRestore);
         }
 
         Assert.Equal(1, environment.Runner.PrepareCount);

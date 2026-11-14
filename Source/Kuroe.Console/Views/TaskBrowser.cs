@@ -452,7 +452,7 @@ internal sealed class TaskBrowser(
         {
             items.Add(new Item("▶ 恢复任务", "resumeTask", Task: task.Id));
 
-            if (task.View.Steps.Any(step => step.State == FlowNodeState.Blocked))
+            if (task.View.Steps.Any(step => step.State == FlowItemState.Blocked))
             {
                 items.Add(new Item("* 重新执行被阻塞的节点，放弃恢复，保留恢复数据", "rerun", Task: task.Id));
             }
@@ -464,7 +464,7 @@ internal sealed class TaskBrowser(
 
         // 等待与阻塞可以并存，任务级状态只表达阻塞，入口按节点的实际停留各自给出
         List<PendingNode> waiting = pendings.Pending(task.Id) is { IsError: false } found ? found.Value : [];
-        bool blocked = task.View.Steps.Any(step => step.State == FlowNodeState.Blocked);
+        bool blocked = task.View.Steps.Any(step => step.State == FlowItemState.Blocked);
 
         if (waiting.Any(node => node.Kind == PendingKind.Approve))
         {

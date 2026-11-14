@@ -464,7 +464,7 @@ internal sealed class FlowModelBuilder(INodeTypeDescriptionRegistry types)
             return PortRef.Named(new NodeLabel(text[..at]), port.Value);
         }
 
-        return Error.Validation(FlowErrorCodes.FlowNode, $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
+        return Error.Validation(FlowErrorCodes.FlowEntry, $"端口引用 {text} 缺少 @，必须写 来源@端口 或 @端口。");
     }
 
     private static ErrorOr<Dictionary<PortName, PortRef>?> ToBindings(

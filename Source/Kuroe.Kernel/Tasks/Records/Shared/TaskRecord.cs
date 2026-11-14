@@ -37,13 +37,3 @@ public interface IFlowDefinitionRecord;
 
 /// <summary>流程状态的持久记录。由具体流程实现。</summary>
 public interface IFlowStateRecord;
-
-/// <summary>流程记录种类。</summary>
-public static class FlowRecordKinds
-{
-    /// <summary>图驱动流程。</summary>
-    public const string Graph = "graph";
-
-    /// <summary>代码定义流程。</summary>
-    public const string Code = "code";
-}

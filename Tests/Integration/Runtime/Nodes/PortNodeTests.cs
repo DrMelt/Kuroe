@@ -37,7 +37,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
-        Assert.Contains(blocked.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.Contains(blocked.View.Steps, step => step.State == FlowItemState.Blocked);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public sealed class PortNodeTests
         TaskId id = environment.Submit("目标");
         TaskSnapshot blocked = environment.Wait(id, snapshot => snapshot.State == TaskState.Blocked);
 
-        Assert.Contains(blocked.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.Contains(blocked.View.Steps, step => step.State == FlowItemState.Blocked);
     }
 
     /// <summary>端口交回工具的说明按需交回端口列出 Signal 端口。</summary>

@@ -65,7 +65,7 @@ public sealed class TaskKuroeInfoTool : ITool
         foreach (TaskSnapshot task in tasks)
         {
             text.AppendLine($"#{task.Id.Short} · {task.Title} · {StateLabel(task)}"
-                + $" · 步骤 {task.FrontierNodes}/{task.TotalExecutableNodes}"
+                + $" · 步骤 {task.ProgressSteps}/{task.TotalSteps}"
                 + $" · {task.LiveExecutions} 个执行在跑 / {task.Executions.Count} 已派"
                 + $" · 最近 {InfoLabels.Clock(task.LastActivityAt)}");
         }
@@ -125,7 +125,7 @@ public sealed class TaskKuroeInfoTool : ITool
     {
         var text = new StringBuilder();
         text.AppendLine($"#{task.Id.Short} · {task.Title} · {StateLabel(task)}");
-        text.AppendLine($"流程 {task.View.Name} · {task.View.Kind} · 步骤 {task.TotalExecutableNodes}");
+        text.AppendLine($"流程 {task.View.Name} · {task.View.Kind} · 步骤 {task.TotalSteps}");
         foreach (StartInput input in task.Inputs.Values)
         {
             text.AppendLine($"输入 {input.Port}：{input.Text}");

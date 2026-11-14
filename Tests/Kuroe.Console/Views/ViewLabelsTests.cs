@@ -35,9 +35,9 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Node_state_labels_cover_the_scope()
     {
-        Assert.Equal("执行中", ViewLabels.Of(FlowNodeState.Running));
-        Assert.Equal("待执行", ViewLabels.Of(FlowNodeState.Pending));
-        Assert.Equal("已完成", ViewLabels.Of(FlowNodeState.Done));
+        Assert.Equal("执行中", ViewLabels.Of(FlowItemState.Running));
+        Assert.Equal("待执行", ViewLabels.Of(FlowItemState.Pending));
+        Assert.Equal("已完成", ViewLabels.Of(FlowItemState.Done));
     }
 
     [Fact]
@@ -91,10 +91,10 @@ public sealed class ViewLabelsTests
     [Fact]
     public void Style_of_node_state_picks_the_host_style()
     {
-        Assert.Equal(Styles.Success, ViewLabels.StyleOf(FlowNodeState.Done));
-        Assert.Equal(Styles.Key, ViewLabels.StyleOf(FlowNodeState.Running));
-        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(FlowNodeState.Blocked));
-        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(FlowNodeState.Pending));
+        Assert.Equal(Styles.Success, ViewLabels.StyleOf(FlowItemState.Done));
+        Assert.Equal(Styles.Key, ViewLabels.StyleOf(FlowItemState.Running));
+        Assert.Equal(Styles.Warning, ViewLabels.StyleOf(FlowItemState.Blocked));
+        Assert.Equal(Styles.Hint, ViewLabels.StyleOf(FlowItemState.Pending));
     }
 
     [Fact]

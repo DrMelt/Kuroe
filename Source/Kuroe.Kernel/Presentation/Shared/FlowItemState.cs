@@ -1,7 +1,7 @@
 namespace Kuroe.Presentation.Shared;
 
 /// <summary>步骤或分组在某一刻的状态。</summary>
-public enum FlowNodeState
+public enum FlowItemState
 {
     /// <summary>尚未开始。</summary>
     Pending,

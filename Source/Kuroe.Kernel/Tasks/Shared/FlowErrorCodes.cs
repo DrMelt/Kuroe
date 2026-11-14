@@ -15,17 +15,20 @@ public static class FlowErrorCodes
     /// <summary>流程名不存在。</summary>
     public const string FlowNotFound = "Flow.NotFound";
 
-    /// <summary>节点库或流程文件不是合法 JSON 或结构不符。</summary>
+    /// <summary>流程条目库或流程文件不是合法 JSON 或结构不符。</summary>
     public const string FlowFormat = "Flow.Format";
 
     /// <summary>流程名为空或重复。</summary>
     public const string FlowName = "Flow.Name";
 
-    /// <summary>节点条目不合法：节点名与标签的写位置、形状与取值。</summary>
-    public const string FlowNode = "Flow.Node";
+    /// <summary>流程条目不合法：名称与标签的写位置、形状与取值。</summary>
+    public const string FlowEntry = "Flow.Entry";
 
-    /// <summary>流程的节点组合不满足推进依赖的不变量。</summary>
-    public const string FlowBody = "Flow.Body";
+    /// <summary>端口名不合法。</summary>
+    public const string FlowPort = "Flow.Port";
+
+    /// <summary>流程条目组合不满足推进依赖的不变量。</summary>
+    public const string FlowComposition = "Flow.Composition";
 
     /// <summary>命令里的文件参数无法解析为路径。</summary>
     public const string FlowInvalidPath = "Flow.InvalidPath";
@@ -59,12 +62,6 @@ public static class FlowErrorCodes
 
     /// <summary>流程快照无法编译。</summary>
     public const string RecordFlowSnapshot = "Record.FlowSnapshot";
-
-    /// <summary>存档与流程图的节点集合不一致。</summary>
-    public const string RecordGraphMismatch = "Record.GraphMismatch";
-
-    /// <summary>存档节点状态与图节点类型不一致。</summary>
-    public const string RecordNodeMismatch = "Record.NodeMismatch";
 
     /// <summary>存档读取失败。</summary>
     public const string RecordRead = "Record.Read";

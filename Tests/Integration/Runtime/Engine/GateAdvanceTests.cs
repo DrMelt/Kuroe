@@ -85,7 +85,7 @@ public sealed class GateAdvanceTests
         TaskSnapshot blocked = await environment.SettleAsync(id);
 
         Assert.Equal(TaskState.Blocked, blocked.State);
-        Assert.Equal(FlowNodeState.Blocked, Assert.Single(blocked.View.Steps, step => step.Label == "甲").State);
+        Assert.Equal(FlowItemState.Blocked, Assert.Single(blocked.View.Steps, step => step.Label == "甲").State);
         Assert.Empty(blocked.View.Steps.Single(step => step.Label == "闸门").Executions);
 
         environment.Tasks.Rerun(id).ThrowIfError();

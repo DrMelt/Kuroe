@@ -195,9 +195,9 @@ public sealed class InputNodeTests
 
         TaskSnapshot awaiting = environment.Wait(id, snapshot =>
             environment.Awaiting(id, PendingKind.Approve).Count == 1
-            && snapshot.View.Groups.Single(group => group.Label == "审查容器").State == FlowNodeState.Done);
+            && snapshot.View.Groups.Single(group => group.Label == "审查容器").State == FlowItemState.Done);
         Assert.Equal(TaskState.Running, awaiting.State);
-        Assert.Equal(FlowNodeState.Done, Assert.Single(awaiting.View.Groups, group => group.Label == "审查容器").State);
+        Assert.Equal(FlowItemState.Done, Assert.Single(awaiting.View.Groups, group => group.Label == "审查容器").State);
         Assert.Single(environment.Awaiting(id, PendingKind.Approve));
 
         environment.Pendings.Approve(id).ThrowIfError();
@@ -234,7 +234,7 @@ public sealed class InputNodeTests
         TaskSnapshot parked = WaitForInputs(environment, id, 1);
 
         // 容器不表达成员的等待，只按成员活动给状态；等待由节点的待处理报告给出
-        Assert.All(parked.View.Groups, group => Assert.Equal(FlowNodeState.Pending, group.State));
+        Assert.All(parked.View.Groups, group => Assert.Equal(FlowItemState.Pending, group.State));
         Assert.Single(environment.Awaiting(id, PendingKind.Answer));
     }
 

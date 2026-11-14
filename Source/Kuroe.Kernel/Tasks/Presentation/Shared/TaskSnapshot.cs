@@ -26,19 +26,19 @@ public sealed record TaskSnapshot(
     /// <summary>任务启动时的开始端口文本。</summary>
     public FlowTexts? StartTexts { get; init; }
 
-    /// <summary>流程的执行节点数。</summary>
-    public int TotalExecutableNodes => View.Steps.Count;
+    /// <summary>流程的步骤数。</summary>
+    public int TotalSteps => View.Steps.Count;
 
-    /// <summary>已发布产出的最远执行节点在执行节点表里的位置，用于列表里的进度。</summary>
-    public int FrontierNodes =>
+    /// <summary>已发布产出的最远步骤在步骤表里的位置，用于列表里的进度。</summary>
+    public int ProgressSteps =>
         View.Steps
             .Select((step, index) => (step, index))
-            .Where(entry => entry.step.State == FlowNodeState.Done)
+            .Where(entry => entry.step.State == FlowItemState.Done)
             .Select(entry => entry.index + 1)
             .DefaultIfEmpty(0)
             .Max();
 
-    /// <summary>执行节点在执行节点表里的顺位，用于展示；容器或未收录的节点给最末顺位之后。</summary>
+    /// <summary>步骤在步骤表里的顺位，用于展示；分组或未收录的步骤给最末顺位之后。</summary>
     public int OrdinalOf(string path) =>
         View.IndexOf(path) is { } index ? index + 1 : View.Steps.Count + 1;
 }

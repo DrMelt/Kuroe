@@ -1,3 +1,4 @@
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Tasks.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -10,7 +11,7 @@ namespace Kuroe.Flow.Persistence.Code;
 public sealed class CodeFlowRecordCodec : IFlowRecordCodec
 {
     /// <inheritdoc/>
-    public bool Handles(FlowIdentity identity) => identity.Kind == FlowRecordKinds.Code;
+    public bool Handles(FlowIdentity identity) => identity.Kind == CodeFlowKind.Value;
 
     /// <inheritdoc/>
     public IFlowDefinitionRecord ReadDefinition(FlowRecordData data)

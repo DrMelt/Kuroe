@@ -1,5 +1,6 @@
 using ErrorOr;
 using Kuroe.Control.Shared;
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Flow.Runtime;
 using Kuroe.Flow.Runtime.Tasks;
@@ -98,7 +99,7 @@ public sealed class FlowProviderSourceTests
 
     private static FlowRecord CodeRecord(string implementation) =>
         new(
-            new FlowIdentity(new FlowName(implementation), FlowRecordKinds.Code, implementation),
+            new FlowIdentity(new FlowName(implementation), CodeFlowKind.Value, implementation),
             new CodeFlowDefinitionRecord(implementation, new Dictionary<string, string>()),
             new CodeFlowStateRecord(
                 new StartInputs([]),
@@ -125,7 +126,7 @@ public sealed class FlowProviderSourceTests
         public bool Handles(FlowName name) => name.Value == implementation;
 
         public bool Handles(FlowIdentity identity) =>
-            identity.Kind == FlowRecordKinds.Code
+            identity.Kind == CodeFlowKind.Value
             && identity.Implementation == implementation;
     }
 

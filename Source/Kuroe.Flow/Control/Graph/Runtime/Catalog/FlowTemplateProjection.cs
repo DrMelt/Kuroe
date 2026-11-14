@@ -78,17 +78,16 @@ public static class FlowTemplateProjection
             path.Value,
             node.Label.Value,
             node.EffectiveKind.Value,
-            FlowNodeState.Pending,
+            FlowItemState.Pending,
             [.. node.EffectiveInputs.Select(port => Input(port, node))],
             [.. node.Outputs.Select(Output)],
             [],
             node.MaxExecutions ?? FlowStepView.DefaultMaxExecutions)
         {
-            ParentPath = path.Parent?.Value,
-            NodeType = node.EffectiveKind.Value,
+            GroupPath = path.Parent?.Value,
             Model = Model(node),
             Attributes = [.. (node.Type?.Attributes ?? []).Select(attribute => new FlowAttributeView(attribute.Name, attribute.Value))],
-            Upstream = Upstream(node),
+            SourceBindings = SourceBindings(node),
         };
 
     private static FlowGroupView Group(
@@ -99,8 +98,8 @@ public static class FlowTemplateProjection
             node.Label.Value,
             [.. (node.Nodes ?? []).Select(child => path.Append(child.Label).Value)])
         {
-            ParentPath = path.Parent?.Value,
-            Kind = node.Type?.Kind.Value,
+            ParentGroupPath = path.Parent?.Value,
+            TypeName = node.Type?.Kind.Value,
             Inputs = [.. node.EffectiveInputs.Select(port => Input(port, node))],
             Outputs = [.. node.Outputs.Select(Output)],
             MaxExecutions = node.MaxExecutions ?? int.MaxValue,
@@ -141,7 +140,7 @@ public static class FlowTemplateProjection
         return node.FindInput(modelPort)?.Default;
     }
 
-    private static IReadOnlyList<string> Upstream(NodeSpec node) =>
+    private static IReadOnlyList<string> SourceBindings(NodeSpec node) =>
     [
         .. node.From.Select(group => string.Join(
             '、',

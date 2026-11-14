@@ -209,7 +209,7 @@ public sealed class FlowService : IFlowCatalog, IFlowRuntimeCatalog, IFlowSnapsh
                     .GroupBy(node => node.Name)
                     .Where(group => group.Count() > 1)
                     .SelectMany(group => group.Skip(1).Select(node =>
-                        Error.Validation(FlowErrorCodes.FlowNode, $"节点库定义 {node.Name}：节点名重复。"))),
+                        Error.Validation(FlowErrorCodes.FlowEntry, $"节点库定义 {node.Name}：节点名重复。"))),
             ];
             if (duplicates.Count > 0)
             {

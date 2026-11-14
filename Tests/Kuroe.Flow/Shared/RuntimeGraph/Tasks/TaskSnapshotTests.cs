@@ -14,16 +14,16 @@ public sealed class TaskSnapshotTests
     public void Task_frontier_comes_from_the_furthest_done_leaf()
     {
         Assert.Equal(2, Snap([
-            State("制定计划", FlowNodeState.Done),
-            State("实施", FlowNodeState.Done)]).FrontierNodes);
-        Assert.Equal(2, Snap([]).TotalExecutableNodes);
+            State("制定计划", FlowItemState.Done),
+            State("实施", FlowItemState.Done)]).ProgressSteps);
+        Assert.Equal(2, Snap([]).TotalSteps);
     }
 
     [Fact]
     public void Task_without_done_leaves_has_zero_frontier()
     {
-        Assert.Equal(0, Snap([State("制定计划", FlowNodeState.Running)]).FrontierNodes);
-        Assert.Equal(2, Snap([]).TotalExecutableNodes);
+        Assert.Equal(0, Snap([State("制定计划", FlowItemState.Running)]).ProgressSteps);
+        Assert.Equal(2, Snap([]).TotalSteps);
     }
 
     [Fact]
@@ -36,15 +36,15 @@ public sealed class TaskSnapshotTests
         Assert.Equal(3, snapshot.OrdinalOf("Start"));
     }
 
-    private static (string Label, FlowNodeState State) State(string label, FlowNodeState state) =>
+    private static (string Label, FlowItemState State) State(string label, FlowItemState state) =>
         (label, state);
 
-    private static FlowNodeState StateOf(
+    private static FlowItemState StateOf(
         string label,
-        IReadOnlyList<(string Label, FlowNodeState State)> states) =>
+        IReadOnlyList<(string Label, FlowItemState State)> states) =>
         states.FirstOrDefault(state => state.Label == label).State;
 
-    private static TaskSnapshot Snap(IReadOnlyList<(string Label, FlowNodeState State)> states) => new(
+    private static TaskSnapshot Snap(IReadOnlyList<(string Label, FlowItemState State)> states) => new(
         new TaskId(1),
         "标题",
         StartInputs.Single(new PortName("目标"), "目标"),

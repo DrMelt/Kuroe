@@ -36,7 +36,7 @@ public static class TaskRecordFixture
             Completed: false,
             new TaskJournalRecord([new JournalEntry(At(3, 5), JournalLevel.Information, "信息", "已暂停。")], 0),
             new FlowRecord(
-                new FlowIdentity(flow, FlowRecordKinds.Graph, "graph"),
+                new FlowIdentity(flow, GraphFlowKind.Value, "graph"),
                 new GraphFlowDefinitionRecord(flow, """{"Nodes":[]}""", """{"Flows":[]}"""),
                 new GraphFlowStateRecord(
                     new TaskStartSnapshot(

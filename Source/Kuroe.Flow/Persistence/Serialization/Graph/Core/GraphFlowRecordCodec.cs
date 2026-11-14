@@ -10,7 +10,7 @@ namespace Kuroe.Flow.Persistence.Graph;
 public sealed class GraphFlowRecordCodec : IFlowRecordCodec
 {
     /// <inheritdoc/>
-    public bool Handles(FlowIdentity identity) => identity.Kind == FlowRecordKinds.Graph;
+    public bool Handles(FlowIdentity identity) => identity.Kind == GraphFlowKind.Value;
 
     /// <inheritdoc/>
     public IFlowDefinitionRecord ReadDefinition(FlowRecordData data) =>

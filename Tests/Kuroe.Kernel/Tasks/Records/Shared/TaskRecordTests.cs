@@ -17,13 +17,13 @@ public sealed class TaskRecordTests
             Completed: false,
             new TaskJournalRecord([], 0),
             new FlowRecord(
-                new FlowIdentity(new FlowName("默认"), FlowRecordKinds.Graph, "graph"),
+                new FlowIdentity(new FlowName("默认"), "test", "test"),
                 new Definition(),
                 new State()),
             []);
 
         Assert.Equal(id, record.Identity.Id);
-        Assert.Equal(FlowRecordKinds.Graph, record.Flow.Identity.Kind);
+        Assert.Equal("test", record.Flow.Identity.Kind);
         Assert.IsType<Definition>(record.Flow.Definition);
         Assert.IsType<State>(record.Flow.State);
         Assert.Empty(record.Executions);

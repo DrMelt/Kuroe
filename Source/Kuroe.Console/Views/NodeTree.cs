@@ -22,7 +22,7 @@ internal static class NodeTree
 
         void Add(IHasTreeNodes parent, string? parentPath)
         {
-            foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parentPath))
+            foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentGroupPath == parentPath))
             {
                 TreeNode branch = parent.AddNode(groupLine(group));
                 foreach (IRenderable detail in details?.Invoke(group) ?? [])
@@ -33,7 +33,7 @@ internal static class NodeTree
                 Add(branch, group.Path);
             }
 
-            foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parentPath))
+            foreach (FlowStepView step in flow.Steps.Where(step => step.GroupPath == parentPath))
             {
                 parent.AddNode(stepLine(step));
             }

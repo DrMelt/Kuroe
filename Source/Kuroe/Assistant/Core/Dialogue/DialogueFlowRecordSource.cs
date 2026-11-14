@@ -1,5 +1,6 @@
 using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 
@@ -14,7 +15,7 @@ public sealed class DialogueFlowRecordSource : IFlowRecordSource
         DialogueFlowState state = DialogueFlowAccess.State(task);
 
         return new FlowRecord(
-            new FlowIdentity(DialogueFlow.Name, FlowRecordKinds.Code, DialogueFlow.Implementation),
+            new FlowIdentity(DialogueFlow.Name, CodeFlowKind.Value, DialogueFlow.Implementation),
             new CodeFlowDefinitionRecord(DialogueFlow.Implementation, DialogueFlowAccess.Values(state.Language)),
             new CodeFlowStateRecord(state.Inputs, state.StartTexts, DialogueFlowAccess.Values(state)));
     }

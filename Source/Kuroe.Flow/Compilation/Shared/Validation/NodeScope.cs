@@ -26,7 +26,7 @@ public readonly record struct NodeScope
 
     /// <summary>作用域内一个节点的错误。</summary>
     public Error Node(string node, string message) =>
-        Error.Validation(FlowErrorCodes.FlowNode, IsLibrary
+        Error.Validation(FlowErrorCodes.FlowEntry, IsLibrary
             ? $"节点库定义 {node}：{message}"
             : $"流程 {Name} 的节点 {node}：{message}");
 }

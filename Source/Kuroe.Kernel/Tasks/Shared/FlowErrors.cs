@@ -7,7 +7,7 @@ public static class FlowErrors
 {
     /// <summary>一条流程整体的错误。</summary>
     public static Error Body(string flow, string message) =>
-        Error.Validation(FlowErrorCodes.FlowBody, $"流程 {flow}：{message}");
+        Error.Validation(FlowErrorCodes.FlowComposition, $"流程 {flow}：{message}");
 
     /// <summary>没有该名称的流程模板。</summary>
     public static Error FlowNotFound(string name) =>

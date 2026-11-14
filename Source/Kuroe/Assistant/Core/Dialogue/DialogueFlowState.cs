@@ -1,7 +1,7 @@
 using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Presentation.Shared;
-using Kuroe.Tasks.Records.Shared;
 using Kuroe.Tasks.Shared;
 using Kuroe.Node.Llm;
 
@@ -64,25 +64,25 @@ internal static class DialogueView
                 }),
         ];
 
-        FlowNodeState stepState;
+        FlowItemState stepState;
         if (taskState is TaskState.Terminated or TaskState.Done)
         {
-            stepState = FlowNodeState.Canceled;
+            stepState = FlowItemState.Canceled;
         }
         else if (control?.Pending().Count > 0)
         {
-            stepState = FlowNodeState.Pending;
+            stepState = FlowItemState.Pending;
         }
         else
         {
             stepState = task.Executions.Any(execution => execution.IsLive)
-                ? FlowNodeState.Running
-                : FlowNodeState.Done;
+                ? FlowItemState.Running
+                : FlowItemState.Done;
         }
 
         return new FlowView(
             DialogueFlow.Name.Value,
-            FlowRecordKinds.Code,
+            CodeFlowKind.Value,
             "内置对话：回答用户的每轮输入",
             [new FlowPortView(DialogueFlow.StartPort.Value, "Text", null)],
             [

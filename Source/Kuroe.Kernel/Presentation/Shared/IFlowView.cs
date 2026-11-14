@@ -1,6 +1,6 @@
 namespace Kuroe.Presentation.Shared;
 
-/// <summary>流程的只读表现视图。宿主只读取它，不读取节点与图运行期。</summary>
+/// <summary>流程的只读表现视图。宿主只读取它，不读取流程实现内部状态。</summary>
 public interface IFlowView
 {
     /// <summary>流程名。</summary>

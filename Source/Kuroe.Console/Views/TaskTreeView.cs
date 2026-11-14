@@ -28,12 +28,12 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
         [
             .. task.View.Groups.Select(group => new TreeNodeData(
                 group.Path,
-                group.ParentPath,
+                group.ParentGroupPath,
                 GroupLine(facts, group),
                 [.. Details(group)])),
             .. task.View.Steps.Select(step => new TreeNodeData(
                 step.Path,
-                step.ParentPath,
+                step.GroupPath,
                 StepLine(facts, step),
                 [.. Details(step)])),
         ];
@@ -233,7 +233,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
             IReadOnlyList<string> members = [.. group.Members.SelectMany(Expand)];
 
-            return (members.Count(member => State(member) == FlowNodeState.Done), members.Count);
+            return (members.Count(member => State(member) == FlowItemState.Done), members.Count);
 
             IEnumerable<string> Expand(string child) =>
                 _groups.TryGetValue(child, out FlowGroupView? nested)
@@ -241,7 +241,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
                     : [child];
         }
 
-        private FlowNodeState State(string path)
+        private FlowItemState State(string path)
         {
             if (_steps.TryGetValue(path, out FlowStepView? step))
             {
@@ -250,7 +250,7 @@ internal sealed class TaskTreeView(Terminal terminal, PendingService pendings)
 
             return _groups.TryGetValue(path, out FlowGroupView? group)
                 ? group.State
-                : FlowNodeState.Pending;
+                : FlowItemState.Pending;
         }
     }
 }

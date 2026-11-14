@@ -1,6 +1,6 @@
 using Kuroe.Assistant.Flows;
 using Kuroe.Control.Shared;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Assistant.Dialogue;
@@ -16,5 +16,5 @@ public sealed class DialogueFlowIdentity : IFlowIdentity
 
     /// <inheritdoc/>
     public bool Handles(FlowIdentity identity) =>
-        identity.Kind == FlowRecordKinds.Code && identity.Implementation == DialogueFlow.Implementation;
+        identity.Kind == CodeFlowKind.Value && identity.Implementation == DialogueFlow.Implementation;
 }

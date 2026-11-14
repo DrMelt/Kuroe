@@ -151,7 +151,7 @@ public sealed class GraphFlowSubmission(
                 if (flow.Graph[path] is not ExecutableNode node)
                 {
                     return [Error.Failure(
-                        FlowErrorCodes.RecordGraphMismatch,
+                        GraphFlowErrors.RecordFlowMismatch,
                         $"存档执行节点 {path} 不在流程图中。")];
                 }
 
@@ -163,7 +163,7 @@ public sealed class GraphFlowSubmission(
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException)
         {
-            return [Error.Failure(FlowErrorCodes.RecordNodeMismatch, ex.Message)];
+            return [Error.Failure(GraphFlowErrors.RecordStepMismatch, ex.Message)];
         }
 
         return new FlowRestore(

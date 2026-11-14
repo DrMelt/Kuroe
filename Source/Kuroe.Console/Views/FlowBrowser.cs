@@ -170,7 +170,7 @@ internal sealed class FlowBrowser(
 
     private static Paragraph GroupLine(FlowGroupView group)
     {
-        ViewLine line = new ViewLine().Add(group.Label, Styles.Key).Add(group.Kind ?? "容器", Styles.Hint);
+        ViewLine line = new ViewLine().Add(group.Label, Styles.Key).Add(group.TypeName ?? "容器", Styles.Hint);
         if (group.Outputs.Count > 0)
         {
             line.Add($"输出 {string.Join('、', group.Outputs.Select(port => port.Name))}", Styles.Hint);
@@ -208,9 +208,9 @@ internal sealed class FlowBrowser(
             line.Add($"上限 {step.MaxExecutions}", Styles.Hint);
         }
 
-        if (step.Upstream.Count > 0)
+        if (step.SourceBindings.Count > 0)
         {
-            line.Add($"上游 {string.Join(" 或 ", step.Upstream)}", Styles.Hint);
+            line.Add($"上游 {string.Join(" 或 ", step.SourceBindings)}", Styles.Hint);
         }
 
         return line.Build();

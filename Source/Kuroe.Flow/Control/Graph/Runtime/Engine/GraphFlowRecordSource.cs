@@ -22,7 +22,7 @@ public sealed class GraphFlowRecordSource : IFlowRecordSource
         FlowSeed seed = task.Control?.CaptureSeed() ?? FlowSeed.Empty;
 
         return new FlowRecord(
-            new FlowIdentity(definition.Name, FlowRecordKinds.Graph, GraphFlowIdentity.Implementation),
+            new FlowIdentity(definition.Name, GraphFlowKind.Value, GraphFlowIdentity.Implementation),
             definition,
             new GraphFlowStateRecord(
                 new TaskStartSnapshot(state.Inputs, state.StartTexts.Texts),

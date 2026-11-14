@@ -3,6 +3,7 @@ using Kuroe.Control.Contract;
 using Kuroe.Control.Shared;
 using Kuroe.Execution.Shared;
 using Kuroe.Execution;
+using Kuroe.Flow.Code.Records.Shared;
 using Kuroe.Flow.Persistence.Serialization.Shared;
 using Kuroe.Presentation.Shared;
 using Kuroe.Flow.Runtime;
@@ -166,7 +167,7 @@ internal sealed class CodeIdentity : IFlowIdentity
     public bool Handles(FlowName name) => name.Value == "目标";
 
     public bool Handles(FlowIdentity identity) =>
-        identity.Kind == FlowRecordKinds.Code && identity.Implementation == Id;
+        identity.Kind == CodeFlowKind.Value && identity.Implementation == Id;
 }
 
 internal sealed class CodeState(StartInputs inputs) : IFlowState
@@ -194,7 +195,7 @@ internal sealed class CodeRecords : IFlowRecordSource
         CodeState state = Assert.IsType<CodeState>(task.FlowState);
 
         return new FlowRecord(
-            new FlowIdentity(new FlowName("目标"), FlowRecordKinds.Code, CodeIdentity.Id),
+            new FlowIdentity(new FlowName("目标"), CodeFlowKind.Value, CodeIdentity.Id),
             new CodeFlowDefinitionRecord(
                 CodeIdentity.Id,
                 new Dictionary<string, string> { ["mode"] = "test" }),
@@ -210,7 +211,7 @@ internal sealed class CodePresentation : IFlowPresentation
     public IFlowView CaptureView(ITaskFlowContext task) =>
         new FlowView(
             "目标",
-            FlowRecordKinds.Code,
+            CodeFlowKind.Value,
             null,
             [],
             [
@@ -218,7 +219,7 @@ internal sealed class CodePresentation : IFlowPresentation
                     "回话",
                     "回话",
                     "code",
-                    FlowNodeState.Done,
+                    FlowItemState.Done,
                     [new FlowPortView("输入", "Text", null)],
                     [new FlowPortView("结论", "Text", null)],
                     [],

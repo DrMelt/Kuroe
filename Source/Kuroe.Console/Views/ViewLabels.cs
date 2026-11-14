@@ -12,13 +12,13 @@ internal static class ViewLabels
 {
     public static string Of(TaskState state) => InfoLabels.Of(state);
 
-    public static string Of(FlowNodeState state) => state switch
+    public static string Of(FlowItemState state) => state switch
     {
-        FlowNodeState.Pending => "待执行",
-        FlowNodeState.Running => "执行中",
-        FlowNodeState.Blocked => "已阻塞",
-        FlowNodeState.Done => "已完成",
-        FlowNodeState.Canceled => "已取消",
+        FlowItemState.Pending => "待执行",
+        FlowItemState.Running => "执行中",
+        FlowItemState.Blocked => "已阻塞",
+        FlowItemState.Done => "已完成",
+        FlowItemState.Canceled => "已取消",
         _ => state.ToString(),
     };
 
@@ -51,11 +51,11 @@ internal static class ViewLabels
         _ => Styles.Hint,
     };
 
-    public static Style StyleOf(FlowNodeState state) => state switch
+    public static Style StyleOf(FlowItemState state) => state switch
     {
-        FlowNodeState.Done => Styles.Success,
-        FlowNodeState.Running => Styles.Key,
-        FlowNodeState.Blocked => Styles.Warning,
+        FlowItemState.Done => Styles.Success,
+        FlowItemState.Running => Styles.Key,
+        FlowItemState.Blocked => Styles.Warning,
         _ => Styles.Hint,
     };
 

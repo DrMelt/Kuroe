@@ -35,7 +35,7 @@ public sealed class FlowAdvanceTests
         Assert.Equal(TaskState.Done, done.State);
         Assert.Single(done.View.Steps[0].Executions);
         Assert.Single(done.View.Steps[1].Executions);
-        Assert.Equal(2, done.FrontierNodes);
+        Assert.Equal(2, done.ProgressSteps);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public sealed class FlowAdvanceTests
         TaskSnapshot canceled = environment.Settle(id);
 
         Assert.Equal(TaskState.Terminated, canceled.State);
-        Assert.DoesNotContain(canceled.View.Steps, step => step.State == FlowNodeState.Blocked);
+        Assert.DoesNotContain(canceled.View.Steps, step => step.State == FlowItemState.Blocked);
         Assert.DoesNotContain(canceled.View.Steps, step => step.Block is not null);
         Assert.Single(environment.Registry.ClearSettled());
     }

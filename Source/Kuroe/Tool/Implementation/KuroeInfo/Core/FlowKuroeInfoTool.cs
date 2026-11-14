@@ -78,15 +78,15 @@ public sealed class FlowKuroeInfoTool : ITool
 
     private static void Walk(StringBuilder text, FlowTemplateView flow, string? parent, int depth)
     {
-        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parent))
+        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentGroupPath == parent))
         {
-            text.AppendLine($"  {Indent(depth)}{group.Label}（{group.Kind ?? "容器"}节点）");
+            text.AppendLine($"  {Indent(depth)}{group.Label}（{group.TypeName ?? "容器"}节点）");
             AppendPorts(text, depth + 1, "传入端口", group.Inputs);
             AppendPorts(text, depth + 1, "输出端口", group.Outputs);
             Walk(text, flow, group.Path, depth + 1);
         }
 
-        foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parent))
+        foreach (FlowStepView step in flow.Steps.Where(step => step.GroupPath == parent))
         {
             text.AppendLine($"  {Indent(depth)}{step.Label}（{step.Kind}节点）");
             string requirement = Requirement(step);
@@ -128,9 +128,9 @@ public sealed class FlowKuroeInfoTool : ITool
             parts.Add($"输入 {string.Join("、", inputs.Select(port => port.Name))}");
         }
 
-        if (step.Upstream.Count > 0)
+        if (step.SourceBindings.Count > 0)
         {
-            parts.Add($"取自 {string.Join("；", step.Upstream)}");
+            parts.Add($"取自 {string.Join("；", step.SourceBindings)}");
         }
 
         if (step.Outputs.Count > 0)

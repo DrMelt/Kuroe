@@ -64,7 +64,7 @@ internal sealed class TaskProjection(
             [.. executions.Select(Execution)],
             LimitOf(node.Path) ?? node.MaxExecutions)
         {
-            ParentPath = node.Path.Parent?.Value,
+            GroupPath = node.Path.Parent?.Value,
             ExecutionCount = materializer.Find(node.Path)?.Progress.Executions ?? 0,
             CanRestore = state.CanRestore,
             Block = state.Block?.Summary,
@@ -104,7 +104,7 @@ internal sealed class TaskProjection(
             container.Path.Label.Value,
             ChildPaths(container))
         {
-            ParentPath = container.Path.Parent?.Value,
+            ParentGroupPath = container.Path.Parent?.Value,
             State = StateOf(state),
             Outputs = [.. container.Outputs.Select(Output)],
             MaxExecutions = LimitOf(container.Path) ?? container.MaxExecutions,
@@ -112,13 +112,13 @@ internal sealed class TaskProjection(
         };
     }
 
-    private static FlowNodeState StateOf(NodeState state) => state switch
+    private static FlowItemState StateOf(NodeState state) => state switch
     {
-        NodeState.Running => FlowNodeState.Running,
-        NodeState.Blocked => FlowNodeState.Blocked,
-        NodeState.Done => FlowNodeState.Done,
-        NodeState.Canceled => FlowNodeState.Canceled,
-        _ => FlowNodeState.Pending,
+        NodeState.Running => FlowItemState.Running,
+        NodeState.Blocked => FlowItemState.Blocked,
+        NodeState.Done => FlowItemState.Done,
+        NodeState.Canceled => FlowItemState.Canceled,
+        _ => FlowItemState.Pending,
     };
 
     private static FlowPortView Input(InputPort port, IPortTexts staticTexts) => new(

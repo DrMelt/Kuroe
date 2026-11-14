@@ -1,6 +1,6 @@
 using Kuroe.Flow.Control.Graph.Runtime.Catalog;
 using Kuroe.Control.Shared;
-using Kuroe.Tasks.Records.Shared;
+using Kuroe.Flow.Graph.Records.Shared;
 using Kuroe.Tasks.Shared;
 
 namespace Kuroe.Flow.Control.Graph.Runtime.Engine;
@@ -19,5 +19,5 @@ public sealed class GraphFlowIdentity(IFlowRuntimeCatalog flows) : IFlowIdentity
 
     /// <inheritdoc/>
     public bool Handles(FlowIdentity identity) =>
-        identity.Kind == FlowRecordKinds.Graph && identity.Implementation == Implementation;
+        identity.Kind == GraphFlowKind.Value && identity.Implementation == Implementation;
 }

@@ -647,6 +647,7 @@ public sealed class RepositoryLayoutTests
         string executionRecords = Path.Combine(KernelRoot, "Execution", "Records", "Shared");
         string taskRecords = Path.Combine(KernelRoot, "Tasks", "Records", "Shared");
         string graphRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Graph", "Records", "Shared");
+        string codeRecords = Path.Combine(SourceRoot, "Kuroe.Flow", "Code", "Records", "Shared");
         string nodeContracts = Path.Combine(SourceRoot, "Kuroe.Flow", "Node", "Shared");
 
         foreach (string project in ProjectFiles(persistence))
@@ -654,6 +655,7 @@ public sealed class RepositoryLayoutTests
             IReadOnlyList<string> references = [.. ProjectReferences(project)
                 .Where(reference => IsUnder(reference, SourceRoot))];
             bool graphCodec = IsUnder(project, Path.Combine(persistence, "Serialization", "Graph"));
+            bool codeCodec = IsUnder(project, Path.Combine(persistence, "Serialization", "Code"));
 
             Assert.All(references, reference =>
                 Assert.True(
@@ -665,7 +667,8 @@ public sealed class RepositoryLayoutTests
                         || IsUnder(reference, taskRecords)
                         || graphCodec && IsUnder(reference, flowContracts)
                         || graphCodec && IsUnder(reference, graphRecords)
-                        || graphCodec && IsUnder(reference, nodeContracts),
+                        || graphCodec && IsUnder(reference, nodeContracts)
+                        || codeCodec && IsUnder(reference, codeRecords),
                     $"{Path.GetFileName(project)} 引用了持久化边界之外的 {reference}。"));
         }
     }
@@ -1591,6 +1594,77 @@ public sealed class RepositoryLayoutTests
             "LlmExecutionParameters.cs");
 
         Assert.DoesNotContain("LlmNodeType", File.ReadAllText(file), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Kernel_projects_reference_only_kernel()
+    {
+        IReadOnlyList<string> projects = [.. ProjectFiles(KernelRoot)];
+
+        Assert.NotEmpty(projects);
+        foreach (string project in projects)
+        {
+            foreach (string reference in ProjectReferences(project))
+            {
+                Assert.True(
+                    IsUnder(reference, KernelRoot),
+                    $"{Path.GetFileName(project)} 引用了 Kernel 之外的 {reference}。");
+            }
+        }
+    }
+
+    [Fact]
+    public void Kernel_sources_stay_free_of_graph_and_node_vocabulary()
+    {
+        string pattern = @"(?<![A-Za-z])(Graph|Node)(?![A-Za-z])";
+
+        Assert.NotEmpty(SourceFiles(KernelRoot));
+        foreach (string file in SourceFiles(KernelRoot))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.False(
+                System.Text.RegularExpressions.Regex.IsMatch(text, pattern),
+                $"{Path.GetFileName(file)} 出现图或节点词汇。");
+        }
+    }
+
+    [Fact]
+    public void Kernel_has_no_concrete_flow_records()
+    {
+        Assert.NotEmpty(SourceFiles(KernelRoot));
+        foreach (string file in SourceFiles(KernelRoot))
+        {
+            string text = File.ReadAllText(file);
+
+            Assert.DoesNotContain("CodeFlowDefinitionRecord", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("CodeFlowStateRecord", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("FlowRecordKinds", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Flow_record_kind_constants_live_with_implementations()
+    {
+        string graph = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Graph",
+            "Records",
+            "Shared",
+            "GraphFlowKind.cs");
+        string code = Path.Combine(
+            SourceRoot,
+            "Kuroe.Flow",
+            "Code",
+            "Records",
+            "Shared",
+            "CodeFlowKind.cs");
+        string taskRecord = Path.Combine(KernelRoot, "Tasks", "Records", "Shared", "TaskRecord.cs");
+
+        Assert.True(File.Exists(graph));
+        Assert.True(File.Exists(code));
+        Assert.DoesNotContain("FlowRecordKinds", File.ReadAllText(taskRecord), StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> InternalsVisibleTo(string project) =>

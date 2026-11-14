@@ -16,7 +16,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowNodeState.Pending));
+        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Pending));
 
         Assert.Contains("节点", output.Output);
         Assert.Contains("整体", output.Output);
@@ -31,7 +31,7 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowNodeState.Blocked));
+        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Blocked));
 
         Assert.Contains("阻塞原因 节点失败原因。", output.Output);
     }
@@ -42,12 +42,12 @@ public sealed class TaskTreeViewTests
         using ConsoleSession cli = new();
         Terminal terminal = ConsoleSession.NewTerminal(out TestConsole output, out _);
 
-        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowNodeState.Done));
+        new TaskTreeView(terminal, cli.Environment.Pendings).Print(Snapshot(FlowItemState.Done));
 
         Assert.Contains("已完成", output.Output);
     }
 
-    private static TaskSnapshot Snapshot(FlowNodeState state) => new(
+    private static TaskSnapshot Snapshot(FlowItemState state) => new(
         new TaskId(1),
         "目标",
         new StartInputs([]),
@@ -67,8 +67,8 @@ public sealed class TaskTreeViewTests
                     [],
                     100)
                 {
-                    ParentPath = "整体",
-                    Block = state == FlowNodeState.Blocked ? "节点失败原因。" : null,
+                    GroupPath = "整体",
+                    Block = state == FlowItemState.Blocked ? "节点失败原因。" : null,
                     CanRestore = false,
                 },
             ],

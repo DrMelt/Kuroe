@@ -59,13 +59,13 @@ internal static class PlainFlowView
     private static void Walk(CliOutput output, FlowTemplateView flow, string? parent, int depth)
     {
         string indent = new(' ', depth * 2);
-        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentPath == parent))
+        foreach (FlowGroupView group in flow.Groups.Where(group => group.ParentGroupPath == parent))
         {
             output.Line($"{indent}{Container(group)}");
             Walk(output, flow, group.Path, depth + 1);
         }
 
-        foreach (FlowStepView step in flow.Steps.Where(step => step.ParentPath == parent))
+        foreach (FlowStepView step in flow.Steps.Where(step => step.GroupPath == parent))
         {
             output.Line($"{indent}{Executable(step)}");
         }
@@ -73,7 +73,7 @@ internal static class PlainFlowView
 
     private static string Container(FlowGroupView group)
     {
-        List<string> parts = [group.Label, group.Kind ?? "容器"];
+        List<string> parts = [group.Label, group.TypeName ?? "容器"];
         if (group.Outputs.Count > 0)
         {
             parts.Add($"输出 {string.Join('、', group.Outputs.Select(port => port.Name))}");
@@ -111,9 +111,9 @@ internal static class PlainFlowView
             parts.Add($"上限 {step.MaxExecutions}");
         }
 
-        if (step.Upstream.Count > 0)
+        if (step.SourceBindings.Count > 0)
         {
-            parts.Add($"上游 {string.Join(" 或 ", step.Upstream)}");
+            parts.Add($"上游 {string.Join(" 或 ", step.SourceBindings)}");
         }
 
         return string.Join('\t', parts);
