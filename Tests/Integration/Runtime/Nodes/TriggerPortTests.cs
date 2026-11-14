@@ -332,7 +332,7 @@ public sealed class TriggerPortTests
 
     /// <summary>Signal 门控只门控容器发布，成员第二次发布仍驱动容器发布并放下游。</summary>
     [Fact]
-    public void Signal_gate_does_not_mask_member_second_publish()
+    public async Task Signal_gate_does_not_mask_member_second_publish()
     {
         using TestEnvironment environment = TestEnvironment.Create(SignalGateContainerFlow);
         environment.Runner.PortValuesJsonFor = execution => execution.Input.Node.Label.Value switch
@@ -341,9 +341,18 @@ public sealed class TriggerPortTests
             "加工" => """{ "结论": "结果" }""",
             _ => null,
         };
+        NodePath work = NodePath.Of("外壳", "整体", "加工");
+        environment.Runner.Gate.Hold(work);
 
         TaskId id = environment.Submit("目标");
-        TaskSnapshot done = environment.Settle(id);
+        // 逐次放行加工，第二次在下游消费第一次之后才开始
+        environment.Runner.Gate.Open(await environment.Runner.Gate.Entered(work));
+
+        await environment.WaitAsync(id, current =>
+            environment.GraphExecutions(current, "下游").Count == 1);
+
+        environment.Runner.Gate.ClearHolds();
+        TaskSnapshot done = await environment.SettleAsync(id);
 
         Assert.Equal(2, environment.GraphExecutions(done, "加工").Count);
         Assert.Equal(2, environment.GraphExecutions(done, "下游").Count);
